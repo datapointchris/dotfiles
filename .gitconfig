@@ -1,0 +1,32 @@
+[user]
+  name = Chris Birch
+  email = datapointchris@gmail.com
+
+[core]
+  editor = code --wait
+
+[alias]
+  # Remove branches which have been deleted from remote
+  prune = fetch --prune
+
+  # undo last commit but keep staging
+  undo = reset --soft HEAD^
+  
+  # stash absolutely everything right now
+  stash-all = stash save --include-untracked
+
+  # easier to read log
+  nicelog = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset'
+
+[merge]
+  # show original change, incoming change, and unchanged
+  conflictstyle = diff3
+
+[credential]
+  helper = osxkeychain
+
+[init]
+  defaultBranch = master
+
+[pull]
+  rebase = false

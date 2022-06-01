@@ -1,0 +1,4 @@
+export PATH="/usr/local/opt/mysql-client/bin:$PATH"
+export PATH="$HOME/.poetry/bin:$PATH"
+export SPARK_HOME=/usr/local/Cellar/apache-spark/3.1.2/libexec
+export PATH="$SPARK_HOME/bin/:$PATH"
