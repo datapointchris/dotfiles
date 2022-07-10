@@ -28,6 +28,7 @@ brew "mysql"
 brew "mysql-client"
 brew "nmap"
 brew "node"
+brew "openjdk"
 brew "openssl@3"
 brew "poetry"
 brew "postgresql"
@@ -58,10 +59,8 @@ cask "obsidian"
 cask "pgadmin4"
 cask "postman"
 cask "teamviewer"
-cask "temurin"
 cask "visual-studio-code"
 cask "zoom"
-mas "Bear", id: 1091189122
 mas "Color Picker", id: 1545870783
 mas "Dark Reader for Safari", id: 1438243180
 mas "Dato", id: 1470584107

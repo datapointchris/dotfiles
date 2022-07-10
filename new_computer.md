@@ -42,8 +42,13 @@ ln -sf ~/.dotfiles/tmux.conf ~/.tmux.conf
 rm ~/.inputrc
 ln -sf ~/.dotfiles/.inputrc ~/.inputrc
 
+
 # iTerm2 settings
 ln -sf ~/.dotfiles/com.googlecode.iterm2.plist 
+
+
+# For the system Java wrappers to find this JDK
+ln -sfn $(brew --prefix)/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
 
 
 ## Load Themes
