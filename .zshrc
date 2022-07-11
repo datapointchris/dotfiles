@@ -49,6 +49,9 @@ source $ZSH/oh-my-zsh.sh
 # Load pyenv
 eval "$(pyenv init --path)"
 
+# Load jenv
+eval "$(jenv init -)"
+
 # iTerm2 Shell Integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 

@@ -47,8 +47,17 @@ ln -sf ~/.dotfiles/.inputrc ~/.inputrc
 ln -sf ~/.dotfiles/com.googlecode.iterm2.plist 
 
 
-# For the system Java wrappers to find this JDK
+# Symlink brew install java versions into system default folder
+## Make the default 
 ln -sfn $(brew --prefix)/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+ln -sfn $(brew --prefix)/opt/openjdk@11/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk@11.jdk
+ln -sfn $(brew --prefix)/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk@17.jdk
+
+
+# Add the Java versions to jenv
+jenv add /Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home
+jenv add /Library/Java/JavaVirtualMachines/openjdk@11.jdk/Contents/Home
+jenv add /Library/Java/JavaVirtualMachines/openjdk@17.jdk/Contents/Home
 
 
 ## Load Themes

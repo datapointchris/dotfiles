@@ -78,6 +78,9 @@ alias makevenv='python -m venv .venv'
 # Activate Python virtual environment
 alias venv='source .venv/bin/activate'
 
+# Reset JAVA_HOME after changing with jenv
+alias jenv_set_java_home='export JAVA_HOME="$HOME/.jenv/versions/`jenv version-name`"'
+
 # Reload audio driver
 alias reload-audio='sudo killall coreaudiod'
 

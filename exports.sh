@@ -9,10 +9,10 @@ export EUPHORIA_IP=23.22.30.103
 export EDITOR="code -w"
 
 # Java if installed
-export JAVA_HOME=/usr/local/opt/openjdk
+export JAVA_HOME="$HOME/.jenv/versions/`jenv version-name`"
 
 # Spark if installed
-
+export SPARK_HOME=""
 
 
 # Export paths only if they exist.
@@ -31,5 +31,9 @@ exportpath "/usr/sbin"
 exportpath "/usr/local/bin"
 exportpath "/usr/local/sbin"
 
+# Jenv
+exportpath "$HOME/.jenv/bin/"
+
 # Java
 exportpath "/$JAVA_HOME/bin/"
+
