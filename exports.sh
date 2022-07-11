@@ -11,21 +11,25 @@ export EDITOR="code -w"
 # Java if installed
 export JAVA_HOME=/usr/local/opt/openjdk
 
+# Spark if installed
+
+
+
 # Export paths only if they exist.
-function export_path {
+function exportpath {
   if [ -d "$1" ]; then
     export PATH="$PATH:$1"
   fi
 }
 
-export_path "/bin"
-export_path "/sbin"
-export_path "/usr/bin"
-export_path "/usr/sbin"
+exportpath "/bin"
+exportpath "/sbin"
+exportpath "/usr/bin"
+exportpath "/usr/sbin"
 
 # Brew paths
-export_path "/usr/local/bin"
-export_path "/usr/local/sbin"
+exportpath "/usr/local/bin"
+exportpath "/usr/local/sbin"
 
 # Java
-export_path "/$JAVA_HOME/bin/"
+exportpath "/$JAVA_HOME/bin/"
