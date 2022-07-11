@@ -15,6 +15,46 @@ function adcomp() {
 	git add . && git commit -m "$1" && git push;
 }
 
+# Create new scala sbt project
+function mkscala() {
+	# Make Folders
+	mkdir -p "$1" && cd "$1"; 
+	mkdir -p src/{main,test}/{java,resources,scala};
+	mkdir project target;
+	# Make build.sbt
+	touch build.sbt;
+	cat <<-EOF > build.sbt
+	name := "$1"
+	version := "1.0"
+	scalaVersion := "2.13.8"
+	EOF
+	# Make scala .gitignore
+	touch .gitignore;
+	cat <<-EOF > .gitignore
+	bin/
+	target/
+	build/
+	.bloop
+	.bsp
+	.metals
+	.cache
+	.cache-main
+	.classpath
+	.history
+	.project
+	.scala_dependencies
+	.settings
+	.worksheet
+	.DS_Store
+	*.class
+	*.log
+	*.iml
+	*.ipr
+	*.iws
+	.idea
+	EOF
+}
+
 # Create a .tar.gz archive, using `zopfli`, `pigz` or `gzip` for compression
 function targz() {
 	local tmpFile="${@%/}.tar";
