@@ -12,7 +12,7 @@ export EDITOR="code -w"
 export JAVA_HOME="$HOME/.jenv/versions/`jenv version-name`"
 
 # Spark if installed
-export SPARK_HOME=""
+# export SPARK_HOME=""
 
 
 # Export paths only if they exist.
@@ -22,18 +22,10 @@ function exportpath {
   fi
 }
 
-exportpath "/bin"
-exportpath "/sbin"
-exportpath "/usr/bin"
-exportpath "/usr/sbin"
-
-# Brew paths
-exportpath "/usr/local/bin"
-exportpath "/usr/local/sbin"
 
 # Jenv
 exportpath "$HOME/.jenv/bin/"
 
 # Java
-exportpath "/$JAVA_HOME/bin/"
+exportpath "$JAVA_HOME/bin/"
 

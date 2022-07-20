@@ -18,6 +18,12 @@ plugins=()
 # Run oh-my-zsh 
 source $ZSH/oh-my-zsh.sh
 
+# Load pyenv
+eval "$(pyenv init --path)"
+
+# Load jenv (before exports so JAVA_HOME export can use jenv location)
+eval "$(jenv init -)"
+
 # Enable completions -> AFTER sourcing oh-my-zsh.sh
 # autoload -Uz compinit && compinit
 
@@ -46,11 +52,6 @@ source $ZSH/oh-my-zsh.sh
 # -------------------- MISC -------------------- #
 # ============================================== #
 
-# Load pyenv
-eval "$(pyenv init --path)"
-
-# Load jenv
-eval "$(jenv init -)"
 
 # iTerm2 Shell Integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"

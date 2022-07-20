@@ -17,17 +17,30 @@ function adcomp() {
 
 # Create new scala sbt project
 function mkscala() {
+	
 	# Make Folders
 	mkdir -p "$1" && cd "$1"; 
 	mkdir -p src/{main,test}/{java,resources,scala};
 	mkdir project target;
+	
 	# Make build.sbt
 	touch build.sbt;
 	cat <<-EOF > build.sbt
 	name := "$1"
 	version := "1.0"
 	scalaVersion := "2.13.8"
+
+	libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.12"
+	libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.12" % "test"
 	EOF
+	
+	# Make scalaformat file
+	touch .scalafmt.conf;
+	cat <<-EOF > .scalafmt.conf
+	version = "3.5.3"
+	runner.dialect = scala213
+	EOF
+	
 	# Make scala .gitignore
 	touch .gitignore;
 	cat <<-EOF > .gitignore
