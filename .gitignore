@@ -364,5 +364,5 @@ hs_err_pid*
 **/__pycache__
 TESTING.*
 .env
-dotfiles/.config/aws/config
-dotfiles/.config/aws/credentials
+**/tmux/plugins/*
+
