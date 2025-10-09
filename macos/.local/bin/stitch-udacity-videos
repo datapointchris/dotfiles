@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Configuration
+readonly VIDEO_EXTENSION="mp4"
+readonly ZIP_EXTENSION="zip"
+readonly FILE_LIST="filelist.txt"
+readonly ZIP_ARCHIVE_DIR="zips"
+
+processed_count=0
+error_count=0
+
+# Clean filename: preserve spaces, remove special chars except alphanumerics, spaces, dots, dashes, underscores, parens
+clean_filename() {
+  local filename="$1"
+  # Keep: A-Z a-z 0-9 space . - _ ( )
+  # This translates all other characters to nothing
+  echo "$filename" | sed 's/[^A-Za-z0-9 ._()-]//g' | sed 's/  */ /g'
+}
+
+# Step 1: Clean up zip filenames
+if ! find . -maxdepth 1 -name "*.${ZIP_EXTENSION}" -print -quit | grep -q .; then
+  echo "Error: No .${ZIP_EXTENSION} files found in current directory" >&2
+  exit 1
+fi
+
+zip_count=$(find . -maxdepth 1 -name "*.${ZIP_EXTENSION}" | wc -l | tr -d ' ')
+echo "Found ${zip_count} zip file(s) to process"
+
+echo ""
+echo "Step 1: Cleaning up zip filenames..."
+
+find . -maxdepth 1 -name "*.${ZIP_EXTENSION}" -print0 | while IFS= read -r -d '' file; do
+  file="${file#./}"
+
+  decoded_name=$(python3 -c "import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))" "$file" 2>/dev/null) || {
+    echo "Warning: Failed to decode '$file', skipping"
+    continue
+  }
+
+  [[ -z "$decoded_name" ]] && continue
+
+  cleaned_name=$(clean_filename "$decoded_name")
+
+  # Remove the exact word 'Videos', clean up spaces, and preserve extension
+  name_without_ext="${cleaned_name%."${ZIP_EXTENSION}"}"
+  extension=".${ZIP_EXTENSION}"
+  name_without_ext=$(echo "$name_without_ext" | sed 's/ Videos//g' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//')
+  cleaned_name="${name_without_ext}${extension}"
+
+  if [[ "$file" != "$cleaned_name" ]]; then
+    if mv -- "$file" "$cleaned_name" 2>/dev/null; then
+      echo "  Renamed: '$file' -> '$cleaned_name'"
+    else
+      echo "  Warning: Failed to rename '$file'"
+    fi
+  fi
+done
+
+# Step 2: Extract zip files
+echo ""
+echo "Step 2: Extracting zip files..."
+
+find . -maxdepth 1 -name "*.${ZIP_EXTENSION}" -print0 | while IFS= read -r -d '' zip_file; do
+  zip_file="${zip_file#./}"
+  target_dir="${zip_file%."${ZIP_EXTENSION}"}"
+
+  echo "  Extracting: $zip_file -> $target_dir/"
+
+  if mkdir -p "$target_dir" && unzip -oq "$zip_file" -d "$target_dir"; then
+    echo "    Success"
+  else
+    echo "    Failed to extract '$zip_file'" >&2
+  fi
+done
+
+# Step 3: Process each directory
+echo ""
+echo "Step 3: Processing video directories..."
+
+for dir in */; do
+  dir="${dir%/}"
+  [[ "$dir" == "$ZIP_ARCHIVE_DIR" ]] && continue
+  [[ ! -d "$dir" ]] && continue
+
+  echo ""
+  echo "  Processing: $dir"
+
+  (
+    cd "$dir" || exit 1
+
+    echo "    Cleaning video filenames..."
+    cleaned_files=0
+
+    find . -maxdepth 1 -type f -print0 | while IFS= read -r -d '' file; do
+      file="${file#./}"
+      [[ -z "$file" ]] && continue
+
+      clean_name=$(clean_filename "$file")
+
+      if [[ "$file" != "$clean_name" ]] && [[ -n "$clean_name" ]]; then
+        if mv -- "$file" "$clean_name" 2>/dev/null; then
+          echo "      '$file' -> '$clean_name'"
+          cleaned_files=$((cleaned_files + 1))
+        fi
+      fi
+    done
+
+    [[ $cleaned_files -eq 0 ]] && echo "      No files needed cleaning"
+
+    echo "    Creating file list..."
+    rm -f "$FILE_LIST"
+
+    find "$(pwd)" -maxdepth 1 -type f -name "*.${VIDEO_EXTENSION}" 2>/dev/null |
+      sort -V |
+      awk '{print "file \x27"$0"\x27"}' > "$FILE_LIST"
+
+    video_count=$(wc -l < "$FILE_LIST" | tr -d ' ')
+
+    if [[ $video_count -eq 0 ]]; then
+      echo "      No .${VIDEO_EXTENSION} files found, skipping"
+      exit 0
+    fi
+
+    echo "      Found ${video_count} video file(s)"
+
+    output_video="FULL VIDEO - ${dir}.${VIDEO_EXTENSION}"
+    echo "    Stitching videos to: $output_video"
+
+    if ! ffmpeg -y -f concat -safe 0 -i "$FILE_LIST" -c copy "$output_video" 2>&1 | grep -qE "error|Error|ERROR"; then
+      if [[ -f "$output_video" ]]; then
+        output_size=$(du -h "$output_video" | cut -f1)
+        echo "      Created: $output_video (${output_size})"
+        rm -f "$FILE_LIST"
+        exit 0
+      else
+        echo "      Output file was not created" >&2
+        rm -f "$FILE_LIST"
+        exit 1
+      fi
+    else
+      echo "      ffmpeg reported errors" >&2
+      rm -f "$FILE_LIST"
+      exit 1
+    fi
+  )
+
+  subshell_exit=$?
+  if [[ $subshell_exit -eq 0 ]]; then
+    processed_count=$((processed_count + 1))
+  else
+    echo "    Failed to process directory: $dir" >&2
+    error_count=$((error_count + 1))
+  fi
+done
+
+# Step 4: Stitch all subdirectory videos into final output
+echo ""
+echo "Step 4: Creating final combined video..."
+
+parent_dir=$(basename "$(pwd)")
+final_output="FINAL - ${parent_dir}.${VIDEO_EXTENSION}"
+final_filelist="final_${FILE_LIST}"
+
+rm -f "$final_filelist"
+
+find . -maxdepth 2 -type f -name "FULL VIDEO - *.${VIDEO_EXTENSION}" 2>/dev/null |
+  sort -V |
+  awk '{print "file \x27"$0"\x27"}' > "$final_filelist"
+
+final_video_count=$(wc -l < "$final_filelist" | tr -d ' ')
+
+if [[ $final_video_count -gt 0 ]]; then
+  echo "  Found ${final_video_count} stitched video(s) to combine"
+  echo "  Creating: $final_output"
+
+  if ! ffmpeg -y -f concat -safe 0 -i "$final_filelist" -c copy "$final_output" 2>&1 | grep -qE "error|Error|ERROR"; then
+    if [[ -f "$final_output" ]]; then
+      final_size=$(du -h "$final_output" | cut -f1)
+      echo "  Created final video: $final_output (${final_size})"
+      rm -f "$final_filelist"
+    else
+      echo "  Warning: Final output file was not created" >&2
+      rm -f "$final_filelist"
+      error_count=$((error_count + 1))
+    fi
+  else
+    echo "  Warning: ffmpeg reported errors creating final video" >&2
+    rm -f "$final_filelist"
+    error_count=$((error_count + 1))
+  fi
+else
+  echo "  No stitched videos found to combine"
+fi
+
+# Step 5: Archive original zip files
+echo ""
+echo "Step 5: Archiving original zip files..."
+
+if [[ -n $(find . -maxdepth 1 -name "*.${ZIP_EXTENSION}" -print -quit) ]]; then
+  mkdir -p "$ZIP_ARCHIVE_DIR"
+  find . -maxdepth 1 -name "*.${ZIP_EXTENSION}" -exec mv {} "$ZIP_ARCHIVE_DIR/" \;
+  echo "  Moved ${zip_count} zip file(s) to ${ZIP_ARCHIVE_DIR}/"
+else
+  echo "  No zip files to archive"
+fi
+
+# Summary
+echo ""
+echo "Summary:"
+echo "  Successfully processed: ${processed_count} director(y/ies)"
+
+if [[ $error_count -gt 0 ]]; then
+  echo "  Errors encountered: ${error_count}"
+  exit 1
+else
+  echo "  All operations completed successfully!"
+fi
