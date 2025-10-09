@@ -4,7 +4,6 @@
 
 export ZSH="$HOME/.oh-my-zsh"
 
-
 # Add the zsh-completions plugin directory to the fpath.
 # This must be set early to ensure that Zsh can locate and use additional
 # completion scripts before any other configurations or plugins are loaded.
@@ -76,7 +75,6 @@ export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
 export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
 
-
 DOTFILES="$HOME/dotfiles"
 SHELLS="$HOME/.shell"
 
@@ -99,7 +97,6 @@ autoload -U +X bashcompinit && bashcompinit
 
 # Set up custom completion for the terraform command without appending a space
 complete -o nospace -C /usr/local/bin/terraform terraform
-
 
 # Load jenv if installed (before exports so JAVA_HOME export can use jenv location)
 if command -v jenv &>/dev/null; then
@@ -128,15 +125,15 @@ export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
 # - The first argument to the function is the name of the command.
 # - You should make sure to pass the rest of the arguments to fzf.
 _fzf_comprun() {
-  local command=$1
-  shift
+    local command=$1
+    shift
 
-  case "$command" in
-    cd)           fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
-    export|unset) fzf --preview "eval 'echo $'{}"         "$@" ;;
-    ssh)          fzf --preview 'dig {}'                   "$@" ;;
-    *)            fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
-  esac
+    case "$command" in
+    cd) fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
+    export | unset) fzf --preview "eval 'echo $'{}" "$@" ;;
+    ssh) fzf --preview 'dig {}' "$@" ;;
+    *) fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
+    esac
 }
 
 # for ** completion of files
@@ -147,4 +144,14 @@ _fzf_compgen_path() {
 # for ** completion of directories
 _fzf_compgen_dir() {
     fd --type d --hidden --follow --exclude .git . "$1"
+}
+
+##### Yazi #####
+
+function y() {
+    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    yazi "$@" --cwd-file="$tmp"
+    IFS= read -r -d '' cwd <"$tmp"
+    [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd" || return
+    rm -f -- "$tmp"
 }
