@@ -1,0 +1,73 @@
+# /Users/chris/.config/tmuxinator/macmini-local-server-logs.yml
+
+name: macmini-local-server-logs
+root: ~/
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+
+# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
+# tmux_command: byobu
+
+# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
+# startup_window: editor
+
+# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
+# startup_pane: 1
+
+# Controls whether the tmux session should be attached to automatically. Defaults to true.
+# attach: false
+
+
+# tmux list-windows to get the layout
+windows:
+  - ichrisbirch-prod-monitoring:
+      layout: 340d,208x44,0,0{104x44,0,0,35,103x44,105,0[103x11,105,0,42,103x10,105,12,45,103x10,105,23,43,103x10,105,34,44]}
+      startup_pane: 5
+      panes:
+        - project-pane:
+          - printf '\033]2;%s\033\\' 'project'
+          - cd ~/var/www/projects/ichrisbirch
+          - git status
+        - nginx-error-log:
+          - printf '\033]2;%s\033\\' 'NGINX Error Log'
+          - cd /var/log/nginx/
+          - tail -f error.log
+        - supervisor-control-log:
+          - printf '\033]2;%s\033\\' 'Supervisor Log'
+          - cd /var/log/supervisor/
+          - tail -f supervisord.log
+        - supervisor-ichrisbirch-app-error-log:
+          - printf '\033]2;%s\033\\' 'Supervisor App Error Log'
+          - cd /var/log/supervisor/
+          - tail -f ichrisbirch-app.log
+        - supervisor-ichrisbirch-api-error-log:
+          - printf '\033]2;%s\033\\' 'Supervisor API Error Log'
+          - cd /var/log/supervisor/
+          - tail -f ichrisbirch-api.log
