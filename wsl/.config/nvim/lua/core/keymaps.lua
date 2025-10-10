@@ -2,8 +2,15 @@
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>', { desc = 'Clear highlights' })
 
--- Bind jj to escape because Windows is shit and does not allow easy key remapping
-vim.keymap.set('i', 'jj', '<escape>', { desc = 'Easy escape' })
+-- Unbind default bindings for arrow keys, trust me this is for your own good
+vim.keymap.set('v', '<up>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('v', '<down>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('v', '<left>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('v', '<right>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('i', '<up>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('i', '<down>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('i', '<left>', '<nop>', { desc = 'Unbind for your benefit' })
+vim.keymap.set('i', '<right>', '<nop>', { desc = 'Unbind for your benefit' })
 
 -- Put single character cut text in the black hole register
 vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
@@ -12,7 +19,7 @@ vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
 vim.keymap.set('n', '+', '<C-a>', { desc = 'Increment number under cursor' })
 vim.keymap.set('n', '-', '<C-x>', { desc = 'Decrement number under cursor' })
 
--- Select
+-- Select all
 vim.keymap.set('n', '<C-a>', 'gg<S-v>G', { desc = 'Select all' })
 
 -- Move selected line / block of text in visual mode down / up
@@ -100,16 +107,6 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<C-k>', '<cmd>TmuxNavigateUp<CR>', { desc = 'Navigate up' })
   vim.keymap.set('n', '<C-l>', '<cmd>TmuxNavigateRight<CR>', { desc = 'Navigate right' })
   vim.keymap.set('n', '<C-\\>', '<cmd>TmuxNavigatePrevious<CR>', { desc = 'Navigate previous' })
-end
-
----------------------------------------------------------------------------------
---- CodeCompanion ---------------------------------------------------------------
----------------------------------------------------------------------------------
--- VSCode has native copilot integration
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>cca', '<cmd>CodeCompanion<CR>', { desc = 'CodeCompanion: Inline Chat' })
-  vim.keymap.set('n', '<leader>ccc', '<cmd>CodeCompanionChat<CR>', { desc = 'CodeCompanion: Chat Buffer' })
-  vim.keymap.set('n', '<leader>ccA', '<cmd>CodeCompanionActions<CR>', { desc = 'CodeCompanion: Actions' })
 end
 
 --------------------------------------------------------------------------------
