@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SHELLS="$HOME/code/dotfiles/shell"
+SHELLS="$HOME/.shell"
 source "$SHELLS/colors.sh"
 
 # help.sh -- self-contained on-line help for bash scripts

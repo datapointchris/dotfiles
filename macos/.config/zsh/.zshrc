@@ -75,18 +75,18 @@ export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
 export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
 
-DOTFILES="$HOME/dotfiles"
-SHELLS="$HOME/.shell"
 
 source "$HOME/.env"
+source "$HOME/.iterm2_shell_integration.zsh"
+# DOTFILES="$HOME/dotfiles"
 
+SHELLS="$HOME/.shell"
 source "$SHELLS/aliases.sh"
 source "$SHELLS/exports.sh"
 source "$SHELLS/colors.sh"
 source "$SHELLS/formatting.sh"
 source "$SHELLS/functions.sh"
 
-source ".iterm2_shell_integration.zsh"
 
 # The setopt complete_aliases command in Zsh enables the completion of command aliases.
 # Zsh will attempt to complete the arguments of an alias as if it were the command it aliases.
@@ -146,12 +146,11 @@ _fzf_compgen_dir() {
     fd --type d --hidden --follow --exclude .git . "$1"
 }
 
-##### Yazi #####
-
+# Yazi wrapper to change directory
 function y() {
-    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-    yazi "$@" --cwd-file="$tmp"
-    IFS= read -r -d '' cwd <"$tmp"
-    [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd" || return
-    rm -f -- "$tmp"
+  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+  yazi "$@" --cwd-file="$tmp"
+  IFS= read -r -d '' cwd <"$tmp"
+  [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd" || return
+  rm -f -- "$tmp"
 }
