@@ -1,0 +1,55 @@
+#!/bin/bash
+
+NOTES_DIR="$HOME/Documents/notes"
+source "$HOME/.shell/aliases.sh"
+# Enable alias expansion in scripts
+shopt -s expand_aliases
+
+function new_note() {
+    nvim --cmd "let g:auto_session_enabled = 0" -c ":ObsidianNewFromTemplate"
+}
+
+function search_notes() {
+  nvim --cmd "let g:auto_session_enabled = 0" -c ":ObsidianSearch $1"
+}
+
+
+function usage() {
+    echo "Usage: notes [command] [args]"
+    echo ""
+    echo "Commands:"
+    echo "  new <note_name>   Create a new note with the given name"
+    echo "  list              List all notes in the notes directory"
+    echo "  search <query>    Search notes for the given query"
+    echo "  help              Show this help message"
+    echo ""
+}
+
+if [ -z "$1" ]; then
+    usage
+    exit 0
+fi
+
+case $1 in
+help | -h | --help | -help)
+    usage
+    ;;
+new)
+    new_note "$2"
+    ;;
+list)
+    ls "$NOTES_DIR"
+    ;;
+search)
+    if [ -z "$2" ]; then
+        echo "Please provide a search query"
+        exit 1
+    fi
+    search_notes "$2"
+    ;;
+*)
+    echo "!! '$1' is not a valid notes command !!"
+    echo ""
+    usage
+    ;;
+esac

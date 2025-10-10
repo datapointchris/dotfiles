@@ -1,0 +1,28 @@
+name: ichrisbirch-development
+root: ~/code/ichrisbirch
+### Use tmux list-windows to get the layout of the windows ###
+enable_pane_titles: true
+windows:
+  - icb-develop:
+      # layout: 4352,208x51,0,0{104x51,0,0[104x20,0,0,0,104x17,0,21,2,104x12,0,39,3],103x51,105,0,1}
+      layout: 69b9,230x60,0,0{111x60,0,0[111x23,0,0,1,111x15,0,24,2,111x13,0,40,19,111x6,0,54,3],118x60,112,0,4}
+      startup_pane: status
+      panes:
+        - dev-app-flask:
+          - venv
+          - ichrisbirch dev runapp
+        - dev-api-fastapi:
+          - venv
+          - ichrisbirch dev runapi
+        - dev-chat:
+          - venv
+          - ichrisbirch dev runchat
+        - dev-scheduler:
+          - venv
+          - ichrisbirch dev runscheduler
+        - status:
+          - venv
+          - export ENVIROMENT=development
+          - git status
+  - icb-logs:
+      - ichrisbirch watchlogs
