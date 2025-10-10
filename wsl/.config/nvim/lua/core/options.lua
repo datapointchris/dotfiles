@@ -47,6 +47,7 @@ vim.opt.mouse = 'a'
 
 -- Use the system clipboard
 vim.opt.clipboard = 'unnamedplus'
+vim.g.clipboard = 'unnamedplus'
 
 -- Open new split windows below the current window
 vim.opt.splitbelow = true
