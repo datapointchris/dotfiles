@@ -365,4 +365,4 @@ hs_err_pid*
 TESTING.*
 .env
 **/tmux/plugins/*
-
+**/.zcompdump*
