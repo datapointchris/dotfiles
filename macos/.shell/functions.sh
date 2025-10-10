@@ -410,8 +410,8 @@ function lsalias() {
 #@lsfunc
 #--> List all functions
 function lsfunc() {
-  echo
-  message="$("$SHELLS/get-docs.sh" "$SHELLS/functions.sh")"
+  echo ""
+  message="$("get-docs" "$SHELLS/functions.sh")"
   if [ -n "$1" ]; then
     command echo "$message" | grep -i "$1" | sort | column -t -s :
   else
