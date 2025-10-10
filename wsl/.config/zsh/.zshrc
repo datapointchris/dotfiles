@@ -74,7 +74,6 @@ export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
-export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
 
 HISTFILE="$XDG_STATE_HOME/zsh/history"
 
@@ -124,47 +123,12 @@ function add_path {
     fi
 }
 
-if command -v cargo &>/dev/null; then
-    CARGO_HOME="$XDG_DATA_HOME/cargo"
-    export CARGO_HOME
-    add_path "$CARGO_HOME/bin"
-fi
-
-if command -v jenv &>/dev/null; then
-    eval "$(jenv init -)"
-    add_path "$HOME/.jenv/bin/"
-    JAVA_HOME="$HOME/.jenv/versions/$(jenv version-name)"
-    export JAVA_HOME
-    add_path "$JAVA_HOME/bin"
-fi
-
-# Spark is installed into /usr/local/bin
-# Already in PATH
-
-if command -v scala &>/dev/null; then
-    SCALA_HOME="/usr/local/opt/scala@2.12"
-    export SCALA_HOME
-    add_path "$SCALA_HOME/bin"
-fi
-
-if command -v pyenv &>/dev/null; then
-    PYENV_ROOT="$XDG_DATA_HOME/pyenv"
-    export PYENV_ROOT
-    add_path "$PYENV_ROOT/bin"
-fi
-
-# Postgres 16, `postgres` points to Postgres 14
-add_path "/usr/local/opt/postgresql@16/bin"
-
-# SnowSQL since it is an Application
-add_path "/Applications/SnowSQL.app/Contents/MacOS"
-
-# Local bin
-add_path "$HOME/.local/bin"
-
-# Brew
-add_path "/usr/local/sbin"
+. "$HOME/.cargo/env"
+add_path "/opt/nvim"
 add_path "/usr/local/bin"
+add_path "/usr/local/go/bin"
+add_path "$HOME/.local/bin"
+add_path "/snap/bin"
 
 # ------------------------------------------------------------------ #
 # TERMINAL APPS
