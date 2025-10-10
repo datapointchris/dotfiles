@@ -2,6 +2,9 @@
 # shellcheck disable=SC2034
 # SC2034 = Variable appears unused -- For the vars picked up by oh-my-zsh
 
+# ------------------------------------------------------------------ #
+# OH-MY-ZSH
+# ------------------------------------------------------------------ #
 export ZSH="$HOME/.oh-my-zsh"
 
 # Add the zsh-completions plugin directory to the fpath.
@@ -26,26 +29,24 @@ plugins=(
 # shellcheck source=/dev/null1
 source "$ZSH/oh-my-zsh.sh"
 
-# ----------------- CONFIG FILE LOCATIONS ----------------- #
+# ------------------------------------------------------------------ #
+# GENERAL SETTINGS
+# ------------------------------------------------------------------ #
+export EDITOR="nvim"
 
+# Disable brew auto update
+export HOMEBREW_NO_AUTO_UPDATE=1
+
+# Set bat theme
+export BAT_THEME="gruvbox-dark"
+
+# ------------------------------------------------------------------ #
+# CONFIG FILE LOCATIONS
+# ------------------------------------------------------------------ #
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
-
-HISTFILE="$XDG_STATE_HOME/zsh/history"
-
-# Completion files: Use XDG dirs
-[ -d "$XDG_CACHE_HOME"/zsh ] || mkdir -p "$XDG_CACHE_HOME/zsh"
-
-# Set the cache path for Zsh completion to a directory within the XDG cache home.
-# This helps in storing completion cache files in a standardized location.
-zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
-
-# Initialize the Zsh completion system using a version-specific dump file.
-# The dump file stores the state of the completion system and is located in the XDG cache home.
-# Using a version-specific file ensures compatibility with the current Zsh version.
-compinit -d "$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
 
 # Config
 export BASH_COMPLETION_USER_FILE="$XDG_CONFIG_HOME/bash-completion/bash_completion"
@@ -75,18 +76,22 @@ export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
 export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
 
+HISTFILE="$XDG_STATE_HOME/zsh/history"
 
-source "$HOME/.env"
-source "$HOME/.iterm2_shell_integration.zsh"
-# DOTFILES="$HOME/dotfiles"
+# ------------------------------------------------------------------ #
+# COMPLETIONS
+# ------------------------------------------------------------------ #
+# Completion files: Use XDG dirs
+[ -d "$XDG_CACHE_HOME"/zsh ] || mkdir -p "$XDG_CACHE_HOME/zsh"
 
-SHELLS="$HOME/.shell"
-source "$SHELLS/aliases.sh"
-source "$SHELLS/exports.sh"
-source "$SHELLS/colors.sh"
-source "$SHELLS/formatting.sh"
-source "$SHELLS/functions.sh"
+# Set the cache path for Zsh completion to a directory within the XDG cache home.
+# This helps in storing completion cache files in a standardized location.
+zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
 
+# Initialize the Zsh completion system using a version-specific dump file.
+# The dump file stores the state of the completion system and is located in the XDG cache home.
+# Using a version-specific file ensures compatibility with the current Zsh version.
+compinit -d "$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
 
 # The setopt complete_aliases command in Zsh enables the completion of command aliases.
 # Zsh will attempt to complete the arguments of an alias as if it were the command it aliases.
@@ -98,15 +103,75 @@ autoload -U +X bashcompinit && bashcompinit
 # Set up custom completion for the terraform command without appending a space
 complete -o nospace -C /usr/local/bin/terraform terraform
 
-# Load jenv if installed (before exports so JAVA_HOME export can use jenv location)
+# ------------------------------------------------------------------ #
+# SHELL CONFIG
+# ------------------------------------------------------------------ #
+source "$HOME/.env"
+source "$HOME/.iterm2_shell_integration.zsh"
+
+SHELLS="$HOME/.shell"
+source "$SHELLS/aliases.sh"
+source "$SHELLS/colors.sh"
+source "$SHELLS/formatting.sh"
+source "$SHELLS/functions.sh"
+
+# ------------------------------------------------------------------- #
+# EXPORTS
+# ------------------------------------------------------------------- #
+function add_path {
+    if [ -d "$1" ]; then
+        export PATH="$1:$PATH"
+    fi
+}
+
+if command -v cargo &>/dev/null; then
+    CARGO_HOME="$XDG_DATA_HOME/cargo"
+    export CARGO_HOME
+    add_path "$CARGO_HOME/bin"
+fi
+
 if command -v jenv &>/dev/null; then
     eval "$(jenv init -)"
+    add_path "$HOME/.jenv/bin/"
+    JAVA_HOME="$HOME/.jenv/versions/$(jenv version-name)"
+    export JAVA_HOME
+    add_path "$JAVA_HOME/bin"
 fi
+
+# Spark is installed into /usr/local/bin
+# Already in PATH
+
+if command -v scala &>/dev/null; then
+    SCALA_HOME="/usr/local/opt/scala@2.12"
+    export SCALA_HOME
+    add_path "$SCALA_HOME/bin"
+fi
+
+if command -v pyenv &>/dev/null; then
+    PYENV_ROOT="$XDG_DATA_HOME/pyenv"
+    export PYENV_ROOT
+    add_path "$PYENV_ROOT/bin"
+fi
+
+# Postgres 16, `postgres` points to Postgres 14
+add_path "/usr/local/opt/postgresql@16/bin"
+
+# SnowSQL since it is an Application
+add_path "/Applications/SnowSQL.app/Contents/MacOS"
+
+# Local bin
+add_path "$HOME/.local/bin"
+
+# Brew
+add_path "/usr/local/sbin"
+add_path "/usr/local/bin"
+
+# ------------------------------------------------------------------ #
+# TERMINAL APPS
+# ------------------------------------------------------------------ #
 
 # Initialize zoxide
 eval "$(zoxide init --cmd cd zsh)"
-
-##### FZF #####
 
 # Initialize fzf
 source <(fzf --zsh)
@@ -148,9 +213,9 @@ _fzf_compgen_dir() {
 
 # Yazi wrapper to change directory
 function y() {
-  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-  yazi "$@" --cwd-file="$tmp"
-  IFS= read -r -d '' cwd <"$tmp"
-  [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd" || return
-  rm -f -- "$tmp"
+    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    yazi "$@" --cwd-file="$tmp"
+    IFS= read -r -d '' cwd <"$tmp"
+    [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd" || return
+    rm -f -- "$tmp"
 }
