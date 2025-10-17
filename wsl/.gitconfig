@@ -1,9 +1,6 @@
-[user]
-name = Chris Birch
-email = datapointchris@gmail.com
 
 [core]
-editor = code --wait
+editor = nvim
 pager = delta
 
 [advice]
@@ -12,9 +9,6 @@ addIgnoredFile = false
 [merge]
 # show original change, incoming change, and unchanged
 conflictstyle = diff3
-
-[credential]
-helper = osxkeychain
 
 [init]
 defaultBranch = main
@@ -60,3 +54,7 @@ last-commit = log -1 HEAD
 
 # look at the changed files in commits
 changes = log --pretty='short' --name-status
+
+[includeIf "gitdir:~/code/"]
+  path = ~/code/.gitconfig
+
