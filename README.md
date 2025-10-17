@@ -7,7 +7,7 @@ Edit `/etc/zsh/zshenv` with `export ZSHDOTDIR="$HOME/.config/zsh"`
 ### System Installs
 
 ```sh
-sudo apt install ripgrep tmux nvim stow fd-find xclip
+sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta
 # stuff for yazi
 sudo apt install ffmpeg 7zip jq poppler-utils fd-find ripgrep zoxide imagemagick chafa
 # for fd need to make a symlink
