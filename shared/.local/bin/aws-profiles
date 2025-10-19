@@ -4,6 +4,14 @@
 ### CREDIT ###
 # https://github.com/ivours/awsprofile
 
+### USAGE ###
+# This script must be SOURCED to work with shell prompts:
+#   source aws-profiles
+# or
+#   . aws-profiles
+#
+# DO NOT run as: ./aws-profiles (environment variables won't persist)
+
 CREDENTIALS_FILE="$HOME/.aws/credentials"
 
 color_red() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
@@ -24,11 +32,36 @@ function list_aws_profiles() {
 
 function set_aws_profile() {
     export AWS_PROFILE=$1
-    echo -e "The AWS profile $(color_green "$AWS_PROFILE") has been set."
+
+    # Try to get the default region for this profile from AWS config
+    local region=""
+    if [[ -f "$HOME/.aws/config" ]]; then
+        # Look for region in the profile section
+        region=$(awk -v profile="$AWS_PROFILE" '
+            /^\[profile / { current_profile = gensub(/^\[profile ([^\]]+)\]/, "\\1", 1) }
+            /^\[default\]/ { current_profile = "default" }
+            /^region = / && current_profile == profile { print gensub(/^region = (.*)/, "\\1", 1); exit }
+        ' "$HOME/.aws/config")
+
+        # If not found and profile is not default, try default section
+        if [[ -z "$region" && "$AWS_PROFILE" != "default" ]]; then
+            region=$(awk '/^\[default\]/{found=1} found && /^region = /{print gensub(/^region = (.*)/, "\\1", 1); exit}' "$HOME/.aws/config")
+        fi
+    fi
+
+    # Set the region if found
+    if [[ -n "$region" ]]; then
+        export AWS_REGION="$region"
+        echo -e "The AWS profile $(color_green "$AWS_PROFILE") and region $(color_blue "$region") have been set."
+    else
+        echo -e "The AWS profile $(color_green "$AWS_PROFILE") has been set."
+    fi
 }
 
 function clear_aws_profile() {
     unset AWS_PROFILE
+    unset AWS_REGION
+    unset AWS_DEFAULT_REGION
     echo -e "The AWS profile has been $(color_yellow "cleared.")"
 }
 
