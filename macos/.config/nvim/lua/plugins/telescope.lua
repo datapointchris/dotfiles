@@ -12,7 +12,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
   config = function()
     require('telescope').setup({
       defaults = {
-        file_ignore_patterns = { '.git', '.gitsecret', '**/tmux/plugins/**' },
+        file_ignore_patterns = { '.git/', '.gitsecret', '**/tmux/plugins/**' },
       },
       pickers = {
         colorscheme = { enable_preview = true },
