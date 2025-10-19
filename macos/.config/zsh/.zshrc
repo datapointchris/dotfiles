@@ -1,7 +1,4 @@
-#shellcheck shell=bash
-# shellcheck disable=SC2034
-# SC2034 = Variable appears unused -- For the vars picked up by oh-my-zsh
-
+#shellcheck disable=all
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
@@ -63,7 +60,6 @@ export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
-export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
 
 # ------------------------------------------------------------------ #
 # COMPLETIONS
