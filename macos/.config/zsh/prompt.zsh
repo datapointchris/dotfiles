@@ -1,0 +1,1 @@
+/Users/chris/dotfiles/shared/.config/zsh/prompt.zsh

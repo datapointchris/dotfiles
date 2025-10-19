@@ -1,8 +1,1 @@
-[flavor]
-dark = "flexoki-dark"
-# dark = "tokyo-night"
-light = "everforest-medium"
-
-# this is for flexoki dark only, because tmux colors conflict
-[mgr]
-hovered = { bg = "darkgray", fg = "gray" }
+/Users/chris/dotfiles/shared/.config/yazi/theme.toml
