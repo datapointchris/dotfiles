@@ -38,7 +38,7 @@ ya pkg add gosxrgxx/flexoki-dark
 
 ## macOS Installation
 
-### Install Dependencies
+### Install Dependencies (macOS)
 
 ```bash
 # Core tools
@@ -47,6 +47,9 @@ brew install zsh git stow
 # Enhanced CLI tools  
 brew install zoxide fzf fd eza bat ripgrep git-delta
 
+# GNU coreutils (for enhanced compatibility)
+brew install coreutils gnu-sed gnu-tar grep
+
 # ZSH plugins
 brew install zsh-syntax-highlighting
 
@@ -54,24 +57,25 @@ brew install zsh-syntax-highlighting
 brew install yazi tmux neovim gh
 ```
 
-### Install Nerd Font
+### Install Nerd Font (macOS)
 
 Download and install a Nerd Font from [nerdfonts.com](https://www.nerdfonts.com/). Configure your terminal to use it.
 
-### Set zsh as default shell
+### Set zsh as default shell (macOS)
 
 ```bash
 chsh -s $(which zsh)
 ```
 
-### Install git-open plugin
+### Install git-open plugin (macOS)
 
 ```bash
 mkdir -p ~/.config/zsh/plugins
 git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
+chmod +x ~/.config/zsh/plugins/git-open/git-open
 ```
 
-### Clone dotfiles and install
+### Clone dotfiles and install (macOS)
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
@@ -132,7 +136,7 @@ sudo mv target/release/yazi target/release/ya /usr/local/bin
 Install imagemagick from source:
 <https://imagemagick.org/script/install-source.php>
 
-### Set zsh as default shell
+### Set zsh as default shell (WSL)
 
 `chsh -s $(which zsh)`
 
@@ -140,15 +144,18 @@ Install imagemagick from source:
 
 ```bash
 # Try package manager first
-sudo apt install zsh-syntax-highlighting
+sudo apt install zsh-syntax-highlighting gh
 
-# If not available, install manually
+# If zsh-syntax-highlighting not available, install manually
 mkdir -p ~/.config/zsh/plugins
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.config/zsh/plugins/zsh-syntax-highlighting
+
+# Install git-open manually (cross-platform compatibility)
 git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
+chmod +x ~/.config/zsh/plugins/git-open/git-open
 ```
 
-### Clone dotfiles and install
+### Clone dotfiles and install (WSL)
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
@@ -159,7 +166,7 @@ stow wsl
 
 ## Arch Linux Installation
 
-### Install Dependencies
+### Install Dependencies (Arch Linux)
 
 ```bash
 # Core tools
@@ -175,27 +182,28 @@ sudo pacman -S zsh-syntax-highlighting
 sudo pacman -S yazi tmux neovim github-cli
 ```
 
-### Install Nerd Font
+### Install Nerd Font (Arch Linux)
 
 ```bash
 sudo pacman -S ttf-firacode-nerd
 # Or install manually from nerdfonts.com
 ```
 
-### Set zsh as default shell
+### Set zsh as default shell (Arch Linux)
 
 ```bash
 chsh -s $(which zsh)
 ```
 
-### Install git-open plugin
+### Install git-open plugin (Arch Linux)
 
 ```bash
 mkdir -p ~/.config/zsh/plugins
 git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
+chmod +x ~/.config/zsh/plugins/git-open/git-open
 ```
 
-### Clone dotfiles and install
+### Clone dotfiles and install (Arch Linux)
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
@@ -217,6 +225,16 @@ stow arch  # or create arch-specific directory if needed
 
 - **zoxide integration**: `z` command for smart directory jumping
 - **Enhanced aliases**: `..`, `...`, `dots`, `dl`, `dt` all use smart navigation
+
+### Plugin System
+
+The .zshrc configuration automatically detects and loads plugins installed in standard locations:
+
+- **zsh-syntax-highlighting**: Installed via package managers
+- **git-open**: Manual installation to ~/.local/bin with executable permissions
+- **colored-man-pages**: Activated via environment variables
+
+Plugins are sourced automatically if detected, with graceful fallback handling.
 
 ### Enhanced Commands
 
