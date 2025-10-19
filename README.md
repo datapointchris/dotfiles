@@ -2,28 +2,126 @@
 
 Modern, cross-platform dotfiles configuration featuring:
 
-- Standalone zsh setup with custom prompt and Nerd Font icons
-- Smart directory navigation with zoxide  
+- **Shared Configuration Architecture**: DRY configuration with platform-specific customizations
+- Standalone zsh setup with custom prompt and Nerd Font icons  
+- Smart directory navigation with zoxide
 - Enhanced command-line tools (fzf, fd, eza, bat, yazi)
 - Cross-platform compatibility (macOS, Ubuntu WSL, Arch Linux)
+
+## Architecture
+
+This dotfiles setup uses a **shared configuration** approach:
+
+- `shared/` - Common configuration files used across all platforms
+- `macos/` - macOS-specific configurations and symlinks
+- `wsl/` - WSL-specific configurations and symlinks  
+- `ubuntu/` - Ubuntu-specific configurations and symlinks
+
+Key shared files are symlinked from platform directories to maintain DRY principles while allowing platform-specific customizations.
+
+## Quick Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+
+# Link shared configuration to platform directories
+./symlinks shared
+
+# Link your platform's configuration to $HOME
+./symlinks macos          # On macOS
+./symlinks wsl            # On WSL
+./symlinks ubuntu         # On Ubuntu
+./symlinks arch           # On Arch (if you add an arch/ directory)
+```
+
+## Symlink Management
+
+This dotfiles setup uses a powerful `symlinks` script that replaces GNU Stow entirely:
+
+### Shared Configuration Management
+
+```bash
+# Link shared/ to all platform directories (macos/, wsl/, ubuntu/, etc.)
+./symlinks shared
+
+# Remove shared symlinks from platform directories  
+./symlinks shared unlink
+
+# Show shared symlinks in platform directories
+./symlinks shared show
+```
+
+### Platform Configuration Management
+
+```bash
+# Link platform directory to $HOME
+./symlinks macos                    # Link macos/ → $HOME
+./symlinks wsl                      # Link wsl/ → $HOME  
+./symlinks ubuntu                   # Link ubuntu/ → $HOME
+
+# Remove platform symlinks from $HOME
+./symlinks macos unlink
+./symlinks wsl unlink
+
+# Show platform symlinks in $HOME
+./symlinks macos show
+./symlinks wsl show
+```
+
+### Key Features
+
+- **Auto-Discovery**: Automatically finds all platform directories (no hardcoding)
+- **Expandable**: Adding a new platform (like `arch/`) automatically works
+- **Safe Operations**: Uses `ln -sf` to overwrite safely
+- **Targeted Removal**: Only removes symlinks pointing to the correct source
+- **Performance Optimized**: Efficient directory scanning with depth limits
 
 ## Required Dependencies
 
 Before installing, ensure you have these dependencies:
 
-**Core Tools:** zsh, git, stow, Nerd Font  
+**Core Tools:** zsh, git, Nerd Font  
 **Enhanced CLI:** zoxide, fzf, fd, eza, bat, ripgrep, delta  
 **ZSH Plugins:** zsh-syntax-highlighting, git-open  
 **Optional:** yazi, tmux, nvim, gh
 
-## General Setup
+## Manual Setup
 
-### Copy shared config to platform-specific directories
+### Legacy Symlink Management
+
+The configuration uses a dynamic symlink system that automatically discovers all files in `shared/` and creates corresponding symlinks in platform directories using `ln -sf`:
 
 ```bash
-cp -r ~/dotfiles/shared/. ~/dotfiles/macos/
-cp -r ~/dotfiles/shared/. ~/dotfiles/wsl/
+# Create symlinks for all files in shared/ to both macos/ and wsl/
+./setup-symlinks.sh create
+
+# Show current symlink status
+./setup-symlinks.sh show
+
+# Remove all symlinks from platform directories
+./setup-symlinks.sh remove
+
+# Recreate all symlinks (remove and create)
+./setup-symlinks.sh recreate
 ```
+
+The script automatically:
+
+- Finds all files in `shared/` directory structure
+- Creates corresponding directory structure in `macos/` and `wsl/`  
+- Uses `ln -sf` to create symlinks for each file
+- Handles any future additions to `shared/` automatically
+
+### Adding New Shared Files
+
+To add new shared configuration:
+
+1. Place files in the appropriate `shared/` subdirectory
+2. Run `./setup-symlinks.sh recreate` to update all symlinks
+
+The script will automatically detect and symlink any new files.
 
 ### Yazi Themes
 
@@ -220,6 +318,7 @@ stow arch  # or create arch-specific directory if needed
 - **Virtual environment display**: Shows active Python venv
 - **Smart user info**: Different colors for SSH sessions and root
 - **Remote status**: Shows commits ahead/behind origin
+- **AWS context**: Displays profile, region, and credential expiration time
 
 ### Smart Navigation
 
@@ -248,6 +347,55 @@ Plugins are sourced automatically if detected, with graceful fallback handling.
 - **Automatic detection**: macOS vs Linux differences handled automatically
 - **Plugin management**: Hybrid approach using package managers when available
 - **Path management**: GNU coreutils on macOS, native tools on Linux
+
+## AWS Prompt Integration
+
+The custom prompt includes intelligent AWS context display inspired by Starship's AWS module. The prompt automatically shows:
+
+### AWS Information Displayed
+
+- **☁️ Profile**: Current AWS profile (`$AWS_PROFILE`)
+- **🌍 Region**: Current AWS region (`$AWS_REGION` or `$AWS_DEFAULT_REGION`)
+- **⏰ Expiration**: Time remaining on temporary credentials
+
+### Supported AWS Tools
+
+The prompt detects and displays credential expiration from:
+
+- **aws-vault**: Reads `$AWS_SESSION_EXPIRATION` environment variable
+- **AWSume**: Reads `$AWSUME_EXPIRATION` environment variable
+- **Manual export**: Any tool that sets these standard variables
+
+### Display Examples
+
+```bash
+# Profile and region only
+☁️ production@us-east-1
+
+# With credential expiration
+☁️ production@us-east-1 [2h15m]
+
+# Expired credentials (shown in red)
+☁️ production@us-east-1 [EXPIRED]
+```
+
+### Usage
+
+The AWS prompt appears automatically when AWS environment variables are detected:
+
+```bash
+# Set profile and region
+export AWS_PROFILE=production
+export AWS_REGION=us-east-1
+
+# For aws-vault users
+aws-vault exec production -- zsh
+
+# For AWSume users  
+awsume production
+```
+
+The prompt hides completely when no AWS context is active, keeping your prompt clean.
 
 ## Troubleshooting
 
