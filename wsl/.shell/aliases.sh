@@ -152,6 +152,11 @@ alias playpi="ssh chris@192.168.10.40 'pacmd suspend 0'"
 # Copy shrug to clipboard
 alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
 
+# ---------- AWS ---------- #
+
+# Source aws-profiles script to set profile (must be sourced for environment variables to persist)
+alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
+
 # ---------- Git ---------- #
 
 # Git - different from alias in gitconfig where these don't have to use `git` first
