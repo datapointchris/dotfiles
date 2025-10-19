@@ -27,20 +27,21 @@ alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&
 
 # ---------- Directory Navigation ---------- #
 
-alias ..='cd ..'
-alias ...='cd ../..'
-alias ....='cd ../../..'
+# Use zoxide for smart directory navigation
+alias ..='z ..'
+alias ...='z ../..'
+alias ....='z ../../..'
 
-# Directory shortcuts
-alias dl='cd $HOME/Downloads'
-alias dt='cd $HOME/Desktop'
+# Directory shortcuts using zoxide
+alias dl='z $HOME/Downloads'
+alias dt='z $HOME/Desktop'
 
-alias icloud="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
+alias icloud="z ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
 
-alias docs='cd $HOME/code/docs'
-alias dots='cd $HOME/dotfiles'
+alias docs='z $HOME/code/docs'
+alias dots='z $HOME/dotfiles'
 alias icb='ichrisbirch'
-alias nconf='cd $HOME/.config/nvim'
+alias nconf='z $HOME/.config/nvim'
 
 # ---------- List / Display ---------- #
 
@@ -82,7 +83,7 @@ alias nlog="tail -f /usr/local/var/log/nginx/error.log"
 # Show supervisor logs (brew installed)
 alias suplog="tail -f -n 20 /usr/local/var/log/supervisor/supervisord.log"
 
-alias locallogs="cd /usr/local/var/log; ls -l"
+alias locallogs="z /usr/local/var/log; ls -l"
 
 # ---------- Operations ---------- #
 

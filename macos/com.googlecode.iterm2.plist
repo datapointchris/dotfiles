@@ -17,17 +17,19 @@
 	<key>AIFeatureStreamingResponses</key>
 	<true/>
 	<key>AITermAPI</key>
+	<integer>2</integer>
+	<key>AIVectorStore</key>
 	<integer>1</integer>
 	<key>AdjustWindowForFontSizeChange</key>
 	<false/>
 	<key>AiMaxTokens</key>
-	<integer>128000</integer>
+	<integer>1000000</integer>
 	<key>AiModel</key>
-	<string>gpt-4o</string>
+	<string>gpt-4.1</string>
 	<key>AiResponseMaxTokens</key>
-	<integer>8192</integer>
+	<integer>32768</integer>
 	<key>AitermURL</key>
-	<string>https://api.openai.com/v1/chat/completions</string>
+	<string>https://api.openai.com/v1/responses</string>
 	<key>AllowClipboardAccess</key>
 	<true/>
 	<key>AlternateMouseScroll</key>
@@ -420,16 +422,12 @@
 			<true/>
 			<key>Background Color</key>
 			<dict>
-				<key>Alpha Component</key>
-				<real>1</real>
 				<key>Blue Component</key>
-				<real>0.17647058823529413</real>
-				<key>Color Space</key>
-				<string>P3</string>
+				<real>0.16608485579490662</real>
 				<key>Green Component</key>
-				<real>0.17647058823529413</real>
+				<real>0.14745020866394043</real>
 				<key>Red Component</key>
-				<real>0.17647058823529413</real>
+				<real>0.11278382688760757</real>
 			</dict>
 			<key>Background Image Location</key>
 			<string></string>
@@ -748,13 +746,13 @@
 				<key>Alpha Component</key>
 				<real>1</real>
 				<key>Blue Component</key>
-				<real>0.0</real>
+				<real>0.32116127014160156</real>
 				<key>Color Space</key>
 				<string>P3</string>
 				<key>Green Component</key>
-				<real>1</real>
+				<real>0.98600882291793823</real>
 				<key>Red Component</key>
-				<real>1</real>
+				<real>0.99697154760360718</real>
 			</dict>
 			<key>Mouse Reporting</key>
 			<true/>
