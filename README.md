@@ -2,17 +2,22 @@
 
 ## General Stuff
 
+### Copy all shared stuff into macos or wsl
+
+```sh
+cp -r ~/dotfiles/shared/. ~/dotfiles/macos/
+cp -r ~/dotfiles/shared/. ~/dotfiles/wsl/
+```
+
 ### Yazi Themes
 
 ```sh
-mkdir -p ~/dotfiles/shared/yazi/flavors
-cd ~/dotfiles/shared/yazi/flavors
-git clone https://github.com/BennyOe/tokyo-night.yazi.git
-git clone https://github.com/dangooddd/kanagawa.yazi.git
-git clone https://github.com/bennyyip/gruvbox-dark.yazi.git
-git clone https://github.com/kmlupreti/ayu-dark.yazi.git
-git clone https://github.com/Chromium-3-Oxide/everforest-medium.yazi.git
-git clone https://github.com/gosxrgxx/flexoki-dark.yazi.git
+ya pkg add BennyOe/tokyo-night
+ya pkg add dangooddd/kanagawa
+ya pkg add bennyyip/gruvbox-dark
+ya pkg add kmlupreti/ayu-dark
+ya pkg add Chromium-3-Oxide/everforest-medium
+ya pkg add gosxrgxx/flexoki-dark
 ```
 
 ## Installing in WSL (Ubuntu)
