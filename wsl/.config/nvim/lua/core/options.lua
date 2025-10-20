@@ -46,8 +46,21 @@ vim.opt.undofile = true
 vim.opt.mouse = 'a'
 
 -- Use the system clipboard
+-- vim.opt.clipboard = 'unnamedplus'
+-- vim.g.clipboard = 'unnamedplus'
+
+vim.g.clipboard = {
+  name = 'win32yank-wsl',
+  copy = {
+    ['+'] = 'win32yank.exe -i',
+    ['*'] = 'win32yank.exe -i',
+  },
+  paste = {
+    ['+'] = 'win32yank.exe -o',
+    ['*'] = 'win32yank.exe -o',
+  },
+}
 vim.opt.clipboard = 'unnamedplus'
-vim.g.clipboard = 'unnamedplus'
 
 -- Open new split windows below the current window
 vim.opt.splitbelow = true
