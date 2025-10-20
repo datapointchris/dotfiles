@@ -157,20 +157,6 @@ if [[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]]; then
     export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
 fi
 
-# Load any other manually installed plugins
-for plugin_dir in "$ZSH_PLUGINS_DIR"/*; do
-    if [[ -d "$plugin_dir" ]]; then
-        plugin_name=$(basename "$plugin_dir")
-        # Look for common plugin file patterns
-        for plugin_file in "$plugin_dir/$plugin_name.plugin.zsh" "$plugin_dir/$plugin_name.zsh" "$plugin_dir/init.zsh"; do
-            if [[ -f "$plugin_file" ]]; then
-                source "$plugin_file"
-                break
-            fi
-        done
-    fi
-done
-
 # ================================================================== #
 
 # ------------------------------------------------------------------ #
@@ -189,7 +175,6 @@ source "$SHELLS/aliases.sh"
 source "$SHELLS/colors.sh"
 source "$SHELLS/formatting.sh"
 source "$SHELLS/functions.sh"
-
 # ------------------------------------------------------------------- #
 # PATH AND ENVIRONMENT SETUP (Platform-Specific)
 # ------------------------------------------------------------------- #
@@ -240,15 +225,15 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # SnowSQL since it is an Application
     add_path "/Applications/SnowSQL.app/Contents/MacOS"
 
-    # Brew
-    add_path "/usr/local/sbin"
-    add_path "/usr/local/bin"
 else
     # Linux/WSL specific paths
-    # Add WSL-specific paths here
+    add_path "/snap/bin"
+    add_path "/opt/nvim"
     :
 fi
 
+add_path "/usr/local/sbin"
+add_path "/usr/local/bin"
 # ------------------------------------------------------------------ #
 # TERMINAL APPS
 # ------------------------------------------------------------------ #
