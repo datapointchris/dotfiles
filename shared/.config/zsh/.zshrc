@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
-
+DEBUG=1
 # Enable extended globbing, parameter expansion, command substitution, and arithmetic expansion
 setopt EXTENDED_GLOB
 setopt PROMPT_SUBST
@@ -105,11 +105,15 @@ if command -v terraform >/dev/null 2>&1; then
     complete -o nospace -C terraform terraform
 fi
 
+echo "Loaded Completions"
+
 # ------------------------------------------------------------------ #
 # PROMPT AND THEME
 # ------------------------------------------------------------------ #
 # Load prompt configuration from separate file
 source "$HOME/.config/zsh/prompt.zsh"
+
+echo "Loaded Prompt"
 
 # ------------------------------------------------------------------ #
 # OH-MY-ZSH PLUGIN REPLACEMENTS (Cross-Platform)
@@ -157,6 +161,7 @@ if [[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]]; then
     export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
 fi
 
+echo "Loaded Plugins"
 # ================================================================== #
 
 # ------------------------------------------------------------------ #
@@ -175,6 +180,8 @@ source "$SHELLS/aliases.sh"
 source "$SHELLS/colors.sh"
 source "$SHELLS/formatting.sh"
 source "$SHELLS/functions.sh"
+
+echo "Sourced Shells"
 # ------------------------------------------------------------------- #
 # PATH AND ENVIRONMENT SETUP (Platform-Specific)
 # ------------------------------------------------------------------- #
@@ -234,65 +241,61 @@ fi
 
 add_path "/usr/local/sbin"
 add_path "/usr/local/bin"
+
+echo "Added Paths"
+
 # ------------------------------------------------------------------ #
 # TERMINAL APPS
 # ------------------------------------------------------------------ #
 
-# Initialize zoxide with 'z' command instead of overriding 'cd'
-if command -v zoxide >/dev/null 2>&1; then
-    eval "$(zoxide init --cmd z zsh)"
-fi
+eval "$(zoxide init --cmd z zsh)"
 
-# Initialize fzf
-if command -v fzf >/dev/null 2>&1; then
-    source <(fzf --zsh)
+source <(fzf --zsh)
 
-    # fzf uses find by default but change to fd because it is faster and better
-    export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
-    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-    export FZF_ALT_COMMAND="fd --type-d --hidden --strip-cwd-prefix --exclude .git"
+# fzf uses find by default but change to fd because it is faster and better
+export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_COMMAND="fd --type-d --hidden --strip-cwd-prefix --exclude .git"
 
-    show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
+show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
 
-    export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
-    export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
+export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
 
-    # Advanced customization of fzf options via _fzf_comprun function
-    # - The first argument to the function is the name of the command.
-    # - You should make sure to pass the rest of the arguments to fzf.
-    _fzf_comprun() {
-        local command=$1
-        shift
+# Advanced customization of fzf options via _fzf_comprun function
+# - The first argument to the function is the name of the command.
+# - You should make sure to pass the rest of the arguments to fzf.
+_fzf_comprun() {
+    local command=$1
+    shift
 
-        case "$command" in
-        cd) fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
-        export | unset) fzf --preview "eval 'echo $'{}" "$@" ;;
-        ssh) fzf --preview 'dig {}' "$@" ;;
-        *) fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
-        esac
-    }
+    case "$command" in
+    cd) fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
+    export | unset) fzf --preview "eval 'echo $'{}" "$@" ;;
+    ssh) fzf --preview 'dig {}' "$@" ;;
+    *) fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
+    esac
+}
 
-    # for ** completion of files
-    _fzf_compgen_path() {
-        fd --hidden --follow --exclude .git . "$1"
-    }
+# for ** completion of files
+_fzf_compgen_path() {
+    fd --hidden --follow --exclude .git . "$1"
+}
 
-    # for ** completion of directories
-    _fzf_compgen_dir() {
-        fd --type d --hidden --follow --exclude .git . "$1"
-    }
-fi
+# for ** completion of directories
+_fzf_compgen_dir() {
+    fd --type d --hidden --follow --exclude .git . "$1"
+}
 
-# Yazi wrapper (if installed)
-if command -v yazi >/dev/null 2>&1; then
-    function y() {
-        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-        yazi "$@" --cwd-file="$tmp"
-        IFS= read -r -d '' cwd <"$tmp"
-        [[ -n "$cwd" ]] && [[ "$cwd" != "$PWD" ]] && builtin cd -- "$cwd" || return
-        rm -f -- "$tmp"
-    }
-fi
+function y() {
+    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    yazi "$@" --cwd-file="$tmp"
+    IFS= read -r -d '' cwd <"$tmp"
+    [[ -n "$cwd" ]] && [[ "$cwd" != "$PWD" ]] && builtin cd -- "$cwd" || return
+    rm -f -- "$tmp"
+}
+
+echo "Loaded Terminal Apps"
 
 # ------------------------------------------------------------------ #
 # SYNTAX HIGHLIGHTING (Load at end - cross-platform)
