@@ -189,7 +189,7 @@ Edit `/etc/zsh/zshenv` with `export ZSHDOTDIR="$HOME/.config/zsh"`
 ### System Installs
 
 ```bash
-sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git
+sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git luarocks
 # stuff for yazi
 sudo apt install ffmpeg 7zip jq poppler-utils imagemagick chafa
 # for fd need to make a symlink
@@ -266,6 +266,9 @@ uv tool install codespell
 cargo install --locked tree-sitter-cli
 npm install -g markdownlint-cli
 uv tool install mypy
+uv tool install mdformat
+uv tool install sqlfluff
+npm install -g prettier
 ```
 
 ### Clone dotfiles and install (WSL)
