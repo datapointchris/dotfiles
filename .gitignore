@@ -1,4 +1,4 @@
-# File created using '.gitignore Generator' for Visual Studio Code: https://bit.ly/vscode-gig
+
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,macos,jupyternotebooks,intellij,scala
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,python,macos,jupyternotebooks,intellij,scala
 
@@ -366,3 +366,4 @@ TESTING.*
 .env
 **/tmux/plugins/*
 **/.zcompdump*
+.git-credentials
