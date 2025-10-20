@@ -1,1 +1,1 @@
-/home/chris/dotfiles/shared/.config/zsh/prompt.zsh
+/Users/chris/dotfiles/shared/.config/zsh/prompt.zsh
