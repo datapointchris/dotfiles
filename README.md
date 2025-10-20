@@ -234,6 +234,14 @@ sudo mv target/release/yazi target/release/ya /usr/local/bin
 Install imagemagick from source:
 <https://imagemagick.org/script/install-source.php>
 
+#### LazyGit has to be installed manually
+
+```bash
+LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
+curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+tar xf lazygit.tar.gz lazygit
+sudo install lazygit -D -t /usr/local/bin/
+```
 ### Set zsh as default shell (WSL)
 
 `chsh -s $(which zsh)`
@@ -251,6 +259,13 @@ git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.config/zsh
 # Install git-open manually (cross-platform compatibility)
 git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
 chmod +x ~/.config/zsh/plugins/git-open/git-open
+```
+
+```bash
+uv tool install codespell
+cargo install --locked tree-sitter-cli
+npm install -g markdownlint-cli
+uv tool install mypy
 ```
 
 ### Clone dotfiles and install (WSL)
