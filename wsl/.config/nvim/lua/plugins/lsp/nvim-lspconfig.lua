@@ -6,14 +6,6 @@ return {
     'williamboman/mason-lspconfig.nvim',
     'WhoIsSethDaniel/mason-tool-installer.nvim',
     'hrsh7th/cmp-nvim-lsp',
-    {
-      'antosha417/nvim-lsp-file-operations',
-      dependencies = {
-        'nvim-lua/plenary.nvim',
-        'nvim-neo-tree/neo-tree.nvim',
-      },
-      config = function() require('lsp-file-operations').setup() end,
-    },
   },
   config = function()
     local capabilities = vim.lsp.protocol.make_client_capabilities()
