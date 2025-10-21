@@ -3,7 +3,7 @@
 Modern, cross-platform dotfiles configuration featuring:
 
 - **Shared Configuration Architecture**: DRY configuration with platform-specific customizations
-- Standalone zsh setup with custom prompt and Nerd Font icons  
+- Standalone zsh setup with custom prompt and Nerd Font icons
 - Smart directory navigation with zoxide
 - Enhanced command-line tools (fzf, fd, eza, bat, yazi)
 - Cross-platform compatibility (macOS, Ubuntu WSL, Arch Linux)
@@ -14,7 +14,7 @@ This dotfiles setup uses a **shared configuration** approach:
 
 - `shared/` - Common configuration files used across all platforms
 - `macos/` - macOS-specific configurations and symlinks
-- `wsl/` - WSL-specific configurations and symlinks  
+- `wsl/` - WSL-specific configurations and symlinks
 - `ubuntu/` - Ubuntu-specific configurations and symlinks
 
 Key shared files are symlinked from platform directories to maintain DRY principles while allowing platform-specific customizations.
@@ -110,7 +110,7 @@ The configuration uses a dynamic symlink system that automatically discovers all
 The script automatically:
 
 - Finds all files in `shared/` directory structure
-- Creates corresponding directory structure in `macos/` and `wsl/`  
+- Creates corresponding directory structure in `macos/` and `wsl/`
 - Uses `ln -sf` to create symlinks for each file
 - Handles any future additions to `shared/` automatically
 
@@ -279,9 +279,14 @@ npm install -g @fsouza/prettierd
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-stow wsl
-# delete or move any conflicting files
 ```
+
+### Set Up Clipboard for Windows Integration
+
+Use the clipboard info in neovim options.
+Download `win32yank.exe` the 64 bit version!
+Put in `/usr/local/bin/win32yank.exe` on WSL
+make sure to `chmod +x /usr/local/bin/win32yank.exe`
 
 ## Arch Linux Installation
 
