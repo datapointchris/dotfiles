@@ -45,20 +45,18 @@ vim.opt.undofile = true
 -- Enable mouse support in all modes
 vim.opt.mouse = 'a'
 
--- Use the system clipboard
--- vim.opt.clipboard = 'unnamedplus'
--- vim.g.clipboard = 'unnamedplus'
-
+-- HOORAY! This is working on WSL2 using Ubuntu 24.04 and Windows 11 (2025-10-21)
 vim.g.clipboard = {
   name = 'win32yank-wsl',
   copy = {
-    ['+'] = 'win32yank.exe -i',
-    ['*'] = 'win32yank.exe -i',
+    ['+'] = 'win32yank.exe -i --crlf',
+    ['*'] = 'win32yank.exe -i --crlf',
   },
   paste = {
-    ['+'] = 'win32yank.exe -o',
-    ['*'] = 'win32yank.exe -o',
+    ['+'] = 'win32yank.exe -o --lf',
+    ['*'] = 'win32yank.exe -o --lf',
   },
+  cache_enable = 0,
 }
 vim.opt.clipboard = 'unnamedplus'
 
