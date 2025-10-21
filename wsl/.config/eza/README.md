@@ -1,1 +1,1 @@
-/home/chris/dotfiles/shared/.config/eza/README.md
+/Users/chris/dotfiles/shared/.config/eza/README.md
