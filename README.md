@@ -231,6 +231,10 @@ git clone https://github.com/sxyazi/yazi.git
 cd yazi
 cargo build --release --locked
 sudo mv target/release/yazi target/release/ya /usr/local/bin
+# !!! Important !!!
+# Must now install yazi from snap, yazi is broken from cargo
+# but cargo needed to get ya to install the themes
+sudo snap install yazi --classic
 ```
 
 Install imagemagick from source:

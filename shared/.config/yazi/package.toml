@@ -4,29 +4,29 @@ deps = []
 [[flavor.deps]]
 use = "BennyOe/tokyo-night"
 rev = "5f56364"
-hash = "c0bf69ad2c44005892d586e9693993c6"
+hash = "ea25e1f0f25b0521ef78fd4e9698ff52"
 
 [[flavor.deps]]
 use = "dangooddd/kanagawa"
 rev = "a0b1d9d"
-hash = "abfb0b2371259b2c8adfc7b617c3d7e5"
+hash = "b33673cdc5d3d68b478085e3e06182d9"
 
 [[flavor.deps]]
 use = "bennyyip/gruvbox-dark"
 rev = "e5e1aef"
-hash = "eb88137cf13a796225254344bf6def2c"
+hash = "29c773d60c0f6808aef630287c6c0a71"
 
 [[flavor.deps]]
 use = "kmlupreti/ayu-dark"
 rev = "648a178"
-hash = "1a8af82f6246942bd700316a16c4e14a"
+hash = "97124aae31cd2a5cae41c93f804996a5"
 
 [[flavor.deps]]
 use = "Chromium-3-Oxide/everforest-medium"
 rev = "0158f0f"
-hash = "dbbbfe681e156c28303efb1f44b6cbc4"
+hash = "a7c36abf0b13289aceb1c20a17c6a63e"
 
 [[flavor.deps]]
 use = "gosxrgxx/flexoki-dark"
 rev = "28e1977"
-hash = "9dbbb64ea20f9f1271c31951dea55c7b"
+hash = "bc4620db89cf55bd91906c239f8fa1a8"
