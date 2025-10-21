@@ -239,6 +239,7 @@ else
     # Linux/WSL specific paths
     add_path "/snap/bin"
     add_path "/opt/nvim"
+    add_path "/usr/local/go/bin"
     :
 fi
 
