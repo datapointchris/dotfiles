@@ -189,7 +189,9 @@ Edit `/etc/zsh/zshenv` with `export ZSHDOTDIR="$HOME/.config/zsh"`
 ### System Installs
 
 ```bash
-sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git luarocks
+sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git luarocks bat
+# bat installed as batcat
+ln -s /usr/bin/batcat ~/.local/bin/bat
 # stuff for yazi
 sudo apt install ffmpeg 7zip jq poppler-utils imagemagick chafa
 # for fd need to make a symlink
@@ -204,7 +206,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 
 # Install via cargo
-cargo install zoxide eza bat
+cargo install zoxide eza
 ```
 
 #### fzf needs to be installed and updated manually
