@@ -1,1 +1,1 @@
-/Users/chris/dotfiles/shared/.config/tmux/keybindings.sh
+/home/chris/dotfiles/shared/.config/tmux/keybindings.sh
