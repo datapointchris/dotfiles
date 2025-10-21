@@ -8,6 +8,7 @@
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
 DEBUG=1
+local check=" ✔️"
 # Enable extended globbing, parameter expansion, command substitution, and arithmetic expansion
 setopt EXTENDED_GLOB
 setopt PROMPT_SUBST
@@ -31,6 +32,7 @@ bindkey "^[[B" down-line-or-beginning-search  # Down arrow
 
 # Create history directory if it doesn't exist
 [[ ! -d "$HOME/.local/state/zsh" ]] && mkdir -p "$HOME/.local/state/zsh"
+echo "$check History Search"
 
 # ------------------------------------------------------------------ #
 # GENERAL SETTINGS
@@ -73,6 +75,7 @@ export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
+echo "$check XDG directories"
 
 # ------------------------------------------------------------------ #
 # COMPLETIONS
@@ -105,7 +108,7 @@ if command -v terraform >/dev/null 2>&1; then
     complete -o nospace -C terraform terraform
 fi
 
-echo "Loaded Completions"
+echo "$check Completions"
 
 # ------------------------------------------------------------------ #
 # PROMPT AND THEME
@@ -113,7 +116,7 @@ echo "Loaded Completions"
 # Load prompt configuration from separate file
 source "$HOME/.config/zsh/prompt.zsh"
 
-echo "Loaded Prompt"
+echo "$check Prompt"
 
 # ------------------------------------------------------------------ #
 # OH-MY-ZSH PLUGIN REPLACEMENTS (Cross-Platform)
@@ -161,7 +164,7 @@ if [[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]]; then
     export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
 fi
 
-echo "Loaded Plugins"
+echo "$check Plugins"
 # ================================================================== #
 
 # ------------------------------------------------------------------ #
@@ -181,7 +184,7 @@ source "$SHELLS/colors.sh"
 source "$SHELLS/formatting.sh"
 source "$SHELLS/functions.sh"
 
-echo "Sourced Shells"
+echo "$check Shells"
 # ------------------------------------------------------------------- #
 # PATH AND ENVIRONMENT SETUP (Platform-Specific)
 # ------------------------------------------------------------------- #
@@ -242,7 +245,7 @@ fi
 add_path "/usr/local/sbin"
 add_path "/usr/local/bin"
 
-echo "Added Paths"
+echo "$check Paths"
 
 # ------------------------------------------------------------------ #
 # TERMINAL APPS
@@ -295,22 +298,15 @@ function y() {
     rm -f -- "$tmp"
 }
 
-echo "Loaded Terminal Apps"
+echo "$check Terminal Apps"
 
 # ------------------------------------------------------------------ #
 # SYNTAX HIGHLIGHTING (Load at end - cross-platform)
 # ------------------------------------------------------------------ #
-# Try package manager installations first, then manual plugins
-if [[ -f "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    # macOS Homebrew location
-    source "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-elif [[ -f "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    # Ubuntu/Debian APT location
-    source "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-elif [[ -f "/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    # Arch Linux location
-    source "/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-elif [[ -f "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    # Manual installation fallback
-    source "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+ZSH_HIGHLIGHT_PATH="/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
+    source $ZSH_HIGHLIGHT_PATH
+    echo "$check ZSH Syntax Highlighting"
+else
+    echo "Could not find zsh syntax highlighting at $ZSH_HIGHLIGHT_PATH"
 fi

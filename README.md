@@ -82,9 +82,9 @@ This dotfiles setup uses a powerful `symlinks` script that replaces GNU Stow ent
 
 Before installing, ensure you have these dependencies:
 
-**Core Tools:** zsh, git, Nerd Font  
-**Enhanced CLI:** zoxide, fzf, fd, eza, bat, ripgrep, delta  
-**ZSH Plugins:** zsh-syntax-highlighting, git-open  
+**Core Tools:** zsh, git, Nerd Font\
+**Enhanced CLI:** zoxide, fzf, fd, eza, bat, ripgrep, delta\
+**ZSH Plugins:** zsh-syntax-highlighting, git-open\
 **Optional:** yazi, tmux, nvim, gh
 
 ## Manual Setup
@@ -119,7 +119,7 @@ The script automatically:
 To add new shared configuration:
 
 1. Place files in the appropriate `shared/` subdirectory
-2. Run `./setup-symlinks.sh recreate` to update all symlinks
+1. Run `./setup-symlinks.sh recreate` to update all symlinks
 
 The script will automatically detect and symlink any new files.
 
@@ -189,7 +189,7 @@ Edit `/etc/zsh/zshenv` with `export ZSHDOTDIR="$HOME/.config/zsh"`
 ### System Installs
 
 ```bash
-sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git luarocks bat
+sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git luarocks bat zsh-syntax-highlighting
 # bat installed as batcat
 ln -s /usr/bin/batcat ~/.local/bin/bat
 # stuff for yazi
@@ -212,13 +212,13 @@ cargo install zoxide eza
 #### fzf needs to be installed and updated manually
 
 1. Download the latest `.zip` release from github and extract
-2. Go must be installed, download the linux 386 or whatever `.tar.gz` archive
+1. Go must be installed, download the linux 386 or whatever `.tar.gz` archive
    `sudo rm -rf /usr/local/go`
    `sudo tar -C /usr/local -xzf go1.25.2.linux-386.tar.gz`
-3. Make sure that go is in the path
+1. Make sure that go is in the path
    `export PATH=$PATH:/usr/local/go/bin`
-4. cd into fzf unzipped directory and `make` then `sudo make install`
-5. If it does not install right `sudo cp -f target/fzf-linux_amd64 /bin/fzf`
+1. cd into fzf unzipped directory and `make` then `sudo make install`
+1. If it does not install right `sudo cp -f target/fzf-linux_amd64 /bin/fzf`
 
 #### yazi has to be installed manually
 
@@ -244,6 +244,7 @@ curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/downl
 tar xf lazygit.tar.gz lazygit
 sudo install lazygit -D -t /usr/local/bin/
 ```
+
 ### Set zsh as default shell (WSL)
 
 `chsh -s $(which zsh)`
@@ -267,6 +268,7 @@ chmod +x ~/.config/zsh/plugins/git-open/git-open
 uv tool install codespell
 cargo install --locked tree-sitter-cli
 npm install -g markdownlint-cli
+uv tool install ruff
 uv tool install mypy
 uv tool install mdformat
 uv tool install sqlfluff
