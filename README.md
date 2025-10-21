@@ -269,6 +269,7 @@ uv tool install mypy
 uv tool install mdformat
 uv tool install sqlfluff
 npm install -g prettier
+npm install -g @fsouza/prettierd
 ```
 
 ### Clone dotfiles and install (WSL)
