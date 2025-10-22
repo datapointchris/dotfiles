@@ -47,22 +47,23 @@ vim.keymap.set('n', '<cmd>lp', '<cmd>lprev<CR>zz', { desc = 'Navigate location p
 ----------------------------------------
 --- QUITTING -------------------------------
 ----------------------------------------
-vim.keymap.set('n', '<leader>qq', ':q<CR>', { noremap = true, silent = true, desc = 'Quit' })
-vim.keymap.set('n', '<leader>qa', ':qa<CR>', { noremap = true, silent = true, desc = 'Quit all' })
-vim.keymap.set('n', '<leader>qs', ':wq<CR>', { noremap = true, silent = true, desc = 'Save and Quit' })
-vim.keymap.set('n', '<leader>qx', ':wqa<CR>', { noremap = true, silent = true, desc = 'Save All and Quit' })
-vim.keymap.set('n', '<leader>qQ', ':q!<CR>', { noremap = true, silent = true, desc = 'Quit without saving' })
-vim.keymap.set('n', '<leader>QQ', ':qa!<CR>', { noremap = true, silent = true, desc = 'Quit All without saving' })
+vim.keymap.set('n', '<leader>qq', ':q<CR>', { noremap = true, silent = true, desc = 'Quit: Current buffer' })
+vim.keymap.set('n', '<leader>qa', ':qa<CR>', { noremap = true, silent = true, desc = 'Quit: All buffers' })
+vim.keymap.set('n', '<leader>qs', ':wq<CR>', { noremap = true, silent = true, desc = 'Quit: Save and quit' })
+vim.keymap.set('n', '<leader>qx', ':wqa<CR>', { noremap = true, silent = true, desc = 'Quit: Save all and quit' })
+vim.keymap.set('n', '<leader>qQ', ':q!<CR>', { noremap = true, silent = true, desc = 'Quit: Force quit (no save)' })
+vim.keymap.set('n', '<leader>QQ', ':qa!<CR>', { noremap = true, silent = true, desc = 'Quit: Force quit all (no save)' })
 
 ----------------------------------------
 --- TABS -------------------------------
 ----------------------------------------
 -- VSCode handles tabs natively, these conflict with VSCode tab navigation
+-- Fixed: Moved 'te' and 'tw' to leader keys to avoid shadowing 't' motion
 if not vim.g.vscode then
-  vim.keymap.set('n', 'te', ':tabedit', { desc = 'Tab edit' })
+  vim.keymap.set('n', '<leader>te', ':tabedit', { desc = 'Tab edit' })
+  vim.keymap.set('n', '<leader>tw', ':tabclose<Return>', { desc = 'Tab close', silent = true })
   vim.keymap.set('n', '<tab>', ':tabnext<Return>', { desc = 'Tab next', silent = true })
   vim.keymap.set('n', '<s-tab>', ':tabprev<Return>', { desc = 'Tab previous', silent = true })
-  vim.keymap.set('n', 'tw', ':tabclose<Return>', { desc = 'Tab close', silent = true })
 end
 
 ----------------------------------------
@@ -103,40 +104,83 @@ if not vim.g.vscode then
 end
 
 ---------------------------------------------------------------------------------
---- CodeCompanion ---------------------------------------------------------------
+--- CodeCompanion - Supercharged AI Assistant & Inline Search Engine ----------
 ---------------------------------------------------------------------------------
 -- VSCode has native copilot integration
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>cca', '<cmd>CodeCompanion<CR>', { desc = 'CodeCompanion: Inline Chat' })
-  vim.keymap.set('n', '<leader>ccc', '<cmd>CodeCompanionChat<CR>', { desc = 'CodeCompanion: Chat Buffer' })
-  vim.keymap.set('n', '<leader>ccA', '<cmd>CodeCompanionActions<CR>', { desc = 'CodeCompanion: Actions' })
+  -- Core quick access - like turbocharged autocomplete
+  vim.keymap.set({ 'n', 'v' }, '<C-a>', '<cmd>CodeCompanionActions<cr>', { desc = 'AI Action Palette' })
+  vim.keymap.set({ 'n', 'v' }, '<leader>a', '<cmd>CodeCompanionChat Toggle<cr>', { desc = 'Toggle AI Chat' })
+  vim.keymap.set('v', 'ga', '<cmd>CodeCompanionChat Add<cr>', { desc = 'Add to AI Chat' })
+
+  -- Inline assistant - supercharged smart autocomplete
+  vim.keymap.set('n', '<leader>cc', '<cmd>CodeCompanion<cr>', { desc = 'AI Inline Assistant' })
+  vim.keymap.set('v', '<leader>cc', '<cmd>CodeCompanion<cr>', { desc = 'AI Process Selection' })
+
+  -- Quick prompts - instant smart help
+  vim.keymap.set({ 'n', 'v' }, '<leader>ce', '<cmd>CodeCompanion /explain<cr>', { desc = 'AI Explain' })
+  vim.keymap.set({ 'n', 'v' }, '<leader>cf', '<cmd>CodeCompanion /fix<cr>', { desc = 'AI Fix' })
+  vim.keymap.set({ 'n', 'v' }, '<leader>co', '<cmd>CodeCompanion /optimize<cr>', { desc = 'AI Optimize' })
+  vim.keymap.set({ 'n', 'v' }, '<leader>ct', '<cmd>CodeCompanion /tests<cr>', { desc = 'AI Generate Tests' })
+  vim.keymap.set({ 'n', 'v' }, '<leader>cd', '<cmd>CodeCompanion /lsp<cr>', { desc = 'AI Explain Diagnostics' })
+
+  -- Quick web search - supercharged inline search engine
+  vim.keymap.set('n', '<leader>cw', function()
+    local word = vim.fn.expand('<cword>')
+    vim.cmd('CodeCompanionChat @web_search query="' .. word .. '"')
+  end, { desc = 'AI Web Search Word' })
+
+  vim.keymap.set('v', '<leader>cw', function()
+    -- Get visual selection
+    vim.cmd('normal! "vy')
+    local text = vim.fn.getreg('v')
+    vim.cmd('CodeCompanionChat @web_search query="' .. text .. '"')
+  end, { desc = 'AI Web Search Selection' })
+
+  -- Quick code search
+  vim.keymap.set('n', '<leader>cs', function()
+    local word = vim.fn.expand('<cword>')
+    vim.cmd('CodeCompanionChat @quick_search pattern="' .. word .. '"')
+  end, { desc = 'AI Quick Code Search' })
+
+  -- Repository context commands
+  vim.keymap.set('n', '<leader>cr', '<cmd>CodeCompanionChat /repo<cr>', { desc = 'AI Repository Overview' })
+
+  -- Command expansions for super quick access
+  vim.cmd([[cab cc CodeCompanion]])
+  vim.cmd([[cab ccc CodeCompanionChat]])
+  vim.cmd([[cab cca CodeCompanionActions]])
 end
 
 --------------------------------------------------------------------------------
---- NeoTree --------------------------------------------------------------------
---------------------------------------------------------------------------------
--- VSCode has native file explorer, NeoTree is Neovim-specific
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>tt', ':Neotree filesystem toggle right<CR>', { desc = 'Toggle file tree' })
-  vim.keymap.set('n', '<leader>tf', ':Neotree focus right<CR>', { desc = 'Toggle file tree' })
-  vim.keymap.set('n', '<leader>tg', ':Neotree float git_status<CR>', { desc = 'Toggle file tree' })
-end
-
---------------------------------------------------------------------------------
---- nvim-lspconfig -------------------------------------------------------------
+--- LSP - Native Neovim 0.11+ LSP Keymaps -------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode handles LSP natively, these mappings are replaced by VSCode keybindings
 if not vim.g.vscode then
+  -- NOTE: Neovim 0.11+ provides these DEFAULT keymaps automatically:
+  -- gra → vim.lsp.buf.code_action() (Normal & Visual)
+  -- gri → vim.lsp.buf.implementation()
+  -- grn → vim.lsp.buf.rename()
+  -- grr → vim.lsp.buf.references()
+  -- grt → vim.lsp.buf.type_definition()
+  -- gO  → vim.lsp.buf.document_symbol()
+  -- K   → vim.lsp.buf.hover() (unless keywordprg is set)
+  -- <C-S> (insert) → vim.lsp.buf.signature_help()
+  -- omnifunc → <C-X><C-O> for completion
+  -- tagfunc → <C-]>, <C-W>], <C-W>} for go-to-definition
+  -- formatexpr → gq for formatting
+
+  -- Additional Telescope-based LSP commands using non-conflicting keys
   local tb = require('telescope.builtin')
-  vim.keymap.set('n', 'gd', tb.lsp_definitions, { silent = true, desc = '[G]oto [D]efinition' })
-  vim.keymap.set('n', 'gr', tb.lsp_references, { silent = true, desc = '[G]oto [R]eferences' })
-  vim.keymap.set('n', 'gI', tb.lsp_implementations, { silent = true, desc = '[G]oto [I]mplementation' })
-  vim.keymap.set('n', '<leader>D', tb.lsp_type_definitions, { silent = true, desc = 'Type [D]efinition' })
-  vim.keymap.set('n', '<leader>ds', tb.lsp_document_symbols, { silent = true, desc = '[D]ocument [S]ymbols' })
-  vim.keymap.set('n', '<leader>ws', tb.lsp_dynamic_workspace_symbols, { silent = true, desc = '[W]orkspace [S]ymbols' })
-  vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, { silent = true, desc = '[R]e[n]ame' })
-  vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, { silent = true, desc = '[G]oto [D]eclaration' })
-  vim.keymap.set({ 'n', 'x' }, '<leader>ca', vim.lsp.buf.code_action, { silent = true, desc = '[C]ode [A]ction' })
+  vim.keymap.set('n', '<leader>ld', tb.lsp_definitions, { silent = true, desc = 'Telescope: [L]SP [D]efinitions' })
+  vim.keymap.set('n', '<leader>lr', tb.lsp_references, { silent = true, desc = 'Telescope: [L]SP [R]eferences' })
+  vim.keymap.set('n', '<leader>li', tb.lsp_implementations, { silent = true, desc = 'Telescope: [L]SP [I]mplementations' })
+  vim.keymap.set('n', '<leader>lt', tb.lsp_type_definitions, { silent = true, desc = 'Telescope: [L]SP [T]ype Definitions' })
+  vim.keymap.set('n', '<leader>ds', tb.lsp_document_symbols, { silent = true, desc = 'Telescope: [D]ocument [S]ymbols' })
+  vim.keymap.set('n', '<leader>ws', tb.lsp_dynamic_workspace_symbols, { silent = true, desc = 'Telescope: [W]orkspace [S]ymbols' })
+
+  -- Declaration is not provided by default, so we add it manually
+  vim.keymap.set('n', '<leader>gD', vim.lsp.buf.declaration, { silent = true, desc = '[G]oto [D]eclaration' })
 end
 
 --------------------------------------------------------------------------------
@@ -237,23 +281,23 @@ if not vim.g.vscode then
     })
   end
   local tb = require('telescope.builtin')
-  vim.keymap.set('n', '<leader>ff', tb.find_files, { desc = 'Find files' })
-  vim.keymap.set('n', '<leader>fg', tb.live_grep, { desc = 'Live grep' })
-  vim.keymap.set('n', '<leader>fb', tb.buffers, { desc = 'Buffers' })
-  vim.keymap.set('n', '<leader>fh', tb.help_tags, { desc = 'Help tags' })
-  vim.keymap.set('n', '<leader>fc', tb.commands, { desc = 'Commands' })
-  vim.keymap.set('n', '<leader>fr', tb.registers, { desc = 'Registers' })
-  vim.keymap.set('n', '<leader>fq', tb.quickfix, { desc = 'Quickfix' })
-  vim.keymap.set('n', '<leader>fl', tb.loclist, { desc = 'Location list' })
-  vim.keymap.set('n', '<leader>fs', tb.lsp_document_symbols, { desc = 'LSP document symbols' })
-  vim.keymap.set('n', '<leader>fk', tb.keymaps, { desc = 'Keymaps' })
-  vim.keymap.set('n', '<leader>ft', tb.treesitter, { desc = 'Treesitter' })
-  vim.keymap.set('n', '<leader>fz', filtered_colorschemes, { desc = 'Color scheme picker' })
+  vim.keymap.set('n', '<leader>ff', tb.find_files, { desc = 'Find: Files' })
+  vim.keymap.set('n', '<leader>fg', tb.live_grep, { desc = 'Find: Live grep' })
+  vim.keymap.set('n', '<leader>fb', tb.buffers, { desc = 'Find: Buffers' })
+  vim.keymap.set('n', '<leader>fh', tb.help_tags, { desc = 'Find: Help tags' })
+  vim.keymap.set('n', '<leader>fc', tb.commands, { desc = 'Find: Commands' })
+  vim.keymap.set('n', '<leader>fr', tb.registers, { desc = 'Find: Registers' })
+  vim.keymap.set('n', '<leader>fq', tb.quickfix, { desc = 'Find: Quickfix' })
+  vim.keymap.set('n', '<leader>fl', tb.loclist, { desc = 'Find: Location list' })
+  vim.keymap.set('n', '<leader>fs', tb.lsp_document_symbols, { desc = 'Find: Document symbols' })
+  vim.keymap.set('n', '<leader>fk', tb.keymaps, { desc = 'Find: Keymaps' })
+  vim.keymap.set('n', '<leader>ft', tb.treesitter, { desc = 'Find: Treesitter' })
+  vim.keymap.set('n', '<leader>fz', filtered_colorschemes, { desc = 'Find: Colorschemes' })
   vim.keymap.set(
     'n',
     '<leader>fn',
     function() tb.find_files({ cwd = vim.fn.stdpath('config') }) end,
-    { desc = 'Search neovim config files' }
+    { desc = 'Find: Neovim config files' }
   )
 end
 
@@ -293,7 +337,7 @@ end
 --------------------------------------------------------------------------------
 -- Custom workflow system is Neovim-specific
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>hw', function() require('utils.workflows').show_workflow_picker() end, { desc = 'Help: Show workflows' })
-  vim.keymap.set('n', '<leader>hk', function() require('utils.workflows').show_all_keymaps() end, { desc = 'Help: Show all keymaps' })
-  vim.keymap.set('n', '<leader>hh', '<leader>?', { desc = 'Help: Show buffer keymaps (which-key)', remap = true })
+  vim.keymap.set('n', '<leader>hw', function() require('utils.workflows').show_workflow_picker() end, { desc = 'Help: Workflows' })
+  vim.keymap.set('n', '<leader>hk', function() require('utils.workflows').show_all_keymaps() end, { desc = 'Help: All keymaps' })
+  vim.keymap.set('n', '<leader>hh', '<leader>?', { desc = 'Help: Buffer keymaps', remap = true })
 end
