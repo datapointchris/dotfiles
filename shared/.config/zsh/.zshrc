@@ -4,6 +4,7 @@
 # Platform-agnostic configuration sourced by platform-specific configs
 # ================================================================== #
 
+echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
@@ -75,7 +76,7 @@ export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
-echo "$check XDG directories"
+echo "$check XDG Directories"
 
 # ------------------------------------------------------------------ #
 # COMPLETIONS
@@ -311,3 +312,4 @@ if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
 else
     echo "Could not find zsh syntax highlighting at $ZSH_HIGHLIGHT_PATH"
 fi
+
