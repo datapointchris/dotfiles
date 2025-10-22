@@ -72,4 +72,6 @@ vim.o.timeoutlen = 300
 -- Set the timeout length for key code sequences (in milliseconds)
 vim.o.ttimeoutlen = 10
 
+-- nice rounded borders on float windows like hover docs
+vim.o.winborder = 'rounded'
 -- vim.lsp.set_log_level("debug")
