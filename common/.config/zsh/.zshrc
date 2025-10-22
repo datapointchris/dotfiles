@@ -15,19 +15,19 @@ local error=" ❌"
 # Check for .env file and required variables
 if [[ -f "$HOME/.env" ]]; then
     source "$HOME/.env"
-    echo "$check Loaded $HOME/.env"
+    echo "$check Load: $HOME/.env"
 
     # Validate required environment variables
     if [[ -n "$PLATFORM" ]]; then
-        echo "$check   PLATFORM=$PLATFORM"
+        echo "$check    PLATFORM=$PLATFORM"
     else
-        echo "$error  PLATFORM not set in .env"
+        echo "$error    PLATFORM not set in .env"
     fi
 
     if [[ -n "$NVIM_AI_ENABLED" ]]; then
-        echo "$check   NVIM_AI_ENABLED=$NVIM_AI_ENABLED"
+        echo "$check    NVIM_AI_ENABLED=$NVIM_AI_ENABLED"
     else
-        echo "$error   NVIM_AI_ENABLED not set in .env"
+        echo "$error    NVIM_AI_ENABLED not set in .env"
     fi
 else
     echo "$error .env file not found at $HOME/.env"
@@ -60,7 +60,7 @@ bindkey "^[[B" down-line-or-beginning-search  # Down arrow
 
 # Create history directory if it doesn't exist
 [[ ! -d "$HOME/.local/state/zsh" ]] && mkdir -p "$HOME/.local/state/zsh"
-echo "$check History Search"
+echo "$check Setup: History Search"
 
 # ------------------------------------------------------------------ #
 # GENERAL SETTINGS
@@ -103,7 +103,7 @@ export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
-echo "$check XDG Directories"
+echo "$check Setup: XDG Directories"
 
 # ------------------------------------------------------------------ #
 # COMPLETIONS
@@ -136,15 +136,14 @@ if command -v terraform >/dev/null 2>&1; then
     complete -o nospace -C terraform terraform
 fi
 
-echo "$check Completions"
+echo "$check Setup: ZSH Completions"
 
 # ------------------------------------------------------------------ #
 # PROMPT AND THEME
 # ------------------------------------------------------------------ #
 # Load prompt configuration from separate file
 source "$HOME/.config/zsh/prompt.zsh"
-
-echo "$check Prompt"
+echo "$check Load: $HOME/.config/zsh/prompt.zsh"
 
 # ------------------------------------------------------------------ #
 # OH-MY-ZSH PLUGIN REPLACEMENTS (Cross-Platform)
@@ -192,7 +191,7 @@ if [[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]]; then
     export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
 fi
 
-echo "$check Plugins"
+echo "$check Load: $ZSH_PLUGINS_DIR"
 # ================================================================== #
 
 # ------------------------------------------------------------------ #
@@ -202,16 +201,22 @@ echo "$check Plugins"
 # Platform-specific shell integrations
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS specific
-    [[ -f "$HOME/.iterm2_shell_integration.zsh" ]] && source "$HOME/.iterm2_shell_integration.zsh"
+    iterm2_shell_integration="$HOME/.iterm2_shell_integration.zsh"
+    [[ -f $iterm2_shell_integration ]] && source $iterm2_shell_integration && echo "$check Load: $iterm2_shell_integration"
 fi
 
 SHELLS="$HOME/.shell"
-source "$SHELLS/aliases.sh"
 source "$SHELLS/colors.sh"
 source "$SHELLS/formatting.sh"
-source "$SHELLS/functions.sh"
 
-echo "$check Shells"
+source "$SHELLS/aliases.sh"
+echo "$check Load: $SHELLS/aliases.sh"
+[[ -f "$SHELLS/$PLATFORM-aliases.sh" ]] && source "$SHELLS/$PLATFORM-aliases.sh" && echo "$check Load: $SHELLS/$PLATFORM-aliases.sh"
+
+source "$SHELLS/functions.sh"
+echo "$check Load: $SHELLS/functions.sh"
+[[ -f "$SHELLS/$PLATFORM-functions.sh" ]] && source "$SHELLS/$PLATFORM-functions.sh" && echo "$check Load: $SHELLS/$PLATFORM-functions.sh"
+
 # ------------------------------------------------------------------- #
 # PATH AND ENVIRONMENT SETUP (Platform-Specific)
 # ------------------------------------------------------------------- #
@@ -273,7 +278,7 @@ fi
 add_path "/usr/local/sbin"
 add_path "/usr/local/bin"
 
-echo "$check Paths"
+echo "$check Load: Paths"
 
 # ------------------------------------------------------------------ #
 # TERMINAL APPS
@@ -326,7 +331,7 @@ function y() {
     rm -f -- "$tmp"
 }
 
-echo "$check Terminal Apps"
+echo "$check Setup: Terminal Apps"
 
 # ------------------------------------------------------------------ #
 # SYNTAX HIGHLIGHTING (Load at end - cross-platform)
@@ -334,13 +339,15 @@ echo "$check Terminal Apps"
 # Check common paths for different systems
 if [[ -f "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
     source "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    echo "$check ZSH Syntax Highlighting (Linux)"
+    echo "$check Load: /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh (Linux)"
 elif [[ -f "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
     source "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    echo "$check ZSH Syntax Highlighting (macOS Homebrew)"
+    echo "$check Load: /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh (macOS Homebrew)"
 elif [[ -f "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
     source "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    echo "$check ZSH Syntax Highlighting (macOS Intel Homebrew)"
+    echo "$check Load: /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh (macOS Intel Homebrew)"
 else
     echo "Could not find zsh syntax highlighting (checked Linux, macOS Homebrew paths)"
 fi
+
+echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"

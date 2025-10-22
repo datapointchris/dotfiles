@@ -13,17 +13,10 @@ alias sudo='sudo '
 # Repeat the last command with sudo prefixed
 alias please='sudo $(fc -ln -1)'
 
-# Copy the last command to the OS clipboard
-alias copycommand='fc -ln -1 | pbcopy'
-
 # Move all files and folders including hidden to parent directory
 alias move_all_to_parent='find . -maxdepth 1 -exec mv {} .. \;'
 
-# SnowSQL command
-alias snowsql='/Applications/SnowSQL.app/Contents/MacOS/snowsql'
 
-# Terraform force-unlock with ID from plan
-alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&1 | grep "ID: " | awk "{print \$NF}")'
 
 # ---------- Directory Navigation ---------- #
 
@@ -36,11 +29,7 @@ alias ....='z ../../..'
 alias dl='z $HOME/Downloads'
 alias dt='z $HOME/Desktop'
 
-alias icloud="z ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
-
-alias docs='z $HOME/code/docs'
 alias dots='z $HOME/dotfiles'
-alias icb='ichrisbirch'
 alias nconf='z $HOME/.config/nvim'
 
 # ---------- List / Display ---------- #
@@ -77,18 +66,7 @@ alias log='less +G'
 # Command: find all of type file, show file type, search for text, split on ':', take first column (file absolute path), invert match of files ending in numbers, tail the remaining files
 alias varlogs="find /var/log -type f -exec file {} \; | grep 'text' | gcut -d ':' -f1 | grep -v '[0-9]$' | xargs tail -f"
 
-# Show nginx logs (brew installed)
-alias nlog="tail -f /usr/local/var/log/nginx/error.log"
-
-# Show supervisor logs (brew installed)
-alias suplog="tail -f -n 20 /usr/local/var/log/supervisor/supervisord.log"
-
-alias locallogs="z /usr/local/var/log; ls -l"
-
 # ---------- Operations ---------- #
-
-# Start Github Issues Flask Server
-alias issues='$HOME/code/python-projects/github-issues/.venv/bin/python $HOME/code/python-projects/github-issues/github_issues/main.py'
 
 # Check the python version and location
 alias checkpython='python -V && which python'
@@ -96,20 +74,8 @@ alias checkpython='python -V && which python'
 # Make new Python virtual environment
 alias makevenv='python -m venv .venv'
 
-# Reset JAVA_HOME after changing with jenv
-alias jenv-set-java-home='export JAVA_HOME="$HOME/.jenv/versions/`jenv version-name`"'
-
 # Run pre-commit on all files in project
 alias pca='pre-commit run --all-files'
-
-# Reload audio driver
-alias reload-audio='sudo killall coreaudiod'
-
-# Trim new lines and copy to clipboard
-alias copytoclip="tr -d '\n' | pbcopy"
-
-# Recursively delete `.DS_Store` files
-alias delete-ds-store="find . -type f -name '*.DS_Store' -ls -delete"
 
 # Recursively delete __pycache__ files
 alias remove-pycache="find . -name '__pycache__' -type d -exec rm -rf {} +"
@@ -124,39 +90,13 @@ alias chromekill="ps ux | grep '[C]hrome Helper --type=renderer' | grep -v exten
 # Reload the shell
 alias reload='exec $SHELL'
 
-# Reload local nginx and supervisor
-alias reload-dev='sudo nginx -s reload && sudo supervisorctl reload'
-
 # Reload DNS
 alias reload-dns="dscacheutil -flushcache && sudo killall -HUP mDNSResponder"
 
 # Watch listening ports for changes
 alias watchports='watch -n 1 -d lsof -iTCP -sTCP:LISTEN -n -P'
 
-# Symlink /etc/hosts to etc.hosts
-alias symlink-hosts='sudo ln -sf $HOME/etc.hosts /etc/hosts'
-
-# ---------- Network ---------- #
-
-alias sshmbp='ssh chris@$mbp'
-alias sshmacmini='ssh chris@$macmini'
-alias sshgreenpi='ssh chris@$greenpi'
-alias sshpython='ssh chris@$python'
-alias sshichrisbirch='ssh -t -o StrictHostKeyChecking=no -i ~/.ssh/ichrisbirch-webserver.pem ubuntu@18.117.41.228'
-
 # ---------- Miscellaneous ---------- #
-
-# Audio control for greenpi
-alias pausepi="ssh chris@192.168.10.40 'pacmd suspend 1'"
-alias playpi="ssh chris@192.168.10.40 'pacmd suspend 0'"
-
-# Copy shrug to clipboard
-alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
-
-# ---------- AWS ---------- #
-
-# Source aws-profiles script to set profile (must be sourced for environment variables to persist)
-alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
 
 # ---------- Git ---------- #
 

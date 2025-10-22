@@ -7,133 +7,11 @@
 SHELLS="$HOME/.shell"
 source "$SHELLS/colors.sh"
 
-#@openhands
-#--> Run the openhands docker container
-function openhands() {
-  local code_dir="$HOME/code"
-  local default_repo="ichrisbirch"
-  if [ -n "$1" ]; then
-    repo="$1"
-  else
-    repo="$default_repo"
-  fi
-  export WORKSPACE_BASE="$code_dir/$repo"
-
-  echo "Using $(color_blue "$WORKSPACE_BASE") as workspace base"
-
-  docker run -it --rm --pull=always \
-    -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.all-hands.dev/all-hands-ai/runtime:0.32-nikolaik \
-    -e SANDBOX_USER_ID="$(id -u)" \
-    -e WORKSPACE_MOUNT_PATH="$WORKSPACE_BASE" \
-    -v "$WORKSPACE_BASE:/opt/workspace_base" \
-    -e LOG_ALL_EVENTS=true \
-    -e LLM_NUM_RETRIES=5 \
-    -e LLM_RETRY_MIN_WAIT=30 \
-    -e LLM_RETRY_MAX_WAIT=150 \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.openhands-state:/.openhands-state \
-    -p 3000:3000 \
-    --add-host host.docker.internal:host-gateway \
-    --name openhands-app \
-    docker.all-hands.dev/all-hands-ai/openhands:0.32
-}
-
 #@ubuntu-docker
 #--> Make a new Ubuntu Docker container and ssh into it
 function ubuntu-docker() {
   container_id=$(docker run -itd ubuntu)
   docker exec -it "$container_id" bash
-}
-
-#@virtubuntu
-#--> Make an Ubuntu virtual machine with multipass, provide optional name
-function virtubuntu() {
-  local name=${1:-ubu}
-  multipass launch --name "$name" --disk 30G --memory 24G --cpus 12
-
-  multipass exec "$name" -- mkdir .aws
-  multipass transfer ~/.aws/config "$name":.aws/config
-  multipass transfer ~/.aws/credentials "$name":.aws/credentials
-  multipass shell "$name"
-}
-
-#@ephemeral-ec2
-#--> Create an ephemeral ec2 instance and ssh into it, provide instance name as argument if desired
-function ephemeral-ec2() {
-  local instance_name=${1:-ephemeral-ec2}
-  local instance_type="t3.xlarge"
-  local key_name="ephemeral-ec2"
-  local key_file="$HOME/.ssh/ephemeral-ec2.pem"
-  local ami_id="ami-085f9c64a9b75eed5" # Ubuntu 24.04
-  local wait_time=5
-
-  echo "Creating $(color_yellow "EC2") instance with name: $(color_green "$instance_name"), type: $(color_red "$instance_type")"
-
-  instance_id=$(aws ec2 run-instances \
-    --image-id "$ami_id" \
-    --instance-type "$instance_type" \
-    --key-name "$key_name" \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance_name}]" \
-    --instance-market-options "MarketType=spot" \
-    --query 'Instances[0].InstanceId' \
-    --output text)
-
-  echo "Instance ID: $(color_blue "$instance_id") created. Waiting for it to become ready..."
-
-  # Wait until the instance is in 'running' state
-  echo -n "Waiting"
-  while
-    instance_state=$(aws ec2 describe-instances \
-      --instance-id "$instance_id" \
-      --query 'Reservations[0].Instances[0].State.Name' \
-      --output text)
-    test "$instance_state" != "running"
-  do
-    echo -n "."
-    sleep "$wait_time"
-  done
-
-  # Wait until the instance status checks are passed
-  while
-    instance_status=$(aws ec2 describe-instance-status \
-      --instance-id "$instance_id" \
-      --query 'InstanceStatuses[0].InstanceStatus.Status' \
-      --output text)
-    test "$instance_status" != "ok"
-  do
-    echo -n "."
-    sleep "$wait_time"
-  done
-  echo -ne "\n"
-
-  echo -n "Waiting"
-  while
-    system_status=$(aws ec2 describe-instance-status \
-      --instance-id "$instance_id" \
-      --query 'InstanceStatuses[0].SystemStatus.Status' \
-      --output text)
-    test "$system_status" != "ok"
-  do
-    echo -n "."
-    sleep "$wait_time"
-  done
-  echo -ne "\n"
-
-  public_ip=$(aws ec2 describe-instances \
-    --instance-id "$instance_id" \
-    --query 'Reservations[0].Instances[0].PublicIpAddress' \
-    --output text)
-
-  echo "Instance is running. Public IP: $(color_green "$public_ip")"
-
-  echo "Connecting to instance via SSH..."
-  ssh -o StrictHostKeyChecking=no -i "$key_file" "ubuntu@$public_ip"
-
-  echo "SSH session ended. To terminate the instance, run:"
-  cmd="aws ec2 terminate-instances --instance-ids $instance_id > /dev/null"
-  color_bright_red "$cmd"
-  echo "Command has been copied to clipboard"
-  echo "$cmd" | pbcopy
 }
 
 #@findup
@@ -163,8 +41,6 @@ function cl() {
 function adcomp() {
   git add . && git commit -m "$1" && git push
 }
-
-function fix_remote() { git remote set-url origin "https://github.com/datapointchris/$1.git"; }
 
 #@git-old-branches
 #--> Look for old branches that have been merged into master, --remote to check remote branches
@@ -206,12 +82,6 @@ function touchdate() {
   touch "$(date +"%Y-%m-%d_%H%M%S")-$1"
 }
 
-#@toichrisbirch
-#--> scp file or directory to ichrisbirch home dir
-function toichrisbirch() {
-  scp -i ~/.ssh/apps.pem "$@" ubuntu@ichrisbirch:~
-}
-
 #@venv
 #--> Activate venv, searching up directories
 function venv() {
@@ -220,27 +90,6 @@ function venv() {
   echo "$venvdir/.venv"
   # shellcheck source=/dev/null
   source "$venvdir$script"
-}
-
-#@development
-#--> Set ENVIRONMENT to development
-function development() {
-  export ENVIRONMENT='development'
-  color_blue 'export ENVIRONMENT=development'
-}
-
-#@testing
-#--> Set ENVIRONMENT to testing
-function testing() {
-  export ENVIRONMENT='testing'
-  color_blue 'export ENVIRONMENT=testing'
-}
-
-#@production
-#--> Set ENVIRONMENT to production
-function production() {
-  export ENVIRONMENT='production'
-  color_blue 'export ENVIRONMENT=production'
 }
 
 #@pytestloop
@@ -342,20 +191,6 @@ function make-lambda-layer() {
 
 }
 
-#@reload-dev-forever
-#--> Reload nginx and supervisor in a loop forever
-function reload-dev-forever() {
-  local char=":"
-  local loops=1
-  while true; do
-    chars=$(printf "$char%.0s" $(seq 1 $loops))
-    echo "Restarting $(color_blue "DEV") $(color_green "NGINX") and $(color_green "Supervisor") $(color_blue ": $loops ${chars}")"
-    sudo nginx -s reload && sudo supervisorctl reload >>/dev/null
-    loops=$((loops + 1))
-    sleep 15
-  done
-}
-
 #@listening
 #--> List what applications are listening on specific port or pattern
 function listening() {
@@ -397,13 +232,59 @@ function resetroute() {
 #--> List all aliases
 function lsalias() {
   echo
-  # grep for aliases, remove alias, replace = with special Ø char. Shift+Option+O
-  message="$(grep '^alias ' "$SHELLS/aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
-  if [ -n "$1" ]; then
-    # output message -E do not interpret \backslash, table column with Ø delimiter, read two columns, color first blue, concat with special delim, columns again
-    command echo -E "$message" | grep -i "$1" | sort | column -t -s 'Ø' | while read -r c1 c2; do echo -E "$(color_blue "$c1")Ø$c2"; done | column -t -s 'Ø'
-  else
-    command echo -E "$message" | sort | column -t -s 'Ø' | while read -r c1 c2; do echo -E "$(color_blue "$c1")Ø$c2"; done | column -t -s 'Ø'
+
+  # Get platform from environment variable
+  local platform="${PLATFORM:-unknown}"
+
+  # Process common aliases
+  local common_message=""
+  if [[ -f "$SHELLS/aliases.sh" ]]; then
+    # grep for aliases, remove alias, replace = with special Ø char. Shift+Option+O
+    common_message="$(grep '^alias ' "$SHELLS/aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
+  fi
+
+  # Process platform-specific aliases
+  local platform_message=""
+  if [[ -f "$SHELLS/$platform-aliases.sh" ]]; then
+    platform_message="$(grep '^alias ' "$SHELLS/$platform-aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
+  fi
+
+  # Function to format and display aliases
+  format_aliases() {
+    local message="$1"
+    local filter="$2"
+
+    if [[ -n "$message" ]]; then
+      if [[ -n "$filter" ]]; then
+        command echo -E "$message" | grep -i "$filter" | sort | column -t -s 'Ø' | while read -r c1 c2; do echo -E "$(color_blue "$c1")Ø$c2"; done | column -t -s 'Ø'
+      else
+        command echo -E "$message" | sort | column -t -s 'Ø' | while read -r c1 c2; do echo -E "$(color_blue "$c1")Ø$c2"; done | column -t -s 'Ø'
+      fi
+    fi
+  }
+
+  # Display results grouped by source
+  if [[ -n "$common_message" ]]; then
+    color_green "$(print_section "Common Aliases")"
+    format_aliases "$common_message" "$1"
+    echo
+  fi
+
+  if [[ -n "$platform_message" ]]; then
+    # Capitalize platform name manually
+    local platform_title
+    case "$platform" in
+      macos) platform_title="MacOS" ;;
+      wsl) platform_title="WSL" ;;
+      *) platform_title="$platform" ;;
+    esac
+    color_green "$(print_section "$platform_title Aliases")"
+    format_aliases "$platform_message" "$1"
+    echo
+  fi
+
+  if [[ -z "$common_message" && -z "$platform_message" ]]; then
+    color_yellow "No aliases found"
   fi
 }
 
@@ -411,11 +292,58 @@ function lsalias() {
 #--> List all functions
 function lsfunc() {
   echo ""
-  message="$("get-docs" "$SHELLS/functions.sh")"
-  if [ -n "$1" ]; then
-    command echo "$message" | grep -i "$1" | sort | column -t -s :
-  else
-    command echo "$message" | sort | column -t -s \|
+
+  # Get platform from environment variable
+  local platform="${PLATFORM:-unknown}"
+
+  # Process common functions
+  local common_message=""
+  if [[ -f "$SHELLS/functions.sh" ]]; then
+    common_message="$("get-docs" "$SHELLS/functions.sh")"
+  fi
+
+  # Process platform-specific functions
+  local platform_message=""
+  if [[ -f "$SHELLS/$platform-functions.sh" ]]; then
+    platform_message="$("get-docs" "$SHELLS/$platform-functions.sh")"
+  fi
+
+  # Function to format and display functions
+  format_functions() {
+    local message="$1"
+    local filter="$2"
+
+    if [[ -n "$message" ]]; then
+      if [[ -n "$filter" ]]; then
+        command echo "$message" | grep -i "$filter" | sort | column -t -s \|
+      else
+        command echo "$message" | sort | column -t -s \|
+      fi
+    fi
+  }
+
+  # Display results grouped by source
+  if [[ -n "$common_message" ]]; then
+    color_green "$(print_section "Common Functions")"
+    format_functions "$common_message" "$1"
+    echo
+  fi
+
+  if [[ -n "$platform_message" ]]; then
+    # Capitalize platform name manually
+    local platform_title
+    case "$platform" in
+      macos) platform_title="MacOS" ;;
+      wsl) platform_title="WSL" ;;
+      *) platform_title="$platform" ;;
+    esac
+    color_green "$(print_section "$platform_title Functions")"
+    format_functions "$platform_message" "$1"
+    echo
+  fi
+
+  if [[ -z "$common_message" && -z "$platform_message" ]]; then
+    color_yellow "No functions found"
   fi
 }
 
@@ -858,70 +786,6 @@ function lsnano() {
 ############################################################
 # NEW PROJECTS
 ############################################################
-
-#@new-scala-project
-#--> Create new scala sbt project
-function new-scala-project() {
-  # Make Folders
-  mkdir -p "$1" && cd "$1" || exit
-  mkdir -p src/{main,test}/{java,resources,scala}
-  mkdir project target
-
-  # Make build.sbt
-  touch build.sbt
-  cat <<-EOF >build.sbt
-		name := "$1"
-		version := "1.0"
-		scalaVersion := "2.13.8"
-
-		libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.12"
-		libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.12" % "test"
-	EOF
-
-  # Make scalaformat file
-  touch .scalafmt.conf
-  cat <<-EOF >.scalafmt.conf
-		version = "3.5.3"
-		runner.dialect = scala213
-	EOF
-
-  # TODO: [2022/10/30] - Get this from github
-  # Make scala .gitignore
-  touch .gitignore
-  cat <<-EOF >.gitignore
-		bin/
-		target/
-		build/
-		.bloop
-		.bsp
-		.metals
-		.cache
-		.cache-main
-		.classpath
-		.history
-		.project
-		.scala_dependencies
-		.settings
-		.worksheet
-		.DS_Store
-		*.class
-		*.log
-		*.iml
-		*.ipr
-		*.iws
-		.idea
-	EOF
-}
-
-function checkstuff() {
-  echo "Pyenv python location: $(pyenv which python)"
-  echo "Pyenv python version: $(pyenv version-name)"
-  echo "Python location: $(which python)"
-  echo "Python version: $(python -V)"
-  echo "Poetry location: $(which poetry)"
-  echo "Poetry version: $(poetry --version)"
-  echo "Poetry python version: $(poetry env info)"
-}
 
 #@new-py-project
 #--> Make a new python project
