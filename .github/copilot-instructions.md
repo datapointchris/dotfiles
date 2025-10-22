@@ -7,28 +7,45 @@ This is a **cross-platform dotfiles repository** using a shared configuration ar
 ### Directory Structure
 
 ```text
-├── shared/              # Common configurations for all platforms
-├── macos/              # macOS-specific configurations and overrides
-├── wsl/                # WSL/Ubuntu-specific configurations
-├── symlinks            # Universal symlink manager (replaces GNU Stow)
+├── common/              # Shared configurations for all platforms (base layer)
+├── macos/              # macOS-specific configurations and overrides (overlay)
+├── wsl/                # WSL/Ubuntu-specific configurations (overlay)
+├── symlinks            # Universal symlink manager with layered architecture
 └── docs/               # MkDocs documentation
 ```
 
-**Key Pattern**: Shared configurations are symlinked FROM `shared/` TO platform directories, then platform directories are symlinked TO `$HOME`.
+**Key Pattern**: Base layer configurations in `common/` are linked directly to `$HOME`, then platform directories create overlay symlinks that override common configs where conflicts exist.
 
 ## Critical Symlink Workflow
 
-The `./symlinks` script is the **central management tool** - never use GNU Stow or manual linking:
+The `./symlinks` script is the **central management tool** using a **layered architecture**:
+
+### Layered Architecture Design
+
+1. **Base Layer**: `common/` → `$HOME` (shared configurations for all platforms)
+2. **Overlay Layer**: `platform/` → `$HOME` (platform-specific overrides)
+
+### Recommended Workflow
 
 ```bash
-# Step 1: Link shared configs to platform directories
-./symlinks shared
+# Step 1: Create base layer (shared configs)
+./symlinks common link
 
-# Step 2: Link platform configs to $HOME
-./symlinks macos        # or wsl, ubuntu, arch
+# Step 2: Add platform overlay (platform-specific configs)
+./symlinks macos link       # or wsl, ubuntu, arch
 ```
 
-**Important**: Always use `./symlinks shared show` and `./symlinks <platform> show` to verify symlink state before making changes.
+**Platform overlays will overwrite common configs where conflicts exist.**
+
+### Key Commands
+
+- `./symlinks common show` - Show base layer symlinks
+- `./symlinks <platform> show` - Show overlay layer symlinks  
+- `./symlinks common unlink` - Remove base layer
+- `./symlinks <platform> unlink` - Remove overlay layer
+- `./symlinks <platform> overlay` - Alias for link (explicit overlay creation)
+
+**Important**: Always use `./symlinks <target> show` to verify symlink state before making changes.
 
 ## Platform Differentiation Patterns
 
