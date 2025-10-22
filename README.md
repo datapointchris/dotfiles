@@ -271,6 +271,7 @@ chmod +x ~/.config/zsh/plugins/git-open/git-open
 ```bash
 uv tool install codespell
 cargo install --locked tree-sitter-cli
+cargo install stylua
 npm install -g markdownlint-cli
 uv tool install ruff
 uv tool install mypy
