@@ -1,1 +1,1 @@
-/home/chris/dotfiles/shared/.config/zsh/.zshrc
+../../../shared/.config/zsh/.zshrc

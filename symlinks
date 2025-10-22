@@ -54,7 +54,7 @@ create_symlinks() {
     # Find all files and symlinks in source and create symlinks, excluding certain paths
     find "$source_dir" \( -type f -o -type l \) | while read -r file; do
         # Get relative path from source directory
-        relative_path="${file#$source_dir/}"
+        relative_path="${file#"$source_dir"/}"
 
         # Skip files in excluded directories
         if [[ "$relative_path" == *"tmux/plugins/"* ]] || \
@@ -69,9 +69,16 @@ create_symlinks() {
         # Create parent directory for file
         mkdir -p "$(dirname "$target_path")"
 
-        # Create symlink using ln -sf
-        ln -sf "$file" "$target_path"
-        log_success "Linked: $relative_path"
+        # Calculate relative path from target back to source
+        local target_dir_path="$(dirname "$target_path")"
+        local relative_symlink_path="$(python3 -c "
+import os
+print(os.path.relpath('$file', '$target_dir_path'))
+")"
+
+        # Create symlink using relative path
+        ln -sf "$relative_symlink_path" "$target_path"
+        log_success "Linked: $relative_path -> $relative_symlink_path"
     done
 }
 
@@ -105,7 +112,7 @@ remove_symlinks() {
     for symlink in "${removed_links[@]}"; do
         if [[ -L "$symlink" ]]; then
             rm "$symlink"
-            relative_path="${symlink#$target_dir/}"
+            relative_path="${symlink#"$target_dir"/}"
             log_success "Removed: $relative_path"
             count=$((count + 1))
         fi
@@ -146,7 +153,7 @@ show_symlinks() {
                 local target="$(readlink "$symlink")"
                 if [[ "$target" == "$source_pattern"* ]]; then
                     symlinks_found=true
-                    local relative_path="${symlink#$target_dir/}"
+                    local relative_path="${symlink#"$target_dir"/}"
                     echo "  $relative_path -> $target"
                 fi
             fi
@@ -155,7 +162,7 @@ show_symlinks() {
         while IFS= read -r symlink; do
             symlinks_found=true
             local target="$(readlink "$symlink")"
-            local relative_path="${symlink#$target_dir/}"
+            local relative_path="${symlink#"$target_dir"/}"
             echo "  $relative_path -> $target"
         done < <(eval "$search_cmd" 2>/dev/null | head -20)  # Limit to first 20 for performance
     fi
@@ -209,7 +216,7 @@ handle_shared() {
                     # Now remove the collected symlinks
                     for symlink in "${removed_links[@]}"; do
                         rm "$symlink"
-                        local relative_path="${symlink#$platform_dir/}"
+                        local relative_path="${symlink#"$platform_dir"/}"
                         log_success "Removed shared symlink from $platform: $relative_path"
                         count=$((count + 1))
                     done
@@ -232,7 +239,7 @@ handle_shared() {
                     find "$platform_dir" -type l | while read -r symlink; do
                         if [[ "$(readlink "$symlink")" == "$shared_dir"* ]]; then
                             local target="$(readlink "$symlink")"
-                            local relative_path="${symlink#$platform_dir/}"
+                            local relative_path="${symlink#"$platform_dir"/}"
                             echo "  $relative_path -> $target"
                         fi
                     done
@@ -278,7 +285,7 @@ handle_platform() {
             for symlink in "${removed_links[@]}"; do
                 if [[ -L "$symlink" ]]; then
                     rm "$symlink"
-                    local relative_path="${symlink#$HOME/}"
+                    local relative_path="${symlink#"$HOME"/}"
                     log_success "Removed: $relative_path"
                     count=$((count + 1))
                 fi
