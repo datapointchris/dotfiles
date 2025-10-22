@@ -224,6 +224,7 @@ show_symlinks() {
     fi
 
     local symlinks_found=false
+    local broken_count=0
 
     # Find and display symlinks
     while IFS= read -r symlink; do
@@ -239,18 +240,36 @@ show_symlinks() {
                 if [[ -n "$absolute_target" && "$absolute_target" == "$source_pattern"* ]]; then
                     symlinks_found=true
                     local relative_path="${symlink#"$target_dir"/}"
-                    echo "  $relative_path -> $target"
+
+                    # Check if the symlink is broken
+                    if [[ ! -e "$symlink" ]]; then
+                        echo -e "  ${RED}$relative_path -> $target${NC} (BROKEN)"
+                        broken_count=$((broken_count + 1))
+                    else
+                        echo "  $relative_path -> $target"
+                    fi
                 fi
             else
                 symlinks_found=true
                 local relative_path="${symlink#"$target_dir"/}"
-                echo "  $relative_path -> $target"
+
+                # Check if the symlink is broken
+                if [[ ! -e "$symlink" ]]; then
+                    echo -e "  ${RED}$relative_path -> $target${NC} (BROKEN)"
+                    broken_count=$((broken_count + 1))
+                else
+                    echo "  $relative_path -> $target"
+                fi
             fi
         fi
     done < <(find "$target_dir" -maxdepth "$SEARCH_DEPTH" -type l 2>/dev/null | head -20)
 
     if [[ "$symlinks_found" == "false" ]]; then
         log_info "No symlinks found"
+    elif [[ $broken_count -gt 0 ]]; then
+        echo ""
+        log_warning "$broken_count broken symlinks detected"
+        log_info "Run '$0 check $2' to manage broken symlinks"
     fi
 }
 
@@ -268,6 +287,9 @@ handle_common() {
             ;;
         "show")
             show_symlinks "$HOME" "\$HOME (common base layer)" "$common_dir"
+            ;;
+        "check")
+            check_dangling_symlinks "$HOME"
             ;;
         *)
             log_error "Unknown action for common: $action"
@@ -297,6 +319,9 @@ handle_platform() {
             ;;
         "show")
             show_symlinks "$HOME" "\$HOME ($platform overlay layer)" "$platform_dir"
+            ;;
+        "check")
+            check_dangling_symlinks "$HOME"
             ;;
         "overlay")
             log_header "Creating platform overlay: $platform -> \$HOME"
@@ -346,16 +371,35 @@ handle_relink() {
 
 # Function to detect and optionally remove dangling symlinks
 check_dangling_symlinks() {
+    local specific_dir="${1:-}"
     local dangling_links=()
     local link_count=0
 
-    log_info "Scanning for dangling symlinks in \$HOME..."
+    if [[ -n "$specific_dir" ]]; then
+        log_info "Scanning for dangling symlinks in $specific_dir..."
+    else
+        log_info "Scanning for dangling symlinks in \$HOME..."
+    fi
+
+    local search_path="${specific_dir:-$HOME}"
 
     # Find symlinks that point to dotfiles but are broken
     while IFS= read -r symlink_path; do
         if [[ -L "$symlink_path" ]]; then
+            local target
+            target="$(readlink "$symlink_path")"
+            local symlink_dir
+            symlink_dir="$(dirname "$symlink_path")"
+
+            # Resolve relative path to absolute if needed
             local absolute_target
-            absolute_target=$(resolve_symlink_target "$symlink_path")
+            if [[ "$target" = /* ]]; then
+                # Already absolute path
+                absolute_target="$target"
+            else
+                # Relative path - convert to absolute by resolving from symlink's directory
+                absolute_target="$(cd "$symlink_dir" && realpath -m "$target" 2>/dev/null)"
+            fi
 
             # Check if it points to our dotfiles but the target doesn't exist
             if [[ -n "$absolute_target" && "$absolute_target" == "$DOTFILES_DIR"* && ! -e "$absolute_target" ]]; then
@@ -363,35 +407,29 @@ check_dangling_symlinks() {
                 link_count=$((link_count + 1))
             fi
         fi
-    done < <(find "$HOME" -maxdepth "$SEARCH_DEPTH" -type l 2>/dev/null)
+    done < <(find "$search_path" -maxdepth "$SEARCH_DEPTH" -type l 2>/dev/null)
 
     if [[ $link_count -eq 0 ]]; then
         log_success "No dangling dotfiles symlinks found"
+        return 0
     else
         log_warning "Found $link_count dangling dotfiles symlinks:"
         for symlink_path in "${dangling_links[@]}"; do
-            local relative_path="${symlink_path#"$HOME"/}"
+            local relative_path="${symlink_path#"$search_path"/}"
             local target_path="$(readlink "$symlink_path")"
             echo "  $relative_path -> $target_path"
         done
 
         echo ""
-        local user_response
-        read -p "Remove these dangling symlinks? [y/N]: " -n 1 -r user_response
-        echo ""
-        if [[ $user_response =~ ^[Yy]$ ]]; then
-            for symlink_path in "${dangling_links[@]}"; do
-                rm "$symlink_path"
-                local relative_path="${symlink_path#"$HOME"/}"
-                log_success "Removed dangling symlink: $relative_path"
-            done
-
-            # Clean up empty directories
-            cleanup_empty_directories
-            log_info "Cleaned up empty directories"
-        else
-            log_info "Skipped removing dangling symlinks"
-        fi
+        log_info "Auto-removing dangling symlinks..."
+        for symlink_path in "${dangling_links[@]}"; do
+            rm "$symlink_path"
+            local relative_path="${symlink_path#"$search_path"/}"
+            log_success "Removed dangling symlink: $relative_path"
+        done
+        cleanup_empty_directories "$search_path"
+        log_info "Cleaned up empty directories"
+        return $link_count
     fi
 }
 
@@ -406,7 +444,8 @@ show_usage() {
     echo "Actions:"
     echo "  link, create     - Create symlinks"
     echo "  unlink, remove   - Remove symlinks"
-    echo "  show             - Show current symlinks"
+    echo "  show             - Show current symlinks (broken links highlighted in red)"
+    echo "  check            - Check for and automatically remove broken symlinks"
     echo "  overlay          - Create platform overlay (alias for link)"
     echo "  relink           - Complete refresh: unlink platform, unlink common,"
     echo "                     check dangling symlinks, link common, link platform"
@@ -422,16 +461,19 @@ show_usage() {
     echo ""
     echo "MAINTENANCE:"
     echo "  $0 relink macos              # Complete refresh of macos setup"
+    echo "  $0 check macos               # Check for broken symlinks only"
     echo ""
     echo "Examples:"
     echo "  $0 link common               # Link common/ directly to \$HOME (base layer)"
     echo "  $0 unlink common             # Remove common symlinks from \$HOME"
     echo "  $0 show common               # Show common symlinks in \$HOME"
+    echo "  $0 check common              # Check for broken symlinks in \$HOME (auto-removes them)"
     echo ""
     echo "  $0 link macos                # Link macos/ to \$HOME (overlay layer)"
     echo "  $0 overlay macos             # Same as above (explicit overlay)"
     echo "  $0 unlink macos              # Remove macos symlinks from \$HOME"
     echo "  $0 show macos                # Show macos symlinks in \$HOME"
+    echo "  $0 check macos               # Check for broken symlinks in \$HOME (auto-removes them)"
     echo ""
     echo "  $0 relink macos              # Complete refresh of macos (recommended for maintenance)"
     echo "  $0 link wsl                  # Link wsl/ to \$HOME (overlay layer)"
@@ -445,6 +487,8 @@ show_usage() {
     echo ""
     echo "NOTE: Platform overlays will overwrite common configs where conflicts exist."
     echo "NOTE: Relink will detect and offer to remove dangling symlinks during refresh."
+    echo "NOTE: The 'show' command highlights broken symlinks in red."
+    echo "NOTE: The 'check' command automatically removes broken symlinks without confirmation."
 }
 
 # Main function
