@@ -305,11 +305,16 @@ echo "$check Terminal Apps"
 # ------------------------------------------------------------------ #
 # SYNTAX HIGHLIGHTING (Load at end - cross-platform)
 # ------------------------------------------------------------------ #
-ZSH_HIGHLIGHT_PATH="/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
-    source $ZSH_HIGHLIGHT_PATH
-    echo "$check ZSH Syntax Highlighting"
+# Check common paths for different systems
+if [[ -f "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+    source "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    echo "$check ZSH Syntax Highlighting (Linux)"
+elif [[ -f "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+    source "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    echo "$check ZSH Syntax Highlighting (macOS Homebrew)"
+elif [[ -f "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+    source "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    echo "$check ZSH Syntax Highlighting (macOS Intel Homebrew)"
 else
-    echo "Could not find zsh syntax highlighting at $ZSH_HIGHLIGHT_PATH"
+    echo "Could not find zsh syntax highlighting (checked Linux, macOS Homebrew paths)"
 fi
-
