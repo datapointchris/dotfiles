@@ -15,19 +15,19 @@ local error=" ❌"
 # Check for .env file and required variables
 if [[ -f "$HOME/.env" ]]; then
     source "$HOME/.env"
-    echo "$check Environment file loaded"
+    echo "$check Loaded $HOME/.env"
 
     # Validate required environment variables
     if [[ -n "$PLATFORM" ]]; then
-        echo "  $check PLATFORM=$PLATFORM"
+        echo "$check   PLATFORM=$PLATFORM"
     else
-        echo "  $error PLATFORM not set in .env"
+        echo "$error  PLATFORM not set in .env"
     fi
 
     if [[ -n "$NVIM_AI_ENABLED" ]]; then
-        echo "  $check NVIM_AI_ENABLED=$NVIM_AI_ENABLED"
+        echo "$check   NVIM_AI_ENABLED=$NVIM_AI_ENABLED"
     else
-        echo "  $error NVIM_AI_ENABLED not set in .env"
+        echo "$error   NVIM_AI_ENABLED not set in .env"
     fi
 else
     echo "$error .env file not found at $HOME/.env"

@@ -1,7 +1,0 @@
--- Terraform Language Server
-return {
-  cmd = { 'terraform-ls', 'serve' },
-  filetypes = { 'terraform', 'terraform-vars' },
-  root_markers = { '.terraform', '.git' },
-  settings = {},
-}
