@@ -1,1 +1,0 @@
-../../../shared/.config/eza/README.md
