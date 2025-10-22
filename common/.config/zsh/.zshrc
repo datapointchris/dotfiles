@@ -5,11 +5,38 @@
 # ================================================================== #
 
 echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
+
+# ------------------------------------------------------------------ #
+# ENVIRONMENT VALIDATION
+# ------------------------------------------------------------------ #
+local check=" ✔️"
+local error=" ❌"
+
+# Check for .env file and required variables
+if [[ -f "$HOME/.env" ]]; then
+    source "$HOME/.env"
+    echo "$check Environment file loaded"
+
+    # Validate required environment variables
+    if [[ -n "$PLATFORM" ]]; then
+        echo "  $check PLATFORM=$PLATFORM"
+    else
+        echo "  $error PLATFORM not set in .env"
+    fi
+
+    if [[ -n "$NVIM_AI_ENABLED" ]]; then
+        echo "  $check NVIM_AI_ENABLED=$NVIM_AI_ENABLED"
+    else
+        echo "  $error NVIM_AI_ENABLED not set in .env"
+    fi
+else
+    echo "$error .env file not found at $HOME/.env"
+fi
+
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
 DEBUG=1
-local check=" ✔️"
 # Enable extended globbing, parameter expansion, command substitution, and arithmetic expansion
 setopt EXTENDED_GLOB
 setopt PROMPT_SUBST
@@ -171,7 +198,6 @@ echo "$check Plugins"
 # ------------------------------------------------------------------ #
 # SHELL CONFIG
 # ------------------------------------------------------------------ #
-source "$HOME/.env"
 
 # Platform-specific shell integrations
 if [[ "$OSTYPE" == "darwin"* ]]; then
