@@ -294,6 +294,45 @@ cd ~/dotfiles
 ./symlinks macos link
 ```
 
+#### Broken Symlinks Causing Import Errors
+
+**Problem**: Neovim shows errors like `Failed to load 'plugins.markview': cannot open /path/to/file.lua: No such file or directory`
+
+**Root Cause**: Broken symlinks in `~/.config/nvim/lua/plugins/` pointing to deleted files. The lazy.nvim `{ import = 'plugins' }` configuration tries to import ALL `.lua` files in the plugins directory, including broken symlinks.
+
+**Detection**:
+
+```bash
+# Find broken symlinks in plugins directory
+find ~/.config/nvim/lua/plugins -type l ! -exec test -e {} \; -print
+
+# List all symlinks with their targets
+ls -la ~/.config/nvim/lua/plugins/ | grep -E '^l'
+
+# Check for specific broken link
+ls -la ~/.config/nvim/lua/plugins/markview.lua 2>/dev/null || echo "File does not exist"
+```
+
+**Resolution**:
+
+```bash
+# Remove specific broken symlink
+rm ~/.config/nvim/lua/plugins/markview.lua
+
+# Remove all broken symlinks in plugins directory
+find ~/.config/nvim/lua/plugins -type l ! -exec test -e {} \; -delete
+
+# Clear Neovim caches after removing broken symlinks
+rm -rf ~/.cache/nvim/
+rm -rf ~/.local/state/nvim/
+find ~/.local/share/nvim -name "*cache*" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# Test that error is resolved
+nvim --headless -c "lua print('Testing...')" -c "sleep 2" -c "q"
+```
+
+**Prevention**: The `./symlinks` script should detect and report broken symlinks but currently has gaps in its detection logic. See the [Symlink Management Issues](#symlink-management-issues) section below.
+
 #### Permission Issues
 
 ```bash
@@ -345,7 +384,7 @@ git config --list | grep delta
 
 Many corporate environments block `raw.githubusercontent.com`, preventing Mason from downloading its package registry.
 
-**Solution 1: Configure Proxy in Mason**
+#### Solution 1: Configure Proxy in Mason
 
 ```lua
 ### Corporate Networks
@@ -359,7 +398,7 @@ For corporate environments with restrictive firewalls or proxy requirements, see
 - Alternative package sources
 ```
 
-**Solution 2: Set Environment Variables**
+#### Solution 2: Set Environment Variables
 
 ```bash
 # Add to your shell profile (.zshrc, .bashrc)
@@ -377,7 +416,7 @@ git config --global http.proxy http://proxy.company.com:8080
 git config --global https.proxy http://proxy.company.com:8080
 ```
 
-**Solution 3: Use Alternative Registry**
+#### Solution 3: Use Alternative Registry
 
 ```lua
 -- Configure Mason to use alternative sources
@@ -390,7 +429,7 @@ require("mason").setup({
 })
 ```
 
-**Solution 4: Manual Registry Download**
+#### Solution 4: Manual Registry Download
 
 ```bash
 # Download registry manually and place in Mason data directory
@@ -401,7 +440,7 @@ cd ~/.local/share/nvim/mason/registries/github__mason-org__mason-registry
 git clone https://github.com/mason-org/mason-registry.git .
 ```
 
-**Solution 5: Switch to Native LSP (Recommended)**
+#### Solution 5: Switch to Native LSP (Recommended)
 
 This configuration already uses **native LSP** which bypasses Mason entirely:
 
@@ -512,6 +551,72 @@ tail -f ~/.local/state/nvim/lazy.log
 # System logs (macOS)
 tail -f /var/log/system.log | grep nvim
 ```
+
+## Symlink Management Issues
+
+### Broken Symlink Detection Gaps
+
+**Problem**: The `./symlinks` script doesn't properly detect or report broken symlinks, leading to recurring issues where deleted source files leave broken symlinks that cause import errors.
+
+**Current Script Limitations**:
+
+1. No comprehensive broken symlink detection
+2. No validation of symlink targets during `show` or `link` operations
+3. Missing cleanup of orphaned symlinks during `unlink`
+
+**Manual Detection Commands**:
+
+```bash
+# Find all broken symlinks in dotfiles workspace
+find ~/.config -type l ! -exec test -e {} \; -print 2>/dev/null
+
+# Check specific broken symlinks in Neovim plugins
+find ~/.config/nvim/lua/plugins -type l ! -exec test -e {} \; -print
+
+# Show all symlinks with their targets (broken ones will show in red)
+ls -la ~/.config/nvim/lua/plugins/ | grep -E '^l'
+```
+
+**Recommended Script Improvements**:
+
+1. Add `--check-broken` flag to detect and report broken symlinks
+2. Modify `show` command to validate symlink targets  
+3. Add `--clean-broken` flag to remove orphaned symlinks
+4. Include broken symlink check in regular `link` operations
+
+### Historical Issues Documented
+
+**2025-10-22**: Markview plugin removal left broken symlink causing lazy.nvim import errors:
+
+- **Symptom**: `Failed to load 'plugins.markview': cannot open /path/markview.lua: No such file or directory`
+- **Root Cause**: `~/.config/nvim/lua/plugins/markview.lua` symlink pointing to deleted source file
+- **Detection Gap**: Multiple `./symlinks` runs didn't detect the broken symlink
+- **Resolution**: Manual removal of broken symlink + cache clearing
+- **Cache Clearing Required**:
+
+  ```bash
+  rm -rf ~/.cache/nvim/
+  rm -rf ~/.local/state/nvim/
+  find ~/.local/share/nvim -name "*cache*" -type d -exec rm -rf {} + 2>/dev/null || true
+  ```
+
+**Pattern**: This issue has occurred multiple times, indicating a systematic problem with the symlink management workflow.
+
+**2025-10-22 Resolution**:
+
+- **Improved Script**: Enhanced `./symlinks` script with:
+  - New `check` command: `./symlinks check <target>` - detects and manages broken symlinks
+  - Enhanced `show` command: highlights broken symlinks in red
+  - Improved broken symlink detection using `realpath -m` for better relative path resolution
+  - Auto-cleanup options for maintenance workflows
+- **Discovered Additional Issues**: Found and cleaned up 4 additional broken symlinks that were causing similar import errors
+- **Testing Verification**: Neovim now starts cleanly without any plugin import errors
+
+**Updated Workflow**:
+
+1. Always run `./symlinks check common` and `./symlinks check <platform>` before and after changes
+2. Use `./symlinks show <target>` to visually inspect symlink health (broken links show in red)
+3. The `relink` command now includes comprehensive broken symlink detection and cleanup
 
 ## Getting Help
 
