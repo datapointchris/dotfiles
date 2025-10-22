@@ -50,7 +50,8 @@ return {
       }
 
       -- Get tools to install from your server list
-      local servers = require('lsp').get_servers()
+      local lsp_config = dofile(vim.fn.stdpath('config') .. '/lsp/init.lua')
+      local servers = lsp_config.get_servers()
       local tools_to_install = {}
 
       for _, server in ipairs(servers) do
@@ -202,7 +203,8 @@ return {
       set_lsp_keymaps()
 
       -- Load and setup native LSP configuration
-      require('lsp').setup()
+      local lsp_config = dofile(vim.fn.stdpath('config') .. '/lsp/init.lua')
+      lsp_config.setup()
     end,
   },
 }

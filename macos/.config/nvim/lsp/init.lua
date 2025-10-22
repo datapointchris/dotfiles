@@ -90,7 +90,8 @@ end
 
 -- Configure a single LSP server
 function M.setup_server(server_name)
-  local ok, config = pcall(require, 'lsp.' .. server_name)
+  local config_path = vim.fn.stdpath('config') .. '/lsp/' .. server_name .. '.lua'
+  local ok, config = pcall(dofile, config_path)
   if not ok then
     vim.notify('Failed to load LSP config for ' .. server_name, vim.log.levels.WARN)
     return
@@ -116,10 +117,8 @@ function M.setup()
     M.setup_server(server_name)
   end
 
-  -- Enable LSP for all configured servers
-  vim.lsp.enable()
-
-  vim.notify('Native LSP configured for ' .. #servers .. ' servers', vim.log.levels.INFO)
+  -- LSP servers are automatically enabled when configured with vim.lsp.config()
+  -- No need to call vim.lsp.enable() explicitly
 end
 
 -- Get list of configured servers
