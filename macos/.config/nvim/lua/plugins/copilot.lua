@@ -5,10 +5,21 @@ return {
     config = function()
       require('copilot').setup({
         suggestion = {
-          enabled = false, -- Disabled in favor of CodeCompanion chat interface
+          enabled = true,
+          auto_trigger = true,
+          hide_during_completion = true,
+          debounce = 75,
+          keymap = {
+            accept = '<Tab>',
+            accept_word = '<C-Right>',
+            accept_line = '<C-l>',
+            next = '<C-]>',
+            prev = '<C-[>',
+            dismiss = '<C-e>', -- Dismiss without exiting insert mode
+          },
         },
         panel = {
-          enabled = false, -- Using CodeCompanion chat buffer instead
+          enabled = false, -- Keep panel disabled, using chat interface
         },
         -- Keep copilot running for CodeCompanion adapter
         server_opts_overrides = {
