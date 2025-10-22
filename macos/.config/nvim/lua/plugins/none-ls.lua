@@ -2,8 +2,7 @@ return {
   'nvimtools/none-ls.nvim',
   cond = not vim.g.vscode, -- VSCode handles linting and formatting
   dependencies = {
-    'williamboman/mason.nvim',
-    'jay-babu/mason-null-ls.nvim',
+    'nvim-lua/plenary.nvim',
   },
   lazy = true,
   event = { 'BufReadPre', 'BufNewFile' },
@@ -74,13 +73,6 @@ return {
       formatting.terraform_fmt,
     }
 
-    require('mason').setup()
-
     null_ls.setup({ sources = sources })
-
-    require('mason-null-ls').setup({
-      ensure_installed = {},
-      automatic_installation = true,
-    })
   end,
 }
