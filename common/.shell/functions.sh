@@ -42,6 +42,17 @@ function adcomp() {
   git add . && git commit -m "$1" && git push
 }
 
+#@checkit
+#--> Check node and npm location and version
+function checknode() {
+  echo
+  echo "$(color_blue "Node") - $(color_green "$(node -v)")"
+  which node
+  echo
+  echo "$(color_blue "npm") - $(color_green "$(npm -v)")"
+  which npm
+}
+
 #@git-old-branches
 #--> Look for old branches that have been merged into master, --remote to check remote branches
 function git-old-branches() {
