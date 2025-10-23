@@ -1,6 +1,6 @@
 -- Docker Language Server
 return {
-  cmd = { 'docker-langserver', '--stdio' },
+  cmd = { 'docker-language-server', '--stdio' },
   filetypes = { 'dockerfile' },
   root_markers = { 'Dockerfile', '.git' },
   settings = {},
