@@ -11,7 +11,7 @@ alias copycommand='fc -ln -1 | win32yank.exe -i'
 
 # ---------- Directory Navigation ---------- #
 
-alias winchris="/mnt/c/Users/600002371"
+export winchris="/mnt/c/Users/600002371"
 
 # ---------- Operations ---------- #
 
