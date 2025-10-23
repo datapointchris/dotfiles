@@ -35,6 +35,7 @@ vim.lsp.enable({
   'docker_compose_language_service',
   'dockerls',
   'eslint',
+  'gh_actions_ls',
   'gopls',
   'html',
   'jsonls',
