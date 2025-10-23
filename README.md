@@ -269,16 +269,46 @@ chmod +x ~/.config/zsh/plugins/git-open/git-open
 ```
 
 ```bash
-uv tool install codespell
+# Important: Must install nodejs and npm from `nvm` to get a recent version
+# Copy install script locally if no rawgithubusercontent available
+# otherwise all npm will be installed in Windows and be slow!
 cargo install --locked tree-sitter-cli
 cargo install stylua
-npm install -g markdownlint-cli
 uv tool install ruff
 uv tool install mypy
 uv tool install mdformat
+uv tool install basedpyright
 uv tool install sqlfluff
+uv tool install codespell
+npm install -g markdownlint-cli
+npm install -g bash-language-server
 npm install -g prettier
 npm install -g @fsouza/prettierd
+npm install -g vscode-langservers-extracted
+
+```
+
+### General Intall Instructions for Binary
+
+```bash
+# Get .tar.gz or .zip from Binary Releases
+# Download to ~/installs
+mkdir program-name
+tar xf program-name.tar.gz --directory program-name
+mv program-name ~/.local/opt/
+ln -s ~/.local/opt/program-name/bin/program ~/.local/bin/program
+```
+
+### Language Servers for Neovim
+
+<https://github.com/LuaLS/lua-language-server/releases>
+
+#### Docker Language Server
+
+```bash
+# requires gcc compiler for go
+sudo apt install gcc-multilib
+go install github.com/docker/docker-language-server/cmd/docker-language-server@latest
 ```
 
 ### Clone dotfiles and install (WSL)
