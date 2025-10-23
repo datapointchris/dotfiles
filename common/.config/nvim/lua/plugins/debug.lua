@@ -3,8 +3,6 @@ return {
   dependencies = {
     'rcarriga/nvim-dap-ui', -- Required dependency for nvim-dap-ui
     'nvim-neotest/nvim-nio', -- Installs the debug adapters for you
-    'williamboman/mason.nvim',
-    'jay-babu/mason-nvim-dap.nvim',
     'leoluz/nvim-dap-go',
     'mfussenegger/nvim-dap-python',
   },
@@ -54,13 +52,6 @@ return {
   config = function()
     local dap = require('dap')
     local dapui = require('dapui')
-
-    require('mason-nvim-dap').setup({
-      ensure_installed = { 'delve', 'python', 'go', 'node2', 'bash', 'js' },
-      automatic_installation = true,
-      handlers = {},
-    })
-
     dapui.setup({
       icons = {
         expanded = '▾',
