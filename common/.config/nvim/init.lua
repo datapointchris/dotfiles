@@ -27,3 +27,39 @@ require('core.keymaps')
 
 -- Only load autocmds in regular Neovim
 if not vim.g.vscode then require('core.autocmds') end
+
+vim.lsp.enable({
+  'bashls',
+  'basedpyright',
+  'cssls',
+  'docker_compose_language_service',
+  'dockerls',
+  'eslint',
+  'gopls',
+  'html',
+  'jsonls',
+  'lua_ls',
+  'marksman',
+  'ruff',
+  'rust_analyzer',
+  'sqlls',
+  'taplo',
+  'terraformls',
+  'tflint',
+  'ts_ls',
+  'vimls',
+  'yamlls',
+})
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if client:supports_method('textDocument/completion') then vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true }) end
+  end,
+})
+
+vim.cmd('set completeopt+=noselect')
+
+vim.diagnostic.config({
+  virtual_text = { current_line = true },
+})

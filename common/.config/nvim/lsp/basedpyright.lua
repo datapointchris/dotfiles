@@ -1,4 +1,6 @@
 -- Python Language Server (basedpyright)
+-- Using Ruff for linting, formatting, and organizing imports
+
 return {
   cmd = { 'basedpyright-langserver', '--stdio' },
   filetypes = { 'python' },
@@ -13,12 +15,14 @@ return {
   },
   settings = {
     basedpyright = {
+      -- Using Ruff's import organizer
+      disableOrganizeImports = true,
+    },
+    python = {
       analysis = {
-        autoSearchPaths = true,
-        useLibraryCodeForTypes = true,
-        diagnosticMode = 'workspace',
+        -- Ignore all files for analysis to exclusively use Ruff for linting
+        ignore = { '*' },
       },
-      disableOrganizeImports = true, -- Let ruff handle this
     },
   },
 }

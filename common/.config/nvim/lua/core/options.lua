@@ -12,6 +12,9 @@ vim.opt.scrolloff = 10
 -- Set the window title
 vim.opt.title = true
 
+-- Rounded borders for floating windows
+vim.o.winborder = 'rounded'
+
 -- Number of spaces that a <Tab> in the file counts for
 vim.opt.tabstop = 2
 -- Number of spaces that a <Tab> counts for while performing editing operations
@@ -44,6 +47,22 @@ vim.opt.undofile = true
 
 -- Enable mouse support in all modes
 vim.opt.mouse = 'a'
+
+-- Use win32yank if on wsl
+if vim.env.PLATFORM == 'wsl' then
+  vim.g.clipboard = {
+    name = 'win32yank-wsl',
+    copy = {
+      ['+'] = 'win32yank.exe -i --crlf',
+      ['*'] = 'win32yank.exe -i --crlf',
+    },
+    paste = {
+      ['+'] = 'win32yank.exe -o --lf',
+      ['*'] = 'win32yank.exe -o --lf',
+    },
+    cache_enabled = 0,
+  }
+end
 
 -- Use the system clipboard
 vim.opt.clipboard = 'unnamedplus'
