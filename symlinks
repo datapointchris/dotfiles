@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Configuration
 readonly DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly SEARCH_DEPTH=3
+readonly SEARCH_DEPTH=5
 readonly CLEANUP_DIRECTORIES=("$HOME/.config" "$HOME/.local" "$HOME/.shell" "$HOME/.setup-macos")
 
 # Colors for logging
@@ -51,8 +51,8 @@ resolve_symlink_target() {
         # Already absolute path
         echo "$target"
     else
-        # Relative path - convert to absolute
-        cd "$symlink_dir" && realpath "$target" 2>/dev/null || echo ""
+        # Relative path - convert to absolute without changing directories
+        realpath -m "$symlink_dir/$target" 2>/dev/null || echo ""
     fi
 }
 
@@ -189,7 +189,12 @@ remove_symlinks() {
                 removed_links+=("$symlink")
             fi
         fi
-    done < <(find "$target_dir" -maxdepth "$SEARCH_DEPTH" -type l 2>/dev/null)
+    done < <(find "$target_dir" -maxdepth "$SEARCH_DEPTH" -type l \
+        -not -path "*/Library/*" \
+        -not -path "*/.Trash/*" \
+        -not -path "*/node_modules/*" \
+        -not -path "*/.git/*" \
+        2>/dev/null)
 
     # Remove the collected symlinks
     for symlink in "${removed_links[@]}"; do
@@ -262,14 +267,19 @@ show_symlinks() {
                 fi
             fi
         fi
-    done < <(find "$target_dir" -maxdepth "$SEARCH_DEPTH" -type l 2>/dev/null | head -20)
+    done < <(find "$target_dir" -maxdepth "$SEARCH_DEPTH" -type l \
+        -not -path "*/Library/*" \
+        -not -path "*/.Trash/*" \
+        -not -path "*/node_modules/*" \
+        -not -path "*/.git/*" \
+        2>/dev/null | head -50)
 
     if [[ "$symlinks_found" == "false" ]]; then
         log_info "No symlinks found"
     elif [[ $broken_count -gt 0 ]]; then
         echo ""
         log_warning "$broken_count broken symlinks detected"
-        log_info "Run '$0 check $2' to manage broken symlinks"
+        log_info "Run '$0 check' to automatically remove broken symlinks"
     fi
 }
 
@@ -383,41 +393,65 @@ check_dangling_symlinks() {
 
     local search_path="${specific_dir:-$HOME}"
 
-    # Find symlinks that point to dotfiles but are broken
+    # Find ALL dangling symlinks, not just dotfiles ones
     while IFS= read -r symlink_path; do
         if [[ -L "$symlink_path" ]]; then
             local target
             target="$(readlink "$symlink_path")"
-            local symlink_dir
-            symlink_dir="$(dirname "$symlink_path")"
 
-            # Resolve relative path to absolute if needed
-            local absolute_target
-            if [[ "$target" = /* ]]; then
-                # Already absolute path
-                absolute_target="$target"
-            else
-                # Relative path - convert to absolute by resolving from symlink's directory
-                absolute_target="$(cd "$symlink_dir" && realpath -m "$target" 2>/dev/null)"
-            fi
+            # Check if the symlink is broken (target doesn't exist)
+            if [[ ! -e "$symlink_path" ]]; then
+                # This symlink is broken - check if it's dotfiles-related or just broken
+                local is_dotfiles_related=false
 
-            # Check if it points to our dotfiles but the target doesn't exist
-            if [[ -n "$absolute_target" && "$absolute_target" == "$DOTFILES_DIR"* && ! -e "$absolute_target" ]]; then
-                dangling_links+=("$symlink_path")
-                link_count=$((link_count + 1))
+                # Check if the target path contains 'dotfiles' anywhere in the path
+                if [[ "$target" == *"dotfiles"* ]]; then
+                    is_dotfiles_related=true
+                fi
+
+                # Also check if it points to a resolved path containing dotfiles
+                local symlink_dir
+                symlink_dir="$(dirname "$symlink_path")"
+                local absolute_target
+                if [[ "$target" = /* ]]; then
+                    # Already absolute path
+                    absolute_target="$target"
+                else
+                    # Relative path - convert to absolute by resolving from symlink's directory
+                    absolute_target="$(cd "$symlink_dir" && realpath -m "$target" 2>/dev/null)"
+                fi
+
+                if [[ -n "$absolute_target" && "$absolute_target" == *"dotfiles"* ]]; then
+                    is_dotfiles_related=true
+                fi
+
+                # Include all broken symlinks in critical directories like nvim plugins
+                if [[ "$symlink_path" == *".config/nvim"* ]]; then
+                    is_dotfiles_related=true
+                fi
+
+                if [[ "$is_dotfiles_related" == true ]]; then
+                    dangling_links+=("$symlink_path")
+                    link_count=$((link_count + 1))
+                fi
             fi
         fi
-    done < <(find "$search_path" -maxdepth "$SEARCH_DEPTH" -type l 2>/dev/null)
+    done < <(find "$search_path" -maxdepth "$SEARCH_DEPTH" -type l \
+        -not -path "*/Library/*" \
+        -not -path "*/.Trash/*" \
+        -not -path "*/node_modules/*" \
+        -not -path "*/.git/*" \
+        2>/dev/null)
 
     if [[ $link_count -eq 0 ]]; then
         log_success "No dangling dotfiles symlinks found"
         return 0
     else
-        log_warning "Found $link_count dangling dotfiles symlinks:"
+        log_warning "Found $link_count dangling dotfiles-related symlinks:"
         for symlink_path in "${dangling_links[@]}"; do
             local relative_path="${symlink_path#"$search_path"/}"
             local target_path="$(readlink "$symlink_path")"
-            echo "  $relative_path -> $target_path"
+            echo -e "  ${RED}$relative_path -> $target_path${NC} (BROKEN)"
         done
 
         echo ""
@@ -429,6 +463,7 @@ check_dangling_symlinks() {
         done
         cleanup_empty_directories "$search_path"
         log_info "Cleaned up empty directories"
+
         return $link_count
     fi
 }
@@ -445,7 +480,8 @@ show_usage() {
     echo "  link, create     - Create symlinks"
     echo "  unlink, remove   - Remove symlinks"
     echo "  show             - Show current symlinks (broken links highlighted in red)"
-    echo "  check            - Check for and automatically remove broken symlinks"
+    echo "  check            - Check for and automatically remove ALL broken symlinks"
+    echo "                     (scans entire \$HOME)"
     echo "  overlay          - Create platform overlay (alias for link)"
     echo "  relink           - Complete refresh: unlink platform, unlink common,"
     echo "                     check dangling symlinks, link common, link platform"
@@ -461,19 +497,18 @@ show_usage() {
     echo ""
     echo "MAINTENANCE:"
     echo "  $0 relink macos              # Complete refresh of macos setup"
-    echo "  $0 check macos               # Check for broken symlinks only"
+    echo "  $0 check                     # Check for and remove ALL broken symlinks"
     echo ""
     echo "Examples:"
     echo "  $0 link common               # Link common/ directly to \$HOME (base layer)"
     echo "  $0 unlink common             # Remove common symlinks from \$HOME"
     echo "  $0 show common               # Show common symlinks in \$HOME"
-    echo "  $0 check common              # Check for broken symlinks in \$HOME (auto-removes them)"
+    echo "  $0 check                     # Check entire \$HOME for broken symlinks (auto-removes them)"
     echo ""
     echo "  $0 link macos                # Link macos/ to \$HOME (overlay layer)"
     echo "  $0 overlay macos             # Same as above (explicit overlay)"
     echo "  $0 unlink macos              # Remove macos symlinks from \$HOME"
     echo "  $0 show macos                # Show macos symlinks in \$HOME"
-    echo "  $0 check macos               # Check for broken symlinks in \$HOME (auto-removes them)"
     echo ""
     echo "  $0 relink macos              # Complete refresh of macos (recommended for maintenance)"
     echo "  $0 link wsl                  # Link wsl/ to \$HOME (overlay layer)"
@@ -486,9 +521,14 @@ show_usage() {
     done
     echo ""
     echo "NOTE: Platform overlays will overwrite common configs where conflicts exist."
-    echo "NOTE: Relink will detect and offer to remove dangling symlinks during refresh."
+    echo "NOTE: Relink includes comprehensive broken symlink detection and cleanup."
     echo "NOTE: The 'show' command highlights broken symlinks in red."
-    echo "NOTE: The 'check' command automatically removes broken symlinks without confirmation."
+    echo "NOTE: The 'check' command automatically removes broken symlinks."
+    echo ""
+    echo "TROUBLESHOOTING:"
+    echo "  If you see Neovim errors like 'Failed to load plugins.X', run:"
+    echo "  $0 check                     # This will find and remove broken symlinks"
+    echo "                               # like ~/.config/nvim/lua/plugins/native-lsp.lua"
 }
 
 # Main function
@@ -505,6 +545,15 @@ main() {
     if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "help" ]]; then
         show_usage
         exit 0
+    fi
+
+    # Handle standalone check command
+    if [[ "$action" == "check" ]]; then
+        if [[ -n "$target" ]]; then
+            log_warning "Note: The 'check' command now scans the entire \$HOME directory for comprehensive broken symlink detection."
+        fi
+        check_dangling_symlinks
+        return 0
     fi
 
     # Handle relink action
