@@ -11,9 +11,10 @@ vim.opt.scrolloff = 10
 
 -- Set the window title
 vim.opt.title = true
-
 -- Rounded borders for floating windows
 vim.o.winborder = 'rounded'
+-- Command line height
+vim.opt.cmdheight = 0
 
 -- Number of spaces that a <Tab> in the file counts for
 vim.opt.tabstop = 2

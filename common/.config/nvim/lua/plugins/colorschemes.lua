@@ -29,4 +29,5 @@ return {
   { 'EdenEast/nightfox.nvim' },
   { 'craftzdog/solarized-osaka.nvim' },
   { 'mhartington/oceanic-next' },
+  { 'datapointchris/flexoki-moon-nvim' },
 }
