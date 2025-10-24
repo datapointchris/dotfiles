@@ -267,6 +267,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # SnowSQL since it is an Application
     add_path "/Applications/SnowSQL.app/Contents/MacOS"
 
+    # npm installed global packages
+    add_path "$HOME/.local/share/npm/bin"
+
 else
     # Linux/WSL specific paths
     add_path "/snap/bin"
