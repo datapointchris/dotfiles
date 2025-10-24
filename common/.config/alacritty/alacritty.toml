@@ -1,40 +1,25 @@
 [general]
-
-import = [
-#   "/Users/joshmedeski/.config/alacritty/catppuccin/catppuccin-mocha.toml",
-]
-live_config_reload = true
-option_as_alt = "Both"
-startup_mode = "Maximized"
+import = ["~/.config/alacritty/themes/themes/tomorrow_night.toml"]
 
 [env]
 TERM = "xterm-256color"
 
+[window]
+startup_mode = "Maximized"
+decorations = "Buttonless"
+dynamic_padding = true
+opacity = 1.0
+blur = true
+padding = { x = 10, y = 10 }
+
 [font]
 size = 16.0
+normal = { family = "SeriousShanns Nerd Font Mono" }
+offset = { x = 2, y = 2 }
 
-[font.bold]
-family = "JetBrainsMono Nerd Font"
-style = "Heavy"
+# size = 18.0
+# normal = { family = "Terminess Nerd Font Mono" }
+# offset = { x = 1, y = 1 }
 
-[font.bold_italic]
-family = "JetBrainsMono Nerd Font"
-style = "Heavy Italic"
-
-[font.italic]
-family = "JetBrainsMono Nerd Font"
-style = "Medium Italic"
-
-[font.normal]
-family = "JetBrainsMono Nerd Font"
-style = "Medium"
-
-[window]
-decorations = "buttonless"
-dynamic_padding = false
-opacity = 0.8
-blur = true
-
-[window.padding]
-x = 25
-y = 20
+[scrolling]
+history = 100000
