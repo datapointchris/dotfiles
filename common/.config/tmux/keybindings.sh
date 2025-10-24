@@ -15,6 +15,7 @@ function lstmux() {
 
 			$(color_green "Menu")
 			  $(color_blue "Open Menu: |${normal} pre + space")
+			  $(color_blue "Show Keybindings Popup: |${normal} pre + C-p")
 			$(color_green "Windows")
 			  $(color_blue "New Window: |${normal} pre + c")
 			  $(color_blue "Select Window: |${normal} pre + 1-9, starts at 1")
@@ -28,7 +29,9 @@ function lstmux() {
 			  $(color_blue "Split Vertically: |${normal} pre + -")
 			  $(color_blue "Rename Pane: |${normal} tmux select-pane -T 'New name'")
 			  $(color_blue "Navigate panes: |${normal} pre + LRUD")
+			  $(color_blue "Navigate panes: |${normal} Ctrl + hjkl")
 			  $(color_blue "Resize pane: |${normal} pre + Cmd-Option-LRUD")
+			  $(color_blue "Resize pane: |${normal} pre + Option-hjkl")
 			  $(color_blue "Toggle last active pane: |${normal} pre + ;")
 			  $(color_blue "Zoom In on pane: |${normal} pre + z")
 			  $(color_blue "Close Pane: |${normal} pre + x")
