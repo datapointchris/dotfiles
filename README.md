@@ -182,6 +182,13 @@ stow macos
 # Handle any conflicting files by backing them up first
 ```
 
+## Neovim Lanuage Servers
+
+```bash
+brew install lua-language-server
+
+```
+
 ## Installing in WSL (Ubuntu)
 
 Edit `/etc/zsh/zshenv` with `export ZSHDOTDIR="$HOME/.config/zsh"`
@@ -285,6 +292,10 @@ npm install -g bash-language-server
 npm install -g prettier
 npm install -g @fsouza/prettierd
 npm install -g vscode-langservers-extracted
+npm install -g typescript-language-server typescript
+npm install -g yaml-language-server
+go install golang.org/x/tools/gopls@latest
+go install github.com/sqls-server/sqls@latest
 
 ```
 
