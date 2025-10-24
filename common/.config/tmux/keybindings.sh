@@ -60,7 +60,7 @@ function lstmux() {
 			  $(color_blue "Copy current directory to clipboard: |${normal} pre + Y")
 			  $(color_blue "Save Tmux Environment: |${normal} pre + Ctrl-s")
 			  $(color_blue "Restore Tmux Environment: |${normal} pre + Ctrl-r")
-			  $(color_blue "Reload tmux conf file: |${normal} pre + Ctrl-R 'tmux source-file ~/.tmux.conf'")
+			  $(color_blue "Reload tmux conf file: |${normal} pre + Ctrl-R 'tmux source-file ~/.config/tmux/tmux.conf'")
 			$(color_green "Tree Sidebar")
 			  $(color_blue "Toggle Tree Sidebar: |${normal} pre + <tab>")
 			  $(color_blue "Toggle Tree Sidebar with Focus: |${normal} pre + <backspace>")
