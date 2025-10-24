@@ -1,0 +1,14 @@
+
+theme = "Flexoki Dark"
+background = #1d1f21
+
+macos-titlebar-style = hidden
+
+window-padding-x = 16
+window-padding-y = 16
+window-padding-balance = true
+
+font-family = "SeriousShanns Nerd Font Mono"
+font-size = 16
+adjust-cell-height = 3
+adjust-cell-width = 1
