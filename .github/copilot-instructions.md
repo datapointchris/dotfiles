@@ -100,6 +100,18 @@ Key aliases follow smart navigation patterns:
 - Documentation in `docs/` with examples and diagrams
 - README.md contains comprehensive installation guides per platform
 
+### Documentation Style Guidelines
+
+When creating or updating documentation, aim for **concise architectural explanations** rather than verbose step-by-step processes. Focus on:
+
+- **How systems work together** and **why they are designed that way**
+- **Paragraphs of explanation** that provide context and reasoning
+- **Selective use of bulleted lists** for overviews, not as the primary structure
+- **Minimal code snippets** with command names or key concepts only
+- **Conversational tone** as if explaining to another developer in a PR review
+
+Avoid creating documentation that is primarily bulleted lists or verbose procedural steps. Instead, focus on architectural understanding and the reasoning behind design decisions.
+
 ### Testing
 
 - `TESTING.ipynb` - Jupyter notebook for interactive development/debugging

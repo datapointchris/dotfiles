@@ -36,6 +36,18 @@ This configuration addresses three primary development environment requirements:
 
 **Trade-offs**: Dependency on system-installed formatters, but ensures consistency across all formatting contexts.
 
+### Unified Completion Architecture
+
+**Problem**: Multiple completion systems (native LSP, nvim-cmp, Copilot) competing for the same triggers.
+
+**Solution**: Single nvim-cmp coordinator with all completion sources integrated as providers.
+
+The completion system establishes a clear hierarchy where nvim-cmp manages all completions in a unified popup. LSP servers provide language-specific completions through the `nvim_lsp` source, while Copilot suggestions integrate via `copilot-cmp` rather than standalone overlays. This eliminates conflicts between Tab key handlers and ensures consistent behavior.
+
+Escape key handling provides an intuitive workflow: pressing `<Esc>` when completions are visible dismisses the popup without exiting insert mode, allowing continued typing. A second `<Esc>` performs the standard mode transition. Manual completion triggers via `<C-Space>` ensure completion is available even when auto-trigger is disabled for specific contexts.
+
+**Trade-offs**: Requires disabling Neovim 0.11's built-in completion and managing nvim-cmp dependencies, but provides unified behavior across all completion sources.
+
 ## Component Documentation
 
 | Component | Purpose | Implementation Details |
