@@ -48,6 +48,16 @@ function fad() {
   git status --short | grep -E '^ ?M' | awk '{print $2}' | grep -i "$1" | xargs -r git add
   git status --short | grep -E '^[AM]'
 }
+
+#@gdp
+#--> Git diff preview for modified files
+function gdp() {
+  git status --short | awk '{print $2}' | \
+    fzf --preview 'git diff --color=always {} | delta --paging=never --width=$FZF_PREVIEW_COLUMNS' \
+        --preview-window='up:85%' \
+        --bind 'ctrl-d:preview-page-down,ctrl-u:preview-page-up'
+}
+
 #@adcomp
 #--> Git add all, commit with message and push
 function adcomp() {
