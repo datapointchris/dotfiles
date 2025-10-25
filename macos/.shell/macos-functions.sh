@@ -78,3 +78,32 @@ function reload-dev-forever() {
     sleep 15
   done
 }
+
+#@brew-maintenance
+#--> Run full brew maintenance - update, upgrade, cleanup, autoremove
+function brew-maintenance() {
+  color_green "$(print_section "Brew Maintenance")"
+  echo
+
+  color_blue "Updating brew..."
+  brew update
+  echo
+
+  color_blue "Upgrading packages..."
+  brew upgrade
+  echo
+
+  color_blue "Cleaning up old versions..."
+  brew cleanup
+  echo
+
+  color_blue "Removing unused dependencies..."
+  brew autoremove
+  echo
+
+  color_blue "Running diagnostics..."
+  brew doctor
+  echo
+
+  color_green "Maintenance complete!"
+}
