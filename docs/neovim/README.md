@@ -44,7 +44,11 @@ This configuration addresses three primary development environment requirements:
 
 The completion system establishes a clear hierarchy where nvim-cmp manages all completions in a unified popup. LSP servers provide language-specific completions through the `nvim_lsp` source, while Copilot suggestions integrate via `copilot-cmp` rather than standalone overlays. This eliminates conflicts between Tab key handlers and ensures consistent behavior.
 
-Escape key handling provides an intuitive workflow: pressing `<Esc>` when completions are visible dismisses the popup without exiting insert mode, allowing continued typing. A second `<Esc>` performs the standard mode transition. Manual completion triggers via `<C-Space>` ensure completion is available even when auto-trigger is disabled for specific contexts.
+Escape key handling provides an intuitive workflow: pressing `<Esc>` when completions are visible dismisses the popup without exiting insert mode, allowing continued typing. A second `<Esc>` performs the standard mode transition. Manual completion triggers via `<C-;>` ensure completion is available even when auto-trigger is disabled for specific contexts.
+
+**Critical Implementation Detail**: The Tab key logic differentiates between completion types to prevent "gibberish" insertions. When accepting a completion, the system checks if the selected item is a LuaSnip snippet (from `friendly-snippets`) and calls `luasnip.expand()` only for those. All other completions—LSP keywords, function names, Copilot suggestions—use `cmp.confirm()` which properly handles LSP snippet expansion through the language server protocol. This distinction is essential because LSP servers return snippet text with `$1`, `$2` placeholders that require different processing than LuaSnip's internal snippet format.
+
+The source priority order matters for debugging: `lazydev` (group 0) takes precedence for Lua development, followed by `nvim_lsp`, `copilot`, `luasnip`, `buffer`, and `path` (all group 2). If completions aren't appearing from a specific source, check that the corresponding LSP server is attached and the source plugin is properly loaded.
 
 **Trade-offs**: Requires disabling Neovim 0.11's built-in completion and managing nvim-cmp dependencies, but provides unified behavior across all completion sources.
 
