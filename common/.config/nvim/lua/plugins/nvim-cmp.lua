@@ -37,6 +37,7 @@ return {
     'onsails/lspkind.nvim', -- icons for completion items
     'hrsh7th/cmp-buffer', -- completions from buffer
     'hrsh7th/cmp-path', -- completions from path
+    'zbirenbaum/copilot-cmp', -- copilot completions integrated with nvim-cmp
     {
       'L3MON4D3/LuaSnip',
       version = 'v2.*', -- follow latest release.
@@ -44,30 +45,41 @@ return {
       dependencies = {
         {
           'rafamadriz/friendly-snippets',
-          config = function() require('luasnip.loaders.from_vscode').lazy_load() end,
+          config = function()
+            require('luasnip.loaders.from_vscode').lazy_load()
+          end,
         },
       },
     },
     {
       'nvimdev/lspsaga.nvim', -- Better UI for LSP -- https://nvimdev.github.io/lspsaga/
-      config = function() require('lspsaga').setup({ ui = { code_action = '' } }) end,
+      config = function()
+        require('lspsaga').setup({ ui = { code_action = '' } })
+      end,
       dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' },
     },
   },
   config = function()
     local luasnip = require('luasnip')
-    luasnip.config.setup({})
+    luasnip.config.setup({
+      enable_autosnippets = true,
+      store_selection_keys = '<Tab>',
+    })
 
     local cmp = require('cmp')
     cmp.setup({
       enabled = function()
         -- Disable completion for markdown files
         local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
-        if filetype == 'markdown' then return false end
+        if filetype == 'markdown' then
+          return false
+        end
         return true
       end,
       snippet = {
-        expand = function(args) luasnip.lsp_expand(args.body) end,
+        expand = function(args)
+          luasnip.lsp_expand(args.body)
+        end,
       },
       completion = {
         completeopt = 'menu,menuone,noinsert',
@@ -98,19 +110,43 @@ return {
         ['<C-j>'] = cmp.mapping.scroll_docs(-4),
         ['<C-k>'] = cmp.mapping.scroll_docs(4),
 
-        ['<Tab>'] = cmp.mapping(function(fallback)
+        -- Add escape key to dismiss completion WITHOUT exiting insert mode
+        ['<Esc>'] = cmp.mapping(function(fallback)
           if cmp.visible() then
-            if luasnip.expandable() then
-              luasnip.expand()
-            else
-              cmp.confirm({
-                select = true,
-              })
-            end
+            cmp.close()
+            -- Stay in insert mode - don't call fallback()
+          else
+            fallback() -- Normal escape behavior when no completion
+          end
+        end, { 'i' }),
+
+        -- Alternative: Ctrl+E to dismiss completion (stays in insert mode)
+        ['<C-e>'] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.close()
+            -- Stay in insert mode
           else
             fallback()
           end
-        end),
+        end, { 'i' }),
+
+        ['<Tab>'] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            local entry = cmp.get_selected_entry()
+            if entry and entry.source.name == 'luasnip' and luasnip.expandable() then
+              luasnip.expand()
+            else
+              cmp.confirm({
+                behavior = cmp.ConfirmBehavior.Replace,
+                select = true,
+              })
+            end
+          elseif luasnip.locally_jumpable(1) then
+            luasnip.jump(1)
+          else
+            fallback()
+          end
+        end, { 'i', 's' }),
 
         ['<C-n>'] = cmp.mapping(function(fallback)
           if cmp.visible() then
@@ -133,23 +169,7 @@ return {
         end, { 'i', 's' }),
 
         -- Manually trigger completion
-        ['<C-:>'] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.complete()
-          elseif luasnip.jumpable(1) then
-            luasnip.jump(1)
-          else
-            fallback()
-          end
-        end, { 'i', 's' }),
-
-        ['<C-;>'] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.close()
-          else
-            fallback()
-          end
-        end, { 'i', 's' }),
+        ['<C-;>'] = cmp.mapping.complete(),
       },
     })
   end,
