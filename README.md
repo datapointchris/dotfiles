@@ -12,7 +12,7 @@ Modern, cross-platform dotfiles configuration featuring:
 
 This dotfiles setup uses a **shared configuration** approach:
 
-- `shared/` - Common configuration files used across all platforms
+- `common/` - Common configuration files used across all platforms
 - `macos/` - macOS-specific configurations and symlinks
 - `wsl/` - WSL-specific configurations and symlinks
 - `ubuntu/` - Ubuntu-specific configurations and symlinks
@@ -27,101 +27,16 @@ git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
 # Link shared configuration to platform directories
-./symlinks shared
+./symlinks link common
 
 # Link your platform's configuration to $HOME
-./symlinks macos          # On macOS
-./symlinks wsl            # On WSL
-./symlinks ubuntu         # On Ubuntu
-./symlinks arch           # On Arch (if you add an arch/ directory)
+./symlinks link macos          # On macOS
+./symlinks link wsl            # On WSL
 ```
 
 ## Symlink Management
 
-This dotfiles setup uses a powerful `symlinks` script that replaces GNU Stow entirely:
-
-### Shared Configuration Management
-
-```bash
-# Link shared/ to all platform directories (macos/, wsl/, ubuntu/, etc.)
-./symlinks shared
-
-# Remove shared symlinks from platform directories  
-./symlinks shared unlink
-
-# Show shared symlinks in platform directories
-./symlinks shared show
-```
-
-### Platform Configuration Management
-
-```bash
-# Link platform directory to $HOME
-./symlinks macos                    # Link macos/ → $HOME
-./symlinks wsl                      # Link wsl/ → $HOME  
-./symlinks ubuntu                   # Link ubuntu/ → $HOME
-
-# Remove platform symlinks from $HOME
-./symlinks macos unlink
-./symlinks wsl unlink
-
-# Show platform symlinks in $HOME
-./symlinks macos show
-./symlinks wsl show
-```
-
-### Key Features
-
-- **Auto-Discovery**: Automatically finds all platform directories (no hardcoding)
-- **Expandable**: Adding a new platform (like `arch/`) automatically works
-- **Safe Operations**: Uses `ln -sf` to overwrite safely
-- **Targeted Removal**: Only removes symlinks pointing to the correct source
-- **Performance Optimized**: Efficient directory scanning with depth limits
-
-## Required Dependencies
-
-Before installing, ensure you have these dependencies:
-
-**Core Tools:** zsh, git, Nerd Font\
-**Enhanced CLI:** zoxide, fzf, fd, eza, bat, ripgrep, delta\
-**ZSH Plugins:** zsh-syntax-highlighting, git-open\
-**Optional:** yazi, tmux, nvim, gh
-
-## Manual Setup
-
-### Legacy Symlink Management
-
-The configuration uses a dynamic symlink system that automatically discovers all files in `shared/` and creates corresponding symlinks in platform directories using `ln -sf`:
-
-```bash
-# Create symlinks for all files in shared/ to both macos/ and wsl/
-./setup-symlinks.sh create
-
-# Show current symlink status
-./setup-symlinks.sh show
-
-# Remove all symlinks from platform directories
-./setup-symlinks.sh remove
-
-# Recreate all symlinks (remove and create)
-./setup-symlinks.sh recreate
-```
-
-The script automatically:
-
-- Finds all files in `shared/` directory structure
-- Creates corresponding directory structure in `macos/` and `wsl/`
-- Uses `ln -sf` to create symlinks for each file
-- Handles any future additions to `shared/` automatically
-
-### Adding New Shared Files
-
-To add new shared configuration:
-
-1. Place files in the appropriate `shared/` subdirectory
-1. Run `./setup-symlinks.sh recreate` to update all symlinks
-
-The script will automatically detect and symlink any new files.
+This dotfiles setup uses a powerful `symlinks` script that replaces GNU Stow entirely
 
 ### Yazi Themes
 
