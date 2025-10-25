@@ -42,7 +42,13 @@ function adcomp() {
   git add . && git commit -m "$1" && git push
 }
 
-#@checkit
+#@gm
+#--> Git commit with message
+function gm() {
+  git commit -m "$1"
+}
+
+#@checknode
 #--> Check node and npm location and version
 function checknode() {
   echo
