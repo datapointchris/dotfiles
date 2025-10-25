@@ -30,4 +30,5 @@ return {
   { 'craftzdog/solarized-osaka.nvim' },
   { 'mhartington/oceanic-next' },
   { 'datapointchris/flexoki-moon-nvim' },
+  -- { dir = '/Users/chris/code/flexoki-moon-nvim/', lazy = false }
 }
