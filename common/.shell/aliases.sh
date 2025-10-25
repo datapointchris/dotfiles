@@ -16,7 +16,8 @@ alias please='sudo $(fc -ln -1)'
 # Move all files and folders including hidden to parent directory
 alias move_all_to_parent='find . -maxdepth 1 -exec mv {} .. \;'
 
-
+# Go to base of current git directory
+alias base='z $(git rev-parse --show-toplevel)'
 
 # ---------- Directory Navigation ---------- #
 
@@ -103,6 +104,6 @@ alias watchports='watch -n 1 -d lsof -iTCP -sTCP:LISTEN -n -P'
 # Git - different from alias in gitconfig where these don't have to use `git` first
 alias gst='git status'
 
-alias commitall='git add -A; git commit -m'
+alias commitall='git add .; git commit -m'
 
 alias git-alias='cat ~/.gitconfig | grep --after-context=50 "\[alias\]"'
