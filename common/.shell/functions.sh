@@ -1,4 +1,4 @@
-# shellcheck shell=bash
+
 # shellcheck disable=SC2154
 # SC2154 = Variable is referenced but not assigned
 # *For the word formatting that comes from .color-and-formatting
@@ -36,6 +36,18 @@ function cl() {
   cd "$1" && ls
 }
 
+#@fad
+#--> Git add modified files matching pattern
+function fad() {
+  if [ -z "$1" ]; then
+    echo "Usage: fad <pattern>"
+    echo "Example: fad init"
+    return 1
+  fi
+
+  git status --short | grep -E '^ ?M' | awk '{print $2}' | grep -i "$1" | xargs -r git add
+  git status --short | grep -E '^[AM]'
+}
 #@adcomp
 #--> Git add all, commit with message and push
 function adcomp() {
