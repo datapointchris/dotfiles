@@ -19,8 +19,10 @@ Working on a cross-platform dotfiles repository with shared configurations and p
 ### Key Files
 
 - `symlinks` - Core symlink management tool
-- `shared/.config/zsh/` - Cross-platform shell configuration
-- `macos/.config/nvim/` - Native LSP configuration
+- `common/` - Common dotfiles between all operating systems
+- `macos/` - MacOS specific dotfiles and configuration
+- `wsl/` - WSL using Ubuntu specific dotfiles for use on a slightly restricted work computer
+- `docs/` - documentation for the dotfiles, stored in mkdocs style
 - Platform-specific Git configs with different editors/credentials
 
 ## Coding Preferences
@@ -49,11 +51,7 @@ When creating or updating documentation:
 
 ### Documentation Structure
 
-1. **Problem Statement**: What specific issue does this solve?
-2. **Design Decisions**: Why this approach over alternatives?
-3. **Trade-offs**: What we gained vs what we sacrificed
-4. **Integration Points**: How it fits with other dotfiles components
-5. **Future Considerations**: Known limitations or planned evolution
+Avoid creating too many bulleted lists.  A bulleted list loses a lot information that long form sentences and explanations can maintain.  Prefer to always talk in a person to person manner as if having a converation with another developer on a pull request that was created to explain the code and how the project works.
 
 ### Writing Style
 
