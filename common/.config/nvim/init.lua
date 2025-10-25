@@ -9,7 +9,9 @@ local required_env_vars = {
 
 local missing_vars = {}
 for _, var in ipairs(required_env_vars) do
-  if not vim.env[var] then table.insert(missing_vars, var) end
+  if not vim.env[var] then
+    table.insert(missing_vars, var)
+  end
 end
 
 if #missing_vars > 0 then
@@ -26,7 +28,9 @@ require('core.lazy') -- Load lazy.nvim in both VSCode and Neovim
 require('core.keymaps')
 
 -- Only load autocmds in regular Neovim
-if not vim.g.vscode then require('core.autocmds') end
+if not vim.g.vscode then
+  require('core.autocmds')
+end
 
 vim.lsp.enable({
   'bashls',
@@ -53,12 +57,16 @@ vim.lsp.enable({
 vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(ev)
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client:supports_method('textDocument/completion') then vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true }) end
+    if client:supports_method('textDocument/completion') then
+      vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+    end
   end,
 })
 
 vim.cmd('set completeopt+=noselect')
 
 vim.diagnostic.config({
-  virtual_text = { current_line = true },
+  -- virtual_text = { current_line = true },
+  virtual_text = true,
+  float = { border = 'rounded' },
 })
