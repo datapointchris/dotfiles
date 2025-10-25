@@ -31,6 +31,44 @@ Working on a cross-platform dotfiles repository with shared configurations and p
 - **Documentation**: Clear README files, inline comments for complex logic
 - **Testing**: Pre-commit hooks, shell validation, configuration testing
 
+## Documentation Philosophy
+
+When creating or updating documentation:
+
+### Audience
+
+- **Primary**: Future me (6+ months later) trying to remember why decisions were made
+- **Secondary**: Technical developers familiar with the technology stack
+- **Context**: Always within the broader dotfiles project ecosystem
+
+### Content Focus
+
+- **WHY over WHAT**: Architectural decisions, trade-offs
+- **Context over Code**: How components fit together, not implementation details
+- **Stability over Examples**: Principles that don't change vs code that does
+
+### Documentation Structure
+
+1. **Problem Statement**: What specific issue does this solve?
+2. **Design Decisions**: Why this approach over alternatives?
+3. **Trade-offs**: What we gained vs what we sacrificed
+4. **Integration Points**: How it fits with other dotfiles components
+5. **Future Considerations**: Known limitations or planned evolution
+
+### Writing Style
+
+- **Technical, not promotional**: State facts and reasoning, not "features"
+- **Context-aware**: Reference other dotfiles components and decisions
+- **Decision-focused**: Document the "why" behind choices made
+- **Maintenance-oriented**: Help future maintenance and debugging
+
+### Avoid
+
+- ❌ Marketing language ("amazing", "powerful", "best")
+- ❌ Step-by-step tutorials (they go stale)
+- ❌ Extensive code examples (reference files instead)
+- ❌ Feature lists without context or reasoning
+
 ## Recent Work
 
 1. Completed migration from Mason LSP to native vim.lsp.config()
