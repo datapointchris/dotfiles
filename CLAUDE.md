@@ -51,7 +51,18 @@ When creating or updating documentation:
 
 ### Documentation Structure
 
-Avoid creating too many bulleted lists.  A bulleted list loses a lot information that long form sentences and explanations can maintain.  Prefer to always talk in a person to person manner as if having a converation with another developer on a pull request that was created to explain the code and how the project works.
+Avoid creating too many bulleted lists. A bulleted list loses a lot of information that long form sentences and explanations can maintain. Prefer to always talk in a person to person manner as if having a conversation with another developer on a pull request that was created to explain the code and how the project works.
+
+**Documentation Guidelines:**
+
+- Focus on **concise architectural explanations** rather than verbose step-by-step processes
+- Emphasize **how systems work together** and **why they are designed that way**
+- Use **paragraphs of explanation** as the primary structure for conveying context and reasoning
+- Include **selective bulleted lists** for overviews only, not as the main documentation format
+- Keep **code snippets minimal** - include command names or key concepts, not full implementations
+- Maintain a **conversational tone** as if explaining technical decisions to another developer
+
+Avoid documentation that is primarily bulleted lists or verbose procedural steps. Instead, focus on architectural understanding and the reasoning behind design decisions.
 
 ### Writing Style
 
@@ -76,7 +87,6 @@ Avoid creating too many bulleted lists.  A bulleted list loses a lot information
 
 ## Communication Style
 
-- I appreciate step-by-step explanations for complex changes
 - Like to understand the "why" behind architectural decisions
 - Prefer seeing the code changes implemented rather than just described
 - Value cross-platform compatibility considerations
