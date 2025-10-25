@@ -12,14 +12,14 @@ color_bright_black() { echo "$(tput setaf 8)$1$(tput sgr0)"; }
 color_bright_red() { echo "$(tput setaf 9)$1$(tput sgr0)"; }
 
 function allcolors() {
-    color_black "black"
-    color_red "red"
-    color_green "green"
-    color_yellow "yellow"
-    color_blue "blue"
-    color_magenta "magenta"
-    color_cyan "cyan"
-    color_white "white"
-    color_bright_black "bright black"
-    color_bright_red "bright red"
+  color_black "black"
+  color_red "red"
+  color_green "green"
+  color_yellow "yellow"
+  color_blue "blue"
+  color_magenta "magenta"
+  color_cyan "cyan"
+  color_white "white"
+  color_bright_black "bright black"
+  color_bright_red "bright red"
 }

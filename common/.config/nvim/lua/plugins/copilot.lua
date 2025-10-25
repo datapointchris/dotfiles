@@ -6,18 +6,8 @@ return {
     config = function()
       require('copilot').setup({
         suggestion = {
-          enabled = true,
-          auto_trigger = true,
-          hide_during_completion = true,
-          debounce = 75,
-          keymap = {
-            accept = '<Tab>',
-            accept_word = '<C-Right>',
-            accept_line = '<C-l>',
-            next = '<C-]>',
-            prev = '<C-[>',
-            dismiss = '<C-e>', -- Dismiss without exiting insert mode
-          },
+          enabled = false, -- Disable standalone suggestions, use nvim-cmp integration
+          auto_trigger = false,
         },
         panel = {
           enabled = false, -- Keep panel disabled, using chat interface
@@ -30,11 +20,14 @@ return {
     end,
   },
 
-  -- Disable copilot-cmp since we're using native LSP completion + CodeCompanion
+  -- Enable copilot-cmp for unified completion in nvim-cmp
   {
     'zbirenbaum/copilot-cmp',
-    enabled = false, -- Conflicts with native LSP completion
-    cond = false,
+    enabled = true, -- Re-enabled for unified completion experience
+    cond = vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode,
+    config = function()
+      require('copilot_cmp').setup()
+    end,
   },
 
   -- Keep copilot-lualine for status integration
