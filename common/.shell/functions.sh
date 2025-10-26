@@ -668,6 +668,9 @@ function lstmux() {
   local message
   message=$(
     cat <<-EOF
+			$(color_green "Menu")
+			  $(color_blue "Open Menu: |${normal} pre + space")
+			  $(color_blue "Show Keybindings Popup: |${normal} pre + C-p")
 			$(color_green "Windows")
 			  $(color_blue "New Window: |${normal} pre + c")
 			  $(color_blue "Select Window: |${normal} pre + 1-9, starts at 1")
@@ -680,7 +683,9 @@ function lstmux() {
 			  $(color_blue "Split Horizontally: |${normal} pre + {pipe}")
 			  $(color_blue "Split Vertically: |${normal} pre + -")
 			  $(color_blue "Rename Pane: |${normal} tmux select-pane -T 'New name'")
+			  $(color_blue "Navigate panes: |${normal} Ctrl + hjkl")
 			  $(color_blue "Navigate panes: |${normal} pre + LRUD")
+			  $(color_blue "Resize pane: |${normal} pre + Ctrl-Option-hjkl")
 			  $(color_blue "Resize pane: |${normal} pre + Cmd-Option-LRUD")
 			  $(color_blue "Toggle last active pane: |${normal} pre + ;")
 			  $(color_blue "Zoom In on pane: |${normal} pre + z")
@@ -711,6 +716,12 @@ function lstmux() {
 			  $(color_blue "Tmuxinator: |${normal} Ctrl + /")
 			  $(color_blue "Fzf Marks: |${normal} Ctrl + g")
 			  $(color_blue "Toggle Preview Pane: |${normal} ?")
+			$(color_green "Copy Mode")
+			  $(color_blue "Enter Copy Mode: |${normal} pre + Enter")
+			  $(color_blue "Scroll Up: |${normal} pre + PageUp")
+			  $(color_blue "Scroll Down: |${normal} pre + PageDown")
+			  $(color_blue "Copy Selection: |${normal} pre + w")
+			  $(color_blue "Exit Copy Mode: |${normal} leq")
 			$(color_green "General")
 			  $(color_green "pre: |${normal} ctrl + <space>")
 			  $(color_blue "Command Mode: |${normal} pre + :")
@@ -723,10 +734,6 @@ function lstmux() {
 			$(color_green "Tree Sidebar")
 			  $(color_blue "Toggle Tree Sidebar: |${normal} pre + <tab>")
 			  $(color_blue "Toggle Tree Sidebar with Focus: |${normal} pre + <backspace>")
-			$(color_green "Links")
-			  $(color_blue "https://github.com/tmux/tmux/wiki/Getting-Started ${normal}")
-			  $(color_blue "https://github.com/omerxx/tmux-sessionx ${normal}")
-			  $(color_blue "https://github.com/tmux-plugins/tpm/blob/master/docs/how_to_create_plugin.md ${normal}")
 		EOF
   )
   if [ -n "$1" ]; then
