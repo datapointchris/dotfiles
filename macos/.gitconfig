@@ -3,7 +3,7 @@ name = Chris Birch
 email = datapointchris@gmail.com
 
 [core]
-editor = code --wait
+editor = nvim
 pager = delta
 
 [advice]
