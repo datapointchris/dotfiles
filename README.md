@@ -49,6 +49,12 @@ ya pkg add Chromium-3-Oxide/everforest-medium
 ya pkg add gosxrgxx/flexoki-dark
 ```
 
+### Yazi Plugins
+
+```bash
+ya
+```
+
 ## macOS Installation
 
 ### Install Dependencies (macOS)
@@ -57,7 +63,7 @@ ya pkg add gosxrgxx/flexoki-dark
 # Core tools
 brew install zsh git stow
 
-# Enhanced CLI tools  
+# Enhanced CLI tools
 brew install zoxide fzf fd eza bat ripgrep git-delta
 
 # GNU coreutils (for enhanced compatibility)
@@ -100,8 +106,19 @@ stow macos
 ## Neovim Lanuage Servers
 
 ```bash
+# NOTE: This list is incomplete
 brew install lua-language-server
 
+```
+
+### Install rclone to get S3 file system browsing
+
+````bash
+cd && curl -O https://downloads.rclone.org/rclone-current-osx-amd64.zip
+unzip -a rclone-current-osx-amd64.zip && cd rclone-*-osx-amd64
+sudo mv rclone /usr/local/bin/
+cd .. && rm -rf rclone-*-osx-amd64 rclone-current-osx-amd64.zip
+cd .. && rm -rf rclone-*-osx-amd64 rclone-current-osx-amd64.zip
 ```
 
 ## Installing in WSL (Ubuntu)
@@ -118,7 +135,7 @@ ln -s /usr/bin/batcat ~/.local/bin/bat
 sudo apt install ffmpeg 7zip jq poppler-utils imagemagick chafa
 # for fd need to make a symlink
 ln -s $(which fdfind) ~/.local/bin/fd
-```
+````
 
 ### Install Enhanced CLI Tools
 
@@ -265,7 +282,7 @@ sudo pacman -S zoxide fzf fd eza bat ripgrep git-delta
 # ZSH plugins
 sudo pacman -S zsh-syntax-highlighting
 
-# Optional tools  
+# Optional tools
 sudo pacman -S yazi tmux neovim github-cli
 ```
 
@@ -380,7 +397,7 @@ export AWS_REGION=us-east-1
 # For aws-vault users
 aws-vault exec production -- zsh
 
-# For AWSume users  
+# For AWSume users
 awsume production
 ```
 
