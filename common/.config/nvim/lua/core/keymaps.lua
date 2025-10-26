@@ -200,7 +200,7 @@ vim.keymap.set('n', '<leader>oq', '<cmd>ObsidianQuickSwitch<CR>', { desc = 'Quic
 --------------------------------------------------------------------------------
 -- VSCode has native file navigation, Oil is Neovim-specific
 if not vim.g.vscode then
-  vim.keymap.set('n', '-', '<cmd>Oil --float<CR>', { desc = 'Open parent directory' })
+  vim.keymap.set('n', '<leader>-', '<cmd>Oil --float<CR>', { desc = 'Open parent directory' })
   vim.keymap.set('n', 'g^', function()
     require('oil').set_columns({ 'icon', 'permissions', 'size', 'mtime' })
   end, { desc = 'Show file details' })
