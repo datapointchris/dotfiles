@@ -281,6 +281,9 @@ fi
 add_path "/usr/local/sbin"
 add_path "/usr/local/bin"
 
+# Add system bin last to put at front to make sure to use macos system tools if available
+add_path "/usr/bin"
+
 echo "$check Load  : Paths"
 
 # ------------------------------------------------------------------ #
