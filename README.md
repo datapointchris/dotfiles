@@ -52,7 +52,9 @@ ya pkg add gosxrgxx/flexoki-dark
 ### Yazi Plugins
 
 ```bash
-ya
+ya pkg add AnirudghG07/nbpreview
+ya pkg add pirafrank/what-size
+ya pkg add yazi-rs/plugins:git
 ```
 
 ## macOS Installation
@@ -218,6 +220,7 @@ uv tool install mypy
 uv tool install mdformat
 uv tool install basedpyright
 uv tool install sqlfluff
+uv tool install nbpreview
 uv tool install codespell
 npm install -g markdownlint-cli
 npm install -g bash-language-server

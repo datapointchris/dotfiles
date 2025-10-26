@@ -115,6 +115,11 @@ image_bound = [5000, 5000]
 suppress_preload = false
 
 [plugin]
+prepend_fetchers = [
+  { id = "git", name = "*", run = "git" },
+  { id = "git", name = "*/", run = "git" },
+]
+prepend_previewers = [{ name = "*.ipynb", run = "nbpreview" }]
 fetchers = [
   # Mimetype
   { id = "mime", name = "*", run = "mime", prio = "high" },
@@ -177,7 +182,6 @@ previewers = [
   # Fallback
   { name = "*", run = "file" },
 ]
-
 [input]
 cursor_blink = false
 
