@@ -1,117 +1,185 @@
-# cSpell: disable
-# Aerospace docs: https://nikitabobko.github.io/AeroSpace/guide
-after-startup-command = [
-  'exec-and-forget borders active_color=0xffa48cf2 inactive_color=0xff3B446A width=5.0',
-]
+###################################################################################
+########### ------------------------- SYSTEM  ------------------------- ###########
+###################################################################################
 
-start-at-login = false
+start-at-login = true
+after-startup-command = []
 
 enable-normalization-flatten-containers = true
 enable-normalization-opposite-orientation-for-nested-containers = true
 
-default-root-container-layout = 'accordion' #Possible values: tiles|accordion
+accordion-padding = 50
+
+# Possible values: tiles|accordion
+default-root-container-layout = 'tiles'
+
+# Possible values: horizontal|vertical|auto
+# 'auto' means: wide monitor (anything wider than high) gets horizontal orientation,
+#               tall monitor (anything higher than wide) gets vertical orientation
 default-root-container-orientation = 'auto'
 
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-on-focus-changed = ['move-mouse window-lazy-center']
 
-automatically-unhide-macos-hidden-apps = false #focuses app regardless of visibility
-
-accordion-padding = 30
-
-[gaps]
-inner.horizontal = 5
-inner.vertical = 5
-outer.top = 2
-outer.left = 5
-outer.right = 5
-outer.bottom = 5
+automatically-unhide-macos-hidden-apps = true
 
 [key-mapping]
 preset = 'qwerty'
 
-########## MAIN BINDINGS ##########
-# M2=LSA alt-shift
-# M3=LCA alt-ctrl
-# M4=LCAG alt-ctrl-cmd
+# Gaps between windows (inner-*) and between monitor edges (outer-*).
+# Possible values:
+# - Constant:     gaps.outer.top = 8
+# - Per monitor:  gaps.outer.top = [{ monitor.main = 16 }, { monitor."some-pattern" = 32 }, 24]
+#                 In this example, 24 is a default value when there is no match.
+#                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
+[gaps]
+inner.horizontal = 10
+inner.vertical = 10
+outer.left = 0
+outer.bottom = 0
+outer.top = 0
+outer.right = 0
 
+
+###################################################################################
+########## ------------------------- MAIN MODE ------------------------- ##########
+###################################################################################
+
+# 'main' binding mode must be always presented
 [mode.main.binding]
-## Moves/Floating/Workspaces - M3
-alt-ctrl-tab = 'workspace-back-and-forth' ## Cycle last 2 workspaces
-alt-ctrl-minus = 'resize smart -50'
-alt-ctrl-equal = 'resize smart +50'
-alt-ctrl-left = 'resize smart -50'
-alt-ctrl-right = 'resize smart +50'
 
-alt-ctrl-j = 'focus down'
-alt-ctrl-h = 'focus left'
-alt-ctrl-k = 'focus up'
-alt-ctrl-l = 'focus right'
+# All possible keys:
+# - Letters.        a, b, c, ..., z
+# - Numbers.        0, 1, 2, ..., 9
+# - Keypad numbers. keypad0, keypad1, keypad2, ..., keypad9
+# - F-keys.         f1, f2, ..., f20
+# - Special keys.   minus, equal, period, comma, slash, backslash, quote, semicolon,
+#                   backtick, leftSquareBracket, rightSquareBracket, space, enter, esc,
+#                   backspace, tab, pageUp, pageDown, home, end, forwardDelete,
+#                   sectionSign (ISO keyboards only, european keyboards only)
+# - Keypad special. keypadClear, keypadDecimalMark, keypadDivide, keypadEnter, keypadEqual,
+#                   keypadMinus, keypadMultiply, keypadPlus
+# - Arrows.         left, down, up, right
 
-alt-ctrl-0 = 'workspace hq'       # 0 -> primary workspace
-alt-ctrl-1 = 'workspace code'     # 1 -> dev/brwosers apps
-alt-ctrl-2 = 'workspace design'   # 2 -> design/work apps
-alt-ctrl-3 = 'workspace chat'     # 3 -> chat
-alt-ctrl-4 = 'workspace overflow' # 4 -> overflow
+# All possible modifiers: cmd, alt, ctrl, shift
+# All possible commands: https://nikitabobko.github.io/AeroSpace/commands
 
-## Layouts/Move - M4
-alt-ctrl-cmd-period = 'layout tiles horizontal vertical'
-alt-ctrl-cmd-comma = 'layout accordion horizontal vertical'
-alt-ctrl-cmd-f = 'layout floating'                          # to undo see service mode
-alt-ctrl-cmd-h = 'move left'
-alt-ctrl-cmd-j = 'move down'
-alt-ctrl-cmd-k = 'move up'
-alt-ctrl-cmd-l = 'move right'
+cmd-h = []     # disable hide application
+cmd-alt-h = [] # disable hide others
 
-alt-ctrl-cmd-0 = 'move-node-to-workspace hq --focus-follows-window'
-alt-ctrl-cmd-1 = 'move-node-to-workspace code --focus-follows-window'
-alt-ctrl-cmd-2 = 'move-node-to-workspace design --focus-follows-window'
-alt-ctrl-cmd-3 = 'move-node-to-workspace chat --focus-follows-window'
-alt-ctrl-cmd-4 = 'move-node-to-workspace overflow --focus-follows-window'
+# You can uncomment the following lines to open up terminal with alt + enter shortcut
+alt-enter = '''exec-and-forget osascript -e '
+tell application "Wezterm"
+    do script
+    activate
+end tell'
+'''
 
-## TODO: test this out and see if we can drop Karabiner Elements
-## Open/focus apps using keybinds
-## See: https://nikitabobko.github.io/AeroSpace/commands#exec-and-forget
-# cmd-alt-ctrl-shift-b = 'exec-and-forget open -a "Claude.app"'
-# cmd-alt-ctrl-shift-f = 'exec-and-forget open -a "Finder"'
+alt-h = 'focus left'
+alt-j = 'focus down'
+alt-k = 'focus up'
+alt-l = 'focus right'
 
-## Service Mode - M2
-alt-ctrl-enter = ['mode service']
+alt-shift-h = 'move left'
+alt-shift-j = 'move down'
+alt-shift-k = 'move up'
+alt-shift-l = 'move right'
+
+alt-tab = 'workspace-back-and-forth'
+
+ctrl-alt-shift-semicolon = 'mode alt'
+alt-shift-semicolon = 'mode service'
+
+###################################################################################
+########## ------------------------- ALT MODE ------------------------- ###########
+###################################################################################
+
+[mode.alt.binding]
+esc = ['mode main']
+
+quote = 'resize smart -50'
+backslash = 'resize smart +50'
+
+# Workspace navigation (exits to main mode after navigation)
+i = ['workspace I', 'mode main'] # ichrisbirch - terminal
+c = ['workspace C', 'mode main'] # ichrisbirch - editor
+b = ['workspace B', 'mode main'] # ichrisbirch - panel
+
+t = ['workspace T', 'mode main'] # project - terminal
+w = ['workspace W', 'mode main'] # project - editor
+a = ['workspace A', 'mode main'] # project - panel
+
+x = ['workspace X', 'mode main'] # misc
+y = ['workspace Y', 'mode main'] # misc
+z = ['workspace Z', 'mode main'] # misc
+
+d = ['workspace D', 'mode main'] # dotfiles
+u = ['workspace U', 'mode main'] # university
+q = ['workspace Q', 'mode main'] # quick temporary
+
+e = ['workspace E', 'mode main'] # email
+m = ['workspace M', 'mode main'] # music
+s = ['workspace S', 'mode main'] # social
+
+# Move node to workspace (exits to main mode after moving)
+shift-i = ['move-node-to-workspace I', 'mode main']
+shift-c = ['move-node-to-workspace C', 'mode main']
+shift-b = ['move-node-to-workspace B', 'mode main']
+
+shift-t = ['move-node-to-workspace T', 'mode main']
+shift-w = ['move-node-to-workspace W', 'mode main']
+shift-a = ['move-node-to-workspace A', 'mode main']
+
+shift-x = ['move-node-to-workspace X', 'mode main']
+shift-y = ['move-node-to-workspace Y', 'mode main']
+shift-z = ['move-node-to-workspace Z', 'mode main']
+
+shift-d = ['move-node-to-workspace D', 'mode main']
+shift-u = ['move-node-to-workspace U', 'mode main']
+shift-q = ['move-node-to-workspace Q', 'mode main']
+
+shift-e = ['move-node-to-workspace E', 'mode main']
+shift-m = ['move-node-to-workspace M', 'mode main']
+shift-s = ['move-node-to-workspace S', 'mode main']
+
+shift-h = ['join-with left', 'mode main']
+shift-j = ['join-with down', 'mode main']
+shift-k = ['join-with up', 'mode main']
+shift-l = ['join-with right', 'mode main']
+
+alt-h = ['focus-monitor left', 'mode main']
+alt-l = ['focus-monitor right', 'mode main']
+
+alt-shift-h = ['move-workspace-to-monitor left', 'mode main']
+alt-shift-l = ['move-workspace-to-monitor right', 'mode main']
+
+slash = 'layout tiles horizontal vertical'
+comma = 'layout accordion horizontal vertical'
+
+# [workspace-to-monitor-force-assignment]
+# i = ['2']
+# c = 'main'
+# b = ['1']
+# t = ['2']
+# w = 'main'
+# a = ['1']
+# z = ['2']
+# x = 'main'
+# l = 'main'
+# q = 'main'
+# e = ['1']
+# m = ['1']
+# s = 'main'
+
+###################################################################################
+######## ------------------------- SERVICE MODE ------------------------- #########
+###################################################################################
+
+
 [mode.service.binding]
 esc = ['reload-config', 'mode main']
-r = ['flatten-workspace-tree', 'mode main']
-f = ['layout floating tiling', 'mode main']
-b = ['balance-sizes', 'mode main']
+r = ['flatten-workspace-tree', 'mode main']                # reset layout
+f = ['layout floating tiling', 'mode main']                # Toggle floating and tiling layout
 backspace = ['close-all-windows-but-current', 'mode main']
 
-alt-shift-h = ['join-with left', 'mode main']
-alt-shift-j = ['join-with down', 'mode main']
-alt-shift-k = ['join-with up', 'mode main']
-alt-shift-l = ['join-with right', 'mode main']
-
-######### DEDICATED APP WORKSPACES ##########
-[[on-window-detected]] # HQ Workspace - macos Desktop 1 (alt-ctrl-0)
-if.app-name-regex-substring = 'Zen|Brave Browser Beta|Safari|Google Chrome|Vivaldi'
-run = "move-node-to-workspace hq"
-
-[[on-window-detected]] # Coding Workspace - macos Desktop 2 (alt-ctrl-1)
-if.app-name-regex-substring = '.*Code|Typora|kitty|WezTerm|Ghostty|Zed|Kiro|Warp*'
-run = "move-node-to-workspace code"
-
-[[on-window-detected]] # Designing Workspace - macos Desktop 3 (alt-ctrl-2)
-if.app-name-regex-substring = ".*Creative|Adobe|Figma|Affinity|Shapr3D|.*Fusion|.*CAD|.*Slicer|.*Studio|AnycubicPhotonWorkshop|Microsoft (?!Teams).*|GIMP|Inkscape"
-run = "move-node-to-workspace design"
-
-[[on-window-detected]] # Chat Workspace - macos Desktop 4 (alt-ctrl-3)
-if.app-name-regex-substring = 'Messages|Microsoft Teams|Slack|Discord|WhatsApp'
-run = "move-node-to-workspace chat"
-
-[[on-window-detected]] # Overflow Workspace - macos Desktop 5 (alt-ctrl-4)
-if.app-name-regex-substring = 'Notes|Reminders'
-run = "move-node-to-workspace overflow"
-
-# Floating Windows
-# Toggl and Cyberduck both always open in Overflow but are floating
-[[on-window-detected]]
-if.app-name-regex-substring = '.*Finder|.*raycast|.*karabiner|.*colorslurp|.*ice|.*shottr|.*dropbox|.*keka|.*toggl|Cyberduck|Preview'
-run = "layout floating"
+# sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
+#s = ['layout sticky tiling', 'mode main']
