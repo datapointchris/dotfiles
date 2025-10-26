@@ -528,7 +528,7 @@ function lsterm() {
 
 #@lsneovim
 #--> List neovim commands
-function lsvim() {
+function lsneovim() {
   echo ""
   color_green "$(print_section "Vim / Neovim Commands")"
   local message
