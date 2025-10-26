@@ -9,7 +9,7 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>', { desc = 'Clear highlights' 
 -- Put single character cut text in the black hole register
 vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
 
--- Select
+-- Select all
 vim.keymap.set('n', '<C-a>', 'gg<S-v>G', { desc = 'Select all' })
 
 -- Move selected line / block of text in visual mode down / up
@@ -68,15 +68,18 @@ end
 ----------------------------------------
 -- VSCode handles window management, these are Neovim-specific
 if not vim.g.vscode then
-  -- Split window
-  vim.keymap.set('n', '<leader><C-_>', ':split<Return>', { desc = 'Split window horizontally' })
-  vim.keymap.set('n', '<leader><C_|>', ':vsplit<Return>', { desc = 'Split window vertically' })
-
-  -- Resize window with arrows
-  vim.keymap.set('n', '<C-Left>', '<C-w><', { desc = 'Resize window left' })
-  vim.keymap.set('n', '<C-Right>', '<C-w>>', { desc = 'Resize window right' })
-  vim.keymap.set('n', '<C-Up>', '<C-w>+', { desc = 'Resize window up' })
-  vim.keymap.set('n', '<C-Down>', '<C-w>-', { desc = 'Resize window down' })
+  -- Resize window with larger amounts, using winresize to resize intuitively
+  local resize = function(win, amt, dir)
+    return function()
+      require('winresize').resize(win, amt, dir)
+    end
+  end
+  vim.keymap.set('n', '<leader>rh', resize(0, 10, 'left'), { desc = 'Resize window left' })
+  vim.keymap.set('n', '<leader>rj', resize(0, 10, 'down'), { desc = 'Resize window down' })
+  vim.keymap.set('n', '<leader>rk', resize(0, 10, 'up'), { desc = 'Resize window up' })
+  vim.keymap.set('n', '<leader>rl', resize(0, 10, 'right'), { desc = 'Resize window right' })
+  -- Maximize / restore current split using vim-maximizer
+  vim.keymap.set('n', '<leader>rm', '<cmd>MaximizerToggle<CR>', { desc = 'Maximize/minimize a split' })
 end
 
 ----------------------------------------
@@ -246,14 +249,6 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>fn', function()
     tb.find_files({ cwd = vim.fn.stdpath('config') })
   end, { desc = 'Find: Neovim config files' })
-end
-
---------------------------------------------------------------------------------
--- Vim Maximizer ----------------------------------------------------------------------
---------------------------------------------------------------------------------
--- VSCode handles window management natively, this is Neovim-specific
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>sm', '<cmd>MaximizerToggle<CR>', { desc = 'Maximize/minimize a split' })
 end
 
 --------------------------------------------------------------------------------
