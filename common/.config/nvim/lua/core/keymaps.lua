@@ -106,7 +106,7 @@ end
 -- AI features only available when NVIM_AI_ENABLED=true (macOS by default)
 if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then
   -- Core quick access - like turbocharged autocomplete
-  vim.keymap.set({ 'n', 'v' }, '<C-a>', '<cmd>CodeCompanionActions<cr>', { desc = 'AI Action Palette' })
+  vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<cmd>CodeCompanionActions<cr>', { desc = 'AI Action Palette' })
   vim.keymap.set({ 'n', 'v' }, '<leader>a', '<cmd>CodeCompanionChat Toggle<cr>', { desc = 'Toggle AI Chat' })
   vim.keymap.set('v', 'ga', '<cmd>CodeCompanionChat Add<cr>', { desc = 'Add to AI Chat' })
 
