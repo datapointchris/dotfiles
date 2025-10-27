@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+commands=(
+    find
+    man
+    tldr
+    sed
+    awk
+    tr
+    cp
+    ls
+    grep
+    xargs
+    rg
+    ps
+    mv
+    kill
+    lsof
+    less
+    head
+    tail
+    tar
+    rm
+    rename
+    jq
+    cat
+    ssh
+    cargo
+    git
+    git-worktree
+    git-status
+    git-commit
+    git-rebase
+    docker
+    docker-compose
+    stow
+    chmod
+    chown
+    make
+)
+
+languages=(
+    golang
+    solidity
+    vlang
+    v
+    nodejs
+    javascript
+    tmux
+    typescript
+    zsh
+    cpp
+    c
+    lua
+    rust
+    python
+    bash
+    php
+    haskell
+    ArnoldC
+    css
+    html
+    gdb
+)
+
+# Combine arrays and pass to fzf
+selected=$(printf '%s\n' "${commands[@]}" "${languages[@]}" | fzf --prompt="Select topic: " --height=50% --reverse)
+if [[ -z $selected ]]; then
+    exit 0
+fi
+
+read -rp "Enter Query: " query
+
+# Exit if no query provided
+if [[ -z $query ]]; then
+    echo "No query provided, exiting."
+    exit 0
+fi
+
+# Check if tmux is running
+if [[ -z $TMUX ]]; then
+    echo "This script requires tmux to be running."
+    exit 1
+fi
+
+# Check if selected item is in languages array
+if [[ " ${languages[*]} " =~ " $selected " ]]; then
+    # Replace spaces with + for language queries
+    query=$(echo "$query" | tr ' ' '+')
+    # Create temporary file
+    tmpfile=$(mktemp "${TMPDIR:-/tmp}/cht.sh.XXXXXX.sh")
+    echo "# $selected: $query" > "$tmpfile"
+    echo "" >> "$tmpfile"
+    curl -s "cht.sh/$selected/$query?T" >> "$tmpfile"
+
+    # Open in floating tmux popup with neovim
+    tmux display-popup -w 90% -h 90% -E "nvim +'set filetype=sh' +'set wrap' +'normal! gg' '$tmpfile'; rm '$tmpfile'"
+else
+    # Use ~ for command queries
+    # Create temporary file
+    tmpfile=$(mktemp "${TMPDIR:-/tmp}/cht.sh.XXXXXX.sh")
+    echo "# $selected: $query" > "$tmpfile"
+    echo "" >> "$tmpfile"
+    curl -s "cht.sh/$selected~$query?T" >> "$tmpfile"
+
+    # Open in floating tmux popup with neovim
+    tmux display-popup -w 90% -h 90% -E "nvim +'set filetype=sh' +'set wrap' +'normal! gg' '$tmpfile'; rm '$tmpfile'"
+fi
