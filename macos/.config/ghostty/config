@@ -1,4 +1,4 @@
-= "Flexoki Dark"
+theme = Flexoki Dark
 background = #1d1f21
 
 macos-titlebar-style = hidden
@@ -7,7 +7,13 @@ window-padding-x = 16
 window-padding-y = 16
 window-padding-balance = true
 
+# Font configuration to match WezTerm
 font-family = "SeriousShanns Nerd Font Mono"
+font-style = Regular
 font-size = 17
 adjust-cell-height = 3
-adjust-cell-width = 1
+adjust-cell-width = 0
+
+# Font rendering - keep thin and crisp like WezTerm
+font-thicken = false
+font-feature = -liga  # Disable ligatures for sharper rendering
