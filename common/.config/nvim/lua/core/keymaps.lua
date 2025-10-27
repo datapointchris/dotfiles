@@ -2,10 +2,6 @@
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>', { desc = 'Clear highlights' })
 
--- ========================================================================== --
--- ==                             Keymaps                                 == --
--- ========================================================================== --
-
 -- Put single character cut text in the black hole register
 vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
 
@@ -102,6 +98,16 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<C-l>', '<cmd>TmuxNavigateRight<CR>', { desc = 'Navigate right' })
   vim.keymap.set('n', '<C-\\>', '<cmd>TmuxNavigatePrevious<CR>', { desc = 'Navigate previous' })
 end
+
+--------------------------------------------------------------------------------
+--- NEOVIM-TIPS -----------------------------------------------------------------------
+--------------------------------------------------------------------------------
+vim.keymap.set('n', '<leader>nto', '<cmd>neovimtips<cr>', { desc = 'open neovim tips' })
+vim.keymap.set('n', '<leader>nte', '<cmd>neovimtipsedit<cr>', { desc = 'edit your neovim tips' })
+vim.keymap.set('n', '<leader>nta', '<cmd>neovimtipsadd<cr>', { desc = 'add your neovim tip' })
+vim.keymap.set('n', '<leader>nth', '<cmd>help neovim-tips<cr>', { desc = 'neovim tips help' })
+vim.keymap.set('n', '<leader>ntr', '<cmd>neovimtipsrandom<cr>', { desc = 'show random tip' })
+vim.keymap.set('n', '<leader>ntp', '<cmd>neovimtipspdf<cr>', { desc = 'open neovim tips pdf' })
 
 ---------------------------------------------------------------------------------
 --- CodeCompanion - Supercharged AI Assistant & Inline Search Engine ----------
