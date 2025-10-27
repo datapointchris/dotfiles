@@ -8,6 +8,11 @@ vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
 -- Select all
 vim.keymap.set('n', '<C-a>', 'gg<S-v>G', { desc = 'Select all' })
 
+-- Reload neovim config or current line
+vim.keymap.set('n', '<leader>rr', '<cmd>source ~/.config/nvim/init.lua<cr>')
+vim.keymap.set('n', '<leader>rx', ':.lua<cr>')
+vim.keymap.set('v', '<leader>rx', 'lua<cr>')
+
 -- Move selected line / block of text in visual mode down / up
 -- gv=gv reselects the text and reindents for proper formatting
 vim.keymap.set('v', 'J', ":m '>+1<CR>gv=gv", { desc = 'Move selected text down' })
