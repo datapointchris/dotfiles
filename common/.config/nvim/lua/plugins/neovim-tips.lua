@@ -14,7 +14,7 @@ return {
     -- Show warnings when user tips conflict with builtin
     warn_on_conflicts = true,
     -- Daily tip mode: 0=off, 1=once per day, 2=every startup
-    daily_tip = 2,
+    daily_tip = 1,
     -- Bookmark symbol
     bookmark_symbol = '🌟 ',
   },
