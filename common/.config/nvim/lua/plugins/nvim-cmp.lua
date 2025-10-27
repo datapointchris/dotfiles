@@ -82,7 +82,7 @@ return {
         end,
       },
       completion = {
-        completeopt = 'menu,menuone,noinsert',
+        completeopt = 'menu,menuone,noinsert,noselect',
       },
       formatting = {
         format = function(entry, item)
@@ -109,16 +109,6 @@ return {
       mapping = {
         ['<C-j>'] = cmp.mapping.scroll_docs(-4),
         ['<C-k>'] = cmp.mapping.scroll_docs(4),
-
-        -- Add escape key to dismiss completion WITHOUT exiting insert mode
-        ['<Esc>'] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.close()
-            -- Stay in insert mode - don't call fallback()
-          else
-            fallback() -- Normal escape behavior when no completion
-          end
-        end, { 'i' }),
 
         -- Alternative: Ctrl+E to dismiss completion (stays in insert mode)
         ['<C-e>'] = cmp.mapping(function(fallback)
