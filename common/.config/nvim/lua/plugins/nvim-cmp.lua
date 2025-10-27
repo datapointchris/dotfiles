@@ -69,13 +69,30 @@ return {
     local cmp = require('cmp')
     cmp.setup({
       enabled = function()
-        -- Disable completion for markdown files
-        local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
+        local buftype = vim.bo.buftype
+        local filetype = vim.bo.filetype
+
+        -- Disable in prompt buffers (Telescope, etc)
+        if buftype == 'prompt' then
+          return false
+        end
+
+        -- Disable for markdown files
         if filetype == 'markdown' then
           return false
         end
+
         return true
       end,
+      performance = {
+        debounce = 150, -- Delay before triggering completion after typing stops
+        throttle = 60, -- Limit how often completion can trigger
+        fetching_timeout = 200, -- Timeout for completion sources
+        max_view_entries = 5, -- Limit number of completion items shown
+        async_budget = 1, -- Time budget for async operations
+        confirm_resolve_timeout = 80, -- Timeout for resolving completion items on confirm
+        filtering_context_budget = 3, -- Time budget for filtering context
+      },
       snippet = {
         expand = function(args)
           luasnip.lsp_expand(args.body)
@@ -83,6 +100,7 @@ return {
       },
       completion = {
         completeopt = 'menu,menuone,noinsert,noselect',
+        keyword_length = 2, -- Require at least 2 characters before triggering
       },
       formatting = {
         format = function(entry, item)
@@ -103,7 +121,20 @@ return {
         { name = 'nvim_lsp', group_index = 2 },
         { name = 'copilot', group_index = 2 },
         { name = 'luasnip', group_index = 2 },
-        { name = 'buffer', group_index = 2 },
+        {
+          name = 'buffer',
+          group_index = 2,
+          option = {
+            -- Only search visible buffers for completions
+            get_bufnrs = function()
+              local bufs = {}
+              for _, win in ipairs(vim.api.nvim_list_wins()) do
+                bufs[vim.api.nvim_win_get_buf(win)] = true
+              end
+              return vim.tbl_keys(bufs)
+            end,
+          },
+        },
         { name = 'path', group_index = 2 },
       },
       mapping = {
@@ -122,15 +153,10 @@ return {
 
         ['<Tab>'] = cmp.mapping(function(fallback)
           if cmp.visible() then
-            local entry = cmp.get_selected_entry()
-            if entry and entry.source.name == 'luasnip' and luasnip.expandable() then
-              luasnip.expand()
-            else
-              cmp.confirm({
-                behavior = cmp.ConfirmBehavior.Replace,
-                select = true,
-              })
-            end
+            cmp.confirm({
+              behavior = cmp.ConfirmBehavior.Replace,
+              select = true,
+            })
           elseif luasnip.locally_jumpable(1) then
             luasnip.jump(1)
           else
