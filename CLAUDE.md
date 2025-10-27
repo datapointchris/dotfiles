@@ -25,6 +25,23 @@ Working on a cross-platform dotfiles repository with shared configurations and p
 - `docs/` - documentation for the dotfiles, stored in mkdocs style
 - Platform-specific Git configs with different editors/credentials
 
+### Symlink Management
+
+This dotfiles repository uses a symlink system to deploy configuration files from the repo to their expected locations in the home directory. When files are added or removed from the dotfiles, the symlinks must be updated.
+
+**Critical Rule**: After adding or removing any files in the dotfiles repository, you MUST run the symlink update command:
+
+- macOS: `./symlinks relink macos`
+- WSL: `./symlinks relink wsl`
+
+**Common Symptoms of Outdated Symlinks**:
+
+- "module not found" errors in Neovim after creating new files in `lua/` directories
+- Configuration files not being picked up by applications
+- Files existing in the dotfiles repo but not accessible in their expected locations
+
+Always check symlinks first when encountering file-related issues after making structural changes to the repository.
+
 ## Coding Preferences
 
 - **Architecture**: DRY principles, intelligent symlink management
@@ -32,6 +49,7 @@ Working on a cross-platform dotfiles repository with shared configurations and p
 - **AI Assistance**: Prefer comprehensive explanations with implementation
 - **Documentation**: Clear README files, inline comments for complex logic
 - **Testing**: Pre-commit hooks, shell validation, configuration testing
+- **Problem-Solving Approach**: Always err on the side of thinking through issues rather than adding extra code. When debugging, analyze what existing code does and test minimal changes first instead of adding complex filtering or workarounds
 
 ## Documentation Philosophy
 
