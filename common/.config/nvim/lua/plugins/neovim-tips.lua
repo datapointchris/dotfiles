@@ -18,20 +18,4 @@ return {
     -- Bookmark symbol
     bookmark_symbol = '🌟 ',
   },
-  cmd = {
-    'NeovimTips',
-    'NeovimTipsEdit',
-    'NeovimTipsAdd',
-    'NeovimTipsRandom',
-    'NeovimTipsPdf',
-  },
-  keys = {
-    { '<leader>nt', '', desc = 'Neovim Tips' },
-    { '<leader>nto', '<cmd>NeovimTips<CR>', desc = 'Open Neovim tips' },
-    { '<leader>nte', '<cmd>NeovimTipsEdit<CR>', desc = 'Edit your Neovim tips' },
-    { '<leader>nta', '<cmd>NeovimTipsAdd<CR>', desc = 'Add your Neovim tip' },
-    { '<leader>nth', '<cmd>help neovim-tips<CR>', desc = 'Neovim tips help' },
-    { '<leader>ntr', '<cmd>NeovimTipsRandom<CR>', desc = 'Show random tip' },
-    { '<leader>ntp', '<cmd>NeovimTipsPdf<CR>', desc = 'Open Neovim tips PDF' },
-  },
 }
