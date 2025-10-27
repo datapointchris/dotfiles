@@ -19,9 +19,12 @@ return { -- Fuzzy Finder (files, lsp, etc)
         find_files = { hidden = true },
       },
       extensions = {
+        fzf = {},
         ['ui-select'] = { require('telescope.themes').get_dropdown() },
       },
     })
+
+    require('telescope').load_extension('fzf')
 
     -- Enable Telescope extensions if they are installed
     pcall(require('telescope').load_extension, 'fzf')

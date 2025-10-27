@@ -253,7 +253,11 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>ft', tb.treesitter, { desc = 'Find: Treesitter' })
   vim.keymap.set('n', '<leader>fz', filtered_colorschemes, { desc = 'Find: Colorschemes' })
   vim.keymap.set('n', '<leader>fn', function()
-    tb.find_files({ cwd = vim.fn.stdpath('config') })
+    tb.find_files({
+      cwd = vim.fn.stdpath('config'),
+      hidden = true,
+      follow = true,
+    })
   end, { desc = 'Find: Neovim config files' })
 end
 
