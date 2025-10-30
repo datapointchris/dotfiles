@@ -7,8 +7,8 @@
 # bash_profile for PATH manipulation
 PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
 
-# Add `~/bin` to the `$PATH`
-export PATH="$HOME/bin:$PATH";
+# Add `~/bin` and `~/.local/bin` to the `$PATH`
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH";
 
 source .bashrc
 
