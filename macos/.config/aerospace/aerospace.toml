@@ -1,9 +1,8 @@
-###################################################################################
-########### ------------------------- SYSTEM  ------------------------- ###########
-###################################################################################
 
 start-at-login = true
-after-startup-command = []
+
+# Start JankyBorders for visual window focus indication
+after-startup-command = ['exec-and-forget borders']
 
 enable-normalization-flatten-containers = true
 enable-normalization-opposite-orientation-for-nested-containers = true
@@ -34,16 +33,13 @@ preset = 'qwerty'
 [gaps]
 inner.horizontal = 10
 inner.vertical = 10
-outer.left = 0
-outer.bottom = 0
-outer.top = 0
-outer.right = 0
+outer.left = 4
+outer.bottom = 4
+outer.top = 4
+outer.right = 4
 
 
-###################################################################################
 ########## ------------------------- MAIN MODE ------------------------- ##########
-###################################################################################
-
 # 'main' binding mode must be always presented
 [mode.main.binding]
 
@@ -66,13 +62,7 @@ outer.right = 0
 cmd-h = []     # disable hide application
 cmd-alt-h = [] # disable hide others
 
-# You can uncomment the following lines to open up terminal with alt + enter shortcut
-alt-enter = '''exec-and-forget osascript -e '
-tell application "Wezterm"
-    do script
-    activate
-end tell'
-'''
+alt-enter = 'exec-and-forget open -na Ghostty'
 
 alt-h = 'focus left'
 alt-j = 'focus down'
@@ -84,70 +74,56 @@ alt-shift-j = 'move down'
 alt-shift-k = 'move up'
 alt-shift-l = 'move right'
 
+# Monitor navigation
+alt-comma = 'focus-monitor left'
+alt-period = 'focus-monitor right'
+
+# Move window to monitor
+alt-shift-comma = 'move-node-to-monitor left'
+alt-shift-period = 'move-node-to-monitor right'
+
 alt-tab = 'workspace-back-and-forth'
 
-ctrl-alt-shift-semicolon = 'mode alt'
+ctrl-alt-shift-semicolon = 'mode cmd'
 alt-shift-semicolon = 'mode service'
 
-###################################################################################
-########## ------------------------- ALT MODE ------------------------- ###########
-###################################################################################
-
-[mode.alt.binding]
+########## ------------------------- CMD MODE ------------------------- ###########
+[mode.cmd.binding]
 esc = ['mode main']
 
-quote = 'resize smart -50'
-backslash = 'resize smart +50'
+minus = 'resize smart -50'
+equal = 'resize smart +50'
 
 # Workspace navigation (exits to main mode after navigation)
-i = ['workspace I', 'mode main'] # ichrisbirch - terminal
-c = ['workspace C', 'mode main'] # ichrisbirch - editor
-b = ['workspace B', 'mode main'] # ichrisbirch - panel
-
-t = ['workspace T', 'mode main'] # project - terminal
-w = ['workspace W', 'mode main'] # project - editor
-a = ['workspace A', 'mode main'] # project - panel
-
-x = ['workspace X', 'mode main'] # misc
-y = ['workspace Y', 'mode main'] # misc
-z = ['workspace Z', 'mode main'] # misc
-
-d = ['workspace D', 'mode main'] # dotfiles
-u = ['workspace U', 'mode main'] # university
-q = ['workspace Q', 'mode main'] # quick temporary
-
-e = ['workspace E', 'mode main'] # email
-m = ['workspace M', 'mode main'] # music
-s = ['workspace S', 'mode main'] # social
+a = ['workspace A', 'mode main'] # name: Project
+b = ['workspace B', 'mode main'] # name: Project
+c = ['workspace C', 'mode main'] # name: Project
+d = ['workspace D', 'mode main'] # name: Dotfiles
+e = ['workspace E', 'mode main'] # name: Email
+m = ['workspace M', 'mode main'] # name: Music
+q = ['workspace Q', 'mode main'] # name: Quick Temporary
+s = ['workspace S', 'mode main'] # name: Social
+x = ['workspace X', 'mode main'] # name: Misc 1
+y = ['workspace Y', 'mode main'] # name: Misc 2
+z = ['workspace Z', 'mode main'] # name: Misc 3
 
 # Move node to workspace (exits to main mode after moving)
-shift-i = ['move-node-to-workspace I', 'mode main']
-shift-c = ['move-node-to-workspace C', 'mode main']
-shift-b = ['move-node-to-workspace B', 'mode main']
-
-shift-t = ['move-node-to-workspace T', 'mode main']
-shift-w = ['move-node-to-workspace W', 'mode main']
 shift-a = ['move-node-to-workspace A', 'mode main']
-
+shift-b = ['move-node-to-workspace B', 'mode main']
+shift-c = ['move-node-to-workspace C', 'mode main']
+shift-d = ['move-node-to-workspace D', 'mode main']
+shift-e = ['move-node-to-workspace E', 'mode main']
+shift-m = ['move-node-to-workspace M', 'mode main']
+shift-q = ['move-node-to-workspace Q', 'mode main']
+shift-s = ['move-node-to-workspace S', 'mode main']
 shift-x = ['move-node-to-workspace X', 'mode main']
 shift-y = ['move-node-to-workspace Y', 'mode main']
 shift-z = ['move-node-to-workspace Z', 'mode main']
-
-shift-d = ['move-node-to-workspace D', 'mode main']
-shift-u = ['move-node-to-workspace U', 'mode main']
-shift-q = ['move-node-to-workspace Q', 'mode main']
-
-shift-e = ['move-node-to-workspace E', 'mode main']
-shift-m = ['move-node-to-workspace M', 'mode main']
-shift-s = ['move-node-to-workspace S', 'mode main']
 
 shift-h = ['join-with left', 'mode main']
 shift-j = ['join-with down', 'mode main']
 shift-k = ['join-with up', 'mode main']
 shift-l = ['join-with right', 'mode main']
-
-alt-h = ['focus-monitor left', 'mode main']
-alt-l = ['focus-monitor right', 'mode main']
 
 alt-shift-h = ['move-workspace-to-monitor left', 'mode main']
 alt-shift-l = ['move-workspace-to-monitor right', 'mode main']
@@ -155,26 +131,8 @@ alt-shift-l = ['move-workspace-to-monitor right', 'mode main']
 slash = 'layout tiles horizontal vertical'
 comma = 'layout accordion horizontal vertical'
 
-# [workspace-to-monitor-force-assignment]
-# i = ['2']
-# c = 'main'
-# b = ['1']
-# t = ['2']
-# w = 'main'
-# a = ['1']
-# z = ['2']
-# x = 'main'
-# l = 'main'
-# q = 'main'
-# e = ['1']
-# m = ['1']
-# s = 'main'
 
-###################################################################################
 ######## ------------------------- SERVICE MODE ------------------------- #########
-###################################################################################
-
-
 [mode.service.binding]
 esc = ['reload-config', 'mode main']
 r = ['flatten-workspace-tree', 'mode main']                # reset layout
