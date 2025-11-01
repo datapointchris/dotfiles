@@ -117,9 +117,9 @@ return {
         expandable_indicator = true,
       },
       sources = {
-        { name = 'lazydev', group_index = 0 },
-        { name = 'nvim_lsp', group_index = 2 },
-        { name = 'copilot', group_index = 2 },
+        { name = 'lazydev', group_index = 1 },
+        { name = 'nvim_lsp', group_index = 1 },
+        { name = 'copilot', group_index = 0 },
         { name = 'luasnip', group_index = 2 },
         {
           name = 'buffer',
