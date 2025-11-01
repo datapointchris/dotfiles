@@ -367,3 +367,5 @@ TESTING.*
 **/tmux/plugins/*
 **/.zcompdump*
 .git-credentials
+
+**/lazy-lock.json
