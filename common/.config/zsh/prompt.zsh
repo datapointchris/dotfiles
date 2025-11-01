@@ -224,7 +224,7 @@ function git_remote_status() {
         local icon_down="$(echo -e '\uf063')"   # down arrow
 
         local remote_status=""
-        [[ "$ahead" != "0" ]] && remote_status="${remote_status}%F{green}${icon_up} ${ahead}%f"
+        [[ "$ahead" != "0" ]] && remote_status="${remote_status}%F{green}${icon_up} ${ahead}%f  "
         [[ "$behind" != "0" ]] && remote_status="${remote_status}%F{red}${icon_down} ${behind}%f"
 
         echo "$remote_status"
@@ -250,7 +250,7 @@ PROMPT='
 $(current_venv) $(user_info):$(current_dir)  $(git_prompt_info) $(aws_prompt_info)
 $(current_caret)'
 PROMPT2='. '
-RPROMPT='%{$(echotc UP 1)%} $(git_remote_status) $(return_status)%{$(echotc DO 1)%}'
+RPROMPT='%{$(echotc UP 1)%} $(git_remote_status)   $(return_status)   %{$(echotc DO 1)%}'
 
 # ========== Color configuration ==========
 # LS Colors - Made with: http://geoff.greer.fm/lscolors/
