@@ -17,7 +17,15 @@ print_title() {
     echo
 }
 
-print_section() { echo "${underline}        $1          ${normal}"; }
+print_section() {
+  local text="$1"
+  local text_len=${#text}
+  local total_width=60
+  local border_each=$(( (total_width - text_len - 2) / 2 ))
+  local left=$(printf '═%.0s' $(seq 1 $border_each))
+  local right=$(printf '═%.0s' $(seq 1 $border_each))
+  echo "${left} ${text} ${right}"
+}
 
 center_text() { printf "%*s\n" $((($(tput cols) + ${#1}) / 2)) "$1"; }
 
