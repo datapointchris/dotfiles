@@ -115,10 +115,15 @@ vim.keymap.set('n', '<leader>ntr', '<cmd>neovimtipsrandom<cr>', { desc = 'show r
 vim.keymap.set('n', '<leader>ntp', '<cmd>neovimtipspdf<cr>', { desc = 'open neovim tips pdf' })
 
 ---------------------------------------------------------------------------------
+--- Claude Code -----------------------------------------------------------------
+---------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------
 --- CodeCompanion - Supercharged AI Assistant & Inline Search Engine ----------
 ---------------------------------------------------------------------------------
 -- AI features only available when NVIM_AI_ENABLED=true (macOS by default)
-if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then
+local companion_enabled = 'false'
+if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode and companion_enabled == 'true' then
   -- Core quick access - like turbocharged autocomplete
   vim.keymap.set({ 'n', 'v' }, '<leader>ca', '<cmd>CodeCompanionActions<cr>', { desc = 'AI Action Palette' })
   vim.keymap.set({ 'n', 'v' }, '<leader>a', '<cmd>CodeCompanionChat Toggle<cr>', { desc = 'Toggle AI Chat' })

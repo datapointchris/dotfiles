@@ -3,6 +3,7 @@ return {
     'olimorris/codecompanion.nvim',
     -- Only load when NVIM_AI_ENABLED is true
     cond = vim.env.NVIM_AI_ENABLED == 'true',
+    enabled = false,
     dependencies = {
       'nvim-lua/plenary.nvim',
       'nvim-treesitter/nvim-treesitter',
