@@ -14,9 +14,15 @@ This directory contains comprehensive documentation for understanding, setting u
 ### Core Configuration
 
 - [**Neovim/**](./neovim/) - Complete Neovim configuration documentation
+- [**Terminal/**](./terminal/) - Terminal application tools and utilities
 - [Environment Setup](./environment-setup.md) - Platform-specific environment configuration
 - [Setup Guide](./setup.md) - Initial installation and configuration
 - [Troubleshooting](./troubleshooting.md) - Common issues and solutions
+
+### Workflow & Usage
+
+- [**Workflow/**](./workflow/) - Efficient workflow patterns and best practices
+  - [AeroSpace + Tmux + Neovim Workflow](./workflow/aerospace-tmux-neovim-workflow.md) - Comprehensive three-layer workflow guide
 
 ### Specialized Topics
 
@@ -60,6 +66,7 @@ This is a **cross-platform dotfiles repository** using a layered configuration a
 
 ### Shell & Terminal
 
+- **Ghostty** with interactive theme manager and live previews
 - **ZSH** with custom prompt and AWS integration
 - **Enhanced CLI tools** (zoxide, fzf, fd, eza, bat, yazi)
 - **tmux** configuration with smart keybindings
@@ -76,9 +83,11 @@ This is a **cross-platform dotfiles repository** using a layered configuration a
 
 | Topic | Documentation |
 |-------|---------------|
+| **Workflow Guide** | [workflow/aerospace-tmux-neovim-workflow.md](./workflow/aerospace-tmux-neovim-workflow.md) |
 | **Neovim Complete Guide** | [neovim/](./neovim/) |
 | **Colorscheme Management** | [neovim/colorscheme-manager.md](./neovim/colorscheme-manager.md) |
 | **Formatting System** | [neovim/formatter.md](./neovim/formatter.md) |
 | **LSP Configuration** | [neovim/lsp.md](./neovim/lsp.md) |
+| **Ghostty Theme Manager** | [terminal/ghostty.md](./terminal/ghostty.md) |
 | **Platform Setup** | [environment-setup.md](./environment-setup.md) |
 | **Corporate Networks** | [corporate.md](./corporate.md) |
