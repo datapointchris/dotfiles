@@ -1,5 +1,5 @@
-theme = Flexoki Dark
-background = #1d1f21
+# Theme (only one theme line should be set)
+theme = Broadcast
 
 macos-titlebar-style = hidden
 
@@ -10,7 +10,7 @@ window-padding-balance = true
 # Font configuration to match WezTerm
 font-family = "SeriousShanns Nerd Font Mono"
 font-style = Regular
-font-size = 17
+font-size = 15
 adjust-cell-height = 3
 adjust-cell-width = 0
 

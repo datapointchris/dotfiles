@@ -1,0 +1,20 @@
+# Ghostty Favorite Themes
+# One theme name per line (comments starting with # are ignored)
+
+Black Metal (Mayhem)
+Broadcast
+Everforest Dark Hard
+Material Design Colors
+Pandora
+Popping and Locking
+Raycast Dark
+Retro Legends
+Rose Pine
+Selenized Dark
+Shades of Purple
+Smyck
+Spacedust
+Spacegray Eighties
+Srcery
+Tomorrow Night Bright
+Treehouse
