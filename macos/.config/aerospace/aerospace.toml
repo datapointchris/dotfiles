@@ -75,14 +75,20 @@ alt-shift-k = 'move up'
 alt-shift-l = 'move right'
 
 # Monitor navigation
-alt-comma = 'focus-monitor left'
-alt-period = 'focus-monitor right'
+# alt-comma = 'focus-monitor left'
+# alt-period = 'focus-monitor right'
 
 # Move window to monitor
-alt-shift-comma = 'move-node-to-monitor left'
-alt-shift-period = 'move-node-to-monitor right'
+# alt-shift-comma = 'move-node-to-monitor left'
+# alt-shift-period = 'move-node-to-monitor right'
 
 alt-tab = 'workspace-back-and-forth'
+
+# Toggle floating/tiling for current window
+alt-f = 'layout floating tiling'
+
+# Toggle fullscreen for current window
+alt-shift-f = 'fullscreen'
 
 ctrl-alt-shift-semicolon = 'mode cmd'
 alt-shift-semicolon = 'mode service'
@@ -91,8 +97,10 @@ alt-shift-semicolon = 'mode service'
 [mode.cmd.binding]
 esc = ['mode main']
 
-minus = 'resize smart -50'
-equal = 'resize smart +50'
+ctrl-alt-j = 'resize smart -50'
+ctrl-alt-k = 'resize smart +50'
+ctrl-alt-h = 'resize smart-opposite +50'
+ctrl-alt-l = 'resize smart-opposite -50'
 
 # Workspace navigation (exits to main mode after navigation)
 a = ['workspace A', 'mode main'] # name: Project
@@ -125,11 +133,11 @@ shift-j = ['join-with down', 'mode main']
 shift-k = ['join-with up', 'mode main']
 shift-l = ['join-with right', 'mode main']
 
-alt-shift-h = ['move-workspace-to-monitor left', 'mode main']
-alt-shift-l = ['move-workspace-to-monitor right', 'mode main']
+# alt-shift-h = ['move-workspace-to-monitor left', 'mode main']
+# alt-shift-l = ['move-workspace-to-monitor right', 'mode main']
 
-slash = 'layout tiles horizontal vertical'
-comma = 'layout accordion horizontal vertical'
+quote = 'layout tiles horizontal vertical'
+backslash = 'layout accordion horizontal vertical'
 
 
 ######## ------------------------- SERVICE MODE ------------------------- #########
@@ -141,3 +149,10 @@ backspace = ['close-all-windows-but-current', 'mode main']
 
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
 #s = ['layout sticky tiling', 'mode main']
+
+######## ----------------------- WINDOW RULES ------------------------- ##########
+# Float Ghostty theme preview windows
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'THEME PREVIEW:'
+run = 'layout floating'
