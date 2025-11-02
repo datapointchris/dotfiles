@@ -62,9 +62,14 @@ zle -N down-line-or-beginning-search
 bindkey "^[[A" up-line-or-beginning-search    # Up arrow
 bindkey "^[[B" down-line-or-beginning-search  # Down arrow
 
+# Edit command line in editor: Ctrl-X Ctrl-E
+autoload -U edit-command-line
+zle -N edit-command-line
+bindkey '^X^E' edit-command-line
+
 # Create history directory if it doesn't exist
 [[ ! -d "$HOME/.local/state/zsh" ]] && mkdir -p "$HOME/.local/state/zsh"
-echo "$check Setup : History Search"
+echo "$check Setup : History Search & Command Editing"
 
 # ------------------------------------------------------------------ #
 # GENERAL SETTINGS
