@@ -33,6 +33,8 @@ This directory contains comprehensive documentation for understanding, setting u
 
 ### Development
 
+- [**Changelog**](./changelog.md) - High-level summary of changes to this repository
+- [**Changelog Details**](./changelog/) - In-depth analysis of all changes
 - [Examples](./examples/) - MkDocs examples and reference material
 
 ## Architecture Overview
@@ -91,3 +93,4 @@ This is a **cross-platform dotfiles repository** using a layered configuration a
 | **Ghostty Theme Manager** | [terminal/ghostty.md](./terminal/ghostty.md) |
 | **Platform Setup** | [environment-setup.md](./environment-setup.md) |
 | **Corporate Networks** | [corporate.md](./corporate.md) |
+| **Changelog** | [changelog.md](./changelog.md) |
