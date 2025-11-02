@@ -236,24 +236,11 @@ function add_path() {
 }
 
 # Common tools
+
 if command -v cargo &>/dev/null; then
     CARGO_HOME="$XDG_DATA_HOME/cargo"
     export CARGO_HOME
     add_path "$CARGO_HOME/bin"
-fi
-
-if command -v jenv &>/dev/null; then
-    eval "$(jenv init -)"
-    add_path "$HOME/.jenv/bin/"
-    JAVA_HOME="$HOME/.jenv/versions/$(jenv version-name)"
-    export JAVA_HOME
-    add_path "$JAVA_HOME/bin"
-fi
-
-if command -v pyenv &>/dev/null; then
-    PYENV_ROOT="$XDG_DATA_HOME/pyenv"
-    export PYENV_ROOT
-    add_path "$PYENV_ROOT/bin"
 fi
 
 # Local bin (always)

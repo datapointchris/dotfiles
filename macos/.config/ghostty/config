@@ -1,5 +1,5 @@
 # Theme (only one theme line should be set)
-theme = Broadcast
+theme = Smyck
 
 macos-titlebar-style = hidden
 
@@ -17,3 +17,4 @@ adjust-cell-width = 0
 # Font rendering - keep thin and crisp like WezTerm
 font-thicken = false
 font-feature = -liga  # Disable ligatures for sharper rendering
+keybind = shift+enter=text:\x1b\r
