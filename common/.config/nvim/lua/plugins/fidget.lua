@@ -10,8 +10,19 @@ return {
   'j-hui/fidget.nvim',
   cond = not vim.g.vscode, -- VSCode has its own progress indicators
   opts = {
+    progress = {
+      display = {
+        render_limit = 16, -- How many LSP messages to show at once
+        done_ttl = 3, -- How long a message should persist after completion
+        done_icon = '✔', -- Icon shown when all tasks are complete
+      },
+    },
     notification = {
-      override_vim_notify = true,
+      override_vim_notify = false, -- Let Noice handle vim.notify() instead
+      window = {
+        winblend = 0, -- Background transparency (0 = opaque)
+        border = 'rounded',
+      },
     },
   },
 }

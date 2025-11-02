@@ -3,10 +3,11 @@ return {
     'zbirenbaum/copilot.lua',
     -- Only load when NVIM_AI_ENABLED is true and not in VSCode
     cond = vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode,
+    event = 'VimEnter', -- Load earlier to ensure it's ready before InsertEnter
     config = function()
       require('copilot').setup({
         suggestion = {
-          enabled = false, -- Disable standalone suggestions, use nvim-cmp integration
+          enabled = false, -- Disable standalone suggestions, use blink-cmp integration
           auto_trigger = false,
         },
         panel = {
@@ -20,15 +21,7 @@ return {
     end,
   },
 
-  -- Enable copilot-cmp for unified completion in nvim-cmp
-  {
-    'zbirenbaum/copilot-cmp',
-    enabled = true, -- Re-enabled for unified completion experience
-    cond = vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode,
-    config = function()
-      require('copilot_cmp').setup()
-    end,
-  },
+  -- blink-cmp-copilot is now configured as a dependency of blink-cmp in blink-cmp.lua
 
   -- Keep copilot-lualine for status integration
   {
