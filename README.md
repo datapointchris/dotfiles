@@ -96,6 +96,12 @@ git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-op
 chmod +x ~/.config/zsh/plugins/git-open/git-open
 ```
 
+Also install the zsh-vi-mode plugin
+
+```bash
+git clone https://github.com/jeffreytse/zsh-vi-mode.git ~/.config/zsh/plugins/zsh-vi-mode
+```
+
 ### Clone dotfiles and install (macOS)
 
 ```bash
