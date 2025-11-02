@@ -109,9 +109,124 @@ Avoid documentation that is primarily bulleted lists or verbose procedural steps
 - Prefer seeing the code changes implemented rather than just described
 - Value cross-platform compatibility considerations
 
+## Changelog Requirements
+
+**IMPORTANT**: Automatically maintain changelog entries for all changes made to this dotfiles repository.
+
+### Changelog Structure
+
+1. **Summary File**: `docs/changelog.md`
+   - High-level overview of changes
+   - Entries organized by date in YYYY-MM-DD format
+   - Each entry has an `id` matching the date: `## YYYY-MM-DD {#YYYY-MM-DD}`
+   - Brief title and description of what changed
+   - List of key changes and files modified
+   - Link to detailed changelog
+
+2. **Detailed File**: `docs/changelog/YYYY-MM-DD.md`
+   - In-depth analysis of changes from our conversation
+   - Multiple unrelated changes can be in the same file (one file per day)
+   - Each change section has its own heading with anchor: `## Title {#anchor-name}`
+
+### Required Content in Detailed Changelog
+
+For each change, include:
+
+1. **Problem Statement**: What was wrong or what needed to be changed
+2. **Solution Overview**: High-level approach taken
+3. **Errors Encountered**: All errors hit during implementation
+   - Error messages (exact text)
+   - Root cause analysis
+   - The fix that was applied
+   - Why that fix was chosen
+4. **Testing Methodology**:
+   - Scripts used to test changes
+   - Why those specific testing approaches were chosen
+   - What each test validated
+5. **Files Modified**: Complete list with brief description of changes
+6. **Final Resolution**: Summary of working state after all fixes
+7. **Learnings**: Key insights, gotchas, and wisdom for future reference
+
+### Changelog Entry Format Example
+
+**Summary (docs/changelog.md):**
+
+```markdown
+## 2025-11-02 {#2025-11-02}
+
+### Feature/Fix Title
+
+Brief description of what changed and why.
+
+**Key Changes:**
+- Bullet point of major change
+- Another major change
+
+**Files Changed:**
+- Created/Modified: path/to/file
+
+See [detailed changelog](changelog/2025-11-02.md#anchor-name) for full details.
+```
+
+**Detailed (docs/changelog/YYYY-MM-DD.md):**
+
+```markdown
+## Feature/Fix Title {#anchor-name}
+
+### Problem Statement
+What was broken or needed...
+
+### Solution Overview
+How we approached it...
+
+### Errors Encountered and Solutions
+
+#### Error 1: Title
+**Error Message:** ```exact error text```
+**Root Cause:** Why it happened
+**Fix:** What we changed
+**Why This Fix:** Reasoning behind the solution
+
+[Continue for all errors...]
+
+### Testing Methodology
+Scripts used, why chosen, what validated...
+
+### Files Modified
+List with descriptions...
+
+### Final Resolution
+Summary of working state...
+
+### Learnings
+Key insights and gotchas...
+```
+
+### When to Create Changelog Entries
+
+Create changelog entries whenever:
+
+- Adding new features or tools
+- Fixing bugs or configuration issues
+- Refactoring code or reorganizing files
+- Updating plugins or dependencies
+- Making architectural changes
+- Any change that would be useful to remember or learn from
+
+### Changelog Workflow
+
+1. At the end of any work session where dotfiles were modified:
+   - Update `docs/changelog.md` with high-level summary
+   - Create or append to `docs/changelog/YYYY-MM-DD.md` with detailed analysis
+2. Use insights from our conversation to document the journey, not just the destination
+3. Be thorough with error documentation - future debugging will thank you
+4. Include testing scripts and methodologies used
+5. Always add a Learnings section with actionable insights
+
 ## Current Goals
 
 - Optimize CodeCompanion workflow for seamless AI-assisted development
 - Maintain clean, conflict-free native LSP configuration
 - Document setup for future maintenance and sharing
 - Create efficient development workflows across all platforms
+- **Maintain comprehensive changelogs for all dotfiles changes**
