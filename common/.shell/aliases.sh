@@ -21,6 +21,8 @@ alias base='z $(git rev-parse --show-toplevel)'
 
 alias y='yazi'
 
+alias symlinks='$HOME/dotfiles/symlinks.sh'
+
 # ---------- Directory Navigation ---------- #
 
 # Use zoxide for smart directory navigation
