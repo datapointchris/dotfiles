@@ -266,6 +266,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # npm installed global packages
     add_path "$HOME/.local/share/npm/bin"
 
+    # go installed packages
+    add_path "$HOME/go/bin"
+
 else
     # Linux/WSL specific paths
     add_path "/snap/bin"

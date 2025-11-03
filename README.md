@@ -102,6 +102,12 @@ Also install the zsh-vi-mode plugin
 git clone https://github.com/jeffreytse/zsh-vi-mode.git ~/.config/zsh/plugins/zsh-vi-mode
 ```
 
+### Install sesh for tmux session management
+
+```bash
+go install github.com/joshmedeski/sesh/v2@latest
+```
+
 ### Clone dotfiles and install (macOS)
 
 ```bash

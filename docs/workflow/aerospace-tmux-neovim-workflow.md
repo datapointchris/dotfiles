@@ -19,7 +19,7 @@ This document provides a comprehensive analysis of how to efficiently use AeroSp
 
 ## 1. The Hierarchy & Nesting Model
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ LEVEL 1: AeroSpace (macOS Window Manager)                                │
 │ PURPOSE: Project/context isolation, monitor management                   │
@@ -115,6 +115,7 @@ This document provides a comprehensive analysis of how to efficiently use AeroSp
 - Window: Very Low (prefix + 0-9, or next/prev)
 
 **Best practice from research:**
+
 > "Sessions = projects, Windows = related tasks within that project"
 
 ---
@@ -149,6 +150,7 @@ This document provides a comprehensive analysis of how to efficiently use AeroSp
 - Want to preserve a specific split arrangement
 
 **Research consensus:**
+
 > "Tabs are for different layouts/workspaces within a project, NOT for open files. Use buffers for files."
 
 **Avoid tabs for:**
@@ -176,13 +178,14 @@ This document provides a comprehensive analysis of how to efficiently use AeroSp
 - Quick navigation (buffers are faster)
 
 **Research consensus:**
+
 > "Prefer buffers for navigation, use splits only when you need to see multiple files at once"
 
 ---
 
 ## 3. The Decision Tree: "Where Should I Split Next?"
 
-```
+```text
 Need to start new work?
 │
 ├─ Is it a completely different project/context?
@@ -220,76 +223,76 @@ Need to start new work?
 
 ### AeroSpace - Window Manager Level
 
-| Action | Keybinding | Notes |
-|--------|-----------|-------|
-| **Navigation** |
-| Focus window | `alt + h/j/k/l` | Directional |
-| Move window | `alt + shift + h/j/k/l` | Directional |
-| Switch to prev workspace | `alt + tab` | Quick toggle |
-| **Creation** |
-| New terminal | `alt + enter` | Opens Ghostty |
-| **Workspace Switching** |
-| Enter cmd mode | `ctrl + alt + shift + ;` | Required first |
-| Go to workspace | `[letter]` (a/b/c/d/e/m/q/s/x/y/z) | After cmd mode |
-| Move window to workspace | `shift + [letter]` | After cmd mode |
-| **Layout** |
-| Toggle floating | `alt + f` | Float/tile |
-| Fullscreen | `alt + shift + f` | Maximize |
-| Toggle layout | `'` or `\` | Tiles/accordion (in cmd mode) |
-| **Resize** |
-| Resize mode | `ctrl + alt + shift + ;` | Enter cmd mode first |
-| Resize smart | `ctrl + alt + j/k` | Shrink/grow (in cmd mode) |
-| Resize opposite | `ctrl + alt + h/l` | Adjust perpendicular (in cmd mode) |
+| Action                   | Keybinding                         | Notes                              |
+| ------------------------ | ---------------------------------- | ---------------------------------- |
+| **Navigation**           |                                    |                                    |
+| Focus window             | `alt + h/j/k/l`                    | Directional                        |
+| Move window              | `alt + shift + h/j/k/l`            | Directional                        |
+| Switch to prev workspace | `alt + tab`                        | Quick toggle                       |
+| **Creation**             |                                    |                                    |
+| New terminal             | `alt + enter`                      | Opens Ghostty                      |
+| **Workspace Switching**  |                                    |                                    |
+| Enter cmd mode           | `ctrl + alt + shift + ;`           | Required first                     |
+| Go to workspace          | `[letter]` (a/b/c/d/e/m/q/s/x/y/z) | After cmd mode                     |
+| Move window to workspace | `shift + [letter]`                 | After cmd mode                     |
+| **Layout**               |                                    |                                    |
+| Toggle floating          | `alt + f`                          | Float/tile                         |
+| Fullscreen               | `alt + shift + f`                  | Maximize                           |
+| Toggle layout            | `'` or `\`                         | Tiles/accordion (in cmd mode)      |
+| **Resize**               |                                    |                                    |
+| Resize mode              | `ctrl + alt + shift + ;`           | Enter cmd mode first               |
+| Resize smart             | `ctrl + alt + j/k`                 | Shrink/grow (in cmd mode)          |
+| Resize opposite          | `ctrl + alt + h/l`                 | Adjust perpendicular (in cmd mode) |
 
 ### Tmux - Terminal Multiplexer Level
 
-| Action | Keybinding | Notes |
-|--------|-----------|-------|
-| **Prefix** | `Ctrl + Space` | Required for most commands |
-| **Sessions** |
-| List sessions | `prefix + s` | sessionx plugin |
-| New session | `prefix + :new -s name` | Named session |
-| Detach | `prefix + d` | Keeps running |
-| **Windows** |
-| New window | `prefix + c` | Create |
-| Kill window | `prefix + k` | Close |
-| Next window | `prefix + n` or `prefix + l` | Cycle forward |
-| Previous window | `prefix + p` or `prefix + h` | Cycle backward |
-| Select window | `prefix + 0-9` | Direct access |
-| Swap window left | `prefix + <` | Repeatable |
-| Swap window right | `prefix + >` | Repeatable |
-| **Panes** |
-| Split vertical | `prefix + \|` | Side-by-side |
-| Split horizontal | `prefix + -` | Stacked |
-| Navigate panes | `Ctrl + h/j/k/l` | Smart (vim-aware) |
-| Resize panes | `Ctrl + Alt + h/j/k/l` | 5 units |
-| **Other** |
-| Reload config | `prefix + R` | Refresh |
-| Command mode | `prefix + :` | Manual commands |
-| Copy mode | `prefix + [` | Scroll/copy |
-| Paste buffer | `prefix + P` | Paste |
+| Action            | Keybinding                   | Notes                      |
+| ----------------- | ---------------------------- | -------------------------- |
+| **Prefix**        | `Ctrl + Space`               | Required for most commands |
+| **Sessions**      |                              |                            |
+| List sessions     | `prefix + s`                 | sesh plugin                |
+| New session       | `prefix + :new -s name`      | Named session              |
+| Detach            | `prefix + d`                 | Keeps running              |
+| **Windows**       |                              |                            |
+| New window        | `prefix + c`                 | Create                     |
+| Kill window       | `prefix + k`                 | Close                      |
+| Next window       | `prefix + n` or `prefix + l` | Cycle forward              |
+| Previous window   | `prefix + p` or `prefix + h` | Cycle backward             |
+| Select window     | `prefix + 0-9`               | Direct access              |
+| Swap window left  | `prefix + <`                 | Repeatable                 |
+| Swap window right | `prefix + >`                 | Repeatable                 |
+| **Panes**         |                              |                            |
+| Split vertical    | `prefix + \|`                | Side-by-side               |
+| Split horizontal  | `prefix + -`                 | Stacked                    |
+| Navigate panes    | `Ctrl + h/j/k/l`             | Smart (vim-aware)          |
+| Resize panes      | `Ctrl + Alt + h/j/k/l`       | 5 units                    |
+| **Other**         |                              |                            |
+| Reload config     | `prefix + R`                 | Refresh                    |
+| Command mode      | `prefix + :`                 | Manual commands            |
+| Copy mode         | `prefix + [`                 | Scroll/copy                |
+| Paste buffer      | `prefix + P`                 | Paste                      |
 
 ### Neovim - Editor Level
 
-| Action | Keybinding | Notes |
-|--------|-----------|-------|
-| **Buffers** (Primary file navigation) |
-| Find buffer | `<leader>fb` | Telescope picker (FAST!) |
-| Switch buffer | `:b [name]` | Type partial name |
-| Next buffer | `:bnext` | Cycle forward |
-| Prev buffer | `:bprev` | Cycle backward |
-| **Tabs** (Layouts/contexts) |
-| New tab | `<leader>te` | Tab edit |
-| Close tab | `<leader>tw` | Tab close |
-| Next tab | `<tab>` | Cycle forward |
-| Previous tab | `<shift-tab>` | Cycle backward |
-| **Splits/Windows** (Viewing multiple files) |
-| Vertical split | `:vsp [file]` | Side-by-side |
-| Horizontal split | `:sp [file]` | Stacked |
-| Navigate splits | `Ctrl + h/j/k/l` | Smart (tmux-aware) |
-| Resize splits | `<leader>r + h/j/k/l` | 10 units |
-| Maximize split | `<leader>rm` | Toggle max |
-| Close split | `:q` or `<leader>qq` | Close current |
+| Action                                      | Keybinding            | Notes                    |
+| ------------------------------------------- | --------------------- | ------------------------ |
+| **Buffers** (Primary file navigation)      |                       |                          |
+| Find buffer                                 | `<leader>fb`          | Telescope picker (FAST!) |
+| Switch buffer                               | `:b [name]`           | Type partial name        |
+| Next buffer                                 | `:bnext`              | Cycle forward            |
+| Prev buffer                                 | `:bprev`              | Cycle backward           |
+| **Tabs** (Layouts/contexts)                |                       |                          |
+| New tab                                     | `<leader>te`          | Tab edit                 |
+| Close tab                                   | `<leader>tw`          | Tab close                |
+| Next tab                                    | `<tab>`               | Cycle forward            |
+| Previous tab                                | `<shift-tab>`         | Cycle backward           |
+| **Splits/Windows** (Viewing multiple files) |                       |                          |
+| Vertical split                              | `:vsp [file]`         | Side-by-side             |
+| Horizontal split                            | `:sp [file]`          | Stacked                  |
+| Navigate splits                             | `Ctrl + h/j/k/l`      | Smart (tmux-aware)       |
+| Resize splits                               | `<leader>r + h/j/k/l` | 10 units                 |
+| Maximize split                              | `<leader>rm`          | Toggle max               |
+| Close split                                 | `:q` or `<leader>qq`  | Close current            |
 
 ---
 
@@ -299,7 +302,7 @@ Based on research and real-world usage, here's the optimal workflow for one larg
 
 ### Recommended Structure
 
-```
+```text
 AeroSpace Workspace (full screen)
 ├─ 1-2 Tmux terminal windows (tiled side-by-side or stacked)
     ├─ Session: project-name
@@ -355,7 +358,7 @@ AeroSpace Workspace (full screen)
 
 #### Workflow: Dotfiles Development
 
-```
+```text
 AeroSpace Workspace D (Dotfiles)
 │
 └─ Ghostty Terminal (fullscreen or large)
@@ -382,7 +385,7 @@ AeroSpace Workspace D (Dotfiles)
 
 #### Workflow: Web Development
 
-```
+```text
 AeroSpace Workspace A (Project)
 │
 ├─ Ghostty Terminal 1 (left half)

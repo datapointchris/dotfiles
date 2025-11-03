@@ -48,7 +48,7 @@ When you open a live preview window, the script creates a temporary config file 
 
 Located at `~/.config/ghostty/favorite-themes.txt`, this file contains your curated list of preferred themes:
 
-```
+```text
 # Ghostty Favorite Themes
 # One theme name per line (comments starting with # are ignored)
 
@@ -66,7 +66,7 @@ Theme names must match exactly what Ghostty expects, including spaces and capita
 
 Your main Ghostty config at `~/.config/ghostty/config` maintains a single theme line:
 
-```
+```text
 # Theme (only one theme line should be set)
 theme = Rose Pine
 

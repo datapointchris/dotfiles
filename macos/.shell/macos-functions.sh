@@ -181,7 +181,7 @@ function lskeys() {
   color_yellow "Prefix: $(color_blue "Ctrl + Space")"
   echo ""
   color_yellow "Sessions:"
-  echo "  $(color_blue "prefix + s")                 List sessions (sessionx)"
+  echo "  $(color_blue "prefix + s")                 List sessions with sesh"
   echo "  $(color_blue "prefix + :new -s name")      New session"
   echo "  $(color_blue "prefix + d")                 Detach"
   echo ""

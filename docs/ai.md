@@ -109,7 +109,7 @@ This is a Neovim configuration project.
 
 Use slash commands for instant context:
 
-```
+```text
 /repo     - Complete repository overview
 /tree     - Directory structure
 /recent   - Recently modified files
@@ -117,7 +117,7 @@ Use slash commands for instant context:
 
 Use @ tools for deeper analysis:
 
-```
+```text
 @repository_analyzer type=overview      - Project statistics
 @repository_analyzer type=config        - Configuration analysis
 @repository_analyzer type=dependencies  - Dependency analysis
@@ -126,7 +126,7 @@ Use @ tools for deeper analysis:
 
 #### Example Chat Session
 
-```
+```text
 User: /repo
 
 AI: 📁 Repository Overview
@@ -162,7 +162,7 @@ lua/plugins/native-lsp.lua:12: -- Uses vim.lsp.config() pattern
 
 #### Example Tool Usage
 
-```
+```text
 User: @cmd_runner command="npm test"
 
 AI: I'll run the npm test command for you.
