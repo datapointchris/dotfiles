@@ -18,7 +18,7 @@ This is a **cross-platform dotfiles repository** using a shared configuration ar
 
 ## Critical Symlink Workflow
 
-The `./symlinks` script is the **central management tool** using a **layered architecture**:
+The `symlinks` command is the **central management tool** using a **layered architecture**:
 
 ### Layered Architecture Design
 
@@ -29,23 +29,23 @@ The `./symlinks` script is the **central management tool** using a **layered arc
 
 ```bash
 # Step 1: Create base layer (shared configs)
-./symlinks common link
+symlinks link common
 
 # Step 2: Add platform overlay (platform-specific configs)
-./symlinks macos link       # or wsl, ubuntu, arch
+symlinks link macos       # or wsl, arch
 ```
 
 **Platform overlays will overwrite common configs where conflicts exist.**
 
 ### Key Commands
 
-- `./symlinks common show` - Show base layer symlinks
-- `./symlinks <platform> show` - Show overlay layer symlinks  
-- `./symlinks common unlink` - Remove base layer
-- `./symlinks <platform> unlink` - Remove overlay layer
-- `./symlinks <platform> overlay` - Alias for link (explicit overlay creation)
+- `symlinks show common` - Show base layer symlinks
+- `symlinks show <platform>` - Show overlay layer symlinks
+- `symlinks unlink common` - Remove base layer
+- `symlinks unlink <platform>` - Remove overlay layer
+- `symlinks relink <platform>` - Complete refresh: unlink, check, relink
 
-**Important**: Always use `./symlinks <target> show` to verify symlink state before making changes.
+**Important**: Always use `symlinks show <target>` to verify symlink state before making changes.
 
 ## Platform Differentiation Patterns
 

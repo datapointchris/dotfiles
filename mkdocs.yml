@@ -150,6 +150,8 @@ nav:
   - Development:
       - VM Testing: development/testing.md
       - Publishing Docs: publishing.md
+  - Learnings:
+      - Relative Path Calculation: learnings/relative-path-calculation.md
   - Changelog:
       - Summary: changelog.md
       - 2025-11-05: changelog/2025-11-05.md

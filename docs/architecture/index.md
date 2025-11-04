@@ -12,7 +12,7 @@ dotfiles/
 ├── arch/            # Arch Linux overrides
 ├── taskfiles/       # Task automation
 ├── scripts/install/ # Bootstrap scripts
-└── symlinks.sh      # Symlink deployment
+└── tools/symlinks/  # Symlink management tool
 ```
 
 ## Symlink System
@@ -22,7 +22,7 @@ Two-layer approach: common base + platform overlay.
 **Step 1**: Link common files
 
 ```sh
-./symlinks.sh link common
+symlinks link common
 ```
 
 Links `common/` to `$HOME`:
@@ -35,7 +35,7 @@ common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
 **Step 2**: Overlay platform files
 
 ```sh
-./symlinks.sh link macos
+symlinks link macos
 ```
 
 Overlays platform-specific files:
@@ -136,7 +136,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 ## Trade-offs
 
-**Symlink Complexity**: Two-layer system adds complexity, but `symlinks.sh` handles it with clear errors.
+**Symlink Complexity**: Two-layer system adds complexity, but `symlinks` tool handles it with clear errors.
 
 **Platform Knowledge**: Need to know whether to edit `common/` or platform dir. Experience makes this clear.
 

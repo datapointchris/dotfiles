@@ -46,13 +46,13 @@ See [Installation Guide](getting-started/installation.md) for details.
 | `tools list` | List all installed tools |
 | `tools search <query>` | Search tools by name/tag |
 | `task update` | Update all packages |
-| `./symlinks relink macos` | Update symlinks after file changes |
+| `symlinks relink macos` | Update symlinks after file changes |
 
 ## Key Concepts
 
 **Version Managers**: uv for Python, nvm for Node.js. Provides cross-platform consistency without system package manager conflicts.
 
-**Symlinks**: The `symlinks` tool deploys configs from the repo to their expected locations. Run `./symlinks relink <platform>` after adding/removing files.
+**Symlinks**: The `symlinks` tool deploys configs from the repo to their expected locations. Run `symlinks relink <platform>` after adding/removing files.
 
 **Theme Sync**: tinty manages Base16 themes across tmux, bat, fzf, and shell. `theme-sync` provides a simpler interface than the taskfile used to.
 

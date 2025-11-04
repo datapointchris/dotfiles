@@ -55,7 +55,7 @@ brew upgrade neovim     # macOS
 
 ```sh
 ls -la ~/.config/zsh/.zshrc  # Check symlink
-./symlinks.sh relink macos   # Recreate symlinks
+symlinks relink macos        # Recreate symlinks
 ```
 
 ## Theme Issues

@@ -18,7 +18,7 @@ Modern, cross-platform dotfiles emphasizing **developer ergonomics, productivity
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./symlinks.sh link macos     # or: wsl, arch
+symlinks link macos     # or: wsl, arch
 ```
 
 **Discover installed tools**:
@@ -46,7 +46,7 @@ dotfiles/
 ├── wsl/            # WSL Ubuntu-specific configs
 ├── docs/           # Comprehensive documentation
 ├── scripts/        # Utility scripts and automation
-└── symlinks.sh     # Symlink management tool
+└── tools/symlinks/ # Symlink management tool
 ```
 
 **Key principle**: DRY configuration with platform-specific customization when needed.
@@ -81,15 +81,15 @@ tools categories        # Show all categories
 
 ## 🔗 Symlink Management
 
-The `symlinks.sh` script manages all configuration symlinks:
+The `symlinks` command manages all configuration symlinks:
 
 ```bash
-./symlinks.sh link macos        # Create symlinks for macOS
-./symlinks.sh relink macos      # Update symlinks after file changes
-./symlinks.sh unlink macos      # Remove all symlinks
+symlinks link macos        # Create symlinks for macOS
+symlinks relink macos      # Update symlinks after file changes
+symlinks unlink macos      # Remove all symlinks
 ```
 
-**Critical**: After adding/removing files in dotfiles, run `./symlinks.sh relink <platform>`
+**Critical**: After adding/removing files in dotfiles, run `symlinks relink <platform>`
 
 ## 🎨 Theme System
 
@@ -127,7 +127,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
 # Clone and link
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./symlinks.sh link macos
+symlinks link macos
 
 # Restart terminal
 ```

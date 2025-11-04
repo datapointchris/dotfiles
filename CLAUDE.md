@@ -108,8 +108,8 @@ This dotfiles repository uses a symlink system to deploy configuration files fro
 
 **Critical Rule**: After adding or removing any files in the dotfiles repository, you MUST run the symlink update command:
 
-- macOS: `./symlinks relink macos`
-- WSL: `./symlinks relink wsl`
+- macOS: `symlinks relink macos`
+- WSL: `symlinks relink wsl`
 
 **Common Symptoms of Outdated Symlinks**:
 
@@ -284,6 +284,53 @@ Focus on **discovery over tracking** - the system helps you remember what tools 
 - Like to understand the "why" behind architectural decisions
 - Prefer seeing the code changes implemented rather than just described
 - Value cross-platform compatibility considerations
+
+## Learnings Directory
+
+**IMPORTANT**: Document key lessons learned in `docs/learnings/` as we encounter them.
+
+### Purpose
+
+The learnings directory provides quick-reference documentation of important lessons, best practices, and gotchas discovered during development. These are extracted insights that are useful beyond the specific context of a changelog entry.
+
+### When to Create a Learning Document
+
+Create a new learning document when you encounter:
+
+- **Critical bugs or design flaws** that taught important lessons
+- **Best practices** that should be followed consistently
+- **Common pitfalls** to avoid in the future
+- **Performance insights** that apply broadly
+- **Tool or library gotchas** worth remembering
+- **Architecture decisions** with important trade-offs
+
+### Learning Document Format
+
+Each learning should include:
+
+1. **Title**: Clear, descriptive (e.g., "Relative Path Calculation: Use stdlib, Don't Reinvent")
+2. **Date and Context**: When discovered and what prompted it
+3. **The Problem**: What went wrong or what was challenging
+4. **The Solution**: How it was solved or what approach works best
+5. **Key Learnings**: Bullet points of actionable insights
+6. **Example**: Brief code example if applicable
+7. **Related**: Links to relevant documentation or related learnings
+
+### Learnings Workflow
+
+1. When encountering a significant lesson during development:
+   - Create `docs/learnings/descriptive-name.md`
+   - Document the problem, solution, and key insights
+   - Add to `mkdocs.yml` navigation under "Learnings" section
+2. Reference learnings from changelogs when relevant
+3. Update existing learnings if new information emerges
+
+### Difference from Changelog
+
+- **Changelog**: Chronological record of what changed and why
+- **Learnings**: Extracted wisdom and best practices, organized by topic
+
+A changelog entry might reference a learning document for deeper insight.
 
 ## Changelog Requirements
 
