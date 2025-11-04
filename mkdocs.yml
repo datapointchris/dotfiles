@@ -183,6 +183,7 @@ nav:
       - Taskfile Reference: reference/taskfile.md
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
+      - GitHub Pages: reference/github-pages.md
 
   - Changelog:
       - Overview: changelog.md

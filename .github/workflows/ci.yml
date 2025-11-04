@@ -36,4 +36,5 @@ jobs:
           pip install mkdocstrings[python]
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+        run: |
+          mkdocs gh-deploy --force --clean --verbose
