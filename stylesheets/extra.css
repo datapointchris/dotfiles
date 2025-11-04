@@ -1,0 +1,10 @@
+.md-grid {
+  max-width: 80%;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 205;
+  --md-primary-fg-color: rgb(0, 68, 88);
+  --md-primary-fg-color--light: #f0f0f0;
+  --md-typeset-a-color: #f0f0f0;
+}

@@ -1,0 +1,637 @@
+# Tool Registry
+# Comprehensive database of installed tools with descriptions, usage, and examples
+# Used by the `tools` command for discovery and learning
+
+version: "1.0"
+last_updated: "2025-11-03"
+
+tools:
+  # =================================================================
+  # FILE MANAGEMENT & VIEWING
+  # =================================================================
+
+  bat:
+    category: file-viewer
+    description: "Syntax-highlighting cat replacement with git integration"
+    installed_via: brew
+    usage: "bat [options] <file>"
+    why_use: "Beautiful syntax highlighting, line numbers, git diff integration, automatic paging"
+    examples:
+      - cmd: "bat README.md"
+        desc: "View file with syntax highlighting"
+      - cmd: "bat -n file.rs"
+        desc: "Show with line numbers"
+      - cmd: "bat --theme='gruvbox-dark' file.py"
+        desc: "Use specific theme"
+      - cmd: "bat --diff file.txt"
+        desc: "Show git modifications"
+    see_also: [eza, less, cat]
+    tags: [cli, productivity, git, syntax-highlighting]
+    docs_url: "https://github.com/sharkdp/bat"
+
+  eza:
+    category: file-management
+    description: "Modern ls replacement with git integration, colors, and icons"
+    installed_via: brew
+    usage: "eza [options] [path]"
+    why_use: "Git status in listings, better colors, Nerd Font icons, tree view built-in"
+    examples:
+      - cmd: "eza -la"
+        desc: "Long format with hidden files"
+      - cmd: "eza --tree --level=2"
+        desc: "Tree view, 2 levels deep"
+      - cmd: "eza --git-ignore"
+        desc: "Respect .gitignore"
+      - cmd: "eza -T --git"
+        desc: "Tree with git status"
+      - cmd: "eza -lh --sort=modified"
+        desc: "Sort by modification time"
+    see_also: [bat, fd, tree, ls]
+    tags: [cli, productivity, git, file-management]
+    docs_url: "https://github.com/eza-community/eza"
+
+  fd:
+    category: search
+    description: "Fast, user-friendly find alternative with sensible defaults"
+    installed_via: brew
+    usage: "fd [pattern] [path]"
+    why_use: "Faster than find, respects .gitignore, colorized output, simpler syntax"
+    examples:
+      - cmd: "fd config"
+        desc: "Find files/dirs matching 'config'"
+      - cmd: "fd -e md"
+        desc: "Find all markdown files"
+      - cmd: "fd -t f 'test.*\\.py$'"
+        desc: "Find Python test files"
+      - cmd: "fd -H -I config"
+        desc: "Include hidden and ignored files"
+      - cmd: "fd . ~/dotfiles -x bat"
+        desc: "Find and execute command on each file"
+    see_also: [ripgrep, fzf, find]
+    tags: [cli, search, productivity]
+    docs_url: "https://github.com/sharkdp/fd"
+
+  yazi:
+    category: file-management
+    description: "Blazing fast terminal file manager with image preview"
+    installed_via: brew
+    usage: "yazi [path]"
+    why_use: "Fast, supports image preview, miller columns, vim keybindings, async I/O"
+    examples:
+      - cmd: "yazi"
+        desc: "Open in current directory"
+      - cmd: "yazi ~/dotfiles"
+        desc: "Open specific directory"
+      - cmd: "yy"
+        desc: "Shell function: cd to directory on exit"
+    see_also: [eza, fd, ranger, lf]
+    tags: [cli, file-management, tui, productivity]
+    docs_url: "https://yazi-rs.github.io/"
+
+  # =================================================================
+  # SEARCH & TEXT PROCESSING
+  # =================================================================
+
+  ripgrep:
+    category: search
+    description: "Ultra-fast recursive grep with smart defaults"
+    installed_via: brew
+    usage: "rg [pattern] [path]"
+    why_use: "Fastest grep tool, respects .gitignore, supports PCRE2, multiline search"
+    examples:
+      - cmd: "rg 'function'"
+        desc: "Search for pattern in current directory"
+      - cmd: "rg -t py 'import'"
+        desc: "Search only Python files"
+      - cmd: "rg -i 'error' --context 3"
+        desc: "Case-insensitive with 3 lines context"
+      - cmd: "rg 'TODO' -g '!target'"
+        desc: "Search excluding target directory"
+      - cmd: "rg -U 'struct.*field'"
+        desc: "Multiline search"
+    see_also: [fd, fzf, grep, ag]
+    tags: [cli, search, productivity, regex]
+    docs_url: "https://github.com/BurntSushi/ripgrep"
+
+  fzf:
+    category: search
+    description: "Command-line fuzzy finder for files, history, and more"
+    installed_via: brew
+    usage: "fzf [options]"
+    why_use: "Interactive filtering, integrates with shell history, vim, git, etc."
+    examples:
+      - cmd: "CTRL-T"
+        desc: "Fuzzy find files (shell keybinding)"
+      - cmd: "CTRL-R"
+        desc: "Fuzzy search command history"
+      - cmd: "ALT-C"
+        desc: "Fuzzy cd to directory"
+      - cmd: "git log | fzf"
+        desc: "Interactive git log browser"
+      - cmd: "fd -t f | fzf --preview 'bat --color=always {}'"
+        desc: "File finder with preview"
+    see_also: [fd, ripgrep, zoxide]
+    tags: [cli, search, productivity, interactive]
+    docs_url: "https://github.com/junegunn/fzf"
+
+  jq:
+    category: text-processing
+    description: "Command-line JSON processor and pretty-printer"
+    installed_via: brew
+    usage: "jq [filter] [file]"
+    why_use: "Parse, transform, and query JSON data from CLI"
+    examples:
+      - cmd: "echo '{\"name\":\"Chris\"}' | jq '.name'"
+        desc: "Extract field from JSON"
+      - cmd: "cat data.json | jq '.[]'"
+        desc: "Iterate array elements"
+      - cmd: "jq -r '.items[].name' data.json"
+        desc: "Raw output (no quotes)"
+      - cmd: "curl api.example.com | jq '.'"
+        desc: "Pretty-print API response"
+    see_also: [yq, curl]
+    tags: [cli, json, text-processing]
+    docs_url: "https://jqlang.github.io/jq/"
+
+  # =================================================================
+  # NAVIGATION
+  # =================================================================
+
+  zoxide:
+    category: navigation
+    description: "Smarter cd command that learns your habits"
+    installed_via: brew
+    usage: "z [pattern]"
+    why_use: "Jump to frequently-used directories by partial match, no need for full paths"
+    examples:
+      - cmd: "z dot"
+        desc: "Jump to ~/dotfiles (if used frequently)"
+      - cmd: "z doc"
+        desc: "Jump to most-used directory matching 'doc'"
+      - cmd: "zi doc"
+        desc: "Interactive selection if multiple matches"
+      - cmd: "z -"
+        desc: "Go to previous directory"
+    see_also: [cd, autojump, fasd]
+    tags: [cli, navigation, productivity]
+    docs_url: "https://github.com/ajeetdsouza/zoxide"
+
+  # =================================================================
+  # VERSION CONTROL
+  # =================================================================
+
+  git:
+    category: version-control
+    description: "Distributed version control system"
+    installed_via: brew
+    usage: "git [command] [options]"
+    why_use: "Industry-standard version control, required for most development workflows"
+    examples:
+      - cmd: "git status"
+        desc: "Show working tree status"
+      - cmd: "git add -p"
+        desc: "Interactively stage changes"
+      - cmd: "git log --oneline --graph"
+        desc: "Compact history with graph"
+      - cmd: "git diff --staged"
+        desc: "Show staged changes"
+    see_also: [gh, lazygit, git-delta]
+    tags: [vcs, development, essential]
+    docs_url: "https://git-scm.com/"
+
+  gh:
+    category: version-control
+    description: "GitHub CLI for pull requests, issues, and workflows"
+    installed_via: brew
+    usage: "gh [command] [options]"
+    why_use: "Manage GitHub from terminal, create PRs, view issues, run workflows"
+    examples:
+      - cmd: "gh pr create"
+        desc: "Create pull request interactively"
+      - cmd: "gh pr list"
+        desc: "List pull requests"
+      - cmd: "gh pr checkout 123"
+        desc: "Checkout PR #123 locally"
+      - cmd: "gh repo view"
+        desc: "View repository details"
+      - cmd: "gh workflow run"
+        desc: "Trigger GitHub Actions workflow"
+    see_also: [git, lazygit]
+    tags: [vcs, github, development]
+    docs_url: "https://cli.github.com/"
+
+  lazygit:
+    category: version-control
+    description: "Terminal UI for git with intuitive keybindings"
+    installed_via: brew
+    usage: "lazygit"
+    why_use: "Visual git interface, stage hunks easily, interactive rebase, branch management"
+    examples:
+      - cmd: "lazygit"
+        desc: "Open in current repository"
+      - cmd: "lazygit -p /path/to/repo"
+        desc: "Open specific repository"
+    see_also: [git, gh, git-delta]
+    tags: [vcs, tui, development, productivity]
+    docs_url: "https://github.com/jesseduffield/lazygit"
+
+  git-delta:
+    category: version-control
+    description: "Syntax-highlighting pager for git, diff, and grep output"
+    installed_via: brew
+    usage: "delta [file]"
+    why_use: "Beautiful git diffs with syntax highlighting, line numbers, side-by-side view"
+    examples:
+      - cmd: "git diff | delta"
+        desc: "View diff with delta (configured in .gitconfig)"
+      - cmd: "git log -p | delta"
+        desc: "View commit patches with delta"
+      - cmd: "git show HEAD | delta"
+        desc: "Show last commit with delta"
+    see_also: [git, bat, diff]
+    tags: [vcs, syntax-highlighting, git]
+    docs_url: "https://github.com/dandavison/delta"
+
+  # =================================================================
+  # DEVELOPMENT TOOLS
+  # =================================================================
+
+  neovim:
+    category: editor
+    description: "Hyperextensible Vim-based text editor"
+    installed_via: brew
+    usage: "nvim [file]"
+    why_use: "Modern vim, Lua configuration, LSP support, async plugins, active ecosystem"
+    examples:
+      - cmd: "nvim file.py"
+        desc: "Edit file"
+      - cmd: "nvim -d file1 file2"
+        desc: "Diff mode"
+      - cmd: "nvim +PluginUpdate +qa"
+        desc: "Update plugins and quit"
+    see_also: [vim, code]
+    tags: [editor, development, essential, vim]
+    docs_url: "https://neovim.io/"
+
+  tmux:
+    category: terminal-multiplexer
+    description: "Terminal multiplexer for persistent sessions"
+    installed_via: brew
+    usage: "tmux [command]"
+    why_use: "Persistent sessions, split panes, multiple windows, session sharing"
+    examples:
+      - cmd: "tmux"
+        desc: "Start new session"
+      - cmd: "tmux attach"
+        desc: "Attach to existing session"
+      - cmd: "tmux ls"
+        desc: "List sessions"
+      - cmd: "tmux new -s work"
+        desc: "Create named session"
+    see_also: [screen, zellij]
+    tags: [terminal, productivity, multiplexer]
+    docs_url: "https://github.com/tmux/tmux"
+
+  # =================================================================
+  # LANGUAGE VERSION MANAGERS
+  # =================================================================
+
+  uv:
+    category: language-manager
+    description: "Extremely fast Python package and project manager"
+    installed_via: cargo
+    usage: "uv [command] [options]"
+    why_use: "Replaces pip, pipx, pyenv, virtualenv with one fast tool written in Rust"
+    examples:
+      - cmd: "uv venv"
+        desc: "Create virtual environment"
+      - cmd: "uv pip install requests"
+        desc: "Install package (10-100x faster than pip)"
+      - cmd: "uv tool install ruff"
+        desc: "Install Python CLI tool globally"
+      - cmd: "uv python install 3.12"
+        desc: "Install Python version"
+      - cmd: "uv run python script.py"
+        desc: "Run script in managed environment"
+    see_also: [pip, pyenv, virtualenv, pipx]
+    tags: [python, package-manager, version-manager]
+    docs_url: "https://github.com/astral-sh/uv"
+
+  nvm:
+    category: language-manager
+    description: "Node.js version manager for switching Node versions"
+    installed_via: script
+    usage: "nvm [command] [version]"
+    why_use: "Manage multiple Node.js versions, switch per project, no sudo needed"
+    examples:
+      - cmd: "nvm install --lts"
+        desc: "Install latest LTS Node.js"
+      - cmd: "nvm use 20"
+        desc: "Switch to Node 20"
+      - cmd: "nvm current"
+        desc: "Show current version"
+      - cmd: "nvm alias default 22"
+        desc: "Set default Node version"
+    see_also: [npm, node, fnm]
+    tags: [nodejs, version-manager, development]
+    docs_url: "https://github.com/nvm-sh/nvm"
+
+  # =================================================================
+  # PYTHON TOOLS
+  # =================================================================
+
+  ruff:
+    category: linter-formatter
+    description: "Extremely fast Python linter and formatter written in Rust"
+    installed_via: uv
+    usage: "ruff [command] [path]"
+    why_use: "Replaces flake8, black, isort, etc. with one fast tool (10-100x faster)"
+    examples:
+      - cmd: "ruff check ."
+        desc: "Lint current directory"
+      - cmd: "ruff format ."
+        desc: "Format code"
+      - cmd: "ruff check --fix ."
+        desc: "Auto-fix violations"
+      - cmd: "ruff check --select E,W ."
+        desc: "Check specific rule categories"
+    see_also: [black, flake8, isort, mypy]
+    tags: [python, linter, formatter, development]
+    docs_url: "https://github.com/astral-sh/ruff"
+
+  mypy:
+    category: linter-formatter
+    description: "Static type checker for Python"
+    installed_via: uv
+    usage: "mypy [options] [files]"
+    why_use: "Catch type errors before runtime, improve code quality and IDE support"
+    examples:
+      - cmd: "mypy script.py"
+        desc: "Type-check file"
+      - cmd: "mypy --strict ."
+        desc: "Strict type checking"
+      - cmd: "mypy --install-types"
+        desc: "Install missing type stubs"
+    see_also: [ruff, basedpyright, pyright]
+    tags: [python, type-checker, development]
+    docs_url: "https://mypy-lang.org/"
+
+  basedpyright:
+    category: linter-formatter
+    description: "Type checker for Python (fork of Pyright with enhanced features)"
+    installed_via: uv
+    usage: "basedpyright [options] [path]"
+    why_use: "Fast type checking, good IDE integration, community-enhanced fork"
+    examples:
+      - cmd: "basedpyright ."
+        desc: "Type-check current directory"
+      - cmd: "basedpyright --watch"
+        desc: "Watch mode for continuous checking"
+    see_also: [mypy, pyright, ruff]
+    tags: [python, type-checker, development]
+    docs_url: "https://github.com/DetachHead/basedpyright"
+
+  # =================================================================
+  # NODE/JS TOOLS
+  # =================================================================
+
+  prettier:
+    category: linter-formatter
+    description: "Opinionated code formatter for JavaScript, TypeScript, and more"
+    installed_via: npm
+    usage: "prettier [options] [files]"
+    why_use: "Automatic consistent code formatting, supports many languages"
+    examples:
+      - cmd: "prettier --write ."
+        desc: "Format all files in directory"
+      - cmd: "prettier --check ."
+        desc: "Check if files are formatted"
+      - cmd: "prettier --write 'src/**/*.{js,ts,md}'"
+        desc: "Format specific file types"
+    see_also: [prettierd, eslint]
+    tags: [javascript, typescript, formatter, development]
+    docs_url: "https://prettier.io/"
+
+  eslint:
+    category: linter-formatter
+    description: "Pluggable JavaScript and TypeScript linter"
+    installed_via: npm
+    usage: "eslint [options] [files]"
+    why_use: "Catch errors and enforce coding standards in JS/TS code"
+    examples:
+      - cmd: "eslint ."
+        desc: "Lint current directory"
+      - cmd: "eslint --fix ."
+        desc: "Auto-fix violations"
+      - cmd: "eslint --ext .ts,.tsx src/"
+        desc: "Lint TypeScript files"
+    see_also: [prettier, tsc]
+    tags: [javascript, typescript, linter, development]
+    docs_url: "https://eslint.org/"
+
+  # =================================================================
+  # LANGUAGE SERVERS (LSP)
+  # =================================================================
+
+  typescript-language-server:
+    category: language-server
+    description: "TypeScript/JavaScript LSP for code intelligence"
+    installed_via: npm
+    usage: "typescript-language-server --stdio"
+    why_use: "Enables IDE features in editors: autocomplete, go-to-definition, etc."
+    examples:
+      - cmd: "Configured in Neovim's LSP setup"
+        desc: "Used automatically by editor"
+    see_also: [vscode-langservers-extracted, eslint]
+    tags: [lsp, typescript, javascript, development]
+    docs_url: "https://github.com/typescript-language-server/typescript-language-server"
+
+  bash-language-server:
+    category: language-server
+    description: "Bash LSP for shell script intelligence"
+    installed_via: npm
+    usage: "bash-language-server start"
+    why_use: "Shell script linting, completion, and navigation in editor"
+    examples:
+      - cmd: "Configured in Neovim's LSP setup"
+        desc: "Used automatically by editor"
+    see_also: [shellcheck, shfmt]
+    tags: [lsp, bash, shell, development]
+    docs_url: "https://github.com/bash-lsp/bash-language-server"
+
+  yaml-language-server:
+    category: language-server
+    description: "YAML LSP with schema validation"
+    installed_via: npm
+    usage: "yaml-language-server --stdio"
+    why_use: "YAML validation, autocomplete, schema support"
+    examples:
+      - cmd: "Configured in Neovim's LSP setup"
+        desc: "Used automatically for .yml files"
+    see_also: [json-language-server]
+    tags: [lsp, yaml, development]
+    docs_url: "https://github.com/redhat-developer/yaml-language-server"
+
+  # =================================================================
+  # INFRASTRUCTURE & DEVOPS
+  # =================================================================
+
+  docker:
+    category: containerization
+    description: "Platform for building and running containerized applications"
+    installed_via: cask
+    usage: "docker [command] [options]"
+    why_use: "Standard for containerization, consistent dev environments, deployment"
+    examples:
+      - cmd: "docker ps"
+        desc: "List running containers"
+      - cmd: "docker build -t myapp ."
+        desc: "Build image from Dockerfile"
+      - cmd: "docker run -it myapp bash"
+        desc: "Run container interactively"
+      - cmd: "docker logs -f container_name"
+        desc: "Follow container logs"
+    see_also: [docker-compose, lazydocker, oxker]
+    tags: [devops, containers, infrastructure]
+    docs_url: "https://docs.docker.com/"
+
+  lazydocker:
+    category: containerization
+    description: "Terminal UI for managing Docker containers and images"
+    installed_via: brew
+    usage: "lazydocker"
+    why_use: "Visual interface for Docker, easy container management, log viewing"
+    examples:
+      - cmd: "lazydocker"
+        desc: "Open Docker TUI"
+    see_also: [docker, oxker, docker-compose]
+    tags: [devops, containers, tui]
+    docs_url: "https://github.com/jesseduffield/lazydocker"
+
+  terraform:
+    category: infrastructure
+    description: "Infrastructure as Code tool for cloud resources"
+    installed_via: brew
+    usage: "terraform [command] [options]"
+    why_use: "Declarative infrastructure, multi-cloud support, state management"
+    examples:
+      - cmd: "terraform init"
+        desc: "Initialize working directory"
+      - cmd: "terraform plan"
+        desc: "Show execution plan"
+      - cmd: "terraform apply"
+        desc: "Apply infrastructure changes"
+      - cmd: "terraform destroy"
+        desc: "Destroy managed infrastructure"
+    see_also: [terraform-docs, tflint, terraformer]
+    tags: [devops, infrastructure, iac]
+    docs_url: "https://www.terraform.io/"
+
+  # =================================================================
+  # TASK AUTOMATION
+  # =================================================================
+
+  task:
+    category: automation
+    description: "Modern task runner and build tool (Taskfile)"
+    installed_via: brew
+    usage: "task [task-name]"
+    why_use: "Better than Makefiles, cross-platform, YAML-based, dependency management"
+    examples:
+      - cmd: "task"
+        desc: "Run default task"
+      - cmd: "task --list"
+        desc: "List available tasks"
+      - cmd: "task install"
+        desc: "Run install task"
+      - cmd: "task build --force"
+        desc: "Force rebuild"
+    see_also: [make, just]
+    tags: [automation, build-tool, productivity]
+    docs_url: "https://taskfile.dev/"
+
+  # =================================================================
+  # SYSTEM MONITORING
+  # =================================================================
+
+  htop:
+    category: system-monitoring
+    description: "Interactive process viewer and system monitor"
+    installed_via: brew
+    usage: "htop"
+    why_use: "Better than top, colorized output, mouse support, tree view"
+    examples:
+      - cmd: "htop"
+        desc: "Monitor system processes"
+      - cmd: "htop -u chris"
+        desc: "Show only user's processes"
+    see_also: [top, btop]
+    tags: [system, monitoring, tui]
+    docs_url: "https://htop.dev/"
+
+  # =================================================================
+  # SHELL & FORMATTING
+  # =================================================================
+
+  shellcheck:
+    category: linter-formatter
+    description: "Static analysis tool for shell scripts"
+    installed_via: brew
+    usage: "shellcheck [file]"
+    why_use: "Catch common shell script errors, suggest best practices"
+    examples:
+      - cmd: "shellcheck script.sh"
+        desc: "Check shell script"
+      - cmd: "shellcheck -x script.sh"
+        desc: "Follow sourced files"
+      - cmd: "shellcheck -S warning *.sh"
+        desc: "Show warnings and above"
+    see_also: [shfmt, bash-language-server]
+    tags: [shell, linter, development]
+    docs_url: "https://www.shellcheck.net/"
+
+  shfmt:
+    category: linter-formatter
+    description: "Shell script formatter (bash, zsh, etc.)"
+    installed_via: brew
+    usage: "shfmt [options] [files]"
+    why_use: "Automatic shell script formatting, consistent style"
+    examples:
+      - cmd: "shfmt -w script.sh"
+        desc: "Format script in-place"
+      - cmd: "shfmt -i 2 -d ."
+        desc: "Check formatting with 2-space indent"
+      - cmd: "shfmt -l -w ."
+        desc: "Format all shell files"
+    see_also: [shellcheck, prettier]
+    tags: [shell, formatter, development]
+    docs_url: "https://github.com/mvdan/sh"
+
+# =================================================================
+# Metadata
+# =================================================================
+
+categories:
+  - file-viewer
+  - file-management
+  - search
+  - text-processing
+  - navigation
+  - version-control
+  - editor
+  - terminal-multiplexer
+  - language-manager
+  - linter-formatter
+  - language-server
+  - containerization
+  - infrastructure
+  - automation
+  - system-monitoring
+
+install_methods:
+  - brew: "Homebrew package manager (macOS/Linux)"
+  - cargo: "Rust package manager"
+  - npm: "Node.js package manager (via nvm)"
+  - uv: "Python package manager"
+  - script: "Installation script"
+  - cask: "Homebrew cask (GUI applications)"
