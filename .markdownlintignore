@@ -1,0 +1,5 @@
+# Archive - historical documents, don't modify
+docs/archive/**
+
+# Changelog - historical records, keep as-is
+docs/changelog/**

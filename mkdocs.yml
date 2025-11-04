@@ -1,29 +1,212 @@
 site_name: Dotfiles
+site_url: https://datapointchris.github.io/dotfiles/
+repo_name: datapointchris/dotfiles
+repo_url: https://github.com/datapointchris/dotfiles
+
 theme:
   name: material
   palette:
-    scheme: slate
-    primary: blue
-    accent:
+    # Dark mode (default)
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+  font:
+    text: Inter
+    code: JetBrains Mono
+
   features:
-    - content.code.copy
-    - navigation.instant
-    - navigation.tracking
+    # Navigation
+    - navigation.instant       # Instant loading (SPA-like)
+    - navigation.instant.prefetch  # Prefetch pages on hover
+    - navigation.tracking      # URL updates with scroll
+    - navigation.tabs          # Top-level tabs
+    - navigation.tabs.sticky   # Tabs stay visible when scrolling
+    - navigation.sections      # Collapsible sections in sidebar
+    - navigation.expand        # Expand all sections by default
+    - navigation.path          # Breadcrumb trail
+    - navigation.indexes       # Section index pages
+    - navigation.top           # "Back to top" button
+
+    # Search
+    - search.suggest           # Search suggestions
+    - search.highlight         # Highlight search terms
+    - search.share             # Share search results
+
+    # Table of contents
+    - toc.follow               # TOC scrolls with page
+    - toc.integrate            # TOC integrated into navigation
+
+    # Content
+    - content.code.copy        # Copy button on code blocks
+    - content.code.annotate    # Annotations in code blocks
+    - content.tabs.link        # Link content tabs across pages
+
+  icon:
+    repo: fontawesome/brands/github
+    admonition:
+      note: octicons/tag-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      tip: octicons/light-bulb-16
+      success: octicons/check-16
+      question: octicons/question-16
+      warning: octicons/alert-16
+      failure: octicons/x-circle-16
+      danger: octicons/zap-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/datapointchris/dotfiles
+  generator: false  # Hide "Made with Material for MkDocs"
+
 markdown_extensions:
+  # Admonitions
   - admonition
-  - nl2br
-  - def_list
   - pymdownx.details
+
+  # Code blocks
   - pymdownx.highlight:
       anchor_linenums: true
-      line_spans: __span
+      use_pygments: true
       pygments_lang_class: true
+      line_spans: __span
+      auto_title: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.snippets
+
+  # Content tabs
+  - pymdownx.tabbed:
+      alternate_style: true
+
+  # Lists
+  - def_list
   - pymdownx.tasklist:
       custom_checkbox: true
+
+  # Formatting
+  - attr_list
+  - md_in_html
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+
+  # Emojis
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+  # Footnotes
+  - footnotes
+
+  # Abbreviations
+  - abbr
+
+  # Table of contents
+  - toc:
+      permalink: true
+      title: On this page
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            show_bases: true
+            show_submodules: true
+
+nav:
+  - Home: index.md
+
+  - Getting Started:
+      - Quick Start: getting-started/quickstart.md
+      - Installation: getting-started/installation.md
+      - First Configuration: getting-started/first-config.md
+
+  - Core Concepts:
+      - Architecture: architecture/index.md
+      - Package Management: architecture/package-management.md
+      - Tool Discovery: architecture/tool-discovery.md
+      - Theme System: architecture/themes.md
+
+  - Configuration:
+      - Themes & Colors: configuration/themes.md
+      - Tools & CLI: configuration/tools.md
+      - Shell: configuration/shell.md
+      - Neovim: configuration/neovim.md
+      - Workflow: configuration/workflow.md
+
+  - Development:
+      - Overview: development/index.md
+      - Testing Guide: development/testing.md
+      - Project Phases: development/phases.md
+      - Master Plan: development/master-plan.md
+
+  - Reference:
+      - Platform Differences: reference/platforms.md
+      - Tool Registry: reference/tools.md
+      - Taskfile Reference: reference/taskfile.md
+      - Troubleshooting: reference/troubleshooting.md
+      - Corporate Setup: reference/corporate.md
+
+  - Changelog:
+      - Overview: changelog.md
+      - 2025-11-04: changelog/2025-11-04.md
+      - 2025-11-02: changelog/2025-11-02.md
+
+  - Archive:
+      - Overview: archive/index.md
+      - Project Phases:
+          - Phase 1 Complete: archive/phases/2025-11-03-phase-1-complete.md
+          - Phase 2 Complete: archive/phases/2025-11-03-phase-2-complete.md
+          - Phase 3 Complete: archive/phases/2025-11-04-phase-3-complete.md
+          - Phase 4 Complete: archive/phases/2025-11-04-phase-4-complete.md
+          - Phase 5 Complete: archive/phases/2025-11-04-phase-5-complete.md
+          - Phase 6 Complete: archive/phases/2025-11-04-phase-6-complete.md
+      - Planning:
+          - Theme Sync Strategy: archive/planning/2025-11-03-theme-sync-strategy.md
+          - VM Testing Plan: archive/planning/2025-11-04-vm-testing-plan.md
+      - Setup Guides:
+          - Original Setup: archive/setup-guides/2024-10-22-setup.md
+          - Environment Setup: archive/setup-guides/2024-10-22-environment-setup.md
+          - Neovim Migration: archive/setup-guides/2024-10-22-nvim-migration.md
+      - Analysis:
+          - Dotfiles Management: archive/analysis/2024-10-22-dotfiles-management-analysis.md
+      - Legacy Docs:
+          - AI Tools: archive/legacy-docs/2024-11-03-ai.md
+          - LSP Config: archive/legacy-docs/2024-10-22-lsp.md
