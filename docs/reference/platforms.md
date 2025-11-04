@@ -10,7 +10,7 @@ This document provides a comprehensive reference for platform-specific differenc
 | **Update Command** | `brew update && brew upgrade` | `sudo apt update && sudo apt upgrade` | `sudo pacman -Syu` |
 | **Install Command** | `brew install <pkg>` | `sudo apt install <pkg>` | `sudo pacman -S <pkg>` |
 | **Homebrew Location** | `/usr/local` (Intel) <br> `/opt/homebrew` (Apple Silicon) | N/A | N/A |
-| **Shell Config** | `~/.zshrc` | `~/.config/zsh/.zshrc` | `~/.config/zsh/.zshrc` |
+| **Shell Config** | `~/.config/zsh/.zshrc` | `~/.config/zsh/.zshrc` | `~/.config/zsh/.zshrc` |
 | **PATH Priority** | brew bins → system | system → local | system → local |
 
 ---
@@ -167,22 +167,24 @@ These paths are added by version managers (nvm, uv) and take precedence:
 
 ### Shell Config File Locations
 
-| Platform | Shell | Main Config | Source Order |
-|----------|-------|-------------|--------------|
-| **macOS** | zsh | `~/.zshrc` | `/etc/zshrc` → `~/.zshrc` |
-| **Ubuntu** | zsh | `~/.config/zsh/.zshrc` | `/etc/zsh/zshenv` → `~/.config/zsh/.zshrc` |
-| **Arch** | zsh | `~/.config/zsh/.zshrc` | `/etc/zsh/zshenv` → `~/.config/zsh/.zshrc` |
+| Platform | Shell | Main Config |
+|----------|-------|-------------|
+| **macOS** | zsh | `~/.config/zsh/.zshrc` |
+| **Ubuntu** | zsh | `~/.config/zsh/.zshrc` |
+| **Arch** | zsh | `~/.config/zsh/.zshrc` |
 
 ### ZSHDOTDIR Configuration
 
-**Ubuntu/WSL** and **Arch Linux** require setting `ZSHDOTDIR` in `/etc/zsh/zshenv`:
+All platforms use `~/.config/zsh/.zshrc` via ZSHDOTDIR.
+
+**macOS**: Set in terminal emulator or user environment.
+
+**Ubuntu/WSL and Arch**: Set in `/etc/zsh/zshenv`:
 
 ```bash
 # /etc/zsh/zshenv
 export ZSHDOTDIR="$HOME/.config/zsh"
 ```
-
-**macOS** uses default `~/.zshrc` location (simpler).
 
 ---
 

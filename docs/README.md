@@ -1,96 +1,37 @@
-# Dotfiles Documentation
+# Documentation
 
-This directory contains comprehensive documentation for understanding, setting up, and maintaining this cross-platform dotfiles repository.
+Comprehensive documentation for cross-platform dotfiles repository.
 
-## Quick Start
+## Structure
 
-1. **Setup**: See [Setup Guide](./setup.md) for installation and initial configuration
-2. **Neovim**: See [Neovim Guide](./neovim/) for comprehensive editor configuration
-3. **Environment**: See [Environment Setup](./environment-setup.md) for platform configuration
-4. **Troubleshooting**: See [Troubleshooting](./troubleshooting.md) for common issues
+**Getting Started**: [Quickstart](getting-started/quickstart.md) | [Installation](getting-started/installation.md) | [First Config](getting-started/first-config.md)
 
-## Documentation Structure
+**Architecture**: [Overview](architecture/index.md)
 
-### Core Configuration
+**Reference**: [Platforms](reference/platforms.md) | [Tools](reference/tools.md) | [Troubleshooting](reference/troubleshooting.md) | [Corporate](reference/corporate.md)
 
-- [**Neovim/**](./neovim/) - Complete Neovim configuration documentation
-- [**Terminal/**](./terminal/) - Terminal application tools and utilities
-- [Environment Setup](./environment-setup.md) - Platform-specific environment configuration
-- [Setup Guide](./setup.md) - Initial installation and configuration
-- [Troubleshooting](./troubleshooting.md) - Common issues and solutions
+**Development**: [Testing](development/testing.md) | [Publishing](publishing.md)
 
-### Workflow & Usage
-
-- [**Workflow/**](./workflow/) - Efficient workflow patterns and best practices
-  - [AeroSpace + Tmux + Neovim Workflow](./workflow/aerospace-tmux-neovim-workflow.md) - Comprehensive three-layer workflow guide
-
-### Specialized Topics
-
-- [AI Integration](./ai.md) - CodeCompanion and Copilot setup
-- [Corporate Environment](./corporate.md) - Solutions for restricted networks
-- [LSP Configuration](./lsp.md) - Legacy LSP documentation (see neovim/ for current)
-- [Dotfiles Management Analysis](./dotfiles-management-analysis.md) - Architecture decisions
-
-### Development
-
-- [**Changelog**](./changelog.md) - High-level summary of changes to this repository
-- [**Changelog Details**](./changelog/) - In-depth analysis of all changes
-- [Examples](./examples/) - MkDocs examples and reference material
-
-## Architecture Overview
-
-This is a **cross-platform dotfiles repository** using a layered configuration approach:
-
-```text
-├── common/              # Shared configurations (base layer)
-├── macos/              # macOS-specific overrides (overlay)
-├── wsl/                # WSL-specific overrides (overlay)
-├── symlinks            # Universal symlink manager
-└── docs/               # This documentation
-```
-
-### Key Principles
-
-- **DRY (Don't Repeat Yourself)** - Shared configs in `common/`, platform-specific overrides only
-- **Native tooling** - Prefer system tools over plugin managers (no Mason, minimal plugins)
-- **Full control** - Custom solutions where possible, well-documented decisions
-- **Corporate-friendly** - Works in restricted environments without external dependencies
-
-## Configuration Highlights
-
-### Neovim (Primary Focus)
-
-- **Native LSP** with 20+ language servers (no nvim-lspconfig)
-- **Custom colorscheme manager** with git-based project persistence
-- **Unified formatter system** matching pre-commit hooks
-- **AI integration** with environment-based enabling
-- **Cross-platform compatibility** with smart platform detection
-
-### Shell & Terminal
-
-- **Ghostty** with interactive theme manager and live previews
-- **ZSH** with custom prompt and AWS integration
-- **Enhanced CLI tools** (zoxide, fzf, fd, eza, bat, yazi)
-- **tmux** configuration with smart keybindings
-- **Platform-aware** configurations
-
-### Development Tools
-
-- **Git** with platform-specific credential helpers
-- **Pre-commit hooks** for code quality
-- **LSP servers** for 20+ languages
-- **Debugging tools** and workflow optimizations
+**Changelog**: [Summary](changelog.md) | [Detailed Entries](changelog/)
 
 ## Quick Navigation
 
-| Topic | Documentation |
-|-------|---------------|
-| **Workflow Guide** | [workflow/aerospace-tmux-neovim-workflow.md](./workflow/aerospace-tmux-neovim-workflow.md) |
-| **Neovim Complete Guide** | [neovim/](./neovim/) |
-| **Colorscheme Management** | [neovim/colorscheme-manager.md](./neovim/colorscheme-manager.md) |
-| **Formatting System** | [neovim/formatter.md](./neovim/formatter.md) |
-| **LSP Configuration** | [neovim/lsp.md](./neovim/lsp.md) |
-| **Ghostty Theme Manager** | [terminal/ghostty.md](./terminal/ghostty.md) |
-| **Platform Setup** | [environment-setup.md](./environment-setup.md) |
-| **Corporate Networks** | [corporate.md](./corporate.md) |
-| **Changelog** | [changelog.md](./changelog.md) |
+| Need to... | Go to... |
+|------------|----------|
+| Install dotfiles | [Quickstart](getting-started/quickstart.md) |
+| Understand architecture | [Architecture Overview](architecture/index.md) |
+| Fix an issue | [Troubleshooting](reference/troubleshooting.md) |
+| Check tool usage | Run `tools show <name>` |
+| Test on VMs | [VM Testing Guide](development/testing.md) |
+| Work in corporate network | [Corporate Setup](reference/corporate.md) |
+
+## Key Principles
+
+- **DRY**: Shared configs in `common/`, platform overrides only
+- **Direct**: Task for coordination, tools for commands
+- **Cross-platform**: Version managers (uv, nvm) for consistency
+- **Testable**: VM-based testing for all platforms
+
+## Documentation
+
+Built with MkDocs Material. See [Publishing Guide](publishing.md) for deployment.

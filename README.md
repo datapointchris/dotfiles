@@ -1,445 +1,214 @@
 # Dotfiles
 
-Modern, cross-platform dotfiles configuration featuring:
+Modern, cross-platform dotfiles emphasizing **developer ergonomics, productivity, and joy**.
 
-- **Shared Configuration Architecture**: DRY configuration with platform-specific customizations
-- Standalone zsh setup with custom prompt and Nerd Font icons
-- Smart directory navigation with zoxide
-- Enhanced command-line tools (fzf, fd, eza, bat, yazi)
-- Cross-platform compatibility (macOS, Ubuntu WSL, Arch Linux)
+## ✨ Features
 
-## Architecture
+- **100+ curated development tools** with discovery system
+- **Cross-platform** (macOS Intel, Ubuntu WSL, Arch Linux)
+- **Clean package management** (brew/apt/pacman for system, uv/nvm for languages)
+- **Modern CLI replacements** (bat, eza, fd, ripgrep, fzf, zoxide)
+- **Native Neovim LSP** with 10+ language servers
+- **Shared config architecture** with platform-specific overrides
 
-This dotfiles setup uses a **shared configuration** approach:
+## 🚀 Quick Start
 
-- `common/` - Common configuration files used across all platforms
-- `macos/` - macOS-specific configurations and symlinks
-- `wsl/` - WSL-specific configurations and symlinks
-- `ubuntu/` - Ubuntu-specific configurations and symlinks
-
-Key shared files are symlinked from platform directories to maintain DRY principles while allowing platform-specific customizations.
-
-## Quick Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-
-# Link shared configuration to platform directories
-./symlinks link common
-
-# Link your platform's configuration to $HOME
-./symlinks link macos          # On macOS
-./symlinks link wsl            # On WSL
-```
-
-## Symlink Management
-
-This dotfiles setup uses a powerful `symlinks` script that replaces GNU Stow entirely
-
-### Yazi Themes
-
-```bash
-ya pkg add BennyOe/tokyo-night
-ya pkg add dangooddd/kanagawa
-ya pkg add bennyyip/gruvbox-dark
-ya pkg add kmlupreti/ayu-dark
-ya pkg add Chromium-3-Oxide/everforest-medium
-ya pkg add gosxrgxx/flexoki-dark
-```
-
-### Yazi Plugins
-
-```bash
-ya pkg add AnirudghG07/nbpreview
-ya pkg add pirafrank/what-size
-ya pkg add yazi-rs/plugins:git
-```
-
-## macOS Installation
-
-### Install Dependencies (macOS)
-
-```bash
-# Core tools
-brew install zsh git stow
-
-# Enhanced CLI tools
-brew install zoxide fzf fd eza bat ripgrep git-delta
-
-# GNU coreutils (for enhanced compatibility)
-brew install coreutils gnu-sed gnu-tar grep
-
-# ZSH plugins
-brew install zsh-syntax-highlighting
-
-# Optional tools
-brew install yazi tmux neovim gh
-```
-
-### Install Nerd Font (macOS)
-
-Download and install a Nerd Font from [nerdfonts.com](https://www.nerdfonts.com/). Configure your terminal to use it.
-
-### Set zsh as default shell (macOS)
-
-```bash
-chsh -s $(which zsh)
-```
-
-### Install git-open plugin (macOS)
-
-```bash
-mkdir -p ~/.config/zsh/plugins
-git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
-chmod +x ~/.config/zsh/plugins/git-open/git-open
-```
-
-Also install the zsh-vi-mode plugin
-
-```bash
-git clone https://github.com/jeffreytse/zsh-vi-mode.git ~/.config/zsh/plugins/zsh-vi-mode
-```
-
-### Install sesh for tmux session management
-
-```bash
-go install github.com/joshmedeski/sesh/v2@latest
-```
-
-### Clone dotfiles and install (macOS)
+**Clone and symlink**:
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-stow macos
-# Handle any conflicting files by backing them up first
+./symlinks.sh link macos     # or: wsl, arch
 ```
 
-## Neovim Lanuage Servers
+**Discover installed tools**:
 
 ```bash
-# NOTE: This list is incomplete
-brew install lua-language-server
-
+tools list          # See all 100+ tools
+tools show bat      # Learn about specific tools
+tools search git    # Find tools by keyword
+tools random        # Discover something new!
 ```
 
-### Install rclone to get S3 file system browsing
+**For full installation and setup**, see:
 
-````bash
-cd && curl -O https://downloads.rclone.org/rclone-current-osx-amd64.zip
-unzip -a rclone-current-osx-amd64.zip && cd rclone-*-osx-amd64
-sudo mv rclone /usr/local/bin/
-cd .. && rm -rf rclone-*-osx-amd64 rclone-current-osx-amd64.zip
-cd .. && rm -rf rclone-*-osx-amd64 rclone-current-osx-amd64.zip
+- 📖 **[Master Plan](docs/MASTER_PLAN.md)** - Complete modernization roadmap & installation
+- 📋 **[Tool List](docs/TOOL_LIST.md)** - All 100+ tools categorized
+- 🎨 **[Theme Strategy](docs/THEME_SYNC_STRATEGY.md)** - Color scheme synchronization
+- ⚙️ **[CLAUDE.md](CLAUDE.md)** - AI assistant context & package philosophy
+
+## 📂 Architecture
+
+```text
+dotfiles/
+├── common/         # Shared configs (zsh, nvim, tmux, etc.)
+├── macos/          # macOS-specific configs and overrides
+├── wsl/            # WSL Ubuntu-specific configs
+├── docs/           # Comprehensive documentation
+├── scripts/        # Utility scripts and automation
+└── symlinks.sh     # Symlink management tool
 ```
 
-## Installing in WSL (Ubuntu)
+**Key principle**: DRY configuration with platform-specific customization when needed.
 
-Edit `/etc/zsh/zshenv` with `export ZSHDOTDIR="$HOME/.config/zsh"`
+## 📦 Package Management
 
-### System Installs
+This setup uses a **clear separation** between system and language tools:
+
+| Type | Manager | Purpose |
+|------|---------|---------|
+| **System Tools** | brew/apt/pacman | bat, eza, fd, ripgrep, tmux, neovim, docker, etc. |
+| **Python** | uv | Version management, tools (ruff, mypy, etc.) |
+| **Node.js** | nvm | Version management, npm globals (LSPs, formatters) |
+
+**Why this split?** Cross-platform consistency, project-specific versions, clean separation of concerns.
+
+See [CLAUDE.md](CLAUDE.md) for detailed philosophy.
+
+## 🔧 Tool Discovery
+
+The `tools` command helps you discover and learn about installed tools:
 
 ```bash
-sudo apt install ripgrep tmux nvim stow fd-find xclip git-delta zsh git luarocks bat zsh-syntax-highlighting
-# bat installed as batcat
-ln -s /usr/bin/batcat ~/.local/bin/bat
-# stuff for yazi
-sudo apt install ffmpeg 7zip jq poppler-utils imagemagick chafa
-# for fd need to make a symlink
-ln -s $(which fdfind) ~/.local/bin/fd
-````
-
-### Install Enhanced CLI Tools
-
-```bash
-# Install Rust for cargo-based tools
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-
-# Install via cargo
-cargo install zoxide eza
+tools list              # List all documented tools
+tools show ripgrep      # Detailed info: usage, examples, why use it
+tools search python     # Find Python-related tools
+tools random            # Discover a random tool (learn something new!)
+tools categories        # Show all categories
 ```
 
-#### fzf needs to be installed and updated manually
+**30+ tools documented** in the registry with usage examples, tips, and cross-references.
 
-1. Download the latest `.zip` release from github and extract
-1. Go must be installed, download the linux 386 or whatever `.tar.gz` archive
-   `sudo rm -rf /usr/local/go`
-   `sudo tar -C /usr/local -xzf go1.25.2.linux-386.tar.gz`
-1. Make sure that go is in the path
-   `export PATH=$PATH:/usr/local/go/bin`
-1. cd into fzf unzipped directory and `make` then `sudo make install`
-1. If it does not install right `sudo cp -f target/fzf-linux_amd64 /bin/fzf`
+## 🔗 Symlink Management
 
-#### yazi has to be installed manually
-
-1. Use rust toolchain to build
+The `symlinks.sh` script manages all configuration symlinks:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup update
-git clone https://github.com/sxyazi/yazi.git
-cd yazi
-cargo build --release --locked
-sudo mv target/release/yazi target/release/ya /usr/local/bin
-# !!! Important !!!
-# Must now install yazi from snap, yazi is broken from cargo
-# but cargo needed to get ya to install the themes
-sudo snap install yazi --classic
+./symlinks.sh link macos        # Create symlinks for macOS
+./symlinks.sh relink macos      # Update symlinks after file changes
+./symlinks.sh unlink macos      # Remove all symlinks
 ```
 
-Install imagemagick from source:
-<https://imagemagick.org/script/install-source.php>
+**Critical**: After adding/removing files in dotfiles, run `./symlinks.sh relink <platform>`
 
-#### LazyGit has to be installed manually
+## 🎨 Theme System
 
-```bash
-LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
-curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-tar xf lazygit.tar.gz lazygit
-sudo install lazygit -D -t /usr/local/bin/
-```
+**Current**: Individual theme configs per application
 
-### Set zsh as default shell (WSL)
+**Future** (Phase 4): Unified theme synchronization across:
 
-`chsh -s $(which zsh)`
+- Terminal (Ghostty)
+- Neovim (17 curated colorschemes including flexoki-moon variants)
+- Tmux, Bat, FZF, Eza, Lazygit
 
-### Install ZSH Plugins
+See [Theme Strategy](docs/THEME_SYNC_STRATEGY.md) for tinty vs custom Rust implementation plan.
 
-```bash
-# Try package manager first
-sudo apt install zsh-syntax-highlighting gh
+## 🛠️ Installation
 
-# If zsh-syntax-highlighting not available, install manually
-mkdir -p ~/.config/zsh/plugins
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.config/zsh/plugins/zsh-syntax-highlighting
+### Prerequisites
 
-# Install git-open manually (cross-platform compatibility)
-git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
-chmod +x ~/.config/zsh/plugins/git-open/git-open
-```
+- **macOS**: Homebrew, uv, nvm
+- **WSL/Ubuntu**: apt, uv, nvm, cargo
+- **Arch**: pacman, uv, nvm, cargo
+
+### macOS Quick Setup
 
 ```bash
-# Important: Must install nodejs and npm from `nvm` to get a recent version
-# Copy install script locally if no rawgithubusercontent available
-# otherwise all npm will be installed in Windows and be slow!
-cargo install --locked tree-sitter-cli
-cargo install stylua
-uv tool install ruff
-uv tool install mypy
-uv tool install mdformat
-uv tool install basedpyright
-uv tool install sqlfluff
-uv tool install nbpreview
-uv tool install codespell
-npm install -g markdownlint-cli
-npm install -g bash-language-server
-npm install -g prettier
-npm install -g @fsouza/prettierd
-npm install -g vscode-langservers-extracted
-npm install -g typescript-language-server typescript
-npm install -g yaml-language-server
-go install golang.org/x/tools/gopls@latest
-go install github.com/sqls-server/sqls@latest
+# Install Homebrew (if not present)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-```
+# Install core tools
+brew install bat eza fd ripgrep fzf zoxide neovim tmux git gh
 
-### General Intall Instructions for Binary
+# Install language managers
+brew install --cask uv
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
 
-```bash
-# Get .tar.gz or .zip from Binary Releases
-# Download to ~/installs
-mkdir program-name
-tar xf program-name.tar.gz --directory program-name
-mv program-name ~/.local/opt/
-ln -s ~/.local/opt/program-name/bin/program ~/.local/bin/program
-```
-
-### Language Servers for Neovim
-
-<https://github.com/LuaLS/lua-language-server/releases>
-
-#### Docker Language Server
-
-```bash
-# requires gcc compiler for go
-sudo apt install gcc-multilib
-go install github.com/docker/docker-language-server/cmd/docker-language-server@latest
-```
-
-### Clone dotfiles and install (WSL)
-
-```bash
+# Clone and link
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
+./symlinks.sh link macos
+
+# Restart terminal
 ```
 
-### Set Up Clipboard for Windows Integration
+**For complete installation**, see [Master Plan - Installation Strategy](docs/MASTER_PLAN.md#installation-strategy)
 
-Use the clipboard info in neovim options.
-Download `win32yank.exe` the 64 bit version!
-Put in `/usr/local/bin/win32yank.exe` on WSL
-make sure to `chmod +x /usr/local/bin/win32yank.exe`
+### WSL/Ubuntu Setup
 
-## Arch Linux Installation
+See [Master Plan - WSL Installation](docs/MASTER_PLAN.md#installing-in-wsl-ubuntu)
 
-### Install Dependencies (Arch Linux)
+### Arch Setup
 
-```bash
-# Core tools
-sudo pacman -S zsh git stow
+See [Master Plan - Arch Installation](docs/MASTER_PLAN.md#arch-linux-installation)
 
-# Enhanced CLI tools
-sudo pacman -S zoxide fzf fd eza bat ripgrep git-delta
+## 📚 Documentation
 
-# ZSH plugins
-sudo pacman -S zsh-syntax-highlighting
+| Document | Purpose |
+|----------|---------|
+| [MASTER_PLAN.md](docs/MASTER_PLAN.md) | Complete modernization roadmap (7 phases) |
+| [TOOL_LIST.md](docs/TOOL_LIST.md) | All 100+ tools categorized by type |
+| [THEME_SYNC_STRATEGY.md](docs/THEME_SYNC_STRATEGY.md) | Theme synchronization approach |
+| [CLAUDE.md](CLAUDE.md) | AI assistant context & philosophies |
+| [PHASE_1_COMPLETE.md](docs/PHASE_1_COMPLETE.md) | Phase 1 completion summary |
+| [tools/registry.yml](docs/tools/registry.yml) | Detailed tool database (YAML) |
 
-# Optional tools
-sudo pacman -S yazi tmux neovim github-cli
-```
+## 🎯 Current Status
 
-### Install Nerd Font (Arch Linux)
+**Phase 1: Foundation** ✅ Complete
 
-```bash
-sudo pacman -S ttf-firacode-nerd
-# Or install manually from nerdfonts.com
-```
+- ✅ Package management (uv/nvm working)
+- ✅ PATH fixed (Homebrew before system)
+- ✅ Shell completions (uv, task, nvm)
+- ✅ npm globals migrated (11 packages)
+- ✅ Taskfile installed
+- ✅ Documentation created
 
-### Set zsh as default shell (Arch Linux)
+**Phase 2: Documentation** ✅ Complete
 
-```bash
-chsh -s $(which zsh)
-```
+- ✅ Tool registry (30+ tools documented)
+- ✅ Tool discovery command (`tools`)
+- ✅ Categorized tool list (100+ tools)
+- ✅ README simplified
 
-### Install git-open plugin (Arch Linux)
+**Next**: Phase 3 - Installation Automation (Taskfile-based install)
 
-```bash
-mkdir -p ~/.config/zsh/plugins
-git clone https://github.com/paulirish/git-open.git ~/.config/zsh/plugins/git-open
-chmod +x ~/.config/zsh/plugins/git-open/git-open
-```
+## 💡 Key Highlights
 
-### Clone dotfiles and install (Arch Linux)
+### Neovim Setup
 
-```bash
-git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-stow arch  # or create arch-specific directory if needed
-# Handle any conflicting files by backing them up first
-```
+- Native LSP configuration (Neovim 0.11+)
+- 10+ language servers (TypeScript, Python, Bash, YAML, etc.)
+- CodeCompanion integration with Claude 3.5 Sonnet
+- Custom colorscheme manager (17 themes with per-project persistence)
 
-## Features
+### Shell Configuration
 
-### Custom Prompt
+- Custom ZSH prompt with git status and AWS context
+- zoxide for smart directory jumping
+- fzf with file/directory preview
+- Syntax highlighting and vi-mode
 
-- **Git status with Nerd Font icons**: Branch, modified files, staged files, etc.
-- **Virtual environment display**: Shows active Python venv
-- **Smart user info**: Different colors for SSH sessions and root
-- **Remote status**: Shows commits ahead/behind origin
-- **AWS context**: Displays profile, region, and credential expiration time
+### Modern CLI Tools
 
-### Smart Navigation
+- **bat**: cat with syntax highlighting
+- **eza**: ls with git integration and icons
+- **fd**: find that respects .gitignore
+- **ripgrep**: fastest grep alternative
+- **yazi**: terminal file manager with preview
 
-- **zoxide integration**: `z` command for smart directory jumping
-- **Enhanced aliases**: `..`, `...`, `dots`, `dl`, `dt` all use smart navigation
+## 🤝 Contributing
 
-### Plugin System
+This is a personal dotfiles repository, but feel free to:
 
-The .zshrc configuration automatically detects and loads plugins installed in standard locations:
+- Take inspiration for your own dotfiles
+- Suggest improvements via issues
+- Share interesting tools or configurations
 
-- **zsh-syntax-highlighting**: Installed via package managers
-- **git-open**: Manual installation to ~/.local/bin with executable permissions
-- **colored-man-pages**: Activated via environment variables
+## 📝 License
 
-Plugins are sourced automatically if detected, with graceful fallback handling.
+MIT License - see repository for details
 
-### Enhanced Commands
+---
 
-- **fzf integration**: Fuzzy finding for files, directories, command history
-- **fd + fzf**: Fast file finding with preview
-- **eza + bat**: Enhanced ls and cat with syntax highlighting
-- **git-open**: Open repository in browser from command line
-
-### Cross-Platform Compatibility
-
-- **Automatic detection**: macOS vs Linux differences handled automatically
-- **Plugin management**: Hybrid approach using package managers when available
-- **Path management**: GNU coreutils on macOS, native tools on Linux
-
-## AWS Prompt Integration
-
-The custom prompt includes intelligent AWS context display inspired by Starship's AWS module. The prompt automatically shows:
-
-### AWS Information Displayed
-
-- **☁️ Profile**: Current AWS profile (`$AWS_PROFILE`)
-- **🌍 Region**: Current AWS region (`$AWS_REGION` or `$AWS_DEFAULT_REGION`)
-- **⏰ Expiration**: Time remaining on temporary credentials
-
-### Supported AWS Tools
-
-The prompt detects and displays credential expiration from:
-
-- **aws-vault**: Reads `$AWS_SESSION_EXPIRATION` environment variable
-- **AWSume**: Reads `$AWSUME_EXPIRATION` environment variable
-- **Manual export**: Any tool that sets these standard variables
-
-### Display Examples
-
-```bash
-# Profile and region only
-☁️ production@us-east-1
-
-# With credential expiration
-☁️ production@us-east-1 [2h15m]
-
-# Expired credentials (shown in red)
-☁️ production@us-east-1 [EXPIRED]
-```
-
-### Usage
-
-The AWS prompt appears automatically when AWS environment variables are detected:
-
-```bash
-# Set profile and region
-export AWS_PROFILE=production
-export AWS_REGION=us-east-1
-
-# For aws-vault users
-aws-vault exec production -- zsh
-
-# For AWSume users
-awsume production
-```
-
-The prompt hides completely when no AWS context is active, keeping your prompt clean.
-
-## Troubleshooting
-
-### Nerd Font icons not displaying
-
-- Ensure your terminal is configured to use a Nerd Font
-- Test with: `echo -e "\ue0a0 \uf067 \uf059"`
-- Popular choices: FiraCode Nerd Font, JetBrainsMono Nerd Font
-
-### Command not found errors
-
-- Verify all required dependencies are installed
-- Check that tools are in your PATH: `which zoxide fzf fd eza bat`
-- Restart terminal after installation
-
-### zsh-syntax-highlighting not working
-
-- Install via package manager or manually to `~/.config/zsh/plugins/`
-- Plugin loads automatically based on detection
-- Restart terminal to see syntax highlighting
-
-### Ubuntu fd command issues
-
-- Ubuntu packages `fd` as `fdfind`
-- Create symlink: `ln -s $(which fdfind) ~/.local/bin/fd`
-- Ensure `~/.local/bin` is in your PATH
+**Tip**: Run `tools random` daily to discover tools you might have forgotten about!

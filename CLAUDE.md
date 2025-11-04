@@ -1,5 +1,25 @@
 # Claude AI Assistant - Neovim Development Context
 
+## Critical Rules
+
+**File Naming**:
+
+- All markdown files MUST use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
+- Exception: README.md and CLAUDE.md (standard conventions)
+
+**Documentation Organization**:
+
+- NEVER create standalone troubleshooting/setup files in docs root
+- Place in appropriate subdirectories: `docs/reference/`, `docs/troubleshooting/`, etc.
+- ALWAYS add new documentation to `mkdocs.yml` navigation
+
+**Problem Solving Philosophy**:
+
+- Solve the actual root cause, don't create unnecessary guardrails
+- Don't add band-aid solutions hoping they work
+- If you know something isn't the real solution (like .nojekyll for a configuration issue), don't create it
+- Focus on fixing the actual problem (like GitHub Pages settings) not symptoms
+
 ## About Me
 
 I'm Chris, a software engineer who uses a dotfiles-based development environment across macOS, WSL, and Ubuntu. I prefer clean, maintainable code and enjoy optimizing developer experience.
@@ -8,9 +28,66 @@ I'm Chris, a software engineer who uses a dotfiles-based development environment
 
 - **Editor**: Neovim 0.11+ with native LSP configuration
 - **Shell**: Zsh with custom prompt and enhanced CLI tools
-- **Platforms**: macOS (primary), WSL, Ubuntu
-- **Terminal**: iTerm2 on macOS, various on Linux
+- **Platforms**: macOS Intel (primary), WSL Ubuntu, Arch Linux (upcoming)
+- **Terminal**: Ghostty, iTerm2 on macOS
 - **AI Coding**: CodeCompanion.nvim with Claude 3.5 Sonnet
+
+## Package Management Philosophy
+
+This dotfiles setup uses a **clear separation** between system package managers and language-specific version managers. This strategy provides cross-platform consistency while allowing each tool to do what it does best.
+
+### System Package Managers
+
+**Homebrew** (macOS), **apt** (Ubuntu/WSL), **pacman** (Arch):
+
+- System utilities: bat, eza, fd, ripgrep, fzf, tmux, neovim, yazi
+- Infrastructure tools: docker, terraform, awscli
+- GUI applications (macOS casks): alfred, bettertouchtool, ghostty
+- Compiled libraries and system dependencies
+
+### Language-Specific Version Managers
+
+**uv** for Python:
+
+- Python version management (replaces pyenv, <python@X.XX> from brew)
+- Python tool installation: ruff, mypy, basedpyright, sqlfluff, mdformat
+- Virtual environment management
+- Cross-platform, fast, modern
+
+**nvm** for Node.js:
+
+- Node/npm version management
+- Project-specific versions via `.nvmrc`
+- npm global packages: language servers, formatters, linters
+- Cross-platform, industry standard
+
+### Why This Split?
+
+**Cross-platform consistency**: uv and nvm work identically on macOS, Ubuntu WSL, and Arch Linux. System package managers vary by platform but handle platform-specific concerns.
+
+**Version flexibility**: Easy project-specific version switching with `.python-version` and `.nvmrc` files. System tools don't need this complexity.
+
+**Clear separation of concerns**: System stability (brew/apt/pacman) vs development flexibility (uv/nvm). No conflicts between system Python and project Python.
+
+**PATH simplicity**: Cleaner shell configuration with version manager shims for languages, direct binaries for system tools.
+
+### Tool Installation Guidelines
+
+When adding a new tool, ask:
+
+- **Is it a system utility?** → Use brew/apt/pacman
+- **Is it a Python tool?** → Use `uv tool install`
+- **Is it a Node.js tool?** → Use `npm install -g` (with nvm)
+- **Is it a language runtime?** → Use uv/nvm, NOT system package manager
+- **Is it a language server?** → Usually npm for universal LSPs, language-specific package manager for others
+
+### GNU Coreutils on macOS
+
+GNU coreutils are installed via Homebrew but **NOT** in PATH by default to avoid conflicts with macOS system tools and potential build issues. They remain available with `g` prefix: `gls`, `gsed`, `gtar`, `ggrep`. This follows standard macOS Homebrew practice for Intel Macs.
+
+### Python from Homebrew
+
+Some Homebrew packages depend on specific Python versions. These are kept only if required by `brew uses --installed python@X.XX`. All development work uses uv-managed Python installations, not Homebrew Python.
 
 ## Current Project Context
 
@@ -51,11 +128,47 @@ Always check symlinks first when encountering file-related issues after making s
 - **Testing**: Pre-commit hooks, shell validation, configuration testing
 - **Problem-Solving Approach**: Always err on the side of thinking through issues rather than adding extra code. When debugging, analyze what existing code does and test minimal changes first instead of adding complex filtering or workarounds
 
-## Documentation Philosophy
+## Documentation Purpose and Philosophy
+
+### Documentation Purpose
+
+The dotfiles documentation serves as a comprehensive wiki-style technical resource designed for multiple audiences and use cases:
+
+**Primary Audiences**:
+
+1. **New User (Day 1)**: Quick start guide to install and configure dotfiles in 15 minutes
+2. **Returning User (After 1 Year)**: Refresh understanding and be productive within a day
+3. **Customizer**: Deep dive into configuration options for themes, tools, and workflows
+4. **Contributor**: Understand architecture, testing framework, and development process
+5. **Troubleshooter**: Quick reference for platform differences and common issues
+
+**Documentation Structure** (inspired by [CodeCompanion.nvim](https://codecompanion.olimorris.dev)):
+
+```text
+docs/
+├── index.md                    # 30-second overview with navigation
+├── getting-started/            # Linear onboarding (15 minutes)
+├── architecture/               # HOW and WHY everything works
+├── configuration/              # Customization guides
+├── development/                # Contributing and testing
+├── reference/                  # Quick lookup (platforms, tools, tasks)
+└── changelog/                  # Historical record (detailed)
+```
+
+**Key Principles**:
+
+- **Task-oriented hierarchy**: Concepts → setup → usage → customization → development
+- **Return-friendly**: Can leave for a year and be productive in a day
+- **Interconnected**: Cross-references show how components work together
+- **Why over What**: Explain decisions and rationale, not just commands
+- **Discoverable**: Use collapsible navigation, search, breadcrumbs
+- **Visual**: Diagrams, tables, admonitions for clarity
+
+### Documentation Philosophy
 
 When creating or updating documentation:
 
-### Audience
+### Audience (for Context Documents)
 
 - **Primary**: Future me (6+ months later) trying to remember why decisions were made
 - **Secondary**: Technical developers familiar with the technology stack
@@ -96,12 +209,75 @@ Avoid documentation that is primarily bulleted lists or verbose procedural steps
 - ❌ Extensive code examples (reference files instead)
 - ❌ Feature lists without context or reasoning
 
+## Theme Synchronization
+
+This dotfiles setup uses **tinty** for Base16 theme synchronization across applications. The theme system works in parallel with your existing `ghostty-theme` script:
+
+- **ghostty-theme**: For Ghostty-specific theme management with live preview
+- **theme-sync**: For synchronized Base16 themes across tmux, bat, fzf, and shell
+
+### Supported Applications
+
+- **Tmux**: Base16 colors sourced via `~/.config/tmux/themes/current.conf`
+- **Bat**: Themes in `$(bat --config-dir)/themes/` with automatic cache rebuild
+- **FZF**: Colors via tinted-shell integration
+- **Shell**: LS_COLORS and prompt colors via tinted-shell
+
+### Your Favorite Themes
+
+The theme system is configured with 12 Base16 themes matching your Ghostty and Neovim favorites:
+
+- rose-pine, gruvbox-dark-hard, kanagawa, oceanicnext, github-dark, nord
+- selenized-dark, everforest-dark-hard, tomorrow-night, tomorrow-night-eighties
+
+### Commands
+
+- `theme-sync apply <theme>` - Apply a Base16 theme
+- `theme-sync current` - Show currently applied theme
+- `theme-sync favorites` - List favorite themes
+- `theme-sync random` - Apply random favorite theme
+- `task themes:rose-pine` - Quick shortcuts for specific themes
+
+### Original Tmux Colors
+
+Your custom tmux color scheme before tinty was backed up to `themes/backup/tmux-original-colors.conf`. Use `task themes:restore-original` to view it.
+
+## Tool Discovery System
+
+The dotfiles include a **tool discovery system** to help learn about and remember the 30+ installed tools. The registry from Phase 2 provides structured documentation for each tool.
+
+### Tools Command
+
+- `tools` or `tools list` - List all 31 tools with categories
+- `tools show <name>` - Show detailed info, examples, and docs for a tool
+- `tools search <query>` - Search by description, tags, or use case
+- `tools categories` - List tool categories with counts
+- `tools count` - Detailed breakdown by category with tool names
+- `tools random` - Discover a random tool (great for learning)
+- `tools installed` - Check installation status of all tools
+
+### Registry Location
+
+Tools are documented in `docs/tools/registry.yml` with:
+
+- Description and "why use" rationale
+- Usage syntax and examples
+- Related tools and tags
+- Installation method (brew, npm, uv)
+- Documentation URLs
+
+### Philosophy
+
+Focus on **discovery over tracking** - the system helps you remember what tools you have and when to use them, without complex usage tracking that clutters configs. Simple, helpful, and maintainable.
+
 ## Recent Work
 
 1. Completed migration from Mason LSP to native vim.lsp.config()
 2. Implemented 20+ language servers (Python, JavaScript, Lua, etc.)
 3. Enhanced CodeCompanion with memory system and VSCode-like experience
 4. Integrated Claude 3.5 Sonnet adapter with project context awareness
+5. **Phase 4 Complete**: Base16 theme synchronization via tinty across tmux, bat, fzf, shell
+6. **Phase 5 Complete**: Tool discovery system with `tools` command for 31 registered tools
 
 ## Communication Style
 

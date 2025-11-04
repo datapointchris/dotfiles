@@ -4,6 +4,41 @@ This file contains high-level summaries of changes to the dotfiles repository. F
 
 ---
 
+## 2025-11-05 {#2025-11-05}
+
+### Major Dotfiles Simplification
+
+Comprehensive refactoring to reduce complexity and eliminate unnecessary abstraction. Removed ~2,750 lines of code and documentation while maintaining all functionality.
+
+**Key Changes:**
+
+- Deleted themes.yml taskfile (305 lines) - complete duplication of theme-sync script
+- Simplified nvm.yml (48% reduction), npm.yml (44% reduction), uv.yml (48% reduction)
+- Converted simple shell functions to aliases
+- **Rewrote ALL documentation files** - removed marketing language, hand-holding, and fluff (68% reduction)
+- Fixed critical error in platforms.md about ZSHDOTDIR configuration
+- Updated mkdocs.yml navigation to match reality (removed all dead file references)
+- Archived planning documents
+- **Fixed tools command availability** - moved from macos/ to common/ so WSL and Arch get it too
+- **Fixed critical symlinks.sh bug** - broken link detection failed on macOS due to BSD vs GNU realpath differences
+
+**Philosophy Change:**
+Task handles coordination, tools handle commands. No wrapper tasks for simple one-liners. Documentation written in direct, technical tone for Chris, not general audience.
+
+**Files Changed:**
+
+- Deleted: `taskfiles/themes.yml`, `scripts/utils/tools`
+- Modified: `Taskfile.yml`, `taskfiles/nvm.yml`, `taskfiles/npm.yml`, `taskfiles/uv.yml`
+- Modified: `macos/.shell/macos-functions.sh`, `macos/.shell/macos-aliases.sh`
+- Modified: All active documentation files (13 files rewritten)
+- Modified: `mkdocs.yml` (updated navigation)
+- Moved: `macos/.local/bin/tools` → `common/.local/bin/tools`
+- Moved: 4 planning docs to `docs/archive/planning/`
+
+See [detailed changelog](changelog/2025-11-05.md) for complete analysis, error documentation, and lessons learned.
+
+---
+
 ## 2025-11-04 {#2025-11-04}
 
 ### Phase 6 Complete - Cross-Platform Expansion & VM Testing
