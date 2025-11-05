@@ -103,18 +103,10 @@ def main():
 ## 📁 Project Context (Auto-loaded)
 
 **Git Status:**
-```
-
 {context['git_status']}
 
-```
-
 **Recent Commits:**
-```
-
 {context['recent_commits']}
-
-```
 
 **Directory Structure:**
 {json.dumps(context['directory_counts'], indent=2)}
@@ -126,7 +118,7 @@ def main():
         "systemMessage": output.strip()
     }))
 
-if __name__ == "__main__":
+if \_\_name\_\_ == "\_\_main\_\_":
     main()
 ```
 
@@ -685,9 +677,8 @@ See [Common Errors](resources/common-errors.md) for detailed examples:
 
 **Tests**: `tests/` directory (25 tests total)
 
-```
-
 **Create resources directory**:
+
 ```bash
 mkdir -p .claude/skills/symlinks-developer/resources
 ```

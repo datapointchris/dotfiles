@@ -35,7 +35,7 @@ These hooks integrate directly with Claude Code's lifecycle and only run during 
 
 **Example output**:
 
-```
+```text
 ## 📁 Project Context (Auto-loaded)
 
 **Git Status:**
@@ -76,7 +76,7 @@ ghi9012 docs: update hooks documentation
 
 **Example scenario**:
 
-```
+```text
 # Claude modifies tools/symlinks/core.py during response
 
 [Response completes]
@@ -100,7 +100,7 @@ Found 1 test failures - showing to Claude for fixing
 
 **Example output**:
 
-```
+```text
 📝 **Reminder**: 2 commit(s) made during this response
 
 Commits will be logged for changelog tracking.
