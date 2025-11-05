@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""
+Analyzes user prompts and file context to suggest relevant skills.
+Based on showcase repo's skill activation pattern.
+"""
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def load_skill_rules():
+    """Load skill-rules.json"""
+    rules_path = Path(".claude/skill-rules.json")
+    if not rules_path.exists():
+        return {}
+
+    with open(rules_path) as f:
+        return json.load(f)
+
+
+def check_prompt_triggers(prompt, skill_config):
+    """Check if prompt matches skill keywords or patterns"""
+    prompt_lower = prompt.lower()
+
+    # Check keywords
+    keywords = skill_config.get("promptTriggers", {}).get("keywords", [])
+    if any(kw in prompt_lower for kw in keywords):
+        return True
+
+    # Check intent patterns
+    patterns = skill_config.get("promptTriggers", {}).get("intentPatterns", [])
+    for pattern in patterns:
+        if re.search(pattern, prompt_lower):
+            return True
+
+    return False
+
+
+def check_file_triggers(files, skill_config):
+    """Check if any files match skill path patterns"""
+    path_patterns = skill_config.get("fileTriggers", {}).get("pathPatterns", [])
+
+    for file_path in files:
+        for pattern in path_patterns:
+            # Simple glob-like matching
+            pattern_regex = pattern.replace("**", ".*").replace("*", "[^/]*")
+            if re.search(pattern_regex, file_path):
+                return True
+
+    return False
+
+
+def main():
+    hook_input = json.loads(sys.stdin.read())
+    prompt = hook_input.get("prompt", "")
+
+    # Get recently modified files from git
+    result = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD"],
+        capture_output=True,
+        text=True
+    )
+    modified_files = result.stdout.strip().split('\n') if result.stdout else []
+
+    # Load skills and check triggers
+    skill_rules = load_skill_rules()
+    activated_skills = []
+
+    for skill_name, skill_config in skill_rules.items():
+        if check_prompt_triggers(prompt, skill_config):
+            activated_skills.append((skill_name, "prompt"))
+        elif check_file_triggers(modified_files, skill_config):
+            activated_skills.append((skill_name, "file"))
+
+    if not activated_skills:
+        exit(0)  # No skills activated
+
+    # Generate skill activation message
+    activation_msg = "\n🎯 **Skill Activation Check**\n\n"
+    for skill_name, trigger_type in activated_skills:
+        activation_msg += f"- Use `{skill_name}` skill (triggered by {trigger_type})\n"
+
+    # Return as system message
+    print(json.dumps({
+        "continue": True,
+        "systemMessage": activation_msg
+    }))
+
+
+if __name__ == "__main__":
+    main()

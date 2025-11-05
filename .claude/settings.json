@@ -13,6 +13,16 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/user-prompt-submit-skill-activation"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

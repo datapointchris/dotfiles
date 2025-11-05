@@ -866,10 +866,11 @@ chmod +x .claude/hooks/pre-compact-save-state
 ```python
 FORBIDDEN = [
     "git push",           # ❌ NEVER - you want to review first
+    "git push --force",   # ❌ Especially on main
+    "git rebase",         # ❌ Rewrites history, can lose commits
+    "git reset --hard",   # ❌ Destructive, ask first
     "rm -rf /",           # ❌ Obviously dangerous
     "sudo rm",            # ❌ Dangerous deletions
-    "git reset --hard",   # ❌ Destructive, ask first
-    "git push --force"    # ❌ Especially on main
 ]
 ```
 

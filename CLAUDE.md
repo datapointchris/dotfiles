@@ -2,6 +2,18 @@
 
 ## Critical Rules
 
+**Git Safety Protocol**:
+
+- NEVER run `git rebase` - rewrites history and can lose commits/work
+- NEVER run `git push --force` or `git push -f` - can overwrite remote history
+- NEVER run `git reset --hard` unless explicitly requested - destroys uncommitted work
+- NEVER run `git push` to remote repositories unless explicitly requested
+- NEVER amend commits that have been pushed
+- NEVER use `--no-verify` to bypass hooks unless explicitly requested
+- NEVER add co-author lines or branding to commit messages without explicit permission
+- If asked to fix commits, use new commits instead of rewriting history
+- Always check `git status` before destructive operations
+
 **File Naming**:
 
 - All markdown files MUST use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
