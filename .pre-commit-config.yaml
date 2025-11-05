@@ -45,7 +45,7 @@ repos:
     hooks:
       - id: stylua # or stylua-system / stylua-github
 
-  # Custom local hooks for documentation and changelog enforcement
+  # Custom local hooks for documentation enforcement
   - repo: local
     hooks:
       # Check that documentation is updated with code changes
@@ -64,21 +64,3 @@ repos:
         language: system
         always_run: true
         stages: [prepare-commit-msg]
-
-      # Check for pending changelog updates
-      - id: check-changelog
-        name: Check changelog updates
-        entry: .claude/hooks/check-changelog
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
-
-      # Log commits for changelog tracking (post-commit)
-      - id: post-commit-log
-        name: Log commit for changelog
-        entry: .claude/hooks/post-commit-log
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [post-commit]
