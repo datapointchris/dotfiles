@@ -152,6 +152,24 @@ All documentation follows direct, technical voice with commands in code blocks a
 - Created: 4 new documentation files (653 lines total)
 - Modified: mkdocs.yml, tasks.md
 
+### Changelog System Refactor
+
+Moved `.pending-changelog` from `.claude/` to root level for independence from Claude Code.
+
+**Changes**:
+
+- Updated 3 hooks to use `.pending-changelog` path
+- Updated all documentation references
+- Added `.pending-changelog` to .gitignore
+
+**Why**: Changelog system can work independently of Claude Code hooks, making it more modular.
+
+**Files Modified**:
+
+- `.claude/hooks/session-start`, `post-commit-log`, `check-changelog`
+- Documentation: `changelog.md`, `hooks.md`, `2025-11-04.md`, `.claude/README.md`
+- `.gitignore`
+
 ### Symlinks Manager Tool
 
 Added Python-based symlinks manager for cross-platform dotfiles deployment with layered architecture.
