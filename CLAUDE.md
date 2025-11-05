@@ -291,46 +291,51 @@ Focus on **discovery over tracking** - the system helps you remember what tools 
 
 ### Purpose
 
-The learnings directory provides quick-reference documentation of important lessons, best practices, and gotchas discovered during development. These are extracted insights that are useful beyond the specific context of a changelog entry.
+Quick-reference extracted wisdom from development. **Keep it concise** - learnings should be skimmable and focused, not comprehensive guides.
 
-### When to Create a Learning Document
+### When to Create a Learning
 
-Create a new learning document when you encounter:
+When you discover something worth remembering:
 
-- **Critical bugs or design flaws** that taught important lessons
-- **Best practices** that should be followed consistently
-- **Common pitfalls** to avoid in the future
-- **Performance insights** that apply broadly
-- **Tool or library gotchas** worth remembering
-- **Architecture decisions** with important trade-offs
+- Critical bugs that taught important lessons
+- Best practices that should be followed consistently
+- Common pitfalls to avoid
+- Tool or library gotchas
 
 ### Learning Document Format
 
-Each learning should include:
+**Target length: 30-50 lines max**
 
-1. **Title**: Clear, descriptive (e.g., "Relative Path Calculation: Use stdlib, Don't Reinvent")
-2. **Date and Context**: When discovered and what prompted it
-3. **The Problem**: What went wrong or what was challenging
-4. **The Solution**: How it was solved or what approach works best
-5. **Key Learnings**: Bullet points of actionable insights
-6. **Example**: Brief code example if applicable
-7. **Related**: Links to relevant documentation or related learnings
+1. **Title and context**: What and when (1-2 lines)
+2. **The Problem**: What went wrong (2-4 lines + minimal code snippet)
+3. **The Solution**: How to do it correctly (2-4 lines + code snippet)
+4. **Key Learnings**: Bullet points of actionable wisdom (3-5 bullets)
+5. **Testing**: Brief example of how to test it (optional, 5-10 lines)
+6. **Related**: Links to other learnings (1-2 lines)
+
+**Don't:**
+
+- Write comprehensive guides (that's what docs/ is for)
+- Repeat yourself with verbose explanations
+- Include extensive examples or edge cases
+- Create pedantic documentation that won't be read
+
+**Do:**
+
+- Extract the core lesson quickly
+- Show just enough code to understand
+- Focus on what future you needs to remember
 
 ### Learnings Workflow
 
-1. When encountering a significant lesson during development:
-   - Create `docs/learnings/descriptive-name.md`
-   - Document the problem, solution, and key insights
-   - Add to `mkdocs.yml` navigation under "Learnings" section
-2. Reference learnings from changelogs when relevant
-3. Update existing learnings if new information emerges
+1. Create `docs/learnings/descriptive-name.md` (aim for 30-50 lines)
+2. Add to `mkdocs.yml` navigation under "Learnings"
+3. Reference from changelogs when relevant
 
 ### Difference from Changelog
 
-- **Changelog**: Chronological record of what changed and why
-- **Learnings**: Extracted wisdom and best practices, organized by topic
-
-A changelog entry might reference a learning document for deeper insight.
+- **Changelog**: What changed and why (can be detailed)
+- **Learnings**: Extracted wisdom (must be concise)
 
 ## Changelog Requirements
 
