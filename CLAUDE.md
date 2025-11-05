@@ -9,10 +9,17 @@
 - NEVER run `git reset --hard` unless explicitly requested - destroys uncommitted work
 - NEVER run `git push` to remote repositories unless explicitly requested
 - NEVER amend commits that have been pushed
-- NEVER use `--no-verify` to bypass hooks unless explicitly requested
 - NEVER add co-author lines or branding to commit messages without explicit permission
 - If asked to fix commits, use new commits instead of rewriting history
 - Always check `git status` before destructive operations
+
+**Pre-commit Hook Protocol**:
+
+- NEVER use `--no-verify` to bypass hooks unless absolutely necessary and explicitly requested
+- ALL commits must go through the pre-commit process no matter what changes they are
+- If hooks fail, fix the issues instead of bypassing them
+- If changelog hook blocks, update the changelog properly instead of skipping
+- The hooks exist for quality control - respect them
 
 **File Naming**:
 
