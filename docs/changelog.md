@@ -126,6 +126,33 @@ Implemented comprehensive Task-based automation system for platform-specific dot
 
 See [detailed changelog](changelog/2025-11-04.md#task-automation) for full details.
 
+### Symlinks Manager Tool
+
+Added Python-based symlinks manager for cross-platform dotfiles deployment with layered architecture.
+
+**Key Features:**
+
+- Support for common base layer + platform overlay (macos, wsl, arch)
+- Link, unlink, relink, and check commands
+- Intelligent conflict detection and resolution
+- Cross-platform path resolution
+- Comprehensive pytest test suite with fixtures and integration tests
+
+**Commands:**
+
+- `symlinks link <platform>` - Deploy symlinks for platform overlay
+- `symlinks relink <platform>` - Complete refresh (unlink + link)
+- `symlinks check` - Verify symlink integrity
+- `symlinks unlink <platform>` - Remove platform symlinks
+
+**Files Changed:**
+
+- Created: `tools/symlinks/` package with cli, config, manager, utils modules
+- Created: `tools/symlinks/tests/` comprehensive test suite
+- Created: `tools/symlinks/pyproject.toml` uv tool configuration
+
+See [detailed changelog](changelog/2025-11-04.md#symlinks-tool) for full details.
+
 ### Shell & Configuration Improvements
 
 **Shell Functions:**

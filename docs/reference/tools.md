@@ -10,6 +10,19 @@ Quick reference for installed tools. For detailed info, use `tools show <name>`.
 
 **Node.js**: nvm
 
+## Dotfiles Management
+
+**symlinks**: Cross-platform dotfiles symlink manager
+
+```sh
+symlinks link common        # Link common base layer
+symlinks link macos         # Link platform overlay
+symlinks relink macos       # Complete refresh (unlink + link)
+symlinks check              # Check for broken symlinks
+```
+
+Supports layered architecture (common base + platform overlay) with intelligent conflict detection. See `tools/symlinks/README.md` for full documentation.
+
 ## Core Tools by Category
 
 **File Management**: bat, eza, fd, tree, yazi, duf
