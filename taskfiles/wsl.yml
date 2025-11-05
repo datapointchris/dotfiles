@@ -13,21 +13,18 @@ tasks:
 
   install-packages:
     desc: Install system packages via apt
+    silent: true
     cmds:
-      - echo " Installing WSL Ubuntu packages..."
-      - task: update-system
+      - echo "✅ Installing WSL Ubuntu packages..."
+      - echo "  Updating package lists..."
+      - sudo apt update
       - task: install-essential
       - task: install-dev-tools
-      - echo " WSL packages installed!"
-
-  update-system:
-    desc: Update apt package lists
-    cmds:
-      - echo " Updating package lists..."
-      - sudo apt update
+      - echo "✅ WSL packages installed!"
 
   install-essential:
-    desc: Install essential tools
+    internal: true
+    silent: true
     cmds:
       - |
         echo " Installing essential tools..."
@@ -40,7 +37,8 @@ tasks:
           gnupg
 
   install-dev-tools:
-    desc: Install development tools
+    internal: true
+    silent: true
     cmds:
       - |
         echo " Installing development tools..."
@@ -136,68 +134,11 @@ tasks:
         fi
 
   # ================================================================
-  # VERIFICATION
+  # UTILITIES
   # ================================================================
-
-  verify:
-    desc: Verify WSL installation
-    cmds:
-      - |
-        echo " Verifying WSL installation..."
-
-        # Check if running in WSL
-        if grep -q "Microsoft" /proc/version 2>/dev/null; then
-          echo " Running in WSL"
-        else
-          echo " Not running in WSL"
-        fi
-
-        # Check essential tools
-        TOOLS=("git" "curl" "wget" "bat" "fd" "rg" "fzf" "zoxide" "tmux" "nvim")
-
-        for tool in "${TOOLS[@]}"; do
-          if command -v "$tool" >/dev/null 2>&1; then
-            echo " $tool"
-          else
-            echo " $tool (missing)"
-          fi
-        done
-
-  info:
-    desc: Show WSL system information
-    cmds:
-      - |
-        echo " WSL System Information"
-        echo ""
-        echo "Distribution - $(lsb_release -ds 2>/dev/null || cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '"')"
-        echo "Kernel - $(uname -r)"
-        echo "Architecture - $(uname -m)"
-        echo ""
-
-        if grep -q "Microsoft" /proc/version 2>/dev/null; then
-          echo "WSL Version - $(cat /proc/version | grep -oP 'WSL\d')"
-        fi
-
-  # ================================================================
-  # UPDATE & MAINTENANCE
-  # ================================================================
-
-  update:
-    desc: Update WSL system and packages
-    cmds:
-      - echo " Updating WSL system..."
-      - sudo apt update
-      - sudo apt upgrade -y
-      - sudo apt autoremove -y
-      - echo " WSL system updated!"
-
-  cleanup:
-    desc: Clean up WSL caches and temporary files
-    cmds:
-      - echo " Cleaning WSL caches..."
-      - sudo apt autoclean
-      - sudo apt autoremove -y
-      - echo " WSL cleanup complete"
+  # For system maintenance, use apt directly:
+  #   sudo apt update && sudo apt upgrade -y
+  #   sudo apt autoremove && sudo apt clean
 
   # ================================================================
   # DOCKER (if needed)

@@ -26,12 +26,14 @@ tasks:
 
   install:
     desc: Install nvm and Node.js
+    silent: true
     cmds:
       - task: check-installed
       - task: install-node
 
   check-installed:
     internal: true
+    silent: true
     cmds:
       - |
         if [[ ! -d "{{.NVM_DIR}}" ]]; then
@@ -45,6 +47,7 @@ tasks:
 
   install-node:
     desc: Install Node.js using nvm
+    silent: true
     cmds:
       - |
         export NVM_DIR="{{.NVM_DIR}}"
@@ -63,6 +66,7 @@ tasks:
 
   install-latest-lts:
     desc: Install latest LTS Node.js version
+    silent: true
     cmds:
       - |
         export NVM_DIR="{{.NVM_DIR}}"
@@ -77,50 +81,7 @@ tasks:
   # ================================================================
   # UPDATE
   # ================================================================
-
-  update-nvm:
-    desc: Update nvm itself
-    cmds:
-      - echo "✅ Updating nvm..."
-      - |
-        cd "{{.NVM_DIR}}"
-        git fetch --tags origin
-        git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" $(git rev-list --tags --max-count=1)`
-      - echo "✅ nvm updated - restart your terminal"
-
-  # ================================================================
-  # VERIFICATION
-  # ================================================================
-
-  verify:
-    desc: Verify nvm and Node.js installation
-    cmds:
-      - |
-        echo "Verifying nvm installation..."
-
-        if [[ ! -d "{{.NVM_DIR}}" ]]; then
-          echo "❌ nvm directory not found"
-          exit 1
-        fi
-        echo "✅ nvm directory exists at {{.NVM_DIR}}"
-
-        export NVM_DIR="{{.NVM_DIR}}"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-        if ! command -v nvm >/dev/null 2>&1; then
-          echo "❌ nvm command not available"
-          exit 1
-        fi
-        echo "✅ nvm command available: $(nvm --version)"
-
-        if ! command -v node >/dev/null 2>&1; then
-          echo "❌ Node.js not installed - run: task nvm:install-node"
-          exit 1
-        fi
-        echo "✅ Node.js available: $(node --version)"
-
-        if ! command -v npm >/dev/null 2>&1; then
-          echo "❌ npm not available"
-          exit 1
-        fi
-        echo "✅ npm available: $(npm --version)"
+  # To update nvm itself, use git directly:
+  #   cd ~/.config/nvm
+  #   git fetch --tags origin
+  #   git checkout `git describe --abbrev=0 --tags`

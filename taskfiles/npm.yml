@@ -23,26 +23,19 @@ tasks:
   # INSTALLATION
   # ================================================================
 
-  install-all:
-    desc: Install all npm global packages from config
+  install:
+    desc: Install all npm global packages
+    silent: true
     deps:
       - check-config
     cmds:
       - echo "✅ Installing npm global packages..."
       - task: load-nvm
-      - task: install-language-servers
-      - task: install-linters-formatters
-      - echo "✅ All npm global packages installed!"
-
-  install-language-servers:
-    desc: Install npm language servers
-    internal: true
-    cmds:
       - |
         export NVM_DIR="{{.NVM_DIR}}"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-        echo "✅ Installing language servers..."
+        # Language servers
         npm install -g typescript-language-server
         npm install -g typescript
         npm install -g bash-language-server
@@ -50,78 +43,20 @@ tasks:
         npm install -g vscode-langservers-extracted
         npm install -g gh-actions-language-server
 
-  install-linters-formatters:
-    desc: Install npm linters and formatters
-    internal: true
-    cmds:
-      - |
-        export NVM_DIR="{{.NVM_DIR}}"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-        echo "✅ Installing linters and formatters..."
+        # Linters and formatters
         npm install -g eslint
         npm install -g prettier
         npm install -g markdownlint-cli
 
+      - echo "✅ npm global packages installed!"
+
   # ================================================================
   # UPDATE
   # ================================================================
-
-  update:
-    desc: Update all npm global packages
-    cmds:
-      - echo "✅ Updating npm global packages..."
-      - task: load-nvm
-      - |
-        export NVM_DIR="{{.NVM_DIR}}"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        npm update -g
-      - echo "✅ npm global packages updated!"
-
-  # ================================================================
-  # VERIFICATION
-  # ================================================================
-
-  verify:
-    desc: Verify npm global packages are installed
-    cmds:
-      - task: load-nvm
-      - |
-        export NVM_DIR="{{.NVM_DIR}}"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-        echo "Verifying npm global packages..."
-
-        MISSING=0
-        PACKAGES=(
-          "typescript-language-server"
-          "typescript"
-          "bash-language-server"
-          "yaml-language-server"
-          "vscode-langservers-extracted"
-          "gh-actions-language-server"
-          "eslint"
-          "prettier"
-          "markdownlint-cli"
-        )
-
-        for pkg in "${PACKAGES[@]}"; do
-          if npm list -g --depth=0 | grep -q "$pkg@"; then
-            echo "✅ $pkg"
-          else
-            echo "❌ $pkg (missing)"
-            MISSING=$((MISSING + 1))
-          fi
-        done
-
-        if [[ $MISSING -gt 0 ]]; then
-          echo ""
-          echo "❌ $MISSING package(s) missing - run: task npm:install-all"
-          exit 1
-        else
-          echo ""
-          echo "✅ All npm global packages installed!"
-        fi
+  # For simple npm commands, use npm directly:
+  #   npm update -g                   # Update all global packages
+  #   npm outdated -g                 # Check outdated packages
+  #   npm install -g npm@latest       # Update npm itself
 
   # ================================================================
   # HELPERS

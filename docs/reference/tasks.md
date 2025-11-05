@@ -2,109 +2,152 @@
 
 This dotfiles repository uses [go-task/task](https://taskfile.dev) for automation and installation management across platforms.
 
-## Platform Detection
+## Philosophy
 
-The main Taskfile automatically detects your platform:
+**Tasks are for orchestration, not wrappers.** The Taskfile system coordinates complex multi-step installations while keeping simple operations accessible via their native commands.
 
-- **macOS**: Detected via `uname = Darwin`
-- **WSL Ubuntu**: Detected via "Microsoft" in `/proc/version`
-- **Arch Linux**: Detected via `/etc/arch-release` file
-- **Manual Override**: Set `PLATFORM` in `~/.env` to override detection
+**Install tasks are idempotent.** Running `task install` multiple times is safe - it will install missing components and skip what's already installed.
 
 ## Core Commands
 
 ### Installation
 
 ```sh
-task install          # Auto-detect platform and install
+task install          # Auto-detect platform and install everything
 task install-macos    # macOS-specific installation
 task install-wsl      # WSL Ubuntu installation
 task install-arch     # Arch Linux installation
 ```
 
-Each platform installation runs:
+Each platform installation:
 
-1. Package manager setup (brew, apt, pacman)
-2. Install language version managers (nvm, uv)
-3. Install global packages (npm, uv tools)
-4. Configure shell (zsh, fzf integration)
-5. Deploy symlinks via `tools/symlinks`
-6. Initialize theme system with tinty
+1. Installs package manager (brew/apt/pacman)
+2. Installs language version managers (nvm, uv)
+3. Installs global packages (npm, uv tools)
+4. Installs shell plugins
+5. Deploys symlinks
+6. Initializes theme system
 
-Time: 15-30 minutes depending on platform
+Time: 15-30 minutes depending on platform and network speed.
 
 ### Package Management
 
 ```sh
-task update           # Update all packages (brew, npm, uv)
+task update           # Update all packages (brew, npm, uv, shell plugins)
 task clean            # Clean package caches
 ```
 
-Platform-specific updates available:
+For direct package manager commands:
 
 ```sh
-task brew:update      # Update Homebrew packages
-task npm:update       # Update npm global packages
-task uv:update        # Update uv tools
+# Homebrew
+brew update && brew upgrade
+brew cleanup
+brew list
+
+# npm (with nvm loaded)
+npm update -g
+npm list -g --depth=0
+
+# uv
+uv tool upgrade --all
+uv tool list
+uv self update
 ```
 
-### Verification
+## Component Installation
+
+Each component has an idempotent install task:
 
 ```sh
-task check            # Quick installation status check
-task verify           # Comprehensive verification of all components
+task brew:install     # Install from Brewfile
+task npm:install      # Install npm global packages
+task uv:install       # Install uv tools
+task nvm:install      # Install nvm and Node.js
+task shell:install    # Install shell plugins
 ```
 
-Component verification available:
+## Platform-Specific Tasks
+
+### macOS
 
 ```sh
-task brew:verify      # Verify Homebrew installation
-task npm:verify       # Verify npm packages
-task uv:verify        # Verify uv tools
-task symlinks:verify  # Verify symlink deployment (when implemented)
+task macos:install-homebrew     # Install Homebrew
+task macos:install-xcode-tools  # Install Xcode CLI tools
+task macos:configure            # Apply system preferences (Finder, Dock, Keyboard)
 ```
 
-### Documentation
+For system maintenance, use native commands:
+
+- `softwareupdate --list` - Check for macOS updates
+- `brew cleanup` - Clean Homebrew caches
+- `brew doctor` - Run Homebrew diagnostics
+
+### WSL Ubuntu
+
+```sh
+task wsl:install-packages       # Install apt packages
+task wsl:install-rust           # Install Rust toolchain
+task wsl:install-cargo-tools    # Install Rust tools
+task wsl:install-docker         # Install Docker (optional)
+task wsl:configure-wsl          # Configure WSL settings
+```
+
+For system maintenance, use native commands:
+
+- `sudo apt update && sudo apt upgrade -y` - Update packages
+- `sudo apt autoremove && sudo apt clean` - Clean caches
+
+### Arch Linux
+
+```sh
+task arch:install-packages      # Install pacman packages
+task arch:install-aur-helper    # Install yay (AUR helper)
+task arch:install-aur-packages  # Install AUR packages
+task arch:install-desktop       # Install desktop environment (optional)
+task arch:configure             # Apply Arch-specific configs
+```
+
+For system maintenance, use native commands:
+
+- `sudo pacman -Syu` - Update system
+- `sudo pacman -Sc` - Clean package cache
+
+## Documentation
 
 ```sh
 task docs:serve       # Serve MkDocs locally (http://localhost:8000)
-task docs:build       # Build static site to site/
+task docs:build       # Build static site
 task docs:deploy      # Deploy to GitHub Pages
 ```
 
-## Taskfile Structure
+## Design Principles
 
-The system is modular with separate taskfiles for each concern:
+**Orchestration Over Wrappers**
+Tasks coordinate multi-step workflows. Simple commands should be run directly:
 
-**Package Managers:**
+- ❌ `task brew:update` (wrapper for `brew update`)
+- ✅ `brew update` (run directly)
+- ✅ `task install` (orchestrates multiple package managers)
 
-- `taskfiles/brew.yml` - Homebrew packages and casks
-- `taskfiles/npm.yml` - npm global packages (language servers, formatters)
-- `taskfiles/uv.yml` - Python tools via uv (ruff, mypy, basedpyright)
+**Idempotent by Default**
+All install tasks can be run multiple times safely. They check for existing installations and skip or update as needed.
 
-**Version Managers:**
+**Single Source of Truth**
 
-- `taskfiles/nvm.yml` - Node.js version management
+- Homebrew packages: `Brewfile`
+- npm packages: Defined in `taskfiles/npm.yml`
+- uv tools: Defined in `taskfiles/uv.yml`
+- Shell plugins: `config/packages.yml`
 
-**Common Tasks:**
-
-- `taskfiles/shell.yml` - Shell configuration and fzf setup
-- `taskfiles/docs.yml` - Documentation building and deployment
-- `taskfiles/symlinks.yml` - Symlink management (planned)
-
-**Platform-Specific:**
-
-- `taskfiles/macos.yml` - macOS setup, casks, defaults
-- `taskfiles/wsl.yml` - WSL Ubuntu packages and configuration
-- `taskfiles/arch.yml` - Arch Linux packages and AUR helper
-
-All taskfiles are optional includes - if missing, tasks gracefully skip.
+**Platform-Specific When Needed**
+Common tasks (docs, shell, verification) work everywhere. Platform tasks handle OS-specific package installation and configuration.
 
 ## Advanced Usage
 
 ### Dry Run
 
-Preview what a task would do without executing:
+Preview what a task would do:
 
 ```sh
 task install --dry
@@ -113,60 +156,46 @@ task install-macos --dry
 
 ### List Tasks
 
-See all available tasks with descriptions:
+See all available tasks:
 
 ```sh
-task --list
-task --list-all  # Include tasks without descriptions
+task --list            # Show described tasks
+task --list-all        # Show all tasks including internal
 ```
 
-### Task-Specific Help
+### Platform Override
 
-Each taskfile namespace provides focused commands:
+Override auto-detection by setting `PLATFORM` in `~/.env`:
 
 ```sh
-task brew:install-all     # Install all Homebrew packages
-task npm:install-all      # Install all npm global packages
-task uv:install-all       # Install all uv tools
+echo "PLATFORM=macos" > ~/.env
 ```
-
-## Design Philosophy
-
-**Modular Over Monolithic:**
-Each taskfile focuses on one concern (<300 lines). Easy to maintain and understand.
-
-**Integration Over Replacement:**
-Taskfiles orchestrate existing tools (`symlinks`, `tinty`, `tools`) rather than rewriting functionality.
-
-**Platform-Specific When Needed:**
-Common tasks (docs, shell) work everywhere. Platform tasks (macos, wsl, arch) handle OS differences.
-
-**Consistent Interface:**
-Same commands across platforms. `task install` works on macOS, WSL, and Arch with different implementations.
 
 ## Troubleshooting
 
-**Task Not Found:**
+**Task Not Found**
+
+Install task:
 
 ```sh
 brew install go-task  # macOS
 # or use bootstrap script
 ```
 
-**Permission Errors:**
-Some tasks require sudo (WSL/Arch package installation). You'll be prompted when needed.
+**Permission Errors**
 
-**Taskfile Syntax Errors:**
+Some tasks require sudo (apt/pacman operations). You'll be prompted when needed.
+
+**Check Installation Status**
 
 ```sh
-task --taskfile Taskfile.yml --list  # Validate YAML syntax
+command -v brew      # Check if Homebrew is installed
+command -v node      # Check if Node.js is installed
+command -v uv        # Check if uv is installed
 ```
-
-**Optional Taskfile Missing:**
-If a referenced taskfile doesn't exist (like `symlinks.yml`), Task gracefully skips it due to `optional: true` in includes.
 
 ## See Also
 
-- [Installation Guide](../getting-started/installation.md) - Platform-specific setup instructions
+- [Installation Guide](../getting-started/installation.md) - Detailed platform-specific instructions
 - [Quickstart](../getting-started/quickstart.md) - Get up and running in 15 minutes
 - [Platform Differences](platforms.md) - Package managers and platform-specific considerations

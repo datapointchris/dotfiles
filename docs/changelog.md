@@ -4,6 +4,33 @@ This file contains high-level summaries of changes to the dotfiles repository. F
 
 ---
 
+## 2025-11-04 {#2025-11-04-taskfile}
+
+### Taskfile System Simplification
+
+Radically simplified the Taskfile system from 86 tasks to 40 tasks (53% reduction) by removing all wrapper tasks and focusing on orchestration.
+
+**Key Changes:**
+
+- Removed all verify/check tasks (18 tasks)
+- Removed wrapper tasks for simple commands (30+ tasks)
+- Simplified task names (`install-all` → `install`)
+- Made all install tasks idempotent
+- Centralized shell plugins to `config/packages.yml`
+- Added `silent: true` for clean output
+- Rewrote documentation with "orchestration over wrappers" philosophy
+
+**Philosophy:** Tasks are for coordinating multi-step workflows, not wrapping single commands. Users should run simple commands directly (`brew cleanup`, `npm update -g`, etc).
+
+See [detailed changelog](changelog/2025-11-04-taskfile-simplification.md) for complete analysis including all tasks removed, testing methodology, and key learnings.
+
+**Files Changed:**
+
+- All taskfiles simplified: brew, npm, uv, nvm, shell, macos, wsl, arch
+- Complete rewrite of `docs/reference/tasks.md`
+
+---
+
 ## 2025-11-04 {#2025-11-04}
 
 ### Bootstrap Script Cleanup

@@ -255,11 +255,10 @@ The theme system is configured with 12 Base16 themes matching your Ghostty and N
 - `theme-sync current` - Show currently applied theme
 - `theme-sync favorites` - List favorite themes
 - `theme-sync random` - Apply random favorite theme
-- `task themes:rose-pine` - Quick shortcuts for specific themes
 
 ### Original Tmux Colors
 
-Your custom tmux color scheme before tinty was backed up to `themes/backup/tmux-original-colors.conf`. Use `task themes:restore-original` to view it.
+Your custom tmux color scheme before tinty was backed up to `themes/backup/tmux-original-colors.conf`. You can view it with `cat ~/dotfiles/themes/backup/tmux-original-colors.conf`.
 
 ## Tool Discovery System
 

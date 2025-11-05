@@ -64,11 +64,11 @@ $(color_yellow "EXAMPLES:")
   theme-sync random
 
 $(color_yellow "QUICK THEME SHORTCUTS:")
-  You can also use task shortcuts:
-  - task themes:rose-pine
-  - task themes:gruvbox
-  - task themes:kanagawa
-  - task themes:nord
+  Use theme-sync with theme names:
+  - theme-sync apply base16-rose-pine
+  - theme-sync apply base16-gruvbox-dark-hard
+  - theme-sync apply base16-kanagawa
+  - theme-sync apply base16-nord
 
 $(color_yellow "NOTE:")
   This works alongside your ghostty-theme script:

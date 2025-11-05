@@ -53,6 +53,7 @@ tasks:
 
   install:
     desc: Auto-detect platform and install dotfiles
+    silent: true
     cmds:
       - |
         case "{{.PLATFORM}}" in
@@ -80,12 +81,13 @@ tasks:
 
   install-macos:
     desc: Full macOS installation
+    silent: true
     cmds:
       - echo "Starting macOS dotfiles installation..."
-      - task: brew:install-all
+      - task: brew:install
       - task: nvm:install
-      - task: npm:install-all
-      - task: uv:install-all
+      - task: npm:install
+      - task: uv:install
       - task: shell:install
       - task: symlinks:link
       - echo "Setting up theme system..."
@@ -101,14 +103,15 @@ tasks:
 
   install-wsl:
     desc: Full WSL Ubuntu installation
+    silent: true
     cmds:
       - echo "Starting WSL Ubuntu dotfiles installation..."
       - task: wsl:install-packages
       - task: wsl:install-rust
       - task: wsl:install-cargo-tools
       - task: nvm:install
-      - task: npm:install-all
-      - task: uv:install-all
+      - task: npm:install
+      - task: uv:install
       - task: shell:install
       - task: symlinks:link
       - echo "Setting up theme system..."
@@ -127,13 +130,14 @@ tasks:
 
   install-arch:
     desc: Full Arch Linux installation
+    silent: true
     cmds:
       - echo "Starting Arch Linux dotfiles installation..."
       - task: arch:install-packages
       - task: arch:install-aur-helper
       - task: nvm:install
-      - task: npm:install-all
-      - task: uv:install-all
+      - task: npm:install
+      - task: uv:install
       - task: shell:install
       - task: symlinks:link
       - echo "Setting up theme system..."
@@ -150,34 +154,33 @@ tasks:
 
   update:
     desc: Update all packages
+    silent: true
     cmds:
       - echo "Updating all packages..."
       - task: brew:update
-      - task: npm:update
-      - task: uv:update
+      - |
+        export NVM_DIR="$HOME/.config/nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        if command -v npm >/dev/null 2>&1; then
+          echo "✅ Updating npm global packages..."
+          npm update -g
+        fi
+      - |
+        if command -v uv >/dev/null 2>&1; then
+          echo "✅ Updating uv tools..."
+          uv tool upgrade --all
+        fi
       - echo "All packages updated!"
 
-  check:
-    desc: Check installation status
-    cmds:
-      - echo "Checking dotfiles installation..."
-      - echo "Platform {{.PLATFORM}}"
-      - command -v brew >/dev/null 2>&1 && echo "Homebrew installed" || echo "Homebrew not installed"
-      - command -v node >/dev/null 2>&1 && echo "Node.js $(node --version)" || echo "Node.js not installed"
-      - command -v uv >/dev/null 2>&1 && echo "uv $(uv --version)" || echo "uv not installed"
-
-  verify:
-    desc: Verify all components
-    cmds:
-      - task: brew:verify
-      - task: npm:verify
-      - task: uv:verify
-      - task: shell:verify
-      - task: symlinks:verify
 
   clean:
     desc: Clean caches
+    silent: true
     cmds:
       - echo "Cleaning caches..."
-      - task: brew:clean
+      - |
+        if command -v brew >/dev/null 2>&1; then
+          echo "Cleaning Homebrew caches..."
+          brew cleanup
+        fi
       - echo "Caches cleaned!"

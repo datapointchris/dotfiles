@@ -25,123 +25,33 @@ tasks:
   # INSTALLATION
   # ================================================================
 
-  install-all:
-    desc: Install all uv tools from config
+  install:
+    desc: Install all uv tools
+    silent: true
     deps:
       - check-uv
       - check-config
     cmds:
       - echo "✅ Installing Python tools via uv..."
-      - task: install-linters-formatters
-      - task: install-code-quality
-      - task: install-sql
-      - task: install-markdown
-      - task: install-template
-      - task: install-utilities
-      - echo "✅ All Python tools installed!"
-
-  install-linters-formatters:
-    desc: Install Python linters and formatters
-    internal: true
-    cmds:
-      - echo "✅ Installing linters and formatters..."
       - uv tool install ruff
       - uv tool install mypy
       - uv tool install basedpyright
-
-  install-code-quality:
-    desc: Install code quality tools
-    internal: true
-    cmds:
-      - echo "✅ Installing code quality tools..."
       - uv tool install codespell
-
-  install-sql:
-    desc: Install SQL tools
-    internal: true
-    cmds:
-      - echo "✅ Installing SQL tools..."
       - uv tool install sqlfluff
-
-  install-markdown:
-    desc: Install markdown tools
-    internal: true
-    cmds:
-      - echo "✅ Installing markdown tools..."
       - uv tool install mdformat
-
-  install-template:
-    desc: Install template linting tools
-    internal: true
-    cmds:
-      - echo "✅ Installing template tools..."
       - uv tool install djlint
-
-  install-utilities:
-    desc: Install utility tools
-    internal: true
-    cmds:
-      - echo "✅ Installing utilities..."
       - uv tool install keymap-drawer
       - uv tool install nbpreview
       - uv tool install numpy
+      - echo "✅ Python tools installed!"
 
   # ================================================================
   # UPDATE
   # ================================================================
-
-  update:
-    desc: Update all uv tools
-    cmds:
-      - echo "✅ Updating uv tools..."
-      - uv tool upgrade --all
-      - echo "✅ uv tools updated!"
-
-  # ================================================================
-  # VERIFICATION
-  # ================================================================
-
-  verify:
-    desc: Verify uv tools are installed
-    deps:
-      - check-uv
-    cmds:
-      - |
-        echo "Verifying uv tools..."
-
-        MISSING=0
-        TOOLS=(
-          "ruff"
-          "mypy"
-          "basedpyright"
-          "codespell"
-          "sqlfluff"
-          "mdformat"
-          "djlint"
-          "keymap-drawer"
-          "nbpreview"
-          "numpy"
-        )
-
-        INSTALLED=$(uv tool list 2>/dev/null | awk '{print $1}' || echo "")
-
-        for tool in "${TOOLS[@]}"; do
-          if echo "$INSTALLED" | grep -q "^$tool"; then
-            echo "✅ $tool"
-          else
-            echo "❌ $tool (missing)"
-            MISSING=$((MISSING + 1))
-          fi
-        done
-
-        if [[ $MISSING -gt 0 ]]; then
-          echo ""
-          echo "❌ $MISSING tool(s) missing - run: task uv:install-all"
-          exit 1
-        else
-          echo ""
-          echo "✅ All uv tools installed!"
-        fi
+  # For simple uv commands, use uv directly:
+  #   uv tool upgrade --all           # Upgrade all tools
+  #   uv tool upgrade <tool>          # Upgrade specific tool
+  #   uv self update                  # Update uv itself
 
   # ================================================================
   # HELPERS

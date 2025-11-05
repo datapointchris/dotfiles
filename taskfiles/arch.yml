@@ -28,7 +28,8 @@ tasks:
       - sudo pacman -Sy
 
   install-essential:
-    desc: Install essential tools
+    internal: true
+    silent: true
     cmds:
       - |
         echo " Installing essential tools..."
@@ -39,7 +40,8 @@ tasks:
           base-devel
 
   install-dev-tools:
-    desc: Install development tools
+    internal: true
+    silent: true
     cmds:
       - |
         echo " Installing development tools..."
@@ -120,13 +122,15 @@ tasks:
 
   configure:
     desc: Apply Arch-specific configurations
+    silent: true
     cmds:
-      - echo "  Configuring Arch Linux..."
+      - echo "✅ Configuring Arch Linux..."
       - task: configure-pacman
-      - echo " Arch configured!"
+      - echo "✅ Arch configured!"
 
   configure-pacman:
-    desc: Configure pacman
+    internal: true
+    silent: true
     cmds:
       - |
         echo "  Configuring pacman..."
@@ -140,100 +144,14 @@ tasks:
         echo " pacman configured"
 
   # ================================================================
-  # VERIFICATION
+  # UTILITIES
   # ================================================================
-
-  verify:
-    desc: Verify Arch installation
-    cmds:
-      - |
-        echo " Verifying Arch installation..."
-
-        # Check if running on Arch
-        if [[ -f /etc/arch-release ]]; then
-          echo " Running on Arch Linux"
-        else
-          echo " Not running on Arch Linux"
-        fi
-
-        # Check pacman
-        if command -v pacman >/dev/null 2>&1; then
-          echo " pacman available"
-        else
-          echo " pacman not available"
-        fi
-
-        # Check yay
-        if command -v yay >/dev/null 2>&1; then
-          echo " yay (AUR helper) installed"
-        else
-          echo "  yay not installed (run - task arch:install-aur-helper)"
-        fi
-
-        # Check essential tools
-        TOOLS=("git" "curl" "wget" "bat" "eza" "fd" "rg" "fzf" "zoxide" "tmux" "nvim")
-
-        echo ""
-        echo "Essential tools"
-        for tool in "${TOOLS[@]}"; do
-          if command -v "$tool" >/dev/null 2>&1; then
-            echo "   $tool"
-          else
-            echo "   $tool (missing)"
-          fi
-        done
-
-  info:
-    desc: Show Arch system information
-    cmds:
-      - |
-        echo " Arch Linux System Information"
-        echo ""
-
-        if [[ -f /etc/os-release ]]; then
-          source /etc/os-release
-          echo "Distribution - $PRETTY_NAME"
-        fi
-
-        echo "Kernel - $(uname -r)"
-        echo "Architecture - $(uname -m)"
-        echo ""
-
-        if command -v pacman >/dev/null 2>&1; then
-          echo "Installed packages - $(pacman -Q | wc -l)"
-        fi
-
-        if command -v yay >/dev/null 2>&1; then
-          echo "yay version - $(yay --version | head -n1)"
-        fi
-
-  # ================================================================
-  # UPDATE & MAINTENANCE
-  # ================================================================
-
-  update:
-    desc: Update Arch system and packages
-    cmds:
-      - echo " Updating Arch system..."
-      - sudo pacman -Syu --noconfirm
-      - |
-        if command -v yay >/dev/null 2>&1; then
-          echo " Updating AUR packages..."
-          yay -Syu --noconfirm
-        fi
-      - echo " Arch system updated!"
-
-  cleanup:
-    desc: Clean up Arch caches and orphaned packages
-    cmds:
-      - echo " Cleaning Arch caches..."
-      - sudo pacman -Sc --noconfirm
-      - sudo pacman -Rns $(pacman -Qtdq) --noconfirm || echo "No orphaned packages"
-      - |
-        if command -v yay >/dev/null 2>&1; then
-          yay -Sc --noconfirm
-        fi
-      - echo " Arch cleanup complete"
+  # For system maintenance, use pacman directly:
+  #   sudo pacman -Syu                         # Update system
+  #   sudo pacman -Sc                          # Clean cache
+  #   sudo pacman -Rns $(pacman -Qtdq)         # Remove orphans
+  #   pacman -Q | wc -l                        # Count packages
+  #   uname -r                                 # Show kernel version
 
   # ================================================================
   # SERVICES
@@ -241,9 +159,10 @@ tasks:
 
   enable-services:
     desc: Enable essential services
+    silent: true
     cmds:
       - |
-        echo "  Enabling services..."
+        echo "✅ Enabling services..."
 
         # Network
         sudo systemctl enable NetworkManager
@@ -253,29 +172,4 @@ tasks:
         # sudo systemctl enable sshd
         # sudo systemctl start sshd
 
-        echo " Services enabled"
-
-  # ================================================================
-  # NOTES
-  # ================================================================
-
-  notes:
-    desc: Show Arch-specific notes and recommendations
-    cmds:
-      - |
-        echo " Arch Linux Notes"
-        echo ""
-        echo "Common Commands"
-        echo "  Install package:       sudo pacman -S <package>"
-        echo "  Remove package:        sudo pacman -R <package>"
-        echo "  Update system:         sudo pacman -Syu"
-        echo "  Search packages:       pacman -Ss <query>"
-        echo "  Install from AUR:      yay -S <package>"
-        echo ""
-        echo "Useful Resources"
-        echo "  Arch Wiki:             https://wiki.archlinux.org/"
-        echo "  AUR:                   https://aur.archlinux.org/"
-        echo "  Package search:        https://archlinux.org/packages/"
-        echo ""
-        echo " This taskfile is a starting point."
-        echo " Customize it as you set up your Arch system."
+        echo "✅ Services enabled"

@@ -14,35 +14,20 @@ tasks:
   # PREREQUISITES
   # ================================================================
 
-  install-prerequisites:
-    desc: Install Homebrew and essential tools
-    cmds:
-      - task: install-homebrew
-      - task: install-essential-tools
-
   install-homebrew:
     desc: Install Homebrew (if not present)
+    silent: true
     cmds:
       - |
         if command -v brew >/dev/null 2>&1; then
-          echo " Homebrew already installed"
+          echo "✅ Homebrew already installed"
         else
-          echo " Installing Homebrew..."
+          echo "✅ Installing Homebrew..."
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          echo " Homebrew installed"
+          echo "✅ Homebrew installed"
         fi
     status:
       - command -v brew >/dev/null 2>&1
-
-  install-essential-tools:
-    desc: Install essential development tools
-    cmds:
-      - |
-        echo " Installing essential macOS tools..."
-        brew install git
-        brew install curl
-        brew install wget
-        echo " Essential tools installed"
 
   # ================================================================
   # XCODE & COMMAND LINE TOOLS
@@ -50,15 +35,16 @@ tasks:
 
   install-xcode-tools:
     desc: Install Xcode Command Line Tools
+    silent: true
     cmds:
       - |
         if xcode-select -p &>/dev/null; then
-          echo " Xcode Command Line Tools already installed"
+          echo "✅ Xcode Command Line Tools already installed"
         else
-          echo " Installing Xcode Command Line Tools..."
+          echo "✅ Installing Xcode Command Line Tools..."
           xcode-select --install
-          echo " Complete the installation in the GUI prompt"
-          echo " Run this task again after installation completes"
+          echo "Complete the installation in the GUI prompt"
+          echo "Run 'task macos:install-xcode-tools' again after installation completes"
         fi
 
   # ================================================================
@@ -67,16 +53,19 @@ tasks:
 
   configure:
     desc: Apply macOS system preferences
+    silent: true
     cmds:
-      - echo "  Configuring macOS system preferences..."
+      - echo "✅ Configuring macOS system preferences..."
       - task: configure-finder
       - task: configure-dock
       - task: configure-keyboard
-      - echo " macOS configured!"
-      - echo " Some changes may require logout/restart"
+      - echo "✅ macOS configured!"
+      - echo "Some changes may require logout/restart"
 
   configure-finder:
     desc: Configure Finder preferences
+    internal: true
+    silent: true
     cmds:
       - |
         echo "  Configuring Finder..."
@@ -94,6 +83,8 @@ tasks:
 
   configure-dock:
     desc: Configure Dock preferences
+    internal: true
+    silent: true
     cmds:
       - |
         echo "  Configuring Dock..."
@@ -105,6 +96,8 @@ tasks:
 
   configure-keyboard:
     desc: Configure keyboard preferences
+    internal: true
+    silent: true
     cmds:
       - |
         echo "  Configuring keyboard..."
@@ -114,95 +107,11 @@ tasks:
         echo " Keyboard configured"
 
   # ================================================================
-  # APPLICATION MANAGEMENT
+  # UTILITIES
   # ================================================================
-
-  install-mas-apps:
-    desc: Install Mac App Store applications
-    cmds:
-      - |
-        if ! command -v mas >/dev/null 2>&1; then
-          echo "Installing mas (Mac App Store CLI)..."
-          brew install mas
-        fi
-
-        echo " Installing Mac App Store apps..."
-        echo " You may need to sign in to the App Store first"
-        echo "  No mas apps currently configured"
-        echo " Add apps to Brewfile with: mas '<App Name>', id: <app-id>"
-
-  # ================================================================
-  # VERIFICATION
-  # ================================================================
-
-  verify:
-    desc: Verify macOS-specific tools are installed
-    cmds:
-      - |
-        echo " Verifying macOS installation..."
-
-        # Homebrew
-        if command -v brew >/dev/null 2>&1; then
-          echo " Homebrew - $(brew --version | head -n1)"
-        else
-          echo " Homebrew not installed"
-        fi
-
-        # Xcode tools
-        if xcode-select -p &>/dev/null; then
-          echo " Xcode Command Line Tools"
-        else
-          echo "  Xcode Command Line Tools not installed"
-        fi
-
-        # Check Homebrew location
-        BREW_PREFIX=$(brew --prefix 2>/dev/null || echo "")
-        if [[ "$BREW_PREFIX" == "{{.HOMEBREW_PREFIX}}" ]]; then
-          echo " Homebrew at correct location: {{.HOMEBREW_PREFIX}}"
-        elif [[ -n "$BREW_PREFIX" ]]; then
-          echo "  Homebrew at - $BREW_PREFIX (expected {{.HOMEBREW_PREFIX}})"
-        fi
-
-  info:
-    desc: Show macOS system information
-    cmds:
-      - |
-        echo " macOS System Information"
-        echo ""
-        echo "OS Version - $(sw_vers -productVersion)"
-        echo "Build - $(sw_vers -buildVersion)"
-        echo "Architecture - $(uname -m)"
-        echo ""
-
-        if command -v brew >/dev/null 2>&1; then
-          echo "Homebrew"
-          echo "  Version - $(brew --version | head -n1)"
-          echo "  Prefix - $(brew --prefix)"
-          echo "  Cellar - $(brew --cellar)"
-          echo ""
-        fi
-
-  # ================================================================
-  # MAINTENANCE
-  # ================================================================
-
-  update:
-    desc: Update macOS system and applications
-    cmds:
-      - echo "Updating macOS system..."
-      - softwareupdate --list
-      - echo ""
-      - echo "To install updates run softwareupdate --install --all"
-
-  cleanup:
-    desc: Clean up macOS caches and temporary files
-    cmds:
-      - echo " Cleaning macOS caches..."
-      - brew cleanup
-      - echo " macOS cleanup complete"
-
-  doctor:
-    desc: Run diagnostics on macOS installation
-    cmds:
-      - task: verify
-      - brew doctor
+  # For system maintenance, use native commands directly:
+  #   softwareupdate --list                # Check for system updates
+  #   softwareupdate --install --all       # Install system updates
+  #   brew cleanup                         # Clean Homebrew caches
+  #   brew doctor                          # Run Homebrew diagnostics
+  #   sw_vers                              # Show macOS version

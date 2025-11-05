@@ -15,33 +15,18 @@ tasks:
   # INSTALLATION
   # ================================================================
 
-  install-all:
+  install:
     desc: Install all packages from Brewfile
+    silent: true
     cmds:
       - task: check-brewfile
-      - echo " Installing Homebrew packages from Brewfile..."
+      - echo "✅ Installing Homebrew packages from Brewfile..."
       - brew bundle install --file={{.BREWFILE}}
-      - echo " Homebrew packages installed!"
+      - echo "✅ Homebrew packages installed!"
     sources:
       - "{{.BREWFILE}}"
     generates:
       - "{{.BREWFILE_LOCK}}"
-
-  install-formulas:
-    desc: Install only formulas (no casks)
-    cmds:
-      - task: check-brewfile
-      - echo " Installing Homebrew formulas..."
-      - brew bundle install --file={{.BREWFILE}} --no-cask
-      - echo " Formulas installed!"
-
-  install-casks:
-    desc: Install only casks (no formulas)
-    cmds:
-      - task: check-brewfile
-      - echo " Installing Homebrew casks..."
-      - brew bundle install --file={{.BREWFILE}} --cask
-      - echo " Casks installed!"
 
   # ================================================================
   # UPDATE
@@ -49,6 +34,7 @@ tasks:
 
   update:
     desc: Update Homebrew and all packages
+    silent: true
     cmds:
       - echo " Updating Homebrew..."
       - brew update
@@ -59,6 +45,7 @@ tasks:
 
   upgrade:
     desc: Upgrade all installed packages
+    silent: true
     cmds:
       - brew upgrade
       - task: auto-commit
@@ -69,6 +56,7 @@ tasks:
 
   dump:
     desc: Generate Brewfile from currently installed packages
+    silent: true
     cmds:
       - echo " Generating Brewfile from installed packages..."
       - echo "  This will OVERWRITE the existing Brewfile!"
@@ -90,11 +78,6 @@ tasks:
       - sh: test -f {{.BREWFILE}}
         msg: "Brewfile not found at {{.BREWFILE}}"
 
-  cleanup-brewfile:
-    desc: Remove comments and organize Brewfile
-    cmds:
-      - echo " This task is not yet implemented"
-      - echo " Brewfile should be manually maintained for best organization"
 
   # ================================================================
   # SYNC & COMMIT
@@ -103,6 +86,7 @@ tasks:
   auto-commit:
     desc: Auto-commit Brewfile changes to git
     internal: true
+    silent: true
     cmds:
       - |
         if [[ -f "{{.BREWFILE}}" ]]; then
@@ -129,76 +113,19 @@ tasks:
             echo "No Brewfile changes to commit"
           fi
         fi
-    silent: false
 
   # ================================================================
   # MAINTENANCE
   # ================================================================
-
-  clean:
-    desc: Clean up Homebrew caches and old versions
-    cmds:
-      - echo " Cleaning Homebrew caches..."
-      - brew cleanup
-      - echo " Cleanup complete!"
-
-  doctor:
-    desc: Run brew doctor to check for issues
-    cmds:
-      - echo " Running brew doctor..."
-      - brew doctor
-
-  info:
-    desc: Show Homebrew installation info
-    cmds:
-      - echo " Homebrew Information"
-      - echo ""
-      - brew --version
-      - echo ""
-      - echo "Prefix - $(brew --prefix)"
-      - echo "Cellar - $(brew --cellar)"
-      - echo ""
-      - echo "Installed packages"
-      - echo "  Formulas - $(brew list --formula | wc -l | tr -d ' ')"
-      - echo "  Casks - $(brew list --cask | wc -l | tr -d ' ')"
+  # For simple maintenance commands, use Homebrew directly:
+  #   brew cleanup                    # Clean caches
+  #   brew doctor                     # Check for issues
+  #   brew --version                  # Show version
+  #   brew list --formula             # List formulas
+  #   brew list --cask                # List casks
 
   # ================================================================
-  # DEPENDENCY MANAGEMENT
+  # UTILITIES
   # ================================================================
-
-  check-python-deps:
-    desc: Check which Homebrew packages depend on Python
-    cmds:
-      - echo " Checking Python dependencies..."
-      - echo ""
-      - echo "Packages that depend on python@3.12"
-      - brew uses --installed python@3.12 || echo "  None"
-      - echo ""
-      - echo "Packages that depend on python@3.13"
-      - brew uses --installed python@3.13 || echo "  None"
-      - echo ""
-      - echo "Packages that depend on python@3.14"
-      - brew uses --installed python@3.14 || echo "  None"
-      - echo ""
-      - echo " If nothing depends on a Python version, consider removing it"
-      - echo " Development Python work should use uv-managed Python"
-
-  # ================================================================
-  # VERIFICATION
-  # ================================================================
-
-  verify:
-    desc: Verify all Brewfile packages are installed
-    cmds:
-      - task: check-brewfile
-      - echo " Verifying Brewfile packages..."
-      - brew bundle check --file={{.BREWFILE}} || echo " Some packages missing - run 'task brew:install-all'"
-
-  list:
-    desc: List all installed packages
-    cmds:
-      - echo " Installed Homebrew Formulas"
-      - brew list --formula
-      - echo ""
-      - echo " Installed Homebrew Casks"
-      - brew list --cask
+  # For checking Python dependencies, use brew directly:
+  #   brew uses --installed python@3.13
