@@ -1,0 +1,328 @@
+#!/usr/bin/env bash
+# ================================================================
+# Tools - Dotfiles Tool Discovery System
+# ================================================================
+# Helps discover, learn about, and remember the 30+ tools installed
+# in your dotfiles. Focus on discovery and learning, not heavy tracking.
+# ================================================================
+
+set -euo pipefail
+
+# Registry location
+REGISTRY="${DOTFILES_REGISTRY:-$HOME/dotfiles/docs/tools/registry.yml}"
+
+# Color output helpers
+color_green() { echo -e "\033[32m$1\033[0m"; }
+color_red() { echo -e "\033[31m$1\033[0m"; }
+color_yellow() { echo -e "\033[33m$1\033[0m"; }
+color_blue() { echo -e "\033[34m$1\033[0m"; }
+color_cyan() { echo -e "\033[36m$1\033[0m"; }
+color_bold() { echo -e "\033[1m$1\033[0m"; }
+
+# ================================================================
+# FUNCTIONS
+# ================================================================
+
+show_help() {
+  cat << EOF
+$(color_blue "Tools - Dotfiles Tool Discovery System")
+
+Discover and learn about the 30+ tools in your dotfiles.
+
+$(color_yellow "USAGE:")
+  tools [command] [options]
+
+$(color_yellow "COMMANDS:")
+  list              List all tools (default)
+  categories        List tool categories
+  show <tool>       Show detailed info for a tool
+  search <query>    Search tools by description or tags
+  random            Show a random tool (for discovery)
+  count             Count tools by category
+  installed         Check which tools are actually installed
+  help              Show this help message
+
+$(color_yellow "EXAMPLES:")
+  tools                         # List all tools
+  tools show bat                # Show details about bat
+  tools search git              # Find git-related tools
+  tools random                  # Discover a random tool
+  tools categories              # List all categories
+
+$(color_yellow "REGISTRY:")
+  Tools are defined in: $REGISTRY
+  Add new tools by editing the registry YAML file.
+
+$(color_yellow "SEE ALSO:")
+  - task --list                 # All available tasks
+  - brew list                   # Installed packages
+  - npm list -g --depth=0       # Global npm packages
+  - uv tool list                # Python tools
+EOF
+}
+
+list_tools() {
+  if [[ ! -f "$REGISTRY" ]]; then
+    echo "$(color_red "Error:") Registry not found at $REGISTRY"
+    exit 1
+  fi
+
+  echo "$(color_blue "Installed Tools") (31 total)"
+  echo ""
+
+  # List tools with their category and description
+  yq -r '.tools | to_entries | .[] | "\(.key)~\(.value.category)~\(.value.description)"' "$REGISTRY" | \
+    while IFS='~' read -r tool category desc; do
+      printf "  $(color_cyan "%-25s") $(color_yellow "[%s]") %s\n" "$tool" "$category" "$desc"
+    done
+
+  echo ""
+  echo "$(color_bold "TIP:") Use $(color_cyan "tools show <name>") to see detailed info and examples"
+}
+
+list_categories() {
+  color_blue "Tool Categories"
+  echo ""
+
+  # Get unique categories with counts
+  yq -r '.tools | to_entries | .[] | .value.category' "$REGISTRY" | \
+    sort | uniq -c | sort -rn | \
+    while read -r count category; do
+      printf "  $(color_cyan "%-25s") %s tools\n" "$category" "$count"
+    done
+
+  echo ""
+  echo "$(color_bold "TIP:") Use $(color_cyan "tools count") for detailed breakdown"
+}
+
+show_tool() {
+  local tool="$1"
+
+  if [[ -z "$tool" ]]; then
+    echo "$(color_red "Error:") Tool name required"
+    echo "Usage: tools show <tool-name>"
+    exit 1
+  fi
+
+  # Check if tool exists in registry
+  if ! yq -e ".tools.$tool" "$REGISTRY" &>/dev/null; then
+    echo "$(color_red "Error:") Tool '$tool' not found in registry"
+    echo ""
+    echo "Available tools:"
+    yq -r '.tools | keys | .[]' "$REGISTRY" | head -10
+    echo "  ..."
+    exit 1
+  fi
+
+  color_blue "═══════════════════════════════════════════"
+  color_bold "$tool"
+  color_blue "═══════════════════════════════════════════"
+  echo ""
+
+  # Description
+  desc=$(yq -r ".tools.$tool.description" "$REGISTRY")
+  color_yellow "Description:"
+  echo "  $desc"
+  echo ""
+
+  # Why use it
+  if yq -e ".tools.$tool.why_use" "$REGISTRY" &>/dev/null; then
+    why_use=$(yq -r ".tools.$tool.why_use" "$REGISTRY")
+    color_yellow "Why Use:"
+    echo "  $why_use"
+    echo ""
+  fi
+
+  # Category and install method
+  category=$(yq -r ".tools.$tool.category" "$REGISTRY")
+  installed_via=$(yq -r ".tools.$tool.installed_via // \"N/A\"" "$REGISTRY")
+  echo "$(color_yellow "Category:") $category"
+  echo "$(color_yellow "Installed via:") $installed_via"
+  echo ""
+
+  # Usage
+  usage=$(yq -r ".tools.$tool.usage // \"N/A\"" "$REGISTRY")
+  color_yellow "Usage:"
+  echo "  $usage"
+  echo ""
+
+  # Examples
+  if yq -e ".tools.$tool.examples" "$REGISTRY" &>/dev/null; then
+    color_yellow "Examples:"
+    yq -r ".tools.$tool.examples[] | \"  $ \(.cmd)\n    \(.desc)\"" "$REGISTRY"
+    echo ""
+  fi
+
+  # See also
+  if yq -e ".tools.$tool.see_also" "$REGISTRY" &>/dev/null; then
+    see_also=$(yq -r ".tools.$tool.see_also | join(\", \")" "$REGISTRY")
+    echo "$(color_yellow "See also:") $see_also"
+    echo ""
+  fi
+
+  # Tags
+  if yq -e ".tools.$tool.tags" "$REGISTRY" &>/dev/null; then
+    tags=$(yq -r ".tools.$tool.tags | join(\", \")" "$REGISTRY")
+    echo "$(color_yellow "Tags:") $tags"
+    echo ""
+  fi
+
+  # Documentation URL
+  if yq -e ".tools.$tool.docs_url" "$REGISTRY" &>/dev/null; then
+    docs_url=$(yq -r ".tools.$tool.docs_url" "$REGISTRY")
+    echo "$(color_yellow "Documentation:") $docs_url"
+    echo ""
+  fi
+
+  # Check if installed
+  if command -v "$tool" &>/dev/null; then
+    echo "$(color_green "✓") Installed at: $(command -v "$tool")"
+  else
+    echo "$(color_yellow "⚠") Not found in PATH (may need shell reload)"
+  fi
+
+  color_blue "═══════════════════════════════════════════"
+}
+
+search_tools() {
+  local query="$1"
+
+  if [[ -z "$query" ]]; then
+    echo "$(color_red "Error:") Search query required"
+    echo "Usage: tools search <query>"
+    exit 1
+  fi
+
+  echo "$(color_blue "Search Results for:") $query"
+  echo ""
+
+  local found=0
+
+  # Search in descriptions and tags (case-insensitive)
+  local query_lower=$(echo "$query" | tr '[:upper:]' '[:lower:]')
+
+  # Get all tools and search through them
+  while IFS='~' read -r tool category desc; do
+    # Get tags for this tool
+    local tags=$(yq -r ".tools.$tool.tags[]? // empty" "$REGISTRY" 2>/dev/null | tr '\n' ' ')
+    local why_use=$(yq -r ".tools.$tool.why_use // empty" "$REGISTRY" 2>/dev/null)
+
+    # Case-insensitive search across description, tags, and why_use
+    local searchable=$(echo "$desc $tags $why_use" | tr '[:upper:]' '[:lower:]')
+    if [[ "$searchable" == *"$query_lower"* ]]; then
+      printf "  $(color_cyan "%-25s") $(color_yellow "[%s]") %s\n" "$tool" "$category" "$desc"
+      found=1
+    fi
+  done < <(yq -r '.tools | to_entries | .[] | "\(.key)~\(.value.category)~\(.value.description)"' "$REGISTRY")
+
+  if [[ $found -eq 0 ]]; then
+    echo "  $(color_yellow "No tools found matching '$query'")"
+    echo ""
+    echo "$(color_bold "TIP:") Try searching for:"
+    echo "  - Category: $(color_cyan "tools search file-management")"
+    echo "  - Tag: $(color_cyan "tools search git")"
+    echo "  - Feature: $(color_cyan "tools search syntax")"
+  fi
+}
+
+random_tool() {
+  color_cyan "💡 Random Tool Discovery"
+  echo ""
+
+  # Get random tool
+  local tools
+  mapfile -t tools < <(yq -r '.tools | keys | .[]' "$REGISTRY")
+  local random_tool="${tools[$RANDOM % ${#tools[@]}]}"
+
+  show_tool "$random_tool"
+
+  echo ""
+  echo "$(color_bold "TIP:") Run $(color_cyan "tools random") again to discover another tool"
+}
+
+count_tools() {
+  color_blue "Tool Count by Category"
+  echo ""
+
+  # Count by category with tool names
+  yq -r '.tools | to_entries | group_by(.value.category) | .[] | "\(.[0].value.category)~\(. | length)~\([.[].key] | join(\", \"))"' "$REGISTRY" | \
+    sort | \
+    while IFS='~' read -r category count tool_list; do
+      echo "$(color_yellow "$category") ($count tools)"
+      echo "  $tool_list"
+      echo ""
+    done
+
+  local total=$(yq -r '.tools | keys | length' "$REGISTRY")
+  echo "$(color_bold "Total:") $total tools"
+}
+
+check_installed() {
+  color_blue "Installation Status"
+  echo ""
+
+  local installed=0
+  local not_installed=0
+
+  yq -r '.tools | keys | .[]' "$REGISTRY" | \
+    while read -r tool; do
+      if command -v "$tool" &>/dev/null; then
+        printf "  $(color_green "✓") %-25s %s\n" "$tool" "$(command -v "$tool")"
+        ((installed++))
+      else
+        printf "  $(color_yellow "✗") %-25s %s\n" "$tool" "not found in PATH"
+        ((not_installed++))
+      fi
+    done
+
+  echo ""
+  echo "$(color_green "Installed:") $installed"
+  echo "$(color_yellow "Not in PATH:") $not_installed (may need shell reload or different command name)"
+  echo ""
+  echo "$(color_bold "TIP:") Some tools have different command names (e.g., typescript-language-server → tsserver)"
+}
+
+# ================================================================
+# MAIN
+# ================================================================
+
+# Check if registry exists
+if [[ ! -f "$REGISTRY" ]]; then
+  echo "$(color_red "Error:") Tool registry not found at $REGISTRY"
+  echo ""
+  echo "Expected location: ~/dotfiles/docs/tools/registry.yml"
+  exit 1
+fi
+
+case "${1:-list}" in
+  list|ls)
+    list_tools
+    ;;
+  categories|cats)
+    list_categories
+    ;;
+  show|info)
+    show_tool "${2:-}"
+    ;;
+  search|find)
+    search_tools "${2:-}"
+    ;;
+  random|rand)
+    random_tool
+    ;;
+  count)
+    count_tools
+    ;;
+  installed|check)
+    check_installed
+    ;;
+  help|--help|-h)
+    show_help
+    ;;
+  *)
+    echo "$(color_red "Error:") Unknown command: $1"
+    echo ""
+    show_help
+    exit 1
+    ;;
+esac

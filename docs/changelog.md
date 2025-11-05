@@ -153,6 +153,26 @@ Added Python-based symlinks manager for cross-platform dotfiles deployment with 
 
 See [detailed changelog](changelog/2025-11-04.md#symlinks-tool) for full details.
 
+### Tools Discovery CLI
+
+Added bash CLI command for the tool discovery system (Phase 5), providing command-line interface to the tool registry.
+
+**Commands:**
+
+- `tools list` - List all tools with categories
+- `tools show <name>` - Show detailed info and examples
+- `tools search <query>` - Search by description or tags
+- `tools categories` - List tool categories
+- `tools count` - Detailed breakdown by category
+- `tools random` - Discover a random tool
+- `tools installed` - Check installation status
+
+**Files Changed:**
+
+- Created: `common/.local/bin/tools` (327 lines, bash script)
+
+Documentation already exists in Phase 5 changelog and docs/reference/tools.md.
+
 ### Shell & Configuration Improvements
 
 **Shell Functions:**
