@@ -1,5 +1,31 @@
 {
   "permissions": {
     "allow": ["Read", "Edit", "Write", "Bash", "Tinty"]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/session-start"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop-build-check"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop-commit-reminder"
+          }
+        ]
+      }
+    ]
   }
 }

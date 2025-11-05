@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Stop hook to remind about commits made during the session
+
+set -euo pipefail
+
+# Read stdin (hook input) but we don't need it for this check
+cat > /dev/null
+
+# Check if any commits were made in the last minute
+# (Assumes Claude's response took less than 1 minute to complete)
+RECENT_COMMITS=$(git log --since="1 minute ago" --oneline --no-merges 2>/dev/null | wc -l | tr -d ' ')
+
+if [[ $RECENT_COMMITS -eq 0 ]]; then
+    # No commits made, nothing to remind
+    exit 0
+fi
+
+# Check if changelog files were modified in recent commits
+CHANGELOG_MODIFIED=$(git log --since="1 minute ago" --name-only --oneline --no-merges 2>/dev/null | grep -c "docs/changelog" || echo "0")
+
+# If commits were made but changelog wasn't updated, show reminder
+if [[ $RECENT_COMMITS -gt 0 ]] && [[ $CHANGELOG_MODIFIED -eq 0 ]]; then
+    echo ""
+    echo "📝 **Reminder**: $RECENT_COMMITS commit(s) made during this response"
+    echo ""
+    echo "Commits will be logged for changelog tracking."
+    echo "Remember to update changelog when you have 3+ pending commits."
+    echo ""
+fi
+
+exit 0

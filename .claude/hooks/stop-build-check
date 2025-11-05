@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Run builds on modified tools to catch TypeScript/Python errors
+
+set -euo pipefail
+
+# Check if symlinks tool was modified
+if git diff --name-only HEAD | grep -q "tools/symlinks"; then
+    echo "🔨 Running pytest for tools/symlinks..."
+
+    cd tools/symlinks
+    if ! pytest -q 2>&1 | tee /tmp/build-errors.txt; then
+        ERROR_COUNT=$(grep -c "FAILED\|ERROR" /tmp/build-errors.txt || echo "0")
+
+        if [[ $ERROR_COUNT -lt 5 ]]; then
+            echo "Found $ERROR_COUNT test failures - showing to Claude for fixing"
+            cat /tmp/build-errors.txt
+            exit 2  # Block and send to Claude
+        else
+            echo "⚠️  Found $ERROR_COUNT errors - consider launching auto-error-resolver"
+            exit 0  # Non-blocking warning
+        fi
+    fi
+    echo "✅ All tests passed"
+fi
+
+exit 0

@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""
+Provides Claude with immediate project context on session start.
+Runs: git status, recent commits, directory structure snapshot
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+def get_git_status():
+    """Get current git status"""
+    result = subprocess.run(
+        ["git", "status", "--short"],
+        capture_output=True,
+        text=True
+    )
+    return result.stdout
+
+def get_recent_commits():
+    """Get last 5 commits in oneline format"""
+    result = subprocess.run(
+        ["git", "log", "--oneline", "-5"],
+        capture_output=True,
+        text=True
+    )
+    return result.stdout
+
+def get_key_directories():
+    """Snapshot of key directories"""
+    project_root = Path(os.getenv("CLAUDE_PROJECT_DIR", "."))
+
+    dirs_to_check = [
+        "install/",
+        "tools/",
+        "docs/",
+        "taskfiles/",
+        "common/",
+        "macos/",
+        "wsl/",
+        "arch/"
+    ]
+
+    structure = {}
+    for dir_path in dirs_to_check:
+        full_path = project_root / dir_path
+        if full_path.exists():
+            structure[dir_path] = len(list(full_path.rglob("*")))  # file count
+
+    return structure
+
+def get_pending_changelog():
+    """Check for pending changelog entries"""
+    project_root = Path(os.getenv("CLAUDE_PROJECT_DIR", "."))
+    pending_file = project_root / ".claude" / ".pending-changelog"
+
+    if not pending_file.exists():
+        return None
+
+    pending_entries = []
+    with open(pending_file, 'r') as f:
+        for line in f:
+            if line.strip():
+                parts = line.strip().split('|')
+                if len(parts) == 3:
+                    pending_entries.append({
+                        "hash": parts[0],
+                        "message": parts[1],
+                        "date": parts[2]
+                    })
+
+    return pending_entries if pending_entries else None
+
+def main():
+    hook_input = json.loads(sys.stdin.read())
+
+    context = {
+        "git_status": get_git_status(),
+        "recent_commits": get_recent_commits(),
+        "directory_counts": get_key_directories(),
+        "pending_changelog": get_pending_changelog(),
+        "cwd": hook_input["cwd"]
+    }
+
+    # Format as markdown for Claude
+    output = f"""
+## 📁 Project Context (Auto-loaded)
+
+**Git Status:**
+```
+{context['git_status']}
+```
+
+**Recent Commits:**
+```
+{context['recent_commits']}
+```
+
+**Directory Structure:**
+{json.dumps(context['directory_counts'], indent=2)}
+"""
+
+    # Add pending changelog reminder if entries exist
+    if context['pending_changelog']:
+        count = len(context['pending_changelog'])
+        output += f"\n\n⚠️ **Pending Changelog Updates ({count} commits):**\n```\n"
+        for entry in context['pending_changelog']:
+            output += f"{entry['date']} [{entry['hash']}] {entry['message']}\n"
+        output += "```\n"
+        if count >= 3:
+            output += "\n❗ **Action Required**: Next commit will be blocked until changelog is updated.\n"
+        else:
+            output += f"\n📝 Reminder: Will block at 3 commits (currently {count}/3)\n"
+
+    # Return as system message
+    print(json.dumps({
+        "continue": True,
+        "systemMessage": output.strip()
+    }))
+
+if __name__ == "__main__":
+    main()
