@@ -169,4 +169,4 @@ If a referenced taskfile doesn't exist (like `symlinks.yml`), Task gracefully sk
 
 - [Installation Guide](../getting-started/installation.md) - Platform-specific setup instructions
 - [Quickstart](../getting-started/quickstart.md) - Get up and running in 15 minutes
-- [Package Management Philosophy](../architecture/package-management.md) - Why brew/apt/pacman + nvm + uv
+- [Platform Differences](platforms.md) - Package managers and platform-specific considerations
