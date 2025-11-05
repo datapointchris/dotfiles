@@ -1,0 +1,126 @@
+# ================================================================
+# Package Configuration
+# ================================================================
+# Defines packages for language-specific package managers
+# Managed by Taskfile - changes committed automatically
+# Last updated: 2025-11-04
+
+# ================================================================
+# NPM GLOBAL PACKAGES
+# ================================================================
+# Installed via: npm install -g <package>
+# Managed by nvm (Node.js version manager)
+# These are system-wide tools, not project dependencies
+
+npm_globals:
+  # Language Servers
+  language_servers:
+    - name: typescript-language-server
+      description: TypeScript & JavaScript LSP
+
+    - name: typescript
+      description: TypeScript compiler (peer dependency for ts-server)
+
+    - name: bash-language-server
+      description: Bash & Shell script LSP
+
+    - name: yaml-language-server
+      description: YAML LSP
+
+    - name: vscode-langservers-extracted
+      description: HTML, CSS, JSON, ESLint LSPs
+
+    - name: gh-actions-language-server
+      description: GitHub Actions LSP
+
+  # Linters & Formatters
+  linters_formatters:
+    - name: eslint
+      description: JavaScript/TypeScript linter
+
+    - name: prettier
+      description: Code formatter (multi-language)
+
+    - name: markdownlint-cli
+      description: Markdown linter
+
+# ================================================================
+# UV TOOLS (Python)
+# ================================================================
+# Installed via: uv tool install <package>
+# Managed by uv (fast Python package manager)
+# These are Python CLI tools, not project dependencies
+
+uv_tools:
+  # Linters & Formatters
+  linters_formatters:
+    - name: ruff
+      description: Fast Python linter & formatter (replaces flake8, black, isort)
+
+    - name: mypy
+      description: Static type checker for Python
+
+    - name: basedpyright
+      description: Type checker (Pyright fork with better defaults)
+
+  # Code Quality
+  code_quality:
+    - name: codespell
+      description: Spell checker for code
+
+  # SQL
+  sql:
+    - name: sqlfluff
+      description: SQL linter and formatter
+
+  # Markdown
+  markdown:
+    - name: mdformat
+      description: Markdown formatter
+
+  # Template Linting
+  template:
+    - name: djlint
+      description: Django/Jinja template linter & formatter
+
+  # Utilities
+  utilities:
+    - name: keymap-drawer
+      description: Generate keyboard layout diagrams
+
+    - name: nbpreview
+      description: Jupyter notebook preview in terminal
+
+    - name: numpy
+      description: Numerical computing (for various tools)
+
+# ================================================================
+# SHELL PLUGINS
+# ================================================================
+# Manually cloned into ~/.config/zsh/plugins
+# Not managed by package managers
+
+shell_plugins:
+  - name: git-open
+    repo: https://github.com/paulirish/git-open.git
+    description: Open repo in browser from terminal
+
+  - name: zsh-vi-mode
+    repo: https://github.com/jeffreytse/zsh-vi-mode.git
+    description: Better vi-mode for ZSH
+
+# ================================================================
+# NOTES
+# ================================================================
+# Node.js Version: Managed by nvm (see .nvmrc or nvm list)
+# Python Version: Managed by uv (see .python-version)
+#
+# To update all packages:
+#   task update           # Updates everything
+#   task update:npm       # Just npm globals
+#   task update:uv        # Just uv tools
+#
+# To add new packages:
+#   1. Add to this file
+#   2. Run: task install:npm or task install:uv
+#   3. Changes will be auto-committed
