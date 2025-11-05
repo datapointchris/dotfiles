@@ -8,28 +8,24 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/architecture/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/changelog/2025-11-04-taskfile-simplification/">
       
       
-        <link rel="prev" href="../getting-started/first-config/">
       
       
-        <link rel="next" href="../reference/platforms/">
-      
-      
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
     
     
       
-        <title>Overview - Dotfiles</title>
+        <title>Taskfile System Simplification - Dotfiles</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.84d31ad4.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
   
@@ -113,11 +109,11 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -143,7 +139,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture" class="md-skip">
+        <a href="#taskfile-system-simplification" class="md-skip">
           Skip to content
         </a>
       
@@ -159,7 +155,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -179,7 +175,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Taskfile System Simplification
             
           </span>
         </div>
@@ -291,7 +287,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -312,7 +308,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../getting-started/quickstart/" class="md-tabs__link">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
           
   
   
@@ -330,13 +326,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   
@@ -358,7 +352,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../reference/platforms/" class="md-tabs__link">
+        <a href="../../reference/platforms/" class="md-tabs__link">
           
   
   
@@ -380,7 +374,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing.md" class="md-tabs__link">
           
   
   
@@ -402,7 +396,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../learnings/" class="md-tabs__link">
+        <a href="../../learnings/" class="md-tabs__link">
           
   
   
@@ -424,7 +418,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../changelog/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -468,7 +462,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -498,7 +492,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -573,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/quickstart/" class="md-nav__link">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -596,7 +590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -619,7 +613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/first-config/" class="md-nav__link">
+      <a href="../../getting-started/first-config/" class="md-nav__link">
         
   
   
@@ -646,8 +640,6 @@
       
   
   
-    
-  
   
   
     
@@ -661,23 +653,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../../architecture/" class="md-nav__link ">
               
   
   
@@ -691,7 +682,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Architecture
@@ -781,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/platforms/" class="md-nav__link">
+      <a href="../../reference/platforms/" class="md-nav__link">
         
   
   
@@ -804,7 +795,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -827,7 +818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tool-discovery/" class="md-nav__link">
+      <a href="../../reference/tool-discovery/" class="md-nav__link">
         
   
   
@@ -850,7 +841,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tasks/" class="md-nav__link">
+      <a href="../../reference/tasks/" class="md-nav__link">
         
   
   
@@ -873,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/symlinks/" class="md-nav__link">
+      <a href="../../reference/symlinks/" class="md-nav__link">
         
   
   
@@ -896,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/skills/" class="md-nav__link">
+      <a href="../../reference/skills/" class="md-nav__link">
         
   
   
@@ -919,7 +910,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/hooks/" class="md-nav__link">
+      <a href="../../reference/hooks/" class="md-nav__link">
         
   
   
@@ -942,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/troubleshooting/" class="md-nav__link">
+      <a href="../../reference/troubleshooting/" class="md-nav__link">
         
   
   
@@ -965,7 +956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/corporate/" class="md-nav__link">
+      <a href="../../reference/corporate/" class="md-nav__link">
         
   
   
@@ -988,7 +979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/github-pages/" class="md-nav__link">
+      <a href="../../reference/github-pages/" class="md-nav__link">
         
   
   
@@ -1069,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing.md" class="md-nav__link">
         
   
   
@@ -1092,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../publishing/" class="md-nav__link">
+      <a href="../../publishing/" class="md-nav__link">
         
   
   
@@ -1153,7 +1144,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../learnings/" class="md-nav__link ">
+            <a href="../../learnings/" class="md-nav__link ">
               
   
   
@@ -1188,7 +1179,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -1211,7 +1202,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -1234,7 +1225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -1319,7 +1310,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1342,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/2025-11-05/" class="md-nav__link">
+      <a href="../2025-11-05/" class="md-nav__link">
         
   
   
@@ -1365,7 +1356,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/2025-11-04/" class="md-nav__link">
+      <a href="../2025-11-04/" class="md-nav__link">
         
   
   
@@ -1388,7 +1379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/2025-11-02/" class="md-nav__link">
+      <a href="../2025-11-02/" class="md-nav__link">
         
   
   
@@ -1430,93 +1421,190 @@
   
 
 
-<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>How the dotfiles repository is organized and why.</p>
-<h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── common/          # Shared configs (all platforms)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── macos/           # macOS-specific overrides
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── wsl/             # WSL Ubuntu overrides
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── arch/            # Arch Linux overrides
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── taskfiles/       # Task automation
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── scripts/install/ # Bootstrap scripts
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└── tools/symlinks/  # Symlink management tool
-</span></code></pre></div>
-<h2 id="symlink-system">Symlink System<a class="headerlink" href="#symlink-system" title="Permanent link">&para;</a></h2>
-<p>Two-layer approach: common base + platform overlay.</p>
-<p><strong>Step 1</strong>: Link common files</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>symlinks<span class="w"> </span>link<span class="w"> </span>common
-</span></code></pre></div>
-<p>Links <code>common/</code> to <code>$HOME</code>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
-</span></code></pre></div>
-<p><strong>Step 2</strong>: Overlay platform files</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>symlinks<span class="w"> </span>link<span class="w"> </span>macos
-</span></code></pre></div>
-<p>Overlays platform-specific files:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>macos/.gitconfig → ~/.gitconfig  (overrides common if it existed)
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>macos/.profile → ~/.profile
-</span></code></pre></div>
-<p>Platform files override common files when both exist.</p>
-<h2 id="package-management">Package Management<a class="headerlink" href="#package-management" title="Permanent link">&para;</a></h2>
-<p><strong>System Packages</strong>: Homebrew (macOS), apt (Ubuntu), pacman (Arch)</p>
-<p><strong>Language Versions</strong>: uv (Python), nvm (Node.js)</p>
-<p><strong>Why separate</strong>: Version managers provide cross-platform consistency and project-specific versions without system conflicts.</p>
-<h2 id="platform-detection">Platform Detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h2>
-<p><strong>Shell</strong> (<code>common/.config/zsh/.zshrc</code>):</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="c1"># macOS</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/proc/version<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Microsoft<span class="w"> </span>/proc/version<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="c1"># WSL</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/etc/arch-release<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="c1"># Arch</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">fi</span>
-</span></code></pre></div>
-<p><strong>Taskfile</strong> (<code>Taskfile.yml</code>):</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">vars</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">PLATFORM</span><span class="p">:</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">sh</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="no">if [ &quot;$(uname)&quot; = &quot;Darwin&quot; ]; then</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="no">echo &quot;macos&quot;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="no">elif [ -f /etc/arch-release ]; then</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="no">echo &quot;arch&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="no">else</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="no">echo &quot;linux&quot;</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">      </span><span class="no">fi</span>
-</span></code></pre></div>
-<h2 id="configuration-layers">Configuration Layers<a class="headerlink" href="#configuration-layers" title="Permanent link">&para;</a></h2>
-<p>Configurations use inheritance: shared base with platform overrides.</p>
-<p><strong>Example: Git Config</strong></p>
-<p>macOS (<code>macos/.gitconfig</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[core]
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    editor = code --wait
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>[credential]
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    helper = osxkeychain
-</span></code></pre></div>
-<p>WSL (<code>wsl/.gitconfig</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[core]
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    editor = nvim
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>[credential]
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-wincred.exe
-</span></code></pre></div>
-<p><strong>Example: Neovim</strong></p>
-<p>Common (<code>common/.config/nvim/</code>): Base LSP, core plugins, keybindings</p>
-<p>Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs</p>
-<h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
-<p><strong>Symlinks over Stow</strong>: Custom tool provides better two-layer linking, clearer error messages, platform awareness.</p>
-<p><strong>Taskfile over Makefile</strong>: Cross-platform consistency, better syntax for complex commands, modular includes, self-documenting.</p>
-<p><strong>Version Managers for Languages</strong>: Same Node/Python versions across platforms, project-specific versions, no system conflicts.</p>
-<p><strong>Separate Theme Systems</strong>: Ghostty has 600+ themes with live preview. tinty provides Base16 sync across tmux/bat/fzf/shell. Both run in parallel for flexibility.</p>
-<h2 id="advantages">Advantages<a class="headerlink" href="#advantages" title="Permanent link">&para;</a></h2>
-<p><strong>Minimal Duplication</strong>: Only platform differences exist in platform directories.</p>
-<p><strong>Clear Separation</strong>: common/ for shared, platform dirs for quirks only.</p>
-<p><strong>Easy Maintenance</strong>: Update shared config once, all platforms benefit.</p>
-<p><strong>Testable</strong>: Each platform can be tested independently with VMs.</p>
-<h2 id="trade-offs">Trade-offs<a class="headerlink" href="#trade-offs" title="Permanent link">&para;</a></h2>
-<p><strong>Symlink Complexity</strong>: Two-layer system adds complexity, but <code>symlinks</code> tool handles it with clear errors.</p>
-<p><strong>Platform Knowledge</strong>: Need to know whether to edit <code>common/</code> or platform dir. Experience makes this clear.</p>
-<p>See <a href="../reference/platforms/">Platform Differences</a> for platform-specific quirks.</p>
+<h1 id="taskfile-system-simplification">Taskfile System Simplification<a class="headerlink" href="#taskfile-system-simplification" title="Permanent link">&para;</a></h1>
+<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
+<p>The Taskfile system had grown bloated with 86+ wrapper tasks that added no value beyond simple command execution. Many tasks were just wrappers around single commands (<code>task brew:clean</code> = <code>brew cleanup</code>), making the system harder to navigate and maintain. Additionally, there were verification tasks with hardcoded package lists that would become outdated as packages were added or removed.</p>
+<p>The system violated the Taskfile best practices of using tasks for orchestration rather than simple command wrappers.</p>
+<h2 id="solution-overview">Solution Overview<a class="headerlink" href="#solution-overview" title="Permanent link">&para;</a></h2>
+<p>Radically simplified the Taskfile system by removing all wrapper tasks and focusing on orchestration. Adopted a "tasks for orchestration, not wrappers" philosophy following official <a href="https://taskfile.dev/docs/guide">Taskfile best practices</a>.</p>
+<p><strong>Key Changes:</strong>
+- Removed all verify/check tasks (18 tasks)
+- Removed wrapper tasks for info/update/cleanup/doctor/notes (30+ tasks)
+- Simplified task names (<code>install-all</code> → <code>install</code>)
+- Made all install tasks idempotent
+- Centralized shell plugins to read from <code>config/packages.yml</code>
+- Added <code>silent: true</code> to all tasks for clean output
+- Completely rewrote documentation to reflect simpler approach</p>
+<h2 id="tasks-removed">Tasks Removed<a class="headerlink" href="#tasks-removed" title="Permanent link">&para;</a></h2>
+<h3 id="verification-tasks-18-removed">Verification Tasks (18 removed)<a class="headerlink" href="#verification-tasks-18-removed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>brew:verify</code> - Checked if Brewfile packages installed</li>
+<li><code>npm:verify</code> - Checked hardcoded list of npm packages</li>
+<li><code>uv:verify</code> - Checked hardcoded list of uv tools</li>
+<li><code>nvm:verify</code> - Checked if nvm/node installed</li>
+<li><code>shell:verify</code> - Checked hardcoded list of shell plugins</li>
+<li><code>macos:verify</code> - Checked if Homebrew/Xcode installed</li>
+<li><code>wsl:verify</code> - Checked hardcoded list of tools</li>
+<li><code>arch:verify</code> - Checked hardcoded list of tools</li>
+<li>Main <code>check</code> and <code>verify</code> tasks</li>
+</ul>
+<h3 id="wrapper-tasks-30-removed">Wrapper Tasks (30+ removed)<a class="headerlink" href="#wrapper-tasks-30-removed" title="Permanent link">&para;</a></h3>
+<p><strong>Homebrew:</strong>
+- <code>brew:clean</code> → Use <code>brew cleanup</code> directly
+- <code>brew:doctor</code> → Use <code>brew doctor</code> directly
+- <code>brew:info</code> → Use <code>brew --version</code> directly
+- <code>brew:list</code> → Use <code>brew list</code> directly
+- <code>brew:check-python-deps</code> → Use <code>brew uses --installed python@X</code> directly</p>
+<p><strong>npm:</strong>
+- <code>npm:update</code> → Use <code>npm update -g</code> directly</p>
+<p><strong>uv:</strong>
+- <code>uv:update</code> → Use <code>uv tool upgrade --all</code> directly</p>
+<p><strong>nvm:</strong>
+- <code>nvm:update-nvm</code> → Use git commands directly</p>
+<p><strong>Shell:</strong>
+- <code>shell:list</code> → Use <code>ls -1 ~/.config/zsh/plugins</code> directly
+- <code>shell:info</code> → Use git commands directly
+- <code>shell:clean</code> → Use <code>rm -rf</code> directly
+- <code>shell:reinstall</code> → Removed</p>
+<p><strong>macOS:</strong>
+- <code>macos:verify</code> → Removed
+- <code>macos:info</code> → Use <code>sw_vers</code> directly
+- <code>macos:update</code> → Use <code>softwareupdate</code> directly
+- <code>macos:cleanup</code> → Use <code>brew cleanup</code> directly
+- <code>macos:doctor</code> → Use <code>brew doctor</code> directly
+- <code>macos:install-prerequisites</code> → Consolidated
+- <code>macos:install-essential-tools</code> → Consolidated</p>
+<p><strong>WSL:</strong>
+- <code>wsl:verify</code> → Removed
+- <code>wsl:info</code> → Use <code>uname -r</code> directly
+- <code>wsl:update</code> → Use <code>apt</code> directly
+- <code>wsl:cleanup</code> → Use <code>apt</code> directly
+- <code>wsl:update-system</code> → Consolidated into install-packages</p>
+<p><strong>Arch:</strong>
+- <code>arch:verify</code> → Removed
+- <code>arch:info</code> → Use <code>uname -r</code> directly
+- <code>arch:update</code> → Use <code>pacman</code> directly
+- <code>arch:cleanup</code> → Use <code>pacman</code> directly
+- <code>arch:notes</code> → Removed
+- <code>arch:update-system</code> → Consolidated into install-packages</p>
+<h2 id="tasks-simplified">Tasks Simplified<a class="headerlink" href="#tasks-simplified" title="Permanent link">&para;</a></h2>
+<p><strong>Renamed for Consistency:</strong>
+- <code>brew:install-all</code> → <code>brew:install</code>
+- <code>npm:install-all</code> → <code>npm:install</code>
+- <code>uv:install-all</code> → <code>uv:install</code></p>
+<p><strong>Removed Separate Install Tasks:</strong>
+- <code>brew:install-formulas</code> - Not needed, just use <code>brew:install</code>
+- <code>brew:install-casks</code> - Not needed, just use <code>brew:install</code>
+- <code>npm:install-language-servers</code> - Consolidated into <code>npm:install</code>
+- <code>npm:install-linters-formatters</code> - Consolidated into <code>npm:install</code>
+- <code>uv:install-linters-formatters</code> - Consolidated into <code>uv:install</code>
+- <code>uv:install-code-quality</code> - Consolidated into <code>uv:install</code>
+- <code>uv:install-sql</code> - Consolidated into <code>uv:install</code>
+- <code>uv:install-markdown</code> - Consolidated into <code>uv:install</code>
+- <code>uv:install-template</code> - Consolidated into <code>uv:install</code>
+- <code>uv:install-utilities</code> - Consolidated into <code>uv:install</code></p>
+<h2 id="tasks-addedmodified">Tasks Added/Modified<a class="headerlink" href="#tasks-addedmodified" title="Permanent link">&para;</a></h2>
+<p><strong>Shell Plugin Centralization:</strong>
+Modified <code>shell:install</code>, <code>shell:update</code>, and removed <code>shell:verify</code> to read plugins dynamically from <code>config/packages.yml</code> using <code>yq</code> instead of having hardcoded plugin names in multiple places.</p>
+<p><strong>Silent Flag:</strong>
+Added <code>silent: true</code> to all tasks to prevent command echo noise and show only actual output.</p>
+<p><strong>Internal Flag:</strong>
+Added <code>internal: true</code> to helper tasks (configure-finder, configure-dock, etc.) so they don't clutter <code>task --list</code> output.</p>
+<h2 id="files-modified">Files Modified<a class="headerlink" href="#files-modified" title="Permanent link">&para;</a></h2>
+<p><strong>Taskfiles:</strong>
+- <code>Taskfile.yml</code> - Removed check/verify, updated install orchestration
+- <code>taskfiles/brew.yml</code> - Removed verify, clean, doctor, info, list, check-python-deps
+- <code>taskfiles/npm.yml</code> - Removed verify, update; simplified install
+- <code>taskfiles/uv.yml</code> - Removed verify, update; simplified install
+- <code>taskfiles/nvm.yml</code> - Removed verify, update-nvm
+- <code>taskfiles/shell.yml</code> - Removed verify, list, info, clean, reinstall; centralized to read from config
+- <code>taskfiles/macos.yml</code> - Removed verify, info, update, cleanup, doctor; consolidated install tasks
+- <code>taskfiles/wsl.yml</code> - Removed verify, info, update, cleanup, update-system
+- <code>taskfiles/arch.yml</code> - Removed verify, info, update, cleanup, notes, update-system</p>
+<p><strong>Documentation:</strong>
+- <code>docs/reference/tasks.md</code> - Complete rewrite emphasizing orchestration philosophy
+- <code>CLAUDE.md</code> - Removed theme task references (from previous cleanup)
+- <code>macos/.local/bin/theme-sync</code> - Updated help text</p>
+<p><strong>Config:</strong>
+- <code>config/packages.yml</code> - Already had shell plugins defined; now used as single source of truth</p>
+<h2 id="testing-methodology">Testing Methodology<a class="headerlink" href="#testing-methodology" title="Permanent link">&para;</a></h2>
+<p><strong>Task Count Verification:</strong>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Before</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>task<span class="w"> </span>--list<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Output: 86 tasks</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># After</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>task<span class="w"> </span>--list<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Output: 40 tasks</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># 53% reduction</span>
+</span></code></pre></div></p>
+<p><strong>Task List Output:</strong>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>--list
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Verified clean output with only meaningful orchestration tasks</span>
+</span></code></pre></div></p>
+<p><strong>Install Dry Run:</strong>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>task<span class="w"> </span>install<span class="w"> </span>--dry
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Verified orchestration flow works correctly</span>
+</span></code></pre></div></p>
+<p><strong>Shell Plugin Verification:</strong>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>yq<span class="w"> </span><span class="nb">eval</span><span class="w"> </span><span class="s1">&#39;.shell_plugins[] | .name + &quot;|&quot; + .repo&#39;</span><span class="w"> </span>config/packages.yml
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Verified yq parsing works correctly</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>task<span class="w"> </span>shell:install<span class="w"> </span>--dry
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Verified dynamic plugin reading works</span>
+</span></code></pre></div></p>
+<h2 id="final-resolution">Final Resolution<a class="headerlink" href="#final-resolution" title="Permanent link">&para;</a></h2>
+<p>The Taskfile system is now:
+- <strong>53% smaller</strong> (40 tasks vs 86 tasks)
+- <strong>More maintainable</strong> - No hardcoded lists to keep updated
+- <strong>Clearer purpose</strong> - Only orchestration tasks remain
+- <strong>Better documented</strong> - Philosophy and direct commands clearly explained
+- <strong>Idempotent</strong> - All install tasks can be run multiple times safely
+- <strong>Cleaner output</strong> - Silent flag removes command echo noise</p>
+<p><strong>Core Tasks Remaining:</strong>
+- <code>install</code>, <code>install-macos</code>, <code>install-wsl</code>, <code>install-arch</code> - Platform orchestration
+- <code>update</code>, <code>clean</code> - Multi-component orchestration
+- <code>brew:install</code>, <code>npm:install</code>, <code>uv:install</code>, <code>nvm:install</code>, <code>shell:install</code> - Component installation
+- <code>macos:configure</code>, <code>wsl:configure-wsl</code>, <code>arch:configure</code> - Platform configuration
+- <code>docs:serve</code>, <code>docs:build</code>, <code>docs:deploy</code> - Documentation management</p>
+<h2 id="key-learnings">Key Learnings<a class="headerlink" href="#key-learnings" title="Permanent link">&para;</a></h2>
+<h3 id="orchestration-vs-wrappers">Orchestration vs Wrappers<a class="headerlink" href="#orchestration-vs-wrappers" title="Permanent link">&para;</a></h3>
+<p>Tasks should coordinate multiple operations, not wrap single commands. If a task just runs one command, users should run that command directly. This makes the system more transparent and reduces maintenance burden.</p>
+<p><strong>Bad (wrapper):</strong>
+<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">update</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Update packages</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">cmds</span><span class="p">:</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sudo apt update &amp;&amp; sudo apt upgrade -y</span>
+</span></code></pre></div></p>
+<p><strong>Good (orchestration):</strong>
+<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">update</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Update all packages</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">cmds</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">brew:update</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npm update -g</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uv tool upgrade --all</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shell:update</span>
+</span></code></pre></div></p>
+<h3 id="single-source-of-truth">Single Source of Truth<a class="headerlink" href="#single-source-of-truth" title="Permanent link">&para;</a></h3>
+<p>Hardcoding lists (like package names) in multiple tasks creates maintenance problems. Use configuration files and read them dynamically.</p>
+<p><strong>Before:</strong> Plugin names hardcoded in <code>install-git-open</code>, <code>install-zsh-vi-mode</code>, <code>update-git-open</code>, <code>update-zsh-vi-mode</code>, and <code>verify</code> tasks.</p>
+<p><strong>After:</strong> All tasks read from <code>config/packages.yml</code> using <code>yq</code>.</p>
+<h3 id="idempotent-installs-verification">Idempotent Installs &gt; Verification<a class="headerlink" href="#idempotent-installs-verification" title="Permanent link">&para;</a></h3>
+<p>Instead of separate verification tasks, make install tasks idempotent. Let <code>npm install -g</code> and <code>uv tool install</code> handle checking if packages are already installed.</p>
+<p><strong>Before:</strong> Separate <code>verify</code> tasks that check and report missing packages.</p>
+<p><strong>After:</strong> Just run <code>task install</code> again - it will skip what's installed and add what's missing.</p>
+<h3 id="documentation-is-critical">Documentation is Critical<a class="headerlink" href="#documentation-is-critical" title="Permanent link">&para;</a></h3>
+<p>When simplifying a system, update documentation immediately. Users need to know:
+- Why the change was made (philosophy)
+- What commands to use directly
+- What tasks remain and why</p>
+<h3 id="silent-output">Silent Output<a class="headerlink" href="#silent-output" title="Permanent link">&para;</a></h3>
+<p>Task execution with <code>silent: false</code> (default) shows both the command AND its output, which is noisy and hard to read. Adding <code>silent: true</code> shows only actual output.</p>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://taskfile.dev/docs/guide">Taskfile Best Practices</a></li>
+<li><a href="../architecture/package-management.md">Package Management Philosophy</a></li>
+</ul>
 
 
 
@@ -1584,10 +1672,10 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
       
     
   </body>

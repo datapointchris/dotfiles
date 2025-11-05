@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/reference/corporate/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/reference/tasks/">
       
       
-        <link rel="prev" href="../troubleshooting/">
+        <link rel="prev" href="../tool-discovery/">
       
       
-        <link rel="next" href="../github-pages/">
+        <link rel="next" href="../symlinks/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Corporate Setup - Dotfiles</title>
+        <title>Task Reference - Dotfiles</title>
       
     
     
@@ -143,7 +143,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#corporate-environment" class="md-skip">
+        <a href="#task-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -179,7 +179,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Corporate Setup
+              Task Reference
             
           </span>
         </div>
@@ -847,10 +847,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../tasks/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Task Reference
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -861,6 +883,355 @@
   
 
       </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#philosophy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Philosophy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#package-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Package Updates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-updated" class="md-nav__link">
+    <span class="md-ellipsis">
+      What Gets Updated
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Update Logging
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selective-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Selective Updates
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Component Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#platform-specific-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Platform-Specific Tasks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Platform-Specific Tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#macos" class="md-nav__link">
+    <span class="md-ellipsis">
+      macOS
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wsl-ubuntu" class="md-nav__link">
+    <span class="md-ellipsis">
+      WSL Ubuntu
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arch-linux" class="md-nav__link">
+    <span class="md-ellipsis">
+      Arch Linux
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      Design Principles
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Design Principles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#orchestration-over-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Orchestration Over Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-specific-over-generic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Platform-Specific Over Generic
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fail-loudly-and-early" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fail Loudly and Early
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modular-internal-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modular Internal Tasks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#idempotent-by-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      Idempotent by Default
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#single-source-of-truth" class="md-nav__link">
+    <span class="md-ellipsis">
+      Single Source of Truth
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dry Run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#list-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      List Tasks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#view-update-logs-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      View Update Logs Directly
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      Platform Override
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      Task Not Found
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Permission Errors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-fails-with-missing-tool-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      Update Fails With Missing Tool Error
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-installation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Check Installation Status
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#view-internal-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      View Internal Tasks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-from-previous-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration from Previous Version
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -962,32 +1333,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Corporate Setup
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../corporate/" class="md-nav__link">
         
   
   
@@ -998,91 +1347,6 @@
   
 
       </a>
-      
-        
-
-  
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#native-lsp-advantage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Native LSP Advantage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#offline-installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Offline Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      Configuration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      Troubleshooting
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      Verification
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#minimal-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      Minimal Setup
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1537,91 +1801,289 @@
   
 
 
-<h1 id="corporate-environment">Corporate Environment<a class="headerlink" href="#corporate-environment" title="Permanent link">&para;</a></h1>
-<p>Solutions for corporate environments with restricted internet access.</p>
-<h2 id="native-lsp-advantage">Native LSP Advantage<a class="headerlink" href="#native-lsp-advantage" title="Permanent link">&para;</a></h2>
-<p>This configuration uses native Neovim LSP, not Mason, which bypasses most corporate restrictions:</p>
+<h1 id="task-reference">Task Reference<a class="headerlink" href="#task-reference" title="Permanent link">&para;</a></h1>
+<p>This dotfiles repository uses <a href="https://taskfile.dev">go-task/task</a> for automation and installation management across platforms.</p>
+<h2 id="philosophy">Philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
+<p><strong>Tasks are for orchestration, not wrappers.</strong> The Taskfile system coordinates complex multi-step installations and updates while keeping simple operations accessible via their native commands.</p>
+<p><strong>Install tasks are idempotent.</strong> Running <code>task install</code> multiple times is safe - it will install missing components and skip what's already installed.</p>
+<p><strong>Platform-specific over generic.</strong> Each platform has its own <code>update-all</code> command that updates ALL package managers and tools for that system. No ambiguous cross-platform commands.</p>
+<p><strong>Fail loudly and early.</strong> Core components (brew, npm, uv, apt, pacman) must be installed or update tasks will fail with clear error messages. No silent failures.</p>
+<h2 id="core-commands">Core Commands<a class="headerlink" href="#core-commands" title="Permanent link">&para;</a></h2>
+<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>install<span class="w">          </span><span class="c1"># Auto-detect platform and install everything</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>task<span class="w"> </span>install-macos<span class="w">    </span><span class="c1"># macOS-specific installation</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>task<span class="w"> </span>install-wsl<span class="w">      </span><span class="c1"># WSL Ubuntu installation</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>task<span class="w"> </span>install-arch<span class="w">     </span><span class="c1"># Arch Linux installation</span>
+</span></code></pre></div>
+<p>Each platform installation:</p>
+<ol>
+<li>Installs package manager (brew/apt/pacman)</li>
+<li>Installs language version managers (nvm, uv)</li>
+<li>Installs global packages (npm, uv tools)</li>
+<li>Installs shell plugins</li>
+<li>Deploys symlinks</li>
+<li>Initializes theme system</li>
+</ol>
+<p>Time: 15-30 minutes depending on platform and network speed.</p>
+<h3 id="package-updates">Package Updates<a class="headerlink" href="#package-updates" title="Permanent link">&para;</a></h3>
+<p><strong>Platform-specific update commands</strong> that update ALL package managers and tools:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>macos:update-all<span class="w">    </span><span class="c1"># Update everything on macOS</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>task<span class="w"> </span>wsl:update-all<span class="w">      </span><span class="c1"># Update everything on WSL Ubuntu</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>task<span class="w"> </span>arch:update-all<span class="w">     </span><span class="c1"># Update everything on Arch Linux</span>
+</span></code></pre></div>
+<p><strong>Update history and statistics:</strong></p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>task<span class="w"> </span>macos:update-history<span class="w">    </span><span class="c1"># View update history with stats</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>task<span class="w"> </span>wsl:update-history<span class="w">      </span><span class="c1"># View update history with stats</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>task<span class="w"> </span>arch:update-history<span class="w">     </span><span class="c1"># View update history with stats</span>
+</span></code></pre></div>
+<h3 id="what-gets-updated">What Gets Updated<a class="headerlink" href="#what-gets-updated" title="Permanent link">&para;</a></h3>
+<p><strong>macOS (7 components):</strong></p>
+<ol>
+<li>Homebrew formulas and casks (<code>brew update &amp;&amp; brew upgrade</code>)</li>
+<li>Mac App Store apps (<code>mas upgrade</code>)</li>
+<li>npm global packages (<code>npm update -g</code>)</li>
+<li>Python tools (<code>uv tool upgrade --all</code>)</li>
+<li>Rust packages (<code>cargo install-update -a</code> or manual fallback)</li>
+<li>Shell plugins (git pull in each plugin)</li>
+<li>Tmux plugins (TPM update)</li>
+</ol>
+<p><strong>WSL Ubuntu (6 components):</strong></p>
+<ol>
+<li>System packages (<code>sudo apt update &amp;&amp; sudo apt upgrade -y</code>)</li>
+<li>npm global packages (<code>npm update -g</code>)</li>
+<li>Python tools (<code>uv tool upgrade --all</code>)</li>
+<li>Rust packages (<code>cargo install-update -a</code> or manual fallback)</li>
+<li>Shell plugins (git pull in each plugin)</li>
+<li>Tmux plugins (TPM update)</li>
+</ol>
+<p><strong>Arch Linux (7 components):</strong></p>
+<ol>
+<li>System packages (<code>sudo pacman -Syu</code>)</li>
+<li>AUR packages (<code>yay -Syu</code>)</li>
+<li>npm global packages (<code>npm update -g</code>)</li>
+<li>Python tools (<code>uv tool upgrade --all</code>)</li>
+<li>Rust packages (<code>cargo install-update -a</code> or manual fallback)</li>
+<li>Shell plugins (git pull in each plugin)</li>
+<li>Tmux plugins (TPM update)</li>
+</ol>
+<h3 id="update-logging">Update Logging<a class="headerlink" href="#update-logging" title="Permanent link">&para;</a></h3>
+<p>All update sessions are logged with detailed timing information:</p>
 <ul>
-<li>No dependency on raw.githubusercontent.com</li>
-<li>Direct tool installation via system package managers</li>
-<li>Offline capable after initial setup</li>
+<li><strong>Log location:</strong> <code>~/.local/state/dotfiles/update-history/</code></li>
+<li><strong>Log format:</strong> One file per day (YYYY-MM-DD.log)</li>
+<li><strong>Contains:</strong> Timestamp, hostname, OS version, per-step duration, total duration</li>
+<li><strong>View history:</strong> <code>task &lt;platform&gt;:update-history</code></li>
 </ul>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>Install language servers manually using approved package managers:</p>
-<p><strong>TypeScript/JavaScript</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-g<span class="w"> </span>typescript<span class="w"> </span>typescript-language-server
+<p>Statistics tracked:</p>
+<ul>
+<li>Total number of updates performed</li>
+<li>Average duration across all updates</li>
+<li>Individual update timestamps and durations</li>
+</ul>
+<h3 id="selective-updates">Selective Updates<a class="headerlink" href="#selective-updates" title="Permanent link">&para;</a></h3>
+<p>For selective updates of individual components, use native commands directly:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Homebrew</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>brew<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>brew<span class="w"> </span>upgrade
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>brew<span class="w"> </span>cleanup
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Mac App Store</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>mas<span class="w"> </span>upgrade
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># npm (with nvm loaded)</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>npm<span class="w"> </span>update<span class="w"> </span>-g
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>npm<span class="w"> </span>list<span class="w"> </span>-g<span class="w"> </span>--depth<span class="o">=</span><span class="m">0</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># uv</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>uv<span class="w"> </span>tool<span class="w"> </span>upgrade<span class="w"> </span>--all
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>uv<span class="w"> </span>tool<span class="w"> </span>list
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>uv<span class="w"> </span>self<span class="w"> </span>update
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="c1"># cargo</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>cargo<span class="w"> </span>install-update<span class="w"> </span>-a<span class="w">    </span><span class="c1"># If cargo-update installed</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="c1"># or manual: cargo install &lt;package&gt;</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="c1"># Shell plugins</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="nb">cd</span><span class="w"> </span>~/.config/zsh/plugins/git-open<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="c1"># Tmux plugins</span>
+</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>~/.config/tmux/plugins/tpm/bin/update_plugins<span class="w"> </span>all
 </span></code></pre></div>
-<p><strong>Python</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>basedpyright<span class="w"> </span>ruff
+<h2 id="component-installation">Component Installation<a class="headerlink" href="#component-installation" title="Permanent link">&para;</a></h2>
+<p>Each component has an idempotent install task:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>task<span class="w"> </span>brew:install<span class="w">     </span><span class="c1"># Install from Brewfile</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>task<span class="w"> </span>npm:install<span class="w">      </span><span class="c1"># Install npm global packages</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>task<span class="w"> </span>uv:install<span class="w">       </span><span class="c1"># Install uv tools</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>task<span class="w"> </span>nvm:install<span class="w">      </span><span class="c1"># Install nvm and Node.js</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>task<span class="w"> </span>shell:install<span class="w">    </span><span class="c1"># Install shell plugins</span>
 </span></code></pre></div>
-<p><strong>JSON/HTML/CSS</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-g<span class="w"> </span>vscode-langservers-extracted
+<h2 id="platform-specific-tasks">Platform-Specific Tasks<a class="headerlink" href="#platform-specific-tasks" title="Permanent link">&para;</a></h2>
+<h3 id="macos">macOS<a class="headerlink" href="#macos" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>task<span class="w"> </span>macos:install-homebrew<span class="w">     </span><span class="c1"># Install Homebrew</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>task<span class="w"> </span>macos:install-xcode-tools<span class="w">  </span><span class="c1"># Install Xcode CLI tools</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>task<span class="w"> </span>macos:configure<span class="w">            </span><span class="c1"># Apply system preferences (Finder, Dock, Keyboard)</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>task<span class="w"> </span>macos:update-all<span class="w">           </span><span class="c1"># Update all 7 package systems</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>task<span class="w"> </span>macos:update-history<span class="w">       </span><span class="c1"># View update history and statistics</span>
 </span></code></pre></div>
-<p><strong>Bash</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-g<span class="w"> </span>bash-language-server
+<p>For system maintenance, use native commands:</p>
+<ul>
+<li><code>softwareupdate --list</code> - Check for macOS updates</li>
+<li><code>brew cleanup</code> - Clean Homebrew caches</li>
+<li><code>brew doctor</code> - Run Homebrew diagnostics</li>
+<li><code>mas list</code> - List installed Mac App Store apps</li>
+</ul>
+<h3 id="wsl-ubuntu">WSL Ubuntu<a class="headerlink" href="#wsl-ubuntu" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>task<span class="w"> </span>wsl:install-packages<span class="w">       </span><span class="c1"># Install apt packages</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>task<span class="w"> </span>wsl:install-rust<span class="w">           </span><span class="c1"># Install Rust toolchain</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>task<span class="w"> </span>wsl:install-cargo-tools<span class="w">    </span><span class="c1"># Install Rust tools</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>task<span class="w"> </span>wsl:install-docker<span class="w">         </span><span class="c1"># Install Docker (optional)</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>task<span class="w"> </span>wsl:configure-wsl<span class="w">          </span><span class="c1"># Configure WSL settings</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>task<span class="w"> </span>wsl:update-all<span class="w">             </span><span class="c1"># Update all 6 package systems</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>task<span class="w"> </span>wsl:update-history<span class="w">         </span><span class="c1"># View update history and statistics</span>
 </span></code></pre></div>
-<p><strong>Lua</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>brew<span class="w"> </span>install<span class="w"> </span>lua-language-server<span class="w">  </span><span class="c1"># macOS</span>
+<p>For system maintenance, use native commands:</p>
+<ul>
+<li><code>sudo apt update &amp;&amp; sudo apt upgrade -y</code> - Update packages</li>
+<li><code>sudo apt autoremove &amp;&amp; sudo apt clean</code> - Clean caches</li>
+<li><code>lsb_release -a</code> - Show Ubuntu version</li>
+</ul>
+<h3 id="arch-linux">Arch Linux<a class="headerlink" href="#arch-linux" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>task<span class="w"> </span>arch:install-packages<span class="w">      </span><span class="c1"># Install pacman packages</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>task<span class="w"> </span>arch:install-aur-helper<span class="w">    </span><span class="c1"># Install yay (AUR helper)</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>task<span class="w"> </span>arch:install-aur-packages<span class="w">  </span><span class="c1"># Install AUR packages</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>task<span class="w"> </span>arch:install-desktop<span class="w">       </span><span class="c1"># Install desktop environment (optional)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>task<span class="w"> </span>arch:configure<span class="w">             </span><span class="c1"># Apply Arch-specific configs</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>task<span class="w"> </span>arch:update-all<span class="w">            </span><span class="c1"># Update all 7 package systems</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>task<span class="w"> </span>arch:update-history<span class="w">        </span><span class="c1"># View update history and statistics</span>
 </span></code></pre></div>
-<h2 id="offline-installation">Offline Installation<a class="headerlink" href="#offline-installation" title="Permanent link">&para;</a></h2>
-<p><strong>Download packages at home</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>npm<span class="w"> </span>pack<span class="w"> </span>typescript<span class="w"> </span>typescript-language-server
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>npm<span class="w"> </span>pack<span class="w"> </span>bash-language-server
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Transfer files to work machine</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>npm<span class="w"> </span>install<span class="w"> </span>-g<span class="w"> </span>./typescript-x.x.x.tgz
+<p>For system maintenance, use native commands:</p>
+<ul>
+<li><code>sudo pacman -Syu</code> - Update system</li>
+<li><code>sudo pacman -Sc</code> - Clean package cache</li>
+<li><code>yay -Syu</code> - Update AUR packages</li>
+<li><code>pacman -Q | wc -l</code> - Count installed packages</li>
+</ul>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>task<span class="w"> </span>docs:serve<span class="w">       </span><span class="c1"># Serve MkDocs locally (http://localhost:8000)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>task<span class="w"> </span>docs:build<span class="w">       </span><span class="c1"># Build static site</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>task<span class="w"> </span>docs:deploy<span class="w">      </span><span class="c1"># Deploy to GitHub Pages</span>
 </span></code></pre></div>
-<p><strong>Use company package mirrors</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>npm<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>registry<span class="w"> </span>http://npm.company.com/
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>global.index-url<span class="w"> </span>http://pypi.company.com/simple/
+<h2 id="design-principles">Design Principles<a class="headerlink" href="#design-principles" title="Permanent link">&para;</a></h2>
+<h3 id="orchestration-over-wrappers">Orchestration Over Wrappers<a class="headerlink" href="#orchestration-over-wrappers" title="Permanent link">&para;</a></h3>
+<p>Tasks coordinate multi-step workflows. Simple commands should be run directly:</p>
+<ul>
+<li>❌ <code>task brew:update</code> (removed - just a wrapper)</li>
+<li>✅ <code>brew update &amp;&amp; brew upgrade</code> (run directly)</li>
+<li>✅ <code>task macos:update-all</code> (orchestrates 7 package systems)</li>
+</ul>
+<h3 id="platform-specific-over-generic">Platform-Specific Over Generic<a class="headerlink" href="#platform-specific-over-generic" title="Permanent link">&para;</a></h3>
+<p>Each platform has different package managers and tools. Platform-specific commands are clearer:</p>
+<ul>
+<li>❌ <code>task update</code> (ambiguous - what does it update?)</li>
+<li>✅ <code>task macos:update-all</code> (clear - updates ALL macOS systems)</li>
+<li>✅ <code>task wsl:update-all</code> (clear - updates ALL WSL systems)</li>
+</ul>
+<h3 id="fail-loudly-and-early">Fail Loudly and Early<a class="headerlink" href="#fail-loudly-and-early" title="Permanent link">&para;</a></h3>
+<p>Core components must be installed. Update tasks check for required tools and fail with clear messages if missing:</p>
+<ul>
+<li>Homebrew (macOS)</li>
+<li>apt (WSL/Ubuntu)</li>
+<li>pacman (Arch)</li>
+<li>npm (all platforms)</li>
+<li>uv (all platforms)</li>
+</ul>
+<p>No silent failures or skipped updates.</p>
+<h3 id="modular-internal-tasks">Modular Internal Tasks<a class="headerlink" href="#modular-internal-tasks" title="Permanent link">&para;</a></h3>
+<p>Update logic is broken into internal modular tasks:</p>
+<ul>
+<li><code>brew:update</code> (internal) - Homebrew update logic</li>
+<li><code>npm:update</code> (internal) - npm update logic</li>
+<li><code>uv:update</code> (internal) - uv update logic</li>
+<li><code>shell:update</code> (internal) - Shell plugin update logic</li>
+<li><code>cargo:update</code> (internal) - Rust package update logic</li>
+<li><code>mas:update</code> (internal) - Mac App Store update logic</li>
+<li><code>tmux:update</code> (internal) - Tmux plugin update logic</li>
+<li><code>apt:update</code> (internal) - APT update logic</li>
+<li><code>pacman:update</code> (internal) - Pacman update logic</li>
+<li><code>yay:update</code> (internal) - AUR update logic</li>
+</ul>
+<p>These are called by platform <code>update-all</code> tasks but hidden from <code>task --list</code>.</p>
+<h3 id="idempotent-by-default">Idempotent by Default<a class="headerlink" href="#idempotent-by-default" title="Permanent link">&para;</a></h3>
+<p>All install and update tasks can be run multiple times safely. They check for existing installations and skip or update as needed.</p>
+<h3 id="single-source-of-truth">Single Source of Truth<a class="headerlink" href="#single-source-of-truth" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Homebrew packages: <code>Brewfile</code></li>
+<li>npm packages: Defined in <code>taskfiles/npm.yml</code></li>
+<li>uv tools: Defined in <code>taskfiles/uv.yml</code></li>
+<li>Shell plugins: <code>config/packages.yml</code></li>
+<li>Cargo packages: <code>config/packages.yml</code></li>
+<li>Tmux plugins: <code>config/packages.yml</code></li>
+</ul>
+<h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
+<h3 id="dry-run">Dry Run<a class="headerlink" href="#dry-run" title="Permanent link">&para;</a></h3>
+<p>Preview what a task would do:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>task<span class="w"> </span>install<span class="w"> </span>--dry
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>task<span class="w"> </span>macos:update-all<span class="w"> </span>--dry
 </span></code></pre></div>
-<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Disable features requiring internet access:</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">-- Disable plugin auto-updates</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nv">lazy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nv">checker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nv">change_detection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">}</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">-- Disable AI features if APIs blocked</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nv">codecompanion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nv">copilot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
+<h3 id="list-tasks">List Tasks<a class="headerlink" href="#list-tasks" title="Permanent link">&para;</a></h3>
+<p>See all available tasks:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>task<span class="w"> </span>--list<span class="w">            </span><span class="c1"># Show described tasks</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>task<span class="w"> </span>--list-all<span class="w">        </span><span class="c1"># Show all tasks including internal</span>
+</span></code></pre></div>
+<h3 id="view-update-logs-directly">View Update Logs Directly<a class="headerlink" href="#view-update-logs-directly" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># View today&#39;s update log</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>cat<span class="w"> </span>~/.local/state/dotfiles/update-history/<span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>.log
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># List all update logs</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>ls<span class="w"> </span>-lh<span class="w"> </span>~/.local/state/dotfiles/update-history/
+</span></code></pre></div>
+<h3 id="platform-override">Platform Override<a class="headerlink" href="#platform-override" title="Permanent link">&para;</a></h3>
+<p>Override auto-detection by setting <code>PLATFORM</code> in <code>~/.env</code>:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;PLATFORM=macos&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>~/.env
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>npm install fails</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>npm<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>registry<span class="w"> </span>http://npm.company.com/
+<h3 id="task-not-found">Task Not Found<a class="headerlink" href="#task-not-found" title="Permanent link">&para;</a></h3>
+<p>Install task:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>brew<span class="w"> </span>install<span class="w"> </span>go-task<span class="w">  </span><span class="c1"># macOS</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="c1"># or use bootstrap script</span>
 </span></code></pre></div>
-<p><strong>Git clone fails</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>url.<span class="s2">&quot;https://github.com/&quot;</span>.insteadOf<span class="w"> </span><span class="s2">&quot;git@github.com:&quot;</span>
+<h3 id="permission-errors">Permission Errors<a class="headerlink" href="#permission-errors" title="Permanent link">&para;</a></h3>
+<p>Some tasks require sudo (apt/pacman operations). You'll be prompted when needed.</p>
+<h3 id="update-fails-with-missing-tool-error">Update Fails With Missing Tool Error<a class="headerlink" href="#update-fails-with-missing-tool-error" title="Permanent link">&para;</a></h3>
+<p>If <code>update-all</code> fails because a core component isn't installed:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Example error:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1"># ERROR: npm is not installed (core component)</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># Install Node.js with: task nvm:install</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Solution: Install the missing component</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>task<span class="w"> </span>nvm:install
 </span></code></pre></div>
-<p><strong>SSL certificate errors</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>npm<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>strict-ssl<span class="w"> </span><span class="nb">false</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Better: use company certificate</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>http.sslcainfo<span class="w"> </span>/path/to/company-cert.pem
+<h3 id="check-installation-status">Check Installation Status<a class="headerlink" href="#check-installation-status" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>brew<span class="w">      </span><span class="c1"># Check if Homebrew is installed</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>node<span class="w">      </span><span class="c1"># Check if Node.js is installed</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>uv<span class="w">        </span><span class="c1"># Check if uv is installed</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>cargo<span class="w">     </span><span class="c1"># Check if Rust/cargo is installed</span>
 </span></code></pre></div>
-<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Check language servers installed</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>which<span class="w"> </span>typescript-language-server
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>which<span class="w"> </span>basedpyright
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># Test in Neovim</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>nvim<span class="w"> </span>test.js
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># In Neovim: :LspInfo</span>
+<h3 id="view-internal-tasks">View Internal Tasks<a class="headerlink" href="#view-internal-tasks" title="Permanent link">&para;</a></h3>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>task<span class="w"> </span>--list-all<span class="w">      </span><span class="c1"># Shows all tasks including internal ones</span>
 </span></code></pre></div>
-<h2 id="minimal-setup">Minimal Setup<a class="headerlink" href="#minimal-setup" title="Permanent link">&para;</a></h2>
-<p>If full setup is too complex, use minimal native LSP:</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">-- No external dependencies, just native LSP</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nv">vim</span><span class="p">.</span><span class="py">lsp</span><span class="p">.</span><span class="py">config</span><span class="p">.</span><span class="py">ts_ls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nv">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;typescript-language-server&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;--stdio&#39;</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nv">filetypes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;typescript&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;javascript&#39;</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="p">}</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="nv">vim</span><span class="p">.</span><span class="py">lsp</span><span class="p">.</span><span class="py">config</span><span class="p">.</span><span class="py">basedpyright</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">  </span><span class="nv">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;basedpyright-langserver&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;--stdio&#39;</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">  </span><span class="nv">filetypes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;python&#39;</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="p">}</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="nv">vim</span><span class="p">.</span><span class="py">lsp</span><span class="p">.</span><span class="nf">enable</span><span class="p">({</span><span class="w"> </span><span class="s1">&#39;ts_ls&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;basedpyright&#39;</span><span class="w"> </span><span class="p">})</span>
+<h2 id="migration-from-previous-version">Migration from Previous Version<a class="headerlink" href="#migration-from-previous-version" title="Permanent link">&para;</a></h2>
+<p>If you were using the old generic commands:</p>
+<p><strong>Before:</strong></p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>task<span class="w"> </span>update<span class="w">    </span><span class="c1"># Updated only brew, npm, uv</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>task<span class="w"> </span>clean<span class="w">     </span><span class="c1"># Cleaned only brew caches</span>
 </span></code></pre></div>
+<p><strong>After:</strong></p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>task<span class="w"> </span>macos:update-all<span class="w">     </span><span class="c1"># Updates ALL 7 package systems</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>brew<span class="w"> </span>cleanup<span class="w">              </span><span class="c1"># Run directly for selective cleanup</span>
+</span></code></pre></div>
+<p>The new system is more comprehensive and platform-specific.</p>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../getting-started/installation/">Installation Guide</a> - Detailed platform-specific instructions</li>
+<li><a href="../../getting-started/quickstart/">Quickstart</a> - Get up and running in 15 minutes</li>
+<li><a href="../platforms/">Platform Differences</a> - Package managers and platform-specific considerations</li>
+<li><a href="https://taskfile.dev/docs/guide">Taskfile Best Practices</a> - Official Taskfile documentation</li>
+</ul>
 
 
 

@@ -8,28 +8,24 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/architecture/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/changelog/2025-11-04-taskfile-modularity/">
       
       
-        <link rel="prev" href="../getting-started/first-config/">
       
       
-        <link rel="next" href="../reference/platforms/">
-      
-      
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
     
     
       
-        <title>Overview - Dotfiles</title>
+        <title>Taskfile System Modular Refactor - Dotfiles</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.84d31ad4.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
   
@@ -113,11 +109,11 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -143,7 +139,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture" class="md-skip">
+        <a href="#taskfile-system-modular-refactor" class="md-skip">
           Skip to content
         </a>
       
@@ -159,7 +155,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -179,7 +175,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Taskfile System Modular Refactor
             
           </span>
         </div>
@@ -291,7 +287,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -312,7 +308,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../getting-started/quickstart/" class="md-tabs__link">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
           
   
   
@@ -330,13 +326,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   
@@ -358,7 +352,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../reference/platforms/" class="md-tabs__link">
+        <a href="../../reference/platforms/" class="md-tabs__link">
           
   
   
@@ -380,7 +374,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing.md" class="md-tabs__link">
           
   
   
@@ -402,7 +396,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../learnings/" class="md-tabs__link">
+        <a href="../../learnings/" class="md-tabs__link">
           
   
   
@@ -424,7 +418,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../changelog/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -468,7 +462,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -498,7 +492,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -573,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/quickstart/" class="md-nav__link">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -596,7 +590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -619,7 +613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/first-config/" class="md-nav__link">
+      <a href="../../getting-started/first-config/" class="md-nav__link">
         
   
   
@@ -646,8 +640,6 @@
       
   
   
-    
-  
   
   
     
@@ -661,23 +653,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../../architecture/" class="md-nav__link ">
               
   
   
@@ -691,7 +682,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Architecture
@@ -781,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/platforms/" class="md-nav__link">
+      <a href="../../reference/platforms/" class="md-nav__link">
         
   
   
@@ -804,7 +795,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -827,7 +818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tool-discovery/" class="md-nav__link">
+      <a href="../../reference/tool-discovery/" class="md-nav__link">
         
   
   
@@ -850,7 +841,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tasks/" class="md-nav__link">
+      <a href="../../reference/tasks/" class="md-nav__link">
         
   
   
@@ -873,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/symlinks/" class="md-nav__link">
+      <a href="../../reference/symlinks/" class="md-nav__link">
         
   
   
@@ -896,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/skills/" class="md-nav__link">
+      <a href="../../reference/skills/" class="md-nav__link">
         
   
   
@@ -919,7 +910,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/hooks/" class="md-nav__link">
+      <a href="../../reference/hooks/" class="md-nav__link">
         
   
   
@@ -942,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/troubleshooting/" class="md-nav__link">
+      <a href="../../reference/troubleshooting/" class="md-nav__link">
         
   
   
@@ -965,7 +956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/corporate/" class="md-nav__link">
+      <a href="../../reference/corporate/" class="md-nav__link">
         
   
   
@@ -988,7 +979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/github-pages/" class="md-nav__link">
+      <a href="../../reference/github-pages/" class="md-nav__link">
         
   
   
@@ -1069,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing.md" class="md-nav__link">
         
   
   
@@ -1092,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../publishing/" class="md-nav__link">
+      <a href="../../publishing/" class="md-nav__link">
         
   
   
@@ -1153,7 +1144,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../learnings/" class="md-nav__link ">
+            <a href="../../learnings/" class="md-nav__link ">
               
   
   
@@ -1188,7 +1179,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -1211,7 +1202,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -1234,7 +1225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -1319,7 +1310,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1342,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/2025-11-05/" class="md-nav__link">
+      <a href="../2025-11-05/" class="md-nav__link">
         
   
   
@@ -1365,7 +1356,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/2025-11-04/" class="md-nav__link">
+      <a href="../2025-11-04/" class="md-nav__link">
         
   
   
@@ -1388,7 +1379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/2025-11-02/" class="md-nav__link">
+      <a href="../2025-11-02/" class="md-nav__link">
         
   
   
@@ -1430,93 +1421,351 @@
   
 
 
-<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>How the dotfiles repository is organized and why.</p>
-<h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── common/          # Shared configs (all platforms)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── macos/           # macOS-specific overrides
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── wsl/             # WSL Ubuntu overrides
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── arch/            # Arch Linux overrides
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── taskfiles/       # Task automation
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── scripts/install/ # Bootstrap scripts
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└── tools/symlinks/  # Symlink management tool
+<h1 id="taskfile-system-modular-refactor">Taskfile System Modular Refactor<a class="headerlink" href="#taskfile-system-modular-refactor" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2025-11-04
+<strong>Type:</strong> Major Refactor
+<strong>Scope:</strong> Task automation system, package management</p>
+<hr />
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<p>Completely refactored the Taskfile system to be truly modular with platform-specific <code>update-all</code> commands that update every package manager and tool on that platform. Removed ambiguous generic tasks in favor of clear, platform-specific orchestration.</p>
+<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
+<p>The previous Taskfile system had several significant issues:</p>
+<ol>
+<li><strong>Ambiguous generic tasks</strong>: <code>task update</code> was unclear - it only updated brew, npm, and uv, but users wouldn't know that without reading the code</li>
+<li><strong>Incomplete coverage</strong>: Missing updates for mas (Mac App Store), cargo (Rust), shell plugins, tmux plugins, and system package managers</li>
+<li><strong>Scattered configuration</strong>: Package lists were hardcoded across multiple taskfiles instead of centralized</li>
+<li><strong>Not modular</strong>: Adding new components required editing multiple files with duplicated logic</li>
+<li><strong>Update/upgrade separation</strong>: Some systems had separate update and upgrade tasks that should have been combined</li>
+</ol>
+<h2 id="solution-overview">Solution Overview<a class="headerlink" href="#solution-overview" title="Permanent link">&para;</a></h2>
+<p>Implemented a comprehensive modular task system with the following architecture:</p>
+<ol>
+<li><strong>Centralized package configuration</strong> in <code>config/packages.yml</code></li>
+<li><strong>Internal task modules</strong> in <code>taskfiles/internal/</code> for each component type</li>
+<li><strong>Platform-specific <code>update-all</code> commands</strong> that orchestrate all updates for that platform</li>
+<li><strong>Removed generic cross-platform tasks</strong> that were ambiguous</li>
+</ol>
+<h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-expand-package-configuration">Phase 1: Expand Package Configuration<a class="headerlink" href="#phase-1-expand-package-configuration" title="Permanent link">&para;</a></h3>
+<p><strong>File Modified:</strong> <code>config/packages.yml</code></p>
+<p>Added new sections to centralize all package definitions:</p>
+<ul>
+<li><code>cargo_packages</code> - Rust tools installed via cargo</li>
+<li><code>tmux_plugins</code> - TPM managed plugins with repo URLs</li>
+<li><code>mas_apps</code> - Mac App Store apps (informational)</li>
+</ul>
+<p>All package managers now have their package lists in a single, easily editable location.</p>
+<h3 id="phase-2-create-internal-task-modules">Phase 2: Create Internal Task Modules<a class="headerlink" href="#phase-2-create-internal-task-modules" title="Permanent link">&para;</a></h3>
+<p><strong>Files Created:</strong>
+- <code>taskfiles/internal/cargo.yml</code>
+- <code>taskfiles/internal/mas.yml</code>
+- <code>taskfiles/internal/tmux-plugins.yml</code>
+- <code>taskfiles/internal/apt.yml</code>
+- <code>taskfiles/internal/pacman.yml</code>
+- <code>taskfiles/internal/yay.yml</code></p>
+<p>Each internal taskfile has a single <code>update</code> task marked as <code>internal: true</code> that:
+- Checks if the tool is available
+- Gracefully skips if not installed
+- Provides informative output about what's being updated
+- Handles both optimal (cargo-update) and fallback (manual loop) approaches</p>
+<p>Example from <code>cargo.yml</code>:
+- Checks for <code>cargo-install-update</code> tool
+- Falls back to manual reinstallation loop if not available
+- Provides helpful tip about installing cargo-update</p>
+<h3 id="phase-3-update-existing-component-taskfiles">Phase 3: Update Existing Component Taskfiles<a class="headerlink" href="#phase-3-update-existing-component-taskfiles" title="Permanent link">&para;</a></h3>
+<p><strong>Files Modified:</strong>
+- <code>taskfiles/brew.yml</code>
+- <code>taskfiles/npm.yml</code>
+- <code>taskfiles/uv.yml</code>
+- <code>taskfiles/shell.yml</code></p>
+<p>Changes made to each:</p>
+<ol>
+<li><strong>brew.yml:</strong></li>
+<li>Combined <code>update</code> and <code>upgrade</code> into single <code>update</code> task</li>
+<li>Marked task as <code>internal: true</code></li>
+<li>
+<p>Simplified to run <code>brew update &amp;&amp; brew upgrade</code></p>
+</li>
+<li>
+<p><strong>npm.yml:</strong></p>
+</li>
+<li>Added <code>update</code> task (was missing)</li>
+<li>Marked as <code>internal: true</code></li>
+<li>
+<p>Loads nvm and runs <code>npm update -g</code></p>
+</li>
+<li>
+<p><strong>uv.yml:</strong></p>
+</li>
+<li>Added <code>update</code> task (was missing)</li>
+<li>Marked as <code>internal: true</code></li>
+<li>
+<p>Runs <code>uv tool upgrade --all</code></p>
+</li>
+<li>
+<p><strong>shell.yml:</strong></p>
+</li>
+<li>Marked existing <code>update</code> task as <code>internal: true</code></li>
+<li>Cleaned up output formatting</li>
+<li>Suppressed verbose git output</li>
+</ol>
+<h3 id="phase-4-platform-specific-update-all-commands">Phase 4: Platform-Specific Update-All Commands<a class="headerlink" href="#phase-4-platform-specific-update-all-commands" title="Permanent link">&para;</a></h3>
+<p><strong>Files Modified:</strong>
+- <code>taskfiles/macos.yml</code>
+- <code>taskfiles/wsl.yml</code>
+- <code>taskfiles/arch.yml</code></p>
+<p>Each platform taskfile now:</p>
+<ol>
+<li>
+<p><strong>Includes internal taskfiles</strong> with <code>internal: true</code> flag:
+   <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">includes</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">brew</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">taskfile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./brew.yml</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">cargo</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">taskfile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./internal/cargo.yml</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="c1"># ... etc</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Defines comprehensive <code>update-all</code> task:</strong></p>
+</li>
+</ol>
+<p><strong>macOS (7 update steps):</strong>
+   1. Homebrew (formulas + casks)
+   2. Mac App Store (mas)
+   3. npm global packages
+   4. Python tools (uv)
+   5. Rust packages (cargo)
+   6. Shell plugins
+   7. Tmux plugins</p>
+<p><strong>WSL Ubuntu (6 update steps):</strong>
+   1. System packages (apt)
+   2. npm global packages
+   3. Python tools (uv)
+   4. Rust packages (cargo)
+   5. Shell plugins
+   6. Tmux plugins</p>
+<p><strong>Arch Linux (7 update steps):</strong>
+   1. System packages (pacman)
+   2. AUR packages (yay)
+   3. npm global packages
+   4. Python tools (uv)
+   5. Rust packages (cargo)
+   6. Shell plugins
+   7. Tmux plugins</p>
+<p>Each update-all task provides clear visual separation with informative headers and step indicators.</p>
+<h3 id="phase-5-remove-generic-cross-platform-tasks">Phase 5: Remove Generic Cross-Platform Tasks<a class="headerlink" href="#phase-5-remove-generic-cross-platform-tasks" title="Permanent link">&para;</a></h3>
+<p><strong>File Modified:</strong> <code>Taskfile.yml</code></p>
+<p>Removed tasks:
+- <code>update</code> - Ambiguous generic task
+- <code>clean</code> - Users should run native commands directly</p>
+<p>Kept tasks:
+- <code>install</code> - Platform auto-detection and installation
+- <code>install-macos</code>, <code>install-wsl</code>, <code>install-arch</code> - Platform-specific installations
+- <code>default</code> - Show available tasks</p>
+<h3 id="phase-6-documentation-update">Phase 6: Documentation Update<a class="headerlink" href="#phase-6-documentation-update" title="Permanent link">&para;</a></h3>
+<p><strong>File Modified:</strong> <code>docs/reference/tasks.md</code></p>
+<p>Major documentation rewrite including:</p>
+<ol>
+<li><strong>New philosophy section</strong> explaining platform-specific approach</li>
+<li><strong>Package Management section</strong> with clear examples of each platform's <code>update-all</code> command</li>
+<li><strong>Detailed breakdown</strong> of what gets updated on each platform</li>
+<li><strong>Direct command reference</strong> for selective updates</li>
+<li><strong>Design Principles</strong> explaining modular internal tasks</li>
+<li><strong>Single Source of Truth</strong> documentation for package lists</li>
+</ol>
+<p>Documentation now clearly explains:
+- Why generic tasks were removed
+- How to update everything on your platform (one command)
+- How to selectively update specific components (native commands)
+- The modular internal task architecture</p>
+<h2 id="testing-methodology">Testing Methodology<a class="headerlink" href="#testing-methodology" title="Permanent link">&para;</a></h2>
+<h3 id="syntax-validation">Syntax Validation<a class="headerlink" href="#syntax-validation" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>--list
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Result: ✅ All taskfiles parse correctly</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Result: ✅ Only platform-specific update-all tasks visible</span>
 </span></code></pre></div>
-<h2 id="symlink-system">Symlink System<a class="headerlink" href="#symlink-system" title="Permanent link">&para;</a></h2>
-<p>Two-layer approach: common base + platform overlay.</p>
-<p><strong>Step 1</strong>: Link common files</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>symlinks<span class="w"> </span>link<span class="w"> </span>common
+<h3 id="internal-task-verification">Internal Task Verification<a class="headerlink" href="#internal-task-verification" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>task<span class="w"> </span>--list-all<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>update
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Result: ✅ Internal update tasks not shown in regular list</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Result: ✅ Platform update-all tasks are public</span>
 </span></code></pre></div>
-<p>Links <code>common/</code> to <code>$HOME</code>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
+<h3 id="task-summary-inspection">Task Summary Inspection<a class="headerlink" href="#task-summary-inspection" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>macos:update-all<span class="w"> </span>--summary
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Result: ✅ Shows all 7 update steps</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Result: ✅ Correct namespace references (macos:brew:update, etc.)</span>
 </span></code></pre></div>
-<p><strong>Step 2</strong>: Overlay platform files</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>symlinks<span class="w"> </span>link<span class="w"> </span>macos
-</span></code></pre></div>
-<p>Overlays platform-specific files:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>macos/.gitconfig → ~/.gitconfig  (overrides common if it existed)
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>macos/.profile → ~/.profile
-</span></code></pre></div>
-<p>Platform files override common files when both exist.</p>
-<h2 id="package-management">Package Management<a class="headerlink" href="#package-management" title="Permanent link">&para;</a></h2>
-<p><strong>System Packages</strong>: Homebrew (macOS), apt (Ubuntu), pacman (Arch)</p>
-<p><strong>Language Versions</strong>: uv (Python), nvm (Node.js)</p>
-<p><strong>Why separate</strong>: Version managers provide cross-platform consistency and project-specific versions without system conflicts.</p>
-<h2 id="platform-detection">Platform Detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h2>
-<p><strong>Shell</strong> (<code>common/.config/zsh/.zshrc</code>):</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="c1"># macOS</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/proc/version<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Microsoft<span class="w"> </span>/proc/version<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="c1"># WSL</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/etc/arch-release<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="c1"># Arch</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">fi</span>
-</span></code></pre></div>
-<p><strong>Taskfile</strong> (<code>Taskfile.yml</code>):</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">vars</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">PLATFORM</span><span class="p">:</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">sh</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="no">if [ &quot;$(uname)&quot; = &quot;Darwin&quot; ]; then</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="no">echo &quot;macos&quot;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="no">elif [ -f /etc/arch-release ]; then</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="no">echo &quot;arch&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="no">else</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="no">echo &quot;linux&quot;</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">      </span><span class="no">fi</span>
-</span></code></pre></div>
-<h2 id="configuration-layers">Configuration Layers<a class="headerlink" href="#configuration-layers" title="Permanent link">&para;</a></h2>
-<p>Configurations use inheritance: shared base with platform overrides.</p>
-<p><strong>Example: Git Config</strong></p>
-<p>macOS (<code>macos/.gitconfig</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[core]
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    editor = code --wait
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>[credential]
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    helper = osxkeychain
-</span></code></pre></div>
-<p>WSL (<code>wsl/.gitconfig</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[core]
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    editor = nvim
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>[credential]
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-wincred.exe
-</span></code></pre></div>
-<p><strong>Example: Neovim</strong></p>
-<p>Common (<code>common/.config/nvim/</code>): Base LSP, core plugins, keybindings</p>
-<p>Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs</p>
+<h2 id="files-modified">Files Modified<a class="headerlink" href="#files-modified" title="Permanent link">&para;</a></h2>
+<h3 id="created">Created<a class="headerlink" href="#created" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>taskfiles/internal/cargo.yml</code> - Rust package updates</li>
+<li><code>taskfiles/internal/mas.yml</code> - Mac App Store updates</li>
+<li><code>taskfiles/internal/tmux-plugins.yml</code> - Tmux plugin updates</li>
+<li><code>taskfiles/internal/apt.yml</code> - APT package updates</li>
+<li><code>taskfiles/internal/pacman.yml</code> - Pacman package updates</li>
+<li><code>taskfiles/internal/yay.yml</code> - AUR package updates</li>
+<li><code>.planning/taskfile-refactor-plan.md</code> - Comprehensive refactor plan</li>
+</ul>
+<h3 id="modified">Modified<a class="headerlink" href="#modified" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>config/packages.yml</code> - Added cargo_packages, tmux_plugins, mas_apps sections</li>
+<li><code>taskfiles/brew.yml</code> - Consolidated update+upgrade, marked internal</li>
+<li><code>taskfiles/npm.yml</code> - Added update task, marked internal</li>
+<li><code>taskfiles/uv.yml</code> - Added update task, marked internal</li>
+<li><code>taskfiles/shell.yml</code> - Marked update task internal</li>
+<li><code>taskfiles/macos.yml</code> - Added includes and update-all task</li>
+<li><code>taskfiles/wsl.yml</code> - Added includes and update-all task</li>
+<li><code>taskfiles/arch.yml</code> - Added includes and update-all task</li>
+<li><code>Taskfile.yml</code> - Removed generic update and clean tasks</li>
+<li><code>docs/reference/tasks.md</code> - Complete rewrite of package management section</li>
+</ul>
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
-<p><strong>Symlinks over Stow</strong>: Custom tool provides better two-layer linking, clearer error messages, platform awareness.</p>
-<p><strong>Taskfile over Makefile</strong>: Cross-platform consistency, better syntax for complex commands, modular includes, self-documenting.</p>
-<p><strong>Version Managers for Languages</strong>: Same Node/Python versions across platforms, project-specific versions, no system conflicts.</p>
-<p><strong>Separate Theme Systems</strong>: Ghostty has 600+ themes with live preview. tinty provides Base16 sync across tmux/bat/fzf/shell. Both run in parallel for flexibility.</p>
-<h2 id="advantages">Advantages<a class="headerlink" href="#advantages" title="Permanent link">&para;</a></h2>
-<p><strong>Minimal Duplication</strong>: Only platform differences exist in platform directories.</p>
-<p><strong>Clear Separation</strong>: common/ for shared, platform dirs for quirks only.</p>
-<p><strong>Easy Maintenance</strong>: Update shared config once, all platforms benefit.</p>
-<p><strong>Testable</strong>: Each platform can be tested independently with VMs.</p>
-<h2 id="trade-offs">Trade-offs<a class="headerlink" href="#trade-offs" title="Permanent link">&para;</a></h2>
-<p><strong>Symlink Complexity</strong>: Two-layer system adds complexity, but <code>symlinks</code> tool handles it with clear errors.</p>
-<p><strong>Platform Knowledge</strong>: Need to know whether to edit <code>common/</code> or platform dir. Experience makes this clear.</p>
-<p>See <a href="../reference/platforms/">Platform Differences</a> for platform-specific quirks.</p>
+<h3 id="why-internal-tasks">Why Internal Tasks?<a class="headerlink" href="#why-internal-tasks" title="Permanent link">&para;</a></h3>
+<p>Internal tasks provide modular, reusable update logic without polluting the user-facing task list. Users don't need to know about individual component updates - they just run <code>task &lt;platform&gt;:update-all</code>.</p>
+<p>Benefits:
+- Clean task namespace (only platform tasks visible)
+- Reusable logic across platforms
+- Easy to add new components (create internal task, include in platform)
+- Separation of concerns (implementation vs interface)</p>
+<h3 id="why-platform-specific-instead-of-generic">Why Platform-Specific Instead of Generic?<a class="headerlink" href="#why-platform-specific-instead-of-generic" title="Permanent link">&para;</a></h3>
+<p>Each platform has different package managers and tools:
+- macOS: brew, mas (unique to macOS)
+- WSL: apt (unique to Debian/Ubuntu)
+- Arch: pacman, yay (unique to Arch)</p>
+<p>A generic <code>task update</code> would either:
+1. Not work on all platforms (mas doesn't exist on Linux)
+2. Have complex conditional logic in one file
+3. Be ambiguous about what it updates</p>
+<p>Platform-specific tasks are:
+- Clear: Users know exactly what gets updated
+- Maintainable: Each platform's logic is isolated
+- Flexible: Easy to add platform-specific tools
+- Comprehensive: Can update ALL package managers on that platform</p>
+<h3 id="why-centralized-package-configuration">Why Centralized Package Configuration?<a class="headerlink" href="#why-centralized-package-configuration" title="Permanent link">&para;</a></h3>
+<p>Before: Package lists were hardcoded in taskfiles:
+- npm packages: hardcoded in <code>taskfiles/npm.yml</code>
+- uv tools: hardcoded in <code>taskfiles/uv.yml</code>
+- Shell plugins: in <code>config/packages.yml</code>
+- No cargo, tmux, or mas tracking</p>
+<p>After: All in <code>config/packages.yml</code>:
+- Single file to edit when adding/removing packages
+- Clear documentation of what's installed
+- Easy to review what tools you have
+- Consistent structure across package types</p>
+<h3 id="why-combine-update-upgrade">Why Combine Update + Upgrade?<a class="headerlink" href="#why-combine-update-upgrade" title="Permanent link">&para;</a></h3>
+<p>Systems like brew have separate <code>update</code> (fetch package lists) and <code>upgrade</code> (install new versions). But users almost always want both operations together.</p>
+<p>Before:
+- <code>task brew:update</code> - Just fetches package lists
+- <code>task brew:upgrade</code> - Just installs updates
+- Users had to remember to run both</p>
+<p>After:
+- <code>task macos:update-all</code> - Does both automatically
+- For selective updates, use <code>brew update &amp;&amp; brew upgrade</code> directly
+- No wrapper tasks for simple operations</p>
+<h2 id="migration-guide">Migration Guide<a class="headerlink" href="#migration-guide" title="Permanent link">&para;</a></h2>
+<h3 id="before-this-refactor">Before This Refactor<a class="headerlink" href="#before-this-refactor" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Update packages (only updated brew, npm, uv)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>task<span class="w"> </span>update
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Clean caches</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>task<span class="w"> </span>clean
+</span></code></pre></div>
+<h3 id="after-this-refactor">After This Refactor<a class="headerlink" href="#after-this-refactor" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Update ALL packages on macOS</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>task<span class="w"> </span>macos:update-all
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Update ALL packages on WSL</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>task<span class="w"> </span>wsl:update-all
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Update ALL packages on Arch</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>task<span class="w"> </span>arch:update-all
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># For selective updates, use native commands:</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>brew<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>brew<span class="w"> </span>upgrade
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>mas<span class="w"> </span>upgrade
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade<span class="w"> </span>-y
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>npm<span class="w"> </span>update<span class="w"> </span>-g
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>uv<span class="w"> </span>tool<span class="w"> </span>upgrade<span class="w"> </span>--all
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>cargo<span class="w"> </span>install-update<span class="w"> </span>-a
+</span></code></pre></div>
+<h2 id="key-learnings">Key Learnings<a class="headerlink" href="#key-learnings" title="Permanent link">&para;</a></h2>
+<h3 id="1-taskfile-internal-tasks-are-powerful">1. Taskfile Internal Tasks Are Powerful<a class="headerlink" href="#1-taskfile-internal-tasks-are-powerful" title="Permanent link">&para;</a></h3>
+<p>The <code>internal: true</code> flag creates function-like tasks that can be composed into public orchestration tasks. This is perfect for modular design.</p>
+<p>Pattern:
+<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># In internal taskfile</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">tasks</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">update</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="c1"># update logic</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># In platform taskfile</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nt">includes</span><span class="p">:</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="nt">component</span><span class="p">:</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span><span class="nt">taskfile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./internal/component.yml</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># Hide ALL tasks from this include</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="nt">tasks</span><span class="p">:</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span><span class="nt">update-all</span><span class="p">:</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">component:update</span>
+</span></code></pre></div></p>
+<h3 id="2-include-with-internal-flag-prevents-namespace-pollution">2. Include with Internal Flag Prevents Namespace Pollution<a class="headerlink" href="#2-include-with-internal-flag-prevents-namespace-pollution" title="Permanent link">&para;</a></h3>
+<p>Without <code>internal: true</code> on includes, all tasks from included files appear in the parent namespace. With it, they're hidden but still callable.</p>
+<p>This creates a clean public API (only platform tasks) while maintaining modular implementation.</p>
+<h3 id="3-platform-specific-beats-generic">3. Platform-Specific Beats Generic<a class="headerlink" href="#3-platform-specific-beats-generic" title="Permanent link">&para;</a></h3>
+<p>Trying to make tasks work across all platforms leads to:
+- Complex conditional logic
+- Ambiguous task names
+- Incomplete functionality
+- Harder maintenance</p>
+<p>Platform-specific tasks are:
+- Simpler to implement
+- Clearer to users
+- Easier to maintain
+- More comprehensive</p>
+<h3 id="4-centralized-config-reduces-duplication">4. Centralized Config Reduces Duplication<a class="headerlink" href="#4-centralized-config-reduces-duplication" title="Permanent link">&para;</a></h3>
+<p>Having package lists in one file means:
+- Single source of truth
+- Easy to add/remove packages
+- Clear documentation of installed tools
+- Consistent structure</p>
+<p>The <code>config/packages.yml</code> approach works well and should be extended to more components.</p>
+<h3 id="5-graceful-degradation-in-update-tasks">5. Graceful Degradation in Update Tasks<a class="headerlink" href="#5-graceful-degradation-in-update-tasks" title="Permanent link">&para;</a></h3>
+<p>Update tasks should check if tools are installed and skip gracefully if not:</p>
+<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">cmds</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="no">if ! command -v tool &gt;/dev/null 2&gt;&amp;1; then</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="no">echo &quot;  tool not installed - skipping&quot;</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="no">exit 0</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="no">fi</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="no"># update logic</span>
+</span></code></pre></div>
+<p>This allows update-all to work even if some components aren't installed.</p>
+<h2 id="future-enhancements">Future Enhancements<a class="headerlink" href="#future-enhancements" title="Permanent link">&para;</a></h2>
+<p>Potential improvements for future work:</p>
+<ol>
+<li><strong>cargo-update installation</strong> - Add cargo install cargo-update to platform setup tasks</li>
+<li><strong>TPM auto-installation</strong> - Detect if TPM is missing and offer to install</li>
+<li><strong>Update logging</strong> - Log update history to track when packages were last updated</li>
+<li><strong>Parallel updates</strong> - Investigate running independent updates in parallel for speed</li>
+<li><strong>Update summary</strong> - Show summary at end: "Updated 15 packages, skipped 3 not installed"</li>
+</ol>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>This refactor transforms the Taskfile system from an ambiguous collection of wrapper tasks into a clear, modular, platform-specific automation system. Users can now update everything on their platform with one command, and adding new components is straightforward.</p>
+<p>The modular internal task architecture sets a pattern for future task organization and makes the system much more maintainable.</p>
+<p><strong>Key Outcomes:</strong>
+- ✅ Clear platform-specific update commands
+- ✅ Comprehensive updates (all package managers + tools)
+- ✅ Modular, maintainable architecture
+- ✅ Single source of truth for package configuration
+- ✅ Graceful degradation when tools aren't installed
+- ✅ Excellent documentation</p>
+<p><strong>User Impact:</strong>
+- Before: <code>task update</code> (ambiguous, incomplete)
+- After: <code>task macos:update-all</code> (clear, comprehensive)</p>
 
 
 
@@ -1584,10 +1833,10 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
       
     
   </body>

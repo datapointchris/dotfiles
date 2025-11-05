@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/architecture/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/learnings/">
       
       
-        <link rel="prev" href="../getting-started/first-config/">
+        <link rel="prev" href="../publishing/">
       
       
-        <link rel="next" href="../reference/platforms/">
+        <link rel="next" href="relative-path-calculation/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -143,7 +143,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture" class="md-skip">
+        <a href="#learnings" class="md-skip">
           Skip to content
         </a>
       
@@ -330,13 +330,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../architecture/" class="md-tabs__link">
           
   
   
@@ -398,11 +396,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../learnings/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -646,8 +646,6 @@
       
   
   
-    
-  
   
   
     
@@ -661,23 +659,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../architecture/" class="md-nav__link ">
               
   
   
@@ -691,7 +688,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Architecture
@@ -1119,6 +1116,8 @@
       
   
   
+    
+  
   
   
     
@@ -1138,22 +1137,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../learnings/" class="md-nav__link ">
+            <a href="./" class="md-nav__link md-nav__link--active">
               
   
   
@@ -1166,13 +1166,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+              <label class="md-nav__link md-nav__link--active" for="__nav_6" id="__nav_6_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Learnings
@@ -1188,7 +1188,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -1211,7 +1211,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -1234,7 +1234,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -1430,93 +1430,30 @@
   
 
 
-<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>How the dotfiles repository is organized and why.</p>
-<h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── common/          # Shared configs (all platforms)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── macos/           # macOS-specific overrides
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── wsl/             # WSL Ubuntu overrides
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── arch/            # Arch Linux overrides
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── taskfiles/       # Task automation
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── scripts/install/ # Bootstrap scripts
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└── tools/symlinks/  # Symlink management tool
-</span></code></pre></div>
-<h2 id="symlink-system">Symlink System<a class="headerlink" href="#symlink-system" title="Permanent link">&para;</a></h2>
-<p>Two-layer approach: common base + platform overlay.</p>
-<p><strong>Step 1</strong>: Link common files</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>symlinks<span class="w"> </span>link<span class="w"> </span>common
-</span></code></pre></div>
-<p>Links <code>common/</code> to <code>$HOME</code>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
-</span></code></pre></div>
-<p><strong>Step 2</strong>: Overlay platform files</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>symlinks<span class="w"> </span>link<span class="w"> </span>macos
-</span></code></pre></div>
-<p>Overlays platform-specific files:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>macos/.gitconfig → ~/.gitconfig  (overrides common if it existed)
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>macos/.profile → ~/.profile
-</span></code></pre></div>
-<p>Platform files override common files when both exist.</p>
-<h2 id="package-management">Package Management<a class="headerlink" href="#package-management" title="Permanent link">&para;</a></h2>
-<p><strong>System Packages</strong>: Homebrew (macOS), apt (Ubuntu), pacman (Arch)</p>
-<p><strong>Language Versions</strong>: uv (Python), nvm (Node.js)</p>
-<p><strong>Why separate</strong>: Version managers provide cross-platform consistency and project-specific versions without system conflicts.</p>
-<h2 id="platform-detection">Platform Detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h2>
-<p><strong>Shell</strong> (<code>common/.config/zsh/.zshrc</code>):</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="c1"># macOS</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/proc/version<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Microsoft<span class="w"> </span>/proc/version<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="c1"># WSL</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/etc/arch-release<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="c1"># Arch</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">fi</span>
-</span></code></pre></div>
-<p><strong>Taskfile</strong> (<code>Taskfile.yml</code>):</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">vars</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">PLATFORM</span><span class="p">:</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">sh</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="no">if [ &quot;$(uname)&quot; = &quot;Darwin&quot; ]; then</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="no">echo &quot;macos&quot;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="no">elif [ -f /etc/arch-release ]; then</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="no">echo &quot;arch&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="no">else</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="no">echo &quot;linux&quot;</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">      </span><span class="no">fi</span>
-</span></code></pre></div>
-<h2 id="configuration-layers">Configuration Layers<a class="headerlink" href="#configuration-layers" title="Permanent link">&para;</a></h2>
-<p>Configurations use inheritance: shared base with platform overrides.</p>
-<p><strong>Example: Git Config</strong></p>
-<p>macOS (<code>macos/.gitconfig</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[core]
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    editor = code --wait
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>[credential]
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    helper = osxkeychain
-</span></code></pre></div>
-<p>WSL (<code>wsl/.gitconfig</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[core]
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    editor = nvim
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>[credential]
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-wincred.exe
-</span></code></pre></div>
-<p><strong>Example: Neovim</strong></p>
-<p>Common (<code>common/.config/nvim/</code>): Base LSP, core plugins, keybindings</p>
-<p>Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs</p>
-<h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
-<p><strong>Symlinks over Stow</strong>: Custom tool provides better two-layer linking, clearer error messages, platform awareness.</p>
-<p><strong>Taskfile over Makefile</strong>: Cross-platform consistency, better syntax for complex commands, modular includes, self-documenting.</p>
-<p><strong>Version Managers for Languages</strong>: Same Node/Python versions across platforms, project-specific versions, no system conflicts.</p>
-<p><strong>Separate Theme Systems</strong>: Ghostty has 600+ themes with live preview. tinty provides Base16 sync across tmux/bat/fzf/shell. Both run in parallel for flexibility.</p>
-<h2 id="advantages">Advantages<a class="headerlink" href="#advantages" title="Permanent link">&para;</a></h2>
-<p><strong>Minimal Duplication</strong>: Only platform differences exist in platform directories.</p>
-<p><strong>Clear Separation</strong>: common/ for shared, platform dirs for quirks only.</p>
-<p><strong>Easy Maintenance</strong>: Update shared config once, all platforms benefit.</p>
-<p><strong>Testable</strong>: Each platform can be tested independently with VMs.</p>
-<h2 id="trade-offs">Trade-offs<a class="headerlink" href="#trade-offs" title="Permanent link">&para;</a></h2>
-<p><strong>Symlink Complexity</strong>: Two-layer system adds complexity, but <code>symlinks</code> tool handles it with clear errors.</p>
-<p><strong>Platform Knowledge</strong>: Need to know whether to edit <code>common/</code> or platform dir. Experience makes this clear.</p>
-<p>See <a href="../reference/platforms/">Platform Differences</a> for platform-specific quirks.</p>
+<h1 id="learnings">Learnings<a class="headerlink" href="#learnings" title="Permanent link">&para;</a></h1>
+<p>Quick-reference lessons learned from dotfiles development. Each learning captures a specific bug, gotcha, or best practice worth remembering.</p>
+<h2 id="available-learnings">Available Learnings<a class="headerlink" href="#available-learnings" title="Permanent link">&para;</a></h2>
+<h3 id="relative-path-calculation"><a href="relative-path-calculation/">Relative Path Calculation</a><a class="headerlink" href="#relative-path-calculation" title="Permanent link">&para;</a></h3>
+<p>Python stdlib path resolution vs manual calculation.</p>
+<p><strong>Key lesson</strong>: Use <code>Path.relative_to(walk_up=True)</code> instead of manual path calculation to avoid breaking symlinks.</p>
+<h3 id="directory-pattern-matching"><a href="directory-pattern-matching/">Directory Pattern Matching</a><a class="headerlink" href="#directory-pattern-matching" title="Permanent link">&para;</a></h3>
+<p>Glob pattern matching for directories and the significance of trailing slashes.</p>
+<p><strong>Key lesson</strong>: Check for <code>/.git/</code> or starts with <code>.git/</code>, not substring match, to avoid excluding <code>.gitconfig</code>.</p>
+<h3 id="cross-platform-symlinks"><a href="cross-platform-symlink-considerations/">Cross-Platform Symlinks</a><a class="headerlink" href="#cross-platform-symlinks" title="Permanent link">&para;</a></h3>
+<p>Windows vs Unix symlink behavior differences.</p>
+<p><strong>Key lesson</strong>: Test cross-platform edge cases - <code>.gitconfig</code>, <code>.gitignore</code>, <code>.gitattributes</code> should never be excluded.</p>
+<h2 id="format">Format<a class="headerlink" href="#format" title="Permanent link">&para;</a></h2>
+<p>Learnings follow a concise format (30-50 lines):</p>
+<ol>
+<li><strong>Problem</strong>: What went wrong</li>
+<li><strong>Solution</strong>: How to do it correctly</li>
+<li><strong>Key Learnings</strong>: Bullet points of actionable wisdom</li>
+<li><strong>Testing</strong>: Brief example (optional)</li>
+<li><strong>Related</strong>: Links to other learnings</li>
+</ol>
+<h2 id="adding-learnings">Adding Learnings<a class="headerlink" href="#adding-learnings" title="Permanent link">&para;</a></h2>
+<p>Create new learning in <code>docs/learnings/</code> when you discover something worth remembering.</p>
+<p>Target 30-50 lines total - if longer, it belongs in main documentation not learnings.</p>
 
 
 
