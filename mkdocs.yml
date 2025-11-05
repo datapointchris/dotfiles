@@ -144,6 +144,7 @@ nav:
   - Reference:
       - Platform Differences: reference/platforms.md
       - Tool Reference: reference/tools.md
+      - Claude Code Hooks: reference/hooks.md
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
       - GitHub Pages: reference/github-pages.md
@@ -152,6 +153,8 @@ nav:
       - Publishing Docs: publishing.md
   - Learnings:
       - Relative Path Calculation: learnings/relative-path-calculation.md
+      - Directory Pattern Matching: learnings/directory-pattern-matching.md
+      - Cross-Platform Symlinks: learnings/cross-platform-symlink-considerations.md
   - Changelog:
       - Summary: changelog.md
       - 2025-11-05: changelog/2025-11-05.md
