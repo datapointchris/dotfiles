@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# ================================================================
+# Theme Sync - Base16 Theme Manager
+# ================================================================
+# Manages Base16 color schemes across multiple applications using tinty
+# Supports: tmux, bat, fzf, eza/ls_colors, shell
+#
+# This works in parallel with your existing ghostty-theme script
+# - Use ghostty-theme for Ghostty-specific theme management
+# - Use theme-sync for synchronized themes across other apps
+# ================================================================
+
+set -euo pipefail
+
+# Color output helpers
+color_green() { echo -e "\033[32m$1\033[0m"; }
+color_red() { echo -e "\033[31m$1\033[0m"; }
+color_yellow() { echo -e "\033[33m$1\033[0m"; }
+color_blue() { echo -e "\033[34m$1\033[0m"; }
+
+# Your favorite Base16 themes (matching neovim and ghostty favorites)
+FAVORITES=(
+  "base16-rose-pine"
+  "base16-rose-pine-moon"
+  "base16-gruvbox-dark-hard"
+  "base16-gruvbox-dark-medium"
+  "base16-kanagawa"
+  "base16-oceanicnext"
+  "base16-github-dark"
+  "base16-nord"
+  "base16-selenized-dark"
+  "base16-everforest-dark-hard"
+  "base16-tomorrow-night"
+  "base16-tomorrow-night-eighties"
+)
+
+# ================================================================
+# FUNCTIONS
+# ================================================================
+
+show_help() {
+  cat << EOF
+$(color_blue "Theme Sync - Base16 Theme Manager")
+
+Manage Base16 color schemes across tmux, bat, fzf, and shell.
+
+$(color_yellow "USAGE:")
+  theme-sync [command] [options]
+
+$(color_yellow "COMMANDS:")
+  apply <theme>     Apply a Base16 theme
+  current           Show currently applied theme
+  list              List all available Base16 themes
+  favorites         List your favorite themes
+  info <theme>      Show color palette for a theme
+  random            Apply a random favorite theme
+  reload            Reload theme in running applications
+  verify            Verify theme system is working
+
+$(color_yellow "EXAMPLES:")
+  theme-sync apply base16-rose-pine
+  theme-sync current
+  theme-sync favorites
+  theme-sync random
+
+$(color_yellow "QUICK THEME SHORTCUTS:")
+  You can also use task shortcuts:
+  - task themes:rose-pine
+  - task themes:gruvbox
+  - task themes:kanagawa
+  - task themes:nord
+
+$(color_yellow "NOTE:")
+  This works alongside your ghostty-theme script:
+  - Use ghostty-theme for Ghostty-specific themes
+  - Use theme-sync for tmux, bat, fzf, shell themes
+EOF
+}
+
+apply_theme() {
+  local theme="$1"
+
+  if [[ -z "$theme" ]]; then
+    echo "$(color_red "Error:") Theme name required"
+    echo "Usage: theme-sync apply <theme-name>"
+    exit 1
+  fi
+
+  echo "$(color_blue "Applying theme:") $theme"
+
+  # Apply theme via tinty
+  if ! tinty apply "$theme" 2>&1; then
+    echo "$(color_red "Error:") Failed to apply theme"
+    echo "Check if theme exists with: theme-sync list"
+    exit 1
+  fi
+
+  # Reload tmux if running
+  if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
+    tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null || true
+    echo "$(color_green "✓") Tmux reloaded"
+  fi
+
+  # Rebuild bat cache
+  if command -v bat &> /dev/null; then
+    bat cache --build &>/dev/null || true
+    echo "$(color_green "✓") Bat cache rebuilt"
+  fi
+
+  echo "$(color_green "✓") Theme applied: $theme"
+}
+
+show_current() {
+  local current_file="$HOME/.local/share/tinted-theming/tinty/artifacts/current_scheme"
+
+  if [[ -f "$current_file" ]]; then
+    local current=$(cat "$current_file")
+    echo "$(color_blue "Current theme:") $current"
+  else
+    color_yellow "No theme currently applied"
+  fi
+}
+
+list_themes() {
+  color_blue "Available Base16 Themes:"
+  echo ""
+  tinty list
+}
+
+list_favorites() {
+  color_blue "Your Favorite Base16 Themes:"
+  echo ""
+  for theme in "${FAVORITES[@]}"; do
+    echo "  $theme"
+  done
+  echo ""
+  echo "Apply with: $(color_yellow "theme-sync apply <theme-name>")"
+}
+
+show_info() {
+  local theme="$1"
+
+  if [[ -z "$theme" ]]; then
+    echo "$(color_red "Error:") Theme name required"
+    echo "Usage: theme-sync info <theme-name>"
+    exit 1
+  fi
+
+  tinty info "$theme"
+}
+
+apply_random() {
+  local random_theme="${FAVORITES[$RANDOM % ${#FAVORITES[@]}]}"
+  echo "$(color_blue "Randomly selected:") $random_theme"
+  apply_theme "$random_theme"
+}
+
+reload_apps() {
+  color_blue "Reloading theme in running applications..."
+
+  # Reload tmux
+  if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
+    tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null && echo "$(color_green "✓") Tmux reloaded"
+  fi
+
+  # Rebuild bat cache
+  if command -v bat &> /dev/null; then
+    bat cache --build &>/dev/null && echo "$(color_green "✓") Bat cache rebuilt"
+  fi
+
+  echo "$(color_green "✓") Theme reloaded"
+}
+
+verify_system() {
+  color_blue "Verifying theme system..."
+  echo ""
+
+  # Check tinty installation
+  if command -v tinty &> /dev/null; then
+    echo "$(color_green "✓") tinty installed"
+  else
+    echo "$(color_red "✗") tinty not installed"
+  fi
+
+  # Check config file
+  if [[ -f "$HOME/.config/tinty/config.toml" ]]; then
+    echo "$(color_green "✓") tinty config exists"
+  else
+    echo "$(color_red "✗") tinty config missing"
+  fi
+
+  # Check current theme
+  local current_file="$HOME/.local/share/tinted-theming/tinty/artifacts/current_scheme"
+  if [[ -f "$current_file" ]]; then
+    local current=$(cat "$current_file")
+    echo "$(color_green "✓") Current theme: $current"
+  else
+    echo "$(color_yellow "⚠") No theme applied"
+  fi
+
+  # Check tmux theme file
+  if [[ -f "$HOME/.config/tmux/themes/current.conf" ]]; then
+    echo "$(color_green "✓") Tmux theme file exists"
+  else
+    echo "$(color_red "✗") Tmux theme file missing"
+  fi
+
+  # Check bat themes
+  if [[ -d "$(bat --config-dir)/themes" ]]; then
+    echo "$(color_green "✓") Bat themes directory exists"
+  else
+    echo "$(color_yellow "⚠") Bat themes directory missing"
+  fi
+}
+
+# ================================================================
+# MAIN
+# ================================================================
+
+case "${1:-help}" in
+  apply)
+    apply_theme "${2:-}"
+    ;;
+  current)
+    show_current
+    ;;
+  list)
+    list_themes
+    ;;
+  favorites|favs)
+    list_favorites
+    ;;
+  info)
+    show_info "${2:-}"
+    ;;
+  random|rand)
+    apply_random
+    ;;
+  reload)
+    reload_apps
+    ;;
+  verify)
+    verify_system
+    ;;
+  help|--help|-h)
+    show_help
+    ;;
+  *)
+    echo "$(color_red "Error:") Unknown command: $1"
+    echo ""
+    show_help
+    exit 1
+    ;;
+esac
