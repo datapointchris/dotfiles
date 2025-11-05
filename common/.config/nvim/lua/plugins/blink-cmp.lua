@@ -23,6 +23,9 @@ return {
     end
 
     return {
+      enabled = function()
+        return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype)
+      end,
       -- Keymap configuration
       keymap = {
         preset = 'none', -- We'll define custom keymaps
