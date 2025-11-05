@@ -41,7 +41,7 @@ These hooks integrate directly with Claude Code's lifecycle and only run during 
 **Git Status:**
 M .claude/settings.json
 M docs/reference/hooks.md
-?? .claude/.pending-changelog
+?? .pending-changelog
 
 **Recent Commits:**
 abc1234 feat: add session-start hook
@@ -184,7 +184,7 @@ git commit -m "chore: update dependencies"
 
 **What it does**:
 
-- Checks `.claude/.pending-changelog` for uncommitted work
+- Checks `.pending-changelog` for uncommitted work
 - If ≤2 pending: shows friendly reminder
 - If ≥3 pending: **BLOCKS commit** until changelog updated
 
@@ -218,7 +218,7 @@ Please update changelog files:
   2. Create/update docs/changelog/2025-11-04.md (detailed entry)
 
 After updating, remove the marker file:
-  rm .claude/.pending-changelog
+  rm .pending-changelog
 
 Or use --no-verify to bypass (not recommended)
 ```
@@ -235,7 +235,7 @@ Or use --no-verify to bypass (not recommended)
 
 - Analyzes commit to determine if "significant"
 - Skips trivial commits (typos, deps, WIP, single-line changes, lock files)
-- Appends significant commits to `.claude/.pending-changelog`
+- Appends significant commits to `.pending-changelog`
 
 **Skipped commit types**:
 

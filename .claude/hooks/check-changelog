@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-PENDING_FILE=".claude/.pending-changelog"
+PENDING_FILE=".pending-changelog"
 THRESHOLD=3
 
 # If no pending changelog file, nothing to check

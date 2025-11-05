@@ -73,7 +73,7 @@ Runs builds and tests on modified tools to catch errors immediately.
 
 Reminds about pending changelog entries after commits.
 
-**Triggers**: When `.claude/.pending-changelog` exists
+**Triggers**: When `.pending-changelog` exists
 
 **Purpose**: Ensures commits are documented in changelog files
 

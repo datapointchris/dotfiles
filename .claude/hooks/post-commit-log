@@ -77,7 +77,7 @@ if [[ $CHANGELOG_ONLY -eq 1 ]]; then
 fi
 
 # Log to pending changelog
-PENDING_FILE=".claude/.pending-changelog"
+PENDING_FILE=".pending-changelog"
 mkdir -p .claude
 echo "$COMMIT_HASH|$COMMIT_MSG|$COMMIT_DATE" >> "$PENDING_FILE"
 

@@ -42,7 +42,7 @@ Implemented comprehensive hooks system combining Claude Code hooks (AI workflow 
 
 - `check-feature-docs` - Enforces documentation updates with code changes (blocks feat/fix commits without docs)
 - `check-changelog` - Blocks commits after 3 pending changelog entries
-- `post-commit-log` - Tracks significant commits to `.claude/.pending-changelog`
+- `post-commit-log` - Tracks significant commits to `.pending-changelog`
 - Conventional commits enforcement via pre-commit framework
 
 **Documentation:**
