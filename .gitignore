@@ -370,3 +370,4 @@ TESTING.*
 
 **/lazy-lock.json
 .claude/sessions/
+.pending-changelog
