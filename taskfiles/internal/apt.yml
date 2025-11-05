@@ -1,0 +1,32 @@
+# ================================================================
+# APT Package Update Tasks (Internal)
+# ================================================================
+# Internal tasks for updating system packages via apt
+# These tasks are called by WSL/Ubuntu update-all command
+# Platform: WSL Ubuntu, Debian-based systems
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all apt packages
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if ! command -v apt >/dev/null 2>&1; then
+          echo "  apt not available - skipping"
+          exit 0
+        fi
+
+        echo "  Updating apt package lists..."
+        sudo apt update
+
+        echo "  Upgrading apt packages..."
+        sudo apt upgrade -y
+
+        echo "  System packages updated"

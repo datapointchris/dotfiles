@@ -6,6 +6,30 @@
 
 version: '3'
 
+vars:
+  UPDATE_LOG_DIR: "{{.HOME}}/.local/state/dotfiles/update-history"
+  UPDATE_LOG_FILE: "{{.UPDATE_LOG_DIR}}/{{now | date \"2006-01-02\"}}.log"
+
+includes:
+  npm:
+    taskfile: ./npm.yml
+    internal: true
+  uv:
+    taskfile: ./uv.yml
+    internal: true
+  shell:
+    taskfile: ./shell.yml
+    internal: true
+  cargo:
+    taskfile: ./internal/cargo.yml
+    internal: true
+  tmux:
+    taskfile: ./internal/tmux-plugins.yml
+    internal: true
+  apt:
+    taskfile: ./internal/apt.yml
+    internal: true
+
 tasks:
   # ================================================================
   # PACKAGE INSTALLATION
@@ -97,6 +121,198 @@ tasks:
         cargo install yazi-fm   # Terminal file manager
         cargo install git-delta # Git diff viewer
         cargo install zoxide    # Smarter cd (if not via apt)
+
+  # ================================================================
+  # UPDATE ALL
+  # ================================================================
+
+  update-all:
+    desc: Update all WSL Ubuntu packages and tools
+    silent: true
+    cmds:
+      - task: check-core-components
+      - task: init-update-log
+      - task: run-updates
+      - task: show-update-summary
+
+  check-core-components:
+    desc: Verify core package managers are installed
+    internal: true
+    silent: true
+    preconditions:
+      - sh: command -v apt >/dev/null 2>&1
+        msg: |
+          ERROR: apt is not installed (core component)
+          This should not happen on Ubuntu - your system may be broken
+      - sh: command -v npm >/dev/null 2>&1
+        msg: |
+          ERROR: npm is not installed (core component)
+          Install Node.js with: task nvm:install
+      - sh: command -v uv >/dev/null 2>&1
+        msg: |
+          ERROR: uv is not installed (core component)
+          Install with: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  init-update-log:
+    desc: Initialize update logging
+    internal: true
+    silent: true
+    cmds:
+      - mkdir -p {{.UPDATE_LOG_DIR}}
+      - |
+        cat > {{.UPDATE_LOG_FILE}} <<EOF
+        ================================================================
+        WSL Ubuntu Update Session
+        ================================================================
+        Date: $(date '+%Y-%m-%d %H:%M:%S')
+        Host: $(hostname)
+        Ubuntu: $(lsb_release -d | cut -f2)
+
+        EOF
+
+  run-updates:
+    desc: Run all update tasks
+    internal: true
+    silent: true
+    cmds:
+      - |
+        echo "================================================================"
+        echo "  WSL Ubuntu Update All - Updating all packages and tools"
+        echo "================================================================"
+        echo ""
+
+        # Track start time
+        START_TIME=$(date +%s)
+
+        # Step 1: System packages
+        echo "Step 1/6 - System packages (apt)"
+        STEP_START=$(date +%s)
+        task wsl:apt:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 2: npm
+        echo "Step 2/6 - npm global packages" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task wsl:npm:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 3: uv
+        echo "Step 3/6 - Python tools (uv)" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task wsl:uv:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 4: cargo
+        echo "Step 4/6 - Rust packages (cargo)" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task wsl:cargo:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 5: shell plugins
+        echo "Step 5/6 - Shell plugins" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task wsl:shell:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 6: tmux plugins
+        echo "Step 6/6 - Tmux plugins" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task wsl:tmux:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Calculate total time
+        END_TIME=$(date +%s)
+        TOTAL_DURATION=$((END_TIME - START_TIME))
+        echo "Total Duration: ${TOTAL_DURATION}s" >> {{.UPDATE_LOG_FILE}}
+
+  show-update-summary:
+    desc: Show update summary
+    internal: true
+    silent: true
+    cmds:
+      - |
+        echo ""
+        echo "================================================================"
+        echo "  Update Complete!"
+        echo "================================================================"
+        echo ""
+        TOTAL_DURATION=$(tail -1 {{.UPDATE_LOG_FILE}} | grep -oE '[0-9]+')
+        echo "Total time: ${TOTAL_DURATION}s"
+        echo "Log saved to: {{.UPDATE_LOG_FILE}}"
+        echo ""
+        echo "Run 'task wsl:update-history' to view update history"
+        echo ""
+
+  update-history:
+    desc: View update history and statistics
+    silent: true
+    cmds:
+      - |
+        if [[ ! -d "{{.UPDATE_LOG_DIR}}" ]]; then
+          echo "No update history found"
+          exit 0
+        fi
+
+        echo "================================================================"
+        echo "  WSL Ubuntu Update History"
+        echo "================================================================"
+        echo ""
+
+        # List all update logs
+        LOG_FILES=$(find {{.UPDATE_LOG_DIR}} -name "*.log" -type f | sort -r)
+
+        if [[ -z "$LOG_FILES" ]]; then
+          echo "No update logs found"
+          exit 0
+        fi
+
+        echo "Recent Updates:"
+        echo ""
+
+        for log in $LOG_FILES; do
+          BASENAME=$(basename "$log" .log)
+          DATE_FIELD=$(head -5 "$log" | grep "^Date:" | cut -d' ' -f2-)
+          DURATION=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "unknown")
+
+          echo "  $BASENAME"
+          echo "    Time: $DATE_FIELD"
+          echo "    Duration: ${DURATION}s"
+          echo ""
+        done
+
+        # Statistics
+        TOTAL_UPDATES=$(echo "$LOG_FILES" | wc -l | tr -d ' ')
+        echo "Statistics:"
+        echo "  Total updates: $TOTAL_UPDATES"
+
+        # Average duration
+        if [[ $TOTAL_UPDATES -gt 0 ]]; then
+          TOTAL_TIME=0
+          COUNT=0
+          for log in $LOG_FILES; do
+            DUR=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "0")
+            if [[ $DUR -gt 0 ]]; then
+              TOTAL_TIME=$((TOTAL_TIME + DUR))
+              COUNT=$((COUNT + 1))
+            fi
+          done
+          if [[ $COUNT -gt 0 ]]; then
+            AVG=$((TOTAL_TIME / COUNT))
+            echo "  Average duration: ${AVG}s"
+          fi
+        fi
 
   # ================================================================
   # WSL-SPECIFIC CONFIGURATION

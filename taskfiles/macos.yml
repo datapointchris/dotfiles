@@ -8,6 +8,31 @@ version: '3'
 
 vars:
   HOMEBREW_PREFIX: "/usr/local"
+  UPDATE_LOG_DIR: "{{.HOME}}/.local/state/dotfiles/update-history"
+  UPDATE_LOG_FILE: "{{.UPDATE_LOG_DIR}}/{{now | date \"2006-01-02\"}}.log"
+
+includes:
+  brew:
+    taskfile: ./brew.yml
+    internal: true
+  npm:
+    taskfile: ./npm.yml
+    internal: true
+  uv:
+    taskfile: ./uv.yml
+    internal: true
+  shell:
+    taskfile: ./shell.yml
+    internal: true
+  cargo:
+    taskfile: ./internal/cargo.yml
+    internal: true
+  mas:
+    taskfile: ./internal/mas.yml
+    internal: true
+  tmux:
+    taskfile: ./internal/tmux-plugins.yml
+    internal: true
 
 tasks:
   # ================================================================
@@ -45,6 +70,206 @@ tasks:
           xcode-select --install
           echo "Complete the installation in the GUI prompt"
           echo "Run 'task macos:install-xcode-tools' again after installation completes"
+        fi
+
+  # ================================================================
+  # UPDATE ALL
+  # ================================================================
+
+  update-all:
+    desc: Update all macOS packages and tools
+    silent: true
+    cmds:
+      - task: check-core-components
+      - task: init-update-log
+      - task: run-updates
+      - task: show-update-summary
+
+  check-core-components:
+    desc: Verify core package managers are installed
+    internal: true
+    silent: true
+    preconditions:
+      - sh: command -v brew >/dev/null 2>&1
+        msg: |
+          ERROR: Homebrew is not installed (core component)
+          Install with: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      - sh: command -v npm >/dev/null 2>&1
+        msg: |
+          ERROR: npm is not installed (core component)
+          Install Node.js with: task nvm:install
+      - sh: command -v uv >/dev/null 2>&1
+        msg: |
+          ERROR: uv is not installed (core component)
+          Install with: brew install --cask uv
+
+  init-update-log:
+    desc: Initialize update logging
+    internal: true
+    silent: true
+    cmds:
+      - mkdir -p {{.UPDATE_LOG_DIR}}
+      - |
+        cat > {{.UPDATE_LOG_FILE}} <<EOF
+        ================================================================
+        macOS Update Session
+        ================================================================
+        Date: $(date '+%Y-%m-%d %H:%M:%S')
+        Host: $(hostname)
+        macOS: $(sw_vers -productVersion)
+
+        EOF
+
+  run-updates:
+    desc: Run all update tasks
+    internal: true
+    silent: true
+    cmds:
+      - |
+        echo "================================================================"
+        echo "  macOS Update All - Updating all packages and tools"
+        echo "================================================================"
+        echo ""
+
+        # Track start time
+        START_TIME=$(date +%s)
+
+        # Step 1: Homebrew
+        echo "Step 1/7 - Homebrew (formulas + casks)"
+        STEP_START=$(date +%s)
+        task macos:brew:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 2: Mac App Store
+        echo "Step 2/7 - Mac App Store" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task macos:mas:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 3: npm
+        echo "Step 3/7 - npm global packages" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task macos:npm:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 4: uv
+        echo "Step 4/7 - Python tools (uv)" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task macos:uv:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 5: cargo
+        echo "Step 5/7 - Rust packages (cargo)" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task macos:cargo:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 6: shell plugins
+        echo "Step 6/7 - Shell plugins" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task macos:shell:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Step 7: tmux plugins
+        echo "Step 7/7 - Tmux plugins" | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_START=$(date +%s)
+        task macos:tmux:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
+        STEP_END=$(date +%s)
+        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
+        echo "" | tee -a {{.UPDATE_LOG_FILE}}
+
+        # Calculate total time
+        END_TIME=$(date +%s)
+        TOTAL_DURATION=$((END_TIME - START_TIME))
+        echo "Total Duration: ${TOTAL_DURATION}s" >> {{.UPDATE_LOG_FILE}}
+
+  show-update-summary:
+    desc: Show update summary
+    internal: true
+    silent: true
+    cmds:
+      - |
+        echo ""
+        echo "================================================================"
+        echo "  Update Complete!"
+        echo "================================================================"
+        echo ""
+        TOTAL_DURATION=$(tail -1 {{.UPDATE_LOG_FILE}} | grep -oE '[0-9]+')
+        echo "Total time: ${TOTAL_DURATION}s"
+        echo "Log saved to: {{.UPDATE_LOG_FILE}}"
+        echo ""
+        echo "Run 'task macos:update-history' to view update history"
+        echo ""
+
+  update-history:
+    desc: View update history and statistics
+    silent: true
+    cmds:
+      - |
+        if [[ ! -d "{{.UPDATE_LOG_DIR}}" ]]; then
+          echo "No update history found"
+          exit 0
+        fi
+
+        echo "================================================================"
+        echo "  macOS Update History"
+        echo "================================================================"
+        echo ""
+
+        # List all update logs
+        LOG_FILES=$(find {{.UPDATE_LOG_DIR}} -name "*.log" -type f | sort -r)
+
+        if [[ -z "$LOG_FILES" ]]; then
+          echo "No update logs found"
+          exit 0
+        fi
+
+        echo "Recent Updates:"
+        echo ""
+
+        for log in $LOG_FILES; do
+          BASENAME=$(basename "$log" .log)
+          DATE_FIELD=$(head -5 "$log" | grep "^Date:" | cut -d' ' -f2-)
+          DURATION=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "unknown")
+
+          echo "  $BASENAME"
+          echo "    Time: $DATE_FIELD"
+          echo "    Duration: ${DURATION}s"
+          echo ""
+        done
+
+        # Statistics
+        TOTAL_UPDATES=$(echo "$LOG_FILES" | wc -l | tr -d ' ')
+        echo "Statistics:"
+        echo "  Total updates: $TOTAL_UPDATES"
+
+        # Average duration
+        if [[ $TOTAL_UPDATES -gt 0 ]]; then
+          TOTAL_TIME=0
+          COUNT=0
+          for log in $LOG_FILES; do
+            DUR=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "0")
+            if [[ $DUR -gt 0 ]]; then
+              TOTAL_TIME=$((TOTAL_TIME + DUR))
+              COUNT=$((COUNT + 1))
+            fi
+          done
+          if [[ $COUNT -gt 0 ]]; then
+            AVG=$((TOTAL_TIME / COUNT))
+            echo "  Average duration: ${AVG}s"
+          fi
         fi
 
   # ================================================================

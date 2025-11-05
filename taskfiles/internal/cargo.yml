@@ -1,0 +1,49 @@
+# ================================================================
+# Cargo Package Update Tasks (Internal)
+# ================================================================
+# Internal tasks for updating Rust packages via cargo
+# These tasks are called by platform-specific update-all commands
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all cargo packages
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if ! command -v cargo >/dev/null 2>&1; then
+          echo "  Cargo not installed - skipping"
+          exit 0
+        fi
+
+        echo "  Updating Rust packages..."
+
+        # Check if cargo-update is installed
+        if command -v cargo-install-update >/dev/null 2>&1; then
+          # Use cargo-update for efficient updates
+          cargo install-update -a
+        else
+          # Fallback: reinstall each package to get latest version
+          echo "   cargo-update not found, using manual update method"
+          echo "   Tip: Install cargo-update with: cargo install cargo-update"
+
+          # Get list of installed packages
+          PACKAGES=$(cargo install --list | grep -E '^[a-z0-9_-]+ v' | cut -d' ' -f1)
+
+          if [[ -z "$PACKAGES" ]]; then
+            echo "  No cargo packages installed"
+          else
+            for pkg in $PACKAGES; do
+              echo "   Updating $pkg..."
+              cargo install "$pkg" 2>&1 | grep -v "^   "
+            done
+          fi
+        fi
+
+        echo "  Rust packages updated"

@@ -1,0 +1,28 @@
+# ================================================================
+# Pacman Package Update Tasks (Internal)
+# ================================================================
+# Internal tasks for updating system packages via pacman
+# These tasks are called by Arch Linux update-all command
+# Platform: Arch Linux
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all pacman packages
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if ! command -v pacman >/dev/null 2>&1; then
+          echo "  pacman not available - skipping"
+          exit 0
+        fi
+
+        echo "  Updating Arch Linux system packages..."
+        sudo pacman -Syu --noconfirm
+        echo "  System packages updated"

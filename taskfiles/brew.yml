@@ -33,22 +33,16 @@ tasks:
   # ================================================================
 
   update:
-    desc: Update Homebrew and all packages
+    desc: Update Homebrew and upgrade all packages
+    internal: true
     silent: true
     cmds:
-      - echo " Updating Homebrew..."
+      - echo "  Updating Homebrew..."
       - brew update
-      - echo " Upgrading packages..."
+      - echo "  Upgrading packages..."
       - brew upgrade
       - task: auto-commit
-      - echo " Homebrew updated!"
-
-  upgrade:
-    desc: Upgrade all installed packages
-    silent: true
-    cmds:
-      - brew upgrade
-      - task: auto-commit
+      - echo "  Homebrew updated"
 
   # ================================================================
   # BREWFILE MANAGEMENT

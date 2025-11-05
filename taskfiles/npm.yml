@@ -53,10 +53,18 @@ tasks:
   # ================================================================
   # UPDATE
   # ================================================================
-  # For simple npm commands, use npm directly:
-  #   npm update -g                   # Update all global packages
-  #   npm outdated -g                 # Check outdated packages
-  #   npm install -g npm@latest       # Update npm itself
+
+  update:
+    desc: Update all npm global packages
+    internal: true
+    silent: true
+    cmds:
+      - echo "  Updating npm global packages..."
+      - |
+        export NVM_DIR="{{.NVM_DIR}}"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm update -g
+      - echo "  npm packages updated"
 
   # ================================================================
   # HELPERS

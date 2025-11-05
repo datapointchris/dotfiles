@@ -48,10 +48,15 @@ tasks:
   # ================================================================
   # UPDATE
   # ================================================================
-  # For simple uv commands, use uv directly:
-  #   uv tool upgrade --all           # Upgrade all tools
-  #   uv tool upgrade <tool>          # Upgrade specific tool
-  #   uv self update                  # Update uv itself
+
+  update:
+    desc: Update all uv tools
+    internal: true
+    silent: true
+    cmds:
+      - echo "  Updating Python tools via uv..."
+      - uv tool upgrade --all
+      - echo "  Python tools updated"
 
   # ================================================================
   # HELPERS

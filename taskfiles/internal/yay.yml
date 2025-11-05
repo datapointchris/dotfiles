@@ -1,0 +1,28 @@
+# ================================================================
+# Yay (AUR) Package Update Tasks (Internal)
+# ================================================================
+# Internal tasks for updating AUR packages via yay
+# These tasks are called by Arch Linux update-all command
+# Platform: Arch Linux
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all AUR packages via yay
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if ! command -v yay >/dev/null 2>&1; then
+          echo "  yay not installed - skipping AUR updates"
+          exit 0
+        fi
+
+        echo "  Updating AUR packages..."
+        yay -Syu --noconfirm
+        echo "  AUR packages updated"

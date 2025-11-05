@@ -1,0 +1,28 @@
+# ================================================================
+# Mac App Store Update Tasks (Internal)
+# ================================================================
+# Internal tasks for updating Mac App Store apps via mas
+# These tasks are called by macOS-specific update-all command
+# Platform: macOS only
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all Mac App Store apps
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if ! command -v mas >/dev/null 2>&1; then
+          echo "  mas not installed - skipping Mac App Store updates"
+          exit 0
+        fi
+
+        echo "  Updating Mac App Store apps..."
+        mas upgrade
+        echo "  Mac App Store apps updated"

@@ -1,0 +1,37 @@
+# ================================================================
+# Tmux Plugin Update Tasks (Internal)
+# ================================================================
+# Internal tasks for updating tmux plugins via TPM
+# These tasks are called by platform-specific update-all commands
+
+version: '3'
+
+vars:
+  TPM_DIR: "{{.HOME}}/.config/tmux/plugins/tpm"
+
+tasks:
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all tmux plugins via TPM
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if [[ ! -d "{{.TPM_DIR}}" ]]; then
+          echo "  TPM not installed - skipping tmux plugin updates"
+          echo "   Install TPM: git clone https://github.com/tmux-plugins/tpm {{.TPM_DIR}}"
+          exit 0
+        fi
+
+        UPDATE_SCRIPT="{{.TPM_DIR}}/bin/update_plugins"
+        if [[ ! -f "$UPDATE_SCRIPT" ]]; then
+          echo "  TPM update script not found - skipping"
+          exit 0
+        fi
+
+        echo "  Updating tmux plugins..."
+        "$UPDATE_SCRIPT" all
+        echo "  Tmux plugins updated"

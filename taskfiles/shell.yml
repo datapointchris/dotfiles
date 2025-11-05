@@ -48,9 +48,10 @@ tasks:
 
   update:
     desc: Update all shell plugins
+    internal: true
     silent: true
     cmds:
-      - echo "✅ Updating shell plugins..."
+      - echo "  Updating shell plugins..."
       - |
         # Read plugins from config/packages.yml
         PLUGINS=$(yq eval '.shell_plugins[].name' {{.PACKAGES_CONFIG}})
@@ -59,7 +60,7 @@ tasks:
           PLUGIN_DIR="{{.PLUGINS_DIR}}/$name"
 
           if [[ -d "$PLUGIN_DIR" ]]; then
-            echo "  Updating $name..."
+            echo "    Updating $name..."
             cd "$PLUGIN_DIR"
 
             # Get default branch (main or master)
@@ -68,14 +69,13 @@ tasks:
               DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
             fi
 
-            git pull origin "$DEFAULT_BRANCH"
-            echo "  $name updated"
+            git pull origin "$DEFAULT_BRANCH" --quiet
           else
-            echo "  $name not installed - skipping"
+            echo "    $name not installed - skipping"
           fi
         done
 
-      - echo "✅ All shell plugins updated!"
+      - echo "  Shell plugins updated"
 
   # ================================================================
   # UTILITIES
