@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Pre-commit hook to ensure documentation and tests are updated with code changes
+
+set -euo pipefail
+
+# Get commit message to detect commit type
+COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
+COMMIT_TYPE=""
+
+if [[ -f "$COMMIT_MSG_FILE" ]]; then
+    COMMIT_MSG=$(cat "$COMMIT_MSG_FILE" 2>/dev/null || echo "")
+    # Extract conventional commit type
+    if [[ "$COMMIT_MSG" =~ ^([a-z]+)(\(.+\))?:\ .+ ]]; then
+        COMMIT_TYPE="${BASH_REMATCH[1]}"
+    fi
+fi
+
+# Lenient for these commit types (warn but allow)
+if [[ "$COMMIT_TYPE" =~ ^(chore|deps|typo|style|ci|build)$ ]]; then
+    echo "ℹ️  $COMMIT_TYPE commit - documentation check skipped"
+    exit 0
+fi
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Categorize files
+CODE_FILES=()
+DOC_FILES=()
+TEST_FILES=()
+CONFIG_FILES=()
+
+while IFS= read -r file; do
+    if [[ -z "$file" ]]; then
+        continue
+    fi
+
+    # Skip lock files and generated files
+    if [[ "$file" =~ \.(lock|pyc)$ ]] || [[ "$file" == *"__pycache__"* ]]; then
+        continue
+    fi
+
+    # Categorize by type
+    if [[ "$file" =~ ^docs/ ]]; then
+        DOC_FILES+=("$file")
+    elif [[ "$file" =~ (test_|_test\.py|\.test\.|tests/) ]]; then
+        TEST_FILES+=("$file")
+    elif [[ "$file" =~ \.(py|sh|yaml|yml|toml)$ ]] && [[ ! "$file" =~ ^(\.pre-commit-config\.yaml|pyproject\.toml)$ ]]; then
+        CODE_FILES+=("$file")
+    elif [[ "$file" =~ \.(yaml|yml|json)$ ]]; then
+        CONFIG_FILES+=("$file")
+    fi
+done <<< "$STAGED_FILES"
+
+# If no code files changed, allow commit
+if [[ ${#CODE_FILES[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+# Check if this is a refactor commit (more lenient)
+if [[ "$COMMIT_TYPE" == "refactor" ]]; then
+    if [[ ${#DOC_FILES[@]} -eq 0 ]]; then
+        echo "⚠️  REFACTOR without doc updates - consider updating relevant documentation"
+        echo ""
+        echo "Modified code files:"
+        printf '  - %s\n' "${CODE_FILES[@]}"
+        echo ""
+        echo "Use --no-verify to skip this check if docs don't need updates"
+    fi
+    exit 0
+fi
+
+# For feat/fix commits, be more strict
+if [[ "$COMMIT_TYPE" =~ ^(feat|fix)$ ]]; then
+    ERRORS=0
+
+    # Check for documentation updates
+    if [[ ${#DOC_FILES[@]} -eq 0 ]]; then
+        echo "❌ DOCUMENTATION REQUIRED"
+        echo ""
+        echo "Code changes detected without documentation updates:"
+        printf '  - %s\n' "${CODE_FILES[@]}"
+        echo ""
+        echo "Please update relevant documentation:"
+
+        # Provide specific suggestions based on what changed
+        if [[ " ${CODE_FILES[*]} " =~ "tools/" ]]; then
+            echo "  - docs/reference/tools.md (tool usage documentation)"
+            echo "  - README.md in the tool directory (if API changed)"
+        fi
+        if [[ " ${CODE_FILES[*]} " =~ ".claude/hooks" ]]; then
+            echo "  - docs/reference/hooks.md (hook documentation)"
+        fi
+        if [[ " ${CODE_FILES[*]} " =~ "common/" ]] || [[ " ${CODE_FILES[*]} " =~ "macos/" ]] || [[ " ${CODE_FILES[*]} " =~ "wsl/" ]]; then
+            echo "  - docs/getting-started/ or docs/architecture/ (as appropriate)"
+        fi
+
+        echo ""
+        ERRORS=1
+    fi
+
+    # Check for test updates (for feat commits)
+    if [[ "$COMMIT_TYPE" == "feat" ]] && [[ ${#TEST_FILES[@]} -eq 0 ]]; then
+        # Check if code files are in tested areas
+        if [[ " ${CODE_FILES[*]} " =~ "tools/" ]]; then
+            echo "⚠️  NEW FEATURE without test updates"
+            echo ""
+            echo "Consider adding tests for:"
+            printf '  - %s\n' "${CODE_FILES[@]}"
+            echo ""
+            echo "Use --no-verify to skip if tests aren't applicable"
+            echo ""
+        fi
+    fi
+
+    if [[ $ERRORS -eq 1 ]]; then
+        echo "Use --no-verify to bypass this check if documentation is not needed"
+        exit 1
+    fi
+fi
+
+# For other commits with code changes, just warn
+if [[ ${#CODE_FILES[@]} -gt 0 ]] && [[ ${#DOC_FILES[@]} -eq 0 ]]; then
+    echo "ℹ️  Code changed without documentation - consider updating docs if needed"
+fi
+
+exit 0

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Pre-commit hook to remind about pending changelog updates
+
+set -euo pipefail
+
+PENDING_FILE=".claude/.pending-changelog"
+THRESHOLD=3
+
+# If no pending changelog file, nothing to check
+if [[ ! -f "$PENDING_FILE" ]]; then
+    exit 0
+fi
+
+# Count pending entries
+PENDING_COUNT=$(wc -l < "$PENDING_FILE" | tr -d ' ')
+
+# If under threshold, just show friendly reminder
+if [[ $PENDING_COUNT -lt $THRESHOLD ]]; then
+    echo "ℹ️  You have $PENDING_COUNT commit(s) pending changelog update"
+    echo "   (will block at $THRESHOLD commits)"
+    exit 0
+fi
+
+# Over threshold - block and show details
+echo "❌ CHANGELOG UPDATE REQUIRED"
+echo ""
+echo "You have $PENDING_COUNT commits without changelog entries:"
+echo ""
+
+# Parse and display pending commits nicely
+while IFS='|' read -r hash msg date; do
+    echo "  $date [$hash] $msg"
+done < "$PENDING_FILE"
+
+echo ""
+echo "Please update changelog files:"
+echo "  1. Add entry to docs/changelog.md (high-level summary)"
+echo "  2. Create/update docs/changelog/$(date +%Y-%m-%d).md (detailed entry)"
+echo ""
+echo "After updating, remove the marker file:"
+echo "  rm $PENDING_FILE"
+echo ""
+echo "Or use --no-verify to bypass (not recommended)"
+
+exit 1
