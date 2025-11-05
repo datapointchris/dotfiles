@@ -4,6 +4,84 @@ This file contains high-level summaries of changes to the dotfiles repository. F
 
 ---
 
+## 2025-11-04 {#2025-11-04}
+
+### Bootstrap Script Cleanup
+
+Removed duplicate package installation from WSL and Arch bootstrap scripts. Bootstrap scripts now follow the macOS pattern: install only what's needed to run Task, then delegate everything to taskfiles.
+
+**Key Changes:**
+
+- `wsl-setup.sh` - Removed duplicate apt package installation (git, curl, wget, build-essential, etc.)
+- `arch-setup.sh` - Removed duplicate pacman package installation (git, curl, wget, base-devel, etc.)
+- Deleted obsolete `lsp-corporate.sh` - no longer needed since migrating from Mason to native LSP
+- Updated documentation to reflect bootstrap script changes
+
+**Philosophy:**
+Bootstrap scripts install the minimum prerequisites to run Task. All package installation and configuration is handled by taskfiles for consistency and maintainability.
+
+**Files Changed:**
+
+- Modified: `install/wsl-setup.sh`, `install/arch-setup.sh`
+- Deleted: `install/lsp-corporate.sh`
+- Modified: `docs/getting-started/installation.md`, `docs/getting-started/quickstart.md`
+
+See [detailed changelog](changelog/2025-11-04.md#bootstrap-cleanup) for full details.
+
+### Claude Code Hooks Implementation
+
+Implemented comprehensive hooks system combining Claude Code hooks (AI workflow automation) and Git hooks (pre-commit framework) to maintain code quality and documentation standards.
+
+**Claude Code Hooks (Phase 1):**
+
+- `session-start` - Auto-loads git status, recent commits, directory structure on session start
+- `stop-build-check` - Runs pytest when tools/symlinks modified
+- `stop-commit-reminder` - Reminds about commits needing changelog
+
+**Git Automation (Phase 2):**
+
+- `check-feature-docs` - Enforces documentation updates with code changes (blocks feat/fix commits without docs)
+- `check-changelog` - Blocks commits after 3 pending changelog entries
+- `post-commit-log` - Tracks significant commits to `.claude/.pending-changelog`
+- Conventional commits enforcement via pre-commit framework
+
+**Documentation:**
+
+- Comprehensive `docs/reference/hooks.md` with examples and workflows
+- Troubleshooting guide and philosophy section
+- Complete implementation plan for future phases (Skills & Advanced Automation)
+
+**Philosophy:**
+Atomic commits with synchronized documentation. Feature commits include usage docs, changelog commits document the development journey separately.
+
+See [detailed changelog](changelog/2025-11-04.md#hooks-implementation) for full details.
+
+### Shell & Configuration Improvements
+
+**Shell Functions:**
+
+- Added `commithelp()` function to suggest commit types based on staged files
+- Enhanced `lscommits` with detailed commit type descriptions
+- Migrated environment functions (development/testing/production) to simple aliases
+- Added `risky` alias for `claude --dangerously-skip-permissions`
+
+**Configuration:**
+
+- Disabled blink-cmp autocomplete for markdown and text filetypes (Neovim)
+- Integrated tinty Base16 theme management for tmux
+- Disabled GNU coreutils PATH addition (macOS) - kept as g-prefixed commands
+- Added nvm initialization to profile
+- Added dotfiles/scripts/utils to PATH
+
+**Documentation:**
+
+- Refactored learnings documentation with conciseness guidelines (30-50 lines max)
+- Condensed relative-path-calculation learning from 101 to 58 lines
+
+See [detailed changelog](changelog/2025-11-04.md#shell-config-improvements) for full details.
+
+---
+
 ## 2025-11-05 {#2025-11-05}
 
 ### Major Dotfiles Simplification
