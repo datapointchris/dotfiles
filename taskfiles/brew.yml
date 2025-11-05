@@ -1,0 +1,204 @@
+# ================================================================
+# Homebrew Package Management Tasks
+# ================================================================
+# Platform: macOS
+# Manages Homebrew packages using Brewfile
+
+version: '3'
+
+vars:
+  BREWFILE: "{{.ROOT_DIR}}/Brewfile"
+  BREWFILE_LOCK: "{{.ROOT_DIR}}/Brewfile.lock.json"
+
+tasks:
+  # ================================================================
+  # INSTALLATION
+  # ================================================================
+
+  install-all:
+    desc: Install all packages from Brewfile
+    cmds:
+      - task: check-brewfile
+      - echo " Installing Homebrew packages from Brewfile..."
+      - brew bundle install --file={{.BREWFILE}}
+      - echo " Homebrew packages installed!"
+    sources:
+      - "{{.BREWFILE}}"
+    generates:
+      - "{{.BREWFILE_LOCK}}"
+
+  install-formulas:
+    desc: Install only formulas (no casks)
+    cmds:
+      - task: check-brewfile
+      - echo " Installing Homebrew formulas..."
+      - brew bundle install --file={{.BREWFILE}} --no-cask
+      - echo " Formulas installed!"
+
+  install-casks:
+    desc: Install only casks (no formulas)
+    cmds:
+      - task: check-brewfile
+      - echo " Installing Homebrew casks..."
+      - brew bundle install --file={{.BREWFILE}} --cask
+      - echo " Casks installed!"
+
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update Homebrew and all packages
+    cmds:
+      - echo " Updating Homebrew..."
+      - brew update
+      - echo " Upgrading packages..."
+      - brew upgrade
+      - task: auto-commit
+      - echo " Homebrew updated!"
+
+  upgrade:
+    desc: Upgrade all installed packages
+    cmds:
+      - brew upgrade
+      - task: auto-commit
+
+  # ================================================================
+  # BREWFILE MANAGEMENT
+  # ================================================================
+
+  dump:
+    desc: Generate Brewfile from currently installed packages
+    cmds:
+      - echo " Generating Brewfile from installed packages..."
+      - echo "  This will OVERWRITE the existing Brewfile!"
+      - echo "  Use with caution - prefer manual editing."
+      - read -p "Continue? (y/N) " -n 1 -r && echo
+      - |
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+          brew bundle dump --file={{.BREWFILE}} --force
+          task: auto-commit
+          echo " Brewfile generated!"
+        else
+          echo " Cancelled"
+        fi
+
+  check-brewfile:
+    desc: Verify Brewfile exists and is valid
+    internal: true
+    preconditions:
+      - sh: test -f {{.BREWFILE}}
+        msg: "Brewfile not found at {{.BREWFILE}}"
+
+  cleanup-brewfile:
+    desc: Remove comments and organize Brewfile
+    cmds:
+      - echo " This task is not yet implemented"
+      - echo " Brewfile should be manually maintained for best organization"
+
+  # ================================================================
+  # SYNC & COMMIT
+  # ================================================================
+
+  auto-commit:
+    desc: Auto-commit Brewfile changes to git
+    internal: true
+    cmds:
+      - |
+        if [[ -f "{{.BREWFILE}}" ]]; then
+          cd "{{.ROOT_DIR}}"
+
+          # Check if there are changes
+          if ! git diff --quiet {{.BREWFILE}} {{.BREWFILE_LOCK}}; then
+            echo " Brewfile changes detected, committing..."
+
+            git add {{.BREWFILE}} {{.BREWFILE_LOCK}} 2>/dev/null || true
+
+            # Get list of changes for commit message
+            ADDED=$(git diff --cached --name-only --diff-filter=A {{.BREWFILE}} | wc -l || echo 0)
+            MODIFIED=$(git diff --cached --name-only --diff-filter=M {{.BREWFILE}} | wc -l || echo 0)
+
+            if git diff --cached --quiet; then
+              echo "No staged changes to commit"
+            else
+              git commit -m "chore(brew): update Brewfile" -m "Automated commit from task brew:auto-commit" -m "Files: Brewfile, Brewfile.lock.json" || echo "Commit failed or nothing to commit"
+
+              echo "Brewfile changes committed"
+            fi
+          else
+            echo "No Brewfile changes to commit"
+          fi
+        fi
+    silent: false
+
+  # ================================================================
+  # MAINTENANCE
+  # ================================================================
+
+  clean:
+    desc: Clean up Homebrew caches and old versions
+    cmds:
+      - echo " Cleaning Homebrew caches..."
+      - brew cleanup
+      - echo " Cleanup complete!"
+
+  doctor:
+    desc: Run brew doctor to check for issues
+    cmds:
+      - echo " Running brew doctor..."
+      - brew doctor
+
+  info:
+    desc: Show Homebrew installation info
+    cmds:
+      - echo " Homebrew Information"
+      - echo ""
+      - brew --version
+      - echo ""
+      - echo "Prefix - $(brew --prefix)"
+      - echo "Cellar - $(brew --cellar)"
+      - echo ""
+      - echo "Installed packages"
+      - echo "  Formulas - $(brew list --formula | wc -l | tr -d ' ')"
+      - echo "  Casks - $(brew list --cask | wc -l | tr -d ' ')"
+
+  # ================================================================
+  # DEPENDENCY MANAGEMENT
+  # ================================================================
+
+  check-python-deps:
+    desc: Check which Homebrew packages depend on Python
+    cmds:
+      - echo " Checking Python dependencies..."
+      - echo ""
+      - echo "Packages that depend on python@3.12"
+      - brew uses --installed python@3.12 || echo "  None"
+      - echo ""
+      - echo "Packages that depend on python@3.13"
+      - brew uses --installed python@3.13 || echo "  None"
+      - echo ""
+      - echo "Packages that depend on python@3.14"
+      - brew uses --installed python@3.14 || echo "  None"
+      - echo ""
+      - echo " If nothing depends on a Python version, consider removing it"
+      - echo " Development Python work should use uv-managed Python"
+
+  # ================================================================
+  # VERIFICATION
+  # ================================================================
+
+  verify:
+    desc: Verify all Brewfile packages are installed
+    cmds:
+      - task: check-brewfile
+      - echo " Verifying Brewfile packages..."
+      - brew bundle check --file={{.BREWFILE}} || echo " Some packages missing - run 'task brew:install-all'"
+
+  list:
+    desc: List all installed packages
+    cmds:
+      - echo " Installed Homebrew Formulas"
+      - brew list --formula
+      - echo ""
+      - echo " Installed Homebrew Casks"
+      - brew list --cask

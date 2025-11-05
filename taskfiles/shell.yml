@@ -1,0 +1,201 @@
+# ================================================================
+# Shell Plugin Management Tasks
+# ================================================================
+# Manages ZSH plugins in ~/.config/zsh/plugins
+# Plugins defined in config/packages.yml
+
+version: '3'
+
+vars:
+  PLUGINS_DIR: "{{.HOME}}/.config/zsh/plugins"
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/config/packages.yml"
+
+tasks:
+  # ================================================================
+  # INSTALLATION
+  # ================================================================
+
+  install:
+    desc: Install all shell plugins
+    cmds:
+      - echo " Installing shell plugins..."
+      - task: install-git-open
+      - task: install-zsh-vi-mode
+      - echo " Shell plugins installed!"
+
+  install-git-open:
+    desc: Install git-open plugin
+    internal: true
+    cmds:
+      - |
+        PLUGIN_DIR="{{.PLUGINS_DIR}}/git-open"
+
+        if [[ -d "$PLUGIN_DIR" ]]; then
+          echo " git-open already installed"
+        else
+          echo " Installing git-open..."
+          mkdir -p "{{.PLUGINS_DIR}}"
+          git clone https://github.com/paulirish/git-open.git "$PLUGIN_DIR"
+          echo " git-open installed"
+        fi
+    status:
+      - test -d {{.PLUGINS_DIR}}/git-open
+
+  install-zsh-vi-mode:
+    desc: Install zsh-vi-mode plugin
+    internal: true
+    cmds:
+      - |
+        PLUGIN_DIR="{{.PLUGINS_DIR}}/zsh-vi-mode"
+
+        if [[ -d "$PLUGIN_DIR" ]]; then
+          echo " zsh-vi-mode already installed"
+        else
+          echo " Installing zsh-vi-mode..."
+          mkdir -p "{{.PLUGINS_DIR}}"
+          git clone https://github.com/jeffreytse/zsh-vi-mode.git "$PLUGIN_DIR"
+          echo " zsh-vi-mode installed"
+        fi
+    status:
+      - test -d {{.PLUGINS_DIR}}/zsh-vi-mode
+
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all shell plugins
+    cmds:
+      - echo " Updating shell plugins..."
+      - task: update-git-open
+      - task: update-zsh-vi-mode
+      - echo " Shell plugins updated!"
+
+  update-git-open:
+    desc: Update git-open plugin
+    internal: true
+    cmds:
+      - |
+        PLUGIN_DIR="{{.PLUGINS_DIR}}/git-open"
+
+        if [[ -d "$PLUGIN_DIR" ]]; then
+          echo " Updating git-open..."
+          cd "$PLUGIN_DIR"
+          git pull origin main
+          echo " git-open updated"
+        else
+          echo " git-open not installed"
+        fi
+
+  update-zsh-vi-mode:
+    desc: Update zsh-vi-mode plugin
+    internal: true
+    cmds:
+      - |
+        PLUGIN_DIR="{{.PLUGINS_DIR}}/zsh-vi-mode"
+
+        if [[ -d "$PLUGIN_DIR" ]]; then
+          echo " Updating zsh-vi-mode..."
+          cd "$PLUGIN_DIR"
+          git pull origin master
+          echo " zsh-vi-mode updated"
+        else
+          echo " zsh-vi-mode not installed"
+        fi
+
+  # ================================================================
+  # UTILITIES
+  # ================================================================
+
+  list:
+    desc: List installed shell plugins
+    cmds:
+      - |
+        echo " Installed shell plugins"
+        if [[ -d "{{.PLUGINS_DIR}}" ]]; then
+          ls -1 "{{.PLUGINS_DIR}}"
+        else
+          echo "  None (plugins directory doesn't exist)"
+        fi
+
+  verify:
+    desc: Verify shell plugins are installed
+    cmds:
+      - |
+        echo " Verifying shell plugins..."
+
+        MISSING=0
+
+        # git-open
+        if [[ -d "{{.PLUGINS_DIR}}/git-open" ]]; then
+          echo " git-open"
+        else
+          echo " git-open (missing)"
+          MISSING=$((MISSING + 1))
+        fi
+
+        # zsh-vi-mode
+        if [[ -d "{{.PLUGINS_DIR}}/zsh-vi-mode" ]]; then
+          echo " zsh-vi-mode"
+        else
+          echo " zsh-vi-mode (missing)"
+          MISSING=$((MISSING + 1))
+        fi
+
+        if [[ $MISSING -gt 0 ]]; then
+          echo ""
+          echo " $MISSING plugin(s) missing - run 'task shell:install'"
+          exit 1
+        else
+          echo ""
+          echo " All shell plugins installed!"
+        fi
+
+  info:
+    desc: Show shell plugin information
+    cmds:
+      - |
+        echo " Shell Plugin Information"
+        echo ""
+        echo "Plugins directory: {{.PLUGINS_DIR}}"
+        echo ""
+
+        if [[ -d "{{.PLUGINS_DIR}}/git-open" ]]; then
+          echo "git-open"
+          cd "{{.PLUGINS_DIR}}/git-open"
+          echo "  Repository - $(git remote get-url origin)"
+          echo "  Last update - $(git log -1 --format=%cd --date=short)"
+          echo ""
+        fi
+
+        if [[ -d "{{.PLUGINS_DIR}}/zsh-vi-mode" ]]; then
+          echo "zsh-vi-mode"
+          cd "{{.PLUGINS_DIR}}/zsh-vi-mode"
+          echo "  Repository - $(git remote get-url origin)"
+          echo "  Last update - $(git log -1 --format=%cd --date=short)"
+        fi
+
+  # ================================================================
+  # CLEANUP
+  # ================================================================
+
+  clean:
+    desc: Remove all shell plugins
+    cmds:
+      - |
+        echo "  This will remove all shell plugins!"
+        read -p "Are you sure? (y/N) " -n 1 -r && echo
+
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+          echo " Removing shell plugins..."
+          rm -rf "{{.PLUGINS_DIR}}"
+          echo " Shell plugins removed"
+        else
+          echo " Cancelled"
+        fi
+
+  reinstall:
+    desc: Reinstall all shell plugins
+    cmds:
+      - task: clean
+      - task: install

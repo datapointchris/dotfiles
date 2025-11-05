@@ -88,6 +88,44 @@ Skills activate based on three trigger types:
 
 See [detailed changelog](changelog/2025-11-04.md#skills-auto-activation) for full details.
 
+### Task-Based Installation Automation
+
+Implemented comprehensive Task-based automation system for platform-specific dotfiles installation and management.
+
+**Key Features:**
+
+- Auto-detect platform (macOS, WSL Ubuntu, Arch Linux) and run appropriate installation
+- Modular taskfiles for brew, npm, nvm, uv, shell, docs, and platform-specific tasks
+- Unified interface for install, update, check, verify, and clean commands
+- Integrates with existing dotfiles structure (symlinks, theme sync, tools)
+
+**Taskfiles Created:**
+
+- `Taskfile.yml` - Main orchestration with platform detection and installation workflows
+- `taskfiles/brew.yml` - Homebrew package management
+- `taskfiles/npm.yml` - npm global package installation
+- `taskfiles/nvm.yml` - Node.js version management
+- `taskfiles/uv.yml` - Python uv tool management
+- `taskfiles/shell.yml` - Shell configuration setup
+- `taskfiles/docs.yml` - Documentation building
+- `taskfiles/macos.yml` - macOS-specific tasks
+- `taskfiles/wsl.yml` - WSL Ubuntu-specific tasks
+- `taskfiles/arch.yml` - Arch Linux-specific tasks
+
+**Commands Available:**
+
+- `task install` - Auto-detect platform and install all dotfiles
+- `task update` - Update all packages across brew/npm/uv
+- `task check` - Verify installation status
+- `task verify` - Run all verification tests
+- `task clean` - Clean package manager caches
+
+**Files Changed:**
+
+- Created: `Taskfile.yml`, `taskfiles/*.yml` (9 files)
+
+See [detailed changelog](changelog/2025-11-04.md#task-automation) for full details.
+
 ### Shell & Configuration Improvements
 
 **Shell Functions:**

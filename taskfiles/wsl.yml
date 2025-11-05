@@ -1,0 +1,231 @@
+# ================================================================
+# WSL Ubuntu-Specific Tasks
+# ================================================================
+# Platform-specific installation and configuration for WSL Ubuntu
+# Work-computer restricted environment
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # PACKAGE INSTALLATION
+  # ================================================================
+
+  install-packages:
+    desc: Install system packages via apt
+    cmds:
+      - echo " Installing WSL Ubuntu packages..."
+      - task: update-system
+      - task: install-essential
+      - task: install-dev-tools
+      - echo " WSL packages installed!"
+
+  update-system:
+    desc: Update apt package lists
+    cmds:
+      - echo " Updating package lists..."
+      - sudo apt update
+
+  install-essential:
+    desc: Install essential tools
+    cmds:
+      - |
+        echo " Installing essential tools..."
+        sudo apt install -y \
+          git \
+          curl \
+          wget \
+          build-essential \
+          ca-certificates \
+          gnupg
+
+  install-dev-tools:
+    desc: Install development tools
+    cmds:
+      - |
+        echo " Installing development tools..."
+        sudo apt install -y \
+          bat \
+          fd-find \
+          ripgrep \
+          fzf \
+          zoxide \
+          tmux \
+          neovim \
+          tree \
+          htop \
+          jq
+
+        # Create symlinks for differently-named packages
+        # bat is installed as batcat on Ubuntu
+        if ! command -v bat >/dev/null 2>&1; then
+          mkdir -p ~/.local/bin
+          ln -sf /usr/bin/batcat ~/.local/bin/bat
+        fi
+
+        # fd is installed as fdfind on Ubuntu
+        if ! command -v fd >/dev/null 2>&1; then
+          mkdir -p ~/.local/bin
+          ln -sf /usr/bin/fdfind ~/.local/bin/fd
+        fi
+
+  # ================================================================
+  # RUST & CARGO (for additional tools)
+  # ================================================================
+
+  install-rust:
+    desc: Install Rust and Cargo
+    cmds:
+      - |
+        if command -v cargo >/dev/null 2>&1; then
+          echo " Rust already installed"
+        else
+          echo " Installing Rust..."
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
+          echo " Rust installed"
+        fi
+    status:
+      - command -v cargo >/dev/null 2>&1
+
+  install-cargo-tools:
+    desc: Install tools via cargo
+    deps:
+      - install-rust
+    cmds:
+      - |
+        echo " Installing cargo tools..."
+        cargo install eza       # Modern ls replacement
+        cargo install yazi-fm   # Terminal file manager
+        cargo install git-delta # Git diff viewer
+        cargo install zoxide    # Smarter cd (if not via apt)
+
+  # ================================================================
+  # WSL-SPECIFIC CONFIGURATION
+  # ================================================================
+
+  configure-wsl:
+    desc: Apply WSL-specific configurations
+    cmds:
+      - echo "  Configuring WSL..."
+      - task: configure-wsl-conf
+      - echo " WSL configured!"
+
+  configure-wsl-conf:
+    desc: Configure /etc/wsl.conf
+    cmds:
+      - |
+        echo "  Configuring /etc/wsl.conf..."
+
+        WSL_CONF="/etc/wsl.conf"
+
+        if [[ -f "$WSL_CONF" ]]; then
+          echo " /etc/wsl.conf already exists"
+        else
+          echo "Creating /etc/wsl.conf..."
+          echo "[boot]" | sudo tee "$WSL_CONF" > /dev/null
+          echo "systemd=true" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "[interop]" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "appendWindowsPath=false" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "[user]" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "default=chris" | sudo tee -a "$WSL_CONF" > /dev/null
+          echo "/etc/wsl.conf created"
+          echo "Restart WSL to apply: wsl.exe --shutdown"
+        fi
+
+  # ================================================================
+  # VERIFICATION
+  # ================================================================
+
+  verify:
+    desc: Verify WSL installation
+    cmds:
+      - |
+        echo " Verifying WSL installation..."
+
+        # Check if running in WSL
+        if grep -q "Microsoft" /proc/version 2>/dev/null; then
+          echo " Running in WSL"
+        else
+          echo " Not running in WSL"
+        fi
+
+        # Check essential tools
+        TOOLS=("git" "curl" "wget" "bat" "fd" "rg" "fzf" "zoxide" "tmux" "nvim")
+
+        for tool in "${TOOLS[@]}"; do
+          if command -v "$tool" >/dev/null 2>&1; then
+            echo " $tool"
+          else
+            echo " $tool (missing)"
+          fi
+        done
+
+  info:
+    desc: Show WSL system information
+    cmds:
+      - |
+        echo " WSL System Information"
+        echo ""
+        echo "Distribution - $(lsb_release -ds 2>/dev/null || cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '"')"
+        echo "Kernel - $(uname -r)"
+        echo "Architecture - $(uname -m)"
+        echo ""
+
+        if grep -q "Microsoft" /proc/version 2>/dev/null; then
+          echo "WSL Version - $(cat /proc/version | grep -oP 'WSL\d')"
+        fi
+
+  # ================================================================
+  # UPDATE & MAINTENANCE
+  # ================================================================
+
+  update:
+    desc: Update WSL system and packages
+    cmds:
+      - echo " Updating WSL system..."
+      - sudo apt update
+      - sudo apt upgrade -y
+      - sudo apt autoremove -y
+      - echo " WSL system updated!"
+
+  cleanup:
+    desc: Clean up WSL caches and temporary files
+    cmds:
+      - echo " Cleaning WSL caches..."
+      - sudo apt autoclean
+      - sudo apt autoremove -y
+      - echo " WSL cleanup complete"
+
+  # ================================================================
+  # DOCKER (if needed)
+  # ================================================================
+
+  install-docker:
+    desc: Install Docker on WSL
+    cmds:
+      - |
+        echo " Installing Docker on WSL..."
+
+        # Install Docker's official GPG key
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+        # Add Docker repository
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        # Install Docker Engine
+        sudo apt update
+        sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+        # Add user to docker group
+        sudo usermod -aG docker $USER
+
+        echo " Docker installed!"
+        echo " Log out and back in for group changes to take effect"

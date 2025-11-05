@@ -1,0 +1,281 @@
+# ================================================================
+# Arch Linux-Specific Tasks
+# ================================================================
+# Platform-specific installation and configuration for Arch Linux
+# PLACEHOLDER: To be fully implemented when Arch system is set up
+
+version: '3'
+
+tasks:
+  # ================================================================
+  # PACKAGE INSTALLATION
+  # ================================================================
+
+  install-packages:
+    desc: Install system packages via pacman
+    cmds:
+      - echo " Installing Arch Linux packages..."
+      - task: update-system
+      - task: install-essential
+      - task: install-dev-tools
+      - task: install-aur-helper
+      - echo " Arch packages installed!"
+
+  update-system:
+    desc: Update pacman package database
+    cmds:
+      - echo " Updating package database..."
+      - sudo pacman -Sy
+
+  install-essential:
+    desc: Install essential tools
+    cmds:
+      - |
+        echo " Installing essential tools..."
+        sudo pacman -S --needed --noconfirm \
+          git \
+          curl \
+          wget \
+          base-devel
+
+  install-dev-tools:
+    desc: Install development tools
+    cmds:
+      - |
+        echo " Installing development tools..."
+        sudo pacman -S --needed --noconfirm \
+          bat \
+          eza \
+          fd \
+          ripgrep \
+          fzf \
+          zoxide \
+          git-delta \
+          tmux \
+          neovim \
+          tree \
+          htop \
+          jq \
+          lazygit \
+          yazi \
+          go \
+          rust \
+          lua \
+          luajit
+
+  install-aur-helper:
+    desc: Install yay (AUR helper)
+    cmds:
+      - |
+        if command -v yay >/dev/null 2>&1; then
+          echo " yay already installed"
+        else
+          echo " Installing yay AUR helper..."
+          cd /tmp
+          git clone https://aur.archlinux.org/yay.git
+          cd yay
+          makepkg -si --noconfirm
+          cd ~
+          rm -rf /tmp/yay
+          echo " yay installed"
+        fi
+    status:
+      - command -v yay >/dev/null 2>&1
+
+  # ================================================================
+  # AUR PACKAGES
+  # ================================================================
+
+  install-aur-packages:
+    desc: Install packages from AUR
+    deps:
+      - install-aur-helper
+    cmds:
+      - |
+        echo " Installing AUR packages..."
+
+        # Install AUR packages here
+        # yay -S --needed --noconfirm <package-name>
+
+        echo " No AUR packages configured yet"
+        echo " AUR packages installed!"
+
+  # ================================================================
+  # DESKTOP ENVIRONMENT (if applicable)
+  # ================================================================
+
+  install-desktop:
+    desc: Install desktop environment (optional)
+    cmds:
+      - |
+        echo " Desktop environment installation not configured"
+        echo " Common options"
+        echo "   - GNOME: sudo pacman -S gnome gnome-extra"
+        echo "   - KDE: sudo pacman -S plasma kde-applications"
+        echo "   - i3: sudo pacman -S i3-wm i3status i3lock dmenu"
+
+  # ================================================================
+  # ARCH-SPECIFIC CONFIGURATION
+  # ================================================================
+
+  configure:
+    desc: Apply Arch-specific configurations
+    cmds:
+      - echo "  Configuring Arch Linux..."
+      - task: configure-pacman
+      - echo " Arch configured!"
+
+  configure-pacman:
+    desc: Configure pacman
+    cmds:
+      - |
+        echo "  Configuring pacman..."
+
+        # Enable color output
+        sudo sed -i 's/#Color/Color/' /etc/pacman.conf
+
+        # Enable parallel downloads
+        sudo sed -i 's/#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
+
+        echo " pacman configured"
+
+  # ================================================================
+  # VERIFICATION
+  # ================================================================
+
+  verify:
+    desc: Verify Arch installation
+    cmds:
+      - |
+        echo " Verifying Arch installation..."
+
+        # Check if running on Arch
+        if [[ -f /etc/arch-release ]]; then
+          echo " Running on Arch Linux"
+        else
+          echo " Not running on Arch Linux"
+        fi
+
+        # Check pacman
+        if command -v pacman >/dev/null 2>&1; then
+          echo " pacman available"
+        else
+          echo " pacman not available"
+        fi
+
+        # Check yay
+        if command -v yay >/dev/null 2>&1; then
+          echo " yay (AUR helper) installed"
+        else
+          echo "  yay not installed (run - task arch:install-aur-helper)"
+        fi
+
+        # Check essential tools
+        TOOLS=("git" "curl" "wget" "bat" "eza" "fd" "rg" "fzf" "zoxide" "tmux" "nvim")
+
+        echo ""
+        echo "Essential tools"
+        for tool in "${TOOLS[@]}"; do
+          if command -v "$tool" >/dev/null 2>&1; then
+            echo "   $tool"
+          else
+            echo "   $tool (missing)"
+          fi
+        done
+
+  info:
+    desc: Show Arch system information
+    cmds:
+      - |
+        echo " Arch Linux System Information"
+        echo ""
+
+        if [[ -f /etc/os-release ]]; then
+          source /etc/os-release
+          echo "Distribution - $PRETTY_NAME"
+        fi
+
+        echo "Kernel - $(uname -r)"
+        echo "Architecture - $(uname -m)"
+        echo ""
+
+        if command -v pacman >/dev/null 2>&1; then
+          echo "Installed packages - $(pacman -Q | wc -l)"
+        fi
+
+        if command -v yay >/dev/null 2>&1; then
+          echo "yay version - $(yay --version | head -n1)"
+        fi
+
+  # ================================================================
+  # UPDATE & MAINTENANCE
+  # ================================================================
+
+  update:
+    desc: Update Arch system and packages
+    cmds:
+      - echo " Updating Arch system..."
+      - sudo pacman -Syu --noconfirm
+      - |
+        if command -v yay >/dev/null 2>&1; then
+          echo " Updating AUR packages..."
+          yay -Syu --noconfirm
+        fi
+      - echo " Arch system updated!"
+
+  cleanup:
+    desc: Clean up Arch caches and orphaned packages
+    cmds:
+      - echo " Cleaning Arch caches..."
+      - sudo pacman -Sc --noconfirm
+      - sudo pacman -Rns $(pacman -Qtdq) --noconfirm || echo "No orphaned packages"
+      - |
+        if command -v yay >/dev/null 2>&1; then
+          yay -Sc --noconfirm
+        fi
+      - echo " Arch cleanup complete"
+
+  # ================================================================
+  # SERVICES
+  # ================================================================
+
+  enable-services:
+    desc: Enable essential services
+    cmds:
+      - |
+        echo "  Enabling services..."
+
+        # Network
+        sudo systemctl enable NetworkManager
+        sudo systemctl start NetworkManager
+
+        # SSH (if needed)
+        # sudo systemctl enable sshd
+        # sudo systemctl start sshd
+
+        echo " Services enabled"
+
+  # ================================================================
+  # NOTES
+  # ================================================================
+
+  notes:
+    desc: Show Arch-specific notes and recommendations
+    cmds:
+      - |
+        echo " Arch Linux Notes"
+        echo ""
+        echo "Common Commands"
+        echo "  Install package:       sudo pacman -S <package>"
+        echo "  Remove package:        sudo pacman -R <package>"
+        echo "  Update system:         sudo pacman -Syu"
+        echo "  Search packages:       pacman -Ss <query>"
+        echo "  Install from AUR:      yay -S <package>"
+        echo ""
+        echo "Useful Resources"
+        echo "  Arch Wiki:             https://wiki.archlinux.org/"
+        echo "  AUR:                   https://aur.archlinux.org/"
+        echo "  Package search:        https://archlinux.org/packages/"
+        echo ""
+        echo " This taskfile is a starting point."
+        echo " Customize it as you set up your Arch system."

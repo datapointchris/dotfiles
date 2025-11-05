@@ -1,0 +1,126 @@
+# ================================================================
+# NVM (Node Version Manager) Tasks
+# ================================================================
+# Manages Node.js installation via nvm
+# Cross-platform: macOS, WSL, Arch
+#
+# For simple nvm commands, use nvm directly:
+#   nvm list                    # List installed versions
+#   nvm list-remote --lts       # List available versions
+#   nvm current                 # Show current version
+#   nvm use <version>           # Switch version
+#   nvm cache clear             # Clear cache
+#   nvm uninstall <version>     # Remove version
+
+version: '3'
+
+vars:
+  NVM_DIR: "{{.HOME}}/.config/nvm"
+  NVM_INSTALL_SCRIPT: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
+  NODE_VERSION: "24.11.0"  # Current LTS or preferred version
+
+tasks:
+  # ================================================================
+  # INSTALLATION
+  # ================================================================
+
+  install:
+    desc: Install nvm and Node.js
+    cmds:
+      - task: check-installed
+      - task: install-node
+
+  check-installed:
+    internal: true
+    cmds:
+      - |
+        if [[ ! -d "{{.NVM_DIR}}" ]]; then
+          echo "✅ Installing nvm..."
+          mkdir -p "{{.NVM_DIR}}"
+          curl -o- {{.NVM_INSTALL_SCRIPT}} | NVM_DIR={{.NVM_DIR}} bash
+          echo "✅ nvm installed at {{.NVM_DIR}}"
+        else
+          echo "✅ nvm already installed"
+        fi
+
+  install-node:
+    desc: Install Node.js using nvm
+    cmds:
+      - |
+        export NVM_DIR="{{.NVM_DIR}}"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+        if ! command -v nvm >/dev/null 2>&1; then
+          echo "❌ nvm not loaded properly"
+          exit 1
+        fi
+
+        echo "✅ Installing Node.js {{.NODE_VERSION}}..."
+        nvm install {{.NODE_VERSION}}
+        nvm use {{.NODE_VERSION}}
+        nvm alias default {{.NODE_VERSION}}
+        echo "✅ Node.js {{.NODE_VERSION}} installed and set as default"
+
+  install-latest-lts:
+    desc: Install latest LTS Node.js version
+    cmds:
+      - |
+        export NVM_DIR="{{.NVM_DIR}}"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+        echo "✅ Installing latest LTS Node.js..."
+        nvm install --lts
+        nvm use --lts
+        nvm alias default 'lts/*'
+        echo "✅ Latest LTS Node.js installed"
+
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update-nvm:
+    desc: Update nvm itself
+    cmds:
+      - echo "✅ Updating nvm..."
+      - |
+        cd "{{.NVM_DIR}}"
+        git fetch --tags origin
+        git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" $(git rev-list --tags --max-count=1)`
+      - echo "✅ nvm updated - restart your terminal"
+
+  # ================================================================
+  # VERIFICATION
+  # ================================================================
+
+  verify:
+    desc: Verify nvm and Node.js installation
+    cmds:
+      - |
+        echo "Verifying nvm installation..."
+
+        if [[ ! -d "{{.NVM_DIR}}" ]]; then
+          echo "❌ nvm directory not found"
+          exit 1
+        fi
+        echo "✅ nvm directory exists at {{.NVM_DIR}}"
+
+        export NVM_DIR="{{.NVM_DIR}}"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+        if ! command -v nvm >/dev/null 2>&1; then
+          echo "❌ nvm command not available"
+          exit 1
+        fi
+        echo "✅ nvm command available: $(nvm --version)"
+
+        if ! command -v node >/dev/null 2>&1; then
+          echo "❌ Node.js not installed - run: task nvm:install-node"
+          exit 1
+        fi
+        echo "✅ Node.js available: $(node --version)"
+
+        if ! command -v npm >/dev/null 2>&1; then
+          echo "❌ npm not available"
+          exit 1
+        fi
+        echo "✅ npm available: $(npm --version)"

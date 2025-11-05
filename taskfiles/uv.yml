@@ -1,0 +1,165 @@
+# ================================================================
+# UV (Python Package Manager) Tasks
+# ================================================================
+# Manages Python tools installation via uv
+# Packages defined in config/packages.yml
+#
+# For simple uv commands, use uv directly:
+#   uv tool list                # List installed tools
+#   uv tool install <tool>      # Install a tool
+#   uv tool uninstall <tool>    # Remove a tool
+#   uv tool upgrade <tool>      # Upgrade specific tool
+#   uv tool upgrade --all       # Upgrade all tools
+#   uv self update              # Update uv itself
+#   uv cache clean              # Clean cache
+#   uv python list              # List Python versions
+#   uv python install <version> # Install Python version
+
+version: '3'
+
+vars:
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/config/packages.yml"
+
+tasks:
+  # ================================================================
+  # INSTALLATION
+  # ================================================================
+
+  install-all:
+    desc: Install all uv tools from config
+    deps:
+      - check-uv
+      - check-config
+    cmds:
+      - echo "✅ Installing Python tools via uv..."
+      - task: install-linters-formatters
+      - task: install-code-quality
+      - task: install-sql
+      - task: install-markdown
+      - task: install-template
+      - task: install-utilities
+      - echo "✅ All Python tools installed!"
+
+  install-linters-formatters:
+    desc: Install Python linters and formatters
+    internal: true
+    cmds:
+      - echo "✅ Installing linters and formatters..."
+      - uv tool install ruff
+      - uv tool install mypy
+      - uv tool install basedpyright
+
+  install-code-quality:
+    desc: Install code quality tools
+    internal: true
+    cmds:
+      - echo "✅ Installing code quality tools..."
+      - uv tool install codespell
+
+  install-sql:
+    desc: Install SQL tools
+    internal: true
+    cmds:
+      - echo "✅ Installing SQL tools..."
+      - uv tool install sqlfluff
+
+  install-markdown:
+    desc: Install markdown tools
+    internal: true
+    cmds:
+      - echo "✅ Installing markdown tools..."
+      - uv tool install mdformat
+
+  install-template:
+    desc: Install template linting tools
+    internal: true
+    cmds:
+      - echo "✅ Installing template tools..."
+      - uv tool install djlint
+
+  install-utilities:
+    desc: Install utility tools
+    internal: true
+    cmds:
+      - echo "✅ Installing utilities..."
+      - uv tool install keymap-drawer
+      - uv tool install nbpreview
+      - uv tool install numpy
+
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all uv tools
+    cmds:
+      - echo "✅ Updating uv tools..."
+      - uv tool upgrade --all
+      - echo "✅ uv tools updated!"
+
+  # ================================================================
+  # VERIFICATION
+  # ================================================================
+
+  verify:
+    desc: Verify uv tools are installed
+    deps:
+      - check-uv
+    cmds:
+      - |
+        echo "Verifying uv tools..."
+
+        MISSING=0
+        TOOLS=(
+          "ruff"
+          "mypy"
+          "basedpyright"
+          "codespell"
+          "sqlfluff"
+          "mdformat"
+          "djlint"
+          "keymap-drawer"
+          "nbpreview"
+          "numpy"
+        )
+
+        INSTALLED=$(uv tool list 2>/dev/null | awk '{print $1}' || echo "")
+
+        for tool in "${TOOLS[@]}"; do
+          if echo "$INSTALLED" | grep -q "^$tool"; then
+            echo "✅ $tool"
+          else
+            echo "❌ $tool (missing)"
+            MISSING=$((MISSING + 1))
+          fi
+        done
+
+        if [[ $MISSING -gt 0 ]]; then
+          echo ""
+          echo "❌ $MISSING tool(s) missing - run: task uv:install-all"
+          exit 1
+        else
+          echo ""
+          echo "✅ All uv tools installed!"
+        fi
+
+  # ================================================================
+  # HELPERS
+  # ================================================================
+
+  check-uv:
+    desc: Check if uv is installed
+    internal: true
+    preconditions:
+      - sh: command -v uv >/dev/null 2>&1
+        msg: |
+          uv is not installed. Install it with:
+            macOS: brew install --cask uv
+            Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  check-config:
+    desc: Check packages.yml exists
+    internal: true
+    preconditions:
+      - sh: test -f {{.PACKAGES_CONFIG}}
+        msg: "packages.yml not found at {{.PACKAGES_CONFIG}}"

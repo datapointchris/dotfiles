@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  serve:
+    desc: Serve documentation locally with live reload
+    cmds:
+      - mkdocs serve
+    silent: false
+
+  build:
+    desc: Build documentation site
+    cmds:
+      - mkdocs build
+    silent: false
+
+  deploy:
+    desc: Manually deploy documentation to GitHub Pages
+    cmds:
+      - mkdocs gh-deploy --force
+    silent: false
+
+  install:
+    desc: Install documentation dependencies
+    cmds:
+      - pip install mkdocs-material mkdocstrings[python]
+    silent: false
+
+  clean:
+    desc: Clean built documentation
+    cmds:
+      - rm -rf site/
+    silent: false
