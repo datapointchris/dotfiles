@@ -7,8 +7,8 @@
 # Copy the last command to the OS clipboard
 alias copycommand='fc -ln -1 | pbcopy'
 
-# SnowSQL command
-alias snowsql='/Applications/SnowSQL.app/Contents/MacOS/snowsql'
+# Run claude with open permissions fuck yeah
+alias risky="claude --dangerously-skip-permissions"
 
 # Terraform force-unlock with ID from plan
 alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&1 | grep "ID: " | awk "{print \$NF}")'
@@ -74,3 +74,10 @@ alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
 
 # Source aws-profiles script to set profile (must be sourced for environment variables to persist)
 alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
+
+# ---------- Environment ---------- #
+
+# Set ENVIRONMENT variable (formerly functions in macos-functions.sh)
+alias development='export ENVIRONMENT=development'
+alias testing='export ENVIRONMENT=testing'
+alias production='export ENVIRONMENT=production'

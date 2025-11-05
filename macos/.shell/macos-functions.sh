@@ -43,27 +43,6 @@ function toichrisbirch() {
   scp -i ~/.ssh/apps.pem "$@" ubuntu@ichrisbirch:~
 }
 
-#@development
-#--> Set ENVIRONMENT to development
-function development() {
-  export ENVIRONMENT='development'
-  color_blue 'export ENVIRONMENT=development'
-}
-
-#@testing
-#--> Set ENVIRONMENT to testing
-function testing() {
-  export ENVIRONMENT='testing'
-  color_blue 'export ENVIRONMENT=testing'
-}
-
-#@production
-#--> Set ENVIRONMENT to production
-function production() {
-  export ENVIRONMENT='production'
-  color_blue 'export ENVIRONMENT=production'
-}
-
 #@reload-dev-forever
 #--> Reload nginx and supervisor in a loop forever
 function reload-dev-forever() {
@@ -85,22 +64,27 @@ function brew-maintenance() {
   echo
 
   color_blue "Updating brew..."
+  color_green "brew update"
   brew update
   echo
 
   color_blue "Upgrading packages..."
+  color_green "brew upgrade"
   brew upgrade
   echo
 
   color_blue "Cleaning up old versions..."
+  color_green "brew cleanup"
   brew cleanup
   echo
 
   color_blue "Removing unused dependencies..."
+  color_green "brew autoremove"
   brew autoremove
   echo
 
-  color_blue "Running diagnostics..."
+  color_blue "Running doctor diagnostics..."
+  color_green "brew doctoer"
   brew doctor
   echo
 
