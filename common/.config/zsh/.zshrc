@@ -171,21 +171,26 @@ fi
 
 # ========== gnu-utils plugin replacement ==========
 # Platform-specific GNU coreutils setup
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS: Use GNU coreutils from Homebrew
-    gnu_paths=(
-        "/usr/local/opt/coreutils/libexec/gnubin"
-        "/usr/local/opt/gnu-sed/libexec/gnubin"
-        "/usr/local/opt/gnu-tar/libexec/gnubin"
-        "/usr/local/opt/grep/libexec/gnubin"
-    )
-    for gnu_path in "${gnu_paths[@]}"; do
-        [[ -d "$gnu_path" ]] && export PATH="$gnu_path:$PATH"
-    done
-else
-    # Linux: GNU coreutils are already default, no changes needed
-    :
-fi
+# NOTE: GNU coreutils on macOS are installed via Homebrew but NOT added to PATH
+# to avoid conflicts with system tools and GMP build issues.
+# They remain available with 'g' prefix: gls, gsed, gtar, ggrep
+# This follows standard macOS Homebrew practice.
+#
+# if [[ "$OSTYPE" == "darwin"* ]]; then
+#     # macOS: Use GNU coreutils from Homebrew
+#     gnu_paths=(
+#         "/usr/local/opt/coreutils/libexec/gnubin"
+#         "/usr/local/opt/gnu-sed/libexec/gnubin"
+#         "/usr/local/opt/gnu-tar/libexec/gnubin"
+#         "/usr/local/opt/grep/libexec/gnubin"
+#     )
+#     for gnu_path in "${gnu_paths[@]}"; do
+#         [[ -d "$gnu_path" ]] && export PATH="$gnu_path:$PATH"
+#     done
+# else
+#     # Linux: GNU coreutils are already default, no changes needed
+#     :
+# fi
 
 # ========== Manual plugin loading from ~/.config/zsh/plugins ==========
 ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
@@ -246,6 +251,9 @@ fi
 # Local bin (always)
 add_path "$HOME/.local/bin"
 
+# Dotfiles utility scripts
+add_path "$HOME/dotfiles/scripts/utils"
+
 # Platform-specific PATH setup
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS specific paths
@@ -277,11 +285,13 @@ else
     :
 fi
 
-add_path "/usr/local/sbin"
-add_path "/usr/local/bin"
-
-# Add system bin last to put at front to make sure to use macos system tools if available
+# NOTE: add_path prepends to PATH, so items added last appear first
+# Add system bin first (will end up last in PATH, lowest priority)
 add_path "/usr/bin"
+
+# Add Homebrew bins (will end up early in PATH, high priority)
+add_path "/usr/local/bin"
+add_path "/usr/local/sbin"
 
 echo "$check Load  : Paths"
 
@@ -332,10 +342,16 @@ _fzf_compgen_dir() {
 }
 
 
-# ---------- nvim ---------- #
+# ---------- nvm ---------- #
 export NVM_DIR="$HOME/.config/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+
+# ---------- uv ---------- #
+if command -v uv >/dev/null 2>&1; then
+    eval "$(uv generate-shell-completion zsh)"
+fi
 
 
 # ---------- yazi ---------- #
