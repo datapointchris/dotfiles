@@ -29,7 +29,7 @@ cd ~/dotfiles
 bash scripts/install/wsl-setup.sh
 ```
 
-Bootstrap script installs system packages and Taskfile, then runs `task install-wsl`.
+Bootstrap script installs Taskfile, then delegates all package installation to `task install-wsl`.
 
 Time: ~15-20 minutes
 
@@ -51,7 +51,7 @@ cd ~/dotfiles
 bash scripts/install/arch-setup.sh
 ```
 
-Bootstrap script installs system packages and Taskfile, then runs `task install-arch`.
+Bootstrap script installs Taskfile, then delegates all package installation to `task install-arch`.
 
 Time: ~15-20 minutes
 
@@ -89,7 +89,7 @@ Restart terminal: `exec zsh`
 
 ## Manual Alternative
 
-If bootstrap script fails or you already have brew/task installed:
+If bootstrap script fails or you already have task installed:
 
 ```sh
 cd ~/dotfiles

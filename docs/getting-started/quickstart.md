@@ -20,7 +20,7 @@
     bash scripts/install/wsl-setup.sh
     ```
 
-    Installs system packages, Rust/Cargo tools, Taskfile, then runs full installation.
+    Installs Taskfile, then delegates to `task install-wsl` for full installation.
 
     Time: ~15-20 minutes
 
@@ -36,7 +36,7 @@
     bash scripts/install/arch-setup.sh
     ```
 
-    Installs system packages, yay AUR helper, then runs full installation.
+    Installs Taskfile, then delegates to `task install-arch` for full installation.
 
     Time: ~15-20 minutes
 
