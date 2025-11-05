@@ -4,9 +4,13 @@ This dotfiles repository uses [go-task/task](https://taskfile.dev) for automatio
 
 ## Philosophy
 
-**Tasks are for orchestration, not wrappers.** The Taskfile system coordinates complex multi-step installations while keeping simple operations accessible via their native commands.
+**Tasks are for orchestration, not wrappers.** The Taskfile system coordinates complex multi-step installations and updates while keeping simple operations accessible via their native commands.
 
 **Install tasks are idempotent.** Running `task install` multiple times is safe - it will install missing components and skip what's already installed.
+
+**Platform-specific over generic.** Each platform has its own `update-all` command that updates ALL package managers and tools for that system. No ambiguous cross-platform commands.
+
+**Fail loudly and early.** Core components (brew, npm, uv, apt, pacman) must be installed or update tasks will fail with clear error messages. No silent failures.
 
 ## Core Commands
 
@@ -30,20 +34,81 @@ Each platform installation:
 
 Time: 15-30 minutes depending on platform and network speed.
 
-### Package Management
+### Package Updates
+
+**Platform-specific update commands** that update ALL package managers and tools:
 
 ```sh
-task update           # Update all packages (brew, npm, uv, shell plugins)
-task clean            # Clean package caches
+task macos:update-all    # Update everything on macOS
+task wsl:update-all      # Update everything on WSL Ubuntu
+task arch:update-all     # Update everything on Arch Linux
 ```
 
-For direct package manager commands:
+**Update history and statistics:**
+
+```sh
+task macos:update-history    # View update history with stats
+task wsl:update-history      # View update history with stats
+task arch:update-history     # View update history with stats
+```
+
+### What Gets Updated
+
+**macOS (7 components):**
+
+1. Homebrew formulas and casks (`brew update && brew upgrade`)
+2. Mac App Store apps (`mas upgrade`)
+3. npm global packages (`npm update -g`)
+4. Python tools (`uv tool upgrade --all`)
+5. Rust packages (`cargo install-update -a` or manual fallback)
+6. Shell plugins (git pull in each plugin)
+7. Tmux plugins (TPM update)
+
+**WSL Ubuntu (6 components):**
+
+1. System packages (`sudo apt update && sudo apt upgrade -y`)
+2. npm global packages (`npm update -g`)
+3. Python tools (`uv tool upgrade --all`)
+4. Rust packages (`cargo install-update -a` or manual fallback)
+5. Shell plugins (git pull in each plugin)
+6. Tmux plugins (TPM update)
+
+**Arch Linux (7 components):**
+
+1. System packages (`sudo pacman -Syu`)
+2. AUR packages (`yay -Syu`)
+3. npm global packages (`npm update -g`)
+4. Python tools (`uv tool upgrade --all`)
+5. Rust packages (`cargo install-update -a` or manual fallback)
+6. Shell plugins (git pull in each plugin)
+7. Tmux plugins (TPM update)
+
+### Update Logging
+
+All update sessions are logged with detailed timing information:
+
+- **Log location:** `~/.local/state/dotfiles/update-history/`
+- **Log format:** One file per day (YYYY-MM-DD.log)
+- **Contains:** Timestamp, hostname, OS version, per-step duration, total duration
+- **View history:** `task <platform>:update-history`
+
+Statistics tracked:
+
+- Total number of updates performed
+- Average duration across all updates
+- Individual update timestamps and durations
+
+### Selective Updates
+
+For selective updates of individual components, use native commands directly:
 
 ```sh
 # Homebrew
 brew update && brew upgrade
 brew cleanup
-brew list
+
+# Mac App Store
+mas upgrade
 
 # npm (with nvm loaded)
 npm update -g
@@ -53,6 +118,16 @@ npm list -g --depth=0
 uv tool upgrade --all
 uv tool list
 uv self update
+
+# cargo
+cargo install-update -a    # If cargo-update installed
+# or manual: cargo install <package>
+
+# Shell plugins
+cd ~/.config/zsh/plugins/git-open && git pull
+
+# Tmux plugins
+~/.config/tmux/plugins/tpm/bin/update_plugins all
 ```
 
 ## Component Installation
@@ -75,6 +150,8 @@ task shell:install    # Install shell plugins
 task macos:install-homebrew     # Install Homebrew
 task macos:install-xcode-tools  # Install Xcode CLI tools
 task macos:configure            # Apply system preferences (Finder, Dock, Keyboard)
+task macos:update-all           # Update all 7 package systems
+task macos:update-history       # View update history and statistics
 ```
 
 For system maintenance, use native commands:
@@ -82,6 +159,7 @@ For system maintenance, use native commands:
 - `softwareupdate --list` - Check for macOS updates
 - `brew cleanup` - Clean Homebrew caches
 - `brew doctor` - Run Homebrew diagnostics
+- `mas list` - List installed Mac App Store apps
 
 ### WSL Ubuntu
 
@@ -91,12 +169,15 @@ task wsl:install-rust           # Install Rust toolchain
 task wsl:install-cargo-tools    # Install Rust tools
 task wsl:install-docker         # Install Docker (optional)
 task wsl:configure-wsl          # Configure WSL settings
+task wsl:update-all             # Update all 6 package systems
+task wsl:update-history         # View update history and statistics
 ```
 
 For system maintenance, use native commands:
 
 - `sudo apt update && sudo apt upgrade -y` - Update packages
 - `sudo apt autoremove && sudo apt clean` - Clean caches
+- `lsb_release -a` - Show Ubuntu version
 
 ### Arch Linux
 
@@ -106,12 +187,16 @@ task arch:install-aur-helper    # Install yay (AUR helper)
 task arch:install-aur-packages  # Install AUR packages
 task arch:install-desktop       # Install desktop environment (optional)
 task arch:configure             # Apply Arch-specific configs
+task arch:update-all            # Update all 7 package systems
+task arch:update-history        # View update history and statistics
 ```
 
 For system maintenance, use native commands:
 
 - `sudo pacman -Syu` - Update system
 - `sudo pacman -Sc` - Clean package cache
+- `yay -Syu` - Update AUR packages
+- `pacman -Q | wc -l` - Count installed packages
 
 ## Documentation
 
@@ -123,25 +208,63 @@ task docs:deploy      # Deploy to GitHub Pages
 
 ## Design Principles
 
-**Orchestration Over Wrappers**
+### Orchestration Over Wrappers
+
 Tasks coordinate multi-step workflows. Simple commands should be run directly:
 
-- ❌ `task brew:update` (wrapper for `brew update`)
-- ✅ `brew update` (run directly)
-- ✅ `task install` (orchestrates multiple package managers)
+- ❌ `task brew:update` (removed - just a wrapper)
+- ✅ `brew update && brew upgrade` (run directly)
+- ✅ `task macos:update-all` (orchestrates 7 package systems)
 
-**Idempotent by Default**
-All install tasks can be run multiple times safely. They check for existing installations and skip or update as needed.
+### Platform-Specific Over Generic
 
-**Single Source of Truth**
+Each platform has different package managers and tools. Platform-specific commands are clearer:
+
+- ❌ `task update` (ambiguous - what does it update?)
+- ✅ `task macos:update-all` (clear - updates ALL macOS systems)
+- ✅ `task wsl:update-all` (clear - updates ALL WSL systems)
+
+### Fail Loudly and Early
+
+Core components must be installed. Update tasks check for required tools and fail with clear messages if missing:
+
+- Homebrew (macOS)
+- apt (WSL/Ubuntu)
+- pacman (Arch)
+- npm (all platforms)
+- uv (all platforms)
+
+No silent failures or skipped updates.
+
+### Modular Internal Tasks
+
+Update logic is broken into internal modular tasks:
+
+- `brew:update` (internal) - Homebrew update logic
+- `npm:update` (internal) - npm update logic
+- `uv:update` (internal) - uv update logic
+- `shell:update` (internal) - Shell plugin update logic
+- `cargo:update` (internal) - Rust package update logic
+- `mas:update` (internal) - Mac App Store update logic
+- `tmux:update` (internal) - Tmux plugin update logic
+- `apt:update` (internal) - APT update logic
+- `pacman:update` (internal) - Pacman update logic
+- `yay:update` (internal) - AUR update logic
+
+These are called by platform `update-all` tasks but hidden from `task --list`.
+
+### Idempotent by Default
+
+All install and update tasks can be run multiple times safely. They check for existing installations and skip or update as needed.
+
+### Single Source of Truth
 
 - Homebrew packages: `Brewfile`
 - npm packages: Defined in `taskfiles/npm.yml`
 - uv tools: Defined in `taskfiles/uv.yml`
 - Shell plugins: `config/packages.yml`
-
-**Platform-Specific When Needed**
-Common tasks (docs, shell, verification) work everywhere. Platform tasks handle OS-specific package installation and configuration.
+- Cargo packages: `config/packages.yml`
+- Tmux plugins: `config/packages.yml`
 
 ## Advanced Usage
 
@@ -151,7 +274,7 @@ Preview what a task would do:
 
 ```sh
 task install --dry
-task install-macos --dry
+task macos:update-all --dry
 ```
 
 ### List Tasks
@@ -161,6 +284,16 @@ See all available tasks:
 ```sh
 task --list            # Show described tasks
 task --list-all        # Show all tasks including internal
+```
+
+### View Update Logs Directly
+
+```sh
+# View today's update log
+cat ~/.local/state/dotfiles/update-history/$(date +%Y-%m-%d).log
+
+# List all update logs
+ls -lh ~/.local/state/dotfiles/update-history/
 ```
 
 ### Platform Override
@@ -173,7 +306,7 @@ echo "PLATFORM=macos" > ~/.env
 
 ## Troubleshooting
 
-**Task Not Found**
+### Task Not Found
 
 Install task:
 
@@ -182,20 +315,61 @@ brew install go-task  # macOS
 # or use bootstrap script
 ```
 
-**Permission Errors**
+### Permission Errors
 
 Some tasks require sudo (apt/pacman operations). You'll be prompted when needed.
 
-**Check Installation Status**
+### Update Fails With Missing Tool Error
+
+If `update-all` fails because a core component isn't installed:
+
+```sh
+# Example error:
+# ERROR: npm is not installed (core component)
+# Install Node.js with: task nvm:install
+
+# Solution: Install the missing component
+task nvm:install
+```
+
+### Check Installation Status
 
 ```sh
 command -v brew      # Check if Homebrew is installed
 command -v node      # Check if Node.js is installed
 command -v uv        # Check if uv is installed
+command -v cargo     # Check if Rust/cargo is installed
 ```
+
+### View Internal Tasks
+
+```sh
+task --list-all      # Shows all tasks including internal ones
+```
+
+## Migration from Previous Version
+
+If you were using the old generic commands:
+
+**Before:**
+
+```sh
+task update    # Updated only brew, npm, uv
+task clean     # Cleaned only brew caches
+```
+
+**After:**
+
+```sh
+task macos:update-all     # Updates ALL 7 package systems
+brew cleanup              # Run directly for selective cleanup
+```
+
+The new system is more comprehensive and platform-specific.
 
 ## See Also
 
 - [Installation Guide](../getting-started/installation.md) - Detailed platform-specific instructions
 - [Quickstart](../getting-started/quickstart.md) - Get up and running in 15 minutes
 - [Platform Differences](platforms.md) - Package managers and platform-specific considerations
+- [Taskfile Best Practices](https://taskfile.dev/docs/guide) - Official Taskfile documentation
