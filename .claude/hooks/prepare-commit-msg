@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Strip Claude Code branding from commit messages
+# This hook removes AI tool attribution that may be added by system instructions
+
+COMMIT_MSG_FILE=$1
+
+# Remove "Generated with Claude Code" lines and Co-Authored-By Claude lines
+sed -i.bak '/🤖 Generated with \[Claude Code\]/d' "$COMMIT_MSG_FILE"
+sed -i.bak '/Co-Authored-By: Claude/d' "$COMMIT_MSG_FILE"
+
+# Remove the backup file
+rm -f "${COMMIT_MSG_FILE}.bak"
