@@ -144,7 +144,10 @@ nav:
   - Reference:
       - Platform Differences: reference/platforms.md
       - Tool Reference: reference/tools.md
+      - Tool Discovery: reference/tool-discovery.md
       - Task Reference: reference/tasks.md
+      - Symlinks Manager: reference/symlinks.md
+      - Skills System: reference/skills.md
       - Claude Code Hooks: reference/hooks.md
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
@@ -153,6 +156,7 @@ nav:
       - VM Testing: development/testing.md
       - Publishing Docs: publishing.md
   - Learnings:
+      - Overview: learnings/index.md
       - Relative Path Calculation: learnings/relative-path-calculation.md
       - Directory Pattern Matching: learnings/directory-pattern-matching.md
       - Cross-Platform Symlinks: learnings/cross-platform-symlink-considerations.md
