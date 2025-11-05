@@ -48,13 +48,45 @@ Implemented comprehensive hooks system combining Claude Code hooks (AI workflow 
 **Documentation:**
 
 - Comprehensive `docs/reference/hooks.md` with examples and workflows
-- Troubleshooting guide and philosophy section
-- Complete implementation plan for future phases (Skills & Advanced Automation)
 
 **Philosophy:**
+
 Atomic commits with synchronized documentation. Feature commits include usage docs, changelog commits document the development journey separately.
 
 See [detailed changelog](changelog/2025-11-04.md#hooks-implementation) for full details.
+
+### Skills and Auto-Activation (Phase 3)
+
+Implemented skill auto-activation system that analyzes user prompts and file context to automatically suggest relevant Claude Code skills.
+
+**Key Components:**
+
+- `skill-rules.json` - Configuration defining skill triggers (keywords, intent patterns, file patterns)
+- `user-prompt-submit-skill-activation` - UserPromptSubmit hook that analyzes prompts
+- `symlinks-developer` - First domain skill with comprehensive resources
+- Updated `.claude/settings.json` to enable UserPromptSubmit hook
+
+**How It Works:**
+
+Skills activate based on three trigger types:
+
+- **Prompt keywords**: "symlink", "install", "docs" → suggest relevant skill
+- **Intent patterns**: Regex matching user intent like "(fix|debug).*symlink"
+- **File patterns**: Editing `tools/symlinks/**/*.py` → suggest symlinks-developer skill
+
+**Skills Configured:**
+
+- `symlinks-developer` - Dotfiles symlink system expertise with resources for common errors, testing guide, and platform differences
+- `dotfiles-install` - Bootstrap and installation processes
+- `documentation` - Documentation writing and updates
+
+**Files Changed:**
+
+- Created: `.claude/skill-rules.json`, `.claude/hooks/user-prompt-submit-skill-activation`
+- Created: `.claude/skills/symlinks-developer/` (SKILL.md + 3 resource files)
+- Modified: `.claude/settings.json`
+
+See [detailed changelog](changelog/2025-11-04.md#skills-auto-activation) for full details.
 
 ### Shell & Configuration Improvements
 
@@ -79,6 +111,34 @@ See [detailed changelog](changelog/2025-11-04.md#hooks-implementation) for full 
 - Condensed relative-path-calculation learning from 101 to 58 lines
 
 See [detailed changelog](changelog/2025-11-04.md#shell-config-improvements) for full details.
+
+### Phase 6 Complete - Cross-Platform Expansion & VM Testing
+
+Implemented comprehensive cross-platform testing and installation framework for dotfiles across macOS, Ubuntu (WSL), and Arch Linux. Created VM-based automated testing environment with bootstrap scripts and extensive documentation for rapid iteration and confident deployments.
+
+**Key Changes:**
+
+- Created platform-specific installation tasks (install-macos, install-wsl, install-arch)
+- Added auto-detection install task that detects platform and runs appropriate installation
+- Created 3 bootstrap scripts for automated testing (macos-setup.sh, wsl-setup.sh, arch-setup.sh)
+- Comprehensive VM testing framework documentation (multipass, UTM/QEMU)
+- Detailed platform differences reference (package names, quirks, troubleshooting)
+- Integrated themes system across all platforms
+
+**Architecture Decision:**
+
+Chose VM-based testing framework over manual testing. multipass for Ubuntu (fast, lightweight), UTM/QEMU for Arch (accurate environment), and fresh user accounts for macOS (VMs too complex). Bootstrap scripts handle prerequisites, Taskfile handles complex logic.
+
+**Files Changed:**
+
+- Created: `scripts/install/macos-setup.sh` (90 lines)
+- Created: `scripts/install/wsl-setup.sh` (120 lines)
+- Created: `scripts/install/arch-setup.sh` (105 lines)
+- Created: `docs/vm_testing_guide.md` (400+ lines)
+- Created: `docs/platform_differences.md` (450+ lines)
+- Modified: `Taskfile.yml` (added install tasks, themes include)
+
+See [detailed changelog](changelog/2025-11-04.md#phase-6-cross-platform) for full implementation details, testing strategies, and platform-specific quirks.
 
 ---
 
@@ -114,14 +174,6 @@ Task handles coordination, tools handle commands. No wrapper tasks for simple on
 - Moved: 4 planning docs to `docs/archive/planning/`
 
 See [detailed changelog](changelog/2025-11-05.md) for complete analysis, error documentation, and lessons learned.
-
----
-
-## 2025-11-04 {#2025-11-04}
-
-### Phase 6 Complete - Cross-Platform Expansion & VM Testing
-
-Implemented comprehensive cross-platform testing and installation framework for dotfiles across macOS, Ubuntu (WSL), and Arch Linux. Created VM-based automated testing environment with bootstrap scripts and extensive documentation for rapid iteration and confident deployments.
 
 **Key Changes:**
 
