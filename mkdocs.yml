@@ -160,6 +160,7 @@ nav:
       - Relative Path Calculation: learnings/relative-path-calculation.md
       - Directory Pattern Matching: learnings/directory-pattern-matching.md
       - Cross-Platform Symlinks: learnings/cross-platform-symlink-considerations.md
+      - Documentation Consolidation: learnings/documentation-consolidation-principles.md
   - Changelog:
       - Summary: changelog.md
       - 2025-11-05: changelog/2025-11-05.md

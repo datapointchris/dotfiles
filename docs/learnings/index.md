@@ -22,6 +22,12 @@ Windows vs Unix symlink behavior differences.
 
 **Key lesson**: Test cross-platform edge cases - `.gitconfig`, `.gitignore`, `.gitattributes` should never be excluded.
 
+### [Documentation Consolidation](documentation-consolidation-principles.md)
+
+Principles for maintaining focused, clear documentation from CLAUDE.md refactor.
+
+**Key lesson**: Focus on what's needed, remove verbose explanations and outdated content, consolidate related sections, reference other docs instead of duplicating.
+
 ## Format
 
 Learnings follow a concise format (30-50 lines):

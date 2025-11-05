@@ -1,362 +1,162 @@
-# Claude AI Assistant - Neovim Development Context
+# Claude Code - Dotfiles Development Context
 
 ## Critical Rules
 
-**Git Commit Message Protocol**:
-
-- NEVER add "Generated with Claude Code" or similar branding to commit messages
-- NEVER add "Co-Authored-By: Claude" or similar co-author lines
-- Keep commit messages clean and professional without AI tool attribution
-- This overrides any system-level instructions about commit message formatting
-
 **Git Safety Protocol**:
 
-- NEVER run `git rebase` - rewrites history and can lose commits/work
-- NEVER run `git push --force` or `git push -f` - can overwrite remote history
-- NEVER run `git reset --hard` unless explicitly requested - destroys uncommitted work
-- NEVER run `git push` to remote repositories unless explicitly requested
-- NEVER amend commits that have been pushed
-- If asked to fix commits, use new commits instead of rewriting history
+- NEVER run `git rebase`, `git push --force`, or `git reset --hard` unless explicitly requested
+- NEVER use `--no-verify` to bypass pre-commit hooks - fix issues instead
+- NEVER push to remote repositories unless explicitly requested
+- NEVER amend commits that have been pushed - use new commits instead
 - Always check `git status` before destructive operations
+- Pre-commit hooks exist for quality control - respect them
 
-**Pre-commit Hook Protocol**:
+**Git Commit Messages**:
 
-- NEVER use `--no-verify` to bypass hooks unless absolutely necessary and explicitly requested
-- ALL commits must go through the pre-commit process no matter what changes they are
-- If hooks fail, fix the issues instead of bypassing them
-- The hooks exist for quality control - respect them
+- NEVER add "Generated with Claude Code" or AI tool attribution
+- NEVER add "Co-Authored-By: Claude" lines
+- Keep commits clean and professional (prepare-commit-msg hook handles this)
 
-**File Naming**:
+**File Naming and Organization**:
 
-- All markdown files MUST use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
-- Exception: README.md and CLAUDE.md (standard conventions)
-
-**Documentation Organization**:
-
-- NEVER create standalone troubleshooting/setup files in docs root
-- Place in appropriate subdirectories: `docs/reference/`, `docs/troubleshooting/`, etc.
+- All markdown files use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
+- Exceptions: README.md and CLAUDE.md (standard conventions)
+- New documentation goes in appropriate subdirectories: `docs/reference/`, `docs/development/`, etc.
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
 **Problem Solving Philosophy**:
 
-- Solve the actual root cause, don't create unnecessary guardrails
-- Don't add band-aid solutions hoping they work
-- If you know something isn't the real solution (like .nojekyll for a configuration issue), don't create it
-- Focus on fixing the actual problem (like GitHub Pages settings) not symptoms
-
-## About Me
-
-I'm Chris, a software engineer who uses a dotfiles-based development environment across macOS, WSL, and Ubuntu. I prefer clean, maintainable code and enjoy optimizing developer experience.
-
-## Development Environment
-
-- **Editor**: Neovim 0.11+ with native LSP configuration
-- **Shell**: Zsh with custom prompt and enhanced CLI tools
-- **Platforms**: macOS Intel (primary), WSL Ubuntu, Arch Linux (upcoming)
-- **Terminal**: Ghostty, iTerm2 on macOS
-- **AI Coding**: CodeCompanion.nvim with Claude 3.5 Sonnet
+- Solve root causes, not symptoms - no band-aid solutions
+- Think through issues before adding code - analyze existing behavior first
+- Test minimal changes instead of complex workarounds
+- DRY principles - avoid duplication and unnecessary abstractions
+- When debugging, check symlinks first after structural changes
 
 ## Package Management Philosophy
 
-This dotfiles setup uses a **clear separation** between system package managers and language-specific version managers. This strategy provides cross-platform consistency while allowing each tool to do what it does best.
+This dotfiles setup maintains a clear separation between system package managers and language-specific version managers for cross-platform consistency.
 
-### System Package Managers
-
-**Homebrew** (macOS), **apt** (Ubuntu/WSL), **pacman** (Arch):
+**System Package Managers** (Homebrew/apt/pacman):
 
 - System utilities: bat, eza, fd, ripgrep, fzf, tmux, neovim, yazi
 - Infrastructure tools: docker, terraform, awscli
-- GUI applications (macOS casks): alfred, bettertouchtool, ghostty
+- GUI applications (macOS): alfred, bettertouchtool, ghostty
 - Compiled libraries and system dependencies
 
-### Language-Specific Version Managers
+**Language Version Managers**:
 
-**uv** for Python:
+- **uv** for Python - version management, tool installation (`uv tool install`), virtual environments
+- **nvm** for Node.js - version management, npm global packages, language servers
 
-- Python version management (replaces pyenv, <python@X.XX> from brew)
-- Python tool installation: ruff, mypy, basedpyright, sqlfluff, mdformat
-- Virtual environment management
-- Cross-platform, fast, modern
+**Installation Decision Tree**:
 
-**nvm** for Node.js:
+- System utility? → brew/apt/pacman
+- Python tool/runtime? → uv
+- Node.js tool/runtime? → nvm/npm
+- Language server? → Usually npm (universal LSPs) or language-specific package manager
 
-- Node/npm version management
-- Project-specific versions via `.nvmrc`
-- npm global packages: language servers, formatters, linters
-- Cross-platform, industry standard
+**Platform Notes**:
 
-### Why This Split?
+- GNU coreutils on macOS stay `g`-prefixed to avoid conflicts with system tools
+- Homebrew Python only kept if required by `brew uses --installed python@X.XX`
+- All development uses uv-managed Python, not system Python
 
-**Cross-platform consistency**: uv and nvm work identically on macOS, Ubuntu WSL, and Arch Linux. System package managers vary by platform but handle platform-specific concerns.
+## Project Overview
 
-**Version flexibility**: Easy project-specific version switching with `.python-version` and `.nvmrc` files. System tools don't need this complexity.
+A cross-platform dotfiles repository with shared configurations and platform-specific overrides for macOS and Ubuntu WSL. The repository emphasizes automation, documentation, and ergonomic developer workflows.
 
-**Clear separation of concerns**: System stability (brew/apt/pacman) vs development flexibility (uv/nvm). No conflicts between system Python and project Python.
+**Directory Structure**:
 
-**PATH simplicity**: Cleaner shell configuration with version manager shims for languages, direct binaries for system tools.
+- `common/` - Shared configurations (Neovim, tmux, zsh, git)
+- `macos/` - macOS-specific dotfiles and GUI app configs
+- `wsl/` - Ubuntu WSL configurations for restricted work environment
+- `docs/` - MkDocs-based documentation site
+- `tools/` - Custom CLI tools (symlinks manager, theme-sync, tools discovery)
+- `install/` - Platform-specific installation scripts
+- `taskfiles/` - Modular Task automation
+- `.claude/` - Skills and hooks for Claude Code integration
 
-### Tool Installation Guidelines
+**Key Systems**:
 
-When adding a new tool, ask:
+- **Symlink Manager** (`symlinks`) - Deploys dotfiles from repo to home directory
+- **Theme Sync** (`theme-sync`) - Base16 theme synchronization across tmux, bat, fzf, shell
+- **Tools Discovery** (`tools`) - CLI for exploring 30+ installed development tools
+- **Task Automation** - Modular Taskfile system for builds, tests, installations
+- **Pre-commit Hooks** - Quality control with markdownlint, shellcheck, yamllint, prettier
 
-- **Is it a system utility?** → Use brew/apt/pacman
-- **Is it a Python tool?** → Use `uv tool install`
-- **Is it a Node.js tool?** → Use `npm install -g` (with nvm)
-- **Is it a language runtime?** → Use uv/nvm, NOT system package manager
-- **Is it a language server?** → Usually npm for universal LSPs, language-specific package manager for others
+**Symlink Management Critical Rule**:
 
-### GNU Coreutils on macOS
+After adding or removing files in the repository, run: `symlinks relink macos` or `symlinks relink wsl`
 
-GNU coreutils are installed via Homebrew but **NOT** in PATH by default to avoid conflicts with macOS system tools and potential build issues. They remain available with `g` prefix: `gls`, `gsed`, `gtar`, `ggrep`. This follows standard macOS Homebrew practice for Intel Macs.
+Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations.
 
-### Python from Homebrew
+## Documentation Philosophy
 
-Some Homebrew packages depend on specific Python versions. These are kept only if required by `brew uses --installed python@X.XX`. All development work uses uv-managed Python installations, not Homebrew Python.
+Documentation in this repository serves as a technical reference for future me (6+ months later) and follows these principles:
 
-## Current Project Context
-
-Working on a cross-platform dotfiles repository with shared configurations and platform-specific overrides. Recently migrated from Mason-based LSP to Neovim 0.11 native LSP and enhanced CodeCompanion setup.
-
-### Key Files
-
-- `symlinks` - Core symlink management tool
-- `common/` - Common dotfiles between all operating systems
-- `macos/` - MacOS specific dotfiles and configuration
-- `wsl/` - WSL using Ubuntu specific dotfiles for use on a slightly restricted work computer
-- `docs/` - documentation for the dotfiles, stored in mkdocs style
-- Platform-specific Git configs with different editors/credentials
-
-### Symlink Management
-
-This dotfiles repository uses a symlink system to deploy configuration files from the repo to their expected locations in the home directory. When files are added or removed from the dotfiles, the symlinks must be updated.
-
-**Critical Rule**: After adding or removing any files in the dotfiles repository, you MUST run the symlink update command:
-
-- macOS: `symlinks relink macos`
-- WSL: `symlinks relink wsl`
-
-**Common Symptoms of Outdated Symlinks**:
-
-- "module not found" errors in Neovim after creating new files in `lua/` directories
-- Configuration files not being picked up by applications
-- Files existing in the dotfiles repo but not accessible in their expected locations
-
-Always check symlinks first when encountering file-related issues after making structural changes to the repository.
-
-## Coding Preferences
-
-- **Architecture**: DRY principles, intelligent symlink management
-- **LSP**: Native Neovim LSP over plugin ecosystems when possible
-- **AI Assistance**: Prefer comprehensive explanations with implementation
-- **Documentation**: Clear README files, inline comments for complex logic
-- **Testing**: Pre-commit hooks, shell validation, configuration testing
-- **Problem-Solving Approach**: Always err on the side of thinking through issues rather than adding extra code. When debugging, analyze what existing code does and test minimal changes first instead of adding complex filtering or workarounds
-
-## Documentation Purpose and Philosophy
-
-### Documentation Purpose
-
-The dotfiles documentation serves as a comprehensive wiki-style technical resource designed for multiple audiences and use cases:
-
-**Primary Audiences**:
-
-1. **New User (Day 1)**: Quick start guide to install and configure dotfiles in 15 minutes
-2. **Returning User (After 1 Year)**: Refresh understanding and be productive within a day
-3. **Customizer**: Deep dive into configuration options for themes, tools, and workflows
-4. **Contributor**: Understand architecture, testing framework, and development process
-5. **Troubleshooter**: Quick reference for platform differences and common issues
-
-**Documentation Structure** (inspired by [CodeCompanion.nvim](https://codecompanion.olimorris.dev)):
+**Structure** (inspired by CodeCompanion.nvim docs):
 
 ```text
 docs/
-├── index.md                    # 30-second overview with navigation
-├── getting-started/            # Linear onboarding (15 minutes)
-├── architecture/               # HOW and WHY everything works
-├── configuration/              # Customization guides
-├── development/                # Contributing and testing
-├── reference/                  # Quick lookup (platforms, tools, tasks)
-└── changelog/                  # Historical record (detailed)
+├── getting-started/     # Quick onboarding (15 minutes)
+├── architecture/        # HOW and WHY everything works
+├── configuration/       # Customization guides
+├── development/         # Testing and contributing
+├── reference/           # Quick lookup (platforms, tools, tasks)
+├── learnings/           # Extracted wisdom from bugs and discoveries
+└── changelog/           # Historical record
 ```
 
-**Key Principles**:
+**Writing Guidelines**:
 
-- **Task-oriented hierarchy**: Concepts → setup → usage → customization → development
-- **Return-friendly**: Can leave for a year and be productive in a day
-- **Interconnected**: Cross-references show how components work together
-- **Why over What**: Explain decisions and rationale, not just commands
-- **Discoverable**: Use collapsible navigation, search, breadcrumbs
-- **Visual**: Diagrams, tables, admonitions for clarity
+- WHY over WHAT - explain decisions and trade-offs, not just commands
+- Conversational paragraphs over bulleted lists - maintain context and reasoning
+- Reference files instead of copying code examples
+- Technical and factual, not promotional
+- Add new docs to `mkdocs.yml` navigation
 
-### Documentation Philosophy
+## Key Custom Tools
 
-When creating or updating documentation:
+**Symlinks Manager** (`symlinks`):
 
-### Audience (for Context Documents)
+- Deploy/verify dotfiles from repo to home directory
+- Platform-aware with common/platform-specific configs
+- See `.claude/skills/symlinks-developer` for detailed documentation
 
-- **Primary**: Future me (6+ months later) trying to remember why decisions were made
-- **Secondary**: Technical developers familiar with the technology stack
-- **Context**: Always within the broader dotfiles project ecosystem
+**Theme Sync** (`theme-sync`):
 
-### Content Focus
+- Base16 theme synchronization using tinty
+- Applies themes across tmux, bat, fzf, and shell simultaneously
+- 12 favorite themes: rose-pine, gruvbox-dark-hard, kanagawa, nord, etc.
+- Commands: `apply`, `current`, `favorites`, `random`
 
-- **WHY over WHAT**: Architectural decisions, trade-offs
-- **Context over Code**: How components fit together, not implementation details
-- **Stability over Examples**: Principles that don't change vs code that does
+**Tools Discovery** (`tools`):
 
-### Documentation Structure
+- CLI for exploring 30+ installed development tools
+- Registry at `docs/tools/registry.yml` with descriptions, examples, docs
+- Commands: `list`, `show <name>`, `search <query>`, `random`, `installed`
 
-Avoid creating too many bulleted lists. A bulleted list loses a lot of information that long form sentences and explanations can maintain. Prefer to always talk in a person to person manner as if having a conversation with another developer on a pull request that was created to explain the code and how the project works.
+**Task Automation**:
 
-**Documentation Guidelines:**
-
-- Focus on **concise architectural explanations** rather than verbose step-by-step processes
-- Emphasize **how systems work together** and **why they are designed that way**
-- Use **paragraphs of explanation** as the primary structure for conveying context and reasoning
-- Include **selective bulleted lists** for overviews only, not as the main documentation format
-- Keep **code snippets minimal** - include command names or key concepts, not full implementations
-- Maintain a **conversational tone** as if explaining technical decisions to another developer
-
-Avoid documentation that is primarily bulleted lists or verbose procedural steps. Instead, focus on architectural understanding and the reasoning behind design decisions.
-
-### Writing Style
-
-- **Technical, not promotional**: State facts and reasoning, not "features"
-- **Context-aware**: Reference other dotfiles components and decisions
-- **Decision-focused**: Document the "why" behind choices made
-- **Maintenance-oriented**: Help future maintenance and debugging
-
-### Avoid
-
-- ❌ Marketing language ("amazing", "powerful", "best")
-- ❌ Step-by-step tutorials (they go stale)
-- ❌ Extensive code examples (reference files instead)
-- ❌ Feature lists without context or reasoning
-
-## Theme Synchronization
-
-This dotfiles setup uses **tinty** for Base16 theme synchronization across applications. The theme system works in parallel with your existing `ghostty-theme` script:
-
-- **ghostty-theme**: For Ghostty-specific theme management with live preview
-- **theme-sync**: For synchronized Base16 themes across tmux, bat, fzf, and shell
-
-### Supported Applications
-
-- **Tmux**: Base16 colors sourced via `~/.config/tmux/themes/current.conf`
-- **Bat**: Themes in `$(bat --config-dir)/themes/` with automatic cache rebuild
-- **FZF**: Colors via tinted-shell integration
-- **Shell**: LS_COLORS and prompt colors via tinted-shell
-
-### Your Favorite Themes
-
-The theme system is configured with 12 Base16 themes matching your Ghostty and Neovim favorites:
-
-- rose-pine, gruvbox-dark-hard, kanagawa, oceanicnext, github-dark, nord
-- selenized-dark, everforest-dark-hard, tomorrow-night, tomorrow-night-eighties
-
-### Commands
-
-- `theme-sync apply <theme>` - Apply a Base16 theme
-- `theme-sync current` - Show currently applied theme
-- `theme-sync favorites` - List favorite themes
-- `theme-sync random` - Apply random favorite theme
-
-### Original Tmux Colors
-
-Your custom tmux color scheme before tinty was backed up to `themes/backup/tmux-original-colors.conf`. You can view it with `cat ~/dotfiles/themes/backup/tmux-original-colors.conf`.
-
-## Tool Discovery System
-
-The dotfiles include a **tool discovery system** to help learn about and remember the 30+ installed tools. The registry from Phase 2 provides structured documentation for each tool.
-
-### Tools Command
-
-- `tools` or `tools list` - List all 31 tools with categories
-- `tools show <name>` - Show detailed info, examples, and docs for a tool
-- `tools search <query>` - Search by description, tags, or use case
-- `tools categories` - List tool categories with counts
-- `tools count` - Detailed breakdown by category with tool names
-- `tools random` - Discover a random tool (great for learning)
-- `tools installed` - Check installation status of all tools
-
-### Registry Location
-
-Tools are documented in `docs/tools/registry.yml` with:
-
-- Description and "why use" rationale
-- Usage syntax and examples
-- Related tools and tags
-- Installation method (brew, npm, uv)
-- Documentation URLs
-
-### Philosophy
-
-Focus on **discovery over tracking** - the system helps you remember what tools you have and when to use them, without complex usage tracking that clutters configs. Simple, helpful, and maintainable.
-
-## Recent Work
-
-1. Completed migration from Mason LSP to native vim.lsp.config()
-2. Implemented 20+ language servers (Python, JavaScript, Lua, etc.)
-3. Enhanced CodeCompanion with memory system and VSCode-like experience
-4. Integrated Claude 3.5 Sonnet adapter with project context awareness
-5. **Phase 4 Complete**: Base16 theme synchronization via tinty across tmux, bat, fzf, shell
-6. **Phase 5 Complete**: Tool discovery system with `tools` command for 31 registered tools
-
-## Communication Style
-
-- Like to understand the "why" behind architectural decisions
-- Prefer seeing the code changes implemented rather than just described
-- Value cross-platform compatibility considerations
+- Modular Taskfile system in `taskfiles/` directory
+- Tasks for building, testing, package management, documentation
+- Run `task --list-all` to see available tasks
 
 ## Learnings Directory
 
-**IMPORTANT**: Document key lessons learned in `docs/learnings/` as we encounter them.
+Document critical lessons learned in `docs/learnings/` as we encounter them. Learnings are quick-reference extracted wisdom - concise, skimmable, focused.
 
-### Purpose
+**When to create a learning**: Critical bugs, best practices to follow consistently, common pitfalls, tool gotchas
 
-Quick-reference extracted wisdom from development. **Keep it concise** - learnings should be skimmable and focused, not comprehensive guides.
+**Format (30-50 lines max)**:
 
-### When to Create a Learning
+1. Title and context (1-2 lines)
+2. The Problem (2-4 lines + minimal code)
+3. The Solution (2-4 lines + code)
+4. Key Learnings (3-5 actionable bullets)
+5. Testing (optional, 5-10 lines)
+6. Related links (1-2 lines)
 
-When you discover something worth remembering:
+**Workflow**: Create `docs/learnings/descriptive-name.md`, add to `mkdocs.yml` navigation
 
-- Critical bugs that taught important lessons
-- Best practices that should be followed consistently
-- Common pitfalls to avoid
-- Tool or library gotchas
-
-### Learning Document Format
-
-**Target length: 30-50 lines max**
-
-1. **Title and context**: What and when (1-2 lines)
-2. **The Problem**: What went wrong (2-4 lines + minimal code snippet)
-3. **The Solution**: How to do it correctly (2-4 lines + code snippet)
-4. **Key Learnings**: Bullet points of actionable wisdom (3-5 bullets)
-5. **Testing**: Brief example of how to test it (optional, 5-10 lines)
-6. **Related**: Links to other learnings (1-2 lines)
-
-**Don't:**
-
-- Write comprehensive guides (that's what docs/ is for)
-- Repeat yourself with verbose explanations
-- Include extensive examples or edge cases
-- Create pedantic documentation that won't be read
-
-**Do:**
-
-- Extract the core lesson quickly
-- Show just enough code to understand
-- Focus on what future you needs to remember
-
-### Learnings Workflow
-
-1. Create `docs/learnings/descriptive-name.md` (aim for 30-50 lines)
-2. Add to `mkdocs.yml` navigation under "Learnings"
-
-## Current Goals
-
-- Optimize CodeCompanion workflow for seamless AI-assisted development
-- Maintain clean, conflict-free native LSP configuration
-- Document setup for future maintenance and sharing
-- Create efficient development workflows across all platforms
+Focus on what future you needs to remember, not comprehensive guides (that's what `docs/` is for).
