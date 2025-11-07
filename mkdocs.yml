@@ -141,8 +141,11 @@ nav:
       - First Configuration: getting-started/first-config.md
   - Architecture:
       - Overview: architecture/index.md
+      - Menu System: architecture/menu-system.md
+      - sesh Architecture: architecture/sesh-architecture-diagram.md
   - Reference:
       - Platform Differences: reference/platforms.md
+      - Menu System: reference/menu-system.md
       - Tool Reference: reference/tools.md
       - Tool Discovery: reference/tool-discovery.md
       - Task Reference: reference/tasks.md
@@ -154,6 +157,14 @@ nav:
       - GitHub Pages: reference/github-pages.md
   - Development:
       - VM Testing: development/testing.md
+      - Go Migration Strategy: development/go-migration-strategy.md
+      - Go Migration Quick Start: development/go-migration-quick-start.md
+      - Go Migration Checklist: development/go-migration-checklist.md
+      - Go TUI Comparison: development/go-tui-comparison-summary.md
+      - Bubbletea Quick Reference: development/bubbletea-quick-reference.md
+      - Go Development Standards: development/go-development.md
+      - Go Quick Reference: development/go-quick-reference.md
+      - Go Migration Complete: development/go-menu-migration-complete.md
       - Publishing Docs: publishing.md
   - Learnings:
       - Overview: learnings/index.md
@@ -161,6 +172,10 @@ nav:
       - Directory Pattern Matching: learnings/directory-pattern-matching.md
       - Cross-Platform Symlinks: learnings/cross-platform-symlink-considerations.md
       - Documentation Consolidation: learnings/documentation-consolidation-principles.md
+      - Go TUI Testing Strategies: learnings/go-tui-testing-strategies.md
+      - Go Testing Examples: learnings/go-testing-examples.md
+      - Go TUI Ecosystem Research: learnings/go-tui-ecosystem-research.md
+      - Go CLI Architecture Analysis: learnings/go-cli-architecture-analysis.md
   - Changelog:
       - Summary: changelog.md
       - 2025-11-05: changelog/2025-11-05.md

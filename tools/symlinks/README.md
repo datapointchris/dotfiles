@@ -2,35 +2,36 @@
 
 Cross-platform dotfiles symlink manager with layered architecture.
 
-## Installation
-
-```sh
-# Install as uv tool
-cd tools/symlinks
-uv tool install .
-
-# Or run directly
-uv run symlinks --help
-```
-
 ## Usage
 
+This tool is run via `uv run` from the dotfiles root directory. Use the provided Task commands for the best experience:
+
 ```sh
-# Link common base layer
-symlinks link common
-
-# Link platform overlay
-symlinks link macos
-
 # Complete refresh (recommended after changes)
-symlinks relink macos
+task symlinks:link
 
 # Check for broken symlinks
-symlinks check
+task symlinks:check
 
 # Show current symlinks
-symlinks show common
-symlinks show macos
+task symlinks:show
+
+# Link specific layers
+task symlinks:link-common
+task symlinks:link-platform
+```
+
+### Direct Usage
+
+If you need to run the tool directly without Task:
+
+```sh
+# From dotfiles root directory
+uv run tools/symlinks link common
+uv run tools/symlinks link macos
+uv run tools/symlinks relink macos
+uv run tools/symlinks check
+uv run tools/symlinks show
 ```
 
 ## Architecture

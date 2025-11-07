@@ -45,7 +45,7 @@ This dotfiles setup maintains a clear separation between system package managers
 
 **Language Version Managers**:
 
-- **uv** for Python - version management, tool installation (`uv tool install`), virtual environments
+- **uv** for Python - version management, project dependencies, virtual environments
 - **nvm** for Node.js - version management, npm global packages, language servers
 
 **Installation Decision Tree**:
@@ -78,7 +78,7 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
 
 **Key Systems**:
 
-- **Symlink Manager** (`symlinks`) - Deploys dotfiles from repo to home directory
+- **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme Sync** (`theme-sync`) - Base16 theme synchronization across tmux, bat, fzf, shell
 - **Tools Discovery** (`tools`) - CLI for exploring 30+ installed development tools
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
@@ -86,7 +86,7 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
 
 **Symlink Management Critical Rule**:
 
-After adding or removing files in the repository, run: `symlinks relink macos` or `symlinks relink wsl`
+After adding or removing files in the repository, run: `task symlinks:link`
 
 Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations.
 
@@ -117,10 +117,11 @@ docs/
 
 ## Key Custom Tools
 
-**Symlinks Manager** (`symlinks`):
+**Symlinks Manager**:
 
 - Deploy/verify dotfiles from repo to home directory
 - Platform-aware with common/platform-specific configs
+- Run via Task: `task symlinks:link`, `task symlinks:check`, `task symlinks:show`
 - See `.claude/skills/symlinks-developer` for detailed documentation
 
 **Theme Sync** (`theme-sync`):
