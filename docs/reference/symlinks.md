@@ -4,45 +4,56 @@ Cross-platform dotfiles symlink manager with layered architecture.
 
 ## Commands
 
-### symlinks link
+All symlinks commands are run via Task from the dotfiles root directory. The tool uses `uv run` internally for project-local execution.
 
-Deploy symlinks for a platform.
+### task symlinks:link
 
-```bash
-symlinks link common       # Link common base layer
-symlinks link macos        # Link macOS overlay
-symlinks link wsl          # Link WSL Ubuntu overlay
-symlinks link arch         # Link Arch Linux overlay
-```
-
-Links common base first, then applies platform-specific overlay.
-
-### symlinks relink
-
-Complete refresh (unlink + link).
+Deploy symlinks for current platform (common + platform layers).
 
 ```bash
-symlinks relink macos      # Clean slate, recommended after changes
+task symlinks:link         # Complete refresh (recommended after changes)
 ```
 
 Use after adding/removing files in dotfiles repo to ensure symlinks are current.
 
-### symlinks check
+### task symlinks:check
 
 Verify symlink integrity.
 
 ```bash
-symlinks check             # Find broken symlinks
+task symlinks:check        # Find broken symlinks
 ```
 
 Shows broken symlinks in home directory.
 
-### symlinks unlink
+### task symlinks:show
 
-Remove platform symlinks.
+Display current symlinks.
 
 ```bash
-symlinks unlink macos      # Clean up deployed links
+task symlinks:show         # Show all symlinks
+task symlinks:show-common  # Show common layer only
+task symlinks:show-platform # Show platform layer only
+```
+
+### Additional Commands
+
+```bash
+task symlinks:link-common    # Link common base layer only
+task symlinks:link-platform  # Link platform overlay only
+task symlinks:unlink         # Remove all symlinks
+task symlinks:check-clean    # Check and remove broken symlinks
+```
+
+### Direct Usage (Advanced)
+
+If needed, run the tool directly from dotfiles root:
+
+```bash
+uv run tools/symlinks link common
+uv run tools/symlinks link macos
+uv run tools/symlinks relink macos
+uv run tools/symlinks check
 ```
 
 ## Architecture
@@ -67,27 +78,21 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 - Directory vs directory: Merged (both symlinked)
 - File vs directory: Error (must resolve manually)
 
-## Installation
+## Usage
 
-Install as uv tool for global availability:
-
-```bash
-cd ~/dotfiles/tools/symlinks
-uv tool install .
-```
-
-Or run directly without installing:
+The symlinks tool runs via `uv run` from the dotfiles root directory. Use Task commands for the best experience:
 
 ```bash
-cd ~/dotfiles/tools/symlinks
-uv run symlinks --help
+task symlinks:link    # Deploy all symlinks (recommended)
+task symlinks:check   # Verify symlinks
+task symlinks:show    # Display current symlinks
 ```
 
-After installation, `symlinks` command available globally.
+No installation required - `uv run` executes the tool in-place.
 
 ## When to Relink
 
-Run `symlinks relink <platform>` after:
+Run `task symlinks:link` after:
 
 - Adding new files to dotfiles repo
 - Removing files from dotfiles repo
@@ -161,15 +166,15 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 
 **Symlinks not created**:
 
-- Run with verbose flag: `symlinks link macos -v`
+- Run with verbose flag: `uv run tools/symlinks link macos -v`
 - Check for permission errors
 - Verify source files exist in dotfiles repo
 
 **Broken symlinks**:
 
-- Run `symlinks check` to find them
+- Run `task symlinks:check` to find them
 - Remove: `find ~ -type l ! -exec test -e {} \; -delete`
-- Re-run: `symlinks relink <platform>`
+- Re-run: `task symlinks:link`
 
 **File conflicts**:
 
@@ -181,7 +186,7 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 **Module not found in Neovim**:
 
 - Added new files in `common/.config/nvim/lua/`?
-- Run: `symlinks relink macos`
+- Run: `task symlinks:link`
 - Restart Neovim
 
 ## Development
