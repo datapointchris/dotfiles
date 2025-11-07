@@ -105,6 +105,7 @@ function lsaero() {
   echo "  $(color_blue "alt + shift + f")            Toggle fullscreen"
   echo "  $(color_blue "alt + tab")                  Switch to previous workspace"
   echo "  $(color_blue "alt + enter")                Open new Ghostty terminal"
+  echo "  $(color_blue "alt + shift + m")            Open universal menu (new terminal)"
   echo "  $(color_blue "ctrl + alt + shift + ;")     Enter Cmd Mode"
   echo "  $(color_blue "alt + shift + ;")            Enter Service Mode"
   echo ""

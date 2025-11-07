@@ -209,6 +209,14 @@ if [[ -f "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh" ]]; then
     echo "$error zsh-vi-mode plugin not found at $ZSH_PLUGINS_DIR/zsh-vi-mode"
 fi
 
+# Load forgit (interactive git commands with fzf)
+if [[ -f "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh" ]]; then
+    source "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
+    echo "$check Load  : forgit"
+  else
+    echo "$error forgit plugin not found at $ZSH_PLUGINS_DIR/forgit"
+fi
+
 echo "$check Load  : $ZSH_PLUGINS_DIR"
 # ================================================================== #
 
@@ -229,6 +237,8 @@ echo "$check Load  : $SHELLS/aliases.sh"
 
 source "$SHELLS/functions.sh"
 echo "$check Load  : $SHELLS/functions.sh"
+source "$SHELLS/fzf-functions.sh"
+echo "$check Load  : $SHELLS/fzf-functions.sh"
 [[ -f "$SHELLS/$PLATFORM-functions.sh" ]] && source "$SHELLS/$PLATFORM-functions.sh" && echo "$check Load  : $SHELLS/$PLATFORM-functions.sh"
 
 # ------------------------------------------------------------------- #
