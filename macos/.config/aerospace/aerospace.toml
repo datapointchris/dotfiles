@@ -63,6 +63,7 @@ cmd-h = []     # disable hide application
 cmd-alt-h = [] # disable hide others
 
 alt-enter = 'exec-and-forget open -na Ghostty'
+alt-shift-m = 'exec-and-forget ghostty -e menu'
 
 alt-h = 'focus left'
 alt-j = 'focus down'
