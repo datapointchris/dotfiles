@@ -1,10 +1,29 @@
 #!/usr/bin/env bash
 # Stop hook to remind about commits made during the session
 
-set -euo pipefail
+# Extensive error handling - NEVER block Claude Code
+set +e  # Don't exit on error
+exec 2>&1  # Redirect stderr to stdout for better logging
+
+# Log initial state
+echo "🔍 [stop-commit-reminder] Starting from: $(pwd)" >&2
+
+# Get repository root and change to it
+if ! REPO_ROOT=$(git rev-parse --show-toplevel 2>&1); then
+    echo "⚠️  [stop-commit-reminder] ERROR: Not in a git repository" >&2
+    echo "   Working directory: $(pwd)" >&2
+    exit 0  # Non-blocking
+fi
+
+if ! cd "$REPO_ROOT" 2>&1; then
+    echo "⚠️  [stop-commit-reminder] ERROR: Cannot cd to $REPO_ROOT" >&2
+    exit 0  # Non-blocking
+fi
+
+echo "🔍 [stop-commit-reminder] Repo root: $REPO_ROOT" >&2
 
 # Read stdin (hook input) but we don't need it for this check
-cat > /dev/null
+cat > /dev/null 2>&1 || true
 
 # Check if any commits were made in the last minute
 # (Assumes Claude's response took less than 1 minute to complete)
@@ -12,6 +31,7 @@ RECENT_COMMITS=$(git log --since="1 minute ago" --oneline --no-merges 2>/dev/nul
 
 if [[ $RECENT_COMMITS -eq 0 ]]; then
     # No commits made, nothing to remind
+    echo "✅ [stop-commit-reminder] No recent commits" >&2
     exit 0
 fi
 
@@ -28,4 +48,5 @@ if [[ $RECENT_COMMITS -gt 0 ]] && [[ $CHANGELOG_MODIFIED -eq 0 ]]; then
     echo ""
 fi
 
+echo "✅ [stop-commit-reminder] Complete" >&2
 exit 0

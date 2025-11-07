@@ -1,90 +1,126 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Provides Claude with immediate project context on session start.
-Runs: git status, recent commits, directory structure snapshot
+Runs: git status, recent commits, directory structure snapshot.
+Uses virtual environment python from uv, not system python3.
 """
 import json
 import os
 import subprocess
 import sys
+import traceback
 from pathlib import Path
+
+def get_repo_root():
+    """Get git repository root directory"""
+    print(f"🔍 [session-start] Getting repo root from: {os.getcwd()}", file=sys.stderr)
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        raise Exception(f"git rev-parse failed: {result.stderr}")
+    root = Path(result.stdout.strip())
+    print(f"🔍 [session-start] Repo root: {root}", file=sys.stderr)
+    return root
 
 def get_git_status():
     """Get current git status"""
-    result = subprocess.run(
-        ["git", "status", "--short"],
-        capture_output=True,
-        text=True
-    )
-    return result.stdout
+    try:
+        result = subprocess.run(
+            ["git", "status", "--short"],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout
+    except Exception as e:
+        print(f"⚠️  [session-start] ERROR in get_git_status: {e}", file=sys.stderr)
+        return f"ERROR: {e}"
 
 def get_recent_commits():
     """Get last 5 commits in oneline format"""
-    result = subprocess.run(
-        ["git", "log", "--oneline", "-5"],
-        capture_output=True,
-        text=True
-    )
-    return result.stdout
+    try:
+        result = subprocess.run(
+            ["git", "log", "--oneline", "-5"],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout
+    except Exception as e:
+        print(f"⚠️  [session-start] ERROR in get_recent_commits: {e}", file=sys.stderr)
+        return f"ERROR: {e}"
 
 def get_key_directories():
     """Snapshot of key directories"""
-    project_root = Path(os.getenv("CLAUDE_PROJECT_DIR", "."))
+    try:
+        project_root = get_repo_root()
 
-    dirs_to_check = [
-        "install/",
-        "tools/",
-        "docs/",
-        "taskfiles/",
-        "common/",
-        "macos/",
-        "wsl/",
-        "arch/"
-    ]
+        dirs_to_check = [
+            "install/",
+            "tools/",
+            "docs/",
+            "taskfiles/",
+            "common/",
+            "macos/",
+            "wsl/",
+            "arch/"
+        ]
 
-    structure = {}
-    for dir_path in dirs_to_check:
-        full_path = project_root / dir_path
-        if full_path.exists():
-            structure[dir_path] = len(list(full_path.rglob("*")))  # file count
+        structure = {}
+        for dir_path in dirs_to_check:
+            full_path = project_root / dir_path
+            if full_path.exists():
+                structure[dir_path] = len(list(full_path.rglob("*")))  # file count
 
-    return structure
+        return structure
+    except Exception as e:
+        print(f"⚠️  [session-start] ERROR in get_key_directories: {e}", file=sys.stderr)
+        return {}
 
 def get_pending_changelog():
     """Check for pending changelog entries"""
-    project_root = Path(os.getenv("CLAUDE_PROJECT_DIR", "."))
-    pending_file = project_root / ".pending-changelog"
+    try:
+        project_root = get_repo_root()
+        pending_file = project_root / ".pending-changelog"
 
-    if not pending_file.exists():
+        if not pending_file.exists():
+            return None
+
+        pending_entries = []
+        with open(pending_file, 'r') as f:
+            for line in f:
+                if line.strip():
+                    parts = line.strip().split('|')
+                    if len(parts) == 3:
+                        pending_entries.append({
+                            "hash": parts[0],
+                            "message": parts[1],
+                            "date": parts[2]
+                        })
+
+        return pending_entries if pending_entries else None
+    except Exception as e:
+        print(f"⚠️  [session-start] ERROR in get_pending_changelog: {e}", file=sys.stderr)
         return None
 
-    pending_entries = []
-    with open(pending_file, 'r') as f:
-        for line in f:
-            if line.strip():
-                parts = line.strip().split('|')
-                if len(parts) == 3:
-                    pending_entries.append({
-                        "hash": parts[0],
-                        "message": parts[1],
-                        "date": parts[2]
-                    })
-
-    return pending_entries if pending_entries else None
-
 def main():
-    hook_input = json.loads(sys.stdin.read())
+    try:
+        print(f"🔍 [session-start] Starting from: {os.getcwd()}", file=sys.stderr)
 
-    context = {
-        "git_status": get_git_status(),
-        "recent_commits": get_recent_commits(),
-        "directory_counts": get_key_directories(),
-        "pending_changelog": get_pending_changelog(),
-        "cwd": hook_input["cwd"]
-    }
+        hook_input = json.loads(sys.stdin.read())
+        print(f"🔍 [session-start] Hook input cwd: {hook_input.get('cwd', 'N/A')}", file=sys.stderr)
 
-    # Format as markdown for Claude
-    output = f"""
+        context = {
+            "git_status": get_git_status(),
+            "recent_commits": get_recent_commits(),
+            "directory_counts": get_key_directories(),
+            "pending_changelog": get_pending_changelog(),
+            "cwd": hook_input["cwd"]
+        }
+
+        # Format as markdown for Claude
+        output = f"""
 ## 📁 Project Context (Auto-loaded)
 
 **Git Status:**
@@ -101,23 +137,37 @@ def main():
 {json.dumps(context['directory_counts'], indent=2)}
 """
 
-    # Add pending changelog reminder if entries exist
-    if context['pending_changelog']:
-        count = len(context['pending_changelog'])
-        output += f"\n\n⚠️ **Pending Changelog Updates ({count} commits):**\n```\n"
-        for entry in context['pending_changelog']:
-            output += f"{entry['date']} [{entry['hash']}] {entry['message']}\n"
-        output += "```\n"
-        if count >= 3:
-            output += "\n❗ **Action Required**: Next commit will be blocked until changelog is updated.\n"
-        else:
-            output += f"\n📝 Reminder: Will block at 3 commits (currently {count}/3)\n"
+        # Add pending changelog reminder if entries exist
+        if context['pending_changelog']:
+            count = len(context['pending_changelog'])
+            output += f"\n\n⚠️ **Pending Changelog Updates ({count} commits):**\n```\n"
+            for entry in context['pending_changelog']:
+                output += f"{entry['date']} [{entry['hash']}] {entry['message']}\n"
+            output += "```\n"
+            if count >= 3:
+                output += "\n❗ **Action Required**: Next commit will be blocked until changelog is updated.\n"
+            else:
+                output += f"\n📝 Reminder: Will block at 3 commits (currently {count}/3)\n"
 
-    # Return as system message
-    print(json.dumps({
-        "continue": True,
-        "systemMessage": output.strip()
-    }))
+        print(f"✅ [session-start] Complete", file=sys.stderr)
+
+        # Return as system message
+        print(json.dumps({
+            "continue": True,
+            "systemMessage": output.strip()
+        }))
+
+    except Exception as e:
+        error_details = traceback.format_exc()
+        print(f"⚠️  [session-start] EXCEPTION: {e}", file=sys.stderr)
+        print(f"⚠️  [session-start] Traceback:\n{error_details}", file=sys.stderr)
+
+        # Never block - return error as system message
+        error_msg = f"\n⚠️ **Session Start Hook Error**\n\n```\n{str(e)}\n\nWorking directory: {os.getcwd()}\n```\n\n*Hook continuing anyway...*\n"
+        print(json.dumps({
+            "continue": True,
+            "systemMessage": error_msg
+        }))
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,10 @@
 
 set -euo pipefail
 
+# Get repository root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
 # Get commit message to detect commit type
 COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
 COMMIT_TYPE=""

@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session-start"
+            "command": "python /Users/chris/dotfiles/.claude/hooks/session-start"
           }
         ]
       }
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/user-prompt-submit-skill-activation"
+            "command": "python /Users/chris/dotfiles/.claude/hooks/user-prompt-submit-skill-activation"
           }
         ]
       }
@@ -28,11 +28,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/stop-build-check"
+            "command": "bash /Users/chris/dotfiles/.claude/hooks/stop-build-check"
           },
           {
             "type": "command",
-            "command": "bash .claude/hooks/stop-commit-reminder"
+            "command": "bash /Users/chris/dotfiles/.claude/hooks/stop-commit-reminder"
           }
         ]
       }
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/notification-desktop"
+            "command": "bash /Users/chris/dotfiles/.claude/hooks/notification-desktop"
           }
         ]
       }
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/pre-compact-save-state"
+            "command": "python /Users/chris/dotfiles/.claude/hooks/pre-compact-save-state"
           }
         ]
       }

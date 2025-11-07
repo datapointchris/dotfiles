@@ -17,14 +17,19 @@ Expertise in the dotfiles symlink management system.
 
 ### Running Symlinks
 
+The symlinks tool runs via `uv run` from the dotfiles root. Use Task commands:
+
 ```bash
 # After adding/removing files
-symlinks relink macos
-symlinks relink wsl
-symlinks relink arch
+task symlinks:link          # Deploy all symlinks (common + platform)
 
 # Check current symlinks
-symlinks check macos
+task symlinks:check         # Verify integrity
+task symlinks:show          # Display current symlinks
+
+# Direct usage (advanced)
+uv run tools/symlinks relink macos
+uv run tools/symlinks check
 ```
 
 ### Testing
