@@ -4,17 +4,13 @@
 # Platform: macOS
 # Manages Homebrew packages using Brewfile
 
-version: '3'
+version: "3"
 
 vars:
   BREWFILE: "{{.ROOT_DIR}}/Brewfile"
   BREWFILE_LOCK: "{{.ROOT_DIR}}/Brewfile.lock.json"
 
 tasks:
-  # ================================================================
-  # INSTALLATION
-  # ================================================================
-
   install:
     desc: Install all packages from Brewfile
     silent: true
@@ -27,99 +23,3 @@ tasks:
       - "{{.BREWFILE}}"
     generates:
       - "{{.BREWFILE_LOCK}}"
-
-  # ================================================================
-  # UPDATE
-  # ================================================================
-
-  update:
-    desc: Update Homebrew and upgrade all packages
-    internal: true
-    silent: true
-    cmds:
-      - echo "  Updating Homebrew..."
-      - brew update
-      - echo "  Upgrading packages..."
-      - brew upgrade
-      - task: auto-commit
-      - echo "  Homebrew updated"
-
-  # ================================================================
-  # BREWFILE MANAGEMENT
-  # ================================================================
-
-  dump:
-    desc: Generate Brewfile from currently installed packages
-    silent: true
-    cmds:
-      - echo " Generating Brewfile from installed packages..."
-      - echo "  This will OVERWRITE the existing Brewfile!"
-      - echo "  Use with caution - prefer manual editing."
-      - read -p "Continue? (y/N) " -n 1 -r && echo
-      - |
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-          brew bundle dump --file={{.BREWFILE}} --force
-          task: auto-commit
-          echo " Brewfile generated!"
-        else
-          echo " Cancelled"
-        fi
-
-  check-brewfile:
-    desc: Verify Brewfile exists and is valid
-    internal: true
-    preconditions:
-      - sh: test -f {{.BREWFILE}}
-        msg: "Brewfile not found at {{.BREWFILE}}"
-
-
-  # ================================================================
-  # SYNC & COMMIT
-  # ================================================================
-
-  auto-commit:
-    desc: Auto-commit Brewfile changes to git
-    internal: true
-    silent: true
-    cmds:
-      - |
-        if [[ -f "{{.BREWFILE}}" ]]; then
-          cd "{{.ROOT_DIR}}"
-
-          # Check if there are changes
-          if ! git diff --quiet {{.BREWFILE}} {{.BREWFILE_LOCK}}; then
-            echo " Brewfile changes detected, committing..."
-
-            git add {{.BREWFILE}} {{.BREWFILE_LOCK}} 2>/dev/null || true
-
-            # Get list of changes for commit message
-            ADDED=$(git diff --cached --name-only --diff-filter=A {{.BREWFILE}} | wc -l || echo 0)
-            MODIFIED=$(git diff --cached --name-only --diff-filter=M {{.BREWFILE}} | wc -l || echo 0)
-
-            if git diff --cached --quiet; then
-              echo "No staged changes to commit"
-            else
-              git commit -m "chore(brew): update Brewfile" -m "Automated commit from task brew:auto-commit" -m "Files: Brewfile, Brewfile.lock.json" || echo "Commit failed or nothing to commit"
-
-              echo "Brewfile changes committed"
-            fi
-          else
-            echo "No Brewfile changes to commit"
-          fi
-        fi
-
-  # ================================================================
-  # MAINTENANCE
-  # ================================================================
-  # For simple maintenance commands, use Homebrew directly:
-  #   brew cleanup                    # Clean caches
-  #   brew doctor                     # Check for issues
-  #   brew --version                  # Show version
-  #   brew list --formula             # List formulas
-  #   brew list --cask                # List casks
-
-  # ================================================================
-  # UTILITIES
-  # ================================================================
-  # For checking Python dependencies, use brew directly:
-  #   brew uses --installed python@3.13
