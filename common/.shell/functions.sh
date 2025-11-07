@@ -838,6 +838,7 @@ function lstmux() {
 			  $(color_green "pre: |${normal} ctrl + <space>")
 			  $(color_blue "Command Mode: |${normal} pre + :")
 			  $(color_blue "Copy Mode: |${normal} pre + Enter")
+			  $(color_blue "Universal Menu: |${normal} pre + m")
 			  $(color_blue "Copy current command to clipboard: |${normal} pre + y")
 			  $(color_blue "Copy current directory to clipboard: |${normal} pre + Y")
 			  $(color_blue "Save Tmux Environment: |${normal} pre + Ctrl-s")
