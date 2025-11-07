@@ -109,6 +109,10 @@ shell_plugins:
     repo: https://github.com/jeffreytse/zsh-vi-mode.git
     description: Better vi-mode for ZSH
 
+  - name: forgit
+    repo: https://github.com/wfxr/forgit.git
+    description: Interactive git commands with fzf
+
 # ================================================================
 # NOTES
 # ================================================================
