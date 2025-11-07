@@ -371,3 +371,13 @@ TESTING.*
 **/lazy-lock.json
 .claude/sessions/
 .planning/
+
+### GO BUILD ARTIFACTS
+# Task build cache
+**/.task/
+# Test coverage reports
+**/coverage.html
+**/coverage.out
+# Binaries in tools directories
+tools/*/menu
+tools/*/session
