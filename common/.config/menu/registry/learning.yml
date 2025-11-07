@@ -1,0 +1,93 @@
+# Learning Topics Registry
+# Active learning resources organized by topic
+
+learning:
+  - name: Neovim Quickfix Lists
+    category: Learning Topics
+    status: active
+    description: Master quickfix lists for batch operations
+    keywords: [neovim, quickfix, batch, search, replace]
+    progress:
+      started: 2025-11-06
+      last_practiced: null
+      confidence: beginner
+    resources:
+      bookmarks:
+        - url: "https://vim.fandom.com/wiki/Quickfix"
+          title: "Vim Tips Wiki - Quickfix"
+          tags: [reference, wiki]
+          status: to-read
+        - url: "https://vimways.org/2018/colder-quickfix-lists/"
+          title: "Colder Quickfix Lists"
+          tags: [article, advanced]
+          status: to-read
+      notes:
+        - path: "~/Documents/notes/dev/learning/neovim-quickfix.md"
+          description: "Practice notes and examples"
+      videos:
+        - url: "https://www.youtube.com/watch?v=..."
+          title: "Mastering Quickfix Lists"
+          tags: [tutorial, video]
+          status: to-watch
+          duration: "15min"
+    practice_exercises:
+      - "Search for all TODOs in project, replace with DONE"
+      - "Find all console.log statements, remove them"
+      - "Update all import paths after refactoring"
+    related_workflows:
+      - "Quickfix List - Search and Replace"
+    platform: all
+
+  - name: Docker Compose
+    category: Learning Topics
+    status: planned
+    description: Multi-container Docker applications
+    keywords: [docker, compose, containers, orchestration]
+    progress:
+      started: null
+      last_practiced: null
+      confidence: null
+    resources:
+      bookmarks:
+        - url: "https://docs.docker.com/compose/"
+          title: "Docker Compose Official Docs"
+          tags: [reference, official]
+          status: to-read
+      notes: []
+      videos: []
+    practice_exercises:
+      - "Set up multi-service app (web + db + redis)"
+      - "Add healthchecks to all services"
+      - "Configure networks and volumes"
+    related_workflows: []
+    platform: all
+
+  - name: AWS Lambda Functions
+    category: Learning Topics
+    status: active
+    description: Serverless functions on AWS
+    keywords: [aws, lambda, serverless, functions]
+    progress:
+      started: 2025-10-15
+      last_practiced: 2025-11-01
+      confidence: intermediate
+    resources:
+      bookmarks:
+        - url: "https://docs.aws.amazon.com/lambda/"
+          title: "AWS Lambda Documentation"
+          tags: [reference, official, aws]
+          status: reference
+      notes:
+        - path: "~/Documents/notes/dev/aws/lambda-study-guide.md"
+          description: "Study notes and common patterns"
+      videos: []
+    practice_exercises:
+      - "Deploy simple HTTP endpoint"
+      - "Add DynamoDB integration"
+      - "Set up CI/CD pipeline"
+    related_workflows:
+      - "Lambda Deployment Workflow"
+    platform: all
+
+# Add new learning topics as you discover things you want to learn!
+# Update status and progress as you work through them

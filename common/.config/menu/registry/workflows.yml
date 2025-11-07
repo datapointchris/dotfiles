@@ -1,0 +1,102 @@
+# Workflows Registry
+# Multi-step processes and techniques
+
+workflows:
+  # Neovim Workflows
+  - name: Quickfix List - Search and Replace
+    category: Vim Workflows
+    description: Search entire repo, send to quickfix, batch replace
+    keywords: [search, replace, quickfix, batch, grep]
+    steps:
+      - key: "<leader>fg"
+        description: "Live grep to search repo"
+      - key: "<C-q>"
+        description: "Send results to quickfix list"
+      - key: ":cdo s/old/new/g"
+        description: "Replace in all quickfix entries"
+      - key: ":cfdo update"
+        description: "Save all modified files"
+    keybindings:
+      - key: ":cn"
+        description: "Next quickfix item"
+      - key: ":cp"
+        description: "Previous quickfix item"
+      - key: ":copen"
+        description: "Open quickfix window"
+      - key: ":cclose"
+        description: "Close quickfix window"
+    notes: |
+      This is incredibly powerful for repo-wide refactoring.
+      The quickfix list persists until you replace it.
+      Use :colder to go back to previous quickfix list.
+    resources:
+      - type: bookmark
+        title: "Vim Tips Wiki - Quickfix"
+        url: "https://vim.fandom.com/wiki/Quickfix"
+    platform: all
+
+  - name: File Navigation and Jumping
+    category: Vim Workflows
+    description: Efficient file navigation techniques
+    keywords: [navigate, file, jump, search, telescope]
+    techniques:
+      - name: "Find Files"
+        key: "<leader>ff"
+        when: "You know part of the filename"
+      - name: "Live Grep"
+        key: "<leader>fg"
+        when: "You know content but not filename"
+      - name: "Buffer List"
+        key: "<leader>fb"
+        when: "Switching between open files"
+      - name: "Recent Files"
+        key: "<leader>fr"
+        when: "Recently edited files"
+      - name: "Oil"
+        key: "-"
+        when: "Need to see directory structure"
+    notes: |
+      Telescope is your friend. Learn to fuzzy search.
+      Oil is great for bulk file operations.
+    platform: all
+
+  - name: Git Integration in Neovim
+    category: Vim Workflows
+    description: Git operations without leaving editor
+    keywords: [git, lazygit, fugitive, neovim]
+    keybindings:
+      - key: "<leader>tg"
+        description: "Open LazyGit in floating terminal"
+      - key: "<leader>ccgm"
+        description: "Generate commit message with Copilot"
+      - key: "gx"
+        description: "Open GitHub URL under cursor"
+    notes: |
+      LazyGit is the best git UI. Learn it well.
+      Use Copilot for commit messages - it's surprisingly good.
+    platform: all
+
+  # Shell Workflows
+  - name: Development Environment Setup
+    category: Commands
+    description: Set up new project development environment
+    keywords: [setup, project, environment, dev]
+    steps:
+      - command: "git clone <repo>"
+        description: "Clone repository"
+      - command: "cd <project>"
+        description: "Enter project directory"
+      - command: "uv venv"
+        description: "Create virtual environment (Python)"
+      - command: "venv"
+        description: "Activate virtual environment"
+      - command: "uv pip install -r requirements.txt"
+        description: "Install dependencies"
+      - command: "tmuxinator start <project>"
+        description: "Start tmuxinator session"
+    notes: |
+      Consider creating a tmuxinator config for recurring projects.
+      This workflow can be automated with a script if needed.
+    platform: all
+
+# Add more workflows as you discover/refine them!
