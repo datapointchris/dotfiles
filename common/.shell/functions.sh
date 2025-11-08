@@ -338,13 +338,13 @@ function lsfunc() {
   # Process common functions
   local common_message=""
   if [[ -f "$SHELLS/functions.sh" ]]; then
-    common_message="$("get-docs" "$SHELLS/functions.sh")"
+    common_message="$("shelldocsparser" "$SHELLS/functions.sh")"
   fi
 
   # Process platform-specific functions
   local platform_message=""
   if [[ -f "$SHELLS/$platform-functions.sh" ]]; then
-    platform_message="$("get-docs" "$SHELLS/$platform-functions.sh")"
+    platform_message="$("shelldocsparser" "$SHELLS/$platform-functions.sh")"
   fi
 
   # Function to format and display functions

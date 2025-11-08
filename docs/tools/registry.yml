@@ -607,6 +607,110 @@ tools:
     tags: [shell, formatter, development]
     docs_url: "https://github.com/mvdan/sh"
 
+  # =================================================================
+  # CUSTOM DOTFILES TOOLS
+  # =================================================================
+
+  menu:
+    category: custom-tools
+    description: "Interactive workflow and task menu using gum"
+    installed_via: dotfiles
+    usage: "menu"
+    why_use: "Quick access to common workflows, session management, tasks, and git operations"
+    examples:
+      - cmd: "menu"
+        desc: "Launch interactive menu"
+    see_also: [sess, tools]
+    tags: [dotfiles, workflow, tui]
+
+  sess:
+    category: custom-tools
+    description: "Tmux session manager with gum-based interactive selection"
+    installed_via: dotfiles
+    usage: "sess [session-name]"
+    why_use: "Quick tmux session switching, integrates with tmuxinator, manages default sessions from YAML config"
+    examples:
+      - cmd: "sess"
+        desc: "Interactive session selector (gum)"
+      - cmd: "sess dotfiles"
+        desc: "Attach to or create 'dotfiles' session"
+      - cmd: "sess list"
+        desc: "List all sessions (active, tmuxinator, defaults)"
+      - cmd: "sess last"
+        desc: "Switch to previously active session"
+    see_also: [menu, tmux, tmuxinator]
+    tags: [dotfiles, tmux, workflow, tui, go]
+    docs_url: "tools/sess/README.md"
+
+  tools:
+    category: custom-tools
+    description: "Tool discovery and documentation system"
+    installed_via: dotfiles
+    usage: "tools [command]"
+    why_use: "Discover installed tools, view usage examples, search by keyword"
+    examples:
+      - cmd: "tools list"
+        desc: "List all documented tools"
+      - cmd: "tools show ripgrep"
+        desc: "Show detailed info about ripgrep"
+      - cmd: "tools search git"
+        desc: "Find git-related tools"
+      - cmd: "tools random"
+        desc: "Discover a random tool"
+    see_also: [menu]
+    tags: [dotfiles, discovery, documentation]
+
+  notes:
+    category: custom-tools
+    description: "Quick notes and Obsidian vault access"
+    installed_via: dotfiles
+    usage: "notes [vault-name]"
+    why_use: "Fast access to Obsidian vaults from command line"
+    examples:
+      - cmd: "notes"
+        desc: "Open default notes directory"
+      - cmd: "notes vault-name"
+        desc: "Open specific Obsidian vault"
+    see_also: [nb, buku]
+    tags: [dotfiles, notes, obsidian]
+
+  shelldocsparser:
+    category: custom-tools
+    description: "Parse and extract documentation from shell scripts"
+    installed_via: dotfiles
+    usage: "shelldocsparser <script-file>"
+    why_use: "Extract function documentation from shell scripts with special comment syntax"
+    examples:
+      - cmd: "shelldocsparser ~/.shell/functions.sh"
+        desc: "Parse functions.sh for documentation"
+    see_also: [tools]
+    tags: [dotfiles, documentation, shell]
+    notes: "Uses #@function and #--> comment syntax for documentation"
+
+  printcolors:
+    category: custom-tools
+    description: "Display ANSI color palette"
+    installed_via: dotfiles
+    usage: "printcolors"
+    why_use: "Quick reference for ANSI color codes and testing terminal colors"
+    examples:
+      - cmd: "printcolors"
+        desc: "Display full color palette"
+    tags: [dotfiles, terminal, colors]
+
+  tmux-colors-from-tinty:
+    category: custom-tools
+    description: "Generate tmux statusbar config from current tinty theme"
+    installed_via: dotfiles
+    usage: "tmux-colors-from-tinty"
+    why_use: "Internal tool used by theme-sync to apply Base16 colors to tmux statusbar"
+    examples:
+      - cmd: "tmux-colors-from-tinty"
+        desc: "Generate tmux config from current theme"
+    see_also: [theme-sync, tinty]
+    tags: [dotfiles, theme, tmux, internal]
+    notes: "Parses tinty YAML scheme files and generates tmux configuration. Used internally by theme-sync system."
+
 # =================================================================
 # Metadata
 # =================================================================
@@ -627,6 +731,7 @@ categories:
   - infrastructure
   - automation
   - system-monitoring
+  - custom-tools
 
 install_methods:
   - brew: "Homebrew package manager (macOS/Linux)"
@@ -635,3 +740,4 @@ install_methods:
   - uv: "Python package manager"
   - script: "Installation script"
   - cask: "Homebrew cask (GUI applications)"
+  - dotfiles: "Custom tools included in dotfiles repository"
