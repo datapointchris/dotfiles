@@ -111,7 +111,7 @@ All remaining scripts are active and working:
 **Added:**
 
 - Phase 1: ~120 lines (new menu launcher)
-- Phase 1: ~100 lines (session-go gum conversion)
+- Phase 1: ~100 lines (sess gum conversion)
 - Phase 2: Folder structures (minimal)
 - Phase 3: ~1,900 lines (documentation)
 - Phase 4: ~300 lines (README update)
@@ -125,7 +125,7 @@ All remaining scripts are active and working:
 
 | Tool | Implementation | Location | Status |
 |------|---------------|----------|--------|
-| sess | Go + gum | tools/session-go/ → ~/.local/bin/sess | ✓ Working |
+| sess | Go + gum | tools/sess/ → ~/.local/bin/sess | ✓ Working |
 | tools | Bash | common/.local/bin/tools | ✓ Working |
 | theme-sync | Bash | common/.local/bin/theme-sync | ✓ Working |
 | menu | Bash + gum | common/.local/bin/menu | ✓ Working |

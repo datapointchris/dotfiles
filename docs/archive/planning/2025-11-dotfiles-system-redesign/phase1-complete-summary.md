@@ -46,7 +46,7 @@ menu launch       # Interactive launcher
 
 **Changes Made:**
 
-- ✓ Removed Bubbletea TUI dependency from session-go
+- ✓ Removed Bubbletea TUI dependency from sess
 - ✓ Added gum for interactive selection
 - ✓ Renamed from `session` to `sess`
 - ✓ Archived old bash `sess` script
@@ -141,8 +141,8 @@ sess last           # Switch to last session
 
 ### Modified
 
-- `tools/session-go/cmd/session/main.go` - Converted to use gum instead of Bubbletea
-- `tools/session-go/Taskfile.yml` - Build as `sess` instead of `session`
+- `tools/sess/cmd/session/main.go` - Converted to use gum instead of Bubbletea
+- `tools/sess/Taskfile.yml` - Build as `sess` instead of `session`
 - Planning documents updated with clarifications
 
 ### Removed/Archived

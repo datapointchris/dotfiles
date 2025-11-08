@@ -145,7 +145,7 @@ Components:
 │  │ c → Commands    │ Browse and switch       │  │
 │  │ w → Workflows   │ tmux sessions           │  │
 │  │ l → Learning    │                         │  │
-│  │ t → Tools       │ Integration: session-go │  │
+│  │ t → Tools       │ Integration: sess │  │
 │  └─────────────────┴─────────────────────────┘  │
 └─────────────────────────────────────────────────┘
                      ↓ (select with Enter)
