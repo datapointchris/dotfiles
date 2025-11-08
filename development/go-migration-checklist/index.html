@@ -1630,6 +1630,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1675,6 +1679,52 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Bash Testing Frameworks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Git History Rewriting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -2057,16 +2107,16 @@
 <h3 id="week-1-foundation">Week 1: Foundation<a class="headerlink" href="#week-1-foundation" title="Permanent link">&para;</a></h3>
 <p><strong>Project Setup (Day 1-2)</strong></p>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>tools/session-go</code> directory structure</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Initialize go module (<code>go mod init session-go</code>)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>tools/sess</code> directory structure</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Initialize go module (<code>go mod init sess</code>)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Add dependencies (cobra, bubbletea, lipgloss, yaml.v3)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>main.go</code> entry point</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>cmd/root.go</code> with basic CLI</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>README.md</code> for session-go</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>README.md</code> for sess</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>.gitignore</code> (add vendor/, binary)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Add to <code>taskfiles/go.yml</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test basic build (<code>go build</code>)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Verify <code>session-go --help</code> works</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Verify <code>sess --help</code> works</li>
 </ul>
 <p><strong>Session Config Parser (Day 3-4)</strong></p>
 <ul class="task-list">
@@ -2169,7 +2219,7 @@
 </ul>
 <p><strong>Stabilization (Week 3)</strong></p>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Use <code>session-go</code> exclusively for 1 week</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Use <code>sess</code> exclusively for 1 week</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Track any bugs or regressions</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Fix issues as they arise</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Get feedback (if applicable)</li>
@@ -2183,7 +2233,7 @@
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>tools/menu-go</code> directory structure</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Initialize go module (<code>go mod init menu-go</code>)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Add dependencies (reuse from session-go)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Add dependencies (reuse from sess)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>main.go</code> entry point</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>cmd/root.go</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>README.md</code></li>
@@ -2191,34 +2241,42 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test basic build</li>
 </ul>
 <p><strong>Registry Parsers (Day 2-5)</strong></p>
-<p>Commands Registry:
-- [ ] Create <code>internal/registry/commands.go</code>
-- [ ] Define <code>CommandRegistry</code> struct
-- [ ] Define <code>Command</code> struct
-- [ ] Implement <code>LoadCommands(path)</code> function
-- [ ] Implement validation
-- [ ] Create <code>internal/registry/commands_test.go</code>
-- [ ] Test with actual commands.yml</p>
-<p>Workflows Registry:
-- [ ] Create <code>internal/registry/workflows.go</code>
-- [ ] Define <code>WorkflowRegistry</code> struct
-- [ ] Define <code>Workflow</code> struct
-- [ ] Implement <code>LoadWorkflows(path)</code> function
-- [ ] Create tests
-- [ ] Test with actual workflows.yml</p>
-<p>Learning Registry:
-- [ ] Create <code>internal/registry/learning.go</code>
-- [ ] Define <code>LearningRegistry</code> struct
-- [ ] Define <code>LearningTopic</code> struct
-- [ ] Implement <code>LoadLearning(path)</code> function
-- [ ] Create tests
-- [ ] Test with actual learning.yml</p>
-<p>Config and Categories:
-- [ ] Create <code>internal/config/menu_config.go</code>
-- [ ] Parse <code>config.yml</code>
-- [ ] Parse <code>categories.yml</code>
-- [ ] Test config loading
-- [ ] Achieve &gt;85% coverage on all parsers</p>
+<p>Commands Registry:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>internal/registry/commands.go</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Define <code>CommandRegistry</code> struct</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Define <code>Command</code> struct</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Implement <code>LoadCommands(path)</code> function</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Implement validation</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>internal/registry/commands_test.go</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test with actual commands.yml</li>
+</ul>
+<p>Workflows Registry:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>internal/registry/workflows.go</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Define <code>WorkflowRegistry</code> struct</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Define <code>Workflow</code> struct</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Implement <code>LoadWorkflows(path)</code> function</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create tests</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test with actual workflows.yml</li>
+</ul>
+<p>Learning Registry:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>internal/registry/learning.go</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Define <code>LearningRegistry</code> struct</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Define <code>LearningTopic</code> struct</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Implement <code>LoadLearning(path)</code> function</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create tests</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test with actual learning.yml</li>
+</ul>
+<p>Config and Categories:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>internal/config/menu_config.go</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Parse <code>config.yml</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Parse <code>categories.yml</code></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test config loading</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Achieve &gt;85% coverage on all parsers</li>
+</ul>
 <h3 id="week-2-navigation">Week 2: Navigation<a class="headerlink" href="#week-2-navigation" title="Permanent link">&para;</a></h3>
 <p><strong>Menu Navigation (Day 6-9)</strong></p>
 <ul class="task-list">
@@ -2256,7 +2314,7 @@
 </ul>
 <p><strong>Session Integration (Day 14)</strong></p>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Import session-go as library (or shell out)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Import sess as library (or shell out)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Implement session launching from menu</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Test integration</li>
 </ul>

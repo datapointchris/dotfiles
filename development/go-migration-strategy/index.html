@@ -1376,9 +1376,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-1-session-manager-sess-session-go" class="md-nav__link">
+  <a href="#phase-1-session-manager-sess-sess" class="md-nav__link">
     <span class="md-ellipsis">
-      Phase 1: Session Manager (sess → session-go)
+      Phase 1: Session Manager (sess → sess)
     </span>
   </a>
   
@@ -1420,7 +1420,7 @@
           <li class="md-nav__item">
   <a href="#why-this-structure" class="md-nav__link">
     <span class="md-ellipsis">
-      Why This Structure:
+      Why This Structure
     </span>
   </a>
   
@@ -1730,9 +1730,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-shared-code-between-session-go-and-menu-go" class="md-nav__link">
+  <a href="#4-shared-code-between-sess-and-menu-go" class="md-nav__link">
     <span class="md-ellipsis">
-      4. Shared Code Between session-go and menu-go
+      4. Shared Code Between sess and menu-go
     </span>
   </a>
   
@@ -2056,6 +2056,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2101,6 +2105,52 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Bash Testing Frameworks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Git History Rewriting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -2477,7 +2527,7 @@
 </ul>
 <h2 id="migration-overview">Migration Overview<a class="headerlink" href="#migration-overview" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Phase 1: Session Manager (1-2 weeks)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── sess (329 lines bash) → session-go
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── sess (329 lines bash) → sess
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── YAML config parser
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── Tmux/tmuxinator integration
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└── Interactive TUI
@@ -2496,33 +2546,41 @@
 </span></code></pre></div>
 <h2 id="current-state-analysis">Current State Analysis<a class="headerlink" href="#current-state-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="bash-implementation">Bash Implementation<a class="headerlink" href="#bash-implementation" title="Permanent link">&para;</a></h3>
-<p><strong>Scripts:</strong>
-- <code>menu</code> (~420 lines) - Universal menu with category navigation
-- <code>sess</code> (~329 lines) - Tmux session manager
-- <code>fzf-functions.sh</code> (~216 lines) - Shell functions using fzf
-- Total: ~965 lines of bash</p>
-<p><strong>Data Layer:</strong>
-- YAML registries in <code>~/.config/menu/</code>:
-  - <code>registry/commands.yml</code> - Shell commands, aliases, functions
-  - <code>registry/workflows.yml</code> - Multi-step processes
-  - <code>registry/learning.yml</code> - Learning resources with progress tracking
-  - <code>sessions/sessions-&lt;platform&gt;.yml</code> - Default session configurations
-  - <code>config.yml</code> - Main configuration
-  - <code>categories.yml</code> - Category definitions</p>
-<p><strong>External Dependencies:</strong>
-- <code>gum</code> - Interactive prompts and UI
-- <code>fzf</code> - Fuzzy finding
-- <code>tmux</code> - Terminal multiplexer
-- <code>tmuxinator</code> - Tmux session templates
-- <code>yq</code> - YAML processing (optional, falls back to grep/sed)
-- <code>task</code> - Task runner integration
-- <code>nb</code>, <code>buku</code> - Notes and bookmarks (future)</p>
-<p><strong>Key Features:</strong>
-- Context-aware (detects git repos, Taskfiles)
-- Platform-specific configs (macOS/WSL)
-- Tmux popup integration (<code>prefix + m</code>)
-- Progressive disclosure (menu → category → details)
-- Session aggregation from 3 sources (active tmux, tmuxinator, defaults)</p>
+<p><strong>Scripts:</strong></p>
+<ul>
+<li><code>menu</code> (~420 lines) - Universal menu with category navigation</li>
+<li><code>sess</code> (~329 lines) - Tmux session manager</li>
+<li><code>fzf-functions.sh</code> (~216 lines) - Shell functions using fzf</li>
+<li>Total: ~965 lines of bash</li>
+</ul>
+<p><strong>Data Layer:</strong></p>
+<ul>
+<li>YAML registries in <code>~/.config/menu/</code>:</li>
+<li><code>registry/commands.yml</code> - Shell commands, aliases, functions</li>
+<li><code>registry/workflows.yml</code> - Multi-step processes</li>
+<li><code>registry/learning.yml</code> - Learning resources with progress tracking</li>
+<li><code>sessions/sessions-&lt;platform&gt;.yml</code> - Default session configurations</li>
+<li><code>config.yml</code> - Main configuration</li>
+<li><code>categories.yml</code> - Category definitions</li>
+</ul>
+<p><strong>External Dependencies:</strong></p>
+<ul>
+<li><code>gum</code> - Interactive prompts and UI</li>
+<li><code>fzf</code> - Fuzzy finding</li>
+<li><code>tmux</code> - Terminal multiplexer</li>
+<li><code>tmuxinator</code> - Tmux session templates</li>
+<li><code>yq</code> - YAML processing (optional, falls back to grep/sed)</li>
+<li><code>task</code> - Task runner integration</li>
+<li><code>nb</code>, <code>buku</code> - Notes and bookmarks (future)</li>
+</ul>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Context-aware (detects git repos, Taskfiles)</li>
+<li>Platform-specific configs (macOS/WSL)</li>
+<li>Tmux popup integration (<code>prefix + m</code>)</li>
+<li>Progressive disclosure (menu → category → details)</li>
+<li>Session aggregation from 3 sources (active tmux, tmuxinator, defaults)</li>
+</ul>
 <h3 id="current-pain-points">Current Pain Points<a class="headerlink" href="#current-pain-points" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>YAML Parsing</strong>: Inconsistent parsing with grep/sed fallbacks when yq unavailable</li>
@@ -2551,35 +2609,45 @@
 </ol>
 <h2 id="what-to-migrate-vs-keep">What to Migrate vs Keep<a class="headerlink" href="#what-to-migrate-vs-keep" title="Permanent link">&para;</a></h2>
 <h3 id="migrate-to-go">Migrate to Go<a class="headerlink" href="#migrate-to-go" title="Permanent link">&para;</a></h3>
-<p><strong>Core Logic:</strong>
-- YAML parsing and validation
-- Configuration management
-- Registry data structures and queries
-- Session management logic
-- Menu navigation state machine
-- Tmux/tmuxinator integration
-- Error handling and logging</p>
-<p><strong>Why Go:</strong>
-- Strong typing for YAML schemas
-- Better error handling
-- Easy cross-compilation
-- Fast startup time
-- Great testing ecosystem
-- Single binary deployment
-- Standard library has everything needed</p>
+<p><strong>Core Logic:</strong></p>
+<ul>
+<li>YAML parsing and validation</li>
+<li>Configuration management</li>
+<li>Registry data structures and queries</li>
+<li>Session management logic</li>
+<li>Menu navigation state machine</li>
+<li>Tmux/tmuxinator integration</li>
+<li>Error handling and logging</li>
+</ul>
+<p><strong>Why Go:</strong></p>
+<ul>
+<li>Strong typing for YAML schemas</li>
+<li>Better error handling</li>
+<li>Easy cross-compilation</li>
+<li>Fast startup time</li>
+<li>Great testing ecosystem</li>
+<li>Single binary deployment</li>
+<li>Standard library has everything needed</li>
+</ul>
 <h3 id="keep-in-bash">Keep in Bash<a class="headerlink" href="#keep-in-bash" title="Permanent link">&para;</a></h3>
-<p><strong>Shell-Specific Functions:</strong>
-- <code>fcd</code> - Uses shell's <code>cd</code> builtin (must stay in shell)
-- <code>z</code> - Frecency tracking (requires shell integration)
-- Other functions in <code>fzf-functions.sh</code> that modify shell state</p>
-<p><strong>Integration Scripts:</strong>
-- Tmux key binding calling the menu (<code>prefix + m</code>)
-- Shell aliases and functions that wrap the Go binary</p>
-<p><strong>Why Bash:</strong>
-- Shell state modification (cd, environment variables)
-- Direct shell integration
-- Simpler for one-liners
-- Already works well</p>
+<p><strong>Shell-Specific Functions:</strong></p>
+<ul>
+<li><code>fcd</code> - Uses shell's <code>cd</code> builtin (must stay in shell)</li>
+<li><code>z</code> - Frecency tracking (requires shell integration)</li>
+<li>Other functions in <code>fzf-functions.sh</code> that modify shell state</li>
+</ul>
+<p><strong>Integration Scripts:</strong></p>
+<ul>
+<li>Tmux key binding calling the menu (<code>prefix + m</code>)</li>
+<li>Shell aliases and functions that wrap the Go binary</li>
+</ul>
+<p><strong>Why Bash:</strong></p>
+<ul>
+<li>Shell state modification (cd, environment variables)</li>
+<li>Direct shell integration</li>
+<li>Simpler for one-liners</li>
+<li>Already works well</li>
+</ul>
 <h3 id="platform-specific-boundaries">Platform-Specific Boundaries<a class="headerlink" href="#platform-specific-boundaries" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌─────────────────────────────────────────────┐
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│            Go Binary (menu-go)              │
@@ -2598,25 +2666,29 @@
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>└─────────────────────────────────────────────┘
 </span></code></pre></div>
 <h2 id="migration-phases">Migration Phases<a class="headerlink" href="#migration-phases" title="Permanent link">&para;</a></h2>
-<h3 id="phase-1-session-manager-sess-session-go">Phase 1: Session Manager (<code>sess</code> → <code>session-go</code>)<a class="headerlink" href="#phase-1-session-manager-sess-session-go" title="Permanent link">&para;</a></h3>
-<p><strong>Why Start Here:</strong>
-- Simpler scope (~329 lines)
-- Clear inputs/outputs
-- Limited external dependencies
-- Immediate value (better session management)
-- Learning opportunity before tackling <code>menu</code></p>
+<h3 id="phase-1-session-manager-sess-sess">Phase 1: Session Manager (<code>sess</code> → <code>sess</code>)<a class="headerlink" href="#phase-1-session-manager-sess-sess" title="Permanent link">&para;</a></h3>
+<p><strong>Why Start Here:</strong></p>
+<ul>
+<li>Simpler scope (~329 lines)</li>
+<li>Clear inputs/outputs</li>
+<li>Limited external dependencies</li>
+<li>Immediate value (better session management)</li>
+<li>Learning opportunity before tackling <code>menu</code></li>
+</ul>
 <p><strong>Timeline:</strong> 1-2 weeks</p>
-<p><strong>Deliverables:</strong>
-1. Go binary: <code>session-go</code> (or <code>sess-go</code>)
-2. YAML session config parser
-3. Tmux/tmuxinator integration
-4. Interactive mode with bubbletea
-5. Unit tests (&gt;80% coverage)
-6. Bash wrapper for compatibility
-7. Documentation</p>
+<p><strong>Deliverables:</strong></p>
+<ol>
+<li>Go binary: <code>sess</code> (or <code>sess-go</code>)</li>
+<li>YAML session config parser</li>
+<li>Tmux/tmuxinator integration</li>
+<li>Interactive mode with bubbletea</li>
+<li>Unit tests (&gt;80% coverage)</li>
+<li>Bash wrapper for compatibility</li>
+<li>Documentation</li>
+</ol>
 <p><strong>Tasks:</strong></p>
 <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="l l-Scalar l-Scalar-Plain">1. Project Setup (1-2 days)</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Create tools/session-go directory</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Create tools/sess directory</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Initialize go.mod</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Setup dependencies (cobra, bubbletea, yaml.v3)</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Create basic CLI structure</span>
@@ -2658,34 +2730,46 @@
 </span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Bash wrapper script</span>
 </span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Update symlinks</span>
 </span></code></pre></div>
-<p><strong>Success Metrics:</strong>
-- Feature parity with bash <code>sess</code>
-- &lt;50ms startup time
-- 0 regressions in functionality
-- &gt;80% test coverage
-- Clean error messages</p>
-<p><strong>Rollback Plan:</strong>
-- Keep bash <code>sess</code> as <code>sess-legacy</code>
-- Symlink points to Go version
-- Can switch back instantly if issues</p>
+<p><strong>Success Metrics:</strong></p>
+<ul>
+<li>Feature parity with bash <code>sess</code></li>
+<li>&lt;50ms startup time</li>
+<li>0 regressions in functionality</li>
+<li>
+<blockquote>
+<p>80% test coverage</p>
+</blockquote>
+</li>
+<li>Clean error messages</li>
+</ul>
+<p><strong>Rollback Plan:</strong></p>
+<ul>
+<li>Keep bash <code>sess</code> as <code>sess-legacy</code></li>
+<li>Symlink points to Go version</li>
+<li>Can switch back instantly if issues</li>
+</ul>
 <h3 id="phase-2-menu-core-menu-menu-go">Phase 2: Menu Core (<code>menu</code> → <code>menu-go</code>)<a class="headerlink" href="#phase-2-menu-core-menu-menu-go" title="Permanent link">&para;</a></h3>
-<p><strong>Why Second:</strong>
-- Builds on learnings from Phase 1
-- More complex (multiple registries, categories)
-- Needs robust YAML handling from Phase 1</p>
+<p><strong>Why Second:</strong></p>
+<ul>
+<li>Builds on learnings from Phase 1</li>
+<li>More complex (multiple registries, categories)</li>
+<li>Needs robust YAML handling from Phase 1</li>
+</ul>
 <p><strong>Timeline:</strong> 3-4 weeks</p>
-<p><strong>Deliverables:</strong>
-1. Go binary: <code>menu-go</code>
-2. Registry parsers (commands, workflows, learning)
-3. Category navigation system
-4. Detail view with pager
-5. Context detection (git, taskfile)
-6. Comprehensive tests
-7. Migration guide</p>
+<p><strong>Deliverables:</strong></p>
+<ol>
+<li>Go binary: <code>menu-go</code></li>
+<li>Registry parsers (commands, workflows, learning)</li>
+<li>Category navigation system</li>
+<li>Detail view with pager</li>
+<li>Context detection (git, taskfile)</li>
+<li>Comprehensive tests</li>
+<li>Migration guide</li>
+</ol>
 <p><strong>Tasks:</strong></p>
 <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="l l-Scalar l-Scalar-Plain">1. Project Setup (1 day)</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Create tools/menu-go directory</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Shared config with session-go</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Shared config with sess</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- CLI framework (cobra)</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="l l-Scalar l-Scalar-Plain">2. Registry Parsers (3-4 days)</span>
@@ -2730,77 +2814,85 @@
 </span><span id="__span-3-45"><a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Documentation</span>
 </span><span id="__span-3-46"><a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">- Migration guide for users (you)</span>
 </span></code></pre></div>
-<p><strong>Success Metrics:</strong>
-- Full feature parity with bash <code>menu</code>
-- &lt;100ms startup time
-- 0 user-facing regressions
-- &gt;85% test coverage
-- Better error messages than bash version</p>
-<p><strong>Rollback Plan:</strong>
-- Keep bash <code>menu</code> as <code>menu-legacy</code>
-- Symlink switching
-- Can revert mid-migration</p>
+<p><strong>Success Metrics:</strong></p>
+<ul>
+<li>Full feature parity with bash <code>menu</code></li>
+<li>&lt;100ms startup time</li>
+<li>0 user-facing regressions</li>
+<li>
+<blockquote>
+<p>85% test coverage</p>
+</blockquote>
+</li>
+<li>Better error messages than bash version</li>
+</ul>
+<p><strong>Rollback Plan:</strong></p>
+<ul>
+<li>Keep bash <code>menu</code> as <code>menu-legacy</code></li>
+<li>Symlink switching</li>
+<li>Can revert mid-migration</li>
+</ul>
 <h3 id="phase-3-enhanced-features">Phase 3: Enhanced Features<a class="headerlink" href="#phase-3-enhanced-features" title="Permanent link">&para;</a></h3>
-<p><strong>Why Last:</strong>
-- Foundation is solid
-- Can add value incrementally
-- Not blocking migration</p>
+<p><strong>Why Last:</strong></p>
+<ul>
+<li>Foundation is solid</li>
+<li>Can add value incrementally</li>
+<li>Not blocking migration</li>
+</ul>
 <p><strong>Timeline:</strong> Ongoing (post-migration)</p>
 <p><strong>Potential Features:</strong></p>
 <ol>
-<li>
-<p><strong>Search Across All Registries</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>menu<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;quickfix&quot;</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Shows matches from commands, workflows, learning</span>
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Fuzzy Finding</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>menu<span class="w"> </span>--fuzzy
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Fuzzy search all entries</span>
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Recent Items</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>menu<span class="w"> </span>recent
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Show recently accessed items</span>
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Suggestions</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>menu<span class="w"> </span>suggest
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># AI-powered suggestions based on context</span>
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Notes Integration</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>menu<span class="w"> </span>notes<span class="w"> </span>workflow
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Create workflow note</span>
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Export/Import</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>menu<span class="w"> </span><span class="nb">export</span><span class="w"> </span>dotfiles-knowledge.json
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>menu<span class="w"> </span>import<span class="w"> </span>from-old-system.json
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Web UI</strong> (optional)
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>menu<span class="w"> </span>serve
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Launch web interface on localhost:8080</span>
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Sync</strong> (optional)
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>menu<span class="w"> </span>sync
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Sync learning progress, bookmarks to remote</span>
-</span></code></pre></div></p>
-</li>
+<li><strong>Search Across All Registries</strong></li>
 </ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>menu<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;quickfix&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Shows matches from commands, workflows, learning</span>
+</span></code></pre></div>
+<ol>
+<li><strong>Fuzzy Finding</strong></li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>menu<span class="w"> </span>--fuzzy
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Fuzzy search all entries</span>
+</span></code></pre></div>
+<ol>
+<li><strong>Recent Items</strong></li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>menu<span class="w"> </span>recent
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Show recently accessed items</span>
+</span></code></pre></div>
+<ol>
+<li><strong>Suggestions</strong></li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>menu<span class="w"> </span>suggest
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># AI-powered suggestions based on context</span>
+</span></code></pre></div>
+<ol>
+<li><strong>Notes Integration</strong></li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>menu<span class="w"> </span>notes<span class="w"> </span>workflow
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Create workflow note</span>
+</span></code></pre></div>
+<ol>
+<li><strong>Export/Import</strong></li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>menu<span class="w"> </span><span class="nb">export</span><span class="w"> </span>dotfiles-knowledge.json
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>menu<span class="w"> </span>import<span class="w"> </span>from-old-system.json
+</span></code></pre></div>
+<ol>
+<li><strong>Web UI</strong> (optional)</li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>menu<span class="w"> </span>serve
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Launch web interface on localhost:8080</span>
+</span></code></pre></div>
+<ol>
+<li><strong>Sync</strong> (optional)</li>
+</ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>menu<span class="w"> </span>sync
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Sync learning progress, bookmarks to remote</span>
+</span></code></pre></div>
 <h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>dotfiles/
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── tools/
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   ├── session-go/              # Phase 1
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   ├── sess/              # Phase 1
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>│   │   ├── cmd/
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>│   │   │   └── root.go          # CLI commands
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>│   │   ├── internal/
@@ -2838,7 +2930,7 @@
 </span><span id="__span-12-38"><a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>├── common/.local/bin/
 </span><span id="__span-12-39"><a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a>│   ├── menu                     # Bash wrapper → menu-go
 </span><span id="__span-12-40"><a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>│   ├── menu-legacy              # Original bash (backup)
-</span><span id="__span-12-41"><a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a>│   ├── sess                     # Bash wrapper → session-go
+</span><span id="__span-12-41"><a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a>│   ├── sess                     # Bash wrapper → sess
 </span><span id="__span-12-42"><a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a>│   └── sess-legacy              # Original bash (backup)
 </span><span id="__span-12-43"><a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a>│
 </span><span id="__span-12-44"><a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a>├── taskfiles/
@@ -2849,9 +2941,9 @@
 </span><span id="__span-12-49"><a id="__codelineno-12-49" name="__codelineno-12-49" href="#__codelineno-12-49"></a>    ├── go-migration-strategy.md # This file
 </span><span id="__span-12-50"><a id="__codelineno-12-50" name="__codelineno-12-50" href="#__codelineno-12-50"></a>    └── go-development.md        # Go coding standards (new)
 </span></code></pre></div>
-<h3 id="why-this-structure">Why This Structure:<a class="headerlink" href="#why-this-structure" title="Permanent link">&para;</a></h3>
+<h3 id="why-this-structure">Why This Structure<a class="headerlink" href="#why-this-structure" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Separate binaries</strong> - <code>session-go</code> and <code>menu-go</code> are independent</li>
+<li><strong>Separate binaries</strong> - <code>sess</code> and <code>menu-go</code> are independent</li>
 <li><strong>Internal packages</strong> - Business logic is private, prevents misuse</li>
 <li><strong>Shared patterns</strong> - Config and UI can be shared via internal packages or separate module</li>
 <li><strong>Standard layout</strong> - Follows Go project layout conventions</li>
@@ -2864,13 +2956,13 @@
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3&#39;</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nt">vars</span><span class="p">:</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="nt">SESSION_BIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{.HOME}}/.local/bin/session-go&quot;</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="nt">SESSION_BIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{.HOME}}/.local/bin/sess&quot;</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="nt">MENU_BIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{.HOME}}/.local/bin/menu-go&quot;</span>
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
 </span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nt">tasks</span><span class="p">:</span>
 </span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">  </span><span class="nt">build-session</span><span class="p">:</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build session-go binary</span>
-</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">    </span><span class="nt">dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tools/session-go</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build sess binary</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">    </span><span class="nt">dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tools/sess</span>
 </span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
 </span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">go build -o {{.SESSION_BIN}} .</span>
 </span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">    </span><span class="nt">sources</span><span class="p">:</span>
@@ -2895,8 +2987,8 @@
 </span><span id="__span-13-33"><a id="__codelineno-13-33" name="__codelineno-13-33" href="#__codelineno-13-33"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">build-menu</span>
 </span><span id="__span-13-34"><a id="__codelineno-13-34" name="__codelineno-13-34" href="#__codelineno-13-34"></a>
 </span><span id="__span-13-35"><a id="__codelineno-13-35" name="__codelineno-13-35" href="#__codelineno-13-35"></a><span class="w">  </span><span class="nt">test-session</span><span class="p">:</span>
-</span><span id="__span-13-36"><a id="__codelineno-13-36" name="__codelineno-13-36" href="#__codelineno-13-36"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test session-go</span>
-</span><span id="__span-13-37"><a id="__codelineno-13-37" name="__codelineno-13-37" href="#__codelineno-13-37"></a><span class="w">    </span><span class="nt">dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tools/session-go</span>
+</span><span id="__span-13-36"><a id="__codelineno-13-36" name="__codelineno-13-36" href="#__codelineno-13-36"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test sess</span>
+</span><span id="__span-13-37"><a id="__codelineno-13-37" name="__codelineno-13-37" href="#__codelineno-13-37"></a><span class="w">    </span><span class="nt">dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tools/sess</span>
 </span><span id="__span-13-38"><a id="__codelineno-13-38" name="__codelineno-13-38" href="#__codelineno-13-38"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
 </span><span id="__span-13-39"><a id="__codelineno-13-39" name="__codelineno-13-39" href="#__codelineno-13-39"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">go test ./... -v -cover</span>
 </span><span id="__span-13-40"><a id="__codelineno-13-40" name="__codelineno-13-40" href="#__codelineno-13-40"></a>
@@ -2913,11 +3005,11 @@
 </span><span id="__span-13-51"><a id="__codelineno-13-51" name="__codelineno-13-51" href="#__codelineno-13-51"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test-menu</span>
 </span><span id="__span-13-52"><a id="__codelineno-13-52" name="__codelineno-13-52" href="#__codelineno-13-52"></a>
 </span><span id="__span-13-53"><a id="__codelineno-13-53" name="__codelineno-13-53" href="#__codelineno-13-53"></a><span class="w">  </span><span class="nt">install-session</span><span class="p">:</span>
-</span><span id="__span-13-54"><a id="__codelineno-13-54" name="__codelineno-13-54" href="#__codelineno-13-54"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build and install session-go</span>
+</span><span id="__span-13-54"><a id="__codelineno-13-54" name="__codelineno-13-54" href="#__codelineno-13-54"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build and install sess</span>
 </span><span id="__span-13-55"><a id="__codelineno-13-55" name="__codelineno-13-55" href="#__codelineno-13-55"></a><span class="w">    </span><span class="nt">deps</span><span class="p">:</span>
 </span><span id="__span-13-56"><a id="__codelineno-13-56" name="__codelineno-13-56" href="#__codelineno-13-56"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">build-session</span>
 </span><span id="__span-13-57"><a id="__codelineno-13-57" name="__codelineno-13-57" href="#__codelineno-13-57"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
-</span><span id="__span-13-58"><a id="__codelineno-13-58" name="__codelineno-13-58" href="#__codelineno-13-58"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">echo &quot;Installed session-go to {{.SESSION_BIN}}&quot;</span>
+</span><span id="__span-13-58"><a id="__codelineno-13-58" name="__codelineno-13-58" href="#__codelineno-13-58"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">echo &quot;Installed sess to {{.SESSION_BIN}}&quot;</span>
 </span><span id="__span-13-59"><a id="__codelineno-13-59" name="__codelineno-13-59" href="#__codelineno-13-59"></a>
 </span><span id="__span-13-60"><a id="__codelineno-13-60" name="__codelineno-13-60" href="#__codelineno-13-60"></a><span class="w">  </span><span class="nt">install-menu</span><span class="p">:</span>
 </span><span id="__span-13-61"><a id="__codelineno-13-61" name="__codelineno-13-61" href="#__codelineno-13-61"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build and install menu-go</span>
@@ -2936,12 +3028,12 @@
 </span><span id="__span-13-74"><a id="__codelineno-13-74" name="__codelineno-13-74" href="#__codelineno-13-74"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Clean build artifacts</span>
 </span><span id="__span-13-75"><a id="__codelineno-13-75" name="__codelineno-13-75" href="#__codelineno-13-75"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
 </span><span id="__span-13-76"><a id="__codelineno-13-76" name="__codelineno-13-76" href="#__codelineno-13-76"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rm -f {{.SESSION_BIN}} {{.MENU_BIN}}</span>
-</span><span id="__span-13-77"><a id="__codelineno-13-77" name="__codelineno-13-77" href="#__codelineno-13-77"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cd tools/session-go &amp;&amp; go clean</span>
+</span><span id="__span-13-77"><a id="__codelineno-13-77" name="__codelineno-13-77" href="#__codelineno-13-77"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cd tools/sess &amp;&amp; go clean</span>
 </span><span id="__span-13-78"><a id="__codelineno-13-78" name="__codelineno-13-78" href="#__codelineno-13-78"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cd tools/menu-go &amp;&amp; go clean</span>
 </span></code></pre></div>
 <h3 id="installation-flow">Installation Flow<a class="headerlink" href="#installation-flow" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Development</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>task<span class="w"> </span>go:build-session<span class="w">      </span><span class="c1"># Build session-go</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>task<span class="w"> </span>go:build-session<span class="w">      </span><span class="c1"># Build sess</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>task<span class="w"> </span>go:test-session<span class="w">       </span><span class="c1"># Test it</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Production</span>
@@ -2953,9 +3045,9 @@
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">build-all-platforms</span><span class="p">:</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build for all platforms</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">cmds</span><span class="p">:</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GOOS=darwin GOARCH=arm64 go build -o bin/session-go-darwin-arm64</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GOOS=darwin GOARCH=amd64 go build -o bin/session-go-darwin-amd64</span>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GOOS=linux GOARCH=amd64 go build -o bin/session-go-linux-amd64</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GOOS=darwin GOARCH=arm64 go build -o bin/sess-darwin-arm64</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GOOS=darwin GOARCH=amd64 go build -o bin/sess-darwin-amd64</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GOOS=linux GOARCH=amd64 go build -o bin/sess-linux-amd64</span>
 </span></code></pre></div>
 <h2 id="backward-compatibility-strategy">Backward Compatibility Strategy<a class="headerlink" href="#backward-compatibility-strategy" title="Permanent link">&para;</a></h2>
 <h3 id="during-migration">During Migration<a class="headerlink" href="#during-migration" title="Permanent link">&para;</a></h3>
@@ -2965,40 +3057,50 @@
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Wrapper that calls Go binary</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1"># Check if Go binary exists</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">if</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>session-go<span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nb">exec</span><span class="w"> </span>session-go<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">if</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>sess<span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nb">exec</span><span class="w"> </span>sess<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
 </span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="k">else</span>
 </span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">    </span><span class="c1"># Fallback to legacy bash version</span>
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;session-go not found, using legacy bash version&quot;</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;sess not found, using legacy bash version&quot;</span>
 </span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">    </span><span class="nb">exec</span><span class="w"> </span>sess-legacy<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
 </span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="k">fi</span>
 </span></code></pre></div>
-<p><strong>Benefits:</strong>
-- Transparent to users (you)
-- Easy rollback (just remove session-go)
-- Can A/B test both versions
-- Symlinks still work</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Transparent to users (you)</li>
+<li>Easy rollback (just remove sess)</li>
+<li>Can A/B test both versions</li>
+<li>Symlinks still work</li>
+</ul>
 <h3 id="coexistence-period">Coexistence Period<a class="headerlink" href="#coexistence-period" title="Permanent link">&para;</a></h3>
-<p><strong>Week 1-2:</strong>
-- Both versions installed
-- Go version is default
-- Monitor for issues
-- Keep detailed notes</p>
-<p><strong>Week 3-4:</strong>
-- If stable, remove legacy versions
-- If issues, fix and iterate
-- Full cutover when confident</p>
-<p><strong>Rollback Triggers:</strong>
-- Any data loss
-- Broken core functionality
-- Performance regression
-- Annoying bugs</p>
+<p><strong>Week 1-2:</strong></p>
+<ul>
+<li>Both versions installed</li>
+<li>Go version is default</li>
+<li>Monitor for issues</li>
+<li>Keep detailed notes</li>
+</ul>
+<p><strong>Week 3-4:</strong></p>
+<ul>
+<li>If stable, remove legacy versions</li>
+<li>If issues, fix and iterate</li>
+<li>Full cutover when confident</li>
+</ul>
+<p><strong>Rollback Triggers:</strong></p>
+<ul>
+<li>Any data loss</li>
+<li>Broken core functionality</li>
+<li>Performance regression</li>
+<li>Annoying bugs</li>
+</ul>
 <h3 id="yaml-compatibility">YAML Compatibility<a class="headerlink" href="#yaml-compatibility" title="Permanent link">&para;</a></h3>
-<p><strong>No Changes to Registry Format:</strong>
-- Go must parse existing YAMLs
-- No new required fields
-- Optional fields can be added
-- Strict validation (warn, don't error)</p>
+<p><strong>No Changes to Registry Format:</strong></p>
+<ul>
+<li>Go must parse existing YAMLs</li>
+<li>No new required fields</li>
+<li>Optional fields can be added</li>
+<li>Strict validation (warn, don't error)</li>
+</ul>
 <p><strong>Example:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// Strict parsing, but warnings for unknown fields</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nx">decoder</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">yaml</span><span class="p">.</span><span class="nx">NewDecoder</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span>
@@ -3016,7 +3118,7 @@
 </span></code></pre></div>
 <h2 id="integration-points">Integration Points<a class="headerlink" href="#integration-points" title="Permanent link">&para;</a></h2>
 <h3 id="how-go-calls-external-tools">How Go Calls External Tools<a class="headerlink" href="#how-go-calls-external-tools" title="Permanent link">&para;</a></h3>
-<p><strong>Tmux:</strong>
+<p><strong>Tmux:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// internal/tmux/client.go</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Client</span><span class="w"> </span><span class="kd">struct</span><span class="p">{}</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
@@ -3029,8 +3131,8 @@
 </span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">Client</span><span class="p">)</span><span class="w"> </span><span class="nx">SwitchClient</span><span class="p">(</span><span class="nx">session</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">exec</span><span class="p">.</span><span class="nx">Command</span><span class="p">(</span><span class="s">&quot;tmux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;switch-client&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;-t&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">).</span><span class="nx">Run</span><span class="p">()</span>
 </span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Tmuxinator:</strong>
+</span></code></pre></div>
+<p><strong>Tmuxinator:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1">// internal/tmux/tmuxinator.go</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Tmuxinator</span><span class="w"> </span><span class="kd">struct</span><span class="p">{}</span>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
@@ -3046,8 +3148,8 @@
 </span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">exec</span><span class="p">.</span><span class="nx">Command</span><span class="p">(</span><span class="s">&quot;tmuxinator&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="o">...</span><span class="p">).</span><span class="nx">Run</span><span class="p">()</span>
 </span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Task:</strong>
+</span></code></pre></div>
+<p><strong>Task:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1">// internal/task/client.go</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Client</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="nx">GitRoot</span><span class="w"> </span><span class="kt">string</span>
@@ -3066,9 +3168,9 @@
 </span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="w">    </span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Stderr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span>
 </span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Run</span><span class="p">()</span>
 </span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="how-go-reads-yaml-configs">How Go Reads YAML Configs<a class="headerlink" href="#how-go-reads-yaml-configs" title="Permanent link">&para;</a></h3>
-<p><strong>Centralized Config:</strong>
+<p><strong>Centralized Config:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1">// internal/config/config.go</span>
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="kn">package</span><span class="w"> </span><span class="nx">config</span>
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
@@ -3090,8 +3192,8 @@
 </span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a><span class="w">    </span><span class="nx">configPath</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">filepath</span><span class="p">.</span><span class="nx">Join</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;HOME&quot;</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;.config&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;menu&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;config.yml&quot;</span><span class="p">)</span>
 </span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a><span class="w">    </span><span class="c1">// Load and parse</span>
 </span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Registry Parsing:</strong>
+</span></code></pre></div>
+<p><strong>Registry Parsing:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1">// internal/registry/commands.go</span>
 </span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CommandRegistry</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="nx">Commands</span><span class="w"> </span><span class="p">[]</span><span class="nx">Command</span><span class="w"> </span><span class="s">`yaml:&quot;commands&quot;`</span>
@@ -3115,80 +3217,92 @@
 </span><span id="__span-22-21"><a id="__codelineno-22-21" name="__codelineno-22-21" href="#__codelineno-22-21"></a><span class="w">    </span><span class="nx">path</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">filepath</span><span class="p">.</span><span class="nx">Join</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;HOME&quot;</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;.config&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;menu&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;registry&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;commands.yml&quot;</span><span class="p">)</span>
 </span><span id="__span-22-22"><a id="__codelineno-22-22" name="__codelineno-22-22" href="#__codelineno-22-22"></a><span class="w">    </span><span class="c1">// Load and validate</span>
 </span><span id="__span-22-23"><a id="__codelineno-22-23" name="__codelineno-22-23" href="#__codelineno-22-23"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="how-go-integrates-with-existing-shell-functions">How Go Integrates with Existing Shell Functions<a class="headerlink" href="#how-go-integrates-with-existing-shell-functions" title="Permanent link">&para;</a></h3>
 <p><strong>Not directly.</strong> Shell functions stay in bash. Go provides the data and logic, bash provides shell integration.</p>
 <p><strong>Example - Task Selection:</strong></p>
-<p>Go binary shows task list, returns task name to stdout:
+<p>Go binary shows task list, returns task name to stdout:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Bash wrapper</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nv">selected_task</span><span class="o">=</span><span class="k">$(</span>menu-go<span class="w"> </span>tasks<span class="w"> </span>--select<span class="k">)</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$selected_task</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span>task<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$selected_task</span><span class="s2">&quot;</span>
 </span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="k">fi</span>
-</span></code></pre></div></p>
-<p>Or Go handles it entirely:
+</span></code></pre></div>
+<p>Or Go handles it entirely:</p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1">// menu-go can execute tasks directly</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">runTask</span><span class="p">(</span><span class="nx">name</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">exec</span><span class="p">.</span><span class="nx">Command</span><span class="p">(</span><span class="s">&quot;task&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="p">).</span><span class="nx">Run</span><span class="p">()</span>
 </span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h2 id="risk-assessment-mitigation">Risk Assessment &amp; Mitigation<a class="headerlink" href="#risk-assessment-mitigation" title="Permanent link">&para;</a></h2>
 <h3 id="high-risks">High Risks<a class="headerlink" href="#high-risks" title="Permanent link">&para;</a></h3>
 <p><strong>1. Data Loss (YAML Corruption)</strong></p>
-<p><strong>Risk:</strong> Bad parsing could corrupt YAML files
-- <strong>Likelihood:</strong> Low
-- <strong>Impact:</strong> Critical
-- <strong>Mitigation:</strong>
-  - Read-only mode first (no writes)
-  - Extensive YAML validation tests
-  - Backup configs before migration
-  - Version control everything</p>
+<p><strong>Risk:</strong> Bad parsing could corrupt YAML files</p>
+<ul>
+<li><strong>Likelihood:</strong> Low</li>
+<li><strong>Impact:</strong> Critical</li>
+<li><strong>Mitigation:</strong></li>
+<li>Read-only mode first (no writes)</li>
+<li>Extensive YAML validation tests</li>
+<li>Backup configs before migration</li>
+<li>Version control everything</li>
+</ul>
 <p><strong>2. Broken Workflows</strong></p>
-<p><strong>Risk:</strong> Missing features break daily workflows
-- <strong>Likelihood:</strong> Medium
-- <strong>Impact:</strong> High
-- <strong>Mitigation:</strong>
-  - Feature parity checklist
-  - Manual testing of all workflows
-  - Coexistence period
-  - Easy rollback</p>
+<p><strong>Risk:</strong> Missing features break daily workflows</p>
+<ul>
+<li><strong>Likelihood:</strong> Medium</li>
+<li><strong>Impact:</strong> High</li>
+<li><strong>Mitigation:</strong></li>
+<li>Feature parity checklist</li>
+<li>Manual testing of all workflows</li>
+<li>Coexistence period</li>
+<li>Easy rollback</li>
+</ul>
 <h3 id="medium-risks">Medium Risks<a class="headerlink" href="#medium-risks" title="Permanent link">&para;</a></h3>
 <p><strong>3. Performance Regression</strong></p>
-<p><strong>Risk:</strong> Go version is slower than bash
-- <strong>Likelihood:</strong> Low
-- <strong>Impact:</strong> Medium
-- <strong>Mitigation:</strong>
-  - Benchmark startup time
-  - Profile if slow
-  - Optimize hot paths
-  - Target: &lt;100ms startup</p>
+<p><strong>Risk:</strong> Go version is slower than bash</p>
+<ul>
+<li><strong>Likelihood:</strong> Low</li>
+<li><strong>Impact:</strong> Medium</li>
+<li><strong>Mitigation:</strong></li>
+<li>Benchmark startup time</li>
+<li>Profile if slow</li>
+<li>Optimize hot paths</li>
+<li>Target: &lt;100ms startup</li>
+</ul>
 <p><strong>4. Dependency Issues</strong></p>
-<p><strong>Risk:</strong> New dependencies cause installation problems
-- <strong>Likelihood:</strong> Low
-- <strong>Impact:</strong> Medium
-- <strong>Mitigation:</strong>
-  - Minimal dependencies
-  - Vendoring if needed
-  - Static binaries
-  - Document all deps</p>
+<p><strong>Risk:</strong> New dependencies cause installation problems</p>
+<ul>
+<li><strong>Likelihood:</strong> Low</li>
+<li><strong>Impact:</strong> Medium</li>
+<li><strong>Mitigation:</strong></li>
+<li>Minimal dependencies</li>
+<li>Vendoring if needed</li>
+<li>Static binaries</li>
+<li>Document all deps</li>
+</ul>
 <h3 id="low-risks">Low Risks<a class="headerlink" href="#low-risks" title="Permanent link">&para;</a></h3>
 <p><strong>5. Platform Compatibility</strong></p>
-<p><strong>Risk:</strong> Works on macOS, breaks on WSL
-- <strong>Likelihood:</strong> Low
-- <strong>Impact:</strong> Low (only use WSL occasionally)
-- <strong>Mitigation:</strong>
-  - Test on both platforms
-  - Platform-specific code paths
-  - CI for multiple platforms (future)</p>
+<p><strong>Risk:</strong> Works on macOS, breaks on WSL</p>
+<ul>
+<li><strong>Likelihood:</strong> Low</li>
+<li><strong>Impact:</strong> Low (only use WSL occasionally)</li>
+<li><strong>Mitigation:</strong></li>
+<li>Test on both platforms</li>
+<li>Platform-specific code paths</li>
+<li>CI for multiple platforms (future)</li>
+</ul>
 <p><strong>6. Learning Curve</strong></p>
-<p><strong>Risk:</strong> Go is harder to maintain than bash
-- <strong>Likelihood:</strong> Low
-- <strong>Impact:</strong> Low
-- <strong>Mitigation:</strong>
-  - Good documentation
-  - Standard patterns
-  - Tests make changes safe
-  - AI assistants help with Go</p>
+<p><strong>Risk:</strong> Go is harder to maintain than bash</p>
+<ul>
+<li><strong>Likelihood:</strong> Low</li>
+<li><strong>Impact:</strong> Low</li>
+<li><strong>Mitigation:</strong></li>
+<li>Good documentation</li>
+<li>Standard patterns</li>
+<li>Tests make changes safe</li>
+<li>AI assistants help with Go</li>
+</ul>
 <h2 id="timeline-estimates">Timeline &amp; Estimates<a class="headerlink" href="#timeline-estimates" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-session-manager-1-2-weeks">Phase 1: Session Manager (1-2 weeks)<a class="headerlink" href="#phase-1-session-manager-1-2-weeks" title="Permanent link">&para;</a></h3>
 <table>
@@ -3208,7 +3322,7 @@
 <tr>
 <td>Week 2</td>
 <td>UI, testing, deployment</td>
-<td>Production-ready <code>session-go</code></td>
+<td>Production-ready <code>sess</code></td>
 </tr>
 </tbody>
 </table>
@@ -3290,51 +3404,69 @@
 </ul>
 <h2 id="open-questions-decisions-needed">Open Questions &amp; Decisions Needed<a class="headerlink" href="#open-questions-decisions-needed" title="Permanent link">&para;</a></h2>
 <h3 id="1-binary-names">1. Binary Names<a class="headerlink" href="#1-binary-names" title="Permanent link">&para;</a></h3>
-<p><strong>Option A:</strong> <code>session-go</code> and <code>menu-go</code>
-- Pro: Clear distinction during migration
-- Con: Longer names</p>
-<p><strong>Option B:</strong> <code>sess</code> and <code>menu</code> (replace directly)
-- Pro: No wrapper needed
-- Con: Harder rollback</p>
+<p><strong>Option A:</strong> <code>sess</code> and <code>menu-go</code></p>
+<ul>
+<li>Pro: Clear distinction during migration</li>
+<li>Con: Longer names</li>
+</ul>
+<p><strong>Option B:</strong> <code>sess</code> and <code>menu</code> (replace directly)</p>
+<ul>
+<li>Pro: No wrapper needed</li>
+<li>Con: Harder rollback</li>
+</ul>
 <p><strong>Recommendation:</strong> Option A during migration, Option B after stabilization</p>
 <h3 id="2-ui-library">2. UI Library<a class="headerlink" href="#2-ui-library" title="Permanent link">&para;</a></h3>
-<p><strong>Option A:</strong> Use <code>gum</code> (shell out to existing tool)
-- Pro: Consistent with bash version
-- Pro: Familiar UI
-- Con: External dependency
-- Con: Extra process overhead</p>
-<p><strong>Option B:</strong> Use <code>bubbletea</code> (native Go TUI)
-- Pro: Native Go, faster
-- Pro: More control
-- Pro: Better for complex UIs
-- Con: Different look/feel
-- Con: Learning curve</p>
+<p><strong>Option A:</strong> Use <code>gum</code> (shell out to existing tool)</p>
+<ul>
+<li>Pro: Consistent with bash version</li>
+<li>Pro: Familiar UI</li>
+<li>Con: External dependency</li>
+<li>Con: Extra process overhead</li>
+</ul>
+<p><strong>Option B:</strong> Use <code>bubbletea</code> (native Go TUI)</p>
+<ul>
+<li>Pro: Native Go, faster</li>
+<li>Pro: More control</li>
+<li>Pro: Better for complex UIs</li>
+<li>Con: Different look/feel</li>
+<li>Con: Learning curve</li>
+</ul>
 <p><strong>Recommendation:</strong> Option B (bubbletea) for better long-term control</p>
 <h3 id="3-config-validation">3. Config Validation<a class="headerlink" href="#3-config-validation" title="Permanent link">&para;</a></h3>
-<p><strong>Option A:</strong> Strict validation (error on unknown fields)
-- Pro: Catches mistakes early
-- Con: Breaks if you add experimental fields</p>
-<p><strong>Option B:</strong> Lenient validation (warn on unknown)
-- Pro: More forgiving
-- Con: Silent failures possible</p>
+<p><strong>Option A:</strong> Strict validation (error on unknown fields)</p>
+<ul>
+<li>Pro: Catches mistakes early</li>
+<li>Con: Breaks if you add experimental fields</li>
+</ul>
+<p><strong>Option B:</strong> Lenient validation (warn on unknown)</p>
+<ul>
+<li>Pro: More forgiving</li>
+<li>Con: Silent failures possible</li>
+</ul>
 <p><strong>Recommendation:</strong> Option B (lenient) for flexibility</p>
-<h3 id="4-shared-code-between-session-go-and-menu-go">4. Shared Code Between session-go and menu-go<a class="headerlink" href="#4-shared-code-between-session-go-and-menu-go" title="Permanent link">&para;</a></h3>
-<p><strong>Option A:</strong> Duplicate code
-- Pro: Complete independence
-- Con: DRY violation</p>
-<p><strong>Option B:</strong> Shared internal package
-- Pro: Code reuse
-- Con: Coupling between tools</p>
-<p><strong>Option C:</strong> Separate Go module for shared code
-- Pro: Reusable, versioned
-- Con: Over-engineering for small project</p>
+<h3 id="4-shared-code-between-sess-and-menu-go">4. Shared Code Between sess and menu-go<a class="headerlink" href="#4-shared-code-between-sess-and-menu-go" title="Permanent link">&para;</a></h3>
+<p><strong>Option A:</strong> Duplicate code</p>
+<ul>
+<li>Pro: Complete independence</li>
+<li>Con: DRY violation</li>
+</ul>
+<p><strong>Option B:</strong> Shared internal package</p>
+<ul>
+<li>Pro: Code reuse</li>
+<li>Con: Coupling between tools</li>
+</ul>
+<p><strong>Option C:</strong> Separate Go module for shared code</p>
+<ul>
+<li>Pro: Reusable, versioned</li>
+<li>Con: Over-engineering for small project</li>
+</ul>
 <p><strong>Recommendation:</strong> Option A initially, refactor to Option B if significant duplication emerges</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-this-week">Immediate Actions (This Week)<a class="headerlink" href="#immediate-actions-this-week" title="Permanent link">&para;</a></h3>
 <ol class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Review this strategy document</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Make decisions on open questions</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>tools/session-go</code> directory</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>tools/sess</code> directory</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Initialize Go module</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create <code>taskfiles/go.yml</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Document Go coding standards in <code>docs/development/go-development.md</code></li>
@@ -3365,14 +3497,14 @@
 </span></code></pre></div>
 <h2 id="appendix">Appendix<a class="headerlink" href="#appendix" title="Permanent link">&para;</a></h2>
 <h3 id="example-go-code-patterns">Example Go Code Patterns<a class="headerlink" href="#example-go-code-patterns" title="Permanent link">&para;</a></h3>
-<p><strong>CLI Entry Point:</strong>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1">// tools/session-go/main.go</span>
+<p><strong>CLI Entry Point:</strong></p>
+<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1">// tools/sess/main.go</span>
 </span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
 </span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">    </span><span class="s">&quot;fmt&quot;</span>
 </span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">    </span><span class="s">&quot;os&quot;</span>
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">    </span><span class="s">&quot;session-go/cmd&quot;</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">    </span><span class="s">&quot;sess/cmd&quot;</span>
 </span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="p">)</span>
 </span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>
 </span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
@@ -3381,9 +3513,9 @@
 </span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a><span class="w">        </span><span class="nx">os</span><span class="p">.</span><span class="nx">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 </span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Root Command:</strong>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// tools/session-go/cmd/root.go</span>
+</span></code></pre></div>
+<p><strong>Root Command:</strong></p>
+<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// tools/sess/cmd/root.go</span>
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="kn">package</span><span class="w"> </span><span class="nx">cmd</span>
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
 </span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
@@ -3391,7 +3523,7 @@
 </span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="p">)</span>
 </span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>
 </span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="kd">var</span><span class="w"> </span><span class="nx">rootCmd</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">{</span>
-</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a><span class="w">    </span><span class="nx">Use</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;session-go&quot;</span><span class="p">,</span>
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a><span class="w">    </span><span class="nx">Use</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;sess&quot;</span><span class="p">,</span>
 </span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="w">    </span><span class="nx">Short</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Fast tmux session manager&quot;</span><span class="p">,</span>
 </span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a><span class="w">    </span><span class="nx">Long</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;A simple and fast tmux session manager built in Go&quot;</span><span class="p">,</span>
 </span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="p">}</span>
@@ -3399,15 +3531,15 @@
 </span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a><span class="kd">func</span><span class="w"> </span><span class="nx">Execute</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">rootCmd</span><span class="p">.</span><span class="nx">Execute</span><span class="p">()</span>
 </span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Interactive Mode:</strong>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1">// tools/session-go/cmd/interactive.go</span>
+</span></code></pre></div>
+<p><strong>Interactive Mode:</strong></p>
+<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1">// tools/sess/cmd/interactive.go</span>
 </span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="kn">package</span><span class="w"> </span><span class="nx">cmd</span>
 </span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
 </span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
 </span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="w">    </span><span class="nx">tea</span><span class="w"> </span><span class="s">&quot;github.com/charmbracelet/bubbletea&quot;</span>
 </span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="w">    </span><span class="s">&quot;github.com/spf13/cobra&quot;</span>
-</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="w">    </span><span class="s">&quot;session-go/internal/ui&quot;</span>
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="w">    </span><span class="s">&quot;sess/internal/ui&quot;</span>
 </span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a><span class="p">)</span>
 </span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>
 </span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="kd">var</span><span class="w"> </span><span class="nx">interactiveCmd</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">{</span>
@@ -3423,16 +3555,20 @@
 </span><span id="__span-28-20"><a id="__codelineno-28-20" name="__codelineno-28-20" href="#__codelineno-28-20"></a><span class="kd">func</span><span class="w"> </span><span class="nx">init</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-28-21"><a id="__codelineno-28-21" name="__codelineno-28-21" href="#__codelineno-28-21"></a><span class="w">    </span><span class="nx">rootCmd</span><span class="p">.</span><span class="nx">AddCommand</span><span class="p">(</span><span class="nx">interactiveCmd</span><span class="p">)</span>
 </span><span id="__span-28-22"><a id="__codelineno-28-22" name="__codelineno-28-22" href="#__codelineno-28-22"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h3>
-<p><strong>Core:</strong>
-- <code>gopkg.in/yaml.v3</code> - YAML parsing
-- <code>github.com/spf13/cobra</code> - CLI framework
-- <code>github.com/charmbracelet/bubbletea</code> - TUI framework
-- <code>github.com/charmbracelet/lipgloss</code> - Terminal styling</p>
-<p><strong>Testing:</strong>
-- Standard library <code>testing</code>
-- <code>github.com/stretchr/testify</code> - Test assertions (optional)</p>
+<p><strong>Core:</strong></p>
+<ul>
+<li><code>gopkg.in/yaml.v3</code> - YAML parsing</li>
+<li><code>github.com/spf13/cobra</code> - CLI framework</li>
+<li><code>github.com/charmbracelet/bubbletea</code> - TUI framework</li>
+<li><code>github.com/charmbracelet/lipgloss</code> - Terminal styling</li>
+</ul>
+<p><strong>Testing:</strong></p>
+<ul>
+<li>Standard library <code>testing</code></li>
+<li><code>github.com/stretchr/testify</code> - Test assertions (optional)</li>
+</ul>
 <p><strong>Total:</strong> 4-5 dependencies, all well-maintained</p>
 <h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h3>
 <ul>

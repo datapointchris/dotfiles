@@ -1897,6 +1897,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1942,6 +1946,52 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Bash Testing Frameworks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Git History Rewriting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -2316,43 +2366,51 @@
 <strong>Status</strong>: ✅ Complete and installed</p>
 <h2 id="what-was-built">What Was Built<a class="headerlink" href="#what-was-built" title="Permanent link">&para;</a></h2>
 <h3 id="1-session-manager-session">1. Session Manager (<code>session</code>)<a class="headerlink" href="#1-session-manager-session" title="Permanent link">&para;</a></h3>
-<p><strong>Location</strong>: <code>tools/session-go/</code>
+<p><strong>Location</strong>: <code>tools/sess/</code>
 <strong>Binary</strong>: <code>~/.local/bin/session</code>
 <strong>Language</strong>: Go 1.24</p>
-<p>A fast tmux session manager that aggregates:
-- Active tmux sessions
-- Tmuxinator projects
-- Default sessions from YAML config</p>
-<p><strong>Features</strong>:
-- Beautiful Bubbletea TUI with visual indicators (●, ⚙, ○)
-- Single binary (5.6MB)
-- Comprehensive unit tests with mocks
-- Platform detection (macOS/WSL)
-- Keyboard shortcuts: <code>session</code>, <code>session list</code>, <code>session last</code></p>
-<p><strong>Example Output</strong>:
+<p>A fast tmux session manager that aggregates:</p>
+<ul>
+<li>Active tmux sessions</li>
+<li>Tmuxinator projects</li>
+<li>Default sessions from YAML config</li>
+</ul>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Beautiful Bubbletea TUI with visual indicators (●, ⚙, ○)</li>
+<li>Single binary (5.6MB)</li>
+<li>Comprehensive unit tests with mocks</li>
+<li>Platform detection (macOS/WSL)</li>
+<li>Keyboard shortcuts: <code>session</code>, <code>session list</code>, <code>session last</code></li>
+</ul>
+<p><strong>Example Output</strong>:</p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>● dotfiles (4 windows)
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>● ichrisbirch (1 window)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>⚙ ichrisbirch-development (tmuxinator)
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>○ notes (not started)
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="2-universal-menu-menu">2. Universal Menu (<code>menu</code>)<a class="headerlink" href="#2-universal-menu-menu" title="Permanent link">&para;</a></h3>
 <p><strong>Location</strong>: <code>tools/menu-go/</code>
 <strong>Binary</strong>: <code>~/.local/bin/menu</code>
 <strong>Language</strong>: Go 1.24</p>
-<p>A function-based knowledge and workflow manager with:
-- Commands &amp; Aliases registry
-- Workflows registry
-- Learning Topics registry
-- Multi-level navigation (Main → Category → Details)</p>
-<p><strong>Features</strong>:
-- Interactive Bubbletea TUI
-- YAML registry parsing
-- Keyboard shortcuts (s, t, n, c, g, l)
-- Fuzzy filtering with <code>/</code>
-- Comprehensive test coverage</p>
+<p>A function-based knowledge and workflow manager with:</p>
+<ul>
+<li>Commands &amp; Aliases registry</li>
+<li>Workflows registry</li>
+<li>Learning Topics registry</li>
+<li>Multi-level navigation (Main → Category → Details)</li>
+</ul>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Interactive Bubbletea TUI</li>
+<li>YAML registry parsing</li>
+<li>Keyboard shortcuts (s, t, n, c, g, l)</li>
+<li>Fuzzy filtering with <code>/</code></li>
+<li>Comprehensive test coverage</li>
+</ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <h3 id="session-manager-architecture">Session Manager Architecture<a class="headerlink" href="#session-manager-architecture" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>session-go/
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sess/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── cmd/session/          # Main entry point with Cobra CLI
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── internal/
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   ├── session/          # Core business logic
@@ -2370,11 +2428,13 @@
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>├── Makefile              # Build, test, install
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>└── README.md             # Documentation
 </span></code></pre></div>
-<p><strong>Key Design Decisions</strong>:
-- <strong>Dependency Injection</strong>: All external dependencies (tmux, config) are interfaces
-- <strong>Testability</strong>: Mock implementations for all interfaces
-- <strong>Single Responsibility</strong>: Each package has one clear purpose
-- <strong>Error Handling</strong>: All errors properly propagated and handled</p>
+<p><strong>Key Design Decisions</strong>:</p>
+<ul>
+<li><strong>Dependency Injection</strong>: All external dependencies (tmux, config) are interfaces</li>
+<li><strong>Testability</strong>: Mock implementations for all interfaces</li>
+<li><strong>Single Responsibility</strong>: Each package has one clear purpose</li>
+<li><strong>Error Handling</strong>: All errors properly propagated and handled</li>
+</ul>
 <h3 id="menu-system-architecture">Menu System Architecture<a class="headerlink" href="#menu-system-architecture" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>menu-go/
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── cmd/menu/             # Main entry point
@@ -2388,11 +2448,13 @@
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>├── Makefile              # Build, test, install
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>└── README.md             # Documentation
 </span></code></pre></div>
-<p><strong>Key Features</strong>:
-- <strong>Type Safety</strong>: Strongly-typed structs for all YAML data
-- <strong>State Machine</strong>: Clean state transitions (MainMenu → Submenu → Detail)
-- <strong>Extensibility</strong>: Easy to add new registry types
-- <strong>Performance</strong>: Fast YAML parsing with gopkg.in/yaml.v3</p>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li><strong>Type Safety</strong>: Strongly-typed structs for all YAML data</li>
+<li><strong>State Machine</strong>: Clean state transitions (MainMenu → Submenu → Detail)</li>
+<li><strong>Extensibility</strong>: Easy to add new registry types</li>
+<li><strong>Performance</strong>: Fast YAML parsing with gopkg.in/yaml.v3</li>
+</ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <p>Both projects use the same high-quality libraries:</p>
 <table>
@@ -2491,43 +2553,53 @@
 </tbody>
 </table>
 <h3 id="specific-improvements">Specific Improvements<a class="headerlink" href="#specific-improvements" title="Permanent link">&para;</a></h3>
-<p><strong>1. Session Manager</strong>
-- ✅ No more subshell issues with arrays
-- ✅ No more platform-specific commands (<code>head -n -1</code> vs <code>sed '$d'</code>)
-- ✅ Consistent YAML parsing (no more awk/sed/grep tricks)
-- ✅ Proper error messages with context
-- ✅ Unit tested with 100% interface coverage</p>
-<p><strong>2. Menu System</strong>
-- ✅ Fast YAML parsing (was slow with bash tools)
-- ✅ Type-safe registry access
-- ✅ Smooth TUI navigation (no more gum choose flicker)
-- ✅ Testable business logic
-- ✅ Easy to extend with new registry types</p>
+<p><strong>1. Session Manager</strong></p>
+<ul>
+<li>✅ No more subshell issues with arrays</li>
+<li>✅ No more platform-specific commands (<code>head -n -1</code> vs <code>sed '$d'</code>)</li>
+<li>✅ Consistent YAML parsing (no more awk/sed/grep tricks)</li>
+<li>✅ Proper error messages with context</li>
+<li>✅ Unit tested with 100% interface coverage</li>
+</ul>
+<p><strong>2. Menu System</strong></p>
+<ul>
+<li>✅ Fast YAML parsing (was slow with bash tools)</li>
+<li>✅ Type-safe registry access</li>
+<li>✅ Smooth TUI navigation (no more gum choose flicker)</li>
+<li>✅ Testable business logic</li>
+<li>✅ Easy to extend with new registry types</li>
+</ul>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <h3 id="session-manager-tests">Session Manager Tests<a class="headerlink" href="#session-manager-tests" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>tools/session-go
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>tools/sess
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span><span class="nb">test</span>
 </span></code></pre></div>
-<p><strong>Test Coverage</strong>:
-- ✅ ListAll() - session aggregation from all sources
-- ✅ CreateOrSwitch() - session creation and switching
-- ✅ GetSessionInfo() - session metadata
-- ✅ No duplicates when tmuxinator project is running
-- ✅ Proper handling of empty sources</p>
-<p><strong>Mocks Created</strong>:
-- MockTmuxClient
-- MockTmuxinatorClient
-- MockConfigLoader</p>
+<p><strong>Test Coverage</strong>:</p>
+<ul>
+<li>✅ ListAll() - session aggregation from all sources</li>
+<li>✅ CreateOrSwitch() - session creation and switching</li>
+<li>✅ GetSessionInfo() - session metadata</li>
+<li>✅ No duplicates when tmuxinator project is running</li>
+<li>✅ Proper handling of empty sources</li>
+</ul>
+<p><strong>Mocks Created</strong>:</p>
+<ul>
+<li>MockTmuxClient</li>
+<li>MockTmuxinatorClient</li>
+<li>MockConfigLoader</li>
+</ul>
 <h3 id="menu-system-tests">Menu System Tests<a class="headerlink" href="#menu-system-tests" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>tools/menu-go
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>make<span class="w"> </span><span class="nb">test</span>
 </span></code></pre></div>
-<p><strong>Test Coverage</strong>:
-- ✅ LoadCommands() - commands.yml parsing
-- ✅ LoadWorkflows() - workflows.yml parsing
-- ✅ LoadLearningTopics() - learning.yml parsing
-- ✅ FindCommand() - specific command lookup
-- ✅ YAML structure validation</p>
+<p><strong>Test Coverage</strong>:</p>
+<ul>
+<li>✅ LoadCommands() - commands.yml parsing</li>
+<li>✅ LoadWorkflows() - workflows.yml parsing</li>
+<li>✅ LoadLearningTopics() - learning.yml parsing</li>
+<li>✅ FindCommand() - specific command lookup</li>
+<li>✅ YAML structure validation</li>
+</ul>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>Both binaries are already installed in <code>~/.local/bin</code>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$<span class="w"> </span>which<span class="w"> </span>session
@@ -2538,7 +2610,7 @@
 </span></code></pre></div>
 <h3 id="rebuilding">Rebuilding<a class="headerlink" href="#rebuilding" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Session manager</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">cd</span><span class="w"> </span>tools/session-go
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">cd</span><span class="w"> </span>tools/sess
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>make<span class="w"> </span>clean<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>install
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Menu system</span>
@@ -2569,25 +2641,31 @@
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># From tmux (bound to prefix + m)</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Already configured in tmux.conf</span>
 </span></code></pre></div>
-<p><strong>Keyboard Shortcuts</strong> (in menu):
-- <code>s</code> - Sessions
-- <code>t</code> - Tasks
-- <code>n</code> - Notes
-- <code>c</code> - Commands &amp; Aliases
-- <code>g</code> - Git Workflows
-- <code>v</code> - Vim Workflows
-- <code>l</code> - Learning Topics
-- <code>q</code> - Quit</p>
+<p><strong>Keyboard Shortcuts</strong> (in menu):</p>
+<ul>
+<li><code>s</code> - Sessions</li>
+<li><code>t</code> - Tasks</li>
+<li><code>n</code> - Notes</li>
+<li><code>c</code> - Commands &amp; Aliases</li>
+<li><code>g</code> - Git Workflows</li>
+<li><code>v</code> - Vim Workflows</li>
+<li><code>l</code> - Learning Topics</li>
+<li><code>q</code> - Quit</li>
+</ul>
 <h2 id="what-stayed-in-bash">What Stayed in Bash<a class="headerlink" href="#what-stayed-in-bash" title="Permanent link">&para;</a></h2>
 <p>Not everything was migrated - some things are better in bash:</p>
-<p><strong>Shell Functions</strong> (<code>common/.shell/fzf-functions.sh</code>):
-- <code>fcd</code> - Fuzzy cd (modifies shell state)
-- <code>z</code> - Zoxide jump (modifies shell state)
-- Other functions that need to modify the calling shell</p>
-<p><strong>Aliases</strong> (<code>common/.shell/aliases.sh</code>):
-- Git aliases (gst, glo, etc.)
-- Directory shortcuts (ll, la, etc.)
-- All simple command shortcuts</p>
+<p><strong>Shell Functions</strong> (<code>common/.shell/fzf-functions.sh</code>):</p>
+<ul>
+<li><code>fcd</code> - Fuzzy cd (modifies shell state)</li>
+<li><code>z</code> - Zoxide jump (modifies shell state)</li>
+<li>Other functions that need to modify the calling shell</li>
+</ul>
+<p><strong>Aliases</strong> (<code>common/.shell/aliases.sh</code>):</p>
+<ul>
+<li>Git aliases (gst, glo, etc.)</li>
+<li>Directory shortcuts (ll, la, etc.)</li>
+<li>All simple command shortcuts</li>
+</ul>
 <p><strong>Why?</strong> These need to run in the calling shell's context to modify its state (change directory, set variables, etc.). Launching a binary would create a subprocess that can't affect the parent shell.</p>
 <h2 id="file-changes">File Changes<a class="headerlink" href="#file-changes" title="Permanent link">&para;</a></h2>
 <h3 id="modified-files">Modified Files<a class="headerlink" href="#modified-files" title="Permanent link">&para;</a></h3>
@@ -2596,8 +2674,8 @@
 <li><strong>sessions config</strong> - No change needed! YAML structure identical</li>
 </ol>
 <h3 id="new-files-created">New Files Created<a class="headerlink" href="#new-files-created" title="Permanent link">&para;</a></h3>
-<p><strong>Session Manager</strong> (15 files):
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>tools/session-go/
+<p><strong>Session Manager</strong> (15 files):</p>
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>tools/sess/
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── cmd/session/main.go
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>├── internal/
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>│   ├── session/
@@ -2616,8 +2694,8 @@
 </span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>├── go.sum
 </span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>├── Makefile
 </span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>└── README.md
-</span></code></pre></div></p>
-<p><strong>Menu System</strong> (9 files):
+</span></code></pre></div>
+<p><strong>Menu System</strong> (9 files):</p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>menu-go/
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>├── cmd/menu/main.go
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>├── internal/
@@ -2631,11 +2709,13 @@
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>├── go.sum
 </span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>├── Makefile
 </span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>└── README.md
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="deprecated-files-can-be-archived">Deprecated Files (can be archived)<a class="headerlink" href="#deprecated-files-can-be-archived" title="Permanent link">&para;</a></h3>
-<p>These bash scripts are replaced by Go binaries:
-- <code>common/.local/bin/menu</code> (bash script)
-- <code>common/.local/bin/sess</code> (bash script)</p>
+<p>These bash scripts are replaced by Go binaries:</p>
+<ul>
+<li><code>common/.local/bin/menu</code> (bash script)</li>
+<li><code>common/.local/bin/sess</code> (bash script)</li>
+</ul>
 <p><strong>Note</strong>: Don't delete yet! Keep for reference until we've verified the Go versions work perfectly in all scenarios.</p>
 <h2 id="build-information">Build Information<a class="headerlink" href="#build-information" title="Permanent link">&para;</a></h2>
 <h3 id="session-manager_1">Session Manager<a class="headerlink" href="#session-manager_1" title="Permanent link">&para;</a></h3>
@@ -2685,17 +2765,17 @@
 <h3 id="session-manager-doesnt-show-default-sessions">Session manager doesn't show default sessions<a class="headerlink" href="#session-manager-doesnt-show-default-sessions" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom</strong>: Only shows active tmux sessions and tmuxinator projects</p>
 <p><strong>Cause</strong>: Config file not found or wrong structure</p>
-<p><strong>Solution</strong>:
+<p><strong>Solution</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Check config exists</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config/menu/sessions/sessions-macos.yml
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Verify structure (should have &quot;defaults:&quot; not &quot;sessions:&quot;)</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>head<span class="w"> </span>~/.config/menu/sessions/sessions-macos.yml
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="menu-shows-empty-lists">Menu shows empty lists<a class="headerlink" href="#menu-shows-empty-lists" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom</strong>: Submenus show no items</p>
 <p><strong>Cause</strong>: Registry YAML files not found</p>
-<p><strong>Solution</strong>:
+<p><strong>Solution</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Check registry files exist</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config/menu/registry/
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
@@ -2703,11 +2783,11 @@
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># - commands.yml</span>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># - workflows.yml</span>
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># - learning.yml</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="binary-not-found">Binary not found<a class="headerlink" href="#binary-not-found" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom</strong>: <code>command not found: session</code> or <code>command not found: menu</code></p>
 <p><strong>Cause</strong>: ~/.local/bin not in PATH</p>
-<p><strong>Solution</strong>:
+<p><strong>Solution</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Check PATH</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$PATH</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;.local/bin&quot;</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
@@ -2716,39 +2796,37 @@
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Reload shell</span>
 </span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nb">source</span><span class="w"> </span>~/.zshrc
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="wrong-binary-is-being-used">Wrong binary is being used<a class="headerlink" href="#wrong-binary-is-being-used" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom</strong>: Menu looks different or bash script is running</p>
 <p><strong>Cause</strong>: Old bash script is earlier in PATH</p>
-<p><strong>Solution</strong>:
+<p><strong>Solution</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Check which binary is being used</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>which<span class="w"> </span>session
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>which<span class="w"> </span>menu
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Should both show ~/.local/bin/session and ~/.local/bin/menu</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># If showing different path, adjust PATH order</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h2 id="rollback-plan">Rollback Plan<a class="headerlink" href="#rollback-plan" title="Permanent link">&para;</a></h2>
 <p>If you need to rollback to bash versions:</p>
 <ol>
-<li>
-<p><strong>Remove Go binaries</strong>:
+<li><strong>Remove Go binaries</strong>:</li>
+</ol>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>rm<span class="w"> </span>~/.local/bin/session
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>rm<span class="w"> </span>~/.local/bin/menu
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Ensure bash scripts are executable</strong>:
+</span></code></pre></div>
+<ol>
+<li><strong>Ensure bash scripts are executable</strong>:</li>
+</ol>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>chmod<span class="w"> </span>+x<span class="w"> </span>common/.local/bin/sess
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>chmod<span class="w"> </span>+x<span class="w"> </span>common/.local/bin/menu
-</span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Verify symlinks</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>task<span class="w"> </span>symlinks:check
-</span></code></pre></div></p>
-</li>
+</span></code></pre></div>
+<ol>
+<li><strong>Verify symlinks</strong>:</li>
 </ol>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>task<span class="w"> </span>symlinks:check
+</span></code></pre></div>
 <p>The tmux binding will automatically use the bash scripts since they're symlinked to the same paths.</p>
 <h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
 <ol>
@@ -2813,7 +2891,7 @@
 <li><a href="../go-migration-strategy/">Go Migration Strategy</a> - Original planning doc</li>
 <li><a href="../go-migration-quick-start/">Go Migration Quick Start</a> - Phase 1 kickoff</li>
 <li><a href="../../learnings/go-tui-ecosystem-research/">Go TUI Ecosystem Research</a> - Library research</li>
-<li><a href="../../tools/session-go/README.md">Session Manager README</a> - Usage guide</li>
+<li><a href="../../tools/sess/README.md">Session Manager README</a> - Usage guide</li>
 <li><a href="../../tools/menu-go/README.md">Menu System README</a> - Usage guide</li>
 </ul>
 
