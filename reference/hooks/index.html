@@ -1079,6 +1079,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#userpromptsubmit-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      UserPromptSubmit Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#stop-hook-build-verification" class="md-nav__link">
     <span class="md-ellipsis">
       Stop Hook - Build Verification
@@ -1091,6 +1100,33 @@
   <a href="#stop-hook-commit-reminder" class="md-nav__link">
     <span class="md-ellipsis">
       Stop Hook - Commit Reminder
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#posttooluse-hook-markdown-formatter" class="md-nav__link">
+    <span class="md-ellipsis">
+      PostToolUse Hook - Markdown Formatter
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notification Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#precompact-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      PreCompact Hook
     </span>
   </a>
   
@@ -1124,24 +1160,6 @@
   <a href="#pre-commit-hook-feature-documentation-check" class="md-nav__link">
     <span class="md-ellipsis">
       Pre-Commit Hook - Feature Documentation Check
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pre-commit-hook-changelog-enforcement" class="md-nav__link">
-    <span class="md-ellipsis">
-      Pre-Commit Hook - Changelog Enforcement
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#post-commit-hook-changelog-tracking" class="md-nav__link">
-    <span class="md-ellipsis">
-      Post-Commit Hook - Changelog Tracking
     </span>
   </a>
   
@@ -1181,18 +1199,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#scenario-2-claude-makes-multiple-commits" class="md-nav__link">
+  <a href="#scenario-2-bypassing-hooks" class="md-nav__link">
     <span class="md-ellipsis">
-      Scenario 2: Claude Makes Multiple Commits
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scenario-3-bypassing-hooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      Scenario 3: Bypassing Hooks
+      Scenario 2: Bypassing Hooks
     </span>
   </a>
   
@@ -1268,15 +1277,6 @@
   <a href="#false-positives" class="md-nav__link">
     <span class="md-ellipsis">
       False Positives
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clear-pending-changelog" class="md-nav__link">
-    <span class="md-ellipsis">
-      Clear Pending Changelog
     </span>
   </a>
   
@@ -2189,11 +2189,10 @@
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>The hook system works on multiple layers:</p>
 <ol>
-<li><strong>Claude Code Hooks</strong>: Run during Claude sessions (SessionStart, Stop)</li>
+<li><strong>Claude Code Hooks</strong>: Run during Claude sessions (SessionStart, UserPromptSubmit, PostToolUse, Stop, Notification, PreCompact)</li>
 <li><strong>Pre-commit Hooks</strong>: Run before commits are finalized (documentation checks, linting)</li>
-<li><strong>Post-commit Hooks</strong>: Run after commits succeed (changelog tracking)</li>
 </ol>
-<p>Together, these enforce atomic commits, up-to-date documentation, and comprehensive changelog tracking.</p>
+<p>Together, these enforce atomic commits, up-to-date documentation, and maintain code quality throughout the development workflow.</p>
 <h2 id="claude-code-hooks">Claude Code Hooks<a class="headerlink" href="#claude-code-hooks" title="Permanent link">&para;</a></h2>
 <p>These hooks integrate directly with Claude Code's lifecycle and only run during active Claude sessions.</p>
 <h3 id="sessionstart-hook">SessionStart Hook<a class="headerlink" href="#sessionstart-hook" title="Permanent link">&para;</a></h3>
@@ -2205,7 +2204,6 @@
 <li>Current git status (modified/untracked files)</li>
 <li>Last 5 commits in oneline format</li>
 <li>File counts for key directories (install/, tools/, docs/, common/, etc.)</li>
-<li>Pending changelog entries (if any exist)</li>
 </ul>
 <p><strong>Why it exists</strong>: After conversation compaction or starting fresh, Claude loses awareness of uncommitted changes and recent work. This hook proactively loads relevant context so Claude knows the current state immediately.</p>
 <p><strong>Example output</strong>:</p>
@@ -2214,26 +2212,31 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>**Git Status:**
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>M .claude/settings.json
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>M docs/reference/hooks.md
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>?? .pending-changelog
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>**Recent Commits:**
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>abc1234 feat: add session-start hook
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>def5678 feat: add stop-build-check hook
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>ghi9012 docs: update hooks documentation
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>**Directory Structure:**
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>{
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  &quot;install/&quot;: 3,
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  &quot;tools/&quot;: 1138,
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  &quot;docs/&quot;: 72
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>}
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>⚠️ **Pending Changelog Updates (2 commits):**
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>2025-11-04 [abc1234] feat: add session-start hook
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>2025-11-04 [def5678] feat: add stop-build-check hook
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>📝 Reminder: Will block at 3 commits (currently 2/3)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>**Recent Commits:**
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>abc1234 feat: add session-start hook
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>def5678 feat: add stop-build-check hook
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>ghi9012 docs: update hooks documentation
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>**Directory Structure:**
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>{
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>  &quot;install/&quot;: 3,
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  &quot;tools/&quot;: 1138,
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  &quot;docs/&quot;: 72
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>}
 </span></code></pre></div>
+<h3 id="userpromptsubmit-hook">UserPromptSubmit Hook<a class="headerlink" href="#userpromptsubmit-hook" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose</strong>: Automatically activates relevant skills based on user prompt content before Claude sees the message.</p>
+<p><strong>Location</strong>: <code>.claude/hooks/user-prompt-submit-skill-activation</code></p>
+<p><strong>When it runs</strong>: After user submits a prompt, before Claude processes it.</p>
+<p><strong>What it does</strong>:</p>
+<ul>
+<li>Analyzes the user's prompt for keywords and patterns</li>
+<li>Checks which skills are relevant based on configured triggers</li>
+<li>Injects skill activation reminders into Claude's context</li>
+</ul>
+<p><strong>Why it exists</strong>: Ensures Claude has the right context and guidelines loaded based on what the user is asking about, without requiring manual skill invocation.</p>
+<p><strong>Example</strong>: If you ask about the menu system, the hook automatically suggests activating the menu-developer skill.</p>
 <h3 id="stop-hook-build-verification">Stop Hook - Build Verification<a class="headerlink" href="#stop-hook-build-verification" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose</strong>: Runs automated tests after Claude finishes responding to catch errors immediately.</p>
 <p><strong>Location</strong>: <code>.claude/hooks/stop-build-check</code></p>
@@ -2252,16 +2255,36 @@
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>[Detailed error output shown to Claude]
 </span></code></pre></div>
 <h3 id="stop-hook-commit-reminder">Stop Hook - Commit Reminder<a class="headerlink" href="#stop-hook-commit-reminder" title="Permanent link">&para;</a></h3>
-<p><strong>Purpose</strong>: Reminds about commits made during the session that need changelog documentation.</p>
+<p><strong>Purpose</strong>: Reminds about commits made during the session.</p>
 <p><strong>Location</strong>: <code>.claude/hooks/stop-commit-reminder</code></p>
 <p><strong>When it runs</strong>: After Claude completes a response.</p>
-<p><strong>What it does</strong>: Checks if commits were made in the last minute, and if so, reminds that they're logged for changelog tracking.</p>
+<p><strong>What it does</strong>: Checks if commits were made in the last minute and reminds about them.</p>
 <p><strong>Example output</strong>:</p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>📝 **Reminder**: 2 commit(s) made during this response
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Commits will be logged for changelog tracking.
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Remember to update changelog when you have 3+ pending commits.
 </span></code></pre></div>
+<h3 id="posttooluse-hook-markdown-formatter">PostToolUse Hook - Markdown Formatter<a class="headerlink" href="#posttooluse-hook-markdown-formatter" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose</strong>: Automatically formats markdown files after Claude edits them.</p>
+<p><strong>Location</strong>: <code>.claude/hooks/markdown_formatter.py</code></p>
+<p><strong>When it runs</strong>: After any Edit, MultiEdit, or Write tool operation.</p>
+<p><strong>What it does</strong>:</p>
+<ul>
+<li>Detects if the modified file is markdown (.md extension)</li>
+<li>Runs prettier formatting on the file</li>
+<li>Ensures consistent markdown formatting across the repository</li>
+</ul>
+<p><strong>Why it exists</strong>: Prevents markdown formatting inconsistencies and reduces the need for manual formatting fixes.</p>
+<h3 id="notification-hook">Notification Hook<a class="headerlink" href="#notification-hook" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose</strong>: Sends desktop notifications for important Claude Code events.</p>
+<p><strong>Location</strong>: <code>.claude/hooks/notification-desktop</code></p>
+<p><strong>When it runs</strong>: When Claude Code notification events occur.</p>
+<p><strong>What it does</strong>: Displays macOS desktop notifications for Claude events (errors, completions, etc.)</p>
+<p><strong>Why it exists</strong>: Provides awareness of Claude's status when you're working in other applications.</p>
+<h3 id="precompact-hook">PreCompact Hook<a class="headerlink" href="#precompact-hook" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose</strong>: Saves session state before conversation is compacted.</p>
+<p><strong>Location</strong>: <code>.claude/hooks/pre-compact-save-state</code></p>
+<p><strong>When it runs</strong>: Before Claude Code compacts the conversation history.</p>
+<p><strong>What it does</strong>: Saves important context and state information that should survive compaction.</p>
+<p><strong>Why it exists</strong>: Preserves critical context across conversation compactions to maintain workflow continuity.</p>
 <h2 id="git-hooks-via-pre-commit-framework">Git Hooks (via pre-commit framework)<a class="headerlink" href="#git-hooks-via-pre-commit-framework" title="Permanent link">&para;</a></h2>
 <p>These hooks run for ALL commits (whether made by Claude, you manually, or any other tool) and are installed via the pre-commit framework.</p>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
@@ -2312,171 +2335,122 @@
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>ℹ️<span class="w">  </span>chore<span class="w"> </span>commit<span class="w"> </span>-<span class="w"> </span>documentation<span class="w"> </span>check<span class="w"> </span>skipped
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
 </span></code></pre></div>
-<h3 id="pre-commit-hook-changelog-enforcement">Pre-Commit Hook - Changelog Enforcement<a class="headerlink" href="#pre-commit-hook-changelog-enforcement" title="Permanent link">&para;</a></h3>
-<p><strong>Purpose</strong>: Reminds about pending changelog updates and blocks commits if too many are pending.</p>
-<p><strong>Location</strong>: <code>.claude/hooks/check-changelog</code></p>
-<p><strong>When it runs</strong>: Before every <code>git commit</code> is finalized.</p>
-<p><strong>What it does</strong>:</p>
-<ul>
-<li>Checks <code>.pending-changelog</code> for uncommitted work</li>
-<li>If ≤2 pending: shows friendly reminder</li>
-<li>If ≥3 pending: <strong>BLOCKS commit</strong> until changelog updated</li>
-</ul>
-<p><strong>Example - Under threshold</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new feature&quot;</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>ℹ️<span class="w">  </span>You<span class="w"> </span>have<span class="w"> </span><span class="m">2</span><span class="w"> </span>commit<span class="o">(</span>s<span class="o">)</span><span class="w"> </span>pending<span class="w"> </span>changelog<span class="w"> </span>update
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">   </span><span class="o">(</span>will<span class="w"> </span>block<span class="w"> </span>at<span class="w"> </span><span class="m">3</span><span class="w"> </span>commits<span class="o">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>✓<span class="w"> </span>Commit<span class="w"> </span>logged<span class="w"> </span>-<span class="w"> </span>changelog<span class="w"> </span>update<span class="w"> </span>pending<span class="w"> </span><span class="o">(</span><span class="m">2</span>/3<span class="o">)</span>
-</span></code></pre></div>
-<p><strong>Example - Blocked</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: another feature&quot;</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>❌<span class="w"> </span>CHANGELOG<span class="w"> </span>UPDATE<span class="w"> </span>REQUIRED
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>You<span class="w"> </span>have<span class="w"> </span><span class="m">3</span><span class="w"> </span>commits<span class="w"> </span>without<span class="w"> </span>changelog<span class="w"> </span>entries:
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="m">2025</span>-11-04<span class="w"> </span><span class="o">[</span>abc123<span class="o">]</span><span class="w"> </span>feat:<span class="w"> </span>add<span class="w"> </span>session-start<span class="w"> </span>hook
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="m">2025</span>-11-04<span class="w"> </span><span class="o">[</span>def456<span class="o">]</span><span class="w"> </span>feat:<span class="w"> </span>add<span class="w"> </span>stop-build-check<span class="w"> </span>hook
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="m">2025</span>-11-04<span class="w"> </span><span class="o">[</span>ghi789<span class="o">]</span><span class="w"> </span>docs:<span class="w"> </span>add<span class="w"> </span>hooks<span class="w"> </span>reference<span class="w"> </span>doc
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>Please<span class="w"> </span>update<span class="w"> </span>changelog<span class="w"> </span>files:
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span><span class="m">1</span>.<span class="w"> </span>Add<span class="w"> </span>entry<span class="w"> </span>to<span class="w"> </span>docs/changelog.md<span class="w"> </span><span class="o">(</span>high-level<span class="w"> </span>summary<span class="o">)</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span><span class="m">2</span>.<span class="w"> </span>Create/update<span class="w"> </span>docs/changelog/2025-11-04.md<span class="w"> </span><span class="o">(</span>detailed<span class="w"> </span>entry<span class="o">)</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>After<span class="w"> </span>updating,<span class="w"> </span>remove<span class="w"> </span>the<span class="w"> </span>marker<span class="w"> </span>file:
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">  </span>rm<span class="w"> </span>.pending-changelog
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>Or<span class="w"> </span>use<span class="w"> </span>--no-verify<span class="w"> </span>to<span class="w"> </span>bypass<span class="w"> </span><span class="o">(</span>not<span class="w"> </span>recommended<span class="o">)</span>
-</span></code></pre></div>
-<h3 id="post-commit-hook-changelog-tracking">Post-Commit Hook - Changelog Tracking<a class="headerlink" href="#post-commit-hook-changelog-tracking" title="Permanent link">&para;</a></h3>
-<p><strong>Purpose</strong>: Automatically logs significant commits for later changelog documentation.</p>
-<p><strong>Location</strong>: <code>.claude/hooks/post-commit-log</code></p>
-<p><strong>When it runs</strong>: After every successful <code>git commit</code>.</p>
-<p><strong>What it does</strong>:</p>
-<ul>
-<li>Analyzes commit to determine if "significant"</li>
-<li>Skips trivial commits (typos, deps, WIP, single-line changes, lock files)</li>
-<li>Appends significant commits to <code>.pending-changelog</code></li>
-</ul>
-<p><strong>Skipped commit types</strong>:</p>
-<ul>
-<li>Commit types: <code>chore</code>, <code>style</code>, <code>typo</code>, <code>deps</code>, <code>ci</code>, <code>build</code></li>
-<li>Commit messages: starting with <code>WIP</code>, <code>TODO</code>, <code>TEMP</code>, <code>fixup</code>, <code>squash</code></li>
-<li>Only lock files changed</li>
-<li>Single-line markdown changes</li>
-<li>Changelog-only commits</li>
-</ul>
-<p><strong>Example</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Significant commit</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new hook system&quot;</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>✓<span class="w"> </span>Commit<span class="w"> </span>logged<span class="w"> </span>-<span class="w"> </span>changelog<span class="w"> </span>update<span class="w"> </span>pending
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Trivial commit (skipped)</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;typo: fix spelling in readme&quot;</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="o">(</span>no<span class="w"> </span>changelog<span class="w"> </span>log<span class="w"> </span>-<span class="w"> </span>trivial<span class="w"> </span>change<span class="o">)</span>
-</span></code></pre></div>
 <h2 id="conventional-commits-enforcement">Conventional Commits Enforcement<a class="headerlink" href="#conventional-commits-enforcement" title="Permanent link">&para;</a></h2>
 <p>The pre-commit framework also enforces conventional commit message format:</p>
 <p><strong>Required format</strong>: <code>type(optional-scope): description</code></p>
 <p><strong>Valid types</strong>: <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>chore</code>, <code>refactor</code>, <code>test</code>, <code>style</code>, <code>perf</code>, <code>build</code>, <code>ci</code>, <code>revert</code></p>
 <p><strong>Example - Valid</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(hooks): add changelog tracking system&quot;</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(hooks): add changelog tracking system&quot;</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
 </span></code></pre></div>
 <p><strong>Example - Invalid</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;added new hooks&quot;</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>❌<span class="w"> </span>Commit<span class="w"> </span>message<span class="w"> </span>does<span class="w"> </span>not<span class="w"> </span>follow<span class="w"> </span>Conventional<span class="w"> </span>Commits<span class="w"> </span>format
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>Expected:<span class="w"> </span>type<span class="o">(</span>scope<span class="o">)</span>:<span class="w"> </span>description
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;added new hooks&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>❌<span class="w"> </span>Commit<span class="w"> </span>message<span class="w"> </span>does<span class="w"> </span>not<span class="w"> </span>follow<span class="w"> </span>Conventional<span class="w"> </span>Commits<span class="w"> </span>format
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>Expected:<span class="w"> </span>type<span class="o">(</span>scope<span class="o">)</span>:<span class="w"> </span>description
 </span></code></pre></div>
 <h2 id="complete-workflow-examples">Complete Workflow Examples<a class="headerlink" href="#complete-workflow-examples" title="Permanent link">&para;</a></h2>
 <h3 id="scenario-1-adding-a-new-feature-manual">Scenario 1: Adding a New Feature (Manual)<a class="headerlink" href="#scenario-1-adding-a-new-feature-manual" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># 1. Make code changes</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>vim<span class="w"> </span>tools/symlinks/core.py
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># 2. Try to commit</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>git<span class="w"> </span>add<span class="w"> </span>tools/symlinks/core.py
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add parallel symlink creation&quot;</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="c1"># 3. Pre-commit hook BLOCKS</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>❌<span class="w"> </span>DOCUMENTATION<span class="w"> </span>REQUIRED
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>Please<span class="w"> </span>update<span class="w"> </span>docs/reference/tools.md
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="c1"># 4. Update documentation</span>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>vim<span class="w"> </span>docs/reference/tools.md
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>git<span class="w"> </span>add<span class="w"> </span>docs/reference/tools.md
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="c1"># 5. Commit succeeds</span>
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add parallel symlink creation&quot;</span>
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>✓<span class="w"> </span>All<span class="w"> </span>pre-commit<span class="w"> </span>checks<span class="w"> </span>passed
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>✓<span class="w"> </span>Commit<span class="w"> </span>logged<span class="w"> </span>-<span class="w"> </span>changelog<span class="w"> </span>update<span class="w"> </span>pending<span class="w"> </span><span class="o">(</span><span class="m">1</span>/3<span class="o">)</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 1. Make code changes</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>vim<span class="w"> </span>tools/symlinks/core.py
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># 2. Try to commit</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>git<span class="w"> </span>add<span class="w"> </span>tools/symlinks/core.py
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add parallel symlink creation&quot;</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="c1"># 3. Pre-commit hook BLOCKS</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>❌<span class="w"> </span>DOCUMENTATION<span class="w"> </span>REQUIRED
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>Please<span class="w"> </span>update<span class="w"> </span>docs/reference/tools.md
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="c1"># 4. Update documentation</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>vim<span class="w"> </span>docs/reference/tools.md
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>git<span class="w"> </span>add<span class="w"> </span>docs/reference/tools.md
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="c1"># 5. Commit succeeds</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add parallel symlink creation&quot;</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>✓<span class="w"> </span>All<span class="w"> </span>pre-commit<span class="w"> </span>checks<span class="w"> </span>passed
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>✓<span class="w"> </span>Commit<span class="w"> </span>logged<span class="w"> </span>-<span class="w"> </span>changelog<span class="w"> </span>update<span class="w"> </span>pending<span class="w"> </span><span class="o">(</span><span class="m">1</span>/3<span class="o">)</span>
 </span></code></pre></div>
-<h3 id="scenario-2-claude-makes-multiple-commits">Scenario 2: Claude Makes Multiple Commits<a class="headerlink" href="#scenario-2-claude-makes-multiple-commits" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Claude implements 3 features during session</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1"># Each commit is automatically logged</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># You try to make a 4th commit</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: one more thing&quot;</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Pre-commit hook BLOCKS</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>❌<span class="w"> </span>CHANGELOG<span class="w"> </span>UPDATE<span class="w"> </span>REQUIRED
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>You<span class="w"> </span>have<span class="w"> </span><span class="m">3</span><span class="w"> </span>commits<span class="w"> </span>without<span class="w"> </span>changelog<span class="w"> </span>entries:
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="m">2025</span>-11-04<span class="w"> </span><span class="o">[</span>abc123<span class="o">]</span><span class="w"> </span>feat:<span class="w"> </span>add<span class="w"> </span>session-start<span class="w"> </span>hook
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">  </span><span class="m">2025</span>-11-04<span class="w"> </span><span class="o">[</span>def456<span class="o">]</span><span class="w"> </span>feat:<span class="w"> </span>add<span class="w"> </span>stop-build-check<span class="w"> </span>hook
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="m">2025</span>-11-04<span class="w"> </span><span class="o">[</span>ghi789<span class="o">]</span><span class="w"> </span>feat:<span class="w"> </span>add<span class="w"> </span>commit<span class="w"> </span>tracking
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="c1"># Update changelog</span>
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>vim<span class="w"> </span>docs/changelog.md
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>vim<span class="w"> </span>docs/changelog/2025-11-04.md
-</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>rm<span class="w"> </span>.claude/.pending-changelog
-</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>
-</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>git<span class="w"> </span>add<span class="w"> </span>docs/changelog*
-</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: add changelog for 2025-11-04&quot;</span>
-</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
-</span></code></pre></div>
-<h3 id="scenario-3-bypassing-hooks">Scenario 3: Bypassing Hooks<a class="headerlink" href="#scenario-3-bypassing-hooks" title="Permanent link">&para;</a></h3>
+<h3 id="scenario-2-bypassing-hooks">Scenario 2: Bypassing Hooks<a class="headerlink" href="#scenario-2-bypassing-hooks" title="Permanent link">&para;</a></h3>
 <p>All pre-commit hooks can be bypassed with <code>--no-verify</code>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Bypass all checks (use sparingly!)</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: quick fix&quot;</span><span class="w"> </span>--no-verify
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Or set environment variable</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nv">SKIP</span><span class="o">=</span>check-feature-docs<span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: docs coming later&quot;</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Bypass all checks (use sparingly!)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: quick fix&quot;</span><span class="w"> </span>--no-verify
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Or set environment variable</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nv">SKIP</span><span class="o">=</span>check-feature-docs<span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: docs coming later&quot;</span>
 </span></code></pre></div>
 <h2 id="hook-configuration-files">Hook Configuration Files<a class="headerlink" href="#hook-configuration-files" title="Permanent link">&para;</a></h2>
 <h3 id="claudesettingsjson"><code>.claude/settings.json</code><a class="headerlink" href="#claudesettingsjson" title="Permanent link">&para;</a></h3>
 <p>Configures Claude Code hooks:</p>
-<div class="language-json highlight"><span class="filename">JSON</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">&quot;SessionStart&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">      </span><span class="p">{</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">          </span><span class="p">{</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python .claude/hooks/session-start&quot;</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">          </span><span class="p">}</span>
-</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">        </span><span class="p">]</span>
-</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span><span class="p">],</span>
-</span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">    </span><span class="nt">&quot;Stop&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">      </span><span class="p">{</span>
-</span><span id="__span-14-15"><a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-14-16"><a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">          </span><span class="p">{</span>
-</span><span id="__span-14-17"><a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
-</span><span id="__span-14-18"><a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash .claude/hooks/stop-build-check&quot;</span>
-</span><span id="__span-14-19"><a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">          </span><span class="p">},</span>
-</span><span id="__span-14-20"><a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="w">          </span><span class="p">{</span>
-</span><span id="__span-14-21"><a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
-</span><span id="__span-14-22"><a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash .claude/hooks/stop-commit-reminder&quot;</span>
-</span><span id="__span-14-23"><a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">          </span><span class="p">}</span>
-</span><span id="__span-14-24"><a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a><span class="w">        </span><span class="p">]</span>
-</span><span id="__span-14-25"><a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-14-26"><a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a><span class="w">    </span><span class="p">]</span>
-</span><span id="__span-14-27"><a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-14-28"><a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a><span class="p">}</span>
+<div class="language-json highlight"><span class="filename">JSON</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">&quot;SessionStart&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python $CLAUDE_PROJECT_DIR/.claude/hooks/session-start&quot;</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">        </span><span class="p">]</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="nt">&quot;UserPromptSubmit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-submit-skill-activation&quot;</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">        </span><span class="p">]</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="w">    </span><span class="nt">&quot;Stop&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check&quot;</span>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="w">          </span><span class="p">},</span>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-commit-reminder&quot;</span>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="w">        </span><span class="p">]</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a><span class="w">    </span><span class="nt">&quot;PostToolUse&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a><span class="w">        </span><span class="nt">&quot;matcher&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Edit|MultiEdit|Write&quot;</span><span class="p">,</span>
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python $CLAUDE_PROJECT_DIR/.claude/hooks/markdown_formatter.py&quot;</span>
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a><span class="w">        </span><span class="p">]</span>
+</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-10-47"><a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-10-48"><a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="w">    </span><span class="nt">&quot;Notification&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-49"><a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-10-50"><a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-51"><a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-52"><a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-53"><a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash $CLAUDE_PROJECT_DIR/.claude/hooks/notification-desktop&quot;</span>
+</span><span id="__span-10-54"><a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-10-55"><a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a><span class="w">        </span><span class="p">]</span>
+</span><span id="__span-10-56"><a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-10-57"><a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-10-58"><a id="__codelineno-10-58" name="__codelineno-10-58" href="#__codelineno-10-58"></a><span class="w">    </span><span class="nt">&quot;PreCompact&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-59"><a id="__codelineno-10-59" name="__codelineno-10-59" href="#__codelineno-10-59"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-10-60"><a id="__codelineno-10-60" name="__codelineno-10-60" href="#__codelineno-10-60"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-10-61"><a id="__codelineno-10-61" name="__codelineno-10-61" href="#__codelineno-10-61"></a><span class="w">          </span><span class="p">{</span>
+</span><span id="__span-10-62"><a id="__codelineno-10-62" name="__codelineno-10-62" href="#__codelineno-10-62"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-10-63"><a id="__codelineno-10-63" name="__codelineno-10-63" href="#__codelineno-10-63"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python $CLAUDE_PROJECT_DIR/.claude/hooks/pre-compact-save-state&quot;</span>
+</span><span id="__span-10-64"><a id="__codelineno-10-64" name="__codelineno-10-64" href="#__codelineno-10-64"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-10-65"><a id="__codelineno-10-65" name="__codelineno-10-65" href="#__codelineno-10-65"></a><span class="w">        </span><span class="p">]</span>
+</span><span id="__span-10-66"><a id="__codelineno-10-66" name="__codelineno-10-66" href="#__codelineno-10-66"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-10-67"><a id="__codelineno-10-67" name="__codelineno-10-67" href="#__codelineno-10-67"></a><span class="w">    </span><span class="p">]</span>
+</span><span id="__span-10-68"><a id="__codelineno-10-68" name="__codelineno-10-68" href="#__codelineno-10-68"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-10-69"><a id="__codelineno-10-69" name="__codelineno-10-69" href="#__codelineno-10-69"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="pre-commit-configyaml"><code>.pre-commit-config.yaml</code><a class="headerlink" href="#pre-commit-configyaml" title="Permanent link">&para;</a></h3>
 <p>Configures Git hooks via pre-commit framework. See the file for full configuration including:</p>
@@ -2489,36 +2463,32 @@
 </ul>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="hook-not-running">Hook Not Running<a class="headerlink" href="#hook-not-running" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Reinstall hooks</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Test specific hook</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>check-feature-docs<span class="w"> </span>--all-files
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Reinstall hooks</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Test specific hook</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>check-feature-docs<span class="w"> </span>--all-files
 </span></code></pre></div>
 <h3 id="permission-errors">Permission Errors<a class="headerlink" href="#permission-errors" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Make hooks executable</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/*
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Make hooks executable</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/*
 </span></code></pre></div>
 <h3 id="false-positives">False Positives<a class="headerlink" href="#false-positives" title="Permanent link">&para;</a></h3>
 <p>Use <code>--no-verify</code> to bypass checks when legitimately not needed:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: fix typo&quot;</span><span class="w"> </span>--no-verify
-</span></code></pre></div>
-<h3 id="clear-pending-changelog">Clear Pending Changelog<a class="headerlink" href="#clear-pending-changelog" title="Permanent link">&para;</a></h3>
-<p>If you've documented everything but the marker file still exists:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>rm<span class="w"> </span>.claude/.pending-changelog
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: fix typo&quot;</span><span class="w"> </span>--no-verify
 </span></code></pre></div>
 <h2 id="philosophy">Philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
 <p>The hook system enforces these principles:</p>
 <ol>
 <li><strong>Atomic Commits</strong>: Each commit is a complete, revertable unit of work</li>
 <li><strong>Documentation Synchronization</strong>: Code changes include their usage documentation</li>
-<li><strong>Changelog Separation</strong>: Meta-documentation (changelog) is separate from feature commits</li>
+<li><strong>Context Awareness</strong>: Claude has relevant guidelines loaded automatically</li>
 <li><strong>Progressive Enforcement</strong>: Gentle reminders escalate to blocks only when necessary</li>
 <li><strong>Bypassable When Needed</strong>: All checks can be skipped with <code>--no-verify</code></li>
 </ol>
 <h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../.claude/HOOKS_IMPLEMENTATION_PLAN.md">Hooks Implementation Plan</a> - Full implementation roadmap</li>
+<li><a href="../.claude/hooks-implementation-plan.md">Hooks Implementation Plan</a> - Full implementation roadmap</li>
 <li><a href="https://docs.claude.com/en/docs/claude-code/hooks-guide">Claude Code Hooks Guide</a> - Official documentation</li>
 <li><a href="https://www.conventionalcommits.org/">Conventional Commits</a> - Commit message standard</li>
 <li><a href="https://pre-commit.com/">pre-commit framework</a> - Git hook management</li>
