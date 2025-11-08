@@ -4,7 +4,7 @@ version: "3"
 # A modern alternative to Makefile using Task (task.dev)
 
 vars:
-  BINARY_NAME: session
+  BINARY_NAME: sess
   BUILD_DIR: .
   INSTALL_DIR: "{{.HOME}}/.local/bin"
   CMD_DIR: ./cmd/session
@@ -17,12 +17,12 @@ vars:
 tasks:
   # Default task - runs when you just type "task"
   default:
-    desc: Build the session binary (default)
+    desc: Build the sess binary (default)
     cmds:
       - task: build
 
   build:
-    desc: Build the session binary
+    desc: Build the sess binary
     cmds:
       - echo "Building {{.BINARY_NAME}}..."
       - go build -ldflags "-X main.Version={{.VERSION}} -X main.Commit={{.COMMIT}}" -o {{.BUILD_DIR}}/{{.BINARY_NAME}} {{.CMD_DIR}}

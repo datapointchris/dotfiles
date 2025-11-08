@@ -381,3 +381,4 @@ TESTING.*
 # Binaries in tools directories
 tools/*/menu
 tools/*/session
+tools/session-go/sess

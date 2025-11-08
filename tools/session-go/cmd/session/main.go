@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
+	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ichrisbirch/session/internal/config"
 	"github.com/ichrisbirch/session/internal/session"
 	"github.com/ichrisbirch/session/internal/tmux"
-	"github.com/ichrisbirch/session/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -57,10 +57,10 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "session",
 		Short: "Tmux session manager",
-		Long: `A fast and beautiful tmux session manager.
+		Long: `A fast and lightweight tmux session manager.
 
 Manages tmux sessions, tmuxinator projects, and default sessions from YAML configuration.
-Built with Go, Bubbletea, and Cobra.`,
+Built with Go, gum, and Cobra.`,
 		Version: fmt.Sprintf("%s (%s)", Version, Commit),
 		// Run is called when the user runs "session" with no subcommands
 		Run: func(cmd *cobra.Command, args []string) {
@@ -92,8 +92,15 @@ Built with Go, Bubbletea, and Cobra.`,
 	}
 }
 
-// showInteractiveList displays the Bubbletea UI
+// showInteractiveList displays the gum-based UI
 func showInteractiveList() {
+	// Check if gum is available
+	if _, err := exec.LookPath("gum"); err != nil {
+		fmt.Fprintln(os.Stderr, "Error: gum is not installed")
+		fmt.Fprintln(os.Stderr, "Install with: brew install gum")
+		os.Exit(1)
+	}
+
 	// Create session manager
 	manager := createSessionManager()
 
@@ -113,30 +120,64 @@ func showInteractiveList() {
 		return
 	}
 
-	// Create and run the Bubbletea program
-	model := ui.NewModel(sessions)
-	program := tea.NewProgram(model, tea.WithAltScreen())
+	// Format sessions for gum
+	var options []string
+	sessionMap := make(map[string]string) // Map display text to session name
 
-	// Run the program and get the final model
-	// tea.WithAltScreen() uses the "alternate screen" buffer
-	// This means the TUI doesn't mess up your terminal scrollback
-	finalModel, err := program.Run()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error running UI: %v\n", err)
-		os.Exit(1)
+	for _, sess := range sessions {
+		displayText := fmt.Sprintf("%s %s", sess.Icon(), sess.DisplayInfo())
+		options = append(options, displayText)
+		sessionMap[displayText] = sess.Name
 	}
 
-	// Get the user's choice
-	// We need a type assertion to get our Model type back
-	// The program.Run() returns a tea.Model interface
-	choice := finalModel.(ui.Model).GetChoice()
-	if choice == "" {
-		// User quit without selecting
+	// Add "Create New Session" option
+	options = append(options, "+ Create New Session")
+
+	// Call gum choose
+	cmd := exec.Command("gum", append([]string{"choose", "--header=Tmux Sessions"}, options...)...)
+	cmd.Stderr = os.Stderr
+	output, err := cmd.Output()
+	if err != nil {
+		// User cancelled or error occurred
 		return
 	}
 
+	choice := strings.TrimSpace(string(output))
+	if choice == "" {
+		return
+	}
+
+	// Handle "Create New Session"
+	if choice == "+ Create New Session" {
+		newNameCmd := exec.Command("gum", "input", "--placeholder", "Session name")
+		newNameCmd.Stderr = os.Stderr
+		newNameOutput, err := newNameCmd.Output()
+		if err != nil {
+			return
+		}
+		newName := strings.TrimSpace(string(newNameOutput))
+		if newName == "" {
+			return
+		}
+		if err := manager.CreateOrSwitch(newName); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating session: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Get the session name from the display text
+	sessionName := sessionMap[choice]
+	if sessionName == "" {
+		// Extract name from display text (fallback)
+		parts := strings.Fields(choice)
+		if len(parts) >= 2 {
+			sessionName = parts[1] // Skip icon
+		}
+	}
+
 	// Create or switch to the chosen session
-	if err := manager.CreateOrSwitch(choice); err != nil {
+	if err := manager.CreateOrSwitch(sessionName); err != nil {
 		fmt.Fprintf(os.Stderr, "Error switching to session: %v\n", err)
 		os.Exit(1)
 	}

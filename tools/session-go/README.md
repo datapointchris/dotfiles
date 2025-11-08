@@ -1,16 +1,16 @@
-# session - Tmux Session Manager
+# sess - Tmux Session Manager
 
-A fast, beautiful tmux session manager written in Go with Bubbletea.
+A fast tmux session manager written in Go with gum for interactive selection.
 
 ## Features
 
-- **Interactive TUI** - Beautiful terminal interface powered by Bubbletea
+- **Interactive Selection** - gum-based selection that stays in your terminal
 - **Multiple Session Sources**:
   - Active tmux sessions (●)
   - Tmuxinator projects (⚙)
   - Default sessions from YAML config (○)
 - **Smart Session Management** - Automatically handles creating, switching, and attaching
-- **Keyboard-Driven** - Fuzzy search with `/`, navigate with arrows, select with Enter
+- **Composable** - Works with fzf: `sess list | fzf`
 - **Well-Tested** - Comprehensive unit tests with mocks
 
 ## Installation
@@ -20,7 +20,7 @@ A fast, beautiful tmux session manager written in Go with Bubbletea.
 task install
 ```
 
-This will build the binary and install it to `~/.local/bin/session`.
+This will build the binary and install it to `~/.local/bin/sess`.
 
 Make sure `~/.local/bin` is in your PATH.
 
@@ -28,20 +28,20 @@ Make sure `~/.local/bin` is in your PATH.
 
 ### Interactive Mode
 
-Simply run `session` to launch the interactive TUI:
+Simply run `sess` to launch interactive selection with gum:
 
 ```bash
-session
+sess
 ```
 
-Use arrow keys to navigate, `/` to filter, Enter to select, q to quit.
+Use arrow keys to navigate, Enter to select.
 
 ### Direct Session Access
 
 Switch to or create a session by name:
 
 ```bash
-session <session-name>
+sess <session-name>
 ```
 
 ### List All Sessions
@@ -49,7 +49,7 @@ session <session-name>
 List all available sessions with details:
 
 ```bash
-session list
+sess list
 ```
 
 Output format:
@@ -63,7 +63,7 @@ Output format:
 Switch to the previously active session:
 
 ```bash
-session last
+sess last
 ```
 
 ## Configuration
@@ -128,7 +128,7 @@ task --list-all
 
 The project follows Go best practices with dependency injection for testability:
 
-```
+```text
 session-go/
 ├── cmd/session/          # Main entry point (CLI)
 ├── internal/
