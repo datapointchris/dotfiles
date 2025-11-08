@@ -5,6 +5,7 @@ Quick reference for getting started with the Go migration project.
 ## Prerequisites
 
 **Install Go:**
+
 ```bash
 # macOS
 brew install go
@@ -19,14 +20,14 @@ go version  # Should be 1.21+
 
 ```bash
 cd ~/dotfiles/tools
-mkdir -p session-go/{cmd,internal/{config,session,tmux,ui}}
-cd session-go
+mkdir -p sess/{cmd,internal/{config,session,tmux,ui}}
+cd sess
 ```
 
 ### 2. Initialize Go Module
 
 ```bash
-go mod init session-go
+go mod init sess
 ```
 
 ### 3. Add Dependencies
@@ -41,13 +42,14 @@ go get gopkg.in/yaml.v3@latest
 ### 4. Create Entry Point
 
 Create `main.go`:
+
 ```go
 package main
 
 import (
     "fmt"
     "os"
-    "session-go/cmd"
+    "sess/cmd"
 )
 
 func main() {
@@ -61,6 +63,7 @@ func main() {
 ### 5. Create Root Command
 
 Create `cmd/root.go`:
+
 ```go
 package cmd
 
@@ -69,7 +72,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-    Use:   "session-go",
+    Use:   "sess",
     Short: "Fast tmux session manager",
     Long:  "A simple and fast tmux session manager built in Go",
 }
@@ -83,38 +86,40 @@ func Execute() error {
 
 ```bash
 # Build
-go build -o ~/.local/bin/session-go .
+go build -o ~/.local/bin/sess .
 
 # Test
-session-go --help
+sess --help
 ```
 
 ### 7. Add to Taskfile
 
 Create `taskfiles/go.yml`:
+
 ```yaml
 version: '3'
 
 tasks:
   build-session:
-    desc: Build session-go binary
-    dir: tools/session-go
+    desc: Build sess binary
+    dir: tools/sess
     cmds:
-      - go build -o {{.HOME}}/.local/bin/session-go .
+      - go build -o {{.HOME}}/.local/bin/sess .
 
   test-session:
-    desc: Test session-go
-    dir: tools/session-go
+    desc: Test sess
+    dir: tools/sess
     cmds:
       - go test ./... -v -cover
 
   install-session:
-    desc: Build and install session-go
+    desc: Build and install sess
     deps:
       - build-session
 ```
 
 Include in main `Taskfile.yml`:
+
 ```yaml
 includes:
   go:
@@ -145,6 +150,7 @@ task go:install-session
 ## Common Commands
 
 **Development:**
+
 ```bash
 # Format code
 go fmt ./...
@@ -156,13 +162,14 @@ go test ./... -v
 go test ./... -cover
 
 # Build
-go build -o session-go .
+go build -o sess .
 
 # Run without building
 go run main.go
 ```
 
 **Debugging:**
+
 ```bash
 # Verbose output
 go build -v
@@ -178,6 +185,7 @@ go mod verify
 ## File Templates
 
 **Test file template:**
+
 ```go
 package config
 
@@ -213,6 +221,7 @@ func TestLoadConfig(t *testing.T) {
 ```
 
 **Struct with YAML tags:**
+
 ```go
 type SessionConfig struct {
     Defaults []Session `yaml:"defaults"`
@@ -230,15 +239,18 @@ type Session struct {
 ## Troubleshooting
 
 **Module not found:**
+
 ```bash
 go mod tidy
 ```
 
 **Import cycle:**
+
 - Move shared code to a common package
 - Use interfaces to break dependencies
 
 **Tests not running:**
+
 ```bash
 # Must be in package directory or use ./...
 go test ./...

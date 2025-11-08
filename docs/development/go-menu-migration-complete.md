@@ -12,16 +12,18 @@ Successfully migrated the entire menu system from bash to Go, implementing both 
 
 ### 1. Session Manager (`session`)
 
-**Location**: `tools/session-go/`
+**Location**: `tools/sess/`
 **Binary**: `~/.local/bin/session`
 **Language**: Go 1.24
 
 A fast tmux session manager that aggregates:
+
 - Active tmux sessions
 - Tmuxinator projects
 - Default sessions from YAML config
 
 **Features**:
+
 - Beautiful Bubbletea TUI with visual indicators (●, ⚙, ○)
 - Single binary (5.6MB)
 - Comprehensive unit tests with mocks
@@ -29,6 +31,7 @@ A fast tmux session manager that aggregates:
 - Keyboard shortcuts: `session`, `session list`, `session last`
 
 **Example Output**:
+
 ```
 ● dotfiles (4 windows)
 ● ichrisbirch (1 window)
@@ -43,12 +46,14 @@ A fast tmux session manager that aggregates:
 **Language**: Go 1.24
 
 A function-based knowledge and workflow manager with:
+
 - Commands & Aliases registry
 - Workflows registry
 - Learning Topics registry
 - Multi-level navigation (Main → Category → Details)
 
 **Features**:
+
 - Interactive Bubbletea TUI
 - YAML registry parsing
 - Keyboard shortcuts (s, t, n, c, g, l)
@@ -60,7 +65,7 @@ A function-based knowledge and workflow manager with:
 ### Session Manager Architecture
 
 ```
-session-go/
+sess/
 ├── cmd/session/          # Main entry point with Cobra CLI
 ├── internal/
 │   ├── session/          # Core business logic
@@ -80,6 +85,7 @@ session-go/
 ```
 
 **Key Design Decisions**:
+
 - **Dependency Injection**: All external dependencies (tmux, config) are interfaces
 - **Testability**: Mock implementations for all interfaces
 - **Single Responsibility**: Each package has one clear purpose
@@ -102,6 +108,7 @@ menu-go/
 ```
 
 **Key Features**:
+
 - **Type Safety**: Strongly-typed structs for all YAML data
 - **State Machine**: Clean state transitions (MainMenu → Submenu → Detail)
 - **Extensibility**: Easy to add new registry types
@@ -137,6 +144,7 @@ Both projects use the same high-quality libraries:
 ### Specific Improvements
 
 **1. Session Manager**
+
 - ✅ No more subshell issues with arrays
 - ✅ No more platform-specific commands (`head -n -1` vs `sed '$d'`)
 - ✅ Consistent YAML parsing (no more awk/sed/grep tricks)
@@ -144,6 +152,7 @@ Both projects use the same high-quality libraries:
 - ✅ Unit tested with 100% interface coverage
 
 **2. Menu System**
+
 - ✅ Fast YAML parsing (was slow with bash tools)
 - ✅ Type-safe registry access
 - ✅ Smooth TUI navigation (no more gum choose flicker)
@@ -155,11 +164,12 @@ Both projects use the same high-quality libraries:
 ### Session Manager Tests
 
 ```bash
-cd tools/session-go
+cd tools/sess
 make test
 ```
 
 **Test Coverage**:
+
 - ✅ ListAll() - session aggregation from all sources
 - ✅ CreateOrSwitch() - session creation and switching
 - ✅ GetSessionInfo() - session metadata
@@ -167,6 +177,7 @@ make test
 - ✅ Proper handling of empty sources
 
 **Mocks Created**:
+
 - MockTmuxClient
 - MockTmuxinatorClient
 - MockConfigLoader
@@ -179,6 +190,7 @@ make test
 ```
 
 **Test Coverage**:
+
 - ✅ LoadCommands() - commands.yml parsing
 - ✅ LoadWorkflows() - workflows.yml parsing
 - ✅ LoadLearningTopics() - learning.yml parsing
@@ -201,7 +213,7 @@ $ which menu
 
 ```bash
 # Session manager
-cd tools/session-go
+cd tools/sess
 make clean && make install
 
 # Menu system
@@ -241,6 +253,7 @@ menu
 ```
 
 **Keyboard Shortcuts** (in menu):
+
 - `s` - Sessions
 - `t` - Tasks
 - `n` - Notes
@@ -255,11 +268,13 @@ menu
 Not everything was migrated - some things are better in bash:
 
 **Shell Functions** (`common/.shell/fzf-functions.sh`):
+
 - `fcd` - Fuzzy cd (modifies shell state)
 - `z` - Zoxide jump (modifies shell state)
 - Other functions that need to modify the calling shell
 
 **Aliases** (`common/.shell/aliases.sh`):
+
 - Git aliases (gst, glo, etc.)
 - Directory shortcuts (ll, la, etc.)
 - All simple command shortcuts
@@ -276,8 +291,9 @@ Not everything was migrated - some things are better in bash:
 ### New Files Created
 
 **Session Manager** (15 files):
+
 ```
-tools/session-go/
+tools/sess/
 ├── cmd/session/main.go
 ├── internal/
 │   ├── session/
@@ -299,6 +315,7 @@ tools/session-go/
 ```
 
 **Menu System** (9 files):
+
 ```
 menu-go/
 ├── cmd/menu/main.go
@@ -318,6 +335,7 @@ menu-go/
 ### Deprecated Files (can be archived)
 
 These bash scripts are replaced by Go binaries:
+
 - `common/.local/bin/menu` (bash script)
 - `common/.local/bin/sess` (bash script)
 
@@ -378,6 +396,7 @@ These bash scripts are replaced by Go binaries:
 **Cause**: Config file not found or wrong structure
 
 **Solution**:
+
 ```bash
 # Check config exists
 ls -la ~/.config/menu/sessions/sessions-macos.yml
@@ -393,6 +412,7 @@ head ~/.config/menu/sessions/sessions-macos.yml
 **Cause**: Registry YAML files not found
 
 **Solution**:
+
 ```bash
 # Check registry files exist
 ls -la ~/.config/menu/registry/
@@ -410,6 +430,7 @@ ls -la ~/.config/menu/registry/
 **Cause**: ~/.local/bin not in PATH
 
 **Solution**:
+
 ```bash
 # Check PATH
 echo $PATH | grep ".local/bin"
@@ -428,6 +449,7 @@ source ~/.zshrc
 **Cause**: Old bash script is earlier in PATH
 
 **Solution**:
+
 ```bash
 # Check which binary is being used
 which session
@@ -442,18 +464,21 @@ which menu
 If you need to rollback to bash versions:
 
 1. **Remove Go binaries**:
+
 ```bash
 rm ~/.local/bin/session
 rm ~/.local/bin/menu
 ```
 
 2. **Ensure bash scripts are executable**:
+
 ```bash
 chmod +x common/.local/bin/sess
 chmod +x common/.local/bin/menu
 ```
 
 3. **Verify symlinks**:
+
 ```bash
 task symlinks:check
 ```
@@ -500,5 +525,5 @@ The migration to Go was highly successful:
 - [Go Migration Strategy](./go-migration-strategy.md) - Original planning doc
 - [Go Migration Quick Start](./go-migration-quick-start.md) - Phase 1 kickoff
 - [Go TUI Ecosystem Research](../learnings/go-tui-ecosystem-research.md) - Library research
-- [Session Manager README](../../tools/session-go/README.md) - Usage guide
+- [Session Manager README](../../tools/sess/README.md) - Usage guide
 - [Menu System README](../../tools/menu-go/README.md) - Usage guide

@@ -18,16 +18,16 @@ Detailed task checklist for the Go migration project. Track your progress here.
 
 **Project Setup (Day 1-2)**
 
-- [ ] Create `tools/session-go` directory structure
-- [ ] Initialize go module (`go mod init session-go`)
+- [ ] Create `tools/sess` directory structure
+- [ ] Initialize go module (`go mod init sess`)
 - [ ] Add dependencies (cobra, bubbletea, lipgloss, yaml.v3)
 - [ ] Create `main.go` entry point
 - [ ] Create `cmd/root.go` with basic CLI
-- [ ] Create `README.md` for session-go
+- [ ] Create `README.md` for sess
 - [ ] Create `.gitignore` (add vendor/, binary)
 - [ ] Add to `taskfiles/go.yml`
 - [ ] Test basic build (`go build`)
-- [ ] Verify `session-go --help` works
+- [ ] Verify `sess --help` works
 
 **Session Config Parser (Day 3-4)**
 
@@ -131,7 +131,7 @@ Detailed task checklist for the Go migration project. Track your progress here.
 
 **Stabilization (Week 3)**
 
-- [ ] Use `session-go` exclusively for 1 week
+- [ ] Use `sess` exclusively for 1 week
 - [ ] Track any bugs or regressions
 - [ ] Fix issues as they arise
 - [ ] Get feedback (if applicable)
@@ -147,7 +147,7 @@ Detailed task checklist for the Go migration project. Track your progress here.
 
 - [ ] Create `tools/menu-go` directory structure
 - [ ] Initialize go module (`go mod init menu-go`)
-- [ ] Add dependencies (reuse from session-go)
+- [ ] Add dependencies (reuse from sess)
 - [ ] Create `main.go` entry point
 - [ ] Create `cmd/root.go`
 - [ ] Create `README.md`
@@ -157,6 +157,7 @@ Detailed task checklist for the Go migration project. Track your progress here.
 **Registry Parsers (Day 2-5)**
 
 Commands Registry:
+
 - [ ] Create `internal/registry/commands.go`
 - [ ] Define `CommandRegistry` struct
 - [ ] Define `Command` struct
@@ -166,6 +167,7 @@ Commands Registry:
 - [ ] Test with actual commands.yml
 
 Workflows Registry:
+
 - [ ] Create `internal/registry/workflows.go`
 - [ ] Define `WorkflowRegistry` struct
 - [ ] Define `Workflow` struct
@@ -174,6 +176,7 @@ Workflows Registry:
 - [ ] Test with actual workflows.yml
 
 Learning Registry:
+
 - [ ] Create `internal/registry/learning.go`
 - [ ] Define `LearningRegistry` struct
 - [ ] Define `LearningTopic` struct
@@ -182,6 +185,7 @@ Learning Registry:
 - [ ] Test with actual learning.yml
 
 Config and Categories:
+
 - [ ] Create `internal/config/menu_config.go`
 - [ ] Parse `config.yml`
 - [ ] Parse `categories.yml`
@@ -227,7 +231,7 @@ Config and Categories:
 
 **Session Integration (Day 14)**
 
-- [ ] Import session-go as library (or shell out)
+- [ ] Import sess as library (or shell out)
 - [ ] Implement session launching from menu
 - [ ] Test integration
 

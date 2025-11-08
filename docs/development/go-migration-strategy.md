@@ -12,7 +12,7 @@ This document outlines a comprehensive strategy for migrating the bash-based men
 
 ```
 Phase 1: Session Manager (1-2 weeks)
-├── sess (329 lines bash) → session-go
+├── sess (329 lines bash) → sess
 ├── YAML config parser
 ├── Tmux/tmuxinator integration
 └── Interactive TUI
@@ -35,12 +35,14 @@ Phase 3: Enhanced Features (Ongoing)
 ### Bash Implementation
 
 **Scripts:**
+
 - `menu` (~420 lines) - Universal menu with category navigation
 - `sess` (~329 lines) - Tmux session manager
 - `fzf-functions.sh` (~216 lines) - Shell functions using fzf
 - Total: ~965 lines of bash
 
 **Data Layer:**
+
 - YAML registries in `~/.config/menu/`:
   - `registry/commands.yml` - Shell commands, aliases, functions
   - `registry/workflows.yml` - Multi-step processes
@@ -50,6 +52,7 @@ Phase 3: Enhanced Features (Ongoing)
   - `categories.yml` - Category definitions
 
 **External Dependencies:**
+
 - `gum` - Interactive prompts and UI
 - `fzf` - Fuzzy finding
 - `tmux` - Terminal multiplexer
@@ -59,6 +62,7 @@ Phase 3: Enhanced Features (Ongoing)
 - `nb`, `buku` - Notes and bookmarks (future)
 
 **Key Features:**
+
 - Context-aware (detects git repos, Taskfiles)
 - Platform-specific configs (macOS/WSL)
 - Tmux popup integration (`prefix + m`)
@@ -97,6 +101,7 @@ Phase 3: Enhanced Features (Ongoing)
 ### Migrate to Go
 
 **Core Logic:**
+
 - YAML parsing and validation
 - Configuration management
 - Registry data structures and queries
@@ -106,6 +111,7 @@ Phase 3: Enhanced Features (Ongoing)
 - Error handling and logging
 
 **Why Go:**
+
 - Strong typing for YAML schemas
 - Better error handling
 - Easy cross-compilation
@@ -117,15 +123,18 @@ Phase 3: Enhanced Features (Ongoing)
 ### Keep in Bash
 
 **Shell-Specific Functions:**
+
 - `fcd` - Uses shell's `cd` builtin (must stay in shell)
 - `z` - Frecency tracking (requires shell integration)
 - Other functions in `fzf-functions.sh` that modify shell state
 
 **Integration Scripts:**
+
 - Tmux key binding calling the menu (`prefix + m`)
 - Shell aliases and functions that wrap the Go binary
 
 **Why Bash:**
+
 - Shell state modification (cd, environment variables)
 - Direct shell integration
 - Simpler for one-liners
@@ -153,9 +162,10 @@ Phase 3: Enhanced Features (Ongoing)
 
 ## Migration Phases
 
-### Phase 1: Session Manager (`sess` → `session-go`)
+### Phase 1: Session Manager (`sess` → `sess`)
 
 **Why Start Here:**
+
 - Simpler scope (~329 lines)
 - Clear inputs/outputs
 - Limited external dependencies
@@ -165,7 +175,8 @@ Phase 3: Enhanced Features (Ongoing)
 **Timeline:** 1-2 weeks
 
 **Deliverables:**
-1. Go binary: `session-go` (or `sess-go`)
+
+1. Go binary: `sess` (or `sess-go`)
 2. YAML session config parser
 3. Tmux/tmuxinator integration
 4. Interactive mode with bubbletea
@@ -177,7 +188,7 @@ Phase 3: Enhanced Features (Ongoing)
 
 ```yaml
 1. Project Setup (1-2 days)
-   - Create tools/session-go directory
+   - Create tools/sess directory
    - Initialize go.mod
    - Setup dependencies (cobra, bubbletea, yaml.v3)
    - Create basic CLI structure
@@ -221,6 +232,7 @@ Phase 3: Enhanced Features (Ongoing)
 ```
 
 **Success Metrics:**
+
 - Feature parity with bash `sess`
 - <50ms startup time
 - 0 regressions in functionality
@@ -228,6 +240,7 @@ Phase 3: Enhanced Features (Ongoing)
 - Clean error messages
 
 **Rollback Plan:**
+
 - Keep bash `sess` as `sess-legacy`
 - Symlink points to Go version
 - Can switch back instantly if issues
@@ -235,6 +248,7 @@ Phase 3: Enhanced Features (Ongoing)
 ### Phase 2: Menu Core (`menu` → `menu-go`)
 
 **Why Second:**
+
 - Builds on learnings from Phase 1
 - More complex (multiple registries, categories)
 - Needs robust YAML handling from Phase 1
@@ -242,6 +256,7 @@ Phase 3: Enhanced Features (Ongoing)
 **Timeline:** 3-4 weeks
 
 **Deliverables:**
+
 1. Go binary: `menu-go`
 2. Registry parsers (commands, workflows, learning)
 3. Category navigation system
@@ -255,7 +270,7 @@ Phase 3: Enhanced Features (Ongoing)
 ```yaml
 1. Project Setup (1 day)
    - Create tools/menu-go directory
-   - Shared config with session-go
+   - Shared config with sess
    - CLI framework (cobra)
 
 2. Registry Parsers (3-4 days)
@@ -302,6 +317,7 @@ Phase 3: Enhanced Features (Ongoing)
 ```
 
 **Success Metrics:**
+
 - Full feature parity with bash `menu`
 - <100ms startup time
 - 0 user-facing regressions
@@ -309,6 +325,7 @@ Phase 3: Enhanced Features (Ongoing)
 - Better error messages than bash version
 
 **Rollback Plan:**
+
 - Keep bash `menu` as `menu-legacy`
 - Symlink switching
 - Can revert mid-migration
@@ -316,6 +333,7 @@ Phase 3: Enhanced Features (Ongoing)
 ### Phase 3: Enhanced Features
 
 **Why Last:**
+
 - Foundation is solid
 - Can add value incrementally
 - Not blocking migration
@@ -325,48 +343,56 @@ Phase 3: Enhanced Features (Ongoing)
 **Potential Features:**
 
 1. **Search Across All Registries**
+
    ```bash
    menu search "quickfix"
    # Shows matches from commands, workflows, learning
    ```
 
 2. **Fuzzy Finding**
+
    ```bash
    menu --fuzzy
    # Fuzzy search all entries
    ```
 
 3. **Recent Items**
+
    ```bash
    menu recent
    # Show recently accessed items
    ```
 
 4. **Suggestions**
+
    ```bash
    menu suggest
    # AI-powered suggestions based on context
    ```
 
 5. **Notes Integration**
+
    ```bash
    menu notes workflow
    # Create workflow note
    ```
 
 6. **Export/Import**
+
    ```bash
    menu export dotfiles-knowledge.json
    menu import from-old-system.json
    ```
 
 7. **Web UI** (optional)
+
    ```bash
    menu serve
    # Launch web interface on localhost:8080
    ```
 
 8. **Sync** (optional)
+
    ```bash
    menu sync
    # Sync learning progress, bookmarks to remote
@@ -377,7 +403,7 @@ Phase 3: Enhanced Features (Ongoing)
 ```
 dotfiles/
 ├── tools/
-│   ├── session-go/              # Phase 1
+│   ├── sess/              # Phase 1
 │   │   ├── cmd/
 │   │   │   └── root.go          # CLI commands
 │   │   ├── internal/
@@ -415,7 +441,7 @@ dotfiles/
 ├── common/.local/bin/
 │   ├── menu                     # Bash wrapper → menu-go
 │   ├── menu-legacy              # Original bash (backup)
-│   ├── sess                     # Bash wrapper → session-go
+│   ├── sess                     # Bash wrapper → sess
 │   └── sess-legacy              # Original bash (backup)
 │
 ├── taskfiles/
@@ -427,9 +453,9 @@ dotfiles/
     └── go-development.md        # Go coding standards (new)
 ```
 
-### Why This Structure:
+### Why This Structure
 
-1. **Separate binaries** - `session-go` and `menu-go` are independent
+1. **Separate binaries** - `sess` and `menu-go` are independent
 2. **Internal packages** - Business logic is private, prevents misuse
 3. **Shared patterns** - Config and UI can be shared via internal packages or separate module
 4. **Standard layout** - Follows Go project layout conventions
@@ -446,13 +472,13 @@ Use **Task** (already in use) with new `taskfiles/go.yml`:
 version: '3'
 
 vars:
-  SESSION_BIN: "{{.HOME}}/.local/bin/session-go"
+  SESSION_BIN: "{{.HOME}}/.local/bin/sess"
   MENU_BIN: "{{.HOME}}/.local/bin/menu-go"
 
 tasks:
   build-session:
-    desc: Build session-go binary
-    dir: tools/session-go
+    desc: Build sess binary
+    dir: tools/sess
     cmds:
       - go build -o {{.SESSION_BIN}} .
     sources:
@@ -477,8 +503,8 @@ tasks:
       - build-menu
 
   test-session:
-    desc: Test session-go
-    dir: tools/session-go
+    desc: Test sess
+    dir: tools/sess
     cmds:
       - go test ./... -v -cover
 
@@ -495,11 +521,11 @@ tasks:
       - test-menu
 
   install-session:
-    desc: Build and install session-go
+    desc: Build and install sess
     deps:
       - build-session
     cmds:
-      - echo "Installed session-go to {{.SESSION_BIN}}"
+      - echo "Installed sess to {{.SESSION_BIN}}"
 
   install-menu:
     desc: Build and install menu-go
@@ -518,7 +544,7 @@ tasks:
     desc: Clean build artifacts
     cmds:
       - rm -f {{.SESSION_BIN}} {{.MENU_BIN}}
-      - cd tools/session-go && go clean
+      - cd tools/sess && go clean
       - cd tools/menu-go && go clean
 ```
 
@@ -526,7 +552,7 @@ tasks:
 
 ```bash
 # Development
-task go:build-session      # Build session-go
+task go:build-session      # Build sess
 task go:test-session       # Test it
 
 # Production
@@ -541,9 +567,9 @@ task symlinks:link         # Create symlinks (if needed)
 build-all-platforms:
   desc: Build for all platforms
   cmds:
-    - GOOS=darwin GOARCH=arm64 go build -o bin/session-go-darwin-arm64
-    - GOOS=darwin GOARCH=amd64 go build -o bin/session-go-darwin-amd64
-    - GOOS=linux GOARCH=amd64 go build -o bin/session-go-linux-amd64
+    - GOOS=darwin GOARCH=arm64 go build -o bin/sess-darwin-arm64
+    - GOOS=darwin GOARCH=amd64 go build -o bin/sess-darwin-amd64
+    - GOOS=linux GOARCH=amd64 go build -o bin/sess-linux-amd64
 ```
 
 ## Backward Compatibility Strategy
@@ -558,35 +584,39 @@ build-all-platforms:
 # Wrapper that calls Go binary
 
 # Check if Go binary exists
-if command -v session-go &>/dev/null; then
-    exec session-go "$@"
+if command -v sess &>/dev/null; then
+    exec sess "$@"
 else
     # Fallback to legacy bash version
-    echo "session-go not found, using legacy bash version"
+    echo "sess not found, using legacy bash version"
     exec sess-legacy "$@"
 fi
 ```
 
 **Benefits:**
+
 - Transparent to users (you)
-- Easy rollback (just remove session-go)
+- Easy rollback (just remove sess)
 - Can A/B test both versions
 - Symlinks still work
 
 ### Coexistence Period
 
 **Week 1-2:**
+
 - Both versions installed
 - Go version is default
 - Monitor for issues
 - Keep detailed notes
 
 **Week 3-4:**
+
 - If stable, remove legacy versions
 - If issues, fix and iterate
 - Full cutover when confident
 
 **Rollback Triggers:**
+
 - Any data loss
 - Broken core functionality
 - Performance regression
@@ -595,6 +625,7 @@ fi
 ### YAML Compatibility
 
 **No Changes to Registry Format:**
+
 - Go must parse existing YAMLs
 - No new required fields
 - Optional fields can be added
@@ -623,6 +654,7 @@ if config.DeprecatedField != "" {
 ### How Go Calls External Tools
 
 **Tmux:**
+
 ```go
 // internal/tmux/client.go
 type Client struct{}
@@ -639,6 +671,7 @@ func (c *Client) SwitchClient(session string) error {
 ```
 
 **Tmuxinator:**
+
 ```go
 // internal/tmux/tmuxinator.go
 type Tmuxinator struct{}
@@ -658,6 +691,7 @@ func (t *Tmuxinator) Start(project string, attach bool) error {
 ```
 
 **Task:**
+
 ```go
 // internal/task/client.go
 type Client struct {
@@ -682,6 +716,7 @@ func (c *Client) RunTask(name string) error {
 ### How Go Reads YAML Configs
 
 **Centralized Config:**
+
 ```go
 // internal/config/config.go
 package config
@@ -707,6 +742,7 @@ func Load() (*Config, error) {
 ```
 
 **Registry Parsing:**
+
 ```go
 // internal/registry/commands.go
 type CommandRegistry struct {
@@ -740,6 +776,7 @@ func LoadCommands() (*CommandRegistry, error) {
 **Example - Task Selection:**
 
 Go binary shows task list, returns task name to stdout:
+
 ```bash
 # Bash wrapper
 selected_task=$(menu-go tasks --select)
@@ -749,6 +786,7 @@ fi
 ```
 
 Or Go handles it entirely:
+
 ```go
 // menu-go can execute tasks directly
 func runTask(name string) error {
@@ -763,6 +801,7 @@ func runTask(name string) error {
 **1. Data Loss (YAML Corruption)**
 
 **Risk:** Bad parsing could corrupt YAML files
+
 - **Likelihood:** Low
 - **Impact:** Critical
 - **Mitigation:**
@@ -774,6 +813,7 @@ func runTask(name string) error {
 **2. Broken Workflows**
 
 **Risk:** Missing features break daily workflows
+
 - **Likelihood:** Medium
 - **Impact:** High
 - **Mitigation:**
@@ -787,6 +827,7 @@ func runTask(name string) error {
 **3. Performance Regression**
 
 **Risk:** Go version is slower than bash
+
 - **Likelihood:** Low
 - **Impact:** Medium
 - **Mitigation:**
@@ -798,6 +839,7 @@ func runTask(name string) error {
 **4. Dependency Issues**
 
 **Risk:** New dependencies cause installation problems
+
 - **Likelihood:** Low
 - **Impact:** Medium
 - **Mitigation:**
@@ -811,6 +853,7 @@ func runTask(name string) error {
 **5. Platform Compatibility**
 
 **Risk:** Works on macOS, breaks on WSL
+
 - **Likelihood:** Low
 - **Impact:** Low (only use WSL occasionally)
 - **Mitigation:**
@@ -821,6 +864,7 @@ func runTask(name string) error {
 **6. Learning Curve**
 
 **Risk:** Go is harder to maintain than bash
+
 - **Likelihood:** Low
 - **Impact:** Low
 - **Mitigation:**
@@ -836,7 +880,7 @@ func runTask(name string) error {
 | Week | Tasks | Deliverables |
 |------|-------|--------------|
 | Week 1 | Setup, config parser, tmux integration | Working prototype |
-| Week 2 | UI, testing, deployment | Production-ready `session-go` |
+| Week 2 | UI, testing, deployment | Production-ready `sess` |
 
 ### Phase 2: Menu Core (3-4 weeks)
 
@@ -898,11 +942,13 @@ func runTask(name string) error {
 
 ### 1. Binary Names
 
-**Option A:** `session-go` and `menu-go`
+**Option A:** `sess` and `menu-go`
+
 - Pro: Clear distinction during migration
 - Con: Longer names
 
 **Option B:** `sess` and `menu` (replace directly)
+
 - Pro: No wrapper needed
 - Con: Harder rollback
 
@@ -911,12 +957,14 @@ func runTask(name string) error {
 ### 2. UI Library
 
 **Option A:** Use `gum` (shell out to existing tool)
+
 - Pro: Consistent with bash version
 - Pro: Familiar UI
 - Con: External dependency
 - Con: Extra process overhead
 
 **Option B:** Use `bubbletea` (native Go TUI)
+
 - Pro: Native Go, faster
 - Pro: More control
 - Pro: Better for complex UIs
@@ -928,26 +976,31 @@ func runTask(name string) error {
 ### 3. Config Validation
 
 **Option A:** Strict validation (error on unknown fields)
+
 - Pro: Catches mistakes early
 - Con: Breaks if you add experimental fields
 
 **Option B:** Lenient validation (warn on unknown)
+
 - Pro: More forgiving
 - Con: Silent failures possible
 
 **Recommendation:** Option B (lenient) for flexibility
 
-### 4. Shared Code Between session-go and menu-go
+### 4. Shared Code Between sess and menu-go
 
 **Option A:** Duplicate code
+
 - Pro: Complete independence
 - Con: DRY violation
 
 **Option B:** Shared internal package
+
 - Pro: Code reuse
 - Con: Coupling between tools
 
 **Option C:** Separate Go module for shared code
+
 - Pro: Reusable, versioned
 - Con: Over-engineering for small project
 
@@ -959,7 +1012,7 @@ func runTask(name string) error {
 
 1. [ ] Review this strategy document
 2. [ ] Make decisions on open questions
-3. [ ] Create `tools/session-go` directory
+3. [ ] Create `tools/sess` directory
 4. [ ] Initialize Go module
 5. [ ] Create `taskfiles/go.yml`
 6. [ ] Document Go coding standards in `docs/development/go-development.md`
@@ -997,14 +1050,15 @@ Create a `todo.md` entry or project plan:
 ### Example Go Code Patterns
 
 **CLI Entry Point:**
+
 ```go
-// tools/session-go/main.go
+// tools/sess/main.go
 package main
 
 import (
     "fmt"
     "os"
-    "session-go/cmd"
+    "sess/cmd"
 )
 
 func main() {
@@ -1016,8 +1070,9 @@ func main() {
 ```
 
 **Root Command:**
+
 ```go
-// tools/session-go/cmd/root.go
+// tools/sess/cmd/root.go
 package cmd
 
 import (
@@ -1025,7 +1080,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-    Use:   "session-go",
+    Use:   "sess",
     Short: "Fast tmux session manager",
     Long:  "A simple and fast tmux session manager built in Go",
 }
@@ -1036,14 +1091,15 @@ func Execute() error {
 ```
 
 **Interactive Mode:**
+
 ```go
-// tools/session-go/cmd/interactive.go
+// tools/sess/cmd/interactive.go
 package cmd
 
 import (
     tea "github.com/charmbracelet/bubbletea"
     "github.com/spf13/cobra"
-    "session-go/internal/ui"
+    "sess/internal/ui"
 )
 
 var interactiveCmd = &cobra.Command{
@@ -1064,12 +1120,14 @@ func init() {
 ### Dependencies
 
 **Core:**
+
 - `gopkg.in/yaml.v3` - YAML parsing
 - `github.com/spf13/cobra` - CLI framework
 - `github.com/charmbracelet/bubbletea` - TUI framework
 - `github.com/charmbracelet/lipgloss` - Terminal styling
 
 **Testing:**
+
 - Standard library `testing`
 - `github.com/stretchr/testify` - Test assertions (optional)
 

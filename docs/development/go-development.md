@@ -7,7 +7,7 @@ Standards and best practices for Go development in the dotfiles project.
 Follow the [Standard Go Project Layout](https://github.com/golang-standards/project-layout):
 
 ```
-tools/session-go/
+tools/sess/
 ├── cmd/                    # Main applications
 │   ├── root.go            # Root command
 │   ├── list.go            # Subcommands
@@ -26,6 +26,7 @@ tools/session-go/
 ```
 
 **Key Principles:**
+
 - `internal/` prevents external imports (enforced by Go)
 - `cmd/` contains CLI-specific code
 - Business logic goes in `internal/`
@@ -34,6 +35,7 @@ tools/session-go/
 ## Dependencies
 
 **Minimize dependencies:**
+
 - Prefer standard library when possible
 - Choose well-maintained, popular libraries
 - Avoid bleeding-edge or experimental packages
@@ -41,16 +43,19 @@ tools/session-go/
 **Approved Dependencies:**
 
 Core:
+
 - `gopkg.in/yaml.v3` - YAML parsing (robust, stable)
 - `github.com/spf13/cobra` - CLI framework (industry standard)
 - `github.com/charmbracelet/bubbletea` - TUI framework
 - `github.com/charmbracelet/lipgloss` - Terminal styling
 
 Testing:
+
 - Standard library `testing`
 - `github.com/stretchr/testify` (optional, for assertions)
 
 **Adding New Dependencies:**
+
 1. Check if standard library suffices
 2. Research alternatives
 3. Verify maintenance status (commits, issues)
@@ -59,11 +64,13 @@ Testing:
 ## Code Style
 
 **Follow standard Go conventions:**
+
 - `gofmt` for formatting (automatic)
 - `golint` for linting
 - `go vet` for static analysis
 
 **Naming:**
+
 ```go
 // Good
 type SessionManager struct {}
@@ -75,6 +82,7 @@ func (sm *session_manager) list_sessions() {}
 ```
 
 **Comments:**
+
 ```go
 // Package session provides tmux session management.
 package session
@@ -92,6 +100,7 @@ func (m *Manager) ListSessions() ([]Session, error) {
 ```
 
 **Error Handling:**
+
 ```go
 // Good - wrap errors with context
 if err := m.createSession(name); err != nil {
@@ -107,11 +116,13 @@ if err := m.createSession(name); err != nil {
 ## Testing
 
 **Test Coverage Goals:**
+
 - New code: >80% coverage
 - Critical paths: 100% coverage
 - UI/CLI: Integration tests
 
 **Test Organization:**
+
 ```
 internal/
 ├── config/
@@ -127,6 +138,7 @@ internal/
 **Test Patterns:**
 
 Unit tests:
+
 ```go
 func TestSessionManager_ListSessions(t *testing.T) {
     tests := []struct {
@@ -174,6 +186,7 @@ func TestSessionManager_ListSessions(t *testing.T) {
 ```
 
 Table-driven tests for multiple cases:
+
 ```go
 func TestParseSessionConfig(t *testing.T) {
     tests := []struct {
@@ -207,6 +220,7 @@ defaults:
 ```
 
 Golden file tests for YAML parsing:
+
 ```go
 func TestParseCommands_GoldenFiles(t *testing.T) {
     files, _ := filepath.Glob("testdata/*.yml")
@@ -223,6 +237,7 @@ func TestParseCommands_GoldenFiles(t *testing.T) {
 ```
 
 **Mocking External Commands:**
+
 ```go
 // Use interfaces for testability
 type TmuxClient interface {
@@ -251,6 +266,7 @@ func (c *mockTmuxClient) ListSessions() ([]Session, error) {
 ## Error Handling
 
 **Return errors, don't panic:**
+
 ```go
 // Good
 func LoadConfig() (*Config, error) {
@@ -268,6 +284,7 @@ func LoadConfig() *Config {
 ```
 
 **Wrap errors with context:**
+
 ```go
 if err := yaml.Unmarshal(data, &config); err != nil {
     return nil, fmt.Errorf("parse config file %s: %w", path, err)
@@ -275,6 +292,7 @@ if err := yaml.Unmarshal(data, &config); err != nil {
 ```
 
 **Check errors explicitly:**
+
 ```go
 // Good
 sessions, err := client.ListSessions()
@@ -287,6 +305,7 @@ sessions, _ := client.ListSessions()
 ```
 
 **Custom error types when needed:**
+
 ```go
 type SessionNotFoundError struct {
     Name string
@@ -311,6 +330,7 @@ if errors.As(err, &notFound) {
 ## Configuration
 
 **Use YAML for user-facing configs:**
+
 ```go
 type Config struct {
     Menu      MenuConfig      `yaml:"menu"`
@@ -324,6 +344,7 @@ type MenuConfig struct {
 ```
 
 **Validation:**
+
 ```go
 func (c *Config) Validate() error {
     if c.Menu.Height < 5 || c.Menu.Height > 50 {
@@ -343,6 +364,7 @@ func LoadConfig(path string) (*Config, error) {
 ```
 
 **Default values:**
+
 ```go
 func DefaultConfig() *Config {
     return &Config{
@@ -365,6 +387,7 @@ func LoadConfig(path string) (*Config, error) {
 ## Logging
 
 **Use structured logging:**
+
 ```go
 // Consider using log/slog (Go 1.21+)
 import "log/slog"
@@ -383,12 +406,14 @@ logger.Error("failed to create session",
 ```
 
 **Log levels:**
+
 - Debug: Verbose details (disabled by default)
 - Info: Important events (session created)
 - Warn: Unexpected but handled (deprecated config)
 - Error: Failures (can't create session)
 
 **No logs to stdout** (reserve for output):
+
 ```go
 // Good - logs to stderr
 logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
@@ -400,11 +425,13 @@ logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 ## Performance
 
 **Startup time is critical:**
+
 - Target: <100ms for menu, <50ms for session manager
 - Profile if slow: `go build -ldflags="-s -w"` (strip debug info)
 - Lazy load when possible
 
 **Benchmarking:**
+
 ```go
 func BenchmarkParseCommands(b *testing.B) {
     data, _ := os.ReadFile("testdata/commands.yml")
@@ -416,6 +443,7 @@ func BenchmarkParseCommands(b *testing.B) {
 ```
 
 **Optimize hot paths:**
+
 ```go
 // Cache expensive operations
 type Registry struct {
@@ -434,9 +462,10 @@ func (r *Registry) FindByName(name string) (*Command, error) {
 ## CLI Design
 
 **Use cobra for consistency:**
+
 ```go
 var rootCmd = &cobra.Command{
-    Use:   "session-go",
+    Use:   "sess",
     Short: "Fast tmux session manager",
     Long:  `A simple and fast tmux session manager built in Go.`,
 }
@@ -456,6 +485,7 @@ func init() {
 ```
 
 **Flags and arguments:**
+
 ```go
 var (
     flagAll     bool
@@ -469,6 +499,7 @@ func init() {
 ```
 
 **Exit codes:**
+
 ```go
 // 0 - Success
 // 1 - General error
@@ -488,6 +519,7 @@ func main() {
 ## TUI with Bubbletea
 
 **Model-Update-View pattern:**
+
 ```go
 type model struct {
     sessions []Session
@@ -533,6 +565,7 @@ func (m model) View() string {
 ```
 
 **Testing TUIs:**
+
 ```go
 func TestModel_Update(t *testing.T) {
     m := model{
@@ -556,18 +589,20 @@ func TestModel_Update(t *testing.T) {
 ## Build & Release
 
 **Build flags:**
+
 ```bash
 # Development
-go build -o session-go .
+go build -o sess .
 
 # Production (smaller binary)
-go build -ldflags="-s -w" -o session-go .
+go build -ldflags="-s -w" -o sess .
 
 # Static binary (no dependencies)
-CGO_ENABLED=0 go build -ldflags="-s -w" -o session-go .
+CGO_ENABLED=0 go build -ldflags="-s -w" -o sess .
 ```
 
 **Versioning:**
+
 ```go
 // Set at build time
 var (
@@ -581,11 +616,12 @@ var (
 ```
 
 **Task integration:**
+
 ```yaml
 # taskfiles/go.yml
 build-session:
-  desc: Build session-go
-  dir: tools/session-go
+  desc: Build sess
+  dir: tools/sess
   vars:
     VERSION:
       sh: git describe --tags --always
@@ -594,12 +630,13 @@ build-session:
     DATE:
       sh: date -u '+%Y-%m-%d_%H:%M:%S'
   cmds:
-    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}} -X main.date={{.DATE}}" -o ~/.local/bin/session-go .
+    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}} -X main.date={{.DATE}}" -o ~/.local/bin/sess .
 ```
 
 ## Documentation
 
 **Package documentation:**
+
 ```go
 // Package session provides tmux session management.
 //
@@ -620,6 +657,7 @@ package session
 ```
 
 **Function documentation:**
+
 ```go
 // ListSessions returns all active tmux sessions.
 //
@@ -631,8 +669,9 @@ func (m *Manager) ListSessions() ([]Session, error) {
 ```
 
 **README.md per tool:**
+
 ```markdown
-# session-go
+# sess
 
 Fast tmux session manager written in Go.
 
@@ -649,15 +688,16 @@ task go:install-session
 
 ## Usage
 \`\`\`bash
-session-go              # Interactive menu
-session-go list         # List sessions
-session-go create foo   # Create session
+sess              # Interactive menu
+sess list         # List sessions
+sess create foo   # Create session
 \`\`\`
 ```
 
 ## Common Patterns
 
 **Reading YAML files:**
+
 ```go
 func LoadCommands(path string) (*CommandRegistry, error) {
     data, err := os.ReadFile(path)
@@ -675,6 +715,7 @@ func LoadCommands(path string) (*CommandRegistry, error) {
 ```
 
 **Executing shell commands:**
+
 ```go
 func listTmuxSessions() ([]string, error) {
     cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
@@ -693,6 +734,7 @@ func listTmuxSessions() ([]string, error) {
 ```
 
 **Checking if program exists:**
+
 ```go
 func hasTmux() bool {
     _, err := exec.LookPath("tmux")
@@ -701,6 +743,7 @@ func hasTmux() bool {
 ```
 
 **Platform detection:**
+
 ```go
 func detectPlatform() string {
     switch runtime.GOOS {
@@ -724,6 +767,7 @@ func detectPlatform() string {
 ## Pre-Commit Hooks
 
 **Setup:**
+
 ```bash
 # .pre-commit-config.yaml
 repos:
@@ -744,6 +788,7 @@ repos:
 ```
 
 **Manual checks before commit:**
+
 ```bash
 task go:test           # Run tests
 task go:lint           # Run linter
