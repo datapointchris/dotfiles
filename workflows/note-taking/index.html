@@ -1,0 +1,2307 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/workflows/note-taking/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>Note Taking with nb - Dotfiles</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.84d31ad4.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1%207.775V2.75C1%201.784%201.784%201%202.75%201h5.025c.464%200%20.91.184%201.238.513l6.25%206.25a1.75%201.75%200%200%201%200%202.474l-5.026%205.026a1.75%201.75%200%200%201-2.474%200l-6.25-6.25A1.75%201.75%200%200%201%201%207.775m1.5%200c0%20.066.026.13.073.177l6.25%206.25a.25.25%200%200%200%20.354%200l5.025-5.025a.25.25%200%200%200%200-.354l-6.25-6.25a.25.25%200%200%200-.177-.073H2.75a.25.25%200%200%200-.25.25ZM6%205a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E');--md-admonition-icon--abstract:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.5%201.75v11.5c0%20.138.112.25.25.25h3.17a.75.75%200%200%201%200%201.5H2.75A1.75%201.75%200%200%201%201%2013.25V1.75C1%20.784%201.784%200%202.75%200h8.5C12.216%200%2013%20.784%2013%201.75v7.736a.75.75%200%200%201-1.5%200V1.75a.25.25%200%200%200-.25-.25h-8.5a.25.25%200%200%200-.25.25m13.274%209.537zl-4.557%204.45a.75.75%200%200%201-1.055-.008l-1.943-1.95a.75.75%200%200%201%201.062-1.058l1.419%201.425%204.026-3.932a.75.75%200%201%201%201.048%201.074M4.75%204h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M4%207.75A.75.75%200%200%201%204.75%207h2a.75.75%200%200%201%200%201.5h-2A.75.75%200%200%201%204%207.75%22/%3E%3C/svg%3E');--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.5%207.75A.75.75%200%200%201%207.25%207h1a.75.75%200%200%201%20.75.75v2.75h.25a.75.75%200%200%201%200%201.5h-2a.75.75%200%200%201%200-1.5h.25v-2h-.25a.75.75%200%200%201-.75-.75M8%206a1%201%200%201%201%200-2%201%201%200%200%201%200%202%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M8%201.5c-2.363%200-4%201.69-4%203.75%200%20.984.424%201.625.984%202.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621%201.49a.75.75%200%200%201-1.484.211c-.04-.282-.163-.547-.37-.847a9%209%200%200%200-.542-.68q-.126-.149-.268-.32C3.201%207.75%202.5%206.766%202.5%205.25%202.5%202.31%204.863%200%208%200s5.5%202.31%205.5%205.25c0%201.516-.701%202.5-1.328%203.259q-.142.172-.268.319c-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751%200%200%201-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848q.113-.133.213-.253c.561-.679.985-1.32.985-2.304%200-2.06-1.637-3.75-4-3.75M5.75%2012h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M6%2015.25a.75.75%200%200%201%20.75-.75h2.5a.75.75%200%200%201%200%201.5h-2.5a.75.75%200%200%201-.75-.75%22/%3E%3C/svg%3E');--md-admonition-icon--success:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M13.78%204.22a.75.75%200%200%201%200%201.06l-7.25%207.25a.75.75%200%200%201-1.06%200L2.22%209.28a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018L6%2010.94l6.72-6.72a.75.75%200%200%201%201.06%200%22/%3E%3C/svg%3E');--md-admonition-icon--question:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.92%206.085h.001a.749.749%200%201%201-1.342-.67c.169-.339.436-.701.849-.977C6.845%204.16%207.369%204%208%204a2.76%202.76%200%200%201%201.637.525c.503.377.863.965.863%201.725%200%20.448-.115.83-.329%201.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6%206%200%200%200-.26.16%201%201%200%200%200-.276.245.75.75%200%200%201-1.248-.832c.184-.264.42-.489.692-.661q.154-.1.313-.195l.007-.004c.1-.061.182-.11.258-.161a1%201%200%200%200%20.277-.245C8.96%206.514%209%206.427%209%206.25a.61.61%200%200%200-.262-.525A1.27%201.27%200%200%200%208%205.5c-.369%200-.595.09-.74.187a1%201%200%200%200-.34.398M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M6.457%201.047c.659-1.234%202.427-1.234%203.086%200l6.082%2011.378A1.75%201.75%200%200%201%2014.082%2015H1.918a1.75%201.75%200%200%201-1.543-2.575Zm1.763.707a.25.25%200%200%200-.44%200L1.698%2013.132a.25.25%200%200%200%20.22.368h12.164a.25.25%200%200%200%20.22-.368Zm.53%203.996v2.5a.75.75%200%200%201-1.5%200v-2.5a.75.75%200%200%201%201.5%200M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--failure:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.344%202.343za8%208%200%200%201%2011.314%2011.314A8.002%208.002%200%200%201%20.234%2010.089a8%208%200%200%201%202.11-7.746m1.06%2010.253a6.5%206.5%200%201%200%209.108-9.275%206.5%206.5%200%200%200-9.108%209.275M6.03%204.97%208%206.94l1.97-1.97a.749.749%200%200%201%201.275.326.75.75%200%200%201-.215.734L9.06%208l1.97%201.97a.749.749%200%200%201-.326%201.275.75.75%200%200%201-.734-.215L8%209.06l-1.97%201.97a.749.749%200%200%201-1.275-.326.75.75%200%200%201%20.215-.734L6.94%208%204.97%206.03a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018%22/%3E%3C/svg%3E');--md-admonition-icon--danger:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M9.504.43a1.516%201.516%200%200%201%202.437%201.713L10.415%205.5h2.123c1.57%200%202.346%201.909%201.22%203.004l-7.34%207.142a1.25%201.25%200%200%201-.871.354h-.302a1.25%201.25%200%200%201-1.157-1.723L5.633%2010.5H3.462c-1.57%200-2.346-1.909-1.22-3.004zm1.047%201.074L3.286%208.571A.25.25%200%200%200%203.462%209H6.75a.75.75%200%200%201%20.694%201.034l-1.713%204.188%206.982-6.793A.25.25%200%200%200%2012.538%207H9.25a.75.75%200%200%201-.683-1.06l2.008-4.418.003-.006-.004-.009-.006-.006-.008-.001q-.005%200-.009.004%22/%3E%3C/svg%3E');--md-admonition-icon--bug:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M4.72.22a.75.75%200%200%201%201.06%200l1%20.999a3.5%203.5%200%200%201%202.441%200l.999-1a.748.748%200%200%201%201.265.332.75.75%200%200%201-.205.729l-.775.776c.616.63.995%201.493.995%202.444v.327q0%20.15-.025.292c.408.14.764.392%201.029.722l1.968-.787a.75.75%200%200%201%20.556%201.392L13%207.258V9h2.25a.75.75%200%200%201%200%201.5H13v.5q-.002.615-.141%201.186l2.17.868a.75.75%200%200%201-.557%201.392l-2.184-.873A5%205%200%200%201%208%2016a5%205%200%200%201-4.288-2.427l-2.183.873a.75.75%200%200%201-.558-1.392l2.17-.868A5%205%200%200%201%203%2011v-.5H.75a.75.75%200%200%201%200-1.5H3V7.258L.971%206.446a.75.75%200%200%201%20.558-1.392l1.967.787c.265-.33.62-.583%201.03-.722a1.7%201.7%200%200%201-.026-.292V4.5c0-.951.38-1.814.995-2.444L4.72%201.28a.75.75%200%200%201%200-1.06m.53%206.28a.75.75%200%200%200-.75.75V11a3.5%203.5%200%201%200%207%200V7.25a.75.75%200%200%200-.75-.75ZM6.173%205h3.654A.17.17%200%200%200%2010%204.827V4.5a2%202%200%201%200-4%200v.327c0%20.096.077.173.173.173%22/%3E%3C/svg%3E');--md-admonition-icon--example:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M5%205.782V2.5h-.25a.75.75%200%200%201%200-1.5h6.5a.75.75%200%200%201%200%201.5H11v3.282l3.666%205.76C15.619%2013.04%2014.543%2015%2012.767%2015H3.233c-1.776%200-2.852-1.96-1.899-3.458Zm-2.4%206.565a.75.75%200%200%200%20.633%201.153h9.534a.75.75%200%200%200%20.633-1.153L12.225%2010.5h-8.45ZM9.5%202.5h-3V6c0%20.143-.04.283-.117.403L4.73%209h6.54L9.617%206.403A.75.75%200%200%201%209.5%206Z%22/%3E%3C/svg%3E');--md-admonition-icon--quote:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1.75%202.5h10.5a.75.75%200%200%201%200%201.5H1.75a.75.75%200%200%201%200-1.5m4%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5m0%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5M2.5%207.75v6a.75.75%200%200%201-1.5%200v-6a.75.75%200%200%201%201.5%200%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#note-taking-with-nb" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dotfiles
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Note Taking with nb
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/platforms/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/testing.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../learnings/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Learnings
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../changelog/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Changelog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dotfiles
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quick Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    First Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Architecture
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/menu-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Menu System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    sesh Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Platform Differences
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/menu-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Menu System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tool Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tool-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tool Discovery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/symlinks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Symlinks Manager
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Skills System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Claude Code Hooks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/corporate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Corporate Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/github-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    GitHub Pages
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/testing.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-migration-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Migration Strategy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-migration-quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Migration Quick Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-migration-checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Migration Checklist
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-tui-comparison-summary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go TUI Comparison
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bubbletea-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Bubbletea Quick Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Development Standards
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Quick Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-menu-migration-complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Migration Complete
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Publishing Docs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../learnings/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    Learnings
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Learnings
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Relative Path Calculation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Directory Pattern Matching
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cross-Platform Symlinks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Documentation Consolidation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go TUI Testing Strategies
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-testing-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go Testing Examples
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go TUI Ecosystem Research
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Go CLI Architecture Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Changelog
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Changelog
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Summary
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/2025-11-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2025-11-05
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/2025-11-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2025-11-04
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/2025-11-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2025-11-02
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="note-taking-with-nb">Note Taking with nb<a class="headerlink" href="#note-taking-with-nb" title="Permanent link">&para;</a></h1>
+<p>This guide covers the note-taking workflows using <a href="https://github.com/xwmx/nb">nb</a>, a git-backed command-line note-taking system.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>nb provides a unified interface for multiple git-backed markdown notebooks, supporting wiki-style linking, full-text search, and visual browsing.</p>
+<h3 id="notebook-structure">Notebook Structure<a class="headerlink" href="#notebook-structure" title="Permanent link">&para;</a></h3>
+<p>Three notebooks serve different purposes:</p>
+<p><strong>learning</strong> - Public repository for semester-based learning</p>
+<p><code>text
+~/.nb/learning/ (https://github.com/datapointchris/learning.git)
+├── 2024-fall/
+│   ├── computer-science/{algorithms, data-structures, databases}
+│   ├── systems/{unix, networking}
+│   └── readings/{papers, books}
+└── 2025-spring/
+    ├── computer-science/
+    └── philosophy/</code>text</p>
+<p><strong>notes</strong> - Private repository for general notes</p>
+<p><code>text
+~/.nb/notes/ (https://github.com/datapointchris/notes.git)
+├── work/
+├── personal/
+└── projects/</code>text</p>
+<p><strong>ideas</strong> - Private repository for quick capture</p>
+<p><code>text
+~/.nb/ideas/ (https://github.com/datapointchris/ideas.git)
+(flat structure for quick capture)</code>text</p>
+<h2 id="basic-commands">Basic Commands<a class="headerlink" href="#basic-commands" title="Permanent link">&para;</a></h2>
+<h3 id="navigation">Navigation<a class="headerlink" href="#navigation" title="Permanent link">&para;</a></h3>
+<p><code>bash
+nb                          # Interactive menu (current notebook)
+nb notebooks                # List all notebooks
+nb use learning             # Switch to learning notebook
+nb learning:                # List notes in learning notebook
+nb notes:work/              # List notes in notes/work/ folder</code>text</p>
+<h3 id="creating-notes">Creating Notes<a class="headerlink" href="#creating-notes" title="Permanent link">&para;</a></h3>
+<p><code>bash
+nb add                      # Interactive note creation (opens $EDITOR)
+nb add "Title"              # Quick note with title
+nb learning:add "Topic"     # Add to specific notebook
+nb notes:work/add "Meeting" # Add to specific folder</code>text</p>
+<p><strong>Examples:</strong></p>
+<p>```bash</p>
+<h1 id="add-to-current-semesters-cs-notes">Add to current semester's CS notes<a class="headerlink" href="#add-to-current-semesters-cs-notes" title="Permanent link">&para;</a></h1>
+<p>nb learning:2024-fall/computer-science/add "Binary Search Trees"</p>
+<h1 id="quick-work-note">Quick work note<a class="headerlink" href="#quick-work-note" title="Permanent link">&para;</a></h1>
+<p>nb notes:work/add "Team Meeting Notes"</p>
+<h1 id="capture-an-idea">Capture an idea<a class="headerlink" href="#capture-an-idea" title="Permanent link">&para;</a></h1>
+<p>nb ideas:add "AI-powered search feature"
+```text</p>
+<h3 id="searching">Searching<a class="headerlink" href="#searching" title="Permanent link">&para;</a></h3>
+<p><code>bash
+nb search "algorithm"       # Search current notebook
+nb search "database" --all  # Search all notebooks
+nb list --query "pattern"   # List matching notes</code>text</p>
+<p><strong>Advanced search:</strong></p>
+<p>```bash</p>
+<h1 id="case-insensitive-search">Case-insensitive search<a class="headerlink" href="#case-insensitive-search" title="Permanent link">&para;</a></h1>
+<p>nb search "binary tree" -i</p>
+<h1 id="search-with-regex">Search with regex<a class="headerlink" href="#search-with-regex" title="Permanent link">&para;</a></h1>
+<p>nb search "algorithm.*complexity"</p>
+<h1 id="search-in-specific-notebook">Search in specific notebook<a class="headerlink" href="#search-in-specific-notebook" title="Permanent link">&para;</a></h1>
+<p>nb learning:search "normalization"</p>
+<h1 id="limit-results">Limit results<a class="headerlink" href="#limit-results" title="Permanent link">&para;</a></h1>
+<p>nb search "database" --limit 10
+```text</p>
+<h3 id="editing">Editing<a class="headerlink" href="#editing" title="Permanent link">&para;</a></h3>
+<p><code>bash
+nb edit 1                   # Edit note by ID
+nb edit algorithm           # Edit by title/keyword
+nb learning:edit 3          # Edit in specific notebook</code>text</p>
+<h3 id="viewing">Viewing<a class="headerlink" href="#viewing" title="Permanent link">&para;</a></h3>
+<p><code>bash
+nb show 1                   # Show note content
+nb show --print             # Print to stdout (for piping)
+nb browse --gui             # Visual interface in browser
+nb browse learning:         # Browse specific notebook</code>text</p>
+<h2 id="cross-notebook-wiki-links">Cross-Notebook Wiki Links<a class="headerlink" href="#cross-notebook-wiki-links" title="Permanent link">&para;</a></h2>
+<p>nb supports wiki-style linking across notebooks, enabling connections between learning, work, and ideas.</p>
+<h3 id="link-syntax">Link Syntax<a class="headerlink" href="#link-syntax" title="Permanent link">&para;</a></h3>
+<p><strong>Same notebook:</strong></p>
+<p><code>markdown
+[[file-name]]
+[[folder/file-name]]</code>text</p>
+<p><strong>Different notebook:</strong></p>
+<p><code>markdown
+[[notebook:folder/file-name]]</code>text</p>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<p><strong>In a learning note (learning:2024-fall/computer-science/databases/normalization.md):</strong></p>
+<p>```markdown</p>
+<h1 id="database-normalization">Database Normalization<a class="headerlink" href="#database-normalization" title="Permanent link">&para;</a></h1>
+<h2 id="overview_1">Overview<a class="headerlink" href="#overview_1" title="Permanent link">&para;</a></h2>
+<p>Database normalization is the process of organizing data to reduce redundancy.</p>
+<h2 id="forms">Forms<a class="headerlink" href="#forms" title="Permanent link">&para;</a></h2>
+<ul>
+<li>1NF: Atomic values</li>
+<li>2NF: No partial dependencies</li>
+<li>3NF: No transitive dependencies</li>
+</ul>
+<h2 id="related-topics">Related Topics<a class="headerlink" href="#related-topics" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[[data-structures/trees]]  # Same notebook</li>
+<li>[[algorithms/search]]      # Same notebook</li>
+</ul>
+<h2 id="real-world-application">Real-World Application<a class="headerlink" href="#real-world-application" title="Permanent link">&para;</a></h2>
+<p>See my work project: [[notes:work/database-design]]</p>
+<h2 id="further-reading">Further Reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[[readings/papers/codd-relational-model]]
+```text</li>
+</ul>
+<p><strong>In a work note (notes:work/database-design.md):</strong></p>
+<p>```markdown</p>
+<h1 id="database-design-project">Database Design Project<a class="headerlink" href="#database-design-project" title="Permanent link">&para;</a></h1>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Redesigning the user database schema for better query performance.</p>
+<h2 id="learning-references">Learning References<a class="headerlink" href="#learning-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[[learning:2024-fall/computer-science/databases/normalization]]</li>
+<li>[[learning:2024-fall/computer-science/databases/indexing]]</li>
+</ul>
+<h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
+<p>Applied 3NF to user tables, created composite indexes on frequently queried fields.</p>
+<h2 id="ideas">Ideas<a class="headerlink" href="#ideas" title="Permanent link">&para;</a></h2>
+<p>See related brainstorming: [[ideas:database-optimization]]
+```text</p>
+<p><strong>In an ideas note (ideas:database-optimization.md):</strong></p>
+<p>```markdown</p>
+<h1 id="database-optimization-ideas">Database Optimization Ideas<a class="headerlink" href="#database-optimization-ideas" title="Permanent link">&para;</a></h1>
+<h2 id="potential-improvements">Potential Improvements<a class="headerlink" href="#potential-improvements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Implement read replicas for heavy query load</li>
+<li>Add caching layer with Redis</li>
+<li>Partition large tables by date</li>
+</ul>
+<h2 id="research-needed">Research Needed<a class="headerlink" href="#research-needed" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[[learning:2024-fall/computer-science/databases/partitioning]]</li>
+<li>[[notes:work/database-design]] (current implementation)
+```text</li>
+</ul>
+<h2 id="git-sync-workflow">Git Sync Workflow<a class="headerlink" href="#git-sync-workflow" title="Permanent link">&para;</a></h2>
+<p>Each notebook is independently version-controlled with its own git repository.</p>
+<h3 id="manual-sync">Manual Sync<a class="headerlink" href="#manual-sync" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="sync-specific-notebook">Sync specific notebook<a class="headerlink" href="#sync-specific-notebook" title="Permanent link">&para;</a></h1>
+<p>nb learning:sync            # Add, commit, push learning
+nb notes:sync               # Sync notes
+nb ideas:sync               # Sync ideas</p>
+<h1 id="check-status-before-syncing">Check status before syncing<a class="headerlink" href="#check-status-before-syncing" title="Permanent link">&para;</a></h1>
+<p>nb learning:status          # Git status for learning
+nb notes:git log --oneline  # Recent commits in notes
+```text</p>
+<h3 id="automatic-sync">Automatic Sync<a class="headerlink" href="#automatic-sync" title="Permanent link">&para;</a></h3>
+<p>Configure auto-sync per notebook:</p>
+<p>```bash</p>
+<h1 id="enable-auto-sync-commits-and-pushes-on-each-operation">Enable auto-sync (commits and pushes on each operation)<a class="headerlink" href="#enable-auto-sync-commits-and-pushes-on-each-operation" title="Permanent link">&para;</a></h1>
+<p>nb learning:settings auto_sync on</p>
+<h1 id="disable-auto-sync-manual-control">Disable auto-sync (manual control)<a class="headerlink" href="#disable-auto-sync-manual-control" title="Permanent link">&para;</a></h1>
+<p>nb learning:settings auto_sync off
+```text</p>
+<div class="admonition warning">
+<p class="admonition-title">Auto-sync Considerations</p>
+<p>Auto-sync commits after each <code>add</code>, <code>edit</code>, or <code>delete</code> operation. This is convenient but creates many small commits. For learning notes (public repo), consider manual sync to group related changes.</p>
+</div>
+<h3 id="commit-messages">Commit Messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h3>
+<p>nb auto-generates commit messages:</p>
+<p><code>text
+Add: Binary Search Trees.md
+Update: normalization.md
+Delete: old-notes.md</code>text</p>
+<p>For custom commit messages, use git directly:</p>
+<p><code>bash
+cd ~/.nb/learning
+git add .
+git commit -m "Add complete database normalization notes with examples"
+git push</code>text</p>
+<h2 id="daily-workflows">Daily Workflows<a class="headerlink" href="#daily-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="morning-study-session">Morning Study Session<a class="headerlink" href="#morning-study-session" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="switch-to-learning-context">Switch to learning context<a class="headerlink" href="#switch-to-learning-context" title="Permanent link">&para;</a></h1>
+<p>nb use learning</p>
+<h1 id="review-recent-notes">Review recent notes<a class="headerlink" href="#review-recent-notes" title="Permanent link">&para;</a></h1>
+<p>nb learning:list</p>
+<h1 id="add-todays-learning-topic">Add today's learning topic<a class="headerlink" href="#add-todays-learning-topic" title="Permanent link">&para;</a></h1>
+<p>nb learning:2024-fall/computer-science/add "Graph Algorithms"</p>
+<h1 id="edit-and-expand-with-cross-links">Edit and expand with cross-links<a class="headerlink" href="#edit-and-expand-with-cross-links" title="Permanent link">&para;</a></h1>
+<p>nb edit graph-algorithms</p>
+<h1 id="in-note-data-structuresgraphs-algorithmssearch">In note: [[data-structures/graphs]], [[algorithms/search]]<a class="headerlink" href="#in-note-data-structuresgraphs-algorithmssearch" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h3 id="work-context">Work Context<a class="headerlink" href="#work-context" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="switch-to-work-notes">Switch to work notes<a class="headerlink" href="#switch-to-work-notes" title="Permanent link">&para;</a></h1>
+<p>nb use notes</p>
+<h1 id="create-meeting-notes">Create meeting notes<a class="headerlink" href="#create-meeting-notes" title="Permanent link">&para;</a></h1>
+<p>nb notes:work/add "Sprint Planning Meeting"</p>
+<h1 id="reference-learning-materials">Reference learning materials<a class="headerlink" href="#reference-learning-materials" title="Permanent link">&para;</a></h1>
+<h1 id="in-note-learning2024-fallcomputer-sciencealgorithmscomplexity">In note: [[learning:2024-fall/computer-science/algorithms/complexity]]<a class="headerlink" href="#in-note-learning2024-fallcomputer-sciencealgorithmscomplexity" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h3 id="quick-idea-capture">Quick Idea Capture<a class="headerlink" href="#quick-idea-capture" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="capture-idea-without-switching-context">Capture idea without switching context<a class="headerlink" href="#capture-idea-without-switching-context" title="Permanent link">&para;</a></h1>
+<p>nb ideas:add "Real-time collaboration feature"</p>
+<h1 id="later-link-from-project-notes">Later, link from project notes<a class="headerlink" href="#later-link-from-project-notes" title="Permanent link">&para;</a></h1>
+<p>nb notes:projects/add "New Feature Proposals"</p>
+<h1 id="in-note-ideasreal-time-collaboration-feature">In note: [[ideas:real-time-collaboration-feature]]<a class="headerlink" href="#in-note-ideasreal-time-collaboration-feature" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h3 id="cross-reference-workflow">Cross-Reference Workflow<a class="headerlink" href="#cross-reference-workflow" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="while-studying-algorithms-reference-work-project">While studying algorithms, reference work project<a class="headerlink" href="#while-studying-algorithms-reference-work-project" title="Permanent link">&para;</a></h1>
+<p>nb learning:2024-fall/computer-science/algorithms/add "Search Optimization"</p>
+<h1 id="in-note-applied-in-notesworksearch-feature">In note: Applied in [[notes:work/search-feature]]<a class="headerlink" href="#in-note-applied-in-notesworksearch-feature" title="Permanent link">&para;</a></h1>
+<h1 id="in-work-notes-link-back-to-learning">In work notes, link back to learning<a class="headerlink" href="#in-work-notes-link-back-to-learning" title="Permanent link">&para;</a></h1>
+<p>nb notes:work/edit search-feature</p>
+<h1 id="in-note-theory-learning2024-fallcomputer-sciencealgorithmssearch-optimization">In note: Theory: [[learning:2024-fall/computer-science/algorithms/search-optimization]]<a class="headerlink" href="#in-note-theory-learning2024-fallcomputer-sciencealgorithmssearch-optimization" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h2 id="composition-with-other-tools">Composition with Other Tools<a class="headerlink" href="#composition-with-other-tools" title="Permanent link">&para;</a></h2>
+<p>nb follows the Unix philosophy - it outputs clean data that composes with other tools.</p>
+<h3 id="interactive-selection-with-fzf">Interactive Selection with fzf<a class="headerlink" href="#interactive-selection-with-fzf" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="browse-notes-interactively">Browse notes interactively<a class="headerlink" href="#browse-notes-interactively" title="Permanent link">&para;</a></h1>
+<p>nb list --all | fzf --preview 'nb show {1}'</p>
+<h1 id="search-and-select">Search and select<a class="headerlink" href="#search-and-select" title="Permanent link">&para;</a></h1>
+<p>nb search "algorithm" | fzf | xargs nb show</p>
+<h1 id="edit-note-selected-with-fzf">Edit note selected with fzf<a class="headerlink" href="#edit-note-selected-with-fzf" title="Permanent link">&para;</a></h1>
+<p>nb list | fzf | awk '{print $1}' | xargs nb edit
+```text</p>
+<h3 id="notebook-selection-with-gum">Notebook Selection with gum<a class="headerlink" href="#notebook-selection-with-gum" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="choose-notebook-with-gum">Choose notebook with gum<a class="headerlink" href="#choose-notebook-with-gum" title="Permanent link">&para;</a></h1>
+<p>NOTEBOOK=$(nb notebooks | gum choose)
+nb use "$NOTEBOOK"</p>
+<h1 id="add-note-with-gum-input">Add note with gum input<a class="headerlink" href="#add-note-with-gum-input" title="Permanent link">&para;</a></h1>
+<p>TITLE=$(gum input --placeholder "Note title")
+nb add "$TITLE"
+```text</p>
+<h3 id="integration-with-menu">Integration with menu<a class="headerlink" href="#integration-with-menu" title="Permanent link">&para;</a></h3>
+<p>The <code>menu</code> launcher includes nb:</p>
+<p>```bash
+menu launch</p>
+<h1 id="select-takefind-a-note">Select "Take/find a note"<a class="headerlink" href="#select-takefind-a-note" title="Permanent link">&para;</a></h1>
+<h1 id="launches-nb-interactive-interface">Launches nb interactive interface<a class="headerlink" href="#launches-nb-interactive-interface" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h3 id="scripting">Scripting<a class="headerlink" href="#scripting" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="daily-note-script">Daily note script<a class="headerlink" href="#daily-note-script" title="Permanent link">&para;</a></h1>
+<h1 id="binbash">!/bin/bash<a class="headerlink" href="#binbash" title="Permanent link">&para;</a></h1>
+<p>TODAY=$(date +%Y-%m-%d)
+nb notes:work/add "Daily Log - $TODAY"</p>
+<h1 id="batch-processing">Batch processing<a class="headerlink" href="#batch-processing" title="Permanent link">&para;</a></h1>
+<h1 id="binbash_1">!/bin/bash<a class="headerlink" href="#binbash_1" title="Permanent link">&para;</a></h1>
+<p>nb search "TODO" --all | while read -r note; do
+  echo "Pending task in: $note"
+done
+```text</p>
+<h2 id="advanced-workflows">Advanced Workflows<a class="headerlink" href="#advanced-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="semester-rotation">Semester Rotation<a class="headerlink" href="#semester-rotation" title="Permanent link">&para;</a></h3>
+<p>When starting a new semester:</p>
+<p>```bash</p>
+<h1 id="create-new-semester-folder">Create new semester folder<a class="headerlink" href="#create-new-semester-folder" title="Permanent link">&para;</a></h1>
+<p>cd ~/.nb/learning
+mkdir -p 2025-spring/computer-science
+mkdir -p 2025-spring/philosophy</p>
+<h1 id="add-first-note">Add first note<a class="headerlink" href="#add-first-note" title="Permanent link">&para;</a></h1>
+<p>nb learning:2025-spring/computer-science/add "Distributed Systems"</p>
+<h1 id="sync-structure">Sync structure<a class="headerlink" href="#sync-structure" title="Permanent link">&para;</a></h1>
+<p>nb learning:sync
+```text</p>
+<h3 id="migrating-from-obsidian">Migrating from Obsidian<a class="headerlink" href="#migrating-from-obsidian" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="copy-markdown-files-preserves-wiki-links">Copy markdown files (preserves [[wiki links]])<a class="headerlink" href="#copy-markdown-files-preserves-wiki-links" title="Permanent link">&para;</a></h1>
+<p>cp -r ~/Documents/notes/learning/* ~/.nb/learning/</p>
+<h1 id="add-to-git">Add to git<a class="headerlink" href="#add-to-git" title="Permanent link">&para;</a></h1>
+<p>cd ~/.nb/learning
+git add .
+git commit -m "Migrate learning notes from Obsidian"
+git push</p>
+<h1 id="update-wiki-links-to-cross-notebook-format-if-needed">Update wiki links to cross-notebook format if needed<a class="headerlink" href="#update-wiki-links-to-cross-notebook-format-if-needed" title="Permanent link">&para;</a></h1>
+<h1 id="workproject-notesworkproject">[[work/project]] → [[notes:work/project]]<a class="headerlink" href="#workproject-notesworkproject" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h3 id="visual-browsing">Visual Browsing<a class="headerlink" href="#visual-browsing" title="Permanent link">&para;</a></h3>
+<p>```bash</p>
+<h1 id="launch-web-interface">Launch web interface<a class="headerlink" href="#launch-web-interface" title="Permanent link">&para;</a></h1>
+<p>nb browse --gui</p>
+<h1 id="browse-specific-notebook">Browse specific notebook<a class="headerlink" href="#browse-specific-notebook" title="Permanent link">&para;</a></h1>
+<p>nb browse learning:</p>
+<h1 id="browse-specific-folder">Browse specific folder<a class="headerlink" href="#browse-specific-folder" title="Permanent link">&para;</a></h1>
+<p>nb browse learning:2024-fall/computer-science/
+```text</p>
+<p>The browser interface provides:</p>
+<ul>
+<li>Visual navigation of folder hierarchy</li>
+<li>Rendered markdown preview</li>
+<li>Clickable wiki links (including cross-notebook)</li>
+<li>Search interface</li>
+<li>Edit links to open in $EDITOR</li>
+</ul>
+<h3 id="tags-and-metadata">Tags and Metadata<a class="headerlink" href="#tags-and-metadata" title="Permanent link">&para;</a></h3>
+<p>nb supports tags and metadata in notes:</p>
+<h2 id="markdown">```markdown<a class="headerlink" href="#markdown" title="Permanent link">&para;</a></h2>
+<p>tags: algorithms, study, binary-search
+created: 2024-11-07
+updated: 2024-11-07</p>
+<hr />
+<h1 id="binary-search">Binary Search<a class="headerlink" href="#binary-search" title="Permanent link">&para;</a></h1>
+<p>Content here...
+```text</p>
+<p>Search by tags:</p>
+<p><code>bash
+nb search --tags algorithms
+nb list --tags study,algorithms  # Multiple tags</code>text</p>
+<h2 id="tips-and-best-practices">Tips and Best Practices<a class="headerlink" href="#tips-and-best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="1-consistent-folder-structure">1. Consistent Folder Structure<a class="headerlink" href="#1-consistent-folder-structure" title="Permanent link">&para;</a></h3>
+<p>Maintain parallel structure across semesters:</p>
+<p><code>text
+2024-fall/computer-science/algorithms/
+2024-fall/computer-science/data-structures/
+2025-spring/computer-science/algorithms/
+2025-spring/computer-science/data-structures/</code>text</p>
+<p>This makes cross-semester linking predictable.</p>
+<h3 id="2-descriptive-filenames">2. Descriptive Filenames<a class="headerlink" href="#2-descriptive-filenames" title="Permanent link">&para;</a></h3>
+<p>Use clear, descriptive filenames:</p>
+<p>```bash</p>
+<h1 id="good">Good<a class="headerlink" href="#good" title="Permanent link">&para;</a></h1>
+<p>binary-search-trees.md
+database-normalization-forms.md
+project-kickoff-meeting-2024-11-07.md</p>
+<h1 id="avoid">Avoid<a class="headerlink" href="#avoid" title="Permanent link">&para;</a></h1>
+<p>bst.md
+db.md
+meeting.md
+```text</p>
+<h3 id="3-liberal-cross-linking">3. Liberal Cross-Linking<a class="headerlink" href="#3-liberal-cross-linking" title="Permanent link">&para;</a></h3>
+<p>Link freely between notes - nb makes it easy:</p>
+<p><code>markdown
+Related: [[other-topic]], [[notes:work/project]], [[ideas:feature-idea]]</code>text</p>
+<h3 id="4-git-sync-rhythm">4. Git Sync Rhythm<a class="headerlink" href="#4-git-sync-rhythm" title="Permanent link">&para;</a></h3>
+<p>For public learning repo:</p>
+<ul>
+<li>Manual sync to group related changes</li>
+<li>Meaningful commit messages</li>
+</ul>
+<p>For private notes/ideas:</p>
+<ul>
+<li>Auto-sync for convenience</li>
+<li>Less concern about commit granularity</li>
+</ul>
+<h3 id="5-notebook-switching">5. Notebook Switching<a class="headerlink" href="#5-notebook-switching" title="Permanent link">&para;</a></h3>
+<p>Use <code>nb use</code> to set context:</p>
+<p>```bash</p>
+<h1 id="morning-learning-mode">Morning: Learning mode<a class="headerlink" href="#morning-learning-mode" title="Permanent link">&para;</a></h1>
+<p>nb use learning</p>
+<h1 id="afternoon-work-mode">Afternoon: Work mode<a class="headerlink" href="#afternoon-work-mode" title="Permanent link">&para;</a></h1>
+<p>nb use notes</p>
+<h1 id="quick-idea-capture-without-switching">Quick idea capture (without switching)<a class="headerlink" href="#quick-idea-capture-without-switching" title="Permanent link">&para;</a></h1>
+<p>nb ideas:add "Quick thought"
+```text</p>
+<h3 id="6-search-first-create-second">6. Search First, Create Second<a class="headerlink" href="#6-search-first-create-second" title="Permanent link">&para;</a></h3>
+<p>Before creating a new note:</p>
+<p>```bash</p>
+<h1 id="check-if-topic-already-exists">Check if topic already exists<a class="headerlink" href="#check-if-topic-already-exists" title="Permanent link">&para;</a></h1>
+<p>nb search "binary search tree" --all</p>
+<h1 id="if-found-add-to-existing-note">If found, add to existing note<a class="headerlink" href="#if-found-add-to-existing-note" title="Permanent link">&para;</a></h1>
+<h1 id="if-not-create-new">If not, create new<a class="headerlink" href="#if-not-create-new" title="Permanent link">&para;</a></h1>
+<p>```text</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="links-not-resolving">Links Not Resolving<a class="headerlink" href="#links-not-resolving" title="Permanent link">&para;</a></h3>
+<p>If cross-notebook links don't work:</p>
+<p>```bash</p>
+<h1 id="check-notebook-exists">Check notebook exists<a class="headerlink" href="#check-notebook-exists" title="Permanent link">&para;</a></h1>
+<p>nb notebooks</p>
+<h1 id="verify-path">Verify path<a class="headerlink" href="#verify-path" title="Permanent link">&para;</a></h1>
+<p>nb notes:work/  # Should list notes</p>
+<h1 id="check-link-syntax">Check link syntax<a class="headerlink" href="#check-link-syntax" title="Permanent link">&para;</a></h1>
+<p>[[notes:work/file-name]]  # Correct
+[[notes/work/file-name]]  # Incorrect
+```text</p>
+<h3 id="sync-conflicts">Sync Conflicts<a class="headerlink" href="#sync-conflicts" title="Permanent link">&para;</a></h3>
+<p>If git sync fails:</p>
+<p>```bash
+cd ~/.nb/learning
+git status
+git pull --rebase</p>
+<h1 id="resolve-conflicts-in-editor">Resolve conflicts in $EDITOR<a class="headerlink" href="#resolve-conflicts-in-editor" title="Permanent link">&para;</a></h1>
+<p>git add .
+git rebase --continue
+git push
+```text</p>
+<h3 id="missing-notes-in-search">Missing Notes in Search<a class="headerlink" href="#missing-notes-in-search" title="Permanent link">&para;</a></h3>
+<p>If search doesn't find notes:</p>
+<p>```bash</p>
+<h1 id="rebuild-index">Rebuild index<a class="headerlink" href="#rebuild-index" title="Permanent link">&para;</a></h1>
+<p>nb index rebuild</p>
+<h1 id="search-all-notebooks">Search all notebooks<a class="headerlink" href="#search-all-notebooks" title="Permanent link">&para;</a></h1>
+<p>nb search "query" --all
+```text</p>
+<h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../reference/quick-reference/">Quick Reference</a> - All workflow tools</li>
+<li><a href="../../architecture/tool-composition/">Tool Composition</a> - How tools work together</li>
+<li><a href="https://github.com/xwmx/nb">nb Official Documentation</a> - Complete nb reference</li>
+<li>Planning documents:</li>
+<li><code>planning/phase2-complete-summary.md</code> - nb setup details</li>
+<li><code>planning/dotfiles-system-redesign-2025-11.md</code> - Overall system design</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/datapointchris/dotfiles" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>
