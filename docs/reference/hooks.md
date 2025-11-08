@@ -6,11 +6,10 @@ This dotfiles repository uses a comprehensive hooks system combining **Claude Co
 
 The hook system works on multiple layers:
 
-1. **Claude Code Hooks**: Run during Claude sessions (SessionStart, Stop)
+1. **Claude Code Hooks**: Run during Claude sessions (SessionStart, UserPromptSubmit, PostToolUse, Stop, Notification, PreCompact)
 2. **Pre-commit Hooks**: Run before commits are finalized (documentation checks, linting)
-3. **Post-commit Hooks**: Run after commits succeed (changelog tracking)
 
-Together, these enforce atomic commits, up-to-date documentation, and comprehensive changelog tracking.
+Together, these enforce atomic commits, up-to-date documentation, and maintain code quality throughout the development workflow.
 
 ## Claude Code Hooks
 
@@ -29,7 +28,6 @@ These hooks integrate directly with Claude Code's lifecycle and only run during 
 - Current git status (modified/untracked files)
 - Last 5 commits in oneline format
 - File counts for key directories (install/, tools/, docs/, common/, etc.)
-- Pending changelog entries (if any exist)
 
 **Why it exists**: After conversation compaction or starting fresh, Claude loses awareness of uncommitted changes and recent work. This hook proactively loads relevant context so Claude knows the current state immediately.
 
@@ -41,7 +39,6 @@ These hooks integrate directly with Claude Code's lifecycle and only run during 
 **Git Status:**
 M .claude/settings.json
 M docs/reference/hooks.md
-?? .pending-changelog
 
 **Recent Commits:**
 abc1234 feat: add session-start hook
@@ -54,13 +51,25 @@ ghi9012 docs: update hooks documentation
   "tools/": 1138,
   "docs/": 72
 }
-
-⚠️ **Pending Changelog Updates (2 commits):**
-2025-11-04 [abc1234] feat: add session-start hook
-2025-11-04 [def5678] feat: add stop-build-check hook
-
-📝 Reminder: Will block at 3 commits (currently 2/3)
 ```
+
+### UserPromptSubmit Hook
+
+**Purpose**: Automatically activates relevant skills based on user prompt content before Claude sees the message.
+
+**Location**: `.claude/hooks/user-prompt-submit-skill-activation`
+
+**When it runs**: After user submits a prompt, before Claude processes it.
+
+**What it does**:
+
+- Analyzes the user's prompt for keywords and patterns
+- Checks which skills are relevant based on configured triggers
+- Injects skill activation reminders into Claude's context
+
+**Why it exists**: Ensures Claude has the right context and guidelines loaded based on what the user is asking about, without requiring manual skill invocation.
+
+**Example**: If you ask about the menu system, the hook automatically suggests activating the menu-developer skill.
 
 ### Stop Hook - Build Verification
 
@@ -90,22 +99,59 @@ Found 1 test failures - showing to Claude for fixing
 
 ### Stop Hook - Commit Reminder
 
-**Purpose**: Reminds about commits made during the session that need changelog documentation.
+**Purpose**: Reminds about commits made during the session.
 
 **Location**: `.claude/hooks/stop-commit-reminder`
 
 **When it runs**: After Claude completes a response.
 
-**What it does**: Checks if commits were made in the last minute, and if so, reminds that they're logged for changelog tracking.
+**What it does**: Checks if commits were made in the last minute and reminds about them.
 
 **Example output**:
 
 ```text
 📝 **Reminder**: 2 commit(s) made during this response
-
-Commits will be logged for changelog tracking.
-Remember to update changelog when you have 3+ pending commits.
 ```
+
+### PostToolUse Hook - Markdown Formatter
+
+**Purpose**: Automatically formats markdown files after Claude edits them.
+
+**Location**: `.claude/hooks/markdown_formatter.py`
+
+**When it runs**: After any Edit, MultiEdit, or Write tool operation.
+
+**What it does**:
+
+- Detects if the modified file is markdown (.md extension)
+- Runs prettier formatting on the file
+- Ensures consistent markdown formatting across the repository
+
+**Why it exists**: Prevents markdown formatting inconsistencies and reduces the need for manual formatting fixes.
+
+### Notification Hook
+
+**Purpose**: Sends desktop notifications for important Claude Code events.
+
+**Location**: `.claude/hooks/notification-desktop`
+
+**When it runs**: When Claude Code notification events occur.
+
+**What it does**: Displays macOS desktop notifications for Claude events (errors, completions, etc.)
+
+**Why it exists**: Provides awareness of Claude's status when you're working in other applications.
+
+### PreCompact Hook
+
+**Purpose**: Saves session state before conversation is compacted.
+
+**Location**: `.claude/hooks/pre-compact-save-state`
+
+**When it runs**: Before Claude Code compacts the conversation history.
+
+**What it does**: Saves important context and state information that should survive compaction.
+
+**Why it exists**: Preserves critical context across conversation compactions to maintain workflow continuity.
 
 ## Git Hooks (via pre-commit framework)
 
@@ -174,90 +220,6 @@ git commit -m "chore: update dependencies"
 ✓ Commit successful
 ```
 
-### Pre-Commit Hook - Changelog Enforcement
-
-**Purpose**: Reminds about pending changelog updates and blocks commits if too many are pending.
-
-**Location**: `.claude/hooks/check-changelog`
-
-**When it runs**: Before every `git commit` is finalized.
-
-**What it does**:
-
-- Checks `.pending-changelog` for uncommitted work
-- If ≤2 pending: shows friendly reminder
-- If ≥3 pending: **BLOCKS commit** until changelog updated
-
-**Example - Under threshold**:
-
-```bash
-git commit -m "feat: add new feature"
-
-ℹ️  You have 2 commit(s) pending changelog update
-   (will block at 3 commits)
-
-✓ Commit successful
-✓ Commit logged - changelog update pending (2/3)
-```
-
-**Example - Blocked**:
-
-```bash
-git commit -m "feat: another feature"
-
-❌ CHANGELOG UPDATE REQUIRED
-
-You have 3 commits without changelog entries:
-
-  2025-11-04 [abc123] feat: add session-start hook
-  2025-11-04 [def456] feat: add stop-build-check hook
-  2025-11-04 [ghi789] docs: add hooks reference doc
-
-Please update changelog files:
-  1. Add entry to docs/changelog.md (high-level summary)
-  2. Create/update docs/changelog/2025-11-04.md (detailed entry)
-
-After updating, remove the marker file:
-  rm .pending-changelog
-
-Or use --no-verify to bypass (not recommended)
-```
-
-### Post-Commit Hook - Changelog Tracking
-
-**Purpose**: Automatically logs significant commits for later changelog documentation.
-
-**Location**: `.claude/hooks/post-commit-log`
-
-**When it runs**: After every successful `git commit`.
-
-**What it does**:
-
-- Analyzes commit to determine if "significant"
-- Skips trivial commits (typos, deps, WIP, single-line changes, lock files)
-- Appends significant commits to `.pending-changelog`
-
-**Skipped commit types**:
-
-- Commit types: `chore`, `style`, `typo`, `deps`, `ci`, `build`
-- Commit messages: starting with `WIP`, `TODO`, `TEMP`, `fixup`, `squash`
-- Only lock files changed
-- Single-line markdown changes
-- Changelog-only commits
-
-**Example**:
-
-```bash
-# Significant commit
-git commit -m "feat: add new hook system"
-✓ Commit logged - changelog update pending
-
-# Trivial commit (skipped)
-git commit -m "typo: fix spelling in readme"
-✓ Commit successful
-(no changelog log - trivial change)
-```
-
 ## Conventional Commits Enforcement
 
 The pre-commit framework also enforces conventional commit message format:
@@ -308,33 +270,7 @@ git commit -m "feat: add parallel symlink creation"
 ✓ Commit logged - changelog update pending (1/3)
 ```
 
-### Scenario 2: Claude Makes Multiple Commits
-
-```bash
-# Claude implements 3 features during session
-# Each commit is automatically logged
-
-# You try to make a 4th commit
-git commit -m "feat: one more thing"
-
-# Pre-commit hook BLOCKS
-❌ CHANGELOG UPDATE REQUIRED
-You have 3 commits without changelog entries:
-  2025-11-04 [abc123] feat: add session-start hook
-  2025-11-04 [def456] feat: add stop-build-check hook
-  2025-11-04 [ghi789] feat: add commit tracking
-
-# Update changelog
-vim docs/changelog.md
-vim docs/changelog/2025-11-04.md
-rm .claude/.pending-changelog
-
-git add docs/changelog*
-git commit -m "docs: add changelog for 2025-11-04"
-✓ Commit successful
-```
-
-### Scenario 3: Bypassing Hooks
+### Scenario 2: Bypassing Hooks
 
 All pre-commit hooks can be bypassed with `--no-verify`:
 
@@ -360,7 +296,17 @@ Configures Claude Code hooks:
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session-start"
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/session-start"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-submit-skill-activation"
           }
         ]
       }
@@ -370,11 +316,42 @@ Configures Claude Code hooks:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/stop-build-check"
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check"
           },
           {
             "type": "command",
-            "command": "bash .claude/hooks/stop-commit-reminder"
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-commit-reminder"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/markdown_formatter.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/notification-desktop"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/pre-compact-save-state"
           }
         ]
       }
@@ -420,27 +397,19 @@ Use `--no-verify` to bypass checks when legitimately not needed:
 git commit -m "docs: fix typo" --no-verify
 ```
 
-### Clear Pending Changelog
-
-If you've documented everything but the marker file still exists:
-
-```bash
-rm .claude/.pending-changelog
-```
-
 ## Philosophy
 
 The hook system enforces these principles:
 
 1. **Atomic Commits**: Each commit is a complete, revertable unit of work
 2. **Documentation Synchronization**: Code changes include their usage documentation
-3. **Changelog Separation**: Meta-documentation (changelog) is separate from feature commits
+3. **Context Awareness**: Claude has relevant guidelines loaded automatically
 4. **Progressive Enforcement**: Gentle reminders escalate to blocks only when necessary
 5. **Bypassable When Needed**: All checks can be skipped with `--no-verify`
 
 ## Related Documentation
 
-- [Hooks Implementation Plan](../.claude/HOOKS_IMPLEMENTATION_PLAN.md) - Full implementation roadmap
+- [Hooks Implementation Plan](../.claude/hooks-implementation-plan.md) - Full implementation roadmap
 - [Claude Code Hooks Guide](https://docs.claude.com/en/docs/claude-code/hooks-guide) - Official documentation
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message standard
 - [pre-commit framework](https://pre-commit.com/) - Git hook management
