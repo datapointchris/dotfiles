@@ -161,3 +161,5 @@ Document critical lessons learned in `docs/learnings/` as we encounter them. Lea
 **Workflow**: Create `docs/learnings/descriptive-name.md`, add to `mkdocs.yml` navigation
 
 Focus on what future you needs to remember, not comprehensive guides (that's what `docs/` is for).
+
+- todo.md is for creating future work items, not to be used for planning, moved to .planning, or changed in any way
