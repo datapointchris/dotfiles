@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ##############################################################################
 # Applies MacOS settings and preferences in /Library/Preferences             #
