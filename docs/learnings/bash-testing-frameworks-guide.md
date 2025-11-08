@@ -102,7 +102,7 @@ git submodule add https://github.com/jasonkarns/bats-mock.git test/test_helper/b
 
 **Directory Structure:**
 
-```
+```text
 project/
 ├── src/
 │   └── myapp.sh
@@ -337,7 +337,7 @@ git submodule add https://github.com/shellspec/shellspec.git lib/shellspec
 
 **Directory Structure:**
 
-```
+```text
 project/
 ├── lib/
 │   └── mylib.sh
@@ -1229,7 +1229,7 @@ Based on the dotfiles menu system at `/Users/chris/dotfiles/common/.local/bin/me
 
 ### Project Structure
 
-```
+```text
 dotfiles/
 ├── common/
 │   └── .local/
@@ -1430,7 +1430,7 @@ Based on your menu system and dotfiles structure, here's my recommendation:
 
 3. **Create test structure:**
 
-   ```
+   ```text
    test/
    ├── bats/
    ├── test_helper/

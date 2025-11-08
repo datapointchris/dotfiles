@@ -1,214 +1,144 @@
 # Dotfiles
 
-Modern, cross-platform dotfiles emphasizing **developer ergonomics, productivity, and joy**.
+Cross-platform dotfiles that work across macOS, WSL Ubuntu, and Arch Linux. Because maintaining three separate configs is nobody's idea of a good time.
 
-## ✨ Features
+## What This Is
 
-- **100+ curated development tools** with discovery system
-- **Cross-platform** (macOS Intel, Ubuntu WSL, Arch Linux)
-- **Clean package management** (brew/apt/pacman for system, uv/nvm for languages)
-- **Modern CLI replacements** (bat, eza, fd, ripgrep, fzf, zoxide)
-- **Native Neovim LSP** with 10+ language servers
-- **Shared config architecture** with platform-specific overrides
+A dotfiles setup that prioritizes shared configuration with platform-specific overrides only when absolutely necessary. Includes a bunch of modern CLI tools, a theme system that actually works, and some custom tools to keep everything organized.
 
-## 🚀 Quick Start
+Quick stats: ~100 CLI tools, shared zsh/tmux/neovim configs, automated theme switching, and a discovery system so you can actually remember what you installed.
 
-**Clone and symlink**:
+## Quick Start
+
+Clone and run the setup script for your platform:
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-symlinks link macos     # or: wsl, arch
+
+# Pick your poison
+bash install/macos-setup.sh    # macOS
+bash install/wsl-setup.sh      # WSL Ubuntu
+bash install/arch-setup.sh     # Arch Linux
 ```
 
-**Discover installed tools**:
+Already have Homebrew and Task installed? Just run `task install`.
 
-```bash
-tools list          # See all 100+ tools
-tools show bat      # Learn about specific tools
-tools search git    # Find tools by keyword
-tools random        # Discover something new!
-```
+See the [quickstart guide](https://datapointchris.github.io/dotfiles/getting-started/quickstart/) for details.
 
-**For full installation and setup**, see:
-
-- 📖 **[Master Plan](docs/MASTER_PLAN.md)** - Complete modernization roadmap & installation
-- 📋 **[Tool List](docs/TOOL_LIST.md)** - All 100+ tools categorized
-- 🎨 **[Theme Strategy](docs/THEME_SYNC_STRATEGY.md)** - Color scheme synchronization
-- ⚙️ **[CLAUDE.md](CLAUDE.md)** - AI assistant context & package philosophy
-
-## 📂 Architecture
+## Structure
 
 ```text
 dotfiles/
 ├── common/         # Shared configs (zsh, nvim, tmux, etc.)
 ├── macos/          # macOS-specific configs and overrides
 ├── wsl/            # WSL Ubuntu-specific configs
-├── docs/           # Comprehensive documentation
-├── scripts/        # Utility scripts and automation
-└── tools/symlinks/ # Symlink management tool
+├── arch/           # Arch Linux-specific configs
+├── tools/          # Custom tools (symlinks manager, session manager)
+├── install/        # Platform bootstrap scripts
+├── taskfiles/      # Task automation (modular design)
+└── docs/           # Documentation (because future you will forget)
 ```
 
-**Key principle**: DRY configuration with platform-specific customization when needed.
+The core philosophy: write configs once in `common/`, override only what's platform-specific.
 
-## 📦 Package Management
+## Package Management
 
-This setup uses a **clear separation** between system and language tools:
+This setup uses different package managers for different purposes, because that's apparently the world we live in:
 
-| Type | Manager | Purpose |
-|------|---------|---------|
-| **System Tools** | brew/apt/pacman | bat, eza, fd, ripgrep, tmux, neovim, docker, etc. |
-| **Python** | uv | Version management, tools (ruff, mypy, etc.) |
-| **Node.js** | nvm | Version management, npm globals (LSPs, formatters) |
+| What | How | Examples |
+|------|-----|----------|
+| System utilities | brew / apt / pacman | bat, eza, fd, ripgrep, tmux, neovim |
+| Python | uv | version management, ruff, mypy, etc. |
+| Node.js | nvm | version management, LSPs, formatters |
 
-**Why this split?** Cross-platform consistency, project-specific versions, clean separation of concerns.
+Why the split? Cross-platform consistency, project-specific versions, and keeping system packages separate from development tools.
 
-See [CLAUDE.md](CLAUDE.md) for detailed philosophy.
+See [CLAUDE.md](CLAUDE.md) for the full philosophy (it's longer than it needs to be, but comprehensive).
 
-## 🔧 Tool Discovery
+## Tool Discovery
 
-The `tools` command helps you discover and learn about installed tools:
+Installed something six months ago and forgot about it? The `tools` command has you covered:
 
 ```bash
-tools list              # List all documented tools
-tools show ripgrep      # Detailed info: usage, examples, why use it
-tools search python     # Find Python-related tools
-tools random            # Discover a random tool (learn something new!)
-tools categories        # Show all categories
+tools list              # See everything
+tools show ripgrep      # Details, examples, why you installed it
+tools search git        # Find git-related tools
+tools random            # Discover something you forgot existed
 ```
 
-**30+ tools documented** in the registry with usage examples, tips, and cross-references.
+Currently 31 tools documented in the registry with usage examples and tips. More getting added as I remember they exist.
 
-## 🔗 Symlink Management
-
-The `symlinks` command manages all configuration symlinks:
+## Common Tasks
 
 ```bash
-symlinks link macos        # Create symlinks for macOS
-symlinks relink macos      # Update symlinks after file changes
-symlinks unlink macos      # Remove all symlinks
+# Themes
+theme-sync favorites                    # See your favorite themes
+theme-sync apply base16-gruvbox-dark   # Switch themes
+
+# Package updates
+task update                             # Update everything
+
+# Symlinks
+task symlinks:link                      # Deploy configs (also: relink, check, unlink)
+
+# Discovery
+tools search python                     # Find Python tools
 ```
 
-**Critical**: After adding/removing files in dotfiles, run `symlinks relink <platform>`
+Run `task --list` to see all available tasks.
 
-## 🎨 Theme System
+## Symlink Management
 
-**Current**: Individual theme configs per application
+The `symlinks` tool manages deploying configs from the repo to their actual locations. Written in Python because shell scripts for path manipulation are a recipe for sadness.
 
-**Future** (Phase 4): Unified theme synchronization across:
+**Important**: After adding or removing files in the repo, run `task symlinks:link` to update symlinks. Otherwise Neovim will complain about missing modules and you'll spend 20 minutes debugging before remembering this note.
 
-- Terminal (Ghostty)
-- Neovim (17 curated colorschemes including flexoki-moon variants)
-- Tmux, Bat, FZF, Eza, Lazygit
+## Theme System
 
-See [Theme Strategy](docs/THEME_SYNC_STRATEGY.md) for tinty vs custom Rust implementation plan.
+Uses tinty for Base16 theme management across tmux, bat, fzf, and the shell. The `theme-sync` command wraps tinty with some conveniences:
 
-## 🛠️ Installation
+- `theme-sync favorites` - Quick access to 12 hand-picked themes
+- `theme-sync apply <theme>` - Actually apply the theme
+- `theme-sync current` - See what you're currently using
+- `theme-sync random` - Feeling adventurous
 
-### Prerequisites
+Theme persists across sessions. Neovim has its own theme manager (because integration is hard).
 
-- **macOS**: Homebrew, uv, nvm
-- **WSL/Ubuntu**: apt, uv, nvm, cargo
-- **Arch**: pacman, uv, nvm, cargo
+## Documentation
 
-### macOS Quick Setup
+Full docs are available at [datapointchris.github.io/dotfiles](https://datapointchris.github.io/dotfiles):
 
-```bash
-# Install Homebrew (if not present)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+- [Quickstart](https://datapointchris.github.io/dotfiles/getting-started/quickstart/) - Get running in 15 minutes
+- [Installation](https://datapointchris.github.io/dotfiles/getting-started/installation/) - Detailed install guide
+- [Architecture](https://datapointchris.github.io/dotfiles/architecture/) - How everything fits together
+- [Tool Reference](https://datapointchris.github.io/dotfiles/reference/tools/) - All the tools
+- [Troubleshooting](https://datapointchris.github.io/dotfiles/reference/troubleshooting/) - When things break
 
-# Install core tools
-brew install bat eza fd ripgrep fzf zoxide neovim tmux git gh
+There's also a [learnings](https://datapointchris.github.io/dotfiles/learnings/) section with extracted wisdom from bugs I've fixed and things I've figured out.
 
-# Install language managers
-brew install --cask uv
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+## Some Highlights
 
-# Clone and link
-git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-symlinks link macos
+**Neovim**: Native LSP with 10+ language servers, CodeCompanion for Claude integration, custom colorscheme manager with 17 themes.
 
-# Restart terminal
-```
+**Shell**: Custom ZSH prompt with git status, zoxide for smart directory jumping, fzf with preview, syntax highlighting, vi-mode.
 
-**For complete installation**, see [Master Plan - Installation Strategy](docs/MASTER_PLAN.md#installation-strategy)
+**Modern CLI replacements**: bat (cat with syntax highlighting), eza (ls with git integration), fd (find that respects .gitignore), ripgrep (grep but faster), yazi (terminal file manager).
 
-### WSL/Ubuntu Setup
+**Task automation**: Modular Taskfile system with separate files for brew, npm, uv, symlinks, etc. Makes it easy to add new automation without creating a monolithic mess.
 
-See [Master Plan - WSL Installation](docs/MASTER_PLAN.md#installing-in-wsl-ubuntu)
+## Contributing
 
-### Arch Setup
+This is a personal dotfiles repo, but you're welcome to:
 
-See [Master Plan - Arch Installation](docs/MASTER_PLAN.md#arch-linux-installation)
+- Steal ideas for your own setup
+- Open issues if you spot something broken
+- Suggest tools or improvements
 
-## 📚 Documentation
+## License
 
-| Document | Purpose |
-|----------|---------|
-| [MASTER_PLAN.md](docs/MASTER_PLAN.md) | Complete modernization roadmap (7 phases) |
-| [TOOL_LIST.md](docs/TOOL_LIST.md) | All 100+ tools categorized by type |
-| [THEME_SYNC_STRATEGY.md](docs/THEME_SYNC_STRATEGY.md) | Theme synchronization approach |
-| [CLAUDE.md](CLAUDE.md) | AI assistant context & philosophies |
-| [PHASE_1_COMPLETE.md](docs/PHASE_1_COMPLETE.md) | Phase 1 completion summary |
-| [tools/registry.yml](docs/tools/registry.yml) | Detailed tool database (YAML) |
-
-## 🎯 Current Status
-
-**Phase 1: Foundation** ✅ Complete
-
-- ✅ Package management (uv/nvm working)
-- ✅ PATH fixed (Homebrew before system)
-- ✅ Shell completions (uv, task, nvm)
-- ✅ npm globals migrated (11 packages)
-- ✅ Taskfile installed
-- ✅ Documentation created
-
-**Phase 2: Documentation** ✅ Complete
-
-- ✅ Tool registry (30+ tools documented)
-- ✅ Tool discovery command (`tools`)
-- ✅ Categorized tool list (100+ tools)
-- ✅ README simplified
-
-**Next**: Phase 3 - Installation Automation (Taskfile-based install)
-
-## 💡 Key Highlights
-
-### Neovim Setup
-
-- Native LSP configuration (Neovim 0.11+)
-- 10+ language servers (TypeScript, Python, Bash, YAML, etc.)
-- CodeCompanion integration with Claude 3.5 Sonnet
-- Custom colorscheme manager (17 themes with per-project persistence)
-
-### Shell Configuration
-
-- Custom ZSH prompt with git status and AWS context
-- zoxide for smart directory jumping
-- fzf with file/directory preview
-- Syntax highlighting and vi-mode
-
-### Modern CLI Tools
-
-- **bat**: cat with syntax highlighting
-- **eza**: ls with git integration and icons
-- **fd**: find that respects .gitignore
-- **ripgrep**: fastest grep alternative
-- **yazi**: terminal file manager with preview
-
-## 🤝 Contributing
-
-This is a personal dotfiles repository, but feel free to:
-
-- Take inspiration for your own dotfiles
-- Suggest improvements via issues
-- Share interesting tools or configurations
-
-## 📝 License
-
-MIT License - see repository for details
+MIT - do whatever you want with it
 
 ---
 
-**Tip**: Run `tools random` daily to discover tools you might have forgotten about!
+**Tip**: Running `tools random` occasionally is a good way to rediscover tools you installed and immediately forgot about.

@@ -6,7 +6,7 @@
     ```sh
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash scripts/install/macos-setup.sh
+    bash install/macos-setup.sh
     ```
 
     Installs Homebrew (if needed), Taskfile, then runs full installation.
@@ -17,7 +17,7 @@
     ```sh
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash scripts/install/wsl-setup.sh
+    bash install/wsl-setup.sh
     ```
 
     Installs Taskfile, then delegates to `task install-wsl` for full installation.
@@ -33,7 +33,7 @@
     ```sh
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash scripts/install/arch-setup.sh
+    bash install/arch-setup.sh
     ```
 
     Installs Taskfile, then delegates to `task install-arch` for full installation.

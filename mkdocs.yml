@@ -168,6 +168,8 @@ nav:
       - Publishing Docs: publishing.md
   - Learnings:
       - Overview: learnings/index.md
+      - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md
+      - Git History Rewriting: learnings/git-history-rewriting.md
       - Relative Path Calculation: learnings/relative-path-calculation.md
       - Directory Pattern Matching: learnings/directory-pattern-matching.md
       - Cross-Platform Symlinks: learnings/cross-platform-symlink-considerations.md
