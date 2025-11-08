@@ -16,7 +16,7 @@ A fast tmux session manager written in Go with gum for interactive selection.
 ## Installation
 
 ```bash
-# From the session-go directory
+# From the sess directory
 task install
 ```
 
@@ -129,7 +129,7 @@ task --list-all
 The project follows Go best practices with dependency injection for testability:
 
 ```text
-session-go/
+sess/
 ├── cmd/session/          # Main entry point (CLI)
 ├── internal/
 │   ├── session/          # Core session management

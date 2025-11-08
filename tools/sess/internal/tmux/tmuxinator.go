@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ichrisbirch/session/internal/session"
+	"github.com/ichrisbirch/sess/internal/session"
 )
 
 // TmuxinatorClient handles tmuxinator project operations

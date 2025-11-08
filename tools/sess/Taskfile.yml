@@ -1,6 +1,6 @@
 version: "3"
 
-# Taskfile for session-go
+# Taskfile for sess
 # A modern alternative to Makefile using Task (task.dev)
 
 vars:

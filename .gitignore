@@ -391,3 +391,4 @@ archive/*/cmd/menu-cli/
 archive/*/internal/cli/
 archive/*/internal/formatter/
 archive/*/scripts/
+tools/sess/sess

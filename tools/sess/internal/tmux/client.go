@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ichrisbirch/session/internal/session"
+	"github.com/ichrisbirch/sess/internal/session"
 )
 
 // Client is the real implementation of the TmuxClient interface
