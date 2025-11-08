@@ -382,3 +382,12 @@ TESTING.*
 tools/*/menu
 tools/*/session
 tools/session-go/sess
+
+# Archive build artifacts
+archive/*/menu
+archive/*/menu-go
+archive/*/menu-cli
+archive/*/cmd/menu-cli/
+archive/*/internal/cli/
+archive/*/internal/formatter/
+archive/*/scripts/
