@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /Users/chris/dotfiles/.claude/hooks/session-start"
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/session-start"
           }
         ]
       }
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /Users/chris/dotfiles/.claude/hooks/user-prompt-submit-skill-activation"
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/user-prompt-submit-skill-activation"
           }
         ]
       }
@@ -28,11 +28,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/chris/dotfiles/.claude/hooks/stop-build-check"
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check"
           },
           {
             "type": "command",
-            "command": "bash /Users/chris/dotfiles/.claude/hooks/stop-commit-reminder"
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-commit-reminder"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/markdown_formatter.py"
           }
         ]
       }
@@ -42,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/chris/dotfiles/.claude/hooks/notification-desktop"
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/notification-desktop"
           }
         ]
       }
@@ -52,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python /Users/chris/dotfiles/.claude/hooks/pre-compact-save-state"
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/pre-compact-save-state"
           }
         ]
       }
