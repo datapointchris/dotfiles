@@ -50,7 +50,7 @@ type Session struct {
 }
 
 // SessionConfig represents a default session from YAML configuration
-// This maps to the structure in ~/.config/menu/sessions/sessions-macos.yml
+// This maps to the structure in ~/.config/sess/sessions/sessions-macos.yml
 type SessionConfig struct {
 	// Name is the session name
 	Name string `yaml:"name"`

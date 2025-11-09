@@ -13,7 +13,7 @@ import (
 // Loader handles loading session configurations from YAML files
 type Loader struct {
 	// configDir is the base directory for configuration files
-	// Defaults to ~/.config/menu
+	// Defaults to ~/.config/sess
 	configDir string
 }
 
@@ -28,14 +28,14 @@ func NewLoader() *Loader {
 		home = "."
 	}
 
-	// Default config directory is ~/.config/menu
+	// Default config directory is ~/.config/sess
 	// We use filepath.Join() to build paths correctly on any OS
 	// (it handles / vs \ on Windows)
-	configDir := filepath.Join(home, ".config", "menu")
+	configDir := filepath.Join(home, ".config", "sess")
 
 	// Check if XDG_CONFIG_HOME is set (Linux standard)
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-		configDir = filepath.Join(xdgConfig, "menu")
+		configDir = filepath.Join(xdgConfig, "sess")
 	}
 
 	return &Loader{
@@ -46,7 +46,7 @@ func NewLoader() *Loader {
 // LoadDefaultSessions loads default sessions for the given platform
 func (l *Loader) LoadDefaultSessions(platform string) ([]session.SessionConfig, error) {
 	// Build the path to the sessions config file
-	// e.g., ~/.config/menu/sessions/sessions-macos.yml
+	// e.g., ~/.config/sess/sessions/sessions-macos.yml
 	filename := fmt.Sprintf("sessions-%s.yml", platform)
 	configPath := filepath.Join(l.configDir, "sessions", filename)
 

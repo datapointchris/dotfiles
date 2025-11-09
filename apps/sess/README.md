@@ -70,8 +70,8 @@ sess last
 
 Default sessions are defined in YAML files:
 
-- macOS: `~/.config/menu/sessions/sessions-macos.yml`
-- WSL: `~/.config/menu/sessions/sessions-wsl.yml`
+- macOS: `~/.config/sess/sessions/sessions-macos.yml`
+- WSL: `~/.config/sess/sessions/sessions-wsl.yml`
 
 Example configuration:
 

@@ -29,15 +29,15 @@ show_help() {
 
   echo ""
   color_yellow "Workflow Tools:"
-  echo "  $(color_cyan "sess")             - Manage tmux sessions"
-  echo "  $(color_cyan "tools [cmd]")      - Discover and learn about installed tools"
-  echo "  $(color_cyan "theme-sync [cmd]") - Manage color themes across applications"
-  echo "  $(color_cyan "nb [cmd]")         - Note taking and knowledge management"
+  echo "  $(color_cyan "sess")                - Manage tmux sessions"
+  echo "  $(color_cyan "toolbox [cmd]")       - Discover and learn about installed tools"
+  echo "  $(color_cyan "theme-sync [cmd]")    - Manage color themes across applications"
+  echo "  $(color_cyan "nb [cmd]")            - Note taking and knowledge management"
   echo ""
   color_yellow "Quick Workflows:"
-  echo "  $(color_cyan "tools list | fzf --preview='tools show {1}'")  - Explore tools interactively"
-  echo "  $(color_cyan "theme-sync favorites | fzf")                    - Pick a theme"
-  echo "  $(color_cyan "nb browse --gui")                               - Visual note browsing"
+  echo "  $(color_cyan "toolbox list | fzf --preview='toolbox show {1}'")  - Explore tools interactively"
+  echo "  $(color_cyan "theme-sync favorites | fzf")                        - Pick a theme"
+  echo "  $(color_cyan "nb browse --gui")                                   - Visual note browsing"
   echo ""
   color_yellow "Dotfiles Management:"
   echo "  $(color_cyan "task symlinks:link")     - Deploy dotfiles to home directory"
@@ -80,13 +80,13 @@ launch_menu() {
     "Find a tool")
       # Check if fzf is available
       if command -v fzf &>/dev/null; then
-        tools list | fzf \
-          --preview="tools show {1}" \
+        toolbox list | fzf \
+          --preview="toolbox show {1}" \
           --preview-window=right:60%:wrap \
           --header="Tools - Press Enter to see full details"
       else
         # Fallback to simple list
-        tools list
+        toolbox list
         echo ""
         echo "Tip: Install fzf for interactive tool exploration"
       fi

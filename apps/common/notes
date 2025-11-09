@@ -1,55 +1,106 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ================================================================
+# notes - Note taking wrapper around zk
+# ================================================================
+# Simple wrapper to make zk commands more discoverable
+# ================================================================
 
-NOTES_DIR="$HOME/Documents/notes"
-source "$HOME/.shell/aliases.sh"
-# Enable alias expansion in scripts
-shopt -s expand_aliases
+set -euo pipefail
 
-function new_note() {
-    nvim --cmd "let g:auto_session_enabled = 0" -c ":ObsidianNewFromTemplate"
+# Color output helpers
+color_green() { echo -e "\033[32m$1\033[0m"; }
+color_yellow() { echo -e "\033[33m$1\033[0m"; }
+color_cyan() { echo -e "\033[36m$1\033[0m"; }
+
+show_help() {
+  cat << EOF
+$(color_cyan "notes - Note taking with zk")
+
+Simple wrapper around zk for note management.
+
+$(color_yellow "USAGE:")
+  notes [command] [args]
+
+$(color_yellow "COMMANDS:")
+  new [title]       Create a new note
+  journal [title]   Create a journal entry
+  list              List all notes
+  search <query>    Search notes
+  edit <note>       Edit a note
+  help              Show this help
+
+$(color_yellow "EXAMPLES:")
+  notes new "My Note Title"
+  notes journal "Today's thoughts"
+  notes list
+  notes search git
+  notes edit my-note.md
+
+$(color_yellow "DIRECT ZK ACCESS:")
+  For full zk functionality, use 'zk' directly:
+  - zk list
+  - zk new --group learning
+  - zk edit --interactive
+
+$(color_yellow "CONFIGURATION:")
+  Notes directory: ~/Documents/notes
+  Config file: ~/.config/zk/config.toml
+EOF
 }
 
-function search_notes() {
-  nvim --cmd "let g:auto_session_enabled = 0" -c ":ObsidianSearch $1"
-}
-
-
-function usage() {
-    echo "Usage: notes [command] [args]"
-    echo ""
-    echo "Commands:"
-    echo "  new <note_name>   Create a new note with the given name"
-    echo "  list              List all notes in the notes directory"
-    echo "  search <query>    Search notes for the given query"
-    echo "  help              Show this help message"
-    echo ""
-}
-
-if [ -z "$1" ]; then
-    usage
-    exit 0
+# Check if zk is installed
+if ! command -v zk &>/dev/null; then
+  echo "$(color_red "Error:") zk is not installed"
+  echo "Install with: brew install zk"
+  exit 1
 fi
 
-case $1 in
-help | -h | --help | -help)
-    usage
-    ;;
-new)
-    new_note "$2"
-    ;;
-list)
-    ls "$NOTES_DIR"
-    ;;
-search)
-    if [ -z "$2" ]; then
-        echo "Please provide a search query"
-        exit 1
+case "${1:-help}" in
+  new)
+    if [[ -z "${2:-}" ]]; then
+      color_yellow "Creating new note..."
+      zk new --interactive
+    else
+      shift
+      zk new --title "$*"
     fi
-    search_notes "$2"
     ;;
-*)
-    echo "!! '$1' is not a valid notes command !!"
+
+  journal)
+    shift
+    zk journal "$*"
+    ;;
+
+  list|ls)
+    zk list "${@:2}"
+    ;;
+
+  search|find)
+    if [[ -z "${2:-}" ]]; then
+      echo "Error: Search query required"
+      echo "Usage: notes search <query>"
+      exit 1
+    fi
+    shift
+    zk list --match "$*"
+    ;;
+
+  edit)
+    if [[ -z "${2:-}" ]]; then
+      zk edit --interactive
+    else
+      zk edit "$2"
+    fi
+    ;;
+
+  help|--help|-h)
+    show_help
+    ;;
+
+  *)
+    echo "Unknown command: $1"
     echo ""
-    usage
+    show_help
+    exit 1
     ;;
 esac

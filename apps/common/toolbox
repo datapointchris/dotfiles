@@ -8,8 +8,8 @@
 
 set -euo pipefail
 
-# Registry location
-REGISTRY="${DOTFILES_REGISTRY:-$HOME/dotfiles/docs/tools/registry.yml}"
+# Registry location (XDG compliant)
+REGISTRY="${DOTFILES_REGISTRY:-$HOME/.config/toolbox/registry.yml}"
 
 # Color output helpers
 color_green() { echo -e "\033[32m$1\033[0m"; }
@@ -50,7 +50,7 @@ $(color_yellow "EXAMPLES:")
   tools categories              # List all categories
 
 $(color_yellow "REGISTRY:")
-  Tools are defined in: $REGISTRY
+  Tools are defined in: ~/.config/toolbox/registry.yml
   Add new tools by editing the registry YAML file.
 
 $(color_yellow "SEE ALSO:")
@@ -290,7 +290,7 @@ check_installed() {
 if [[ ! -f "$REGISTRY" ]]; then
   echo "$(color_red "Error:") Tool registry not found at $REGISTRY"
   echo ""
-  echo "Expected location: ~/dotfiles/docs/tools/registry.yml"
+  echo "Expected location: ~/.config/toolbox/registry.yml"
   exit 1
 fi
 
