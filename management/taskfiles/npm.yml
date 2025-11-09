@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  PACKAGES_CONFIG: "{{.ROOT_DIR}}/config/packages.yml"
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
   NVM_DIR: "{{.HOME}}/.config/nvm"
 
 tasks:

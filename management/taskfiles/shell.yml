@@ -2,14 +2,14 @@
 # Shell Plugin Management Tasks
 # ================================================================
 # Manages ZSH plugins in ~/.config/zsh/plugins
-# Plugins defined in config/packages.yml
+# Plugins defined in management/packages.yml
 
 version: '3'
 
 vars:
   PLUGINS_DIR: "{{.HOME}}/.config/zsh/plugins"
-  PACKAGES_CONFIG: "{{.ROOT_DIR}}/config/packages.yml"
-  # Shell plugins defined in config/packages.yml under shell_plugins
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
+  # Shell plugins defined in management/packages.yml under shell_plugins
   # Using yq to read from YAML for single source of truth
 
 tasks:
@@ -23,7 +23,7 @@ tasks:
     cmds:
       - echo "✅ Installing shell plugins..."
       - |
-        # Read plugins from config/packages.yml
+        # Read plugins from management/packages.yml
         PLUGINS=$(yq eval '.shell_plugins[] | .name + "|" + .repo' {{.PACKAGES_CONFIG}})
 
         mkdir -p "{{.PLUGINS_DIR}}"
@@ -53,7 +53,7 @@ tasks:
     cmds:
       - echo "  Updating shell plugins..."
       - |
-        # Read plugins from config/packages.yml
+        # Read plugins from management/packages.yml
         PLUGINS=$(yq eval '.shell_plugins[].name' {{.PACKAGES_CONFIG}})
 
         for name in $PLUGINS; do

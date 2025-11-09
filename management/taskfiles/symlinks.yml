@@ -5,7 +5,7 @@ set: [pipefail]
 vars:
   DOTFILES_DIR:
     sh: pwd
-  SYMLINKS_DIR: '{{.DOTFILES_DIR}}/tools/symlinks'
+  SYMLINKS_DIR: '{{.DOTFILES_DIR}}/management/symlinks'
   PLATFORM:
     sh: |
       if [ -f "$HOME/.env" ]; then

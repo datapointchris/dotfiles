@@ -15,34 +15,34 @@ vars:
 
 includes:
   brew:
-    taskfile: ./taskfiles/brew.yml
+    taskfile: ./management/taskfiles/brew.yml
     optional: true
   nvm:
-    taskfile: ./taskfiles/nvm.yml
+    taskfile: ./management/taskfiles/nvm.yml
     optional: true
   npm:
-    taskfile: ./taskfiles/npm.yml
+    taskfile: ./management/taskfiles/npm.yml
     optional: true
   uv:
-    taskfile: ./taskfiles/uv.yml
+    taskfile: ./management/taskfiles/uv.yml
     optional: true
   shell:
-    taskfile: ./taskfiles/shell.yml
+    taskfile: ./management/taskfiles/shell.yml
     optional: true
   symlinks:
-    taskfile: ./taskfiles/symlinks.yml
+    taskfile: ./management/taskfiles/symlinks.yml
     optional: true
   docs:
-    taskfile: ./taskfiles/docs.yml
+    taskfile: ./management/taskfiles/docs.yml
     optional: true
   macos:
-    taskfile: ./taskfiles/macos.yml
+    taskfile: ./management/taskfiles/macos.yml
     optional: true
   wsl:
-    taskfile: ./taskfiles/wsl.yml
+    taskfile: ./management/taskfiles/wsl.yml
     optional: true
   arch:
-    taskfile: ./taskfiles/arch.yml
+    taskfile: ./management/taskfiles/arch.yml
     optional: true
 
 tasks:

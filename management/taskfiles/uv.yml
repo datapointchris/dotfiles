@@ -2,7 +2,7 @@
 # UV (Python Package Manager) Tasks
 # ================================================================
 # Manages Python tools installation via uv
-# Packages defined in config/packages.yml
+# Packages defined in management/packages.yml
 #
 # For simple uv commands, use uv directly:
 #   uv tool list                # List installed tools
@@ -18,7 +18,7 @@
 version: '3'
 
 vars:
-  PACKAGES_CONFIG: "{{.ROOT_DIR}}/config/packages.yml"
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
 
 tasks:
   # ================================================================
