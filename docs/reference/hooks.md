@@ -115,19 +115,22 @@ Found 1 test failures - showing to Claude for fixing
 
 ### PostToolUse Hook - Markdown Formatter
 
-**Purpose**: Automatically formats markdown files after Claude edits them.
+**Purpose**: Automatically adds missing language tags to code blocks in markdown files.
 
 **Location**: `.claude/hooks/markdown_formatter.py`
 
-**When it runs**: After any Edit, MultiEdit, or Write tool operation.
+**When it runs**: After any Edit, MultiEdit, or Write tool operation on markdown files.
 
 **What it does**:
 
-- Detects if the modified file is markdown (.md extension)
-- Runs prettier formatting on the file
-- Ensures consistent markdown formatting across the repository
+- Reads JSON from stdin containing the edited file path (PostToolUse hook format)
+- Only processes .md and .mdx files (exits silently for other file types)
+- Detects and adds missing language specifiers to fenced code blocks
+- Automatically identifies language from code content (javascript, python, bash, sql, yaml, json, etc.)
+- Fixes spacing issues outside code blocks (collapses excessive blank lines)
+- Only modifies file if changes are needed
 
-**Why it exists**: Prevents markdown formatting inconsistencies and reduces the need for manual formatting fixes.
+**Why it exists**: Prevents MD040 markdownlint errors (fenced-code-language) by automatically adding language tags to code blocks. This ensures proper syntax highlighting and reduces manual fixes during pre-commit.
 
 ### Notification Hook
 

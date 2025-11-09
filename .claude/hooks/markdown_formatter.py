@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 """
-Markdown formatter for Claude Code output.
+Markdown formatter for Claude Code PostToolUse hook.
 Fixes missing language tags and spacing issues while preserving code content.
+Reads JSON from stdin with file_path, only processes .md/.mdx files.
 """
 
 import re
 import sys
 import io
 import json
+import os
 
-# Regex to match fenced code blocks with proper indentation handling
-CODE_FENCE_RE = re.compile(r"(?ms)^([ \t]{0,3})```([^\n]*)\n(.*?)(\n\1```)[ \t]*\r?\n?")
+# Regex to match fenced code blocks with backtick counting
+# Matches ``` or ```` or ````` etc., capturing the backtick count
+FENCE_START_RE = re.compile(r"^([ \t]{0,3})(`{3,})([^\n`]*)$")
+FENCE_END_RE = re.compile(r"^([ \t]{0,3})(`{3,})[ \t]*$")
 
 
 def detect_language(code):
@@ -78,17 +82,73 @@ def detect_language(code):
     return "text"
 
 
-def add_lang_to_fence(match):
-    """Add language tag to fenced code block if missing."""
-    indent, info, body, closing = match.groups()
-    info_str = info.strip()
+def find_code_blocks(content):
+    """Find all code blocks respecting nesting (4-backtick can contain 3-backtick)."""
+    blocks = []
+    lines = content.split('\n')
+    i = 0
 
-    # If language already present, leave as-is
-    if info_str and re.match(r"^[A-Za-z0-9_+.-]+", info_str):
-        return match.group(0)
+    while i < len(lines):
+        match = FENCE_START_RE.match(lines[i])
+        if match:
+            indent, backticks, info = match.groups()
+            fence_len = len(backticks)
+            start_line = i
+            info_str = info.strip()
+            i += 1
 
-    lang = detect_language(body)
-    return f"{indent}```{lang}\n{body}{closing}\n"
+            # Find matching closing fence
+            body_lines = []
+            found_close = False
+            while i < len(lines):
+                close_match = FENCE_END_RE.match(lines[i])
+                if close_match:
+                    close_indent, close_backticks = close_match.groups()
+                    # Must be same backtick count and same indent
+                    if len(close_backticks) == fence_len and close_indent == indent:
+                        found_close = True
+                        end_line = i
+                        break
+                body_lines.append(lines[i])
+                i += 1
+
+            if found_close:
+                blocks.append({
+                    'start': start_line,
+                    'end': end_line,
+                    'indent': indent,
+                    'backticks': backticks,
+                    'info': info_str,
+                    'body': '\n'.join(body_lines)
+                })
+                i += 1
+            else:
+                i = start_line + 1
+        else:
+            i += 1
+
+    return blocks
+
+
+def add_lang_to_blocks(content):
+    """Add language tags to code blocks that are missing them."""
+    blocks = find_code_blocks(content)
+
+    # Process blocks in reverse order to maintain line numbers
+    lines = content.split('\n')
+
+    for block in reversed(blocks):
+        # Skip if language already present
+        if block['info'] and re.match(r"^[A-Za-z0-9_+.-]+", block['info']):
+            continue
+
+        # Detect language
+        lang = detect_language(block['body'])
+
+        # Update the opening fence line
+        lines[block['start']] = f"{block['indent']}{block['backticks']}{lang}"
+
+    return '\n'.join(lines)
 
 
 def fix_spacing_outside_code(text):
@@ -103,57 +163,86 @@ def fix_spacing_outside_code(text):
 def format_markdown(content):
     """Format markdown content with language detection and spacing fixes."""
     # Add language tags to unlabeled code fences
-    content = CODE_FENCE_RE.sub(add_lang_to_fence, content)
+    content = add_lang_to_blocks(content)
 
     # Fix spacing only outside code blocks
-    parts = []
-    last_end = 0
+    blocks = find_code_blocks(content)
+    lines = content.split('\n')
 
-    for match in CODE_FENCE_RE.finditer(content):
-        outside_text = content[last_end : match.start()]
-        parts.append(fix_spacing_outside_code(outside_text))
-        parts.append(match.group(0))  # preserve code fence
-        last_end = match.end()
+    # Mark lines that are inside code blocks
+    inside_block = [False] * len(lines)
+    for block in blocks:
+        for i in range(block['start'], block['end'] + 1):
+            inside_block[i] = True
 
-    parts.append(fix_spacing_outside_code(content[last_end:]))
-    result = "".join(parts)
+    # Apply spacing fixes only to lines outside blocks
+    result_lines = []
+    i = 0
+    while i < len(lines):
+        if inside_block[i]:
+            # Inside code block, preserve as-is
+            result_lines.append(lines[i])
+            i += 1
+        else:
+            # Outside code block, collect consecutive non-block lines
+            outside_chunk = []
+            while i < len(lines) and not inside_block[i]:
+                outside_chunk.append(lines[i])
+                i += 1
 
+            # Apply spacing fixes to this chunk
+            chunk_text = '\n'.join(outside_chunk)
+            fixed_chunk = fix_spacing_outside_code(chunk_text)
+            result_lines.extend(fixed_chunk.split('\n'))
+
+    result = '\n'.join(result_lines)
     return result.rstrip() + "\n"  # ensure single trailing newline
 
 
 def main():
-    """Main function with proper error handling."""
-    if len(sys.argv) < 2:
-        print("Usage: python markdown_formatter.py <file.md> [--in-place]")
-        sys.exit(1)
-
-    in_place = "--in-place" in sys.argv
-    filepath = next((arg for arg in sys.argv[1:] if not arg.startswith("-")), None)
-
-    if not filepath:
-        print("Error: No input file specified")
-        sys.exit(1)
-
+    """Main function for PostToolUse hook."""
     try:
+        # Read JSON from stdin (PostToolUse hook data)
+        hook_data = json.load(sys.stdin)
+
+        # Extract file path from tool_input
+        tool_input = hook_data.get("tool_input", {})
+        filepath = tool_input.get("file_path")
+
+        if not filepath:
+            # No file path provided, exit silently
+            sys.exit(0)
+
+        # Only process markdown files
+        _, ext = os.path.splitext(filepath)
+        if ext.lower() not in [".md", ".mdx"]:
+            # Not a markdown file, exit silently
+            sys.exit(0)
+
+        # Check if file exists
+        if not os.path.isfile(filepath):
+            sys.exit(0)
+
+        # Read file content
         with io.open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
 
+        # Format the markdown
         formatted = format_markdown(content)
 
-        if formatted == content:
-            print(f"No changes needed for '{filepath}'")
-            return
-
-        if in_place:
+        # Only write if changes were made
+        if formatted != content:
             with io.open(filepath, "w", encoding="utf-8") as f:
                 f.write(formatted)
-            print(f"Formatted '{filepath}' in place")
-        else:
-            sys.stdout.write(formatted)
+            print(f"✓ Formatted markdown: {os.path.basename(filepath)}", file=sys.stderr)
 
+    except json.JSONDecodeError:
+        # Not valid JSON input, exit silently (might be called directly)
+        sys.exit(0)
     except Exception as e:
-        print(f"Error processing file: {e}", file=sys.stderr)
-        sys.exit(1)
+        # Log error but don't fail the hook
+        print(f"Markdown formatter warning: {e}", file=sys.stderr)
+        sys.exit(0)
 
 
 if __name__ == "__main__":
