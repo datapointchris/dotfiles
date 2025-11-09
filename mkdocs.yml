@@ -142,7 +142,6 @@ nav:
   - Architecture:
       - Overview: architecture/index.md
       - Menu System: architecture/menu-system.md
-      - sesh Architecture: architecture/sesh-architecture-diagram.md
   - Reference:
       - Platform Differences: reference/platforms.md
       - Menu System: reference/menu-system.md
