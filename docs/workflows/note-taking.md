@@ -1,564 +1,305 @@
-# Note Taking with nb
+# Note Taking with zk
 
-This guide covers the note-taking workflows using [nb](https://github.com/xwmx/nb), a git-backed command-line note-taking system.
-
-## Overview
-
-nb provides a unified interface for multiple git-backed markdown notebooks, supporting wiki-style linking, full-text search, and visual browsing.
-
-### Notebook Structure
-
-Three notebooks serve different purposes:
-
-**learning** - Public repository for semester-based learning
-
-```text
-~/.nb/learning/ (https://github.com/datapointchris/learning.git)
-├── 2024-fall/
-│   ├── computer-science/{algorithms, data-structures, databases}
-│   ├── systems/{unix, networking}
-│   └── readings/{papers, books}
-└── 2025-spring/
-    ├── computer-science/
-    └── philosophy/
-```text
-
-**notes** - Private repository for general notes
-
-```text
-~/.nb/notes/ (https://github.com/datapointchris/notes.git)
-├── work/
-├── personal/
-└── projects/
-```text
-
-**ideas** - Private repository for quick capture
-
-```text
-~/.nb/ideas/ (https://github.com/datapointchris/ideas.git)
-(flat structure for quick capture)
-```text
-
-## Basic Commands
-
-### Navigation
-
-```bash
-nb                          # Interactive menu (current notebook)
-nb notebooks                # List all notebooks
-nb use learning             # Switch to learning notebook
-nb learning:                # List notes in learning notebook
-nb notes:work/              # List notes in notes/work/ folder
-```text
-
-### Creating Notes
-
-```bash
-nb add                      # Interactive note creation (opens $EDITOR)
-nb add "Title"              # Quick note with title
-nb learning:add "Topic"     # Add to specific notebook
-nb notes:work/add "Meeting" # Add to specific folder
-```text
-
-**Examples:**
-
-```bash
-# Add to current semester's CS notes
-nb learning:2024-fall/computer-science/add "Binary Search Trees"
-
-# Quick work note
-nb notes:work/add "Team Meeting Notes"
-
-# Capture an idea
-nb ideas:add "AI-powered search feature"
-```text
-
-### Searching
-
-```bash
-nb search "algorithm"       # Search current notebook
-nb search "database" --all  # Search all notebooks
-nb list --query "pattern"   # List matching notes
-```text
-
-**Advanced search:**
-
-```bash
-# Case-insensitive search
-nb search "binary tree" -i
-
-# Search with regex
-nb search "algorithm.*complexity"
-
-# Search in specific notebook
-nb learning:search "normalization"
-
-# Limit results
-nb search "database" --limit 10
-```text
-
-### Editing
-
-```bash
-nb edit 1                   # Edit note by ID
-nb edit algorithm           # Edit by title/keyword
-nb learning:edit 3          # Edit in specific notebook
-```text
-
-### Viewing
-
-```bash
-nb show 1                   # Show note content
-nb show --print             # Print to stdout (for piping)
-nb browse --gui             # Visual interface in browser
-nb browse learning:         # Browse specific notebook
-```text
-
-## Cross-Notebook Wiki Links
-
-nb supports wiki-style linking across notebooks, enabling connections between learning, work, and ideas.
-
-### Link Syntax
-
-**Same notebook:**
-
-```markdown
-[[file-name]]
-[[folder/file-name]]
-```text
-
-**Different notebook:**
-
-```markdown
-[[notebook:folder/file-name]]
-```text
-
-### Examples
-
-**In a learning note (learning:2024-fall/computer-science/databases/normalization.md):**
-
-```markdown
-# Database Normalization
+This guide covers note-taking workflows using [zk](https://github.com/zk-org/zk), a plain text note-taking assistant with strong markdown and linking support.
 
 ## Overview
-Database normalization is the process of organizing data to reduce redundancy.
 
-## Forms
-- 1NF: Atomic values
-- 2NF: No partial dependencies
-- 3NF: No transitive dependencies
+Single notebook with selective git tracking and auto-discovery of note sections.
 
-## Related Topics
-- [[data-structures/trees]]  # Same notebook
-- [[algorithms/search]]      # Same notebook
+**Philosophy**:
 
-## Real-World Application
-See my work project: [[notes:work/database-design]]
+- One notebook (`~/notes`) for everything
+- Organized by top-level directories (sections)
+- Git tracks only `devnotes/` and `learning/` (public/work)
+- Personal content (`journal/`, `ideas/`, etc.) stays iCloud-only
+- `notes` CLI wrapper for quick access, `zk` directly for advanced features
 
-## Further Reading
-- [[readings/papers/codd-relational-model]]
+**Location**: `~/notes` → `~/Documents/notes` (iCloud synced)
+
+## Notebook Structure
+
 ```text
+~/notes/
+├── journal/      # Daily entries (iCloud only)
+├── learning/     # Study notes (git tracked, public repo)
+├── devnotes/     # Work notes (git tracked, private repo)
+├── ideas/        # Quick capture (iCloud only)
+├── projects/     # Project planning (iCloud only)
+├── dreams/       # Dream journal (iCloud only)
+└── .zk/
+    ├── config.toml
+    └── templates/
+```
 
-**In a work note (notes:work/database-design.md):**
+## Quick Start
 
-```markdown
-# Database Design Project
+### Using the notes CLI Wrapper
 
-## Context
-Redesigning the user database schema for better query performance.
-
-## Learning References
-- [[learning:2024-fall/computer-science/databases/normalization]]
-- [[learning:2024-fall/computer-science/databases/indexing]]
-
-## Implementation Notes
-Applied 3NF to user tables, created composite indexes on frequently queried fields.
-
-## Ideas
-See related brainstorming: [[ideas:database-optimization]]
-```text
-
-**In an ideas note (ideas:database-optimization.md):**
-
-```markdown
-# Database Optimization Ideas
-
-## Potential Improvements
-- Implement read replicas for heavy query load
-- Add caching layer with Redis
-- Partition large tables by date
-
-## Research Needed
-- [[learning:2024-fall/computer-science/databases/partitioning]]
-- [[notes:work/database-design]] (current implementation)
-```text
-
-## Git Sync Workflow
-
-Each notebook is independently version-controlled with its own git repository.
-
-### Manual Sync
+The `notes` command provides an interactive menu with auto-discovery:
 
 ```bash
-# Sync specific notebook
-nb learning:sync            # Add, commit, push learning
-nb notes:sync               # Sync notes
-nb ideas:sync               # Sync ideas
+# Interactive menu - shows all available sections
+notes
 
-# Check status before syncing
-nb learning:status          # Git status for learning
-nb notes:git log --oneline  # Recent commits in notes
-```text
+# Create note in specific section
+notes journal
+notes devnotes
+notes learning
+```
 
-### Automatic Sync
+The menu shows:
 
-Configure auto-sync per notebook:
+- Browse recent notes
+- Search all notes
+- Quick note creation for each discovered section
 
-```bash
-# Enable auto-sync (commits and pushes on each operation)
-nb learning:settings auto_sync on
+### Using zk Directly
 
-# Disable auto-sync (manual control)
-nb learning:settings auto_sync off
-```text
-
-!!! warning "Auto-sync Considerations"
-    Auto-sync commits after each `add`, `edit`, or `delete` operation. This is convenient but creates many small commits. For learning notes (public repo), consider manual sync to group related changes.
-
-### Commit Messages
-
-nb auto-generates commit messages:
-
-```text
-Add: Binary Search Trees.md
-Update: normalization.md
-Delete: old-notes.md
-```text
-
-For custom commit messages, use git directly:
+For advanced features, use `zk` commands directly:
 
 ```bash
-cd ~/.nb/learning
-git add .
-git commit -m "Add complete database normalization notes with examples"
-git push
-```text
+# Create notes using aliases (from config.toml)
+zk journal "Daily standup thoughts"
+zk devnote "Debugging authentication flow"
+zk learn "Understanding B-trees"
+zk idea "App feature concept"
 
-## Daily Workflows
+# Browse and search
+zk list                           # List all notes
+zk list --sort modified-          # Recent notes
+zk edit --interactive             # Pick note to edit
+zk edit --limit 1 --sort modified-  # Edit last modified
 
-### Morning Study Session
+# Search content
+zk list --match "authentication"  # Find notes about auth
+zk list --created-after "today"   # Notes created today
+zk list --group devnotes          # Only work notes
+```
 
-```bash
-# Switch to learning context
-nb use learning
+## Common Workflows
 
-# Review recent notes
-nb learning:list
+### Daily Journal Entry
 
-# Add today's learning topic
-nb learning:2024-fall/computer-science/add "Graph Algorithms"
-
-# Edit and expand with cross-links
-nb edit graph-algorithms
-# In note: [[data-structures/graphs]], [[algorithms/search]]
-```text
-
-### Work Context
+Using notes CLI:
 
 ```bash
-# Switch to work notes
-nb use notes
+notes journal
+# Opens gum input for title, then creates timestamped entry
+```
 
-# Create meeting notes
-nb notes:work/add "Sprint Planning Meeting"
+Using zk directly:
 
-# Reference learning materials
-# In note: [[learning:2024-fall/computer-science/algorithms/complexity]]
-```text
+```bash
+zk journal "Friday reflections"
+# Creates: 2025-11-08-Friday-14:30-friday-reflections.md
+```
+
+The journal template includes:
+
+- Date frontmatter
+- Entry section
+- Tags section
+
+### Work/Dev Notes
+
+```bash
+# Quick way
+notes devnotes
+
+# Or with zk alias
+zk devnote "API endpoint refactoring"
+# Creates: 2025-11-08-api-endpoint-refactoring.md
+```
+
+Git tracks these automatically, so they sync to your notes repository.
+
+### Learning Notes
+
+```bash
+zk learn "Database indexing strategies"
+# Creates: 2025-11-08-database-indexing-strategies.md
+```
+
+These are also git-tracked for building a public learning repository.
 
 ### Quick Idea Capture
 
 ```bash
-# Capture idea without switching context
-nb ideas:add "Real-time collaboration feature"
+notes ideas
+# Or: zk idea "Mobile app feature"
+```
 
-# Later, link from project notes
-nb notes:projects/add "New Feature Proposals"
-# In note: [[ideas:real-time-collaboration-feature]]
-```text
+Perfect for fleeting thoughts - iCloud-backed but not in git.
 
-### Cross-Reference Workflow
+### Browse Recent Work
 
 ```bash
-# While studying algorithms, reference work project
-nb learning:2024-fall/computer-science/algorithms/add "Search Optimization"
-# In note: Applied in [[notes:work/search-feature]]
+# Last 20 modified notes
+zk recent
 
-# In work notes, link back to learning
-nb notes:work/edit search-feature
-# In note: Theory: [[learning:2024-fall/computer-science/algorithms/search-optimization]]
-```text
+# Today's notes
+zk today
 
-## Composition with Other Tools
+# Recent devnotes only
+zk devnotes-list
 
-nb follows the Unix philosophy - it outputs clean data that composes with other tools.
+# Interactive picker
+zk edit --interactive
+```
 
-### Interactive Selection with fzf
-
-```bash
-# Browse notes interactively
-nb list --all | fzf --preview 'nb show {1}'
-
-# Search and select
-nb search "algorithm" | fzf | xargs nb show
-
-# Edit note selected with fzf
-nb list | fzf | awk '{print $1}' | xargs nb edit
-```text
-
-### Notebook Selection with gum
+### Search Notes
 
 ```bash
-# Choose notebook with gum
-NOTEBOOK=$(nb notebooks | gum choose)
-nb use "$NOTEBOOK"
+# Search by content
+zk list --match "authentication"
+zk list --match "react hooks"
 
-# Add note with gum input
-TITLE=$(gum input --placeholder "Note title")
-nb add "$TITLE"
-```text
+# Search with interactive edit
+zk edit --interactive --match "API"
 
-### Integration with menu
+# Full-text search (if fzf preview is configured)
+zk list | fzf --preview 'bat -p {-1}'
+```
 
-The `menu` launcher includes nb:
+## Wiki-Style Linking
 
-```bash
-menu launch
-# Select "Take/find a note"
-# Launches nb interactive interface
-```text
-
-### Scripting
-
-```bash
-# Daily note script
-#!/bin/bash
-TODAY=$(date +%Y-%m-%d)
-nb notes:work/add "Daily Log - $TODAY"
-
-# Batch processing
-#!/bin/bash
-nb search "TODO" --all | while read -r note; do
-  echo "Pending task in: $note"
-done
-```text
-
-## Advanced Workflows
-
-### Semester Rotation
-
-When starting a new semester:
-
-```bash
-# Create new semester folder
-cd ~/.nb/learning
-mkdir -p 2025-spring/computer-science
-mkdir -p 2025-spring/philosophy
-
-# Add first note
-nb learning:2025-spring/computer-science/add "Distributed Systems"
-
-# Sync structure
-nb learning:sync
-```text
-
-### Migrating from Obsidian
-
-```bash
-# Copy markdown files (preserves [[wiki links]])
-cp -r ~/Documents/notes/learning/* ~/.nb/learning/
-
-# Add to git
-cd ~/.nb/learning
-git add .
-git commit -m "Migrate learning notes from Obsidian"
-git push
-
-# Update wiki links to cross-notebook format if needed
-# [[work/project]] → [[notes:work/project]]
-```text
-
-### Visual Browsing
-
-```bash
-# Launch web interface
-nb browse --gui
-
-# Browse specific notebook
-nb browse learning:
-
-# Browse specific folder
-nb browse learning:2024-fall/computer-science/
-```text
-
-The browser interface provides:
-
-- Visual navigation of folder hierarchy
-- Rendered markdown preview
-- Clickable wiki links (including cross-notebook)
-- Search interface
-- Edit links to open in $EDITOR
-
-### Tags and Metadata
-
-nb supports tags and metadata in notes:
+zk supports wiki-links between notes:
 
 ```markdown
----
-tags: algorithms, study, binary-search
-created: 2024-11-07
-updated: 2024-11-07
----
+# In a note about authentication
 
-# Binary Search
+See [[jwt-tokens]] for token handling details.
+Related: [[api-security]], [[session-management]]
+```
 
-Content here...
-```text
+The zk LSP integration provides:
 
-Search by tags:
+- Autocomplete for note links
+- Dead link detection
+- Link following in editors (Neovim, VS Code)
 
-```bash
-nb search --tags algorithms
-nb list --tags study,algorithms  # Multiple tags
-```text
+## Git Workflow
 
-## Tips and Best Practices
-
-### 1. Consistent Folder Structure
-
-Maintain parallel structure across semesters:
-
-```text
-2024-fall/computer-science/algorithms/
-2024-fall/computer-science/data-structures/
-2025-spring/computer-science/algorithms/
-2025-spring/computer-science/data-structures/
-```text
-
-This makes cross-semester linking predictable.
-
-### 2. Descriptive Filenames
-
-Use clear, descriptive filenames:
+Only `devnotes/` and `learning/` are tracked:
 
 ```bash
-# Good
-binary-search-trees.md
-database-normalization-forms.md
-project-kickoff-meeting-2024-11-07.md
+cd ~/notes
 
-# Avoid
-bst.md
-db.md
-meeting.md
-```text
-
-### 3. Liberal Cross-Linking
-
-Link freely between notes - nb makes it easy:
-
-```markdown
-Related: [[other-topic]], [[notes:work/project]], [[ideas:feature-idea]]
-```text
-
-### 4. Git Sync Rhythm
-
-For public learning repo:
-
-- Manual sync to group related changes
-- Meaningful commit messages
-
-For private notes/ideas:
-
-- Auto-sync for convenience
-- Less concern about commit granularity
-
-### 5. Notebook Switching
-
-Use `nb use` to set context:
-
-```bash
-# Morning: Learning mode
-nb use learning
-
-# Afternoon: Work mode
-nb use notes
-
-# Quick idea capture (without switching)
-nb ideas:add "Quick thought"
-```text
-
-### 6. Search First, Create Second
-
-Before creating a new note:
-
-```bash
-# Check if topic already exists
-nb search "binary search tree" --all
-
-# If found, add to existing note
-# If not, create new
-```text
-
-## Troubleshooting
-
-### Links Not Resolving
-
-If cross-notebook links don't work:
-
-```bash
-# Check notebook exists
-nb notebooks
-
-# Verify path
-nb notes:work/  # Should list notes
-
-# Check link syntax
-[[notes:work/file-name]]  # Correct
-[[notes/work/file-name]]  # Incorrect
-```text
-
-### Sync Conflicts
-
-If git sync fails:
-
-```bash
-cd ~/.nb/learning
+# Check what's tracked
 git status
-git pull --rebase
-# Resolve conflicts in $EDITOR
-git add .
-git rebase --continue
+
+# Commit work notes
+git add devnotes/ learning/
+git commit -m "notes: add API authentication learnings"
 git push
-```text
+```
 
-### Missing Notes in Search
+Personal sections (`journal/`, `ideas/`, etc.) are in `.gitignore` and stay iCloud-only.
 
-If search doesn't find notes:
+## Templates
+
+Templates live in `~/notes/.zk/templates/`:
+
+- `daily.md` - Journal entries with date and tags
+- `devnote.md` - Work notes with project context
+- `learning.md` - Study notes with resources section
+- `idea.md` - Quick capture template
+- `project.md` - Project planning structure
+- `dream.md` - Dream journal format
+
+Edit templates to customize note structure:
 
 ```bash
-# Rebuild index
-nb index rebuild
+cd ~/notes/.zk/templates
+nvim daily.md
+```
 
-# Search all notebooks
-nb search "query" --all
-```text
+## Configuration
 
-## Related Documentation
+zk config at `~/.config/zk/config.toml` defines:
 
-- [Quick Reference](../reference/quick-reference.md) - All workflow tools
-- [Tool Composition](../architecture/tool-composition.md) - How tools work together
-- [nb Official Documentation](https://github.com/xwmx/nb) - Complete nb reference
-- Planning documents:
-  - `planning/phase2-complete-summary.md` - nb setup details
-  - `planning/dotfiles-system-redesign-2025-11.md` - Overall system design
+- **Groups**: Organize notes by directory (journal, devnotes, etc.)
+- **Aliases**: Quick commands (`zk journal`, `zk learn`)
+- **Templates**: Per-group note formats
+- **LSP**: Editor integration settings
+
+See `platforms/common/.config/zk/config.toml` in the dotfiles repo.
+
+## Advanced Usage
+
+### Custom Searches
+
+```bash
+# Notes modified in last 7 days
+zk list --modified-after "7 days ago"
+
+# Notes by group and date range
+zk list --group devnotes --created-after "2025-11-01"
+
+# Interactive edit with filters
+zk edit --interactive --group learning --match "database"
+```
+
+### Integration with Other Tools
+
+```bash
+# Open random note for review
+zk edit --limit 1 --sort random
+
+# List notes as JSON for scripting
+zk list --format json
+
+# Create note from stdin
+echo "# Quick Note\n\nContent here" | zk new --title "Generated"
+```
+
+### Batch Operations
+
+```bash
+# List notes and pipe to other tools
+zk list --format path | xargs grep "TODO"
+
+# Count notes by section
+for section in journal learning devnotes ideas; do
+  count=$(zk list --group $section | wc -l)
+  echo "$section: $count notes"
+done
+```
+
+## Setup
+
+For initial setup instructions, see [Notes System Setup](../development/notes-system-setup.md).
+
+**Prerequisites**:
+
+- zk installed (`brew install zk`)
+- gum installed (`brew install gum`) - for notes CLI interactive menus
+- bat installed (`brew install bat`) - for preview formatting
+
+## Tips
+
+**Auto-discovery**: The `notes` CLI automatically discovers new sections. Create any directory in `~/notes/` and it appears in the menu.
+
+**Editor Integration**: Configure your editor for zk LSP support to get link completion and navigation.
+
+**Backup Strategy**:
+
+- Git-tracked sections (devnotes/, learning/) backed up to GitHub
+- Personal sections (journal/, ideas/) backed up to iCloud
+- Full notebook available on all devices via iCloud
+
+**Quick Access**: Add shell aliases for frequent operations:
+
+```bash
+# In your .zshrc
+alias jot='zk journal'
+alias note='zk devnote'
+alias til='zk learn'
+```
+
+## Reference
+
+**notes CLI**: `apps/common/notes`
+**zk Config**: `platforms/common/.config/zk/config.toml`
+**Setup Guide**: `docs/development/notes-system-setup.md`
+**zk Documentation**: <https://zk-org.github.io/zk/>
