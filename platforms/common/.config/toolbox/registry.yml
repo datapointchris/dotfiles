@@ -257,7 +257,7 @@ tools:
 
   git-forgit-log:
     category: version-control
-    description: "Interactive git log viewer with fzf"
+    description: "Interactive git log viewer with fzf (alias: glo)"
     installed_via: dotfiles
     usage: "git forgit log"
     why_use: "Browse git history interactively, preview commits, search by content"
@@ -270,7 +270,7 @@ tools:
 
   git-forgit-reflog:
     category: version-control
-    description: "Interactive git reflog viewer with fzf"
+    description: "Interactive git reflog viewer with fzf (alias: grl)"
     installed_via: dotfiles
     usage: "git forgit reflog"
     why_use: "Browse reflog interactively to recover lost commits or understand history changes"
@@ -283,7 +283,7 @@ tools:
 
   git-forgit-diff:
     category: version-control
-    description: "Interactive git diff viewer with fzf"
+    description: "Interactive git diff viewer with fzf (alias: gd)"
     installed_via: dotfiles
     usage: "git forgit diff"
     why_use: "Interactively select files to view diffs with syntax highlighting"
@@ -296,7 +296,7 @@ tools:
 
   git-forgit-show:
     category: version-control
-    description: "Interactive git show commit viewer with fzf"
+    description: "Interactive git show commit viewer with fzf (alias: gso)"
     installed_via: dotfiles
     usage: "git forgit show"
     why_use: "Interactively select and view commit details with diffs"
@@ -309,7 +309,7 @@ tools:
 
   git-forgit-add:
     category: version-control
-    description: "Interactive git add file selector with fzf"
+    description: "Interactive git add file selector with fzf (alias: ga)"
     installed_via: dotfiles
     usage: "git forgit add"
     why_use: "Visually select files to stage with preview of changes"
@@ -322,7 +322,7 @@ tools:
 
   git-forgit-reset-head:
     category: version-control
-    description: "Interactive git reset HEAD file selector with fzf"
+    description: "Interactive git reset HEAD file selector with fzf (alias: grh)"
     installed_via: dotfiles
     usage: "git forgit reset_head"
     why_use: "Interactively unstage files with preview"
@@ -335,7 +335,7 @@ tools:
 
   git-forgit-ignore:
     category: version-control
-    description: "Interactive .gitignore generator with fzf"
+    description: "Interactive .gitignore generator with fzf (alias: gi)"
     installed_via: dotfiles
     usage: "git forgit ignore"
     why_use: "Add gitignore patterns from gitignore.io templates interactively"
@@ -348,7 +348,7 @@ tools:
 
   git-forgit-checkout-file:
     category: version-control
-    description: "Interactive git checkout file selector with fzf"
+    description: "Interactive git checkout file selector with fzf (alias: gcf)"
     installed_via: dotfiles
     usage: "git forgit checkout_file"
     why_use: "Interactively select files to discard changes with preview"
@@ -361,7 +361,7 @@ tools:
 
   git-forgit-checkout-branch:
     category: version-control
-    description: "Interactive git branch checkout selector with fzf"
+    description: "Interactive git branch checkout selector with fzf (alias: gcb)"
     installed_via: dotfiles
     usage: "git forgit checkout_branch"
     why_use: "Fuzzy search and switch branches with preview of branch info"
@@ -374,7 +374,7 @@ tools:
 
   git-forgit-checkout-tag:
     category: version-control
-    description: "Interactive git tag checkout selector with fzf"
+    description: "Interactive git tag checkout selector with fzf (alias: gct)"
     installed_via: dotfiles
     usage: "git forgit checkout_tag"
     why_use: "Interactively select and checkout tags"
@@ -387,7 +387,7 @@ tools:
 
   git-forgit-checkout-commit:
     category: version-control
-    description: "Interactive git commit checkout selector with fzf"
+    description: "Interactive git commit checkout selector with fzf (alias: gco)"
     installed_via: dotfiles
     usage: "git forgit checkout_commit"
     why_use: "Interactively select and checkout specific commits"
@@ -400,7 +400,7 @@ tools:
 
   git-forgit-branch-delete:
     category: version-control
-    description: "Interactive git branch delete selector with fzf"
+    description: "Interactive git branch delete selector with fzf (alias: gbd)"
     installed_via: dotfiles
     usage: "git forgit branch_delete"
     why_use: "Safely delete branches with interactive selection and confirmation"
@@ -413,7 +413,7 @@ tools:
 
   git-forgit-revert-commit:
     category: version-control
-    description: "Interactive git revert commit selector with fzf"
+    description: "Interactive git revert commit selector with fzf (alias: grc)"
     installed_via: dotfiles
     usage: "git forgit revert_commit"
     why_use: "Interactively select commits to revert with preview"
@@ -426,7 +426,7 @@ tools:
 
   git-forgit-clean:
     category: version-control
-    description: "Interactive git clean untracked files selector with fzf"
+    description: "Interactive git clean untracked files selector with fzf (alias: gclean)"
     installed_via: dotfiles
     usage: "git forgit clean"
     why_use: "Safely remove untracked files with preview and selection"
@@ -439,7 +439,7 @@ tools:
 
   git-forgit-stash-show:
     category: version-control
-    description: "Interactive git stash viewer with fzf"
+    description: "Interactive git stash viewer with fzf (alias: gss)"
     installed_via: dotfiles
     usage: "git forgit stash_show"
     why_use: "Browse and view stash entries interactively with diff preview"
@@ -452,7 +452,7 @@ tools:
 
   git-forgit-stash-push:
     category: version-control
-    description: "Interactive git stash push file selector with fzf"
+    description: "Interactive git stash push file selector with fzf (alias: gsp)"
     installed_via: dotfiles
     usage: "git forgit stash_push"
     why_use: "Selectively stash files with interactive selection"
@@ -465,7 +465,7 @@ tools:
 
   git-forgit-cherry-pick:
     category: version-control
-    description: "Interactive git cherry-pick commit selector with fzf"
+    description: "Interactive git cherry-pick commit selector with fzf (alias: gcp)"
     installed_via: dotfiles
     usage: "git forgit cherry_pick"
     why_use: "Interactively select commits to cherry-pick from branches"
@@ -478,7 +478,7 @@ tools:
 
   git-forgit-rebase:
     category: version-control
-    description: "Interactive git rebase -i commit selector with fzf"
+    description: "Interactive git rebase -i commit selector with fzf (alias: grb)"
     installed_via: dotfiles
     usage: "git forgit rebase"
     why_use: "Interactively select base commit for interactive rebase"
@@ -491,7 +491,7 @@ tools:
 
   git-forgit-blame:
     category: version-control
-    description: "Interactive git blame viewer with fzf"
+    description: "Interactive git blame viewer with fzf (alias: gbl)"
     installed_via: dotfiles
     usage: "git forgit blame"
     why_use: "Interactively view file blame with commit details"
@@ -504,7 +504,7 @@ tools:
 
   git-forgit-fixup:
     category: version-control
-    description: "Interactive commit fixup with autosquash"
+    description: "Interactive commit fixup with autosquash (alias: gfu)"
     installed_via: dotfiles
     usage: "git forgit fixup"
     why_use: "Interactively create fixup commits for previous commits"
@@ -517,7 +517,7 @@ tools:
 
   git-forgit-squash:
     category: version-control
-    description: "Interactive commit squash with autosquash"
+    description: "Interactive commit squash with autosquash (alias: gsq)"
     installed_via: dotfiles
     usage: "git forgit squash"
     why_use: "Interactively create squash commits for combining with previous commits"
@@ -530,7 +530,7 @@ tools:
 
   git-forgit-reword:
     category: version-control
-    description: "Interactive commit reword with autosquash"
+    description: "Interactive commit reword with autosquash (alias: grw)"
     installed_via: dotfiles
     usage: "git forgit reword"
     why_use: "Interactively reword previous commit messages"
