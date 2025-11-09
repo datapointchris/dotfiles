@@ -5,12 +5,14 @@ The universal menu system is a function-based knowledge and workflow management 
 ## Philosophy
 
 Instead of organizing by type:
-```
+
+```text
 Bookmarks/ → Notes/ → Aliases/ → Functions/
 ```
 
 Organize by function:
-```
+
+```text
 Learning: Neovim/
 ├── Tutorials (bookmarks)
 ├── Study notes
@@ -27,15 +29,17 @@ When you search for "quickfix", you get ALL resources about quickfix: bookmarks,
 The primary interface for accessing all your knowledge and tools.
 
 **Opening the Menu:**
+
 ```bash
 menu              # From terminal
 prefix + m        # From tmux (Ctrl-Space + m)
 ```
 
 **Single-Key Navigation:**
+
 - `s` → Sessions (tmux/tmuxinator)
 - `t` → Tasks (current project)
-- `n` → Notes (Obsidian)
+- `n` → Notes (zk)
 - `c` → Commands & Aliases
 - `g` → Git Workflows
 - `f` → File Operations
@@ -44,6 +48,7 @@ prefix + m        # From tmux (Ctrl-Space + m)
 - `l` → Learning Topics
 
 **Features:**
+
 - Context-aware (shows project tasks if in git repo)
 - Loop navigation (back and forth between categories)
 - Beautiful gum-based UI
@@ -54,6 +59,7 @@ prefix + m        # From tmux (Ctrl-Space + m)
 Simple and fast tmux session management that replaces sesh.
 
 **Usage:**
+
 ```bash
 sess                # Interactive list of all sessions
 sess <name>         # Create or switch to session
@@ -63,13 +69,15 @@ sess kill <name>    # Kill a session
 ```
 
 **What It Shows:**
+
 - Active tmux sessions
 - Tmuxinator projects
 - Default sessions (configured per platform)
 
 **Default Sessions:**
 
-Configured in `~/.config/menu/sessions/sessions-macos.yml`:
+Configured in `~/.config/sess/sessions-macos.yml`:
+
 ```yaml
 defaults:
   - name: dotfiles
@@ -146,19 +154,20 @@ Active learning topics with bookmarks, notes, and exercises.
 
 ## File Structure
 
-```
+```text
 ~/.config/menu/
 ├── config.yml              # Main configuration
 ├── categories.yml          # Category definitions
-├── registry/
-│   ├── commands.yml        # Commands, aliases, functions
-│   ├── workflows.yml       # Multi-step processes
-│   └── learning.yml        # Learning topics
-└── sessions/
-    └── sessions-macos.yml  # Default sessions
+└── registry/
+    ├── commands.yml        # Commands, aliases, functions
+    ├── workflows.yml       # Multi-step processes
+    └── learning.yml        # Learning topics
+
+~/.config/sess/
+└── sessions-macos.yml      # Default sessions (separate tool)
 
 ~/dotfiles/                 # Source files (version controlled)
-└── common/.config/menu/    # Same structure (symlinked)
+└── platforms/common/.config/menu/    # Same structure (symlinked)
 ```
 
 ## Adding Content
@@ -224,7 +233,7 @@ Edit `~/.config/menu/registry/learning.yml`:
 
 ### Add a Default Session
 
-Edit `~/.config/menu/sessions/sessions-macos.yml`:
+Edit `~/.config/sess/sessions-macos.yml`:
 
 ```yaml
 - name: my-project
@@ -277,74 +286,60 @@ sess dotfiles     # Direct switch
 ### Growing Your Registry
 
 **Start small:**
+
 - Only add things you actually forget
 - Quality over quantity
 
 **Add as you go:**
+
 - When you Google something → add it
 - When you learn a workflow → document it
 - When you struggle with something → add it
 
 **Link related items:**
+
 - Use the `related` field to connect commands
 - Reference workflows in learning topics
 
 ### Using Categories
 
 **Commands:**
+
 - Shell commands, aliases, functions
 - Tools with usage examples
 
 **Git Workflows:**
+
 - Git commands
 - Forgit interactive commands
 - Git techniques
 
 **Vim Workflows:**
+
 - Multi-step Neovim processes
 - Editor techniques
 
 **Learning Topics:**
+
 - Active learning projects
 - Resources organized by topic
 - Practice exercises
 
 ## Integrated Tools
 
-### nb - Notes and Bookmarks
+### zk - Note Taking
 
-CLI tool for plain-text notes and bookmarks:
-
-```bash
-nb                          # List notes
-nb add                      # Create note
-nb bookmark <url>           # Save bookmark (downloads & cleans)
-nb search <term>            # Full-text search
-nb tag note learning        # Add tags
-nb learning:               # Filter by tag
-```
-
-**Features:**
-- Plain text, markdown-based
-- Git-backed versioning
-- Bookmarks → markdown
-- [[Wiki-links]] between notes
-
-### buku - Bookmark Manager
-
-SQLite-backed bookmark manager:
+Plain text note-taking with wiki-links and LSP support:
 
 ```bash
-buku -a <url> <tags>        # Add bookmark
-buku -s <tag>               # Search by tag
-buku -p -f 10 | fzf         # Fuzzy search
+zk journal "Daily standup"  # Create journal entry
+zk devnote "Bug fix notes"  # Create dev note
+zk list --match "API"       # Search notes
+zk edit --interactive       # Browse and edit
+notes                       # Quick menu wrapper
 ```
 
-**fzf Integration:**
-```bash
-# Fuzzy search and open
-firefox $(buku -p -f 10 | fzf | awk '{print $1}' | xargs buku -p | grep http | awk '{print $2}')
-```
+See [Note Taking](../workflows/note-taking.md) for full documentation.
 
 ### forgit - Interactive Git
 
@@ -370,14 +365,12 @@ menu:
 tools:
   gum: gum
   fzf: fzf
-  nb: nb
-  buku: buku
+  zk: zk
   bat: bat
 
 notes:
-  directory: ~/Documents/notes
+  directory: ~/notes
   editor: nvim
-  obsidian_vault: ~/Documents/notes
 
 sessions:
   default_directory: ~
@@ -401,17 +394,20 @@ categories:
 ### Keyboard Shortcuts
 
 **In Menu:**
+
 - Arrow keys or j/k: Navigate
 - Enter: Select
 - Esc or Ctrl-C: Back/Quit
 
 **In Tmux:**
+
 - `Ctrl-Space + m`: Open menu
 - `Ctrl-Space + R`: Reload tmux config
 
 ### Adding Lots of Content
 
 When documenting a complex workflow:
+
 1. Use the menu to find a similar example
 2. Copy the YAML structure
 3. Fill in your specific details
@@ -420,6 +416,7 @@ When documenting a complex workflow:
 ### Searching
 
 All YAML files support full-text search:
+
 ```bash
 rg "quickfix" ~/.config/menu/registry/
 ```
@@ -427,6 +424,7 @@ rg "quickfix" ~/.config/menu/registry/
 ## Troubleshooting
 
 **Menu not found:**
+
 ```bash
 which menu
 # If not found:
@@ -434,6 +432,7 @@ task symlinks:link
 ```
 
 **Config not found:**
+
 ```bash
 ls ~/.config/menu/
 # If not found:
@@ -441,6 +440,7 @@ task symlinks:link
 ```
 
 **Sess not working:**
+
 ```bash
 which sess
 # Check tmux is running:
@@ -449,6 +449,6 @@ tmux info
 
 ## See Also
 
-- [Tools Discovery](./tools.md) - CLI tools registry
-- [Session Management](../configuration/tmux.md) - Tmux configuration
+- [Tool Discovery](./tool-discovery.md) - CLI toolbox registry
 - [Symlinks](./symlinks.md) - Dotfiles deployment
+- [Note Taking](../workflows/note-taking.md) - zk workflow guide
