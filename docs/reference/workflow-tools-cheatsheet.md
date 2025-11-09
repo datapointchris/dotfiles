@@ -12,23 +12,23 @@ sess <name>              # Create or switch to session
 # List
 sess list                # List all sessions with icons
 sess last                # Switch to last session
-```text
+```
 
-## tools - Tool Discovery
+## toolbox - Tool Discovery
 
 ```bash
 # Basic
-tools list               # List all tools
-tools show <name>        # Show tool details
-tools search <query>     # Search tools
+toolbox list             # List all tools
+toolbox show <name>      # Show tool details
+toolbox search <query>   # Search tools
 
 # Discovery
-tools random             # Random tool
-tools installed          # Only installed tools
+toolbox random           # Random tool
+toolbox installed        # Only installed tools
 
 # Interactive
-tools list | fzf --preview='tools show {1}'
-```text
+toolbox list | fzf --preview='toolbox show {1}'
+```
 
 ## theme-sync - Theme Management
 
@@ -41,43 +41,35 @@ theme-sync random        # Apply random favorite
 
 # Interactive
 theme-sync favorites | fzf | xargs theme-sync apply
-```text
+```
 
 ## menu - Quick Reference
 
 ```bash
 menu                     # Show help and commands
 menu launch              # Interactive launcher
-```text
+```
 
-## nb - Note Taking
+## notes - Note Taking
 
 ```bash
-# Basic
-nb                       # Interactive menu
-nb add                   # Create note
-nb add "Title"           # Create note with title
+# Interactive menu
+notes                    # Auto-discovers notebook sections
+notes journal            # Create journal entry
+notes devnotes           # Create dev note
+notes learning           # Create learning note
 
-# Notebooks
-nb notebooks             # List notebooks
-nb use learning          # Switch notebook
-nb learning:add "Topic"  # Add to specific notebook
+# Direct zk access
+zk journal "Daily standup"     # Create journal entry
+zk devnote "Bug fix notes"     # Create dev note
+zk learn "Database indexing"   # Create learning note
 
-# Search
-nb search "query"        # Search current notebook
-nb search "query" --all  # Search all notebooks
-
-# Viewing
-nb list                  # List notes
-nb show <id>             # Show note
-nb edit <id>             # Edit note
-nb browse --gui          # Visual interface
-
-# Git Sync
-nb learning:sync         # Sync learning notebook
-nb notes:sync            # Sync notes
-nb ideas:sync            # Sync ideas
-```text
+# Viewing and searching
+zk list                        # List all notes
+zk list --match "API"          # Search notes
+zk list --sort modified-       # Recent notes
+zk edit --interactive          # Browse and edit
+```
 
 ## Composition Patterns
 
@@ -86,26 +78,26 @@ nb ideas:sync            # Sync ideas
 ```bash
 # Interactive selection
 sess list | fzf
-tools list | fzf --preview='tools show {1}'
+toolbox list | fzf --preview='toolbox show {1}'
 theme-sync favorites | fzf | xargs theme-sync apply
-nb list --all | fzf --preview='nb show {1}'
+zk list | fzf --preview='bat {-1}'
 
 # Filter and process
-tools list | grep cli-utility
+toolbox list | grep cli-utility
 sess list | awk '{print $2}'
-```text
+```
 
 ### With gum
 
 ```bash
 # Choose from list
-TOOL=$(tools list | awk '{print $1}' | gum choose)
-tools show "$TOOL"
+TOOL=$(toolbox list | awk '{print $1}' | gum choose)
+toolbox show "$TOOL"
 
 # Input
 TITLE=$(gum input --placeholder "Note title")
-nb add "$TITLE"
-```text
+zk journal "$TITLE"
+```
 
 ### Scripting
 
@@ -122,8 +114,8 @@ else
 fi
 
 # Search notes and count results
-nb search "algorithm" --all | wc -l
-```text
+zk list --match "algorithm" | wc -l
+```
 
 ## Dotfiles Management
 
@@ -134,9 +126,10 @@ task symlinks:check      # Verify symlinks
 task symlinks:show       # Show mappings
 
 # Installation
-task install:macos       # Install macOS packages
-task install:wsl         # Install WSL packages
-task install:common      # Install common packages
+task install             # Auto-detect platform and install
+task install-macos       # Install macOS packages
+task install-wsl         # Install WSL packages
+task install-arch        # Install Arch packages
 
 # Documentation
 task docs:serve          # Start docs server (localhost:8000)
@@ -147,37 +140,34 @@ task update              # Update packages
 
 # List all tasks
 task --list-all
+```
+
+## Notes Directory Structure
+
 ```text
+~/notes/                 # Single notebook with auto-discovered sections
+├── journal/             # Daily entries (iCloud only)
+├── devnotes/            # Work notes (git tracked)
+├── learning/            # Study notes (git tracked)
+├── ideas/               # Quick capture (iCloud only)
+├── projects/            # Project planning (iCloud only)
+├── dreams/              # Dream journal (iCloud only)
+└── .zk/
+    ├── config.toml
+    └── templates/
+```
 
-## nb Notebook Directories
+## zk Wiki Links
 
-```bash
-~/.nb/learning/          # Semester-based learning (public)
-  ├── 2024-fall/computer-science/
-  ├── 2024-fall/systems/
-  ├── 2024-fall/readings/
-  └── 2025-spring/
-
-~/.nb/notes/             # General notes (private)
-  ├── work/
-  ├── personal/
-  └── projects/
-
-~/.nb/ideas/             # Quick capture (private)
-```text
-
-## nb Wiki Links
-
-```bash
-# Same notebook
-[[file-name]]
+```markdown
+# In any note
+[[jwt-tokens]]
 [[folder/file-name]]
 
-# Different notebook
-[[notes:work/project]]
-[[learning:2024-fall/computer-science/algorithms]]
-[[ideas:feature-idea]]
-```text
+# Wiki-links work across all directories
+See [[api-security]] for details.
+Related: [[session-management]]
+```
 
 ## Favorite Themes
 
@@ -186,11 +176,11 @@ rose-pine              rose-pine-moon         rose-pine-dawn
 gruvbox-dark-hard      gruvbox-dark-medium    kanagawa
 nord                   tokyo-night-dark       catppuccin-mocha
 dracula                one-dark               solarized-dark
-```text
+```
 
 ## Tool Categories
 
-Run `tools list` to see all 30+ tools. Common categories:
+Run `toolbox list` to see all 30+ tools. Common categories:
 
 - `[cli-utility]` - bat, eza, fd, ripgrep, fzf
 - `[file-manager]` - yazi, ranger
@@ -207,30 +197,32 @@ Run `tools list` to see all 30+ tools. Common categories:
 ```bash
 sess                     # Start/switch session
 theme-sync current       # Check theme
-nb learning:list         # Review learning notes
-```text
+zk list --sort modified- --limit 10  # Review recent notes
+```
 
 ### Interactive Exploration
 
 ```bash
-tools list | fzf --preview='tools show {1}'
+toolbox list | fzf --preview='toolbox show {1}'
 theme-sync favorites | fzf | xargs theme-sync apply
-nb list --all | fzf --preview='nb show {1}'
-```text
+zk list | fzf --preview='bat {-1}'
+```
 
 ### Note Taking
 
 ```bash
 # Quick capture
-nb add "Quick thought"
+notes
 
-# Add to specific location
-nb learning:2024-fall/computer-science/add "Algorithm notes"
+# Add specific note types
+zk journal "Daily reflections"
+zk devnote "API refactoring"
+zk learn "Docker networking"
 
 # Search and review
-nb search "database" --all
-nb browse --gui
-```text
+zk list --match "database"
+zk edit --interactive
+```
 
 ## Tips
 
@@ -238,7 +230,7 @@ nb browse --gui
 - **Compose with pipes** - Tools output clean data for piping
 - **Use fzf/gum** - Add interactivity when needed
 - **Reference docs** - Use `menu` as quick reference
-- **Check planning docs** - See `planning/` for system design details
+- **Check planning docs** - See `.planning/` for system design details
 
 ## Documentation
 
