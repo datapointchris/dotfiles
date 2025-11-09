@@ -6,7 +6,7 @@
     ```sh
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash install/macos-setup.sh
+    bash management/macos-setup.sh
     ```
 
     Installs Homebrew (if needed), Taskfile, then runs full installation.
@@ -17,7 +17,7 @@
     ```sh
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash install/wsl-setup.sh
+    bash management/wsl-setup.sh
     ```
 
     Installs Taskfile, then delegates to `task install-wsl` for full installation.
@@ -33,7 +33,7 @@
     ```sh
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash install/arch-setup.sh
+    bash management/arch-setup.sh
     ```
 
     Installs Taskfile, then delegates to `task install-arch` for full installation.
@@ -44,7 +44,7 @@
 
 ```sh
 task --list           # Should show available tasks
-tools list            # Should show installed tools
+toolbox list          # Should show installed tools
 theme-sync current    # Should show current theme
 ```
 
@@ -54,8 +54,8 @@ Restart terminal or run `exec zsh` to load configs.
 
 ```sh
 # Explore tools
-tools search git
-tools show bat
+toolbox search git
+toolbox show bat
 
 # Switch themes
 theme-sync favorites
@@ -72,7 +72,7 @@ task update
 - nvm (Node.js)
 - uv (Python)
 
-**CLI Tools**: bat, eza, fd, ripgrep, fzf, zoxide, yazi, lazygit, tmux, neovim, etc. Run `tools list` to see all.
+**CLI Tools**: bat, eza, fd, ripgrep, fzf, zoxide, yazi, lazygit, tmux, neovim, etc. Run `toolbox list` to see all.
 
 **Theme System**: tinty + theme-sync command for Base16 themes
 

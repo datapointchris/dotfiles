@@ -44,9 +44,9 @@ tools random            # Discover random tool
 
 ## Shell Customization
 
-**Aliases**: Edit `common/.shell/aliases.sh`
+**Aliases**: Edit `platforms/common/.config/zsh/aliases.zsh`
 
-**Functions**: Edit `macos/.shell/macos-functions.sh` (or platform-specific)
+**Functions**: Edit `platforms/{platform}/.config/zsh/functions.zsh` (platform-specific)
 
 Reload: `source ~/.zshrc`
 

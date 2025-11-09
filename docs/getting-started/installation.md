@@ -7,7 +7,7 @@ Platform-specific installation instructions.
 ```sh
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bash scripts/install/macos-setup.sh
+bash management/macos-setup.sh
 ```
 
 Bootstrap script installs Homebrew and Taskfile, then runs `task install-macos`.
@@ -26,7 +26,7 @@ Time: ~20-30 minutes
 ```sh
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bash scripts/install/wsl-setup.sh
+bash management/wsl-setup.sh
 ```
 
 Bootstrap script installs Taskfile, then delegates all package installation to `task install-wsl`.
@@ -48,7 +48,7 @@ echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv
 ```sh
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bash scripts/install/arch-setup.sh
+bash management/arch-setup.sh
 ```
 
 Bootstrap script installs Taskfile, then delegates all package installation to `task install-arch`.
@@ -67,7 +67,7 @@ echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv
 
 ```sh
 task --list           # Should show available tasks
-tools list            # Should show installed tools
+toolbox list          # Should show installed tools
 theme-sync current    # Should show current theme
 node --version        # Should show Node.js version
 uv --version          # Should show uv version
@@ -81,7 +81,7 @@ Restart terminal: `exec zsh`
 
 **Version Managers**: nvm (Node.js), uv (Python)
 
-**CLI Tools**: bat, eza, fd, ripgrep, fzf, zoxide, yazi, lazygit, tmux, neovim, git-delta, and more. Run `tools list` for complete list.
+**CLI Tools**: bat, eza, fd, ripgrep, fzf, zoxide, yazi, lazygit, tmux, neovim, git-delta, and more. Run `toolbox list` for complete list.
 
 **Theme System**: tinty + theme-sync script
 
