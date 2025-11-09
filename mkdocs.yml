@@ -157,6 +157,7 @@ nav:
       - GitHub Pages: reference/github-pages.md
   - Development:
       - VM Testing: development/testing.md
+      - Notes System Setup: development/notes-system-setup.md
       - Go Migration Strategy: development/go-migration-strategy.md
       - Go Migration Quick Start: development/go-migration-quick-start.md
       - Go Migration Checklist: development/go-migration-checklist.md
