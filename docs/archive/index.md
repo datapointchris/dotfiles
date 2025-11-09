@@ -55,9 +55,9 @@ Old documentation structure from before the 2025-11-04 reorganization:
 
 #### Old Directory Structure
 
-- [Neovim Documentation](legacy-docs/neovim/) - Historical neovim-specific docs
-- [Terminal Documentation](legacy-docs/terminal/) - Historical terminal-specific docs (Ghostty)
-- [Workflow Documentation](legacy-docs/workflow/) - Historical workflow docs (Aerospace, tmux)
+- [Neovim Documentation](legacy-docs/neovim/README.md) - Historical neovim-specific docs
+- [Terminal Documentation](legacy-docs/terminal/README.md) - Historical terminal-specific docs (Ghostty)
+- [Workflow Documentation](legacy-docs/workflow/README.md) - Historical workflow docs (Aerospace, tmux)
 
 ## Why These Are Archived
 
@@ -74,9 +74,8 @@ These documents are archived because they:
 For current, up-to-date documentation:
 
 - **Getting Started**: [Quickstart](../getting-started/quickstart.md) | [Installation](../getting-started/installation.md)
-- **Architecture**: [Overview](../architecture/index.md) | [Package Management](../architecture/package-management.md)
-- **Configuration**: [Themes](../configuration/themes.md) | [Tools](../configuration/tools.md)
-- **Development**: [Testing](../development/testing.md) | [Master Plan](../development/master-plan.md)
+- **Architecture**: [Overview](../architecture/index.md)
+- **Development**: [Testing](../development/testing.md)
 - **Reference**: [Platforms](../reference/platforms.md) | [Tools](../reference/tools.md) | [Troubleshooting](../reference/troubleshooting.md)
 
 ## Archive Organization
