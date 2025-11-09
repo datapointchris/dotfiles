@@ -374,7 +374,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../development/testing.md" class="md-tabs__link">
+        <a href="../../../development/testing/" class="md-tabs__link">
           
   
   
@@ -651,8 +651,6 @@
       
         
       
-        
-      
     
     
     
@@ -713,29 +711,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1111,6 +1086,8 @@
       
         
       
+        
+      
     
     
     
@@ -1156,12 +1133,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/testing.md" class="md-nav__link">
+      <a href="../../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -1923,7 +1923,7 @@
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>nvim
 </span></code></pre></div>
 <h3 id="3-language-server-installation">3. Language Server Installation<a class="headerlink" href="#3-language-server-installation" title="Permanent link">&para;</a></h3>
-<p>See the <a href="./lsp.md">LSP Guide</a> for detailed language server installation instructions.</p>
+<p>See the <a href="../../legacy-docs/2024-10-22-lsp/">LSP Guide</a> for detailed language server installation instructions.</p>
 <h2 id="configuration-structure">Configuration Structure<a class="headerlink" href="#configuration-structure" title="Permanent link">&para;</a></h2>
 <h3 id="core-files">Core Files<a class="headerlink" href="#core-files" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2003,7 +2003,7 @@
 <h2 id="customization">Customization<a class="headerlink" href="#customization" title="Permanent link">&para;</a></h2>
 <h3 id="adding-language-servers">Adding Language Servers<a class="headerlink" href="#adding-language-servers" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Install the language server (see <a href="./lsp.md">LSP Guide</a>)</li>
+<li>Install the language server (see <a href="../../legacy-docs/2024-10-22-lsp/">LSP Guide</a>)</li>
 <li>Create config in <code>lsp/servername.lua</code></li>
 <li>Add server name to <code>lsp/init.lua</code> servers list</li>
 </ol>
@@ -2016,7 +2016,7 @@
 <div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">vim</span><span class="p">.</span><span class="py">keymap</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;leader&gt;your-key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;cmd&gt;YourCommand&lt;cr&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">desc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Description&#39;</span><span class="w"> </span><span class="p">})</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p>See the <a href="./troubleshooting.md">Troubleshooting Guide</a> for common issues and solutions.</p>
+<p>See the <a href="../../../reference/troubleshooting/">Troubleshooting Guide</a> for common issues and solutions.</p>
 
 
 

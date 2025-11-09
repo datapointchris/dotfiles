@@ -18,7 +18,7 @@
     
     
       
-        <title>Note Taking with nb - Dotfiles</title>
+        <title>Note Taking with zk - Dotfiles</title>
       
     
     
@@ -139,7 +139,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#note-taking-with-nb" class="md-skip">
+        <a href="#note-taking-with-zk" class="md-skip">
           Skip to content
         </a>
       
@@ -175,7 +175,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Note Taking with nb
+              Note Taking with zk
             
           </span>
         </div>
@@ -374,7 +374,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -651,8 +651,6 @@
       
         
       
-        
-      
     
     
     
@@ -713,29 +711,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1111,6 +1086,8 @@
       
         
       
+        
+      
     
     
     
@@ -1156,12 +1133,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -1876,410 +1876,234 @@
   
 
 
-<h1 id="note-taking-with-nb">Note Taking with nb<a class="headerlink" href="#note-taking-with-nb" title="Permanent link">&para;</a></h1>
-<p>This guide covers the note-taking workflows using <a href="https://github.com/xwmx/nb">nb</a>, a git-backed command-line note-taking system.</p>
+<h1 id="note-taking-with-zk">Note Taking with zk<a class="headerlink" href="#note-taking-with-zk" title="Permanent link">&para;</a></h1>
+<p>This guide covers note-taking workflows using <a href="https://github.com/zk-org/zk">zk</a>, a plain text note-taking assistant with strong markdown and linking support.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>nb provides a unified interface for multiple git-backed markdown notebooks, supporting wiki-style linking, full-text search, and visual browsing.</p>
-<h3 id="notebook-structure">Notebook Structure<a class="headerlink" href="#notebook-structure" title="Permanent link">&para;</a></h3>
-<p>Three notebooks serve different purposes:</p>
-<p><strong>learning</strong> - Public repository for semester-based learning</p>
-<p><code>text
-~/.nb/learning/ (https://github.com/datapointchris/learning.git)
-├── 2024-fall/
-│   ├── computer-science/{algorithms, data-structures, databases}
-│   ├── systems/{unix, networking}
-│   └── readings/{papers, books}
-└── 2025-spring/
-    ├── computer-science/
-    └── philosophy/</code>text</p>
-<p><strong>notes</strong> - Private repository for general notes</p>
-<p><code>text
-~/.nb/notes/ (https://github.com/datapointchris/notes.git)
-├── work/
-├── personal/
-└── projects/</code>text</p>
-<p><strong>ideas</strong> - Private repository for quick capture</p>
-<p><code>text
-~/.nb/ideas/ (https://github.com/datapointchris/ideas.git)
-(flat structure for quick capture)</code>text</p>
-<h2 id="basic-commands">Basic Commands<a class="headerlink" href="#basic-commands" title="Permanent link">&para;</a></h2>
-<h3 id="navigation">Navigation<a class="headerlink" href="#navigation" title="Permanent link">&para;</a></h3>
-<p><code>bash
-nb                          # Interactive menu (current notebook)
-nb notebooks                # List all notebooks
-nb use learning             # Switch to learning notebook
-nb learning:                # List notes in learning notebook
-nb notes:work/              # List notes in notes/work/ folder</code>text</p>
-<h3 id="creating-notes">Creating Notes<a class="headerlink" href="#creating-notes" title="Permanent link">&para;</a></h3>
-<p><code>bash
-nb add                      # Interactive note creation (opens $EDITOR)
-nb add "Title"              # Quick note with title
-nb learning:add "Topic"     # Add to specific notebook
-nb notes:work/add "Meeting" # Add to specific folder</code>text</p>
-<p><strong>Examples:</strong></p>
-<p>```bash</p>
-<h1 id="add-to-current-semesters-cs-notes">Add to current semester's CS notes<a class="headerlink" href="#add-to-current-semesters-cs-notes" title="Permanent link">&para;</a></h1>
-<p>nb learning:2024-fall/computer-science/add "Binary Search Trees"</p>
-<h1 id="quick-work-note">Quick work note<a class="headerlink" href="#quick-work-note" title="Permanent link">&para;</a></h1>
-<p>nb notes:work/add "Team Meeting Notes"</p>
-<h1 id="capture-an-idea">Capture an idea<a class="headerlink" href="#capture-an-idea" title="Permanent link">&para;</a></h1>
-<p>nb ideas:add "AI-powered search feature"
-```text</p>
-<h3 id="searching">Searching<a class="headerlink" href="#searching" title="Permanent link">&para;</a></h3>
-<p><code>bash
-nb search "algorithm"       # Search current notebook
-nb search "database" --all  # Search all notebooks
-nb list --query "pattern"   # List matching notes</code>text</p>
-<p><strong>Advanced search:</strong></p>
-<p>```bash</p>
-<h1 id="case-insensitive-search">Case-insensitive search<a class="headerlink" href="#case-insensitive-search" title="Permanent link">&para;</a></h1>
-<p>nb search "binary tree" -i</p>
-<h1 id="search-with-regex">Search with regex<a class="headerlink" href="#search-with-regex" title="Permanent link">&para;</a></h1>
-<p>nb search "algorithm.*complexity"</p>
-<h1 id="search-in-specific-notebook">Search in specific notebook<a class="headerlink" href="#search-in-specific-notebook" title="Permanent link">&para;</a></h1>
-<p>nb learning:search "normalization"</p>
-<h1 id="limit-results">Limit results<a class="headerlink" href="#limit-results" title="Permanent link">&para;</a></h1>
-<p>nb search "database" --limit 10
-```text</p>
-<h3 id="editing">Editing<a class="headerlink" href="#editing" title="Permanent link">&para;</a></h3>
-<p><code>bash
-nb edit 1                   # Edit note by ID
-nb edit algorithm           # Edit by title/keyword
-nb learning:edit 3          # Edit in specific notebook</code>text</p>
-<h3 id="viewing">Viewing<a class="headerlink" href="#viewing" title="Permanent link">&para;</a></h3>
-<p><code>bash
-nb show 1                   # Show note content
-nb show --print             # Print to stdout (for piping)
-nb browse --gui             # Visual interface in browser
-nb browse learning:         # Browse specific notebook</code>text</p>
-<h2 id="cross-notebook-wiki-links">Cross-Notebook Wiki Links<a class="headerlink" href="#cross-notebook-wiki-links" title="Permanent link">&para;</a></h2>
-<p>nb supports wiki-style linking across notebooks, enabling connections between learning, work, and ideas.</p>
-<h3 id="link-syntax">Link Syntax<a class="headerlink" href="#link-syntax" title="Permanent link">&para;</a></h3>
-<p><strong>Same notebook:</strong></p>
-<p><code>markdown
-[[file-name]]
-[[folder/file-name]]</code>text</p>
-<p><strong>Different notebook:</strong></p>
-<p><code>markdown
-[[notebook:folder/file-name]]</code>text</p>
-<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
-<p><strong>In a learning note (learning:2024-fall/computer-science/databases/normalization.md):</strong></p>
-<p>```markdown</p>
-<h1 id="database-normalization">Database Normalization<a class="headerlink" href="#database-normalization" title="Permanent link">&para;</a></h1>
-<h2 id="overview_1">Overview<a class="headerlink" href="#overview_1" title="Permanent link">&para;</a></h2>
-<p>Database normalization is the process of organizing data to reduce redundancy.</p>
-<h2 id="forms">Forms<a class="headerlink" href="#forms" title="Permanent link">&para;</a></h2>
+<p>Single notebook with selective git tracking and auto-discovery of note sections.</p>
+<p><strong>Philosophy</strong>:</p>
 <ul>
-<li>1NF: Atomic values</li>
-<li>2NF: No partial dependencies</li>
-<li>3NF: No transitive dependencies</li>
+<li>One notebook (<code>~/notes</code>) for everything</li>
+<li>Organized by top-level directories (sections)</li>
+<li>Git tracks only <code>devnotes/</code> and <code>learning/</code> (public/work)</li>
+<li>Personal content (<code>journal/</code>, <code>ideas/</code>, etc.) stays iCloud-only</li>
+<li><code>notes</code> CLI wrapper for quick access, <code>zk</code> directly for advanced features</li>
 </ul>
-<h2 id="related-topics">Related Topics<a class="headerlink" href="#related-topics" title="Permanent link">&para;</a></h2>
+<p><strong>Location</strong>: <code>~/notes</code> → <code>~/Documents/notes</code> (iCloud synced)</p>
+<h2 id="notebook-structure">Notebook Structure<a class="headerlink" href="#notebook-structure" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>~/notes/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── journal/      # Daily entries (iCloud only)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── learning/     # Study notes (git tracked, public repo)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── devnotes/     # Work notes (git tracked, private repo)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── ideas/        # Quick capture (iCloud only)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── projects/     # Project planning (iCloud only)
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── dreams/       # Dream journal (iCloud only)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└── .zk/
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    ├── config.toml
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    └── templates/
+</span></code></pre></div>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<h3 id="using-the-notes-cli-wrapper">Using the notes CLI Wrapper<a class="headerlink" href="#using-the-notes-cli-wrapper" title="Permanent link">&para;</a></h3>
+<p>The <code>notes</code> command provides an interactive menu with auto-discovery:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Interactive menu - shows all available sections</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>notes
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Create note in specific section</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>notes<span class="w"> </span>journal
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>notes<span class="w"> </span>devnotes
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>notes<span class="w"> </span>learning
+</span></code></pre></div>
+<p>The menu shows:</p>
 <ul>
-<li>[[data-structures/trees]]  # Same notebook</li>
-<li>[[algorithms/search]]      # Same notebook</li>
+<li>Browse recent notes</li>
+<li>Search all notes</li>
+<li>Quick note creation for each discovered section</li>
 </ul>
-<h2 id="real-world-application">Real-World Application<a class="headerlink" href="#real-world-application" title="Permanent link">&para;</a></h2>
-<p>See my work project: [[notes:work/database-design]]</p>
-<h2 id="further-reading">Further Reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
+<h3 id="using-zk-directly">Using zk Directly<a class="headerlink" href="#using-zk-directly" title="Permanent link">&para;</a></h3>
+<p>For advanced features, use <code>zk</code> commands directly:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Create notes using aliases (from config.toml)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Daily standup thoughts&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;Debugging authentication flow&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>zk<span class="w"> </span>learn<span class="w"> </span><span class="s2">&quot;Understanding B-trees&quot;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>zk<span class="w"> </span>idea<span class="w"> </span><span class="s2">&quot;App feature concept&quot;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Browse and search</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>zk<span class="w"> </span>list<span class="w">                           </span><span class="c1"># List all notes</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>zk<span class="w"> </span>list<span class="w"> </span>--sort<span class="w"> </span>modified-<span class="w">          </span><span class="c1"># Recent notes</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive<span class="w">             </span><span class="c1"># Pick note to edit</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>zk<span class="w"> </span>edit<span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--sort<span class="w"> </span>modified-<span class="w">  </span><span class="c1"># Edit last modified</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Search content</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;authentication&quot;</span><span class="w">  </span><span class="c1"># Find notes about auth</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>zk<span class="w"> </span>list<span class="w"> </span>--created-after<span class="w"> </span><span class="s2">&quot;today&quot;</span><span class="w">   </span><span class="c1"># Notes created today</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>zk<span class="w"> </span>list<span class="w"> </span>--group<span class="w"> </span>devnotes<span class="w">          </span><span class="c1"># Only work notes</span>
+</span></code></pre></div>
+<h2 id="common-workflows">Common Workflows<a class="headerlink" href="#common-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="daily-journal-entry">Daily Journal Entry<a class="headerlink" href="#daily-journal-entry" title="Permanent link">&para;</a></h3>
+<p>Using notes CLI:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>notes<span class="w"> </span>journal
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Opens gum input for title, then creates timestamped entry</span>
+</span></code></pre></div>
+<p>Using zk directly:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Friday reflections&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Creates: 2025-11-08-Friday-14:30-friday-reflections.md</span>
+</span></code></pre></div>
+<p>The journal template includes:</p>
 <ul>
-<li>[[readings/papers/codd-relational-model]]
-```text</li>
+<li>Date frontmatter</li>
+<li>Entry section</li>
+<li>Tags section</li>
 </ul>
-<p><strong>In a work note (notes:work/database-design.md):</strong></p>
-<p>```markdown</p>
-<h1 id="database-design-project">Database Design Project<a class="headerlink" href="#database-design-project" title="Permanent link">&para;</a></h1>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Redesigning the user database schema for better query performance.</p>
-<h2 id="learning-references">Learning References<a class="headerlink" href="#learning-references" title="Permanent link">&para;</a></h2>
-<ul>
-<li>[[learning:2024-fall/computer-science/databases/normalization]]</li>
-<li>[[learning:2024-fall/computer-science/databases/indexing]]</li>
-</ul>
-<h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
-<p>Applied 3NF to user tables, created composite indexes on frequently queried fields.</p>
-<h2 id="ideas">Ideas<a class="headerlink" href="#ideas" title="Permanent link">&para;</a></h2>
-<p>See related brainstorming: [[ideas:database-optimization]]
-```text</p>
-<p><strong>In an ideas note (ideas:database-optimization.md):</strong></p>
-<p>```markdown</p>
-<h1 id="database-optimization-ideas">Database Optimization Ideas<a class="headerlink" href="#database-optimization-ideas" title="Permanent link">&para;</a></h1>
-<h2 id="potential-improvements">Potential Improvements<a class="headerlink" href="#potential-improvements" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Implement read replicas for heavy query load</li>
-<li>Add caching layer with Redis</li>
-<li>Partition large tables by date</li>
-</ul>
-<h2 id="research-needed">Research Needed<a class="headerlink" href="#research-needed" title="Permanent link">&para;</a></h2>
-<ul>
-<li>[[learning:2024-fall/computer-science/databases/partitioning]]</li>
-<li>[[notes:work/database-design]] (current implementation)
-```text</li>
-</ul>
-<h2 id="git-sync-workflow">Git Sync Workflow<a class="headerlink" href="#git-sync-workflow" title="Permanent link">&para;</a></h2>
-<p>Each notebook is independently version-controlled with its own git repository.</p>
-<h3 id="manual-sync">Manual Sync<a class="headerlink" href="#manual-sync" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="sync-specific-notebook">Sync specific notebook<a class="headerlink" href="#sync-specific-notebook" title="Permanent link">&para;</a></h1>
-<p>nb learning:sync            # Add, commit, push learning
-nb notes:sync               # Sync notes
-nb ideas:sync               # Sync ideas</p>
-<h1 id="check-status-before-syncing">Check status before syncing<a class="headerlink" href="#check-status-before-syncing" title="Permanent link">&para;</a></h1>
-<p>nb learning:status          # Git status for learning
-nb notes:git log --oneline  # Recent commits in notes
-```text</p>
-<h3 id="automatic-sync">Automatic Sync<a class="headerlink" href="#automatic-sync" title="Permanent link">&para;</a></h3>
-<p>Configure auto-sync per notebook:</p>
-<p>```bash</p>
-<h1 id="enable-auto-sync-commits-and-pushes-on-each-operation">Enable auto-sync (commits and pushes on each operation)<a class="headerlink" href="#enable-auto-sync-commits-and-pushes-on-each-operation" title="Permanent link">&para;</a></h1>
-<p>nb learning:settings auto_sync on</p>
-<h1 id="disable-auto-sync-manual-control">Disable auto-sync (manual control)<a class="headerlink" href="#disable-auto-sync-manual-control" title="Permanent link">&para;</a></h1>
-<p>nb learning:settings auto_sync off
-```text</p>
-<div class="admonition warning">
-<p class="admonition-title">Auto-sync Considerations</p>
-<p>Auto-sync commits after each <code>add</code>, <code>edit</code>, or <code>delete</code> operation. This is convenient but creates many small commits. For learning notes (public repo), consider manual sync to group related changes.</p>
-</div>
-<h3 id="commit-messages">Commit Messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h3>
-<p>nb auto-generates commit messages:</p>
-<p><code>text
-Add: Binary Search Trees.md
-Update: normalization.md
-Delete: old-notes.md</code>text</p>
-<p>For custom commit messages, use git directly:</p>
-<p><code>bash
-cd ~/.nb/learning
-git add .
-git commit -m "Add complete database normalization notes with examples"
-git push</code>text</p>
-<h2 id="daily-workflows">Daily Workflows<a class="headerlink" href="#daily-workflows" title="Permanent link">&para;</a></h2>
-<h3 id="morning-study-session">Morning Study Session<a class="headerlink" href="#morning-study-session" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="switch-to-learning-context">Switch to learning context<a class="headerlink" href="#switch-to-learning-context" title="Permanent link">&para;</a></h1>
-<p>nb use learning</p>
-<h1 id="review-recent-notes">Review recent notes<a class="headerlink" href="#review-recent-notes" title="Permanent link">&para;</a></h1>
-<p>nb learning:list</p>
-<h1 id="add-todays-learning-topic">Add today's learning topic<a class="headerlink" href="#add-todays-learning-topic" title="Permanent link">&para;</a></h1>
-<p>nb learning:2024-fall/computer-science/add "Graph Algorithms"</p>
-<h1 id="edit-and-expand-with-cross-links">Edit and expand with cross-links<a class="headerlink" href="#edit-and-expand-with-cross-links" title="Permanent link">&para;</a></h1>
-<p>nb edit graph-algorithms</p>
-<h1 id="in-note-data-structuresgraphs-algorithmssearch">In note: [[data-structures/graphs]], [[algorithms/search]]<a class="headerlink" href="#in-note-data-structuresgraphs-algorithmssearch" title="Permanent link">&para;</a></h1>
-<p>```text</p>
-<h3 id="work-context">Work Context<a class="headerlink" href="#work-context" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="switch-to-work-notes">Switch to work notes<a class="headerlink" href="#switch-to-work-notes" title="Permanent link">&para;</a></h1>
-<p>nb use notes</p>
-<h1 id="create-meeting-notes">Create meeting notes<a class="headerlink" href="#create-meeting-notes" title="Permanent link">&para;</a></h1>
-<p>nb notes:work/add "Sprint Planning Meeting"</p>
-<h1 id="reference-learning-materials">Reference learning materials<a class="headerlink" href="#reference-learning-materials" title="Permanent link">&para;</a></h1>
-<h1 id="in-note-learning2024-fallcomputer-sciencealgorithmscomplexity">In note: [[learning:2024-fall/computer-science/algorithms/complexity]]<a class="headerlink" href="#in-note-learning2024-fallcomputer-sciencealgorithmscomplexity" title="Permanent link">&para;</a></h1>
-<p>```text</p>
+<h3 id="workdev-notes">Work/Dev Notes<a class="headerlink" href="#workdev-notes" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Quick way</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>notes<span class="w"> </span>devnotes
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Or with zk alias</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;API endpoint refactoring&quot;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># Creates: 2025-11-08-api-endpoint-refactoring.md</span>
+</span></code></pre></div>
+<p>Git tracks these automatically, so they sync to your notes repository.</p>
+<h3 id="learning-notes">Learning Notes<a class="headerlink" href="#learning-notes" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>zk<span class="w"> </span>learn<span class="w"> </span><span class="s2">&quot;Database indexing strategies&quot;</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Creates: 2025-11-08-database-indexing-strategies.md</span>
+</span></code></pre></div>
+<p>These are also git-tracked for building a public learning repository.</p>
 <h3 id="quick-idea-capture">Quick Idea Capture<a class="headerlink" href="#quick-idea-capture" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="capture-idea-without-switching-context">Capture idea without switching context<a class="headerlink" href="#capture-idea-without-switching-context" title="Permanent link">&para;</a></h1>
-<p>nb ideas:add "Real-time collaboration feature"</p>
-<h1 id="later-link-from-project-notes">Later, link from project notes<a class="headerlink" href="#later-link-from-project-notes" title="Permanent link">&para;</a></h1>
-<p>nb notes:projects/add "New Feature Proposals"</p>
-<h1 id="in-note-ideasreal-time-collaboration-feature">In note: [[ideas:real-time-collaboration-feature]]<a class="headerlink" href="#in-note-ideasreal-time-collaboration-feature" title="Permanent link">&para;</a></h1>
-<p>```text</p>
-<h3 id="cross-reference-workflow">Cross-Reference Workflow<a class="headerlink" href="#cross-reference-workflow" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="while-studying-algorithms-reference-work-project">While studying algorithms, reference work project<a class="headerlink" href="#while-studying-algorithms-reference-work-project" title="Permanent link">&para;</a></h1>
-<p>nb learning:2024-fall/computer-science/algorithms/add "Search Optimization"</p>
-<h1 id="in-note-applied-in-notesworksearch-feature">In note: Applied in [[notes:work/search-feature]]<a class="headerlink" href="#in-note-applied-in-notesworksearch-feature" title="Permanent link">&para;</a></h1>
-<h1 id="in-work-notes-link-back-to-learning">In work notes, link back to learning<a class="headerlink" href="#in-work-notes-link-back-to-learning" title="Permanent link">&para;</a></h1>
-<p>nb notes:work/edit search-feature</p>
-<h1 id="in-note-theory-learning2024-fallcomputer-sciencealgorithmssearch-optimization">In note: Theory: [[learning:2024-fall/computer-science/algorithms/search-optimization]]<a class="headerlink" href="#in-note-theory-learning2024-fallcomputer-sciencealgorithmssearch-optimization" title="Permanent link">&para;</a></h1>
-<p>```text</p>
-<h2 id="composition-with-other-tools">Composition with Other Tools<a class="headerlink" href="#composition-with-other-tools" title="Permanent link">&para;</a></h2>
-<p>nb follows the Unix philosophy - it outputs clean data that composes with other tools.</p>
-<h3 id="interactive-selection-with-fzf">Interactive Selection with fzf<a class="headerlink" href="#interactive-selection-with-fzf" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="browse-notes-interactively">Browse notes interactively<a class="headerlink" href="#browse-notes-interactively" title="Permanent link">&para;</a></h1>
-<p>nb list --all | fzf --preview 'nb show {1}'</p>
-<h1 id="search-and-select">Search and select<a class="headerlink" href="#search-and-select" title="Permanent link">&para;</a></h1>
-<p>nb search "algorithm" | fzf | xargs nb show</p>
-<h1 id="edit-note-selected-with-fzf">Edit note selected with fzf<a class="headerlink" href="#edit-note-selected-with-fzf" title="Permanent link">&para;</a></h1>
-<p>nb list | fzf | awk '{print $1}' | xargs nb edit
-```text</p>
-<h3 id="notebook-selection-with-gum">Notebook Selection with gum<a class="headerlink" href="#notebook-selection-with-gum" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="choose-notebook-with-gum">Choose notebook with gum<a class="headerlink" href="#choose-notebook-with-gum" title="Permanent link">&para;</a></h1>
-<p>NOTEBOOK=$(nb notebooks | gum choose)
-nb use "$NOTEBOOK"</p>
-<h1 id="add-note-with-gum-input">Add note with gum input<a class="headerlink" href="#add-note-with-gum-input" title="Permanent link">&para;</a></h1>
-<p>TITLE=$(gum input --placeholder "Note title")
-nb add "$TITLE"
-```text</p>
-<h3 id="integration-with-menu">Integration with menu<a class="headerlink" href="#integration-with-menu" title="Permanent link">&para;</a></h3>
-<p>The <code>menu</code> launcher includes nb:</p>
-<p>```bash
-menu launch</p>
-<h1 id="select-takefind-a-note">Select "Take/find a note"<a class="headerlink" href="#select-takefind-a-note" title="Permanent link">&para;</a></h1>
-<h1 id="launches-nb-interactive-interface">Launches nb interactive interface<a class="headerlink" href="#launches-nb-interactive-interface" title="Permanent link">&para;</a></h1>
-<p>```text</p>
-<h3 id="scripting">Scripting<a class="headerlink" href="#scripting" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="daily-note-script">Daily note script<a class="headerlink" href="#daily-note-script" title="Permanent link">&para;</a></h1>
-<h1 id="binbash">!/bin/bash<a class="headerlink" href="#binbash" title="Permanent link">&para;</a></h1>
-<p>TODAY=$(date +%Y-%m-%d)
-nb notes:work/add "Daily Log - $TODAY"</p>
-<h1 id="batch-processing">Batch processing<a class="headerlink" href="#batch-processing" title="Permanent link">&para;</a></h1>
-<h1 id="binbash_1">!/bin/bash<a class="headerlink" href="#binbash_1" title="Permanent link">&para;</a></h1>
-<p>nb search "TODO" --all | while read -r note; do
-  echo "Pending task in: $note"
-done
-```text</p>
-<h2 id="advanced-workflows">Advanced Workflows<a class="headerlink" href="#advanced-workflows" title="Permanent link">&para;</a></h2>
-<h3 id="semester-rotation">Semester Rotation<a class="headerlink" href="#semester-rotation" title="Permanent link">&para;</a></h3>
-<p>When starting a new semester:</p>
-<p>```bash</p>
-<h1 id="create-new-semester-folder">Create new semester folder<a class="headerlink" href="#create-new-semester-folder" title="Permanent link">&para;</a></h1>
-<p>cd ~/.nb/learning
-mkdir -p 2025-spring/computer-science
-mkdir -p 2025-spring/philosophy</p>
-<h1 id="add-first-note">Add first note<a class="headerlink" href="#add-first-note" title="Permanent link">&para;</a></h1>
-<p>nb learning:2025-spring/computer-science/add "Distributed Systems"</p>
-<h1 id="sync-structure">Sync structure<a class="headerlink" href="#sync-structure" title="Permanent link">&para;</a></h1>
-<p>nb learning:sync
-```text</p>
-<h3 id="migrating-from-obsidian">Migrating from Obsidian<a class="headerlink" href="#migrating-from-obsidian" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="copy-markdown-files-preserves-wiki-links">Copy markdown files (preserves [[wiki links]])<a class="headerlink" href="#copy-markdown-files-preserves-wiki-links" title="Permanent link">&para;</a></h1>
-<p>cp -r ~/Documents/notes/learning/* ~/.nb/learning/</p>
-<h1 id="add-to-git">Add to git<a class="headerlink" href="#add-to-git" title="Permanent link">&para;</a></h1>
-<p>cd ~/.nb/learning
-git add .
-git commit -m "Migrate learning notes from Obsidian"
-git push</p>
-<h1 id="update-wiki-links-to-cross-notebook-format-if-needed">Update wiki links to cross-notebook format if needed<a class="headerlink" href="#update-wiki-links-to-cross-notebook-format-if-needed" title="Permanent link">&para;</a></h1>
-<h1 id="workproject-notesworkproject">[[work/project]] → [[notes:work/project]]<a class="headerlink" href="#workproject-notesworkproject" title="Permanent link">&para;</a></h1>
-<p>```text</p>
-<h3 id="visual-browsing">Visual Browsing<a class="headerlink" href="#visual-browsing" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="launch-web-interface">Launch web interface<a class="headerlink" href="#launch-web-interface" title="Permanent link">&para;</a></h1>
-<p>nb browse --gui</p>
-<h1 id="browse-specific-notebook">Browse specific notebook<a class="headerlink" href="#browse-specific-notebook" title="Permanent link">&para;</a></h1>
-<p>nb browse learning:</p>
-<h1 id="browse-specific-folder">Browse specific folder<a class="headerlink" href="#browse-specific-folder" title="Permanent link">&para;</a></h1>
-<p>nb browse learning:2024-fall/computer-science/
-```text</p>
-<p>The browser interface provides:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>notes<span class="w"> </span>ideas
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Or: zk idea &quot;Mobile app feature&quot;</span>
+</span></code></pre></div>
+<p>Perfect for fleeting thoughts - iCloud-backed but not in git.</p>
+<h3 id="browse-recent-work">Browse Recent Work<a class="headerlink" href="#browse-recent-work" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Last 20 modified notes</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>zk<span class="w"> </span>recent
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Today&#39;s notes</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>zk<span class="w"> </span>today
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Recent devnotes only</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>zk<span class="w"> </span>devnotes-list
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Interactive picker</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive
+</span></code></pre></div>
+<h3 id="search-notes">Search Notes<a class="headerlink" href="#search-notes" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Search by content</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;authentication&quot;</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;react hooks&quot;</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Search with interactive edit</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;API&quot;</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1"># Full-text search (if fzf preview is configured)</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>zk<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;bat -p {-1}&#39;</span>
+</span></code></pre></div>
+<h2 id="wiki-style-linking">Wiki-Style Linking<a class="headerlink" href="#wiki-style-linking" title="Permanent link">&para;</a></h2>
+<p>zk supports wiki-links between notes:</p>
+<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="gh"># In a note about authentication</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>See [[jwt-tokens]] for token handling details.
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>Related: [[api-security]], [[session-management]]
+</span></code></pre></div>
+<p>The zk LSP integration provides:</p>
 <ul>
-<li>Visual navigation of folder hierarchy</li>
-<li>Rendered markdown preview</li>
-<li>Clickable wiki links (including cross-notebook)</li>
-<li>Search interface</li>
-<li>Edit links to open in $EDITOR</li>
+<li>Autocomplete for note links</li>
+<li>Dead link detection</li>
+<li>Link following in editors (Neovim, VS Code)</li>
 </ul>
-<h3 id="tags-and-metadata">Tags and Metadata<a class="headerlink" href="#tags-and-metadata" title="Permanent link">&para;</a></h3>
-<p>nb supports tags and metadata in notes:</p>
-<h2 id="markdown">```markdown<a class="headerlink" href="#markdown" title="Permanent link">&para;</a></h2>
-<p>tags: algorithms, study, binary-search
-created: 2024-11-07
-updated: 2024-11-07</p>
-<hr />
-<h1 id="binary-search">Binary Search<a class="headerlink" href="#binary-search" title="Permanent link">&para;</a></h1>
-<p>Content here...
-```text</p>
-<p>Search by tags:</p>
-<p><code>bash
-nb search --tags algorithms
-nb list --tags study,algorithms  # Multiple tags</code>text</p>
-<h2 id="tips-and-best-practices">Tips and Best Practices<a class="headerlink" href="#tips-and-best-practices" title="Permanent link">&para;</a></h2>
-<h3 id="1-consistent-folder-structure">1. Consistent Folder Structure<a class="headerlink" href="#1-consistent-folder-structure" title="Permanent link">&para;</a></h3>
-<p>Maintain parallel structure across semesters:</p>
-<p><code>text
-2024-fall/computer-science/algorithms/
-2024-fall/computer-science/data-structures/
-2025-spring/computer-science/algorithms/
-2025-spring/computer-science/data-structures/</code>text</p>
-<p>This makes cross-semester linking predictable.</p>
-<h3 id="2-descriptive-filenames">2. Descriptive Filenames<a class="headerlink" href="#2-descriptive-filenames" title="Permanent link">&para;</a></h3>
-<p>Use clear, descriptive filenames:</p>
-<p>```bash</p>
-<h1 id="good">Good<a class="headerlink" href="#good" title="Permanent link">&para;</a></h1>
-<p>binary-search-trees.md
-database-normalization-forms.md
-project-kickoff-meeting-2024-11-07.md</p>
-<h1 id="avoid">Avoid<a class="headerlink" href="#avoid" title="Permanent link">&para;</a></h1>
-<p>bst.md
-db.md
-meeting.md
-```text</p>
-<h3 id="3-liberal-cross-linking">3. Liberal Cross-Linking<a class="headerlink" href="#3-liberal-cross-linking" title="Permanent link">&para;</a></h3>
-<p>Link freely between notes - nb makes it easy:</p>
-<p><code>markdown
-Related: [[other-topic]], [[notes:work/project]], [[ideas:feature-idea]]</code>text</p>
-<h3 id="4-git-sync-rhythm">4. Git Sync Rhythm<a class="headerlink" href="#4-git-sync-rhythm" title="Permanent link">&para;</a></h3>
-<p>For public learning repo:</p>
+<h2 id="git-workflow">Git Workflow<a class="headerlink" href="#git-workflow" title="Permanent link">&para;</a></h2>
+<p>Only <code>devnotes/</code> and <code>learning/</code> are tracked:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># Check what&#39;s tracked</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>git<span class="w"> </span>status
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Commit work notes</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>git<span class="w"> </span>add<span class="w"> </span>devnotes/<span class="w"> </span>learning/
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;notes: add API authentication learnings&quot;</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>git<span class="w"> </span>push
+</span></code></pre></div>
+<p>Personal sections (<code>journal/</code>, <code>ideas/</code>, etc.) are in <code>.gitignore</code> and stay iCloud-only.</p>
+<h2 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h2>
+<p>Templates live in <code>~/notes/.zk/templates/</code>:</p>
 <ul>
-<li>Manual sync to group related changes</li>
-<li>Meaningful commit messages</li>
+<li><code>daily.md</code> - Journal entries with date and tags</li>
+<li><code>devnote.md</code> - Work notes with project context</li>
+<li><code>learning.md</code> - Study notes with resources section</li>
+<li><code>idea.md</code> - Quick capture template</li>
+<li><code>project.md</code> - Project planning structure</li>
+<li><code>dream.md</code> - Dream journal format</li>
 </ul>
-<p>For private notes/ideas:</p>
+<p>Edit templates to customize note structure:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes/.zk/templates
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>nvim<span class="w"> </span>daily.md
+</span></code></pre></div>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>zk config at <code>~/.config/zk/config.toml</code> defines:</p>
 <ul>
-<li>Auto-sync for convenience</li>
-<li>Less concern about commit granularity</li>
+<li><strong>Groups</strong>: Organize notes by directory (journal, devnotes, etc.)</li>
+<li><strong>Aliases</strong>: Quick commands (<code>zk journal</code>, <code>zk learn</code>)</li>
+<li><strong>Templates</strong>: Per-group note formats</li>
+<li><strong>LSP</strong>: Editor integration settings</li>
 </ul>
-<h3 id="5-notebook-switching">5. Notebook Switching<a class="headerlink" href="#5-notebook-switching" title="Permanent link">&para;</a></h3>
-<p>Use <code>nb use</code> to set context:</p>
-<p>```bash</p>
-<h1 id="morning-learning-mode">Morning: Learning mode<a class="headerlink" href="#morning-learning-mode" title="Permanent link">&para;</a></h1>
-<p>nb use learning</p>
-<h1 id="afternoon-work-mode">Afternoon: Work mode<a class="headerlink" href="#afternoon-work-mode" title="Permanent link">&para;</a></h1>
-<p>nb use notes</p>
-<h1 id="quick-idea-capture-without-switching">Quick idea capture (without switching)<a class="headerlink" href="#quick-idea-capture-without-switching" title="Permanent link">&para;</a></h1>
-<p>nb ideas:add "Quick thought"
-```text</p>
-<h3 id="6-search-first-create-second">6. Search First, Create Second<a class="headerlink" href="#6-search-first-create-second" title="Permanent link">&para;</a></h3>
-<p>Before creating a new note:</p>
-<p>```bash</p>
-<h1 id="check-if-topic-already-exists">Check if topic already exists<a class="headerlink" href="#check-if-topic-already-exists" title="Permanent link">&para;</a></h1>
-<p>nb search "binary search tree" --all</p>
-<h1 id="if-found-add-to-existing-note">If found, add to existing note<a class="headerlink" href="#if-found-add-to-existing-note" title="Permanent link">&para;</a></h1>
-<h1 id="if-not-create-new">If not, create new<a class="headerlink" href="#if-not-create-new" title="Permanent link">&para;</a></h1>
-<p>```text</p>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="links-not-resolving">Links Not Resolving<a class="headerlink" href="#links-not-resolving" title="Permanent link">&para;</a></h3>
-<p>If cross-notebook links don't work:</p>
-<p>```bash</p>
-<h1 id="check-notebook-exists">Check notebook exists<a class="headerlink" href="#check-notebook-exists" title="Permanent link">&para;</a></h1>
-<p>nb notebooks</p>
-<h1 id="verify-path">Verify path<a class="headerlink" href="#verify-path" title="Permanent link">&para;</a></h1>
-<p>nb notes:work/  # Should list notes</p>
-<h1 id="check-link-syntax">Check link syntax<a class="headerlink" href="#check-link-syntax" title="Permanent link">&para;</a></h1>
-<p>[[notes:work/file-name]]  # Correct
-[[notes/work/file-name]]  # Incorrect
-```text</p>
-<h3 id="sync-conflicts">Sync Conflicts<a class="headerlink" href="#sync-conflicts" title="Permanent link">&para;</a></h3>
-<p>If git sync fails:</p>
-<p>```bash
-cd ~/.nb/learning
-git status
-git pull --rebase</p>
-<h1 id="resolve-conflicts-in-editor">Resolve conflicts in $EDITOR<a class="headerlink" href="#resolve-conflicts-in-editor" title="Permanent link">&para;</a></h1>
-<p>git add .
-git rebase --continue
-git push
-```text</p>
-<h3 id="missing-notes-in-search">Missing Notes in Search<a class="headerlink" href="#missing-notes-in-search" title="Permanent link">&para;</a></h3>
-<p>If search doesn't find notes:</p>
-<p>```bash</p>
-<h1 id="rebuild-index">Rebuild index<a class="headerlink" href="#rebuild-index" title="Permanent link">&para;</a></h1>
-<p>nb index rebuild</p>
-<h1 id="search-all-notebooks">Search all notebooks<a class="headerlink" href="#search-all-notebooks" title="Permanent link">&para;</a></h1>
-<p>nb search "query" --all
-```text</p>
-<h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
+<p>See <code>platforms/common/.config/zk/config.toml</code> in the dotfiles repo.</p>
+<h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
+<h3 id="custom-searches">Custom Searches<a class="headerlink" href="#custom-searches" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Notes modified in last 7 days</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>zk<span class="w"> </span>list<span class="w"> </span>--modified-after<span class="w"> </span><span class="s2">&quot;7 days ago&quot;</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Notes by group and date range</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>zk<span class="w"> </span>list<span class="w"> </span>--group<span class="w"> </span>devnotes<span class="w"> </span>--created-after<span class="w"> </span><span class="s2">&quot;2025-11-01&quot;</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Interactive edit with filters</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive<span class="w"> </span>--group<span class="w"> </span>learning<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;database&quot;</span>
+</span></code></pre></div>
+<h3 id="integration-with-other-tools">Integration with Other Tools<a class="headerlink" href="#integration-with-other-tools" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Open random note for review</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>zk<span class="w"> </span>edit<span class="w"> </span>--limit<span class="w"> </span><span class="m">1</span><span class="w"> </span>--sort<span class="w"> </span>random
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># List notes as JSON for scripting</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>zk<span class="w"> </span>list<span class="w"> </span>--format<span class="w"> </span>json
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Create note from stdin</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;# Quick Note\n\nContent here&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>zk<span class="w"> </span>new<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Generated&quot;</span>
+</span></code></pre></div>
+<h3 id="batch-operations">Batch Operations<a class="headerlink" href="#batch-operations" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># List notes and pipe to other tools</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>zk<span class="w"> </span>list<span class="w"> </span>--format<span class="w"> </span>path<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;TODO&quot;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Count notes by section</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">for</span><span class="w"> </span>section<span class="w"> </span><span class="k">in</span><span class="w"> </span>journal<span class="w"> </span>learning<span class="w"> </span>devnotes<span class="w"> </span>ideas<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nv">count</span><span class="o">=</span><span class="k">$(</span>zk<span class="w"> </span>list<span class="w"> </span>--group<span class="w"> </span><span class="nv">$section</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="k">)</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$section</span><span class="s2">: </span><span class="nv">$count</span><span class="s2"> notes&quot;</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="k">done</span>
+</span></code></pre></div>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<p>For initial setup instructions, see <a href="../../development/notes-system-setup/">Notes System Setup</a>.</p>
+<p><strong>Prerequisites</strong>:</p>
 <ul>
-<li><a href="../../reference/quick-reference/">Quick Reference</a> - All workflow tools</li>
-<li><a href="../../architecture/tool-composition/">Tool Composition</a> - How tools work together</li>
-<li><a href="https://github.com/xwmx/nb">nb Official Documentation</a> - Complete nb reference</li>
-<li>Planning documents:</li>
-<li><code>planning/phase2-complete-summary.md</code> - nb setup details</li>
-<li><code>planning/dotfiles-system-redesign-2025-11.md</code> - Overall system design</li>
+<li>zk installed (<code>brew install zk</code>)</li>
+<li>gum installed (<code>brew install gum</code>) - for notes CLI interactive menus</li>
+<li>bat installed (<code>brew install bat</code>) - for preview formatting</li>
 </ul>
+<h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">&para;</a></h2>
+<p><strong>Auto-discovery</strong>: The <code>notes</code> CLI automatically discovers new sections. Create any directory in <code>~/notes/</code> and it appears in the menu.</p>
+<p><strong>Editor Integration</strong>: Configure your editor for zk LSP support to get link completion and navigation.</p>
+<p><strong>Backup Strategy</strong>:</p>
+<ul>
+<li>Git-tracked sections (devnotes/, learning/) backed up to GitHub</li>
+<li>Personal sections (journal/, ideas/) backed up to iCloud</li>
+<li>Full notebook available on all devices via iCloud</li>
+</ul>
+<p><strong>Quick Access</strong>: Add shell aliases for frequent operations:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># In your .zshrc</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">jot</span><span class="o">=</span><span class="s1">&#39;zk journal&#39;</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">note</span><span class="o">=</span><span class="s1">&#39;zk devnote&#39;</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">til</span><span class="o">=</span><span class="s1">&#39;zk learn&#39;</span>
+</span></code></pre></div>
+<h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
+<p><strong>notes CLI</strong>: <code>apps/common/notes</code>
+<strong>zk Config</strong>: <code>platforms/common/.config/zk/config.toml</code>
+<strong>Setup Guide</strong>: <code>docs/development/notes-system-setup.md</code>
+<strong>zk Documentation</strong>: <a href="https://zk-org.github.io/zk/">https://zk-org.github.io/zk/</a></p>
 
 
 

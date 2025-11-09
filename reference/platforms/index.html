@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://datapointchris.github.io/dotfiles/reference/platforms/">
       
       
-        <link rel="prev" href="../../architecture/sesh-architecture-diagram/">
+        <link rel="prev" href="../../architecture/menu-system/">
       
       
         <link rel="next" href="../menu-system/">
@@ -380,7 +380,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -657,8 +657,6 @@
       
         
       
-        
-      
     
     
     
@@ -719,29 +717,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1065,15 +1040,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#cargo-installed-tools" class="md-nav__link">
     <span class="md-ellipsis">
       Cargo-Installed Tools
@@ -1096,15 +1062,6 @@
   
     <nav class="md-nav" aria-label="Theme System (tinty)">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#installation_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
@@ -1131,18 +1088,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#installation_2" class="md-nav__link">
+  <a href="#nvm-configuration" class="md-nav__link">
     <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configuration_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Configuration
+      nvm Configuration
     </span>
   </a>
   
@@ -1162,15 +1110,6 @@
   
     <nav class="md-nav" aria-label="Python (via uv)">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#installation_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#python-tool-installation" class="md-nav__link">
@@ -1197,27 +1136,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#macos" class="md-nav__link">
+  <a href="#macos-quirks" class="md-nav__link">
     <span class="md-ellipsis">
-      macOS
+      macOS Quirks
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#ubuntuwsl" class="md-nav__link">
+  <a href="#ubuntuwsl-quirks" class="md-nav__link">
     <span class="md-ellipsis">
-      Ubuntu/WSL
+      Ubuntu/WSL Quirks
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#arch-linux" class="md-nav__link">
+  <a href="#arch-linux-quirks" class="md-nav__link">
     <span class="md-ellipsis">
-      Arch Linux
+      Arch Linux Quirks
     </span>
   </a>
   
@@ -1239,27 +1178,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#macos_1" class="md-nav__link">
+  <a href="#macos-testing" class="md-nav__link">
     <span class="md-ellipsis">
-      macOS
+      macOS Testing
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#ubuntuwsl_1" class="md-nav__link">
+  <a href="#ubuntuwsl-testing" class="md-nav__link">
     <span class="md-ellipsis">
-      Ubuntu/WSL
+      Ubuntu/WSL Testing
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#arch-linux_1" class="md-nav__link">
+  <a href="#arch-linux-testing" class="md-nav__link">
     <span class="md-ellipsis">
-      Arch Linux
+      Arch Linux Testing
     </span>
   </a>
   
@@ -1596,6 +1535,8 @@
       
         
       
+        
+      
     
     
     
@@ -1641,12 +1582,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -2878,7 +2842,6 @@
 <hr />
 <h2 id="rustcargo-installation">Rust/Cargo Installation<a class="headerlink" href="#rustcargo-installation" title="Permanent link">&para;</a></h2>
 <p>Some tools require Rust/Cargo, especially on Ubuntu where they're not available via apt.</p>
-<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
 <p><strong>All Platforms</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>--proto<span class="w"> </span><span class="s1">&#39;=https&#39;</span><span class="w"> </span>--tlsv1.2<span class="w"> </span>-sSf<span class="w"> </span>https://sh.rustup.rs<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>-y
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.cargo/env&quot;</span>
@@ -2895,7 +2858,6 @@
 <p>On <strong>macOS</strong> and <strong>Arch</strong>, these are available via native package managers.</p>
 <hr />
 <h2 id="theme-system-tinty">Theme System (tinty)<a class="headerlink" href="#theme-system-tinty" title="Permanent link">&para;</a></h2>
-<h3 id="installation_1">Installation<a class="headerlink" href="#installation_1" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2928,7 +2890,6 @@
 <hr />
 <h2 id="nodejs-and-npm-via-nvm">Node.js and npm (via nvm)<a class="headerlink" href="#nodejs-and-npm-via-nvm" title="Permanent link">&para;</a></h2>
 <p>nvm provides <strong>consistent Node.js management</strong> across all platforms.</p>
-<h3 id="installation_2">Installation<a class="headerlink" href="#installation_2" title="Permanent link">&para;</a></h3>
 <p><strong>All Platforms</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Install nvm</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>curl<span class="w"> </span>-o-<span class="w"> </span>https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
@@ -2937,7 +2898,7 @@
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>nvm<span class="w"> </span>install<span class="w"> </span>--lts
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>nvm<span class="w"> </span><span class="nb">alias</span><span class="w"> </span>default<span class="w"> </span>lts/*
 </span></code></pre></div>
-<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
+<h3 id="nvm-configuration">nvm Configuration<a class="headerlink" href="#nvm-configuration" title="Permanent link">&para;</a></h3>
 <p>nvm directory: <code>~/.config/nvm</code> (consistent across platforms)</p>
 <p>Shell integration (added to <code>.zshrc</code>):</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">NVM_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.config/nvm&quot;</span>
@@ -2946,7 +2907,6 @@
 <hr />
 <h2 id="python-via-uv">Python (via uv)<a class="headerlink" href="#python-via-uv" title="Permanent link">&para;</a></h2>
 <p>uv provides <strong>consistent Python management</strong> across all platforms.</p>
-<h3 id="installation_3">Installation<a class="headerlink" href="#installation_3" title="Permanent link">&para;</a></h3>
 <p><strong>All Platforms</strong>:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>-LsSf<span class="w"> </span>https://astral.sh/uv/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
 </span></code></pre></div>
@@ -2961,7 +2921,7 @@
 <p>Tools installed to: <code>~/.local/bin</code> (consistent across platforms)</p>
 <hr />
 <h2 id="platform-specific-quirks">Platform-Specific Quirks<a class="headerlink" href="#platform-specific-quirks" title="Permanent link">&para;</a></h2>
-<h3 id="macos">macOS<a class="headerlink" href="#macos" title="Permanent link">&para;</a></h3>
+<h3 id="macos-quirks">macOS Quirks<a class="headerlink" href="#macos-quirks" title="Permanent link">&para;</a></h3>
 <p><strong>GNU Coreutils</strong>:</p>
 <ul>
 <li>Installed with <code>g</code> prefix: <code>gls</code>, <code>gsed</code>, <code>gtar</code>, <code>ggrep</code></li>
@@ -2974,7 +2934,7 @@
 <li>Apple Silicon: <code>/opt/homebrew</code></li>
 <li>Scripts should detect automatically</li>
 </ul>
-<h3 id="ubuntuwsl">Ubuntu/WSL<a class="headerlink" href="#ubuntuwsl" title="Permanent link">&para;</a></h3>
+<h3 id="ubuntuwsl-quirks">Ubuntu/WSL Quirks<a class="headerlink" href="#ubuntuwsl-quirks" title="Permanent link">&para;</a></h3>
 <p><strong>WSL-Specific Configuration</strong> (<code>/etc/wsl.conf</code>):</p>
 <div class="language-ini highlight"><span class="filename">INI</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">[boot]</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="na">systemd</span><span class="o">=</span><span class="s">true</span>
@@ -2995,7 +2955,7 @@
 <li>Some tools only available via snap</li>
 <li>Snap integration varies</li>
 </ul>
-<h3 id="arch-linux">Arch Linux<a class="headerlink" href="#arch-linux" title="Permanent link">&para;</a></h3>
+<h3 id="arch-linux-quirks">Arch Linux Quirks<a class="headerlink" href="#arch-linux-quirks" title="Permanent link">&para;</a></h3>
 <p><strong>AUR Helper</strong> (yay):</p>
 <ul>
 <li>Required for AUR packages</li>
@@ -3017,7 +2977,7 @@
 <hr />
 <h2 id="testing-checklist">Testing Checklist<a class="headerlink" href="#testing-checklist" title="Permanent link">&para;</a></h2>
 <p>When testing installations, verify these platform-specific items:</p>
-<h3 id="macos_1">macOS<a class="headerlink" href="#macos_1" title="Permanent link">&para;</a></h3>
+<h3 id="macos-testing">macOS Testing<a class="headerlink" href="#macos-testing" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Homebrew location correct for architecture</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> All Brewfile packages install</li>
@@ -3025,7 +2985,7 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Symlinks created in expected locations</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> GNU coreutils NOT in PATH by default</li>
 </ul>
-<h3 id="ubuntuwsl_1">Ubuntu/WSL<a class="headerlink" href="#ubuntuwsl_1" title="Permanent link">&para;</a></h3>
+<h3 id="ubuntuwsl-testing">Ubuntu/WSL Testing<a class="headerlink" href="#ubuntuwsl-testing" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> bat and fd symlinks created</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Cargo tools install (eza, yazi, git-delta)</li>
@@ -3033,7 +2993,7 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> WSL-specific config applied (/etc/wsl.conf)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> systemd enabled if needed</li>
 </ul>
-<h3 id="arch-linux_1">Arch Linux<a class="headerlink" href="#arch-linux_1" title="Permanent link">&para;</a></h3>
+<h3 id="arch-linux-testing">Arch Linux Testing<a class="headerlink" href="#arch-linux-testing" title="Permanent link">&para;</a></h3>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> yay AUR helper installed</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> pacman.conf configured (color, parallel downloads)</li>

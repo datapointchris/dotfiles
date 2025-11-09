@@ -380,7 +380,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -657,8 +657,6 @@
       
         
       
-        
-      
     
     
     
@@ -719,29 +717,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1118,18 +1093,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#nb-notes-and-bookmarks" class="md-nav__link">
+  <a href="#zk-note-taking" class="md-nav__link">
     <span class="md-ellipsis">
-      nb - Notes and Bookmarks
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#buku-bookmark-manager" class="md-nav__link">
-    <span class="md-ellipsis">
-      buku - Bookmark Manager
+      zk - Note Taking
     </span>
   </a>
   
@@ -1494,6 +1460,8 @@
       
         
       
+        
+      
     
     
     
@@ -1539,12 +1507,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -2262,54 +2253,60 @@
 <h1 id="universal-menu-system">Universal Menu System<a class="headerlink" href="#universal-menu-system" title="Permanent link">&para;</a></h1>
 <p>The universal menu system is a function-based knowledge and workflow management tool that organizes information by <em>what you're trying to accomplish</em> rather than by type (bookmarks, notes, commands, etc.).</p>
 <h2 id="philosophy">Philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
-<p>Instead of organizing by type:
+<p>Instead of organizing by type:</p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Bookmarks/ → Notes/ → Aliases/ → Functions/
-</span></code></pre></div></p>
-<p>Organize by function:
+</span></code></pre></div>
+<p>Organize by function:</p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Learning: Neovim/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── Tutorials (bookmarks)
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── Study notes
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── Workflows &amp; keybindings
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>└── Practice exercises
-</span></code></pre></div></p>
+</span></code></pre></div>
 <p>When you search for "quickfix", you get ALL resources about quickfix: bookmarks, notes, keybindings, and workflows in one place.</p>
 <h2 id="components">Components<a class="headerlink" href="#components" title="Permanent link">&para;</a></h2>
 <h3 id="main-menu-menu">Main Menu (<code>menu</code>)<a class="headerlink" href="#main-menu-menu" title="Permanent link">&para;</a></h3>
 <p>The primary interface for accessing all your knowledge and tools.</p>
-<p><strong>Opening the Menu:</strong>
+<p><strong>Opening the Menu:</strong></p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>menu<span class="w">              </span><span class="c1"># From terminal</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>prefix<span class="w"> </span>+<span class="w"> </span>m<span class="w">        </span><span class="c1"># From tmux (Ctrl-Space + m)</span>
-</span></code></pre></div></p>
-<p><strong>Single-Key Navigation:</strong>
-- <code>s</code> → Sessions (tmux/tmuxinator)
-- <code>t</code> → Tasks (current project)
-- <code>n</code> → Notes (Obsidian)
-- <code>c</code> → Commands &amp; Aliases
-- <code>g</code> → Git Workflows
-- <code>f</code> → File Operations
-- <code>v</code> → Vim Workflows
-- <code>k</code> → Vim Keybindings
-- <code>l</code> → Learning Topics</p>
-<p><strong>Features:</strong>
-- Context-aware (shows project tasks if in git repo)
-- Loop navigation (back and forth between categories)
-- Beautiful gum-based UI
-- Detailed previews with examples and notes</p>
+</span></code></pre></div>
+<p><strong>Single-Key Navigation:</strong></p>
+<ul>
+<li><code>s</code> → Sessions (tmux/tmuxinator)</li>
+<li><code>t</code> → Tasks (current project)</li>
+<li><code>n</code> → Notes (zk)</li>
+<li><code>c</code> → Commands &amp; Aliases</li>
+<li><code>g</code> → Git Workflows</li>
+<li><code>f</code> → File Operations</li>
+<li><code>v</code> → Vim Workflows</li>
+<li><code>k</code> → Vim Keybindings</li>
+<li><code>l</code> → Learning Topics</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Context-aware (shows project tasks if in git repo)</li>
+<li>Loop navigation (back and forth between categories)</li>
+<li>Beautiful gum-based UI</li>
+<li>Detailed previews with examples and notes</li>
+</ul>
 <h3 id="session-manager-sess">Session Manager (<code>sess</code>)<a class="headerlink" href="#session-manager-sess" title="Permanent link">&para;</a></h3>
 <p>Simple and fast tmux session management that replaces sesh.</p>
-<p><strong>Usage:</strong>
+<p><strong>Usage:</strong></p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sess<span class="w">                </span><span class="c1"># Interactive list of all sessions</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sess<span class="w"> </span>&lt;name&gt;<span class="w">         </span><span class="c1"># Create or switch to session</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>sess<span class="w"> </span>last<span class="w">           </span><span class="c1"># Switch to last session</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>sess<span class="w"> </span>defaults<span class="w">       </span><span class="c1"># Show default sessions</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>sess<span class="w"> </span><span class="nb">kill</span><span class="w"> </span>&lt;name&gt;<span class="w">    </span><span class="c1"># Kill a session</span>
-</span></code></pre></div></p>
-<p><strong>What It Shows:</strong>
-- Active tmux sessions
-- Tmuxinator projects
-- Default sessions (configured per platform)</p>
+</span></code></pre></div>
+<p><strong>What It Shows:</strong></p>
+<ul>
+<li>Active tmux sessions</li>
+<li>Tmuxinator projects</li>
+<li>Default sessions (configured per platform)</li>
+</ul>
 <p><strong>Default Sessions:</strong></p>
-<p>Configured in <code>~/.config/menu/sessions/sessions-macos.yml</code>:
+<p>Configured in <code>~/.config/sess/sessions-macos.yml</code>:</p>
 <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">defaults</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dotfiles</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/dotfiles</span>
@@ -2319,7 +2316,7 @@
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/code/ichrisbirch</span>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">tmuxinator_project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ichrisbirch-development</span>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Main project development</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="knowledge-registry">Knowledge Registry<a class="headerlink" href="#knowledge-registry" title="Permanent link">&para;</a></h3>
 <p>Three YAML files that store all your knowledge:</p>
 <p><strong>1. Commands Registry</strong> (<code>~/.config/menu/registry/commands.yml</code>)</p>
@@ -2372,15 +2369,16 @@
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~/.config/menu/
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>├── config.yml              # Main configuration
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>├── categories.yml          # Category definitions
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>├── registry/
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>│   ├── commands.yml        # Commands, aliases, functions
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>│   ├── workflows.yml       # Multi-step processes
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>│   └── learning.yml        # Learning topics
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>└── sessions/
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    └── sessions-macos.yml  # Default sessions
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>~/dotfiles/                 # Source files (version controlled)
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>└── common/.config/menu/    # Same structure (symlinked)
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>└── registry/
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    ├── commands.yml        # Commands, aliases, functions
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    ├── workflows.yml       # Multi-step processes
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    └── learning.yml        # Learning topics
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>~/.config/sess/
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>└── sessions-macos.yml      # Default sessions (separate tool)
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>~/dotfiles/                 # Source files (version controlled)
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>└── platforms/common/.config/menu/    # Same structure (symlinked)
 </span></code></pre></div>
 <h2 id="adding-content">Adding Content<a class="headerlink" href="#adding-content" title="Permanent link">&para;</a></h2>
 <h3 id="add-a-command">Add a Command<a class="headerlink" href="#add-a-command" title="Permanent link">&para;</a></h3>
@@ -2431,7 +2429,7 @@
 </span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Exercise</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">practice&quot;</span>
 </span></code></pre></div>
 <h3 id="add-a-default-session">Add a Default Session<a class="headerlink" href="#add-a-default-session" title="Permanent link">&para;</a></h3>
-<p>Edit <code>~/.config/menu/sessions/sessions-macos.yml</code>:</p>
+<p>Edit <code>~/.config/sess/sessions-macos.yml</code>:</p>
 <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-project</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/code/my-project</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Project description</span>
@@ -2465,56 +2463,55 @@
 </span></code></pre></div>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <h3 id="growing-your-registry">Growing Your Registry<a class="headerlink" href="#growing-your-registry" title="Permanent link">&para;</a></h3>
-<p><strong>Start small:</strong>
-- Only add things you actually forget
-- Quality over quantity</p>
-<p><strong>Add as you go:</strong>
-- When you Google something → add it
-- When you learn a workflow → document it
-- When you struggle with something → add it</p>
-<p><strong>Link related items:</strong>
-- Use the <code>related</code> field to connect commands
-- Reference workflows in learning topics</p>
+<p><strong>Start small:</strong></p>
+<ul>
+<li>Only add things you actually forget</li>
+<li>Quality over quantity</li>
+</ul>
+<p><strong>Add as you go:</strong></p>
+<ul>
+<li>When you Google something → add it</li>
+<li>When you learn a workflow → document it</li>
+<li>When you struggle with something → add it</li>
+</ul>
+<p><strong>Link related items:</strong></p>
+<ul>
+<li>Use the <code>related</code> field to connect commands</li>
+<li>Reference workflows in learning topics</li>
+</ul>
 <h3 id="using-categories">Using Categories<a class="headerlink" href="#using-categories" title="Permanent link">&para;</a></h3>
-<p><strong>Commands:</strong>
-- Shell commands, aliases, functions
-- Tools with usage examples</p>
-<p><strong>Git Workflows:</strong>
-- Git commands
-- Forgit interactive commands
-- Git techniques</p>
-<p><strong>Vim Workflows:</strong>
-- Multi-step Neovim processes
-- Editor techniques</p>
-<p><strong>Learning Topics:</strong>
-- Active learning projects
-- Resources organized by topic
-- Practice exercises</p>
+<p><strong>Commands:</strong></p>
+<ul>
+<li>Shell commands, aliases, functions</li>
+<li>Tools with usage examples</li>
+</ul>
+<p><strong>Git Workflows:</strong></p>
+<ul>
+<li>Git commands</li>
+<li>Forgit interactive commands</li>
+<li>Git techniques</li>
+</ul>
+<p><strong>Vim Workflows:</strong></p>
+<ul>
+<li>Multi-step Neovim processes</li>
+<li>Editor techniques</li>
+</ul>
+<p><strong>Learning Topics:</strong></p>
+<ul>
+<li>Active learning projects</li>
+<li>Resources organized by topic</li>
+<li>Practice exercises</li>
+</ul>
 <h2 id="integrated-tools">Integrated Tools<a class="headerlink" href="#integrated-tools" title="Permanent link">&para;</a></h2>
-<h3 id="nb-notes-and-bookmarks">nb - Notes and Bookmarks<a class="headerlink" href="#nb-notes-and-bookmarks" title="Permanent link">&para;</a></h3>
-<p>CLI tool for plain-text notes and bookmarks:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>nb<span class="w">                          </span><span class="c1"># List notes</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>nb<span class="w"> </span>add<span class="w">                      </span><span class="c1"># Create note</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>nb<span class="w"> </span>bookmark<span class="w"> </span>&lt;url&gt;<span class="w">           </span><span class="c1"># Save bookmark (downloads &amp; cleans)</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>nb<span class="w"> </span>search<span class="w"> </span>&lt;term&gt;<span class="w">            </span><span class="c1"># Full-text search</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>nb<span class="w"> </span>tag<span class="w"> </span>note<span class="w"> </span>learning<span class="w">        </span><span class="c1"># Add tags</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>nb<span class="w"> </span>learning:<span class="w">               </span><span class="c1"># Filter by tag</span>
+<h3 id="zk-note-taking">zk - Note Taking<a class="headerlink" href="#zk-note-taking" title="Permanent link">&para;</a></h3>
+<p>Plain text note-taking with wiki-links and LSP support:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Daily standup&quot;</span><span class="w">  </span><span class="c1"># Create journal entry</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;Bug fix notes&quot;</span><span class="w">  </span><span class="c1"># Create dev note</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;API&quot;</span><span class="w">       </span><span class="c1"># Search notes</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive<span class="w">       </span><span class="c1"># Browse and edit</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>notes<span class="w">                       </span><span class="c1"># Quick menu wrapper</span>
 </span></code></pre></div>
-<p><strong>Features:</strong>
-- Plain text, markdown-based
-- Git-backed versioning
-- Bookmarks → markdown
-- [[Wiki-links]] between notes</p>
-<h3 id="buku-bookmark-manager">buku - Bookmark Manager<a class="headerlink" href="#buku-bookmark-manager" title="Permanent link">&para;</a></h3>
-<p>SQLite-backed bookmark manager:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>buku<span class="w"> </span>-a<span class="w"> </span>&lt;url&gt;<span class="w"> </span>&lt;tags&gt;<span class="w">        </span><span class="c1"># Add bookmark</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>buku<span class="w"> </span>-s<span class="w"> </span>&lt;tag&gt;<span class="w">               </span><span class="c1"># Search by tag</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>buku<span class="w"> </span>-p<span class="w"> </span>-f<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w">         </span><span class="c1"># Fuzzy search</span>
-</span></code></pre></div>
-<p><strong>fzf Integration:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Fuzzy search and open</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>firefox<span class="w"> </span><span class="k">$(</span>buku<span class="w"> </span>-p<span class="w"> </span>-f<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>buku<span class="w"> </span>-p<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>http<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
-</span></code></pre></div></p>
+<p>See <a href="../../workflows/note-taking/">Note Taking</a> for full documentation.</p>
 <h3 id="forgit-interactive-git">forgit - Interactive Git<a class="headerlink" href="#forgit-interactive-git" title="Permanent link">&para;</a></h3>
 <p>All forgit commands are in the Git Workflows category:</p>
 <ul>
@@ -2527,76 +2524,80 @@
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="main-config-configmenuconfigyml">Main Config (<code>~/.config/menu/config.yml</code>)<a class="headerlink" href="#main-config-configmenuconfigyml" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">menu</span><span class="p">:</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">preview_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="nt">search_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">  </span><span class="nt">gum</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gum</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">  </span><span class="nt">fzf</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fzf</span>
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">  </span><span class="nt">nb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nb</span>
-</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">  </span><span class="nt">buku</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">buku</span>
-</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">  </span><span class="nt">bat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bat</span>
-</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>
-</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="nt">notes</span><span class="p">:</span>
-</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="w">  </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/Documents/notes</span>
-</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="w">  </span><span class="nt">editor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nvim</span>
-</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="w">  </span><span class="nt">obsidian_vault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/Documents/notes</span>
-</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>
-</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a><span class="nt">sessions</span><span class="p">:</span>
-</span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a><span class="w">  </span><span class="nt">default_directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span>
-</span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a><span class="w">  </span><span class="nt">tmuxinator_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">menu</span><span class="p">:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">preview_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">search_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span><span class="nt">gum</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gum</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">  </span><span class="nt">fzf</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fzf</span>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">  </span><span class="nt">zk</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zk</span>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">  </span><span class="nt">bat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bat</span>
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="nt">notes</span><span class="p">:</span>
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">  </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/notes</span>
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="w">  </span><span class="nt">editor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nvim</span>
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="nt">sessions</span><span class="p">:</span>
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="w">  </span><span class="nt">default_directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span>
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="w">  </span><span class="nt">tmuxinator_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div>
 <h3 id="categories-configmenucategoriesyml">Categories (<code>~/.config/menu/categories.yml</code>)<a class="headerlink" href="#categories-configmenucategoriesyml" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">categories</span><span class="p">:</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Sessions</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">s</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">icon</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;🪟&quot;</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tmux sessions and tmuxinator projects</span>
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quick_access</span>
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">categories</span><span class="p">:</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Sessions</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">s</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nt">icon</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;🪟&quot;</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Tmux sessions and tmuxinator projects</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quick_access</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">    </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 </span></code></pre></div>
 <h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">&para;</a></h2>
 <h3 id="keyboard-shortcuts">Keyboard Shortcuts<a class="headerlink" href="#keyboard-shortcuts" title="Permanent link">&para;</a></h3>
-<p><strong>In Menu:</strong>
-- Arrow keys or j/k: Navigate
-- Enter: Select
-- Esc or Ctrl-C: Back/Quit</p>
-<p><strong>In Tmux:</strong>
-- <code>Ctrl-Space + m</code>: Open menu
-- <code>Ctrl-Space + R</code>: Reload tmux config</p>
+<p><strong>In Menu:</strong></p>
+<ul>
+<li>Arrow keys or j/k: Navigate</li>
+<li>Enter: Select</li>
+<li>Esc or Ctrl-C: Back/Quit</li>
+</ul>
+<p><strong>In Tmux:</strong></p>
+<ul>
+<li><code>Ctrl-Space + m</code>: Open menu</li>
+<li><code>Ctrl-Space + R</code>: Reload tmux config</li>
+</ul>
 <h3 id="adding-lots-of-content">Adding Lots of Content<a class="headerlink" href="#adding-lots-of-content" title="Permanent link">&para;</a></h3>
-<p>When documenting a complex workflow:
-1. Use the menu to find a similar example
-2. Copy the YAML structure
-3. Fill in your specific details
-4. Keep notes concise but informative</p>
+<p>When documenting a complex workflow:</p>
+<ol>
+<li>Use the menu to find a similar example</li>
+<li>Copy the YAML structure</li>
+<li>Fill in your specific details</li>
+<li>Keep notes concise but informative</li>
+</ol>
 <h3 id="searching">Searching<a class="headerlink" href="#searching" title="Permanent link">&para;</a></h3>
-<p>All YAML files support full-text search:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>rg<span class="w"> </span><span class="s2">&quot;quickfix&quot;</span><span class="w"> </span>~/.config/menu/registry/
-</span></code></pre></div></p>
+<p>All YAML files support full-text search:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>rg<span class="w"> </span><span class="s2">&quot;quickfix&quot;</span><span class="w"> </span>~/.config/menu/registry/
+</span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Menu not found:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>which<span class="w"> </span>menu
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># If not found:</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>task<span class="w"> </span>symlinks:link
-</span></code></pre></div></p>
-<p><strong>Config not found:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>ls<span class="w"> </span>~/.config/menu/
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="c1"># If not found:</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>task<span class="w"> </span>symlinks:link
-</span></code></pre></div></p>
-<p><strong>Sess not working:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>which<span class="w"> </span>sess
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="c1"># Check tmux is running:</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>tmux<span class="w"> </span>info
-</span></code></pre></div></p>
+<p><strong>Menu not found:</strong></p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>which<span class="w"> </span>menu
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="c1"># If not found:</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>task<span class="w"> </span>symlinks:link
+</span></code></pre></div>
+<p><strong>Config not found:</strong></p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>ls<span class="w"> </span>~/.config/menu/
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="c1"># If not found:</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>task<span class="w"> </span>symlinks:link
+</span></code></pre></div>
+<p><strong>Sess not working:</strong></p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>which<span class="w"> </span>sess
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># Check tmux is running:</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>tmux<span class="w"> </span>info
+</span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../tools/">Tools Discovery</a> - CLI tools registry</li>
-<li><a href="../configuration/tmux.md">Session Management</a> - Tmux configuration</li>
+<li><a href="../tool-discovery/">Tool Discovery</a> - CLI toolbox registry</li>
 <li><a href="../symlinks/">Symlinks</a> - Dotfiles deployment</li>
+<li><a href="../../workflows/note-taking/">Note Taking</a> - zk workflow guide</li>
 </ul>
 
 

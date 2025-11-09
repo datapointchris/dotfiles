@@ -374,7 +374,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -651,8 +651,6 @@
       
         
       
-        
-      
     
     
     
@@ -713,29 +711,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1111,6 +1086,8 @@
       
         
       
+        
+      
     
     
     
@@ -1156,12 +1133,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -1880,8 +1880,8 @@
 <p>This page provides a quick reference for the workflow tools available in your dotfiles system. These tools help with daily development work and happen to live in the dotfiles repository for convenience.</p>
 <div class="admonition note">
 <p class="admonition-title">Workflow Tools vs Dotfiles Management</p>
-<p>This reference covers <strong>workflow tools</strong> (sess, tools, theme-sync, nb, menu) for daily development work.</p>
-<p>For <strong>dotfiles management</strong> (configuration deployment), see <a href="../development/symlinks.md">Symlinks Management</a> and use <code>task symlinks:*</code> commands.</p>
+<p>This reference covers <strong>workflow tools</strong> (sess, toolbox, theme-sync, notes, menu) for daily development work.</p>
+<p>For <strong>dotfiles management</strong> (configuration deployment), see <a href="../symlinks/">Symlinks Management</a> and use <code>task symlinks:*</code> commands.</p>
 </div>
 <h2 id="core-workflow-tools">Core Workflow Tools<a class="headerlink" href="#core-workflow-tools" title="Permanent link">&para;</a></h2>
 <h3 id="sess-session-management">sess - Session Management<a class="headerlink" href="#sess-session-management" title="Permanent link">&para;</a></h3>
@@ -1898,31 +1898,31 @@
 </span></code></pre></div>
 <p><strong>Configuration:</strong></p>
 <ul>
-<li>Sessions defined in: <code>~/.config/menu/sessions/sessions-macos.yml</code></li>
+<li>Sessions defined in: <code>~/.config/sess/sessions-macos.yml</code></li>
 <li>Tmuxinator projects: <code>~/.config/tmuxinator/</code></li>
 <li>Built with Go for type safety and testing</li>
 </ul>
 <hr />
-<h3 id="tools-tool-discovery">tools - Tool Discovery<a class="headerlink" href="#tools-tool-discovery" title="Permanent link">&para;</a></h3>
+<h3 id="toolbox-tool-discovery">toolbox - Tool Discovery<a class="headerlink" href="#toolbox-tool-discovery" title="Permanent link">&para;</a></h3>
 <p>CLI for exploring 30+ curated development tools.</p>
 <p><strong>Quick Commands:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>tools<span class="w"> </span>list<span class="w">           </span><span class="c1"># List all tools with descriptions</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>tools<span class="w"> </span>show<span class="w"> </span>&lt;name&gt;<span class="w">    </span><span class="c1"># Show detailed info for a tool</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>tools<span class="w"> </span>search<span class="w"> </span>&lt;query&gt;<span class="w"> </span><span class="c1"># Search tools by name or description</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>tools<span class="w"> </span>random<span class="w">         </span><span class="c1"># Discover a random tool</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>tools<span class="w"> </span>installed<span class="w">      </span><span class="c1"># Show only installed tools</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>toolbox<span class="w"> </span>list<span class="w">           </span><span class="c1"># List all tools with descriptions</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>toolbox<span class="w"> </span>show<span class="w"> </span>&lt;name&gt;<span class="w">    </span><span class="c1"># Show detailed info for a tool</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>toolbox<span class="w"> </span>search<span class="w"> </span>&lt;query&gt;<span class="w"> </span><span class="c1"># Search tools by name or description</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>toolbox<span class="w"> </span>random<span class="w">         </span><span class="c1"># Discover a random tool</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>toolbox<span class="w"> </span>installed<span class="w">      </span><span class="c1"># Show only installed tools</span>
 </span></code></pre></div>
 <p><strong>Integration:</strong></p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Interactive tool exploration with fzf</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>tools<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--preview<span class="o">=</span><span class="s1">&#39;tools show {1}&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--preview<span class="o">=</span><span class="s1">&#39;toolbox show {1}&#39;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--preview-window<span class="o">=</span>right:60%:wrap<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--header<span class="o">=</span><span class="s1">&#39;Tools - Press Enter to see details&#39;</span>
 </span></code></pre></div>
 <p><strong>Configuration:</strong></p>
 <ul>
-<li>Registry: <code>docs/tools/registry.yml</code></li>
-<li>Bash script: <code>common/.local/bin/tools</code></li>
+<li>Registry: <code>platforms/common/.config/toolbox/registry.yml</code></li>
+<li>Bash script: <code>apps/common/toolbox</code></li>
 </ul>
 <hr />
 <h3 id="theme-sync-theme-management">theme-sync - Theme Management<a class="headerlink" href="#theme-sync-theme-management" title="Permanent link">&para;</a></h3>
@@ -1956,48 +1956,49 @@
 <li>Shell prompt</li>
 </ul>
 <hr />
-<h3 id="nb-note-taking">nb - Note Taking<a class="headerlink" href="#nb-note-taking" title="Permanent link">&para;</a></h3>
-<p>Git-backed note taking and knowledge management.</p>
+<h3 id="notes-note-taking">notes - Note Taking<a class="headerlink" href="#notes-note-taking" title="Permanent link">&para;</a></h3>
+<p>Plain text note-taking with zk, wiki-links, and LSP support.</p>
 <p><strong>Quick Commands:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>nb<span class="w">                      </span><span class="c1"># Interactive menu</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>nb<span class="w"> </span>add<span class="w">                  </span><span class="c1"># Create new note</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>nb<span class="w"> </span>learning:add<span class="w"> </span><span class="s2">&quot;Topic&quot;</span><span class="w"> </span><span class="c1"># Add to specific notebook</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>nb<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;keyword&quot;</span><span class="w">     </span><span class="c1"># Search current notebook</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>nb<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;text&quot;</span><span class="w"> </span>--all<span class="w">  </span><span class="c1"># Search all notebooks</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>nb<span class="w"> </span>list<span class="w">                 </span><span class="c1"># List notes in current notebook</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>nb<span class="w"> </span>show<span class="w"> </span>&lt;id&gt;<span class="w">            </span><span class="c1"># Show note content</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>nb<span class="w"> </span>edit<span class="w"> </span>&lt;id&gt;<span class="w">            </span><span class="c1"># Edit a note</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>nb<span class="w"> </span>browse<span class="w"> </span>--gui<span class="w">         </span><span class="c1"># Visual interface</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>notes<span class="w">                   </span><span class="c1"># Interactive menu (auto-discovers sections)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>notes<span class="w"> </span>journal<span class="w">           </span><span class="c1"># Create journal entry</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>notes<span class="w"> </span>devnotes<span class="w">          </span><span class="c1"># Create dev note</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>notes<span class="w"> </span>learning<span class="w">          </span><span class="c1"># Create learning note</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># Direct zk access</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Daily standup&quot;</span><span class="w">     </span><span class="c1"># Create journal entry</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;Bug fix notes&quot;</span><span class="w">     </span><span class="c1"># Create dev note</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>zk<span class="w"> </span>learn<span class="w"> </span><span class="s2">&quot;Database indexing&quot;</span><span class="w">   </span><span class="c1"># Create learning note</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;API&quot;</span><span class="w">          </span><span class="c1"># Search notes</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive<span class="w">          </span><span class="c1"># Browse and edit</span>
 </span></code></pre></div>
-<p><strong>Notebooks:</strong></p>
+<p><strong>Notebook Structure:</strong></p>
+<p>Single notebook at <code>~/notes/</code> with auto-discovered sections:</p>
 <ul>
-<li><code>learning</code> - Semester-based learning (public repo)</li>
-<li><code>notes</code> - General notes (private repo)</li>
-<li><code>ideas</code> - Quick capture (private repo)</li>
+<li><code>journal/</code> - Daily entries (iCloud only)</li>
+<li><code>devnotes/</code> - Work notes (git tracked)</li>
+<li><code>learning/</code> - Study notes (git tracked)</li>
+<li><code>ideas/</code> - Quick capture (iCloud only)</li>
+<li><code>projects/</code> - Project planning (iCloud only)</li>
+<li><code>dreams/</code> - Dream journal (iCloud only)</li>
 </ul>
-<p><strong>Cross-Notebook Links:</strong></p>
-<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="gh"># In learning notebook:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>[[notes:work/database-design]]
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="gh"># In notes notebook:</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>[[learning:2024-fall/computer-science/algorithms]]
+<p><strong>Wiki-Links:</strong></p>
+<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="gh"># In any note:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>See [[jwt-tokens]] for token handling.
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Related: [[api-security]], [[session-management]]
 </span></code></pre></div>
-<p><strong>Git Sync:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>nb<span class="w"> </span>learning:sync<span class="w">        </span><span class="c1"># Sync learning notebook</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>nb<span class="w"> </span>notes:sync<span class="w">           </span><span class="c1"># Sync notes notebook</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>nb<span class="w"> </span>ideas:sync<span class="w">           </span><span class="c1"># Sync ideas notebook</span>
-</span></code></pre></div>
+<p><strong>Git Tracking:</strong></p>
+<p>Only <code>devnotes/</code> and <code>learning/</code> are git-tracked. Personal sections stay iCloud-only.</p>
 <p>See <a href="../../workflows/note-taking/">Note Taking Workflows</a> for detailed guide.</p>
 <hr />
 <h3 id="menu-workflow-tools-launcher">menu - Workflow Tools Launcher<a class="headerlink" href="#menu-workflow-tools-launcher" title="Permanent link">&para;</a></h3>
 <p>Simple gum-based launcher showing available workflow tools.</p>
 <p><strong>Quick Commands:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>menu<span class="w">              </span><span class="c1"># Show help and quick reference</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>menu<span class="w"> </span>launch<span class="w">       </span><span class="c1"># Interactive launcher with gum</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>menu<span class="w">              </span><span class="c1"># Show help and quick reference</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>menu<span class="w"> </span>launch<span class="w">       </span><span class="c1"># Interactive launcher with gum</span>
 </span></code></pre></div>
 <p><strong>What It Shows:</strong></p>
 <ul>
-<li>Available workflow tools (sess, tools, theme-sync, nb)</li>
+<li>Available workflow tools (sess, toolbox, theme-sync, notes)</li>
 <li>Quick workflow examples</li>
 <li>Dotfiles management commands</li>
 <li>Documentation locations</li>
@@ -2008,112 +2009,114 @@ Can be called from tmux popup or Alfred/Raycast for quick access.</p>
 <h2 id="dotfiles-management">Dotfiles Management<a class="headerlink" href="#dotfiles-management" title="Permanent link">&para;</a></h2>
 <p><strong>Important:</strong> These are separate from workflow tools above.</p>
 <p><strong>Symlink Deployment:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>task<span class="w"> </span>symlinks:link<span class="w">   </span><span class="c1"># Deploy dotfiles to home directory</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>task<span class="w"> </span>symlinks:check<span class="w">  </span><span class="c1"># Verify symlinks are correct</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>task<span class="w"> </span>symlinks:show<span class="w">   </span><span class="c1"># Show symlink mappings</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>task<span class="w"> </span>symlinks:link<span class="w">   </span><span class="c1"># Deploy dotfiles to home directory</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>task<span class="w"> </span>symlinks:check<span class="w">  </span><span class="c1"># Verify symlinks are correct</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>task<span class="w"> </span>symlinks:show<span class="w">   </span><span class="c1"># Show symlink mappings</span>
 </span></code></pre></div>
 <p><strong>Package Installation:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>task<span class="w"> </span>install:macos<span class="w">   </span><span class="c1"># Install macOS packages</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>task<span class="w"> </span>install:wsl<span class="w">     </span><span class="c1"># Install WSL packages</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>task<span class="w"> </span>install:common<span class="w">  </span><span class="c1"># Install common packages</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>task<span class="w"> </span>install:macos<span class="w">   </span><span class="c1"># Install macOS packages</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>task<span class="w"> </span>install:wsl<span class="w">     </span><span class="c1"># Install WSL packages</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>task<span class="w"> </span>install:common<span class="w">  </span><span class="c1"># Install common packages</span>
 </span></code></pre></div>
 <p><strong>Documentation:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>task<span class="w"> </span>docs:serve<span class="w">      </span><span class="c1"># Start MkDocs server (http://localhost:8000)</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>task<span class="w"> </span>docs:build<span class="w">      </span><span class="c1"># Build static docs</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>task<span class="w"> </span>docs:serve<span class="w">      </span><span class="c1"># Start MkDocs server (http://localhost:8000)</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>task<span class="w"> </span>docs:build<span class="w">      </span><span class="c1"># Build static docs</span>
 </span></code></pre></div>
 <p><strong>See All Tasks:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>task<span class="w"> </span>--list-all<span class="w">      </span><span class="c1"># Show all available tasks</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>task<span class="w"> </span>--list-all<span class="w">      </span><span class="c1"># Show all available tasks</span>
 </span></code></pre></div>
 <hr />
 <h2 id="composition-patterns">Composition Patterns<a class="headerlink" href="#composition-patterns" title="Permanent link">&para;</a></h2>
 <p>These tools follow the Unix philosophy: do one thing well, output clean data, compose with others.</p>
 <h3 id="pattern-1-interactive-selection">Pattern 1: Interactive Selection<a class="headerlink" href="#pattern-1-interactive-selection" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Tools with fzf preview</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>tools<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;tools show {1}&#39;</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Themes with fzf</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Sessions with fzf</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sess
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
-</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="c1"># Notes with fzf</span>
-</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>nb<span class="w"> </span>list<span class="w"> </span>--all<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;nb show {1}&#39;</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Tools with fzf preview</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;toolbox show {1}&#39;</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Themes with fzf</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Sessions with fzf</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sess
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Notes with fzf</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>zk<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;bat {-1}&#39;</span>
 </span></code></pre></div>
 <h3 id="pattern-2-filtering-and-processing">Pattern 2: Filtering and Processing<a class="headerlink" href="#pattern-2-filtering-and-processing" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Find tools by category</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>tools<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;\[cli-utility\]&#39;</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Get session names only</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="c1"># Search notes and count results</span>
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>nb<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;algorithm&quot;</span><span class="w"> </span>--all<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Find tools by category</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;\[cli-utility\]&#39;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Get session names only</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Search notes and count results</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;algorithm&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
 </span></code></pre></div>
 <h3 id="pattern-3-scripting">Pattern 3: Scripting<a class="headerlink" href="#pattern-3-scripting" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Apply theme based on time of day</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>rose-pine-dawn
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="k">else</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>rose-pine
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="k">fi</span>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="c1"># Auto-create session for current directory</span>
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>sess<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Apply theme based on time of day</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>rose-pine-dawn
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">else</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>rose-pine
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">fi</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="c1"># Auto-create session for current directory</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>sess<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="quick-workflows">Quick Workflows<a class="headerlink" href="#quick-workflows" title="Permanent link">&para;</a></h2>
 <h3 id="morning-setup">Morning Setup<a class="headerlink" href="#morning-setup" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Start tmux session</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>sess
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Check current theme</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>theme-sync<span class="w"> </span>current
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="c1"># Review learning notes</span>
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>nb<span class="w"> </span>learning:list
-</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>
-</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="c1"># Browse work notes</span>
-</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>nb<span class="w"> </span>notes:work/
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Start tmux session</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>sess
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Check current theme</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>theme-sync<span class="w"> </span>current
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1"># Review recent notes</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>zk<span class="w"> </span>list<span class="w"> </span>--sort<span class="w"> </span>modified-<span class="w"> </span>--limit<span class="w"> </span><span class="m">10</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="c1"># Browse learning notes</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>zk<span class="w"> </span>list<span class="w"> </span>--group<span class="w"> </span>learning
 </span></code></pre></div>
 <h3 id="theme-exploration">Theme Exploration<a class="headerlink" href="#theme-exploration" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Browse themes interactively</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--header<span class="o">=</span><span class="s2">&quot;Select theme&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Try random theme</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>theme-sync<span class="w"> </span>random
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Browse themes interactively</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--header<span class="o">=</span><span class="s2">&quot;Select theme&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Try random theme</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>theme-sync<span class="w"> </span>random
 </span></code></pre></div>
 <h3 id="tool-discovery">Tool Discovery<a class="headerlink" href="#tool-discovery" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Explore tools interactively</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>tools<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;tools show {1}&#39;</span><span class="w"> </span>--preview-window<span class="o">=</span>right:60%:wrap
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Find CLI utilities</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>tools<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cli-utility
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="c1"># Learn about a specific tool</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>tools<span class="w"> </span>show<span class="w"> </span>bat
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Explore tools interactively</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;toolbox show {1}&#39;</span><span class="w"> </span>--preview-window<span class="o">=</span>right:60%:wrap
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Find CLI utilities</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cli-utility
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># Learn about a specific tool</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>toolbox<span class="w"> </span>show<span class="w"> </span>bat
 </span></code></pre></div>
 <h3 id="note-taking">Note Taking<a class="headerlink" href="#note-taking" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Quick note capture</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>nb<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;Quick thought&quot;</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Add to specific notebook</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>nb<span class="w"> </span>learning:2024-fall/computer-science/add<span class="w"> </span><span class="s2">&quot;Algorithm notes&quot;</span>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Search across all notebooks</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>nb<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;database&quot;</span><span class="w"> </span>--all
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
-</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="c1"># Visual browsing</span>
-</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>nb<span class="w"> </span>browse<span class="w"> </span>--gui
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Quick note capture</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>notes
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Create specific note types</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Daily reflections&quot;</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;API refactoring&quot;</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>zk<span class="w"> </span>learn<span class="w"> </span><span class="s2">&quot;Docker networking&quot;</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="c1"># Search notes</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;database&quot;</span>
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="c1"># Interactive browsing</span>
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive
 </span></code></pre></div>
 <hr />
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>MkDocs Site:</strong> <code>http://localhost:8000</code> (run <code>task docs:serve</code>)</li>
 <li><strong>CLAUDE.md:</strong> Development context and guidelines (<code>~/dotfiles/CLAUDE.md</code>)</li>
-<li><strong>Tool Registries:</strong> Tool definitions and metadata (<code>docs/tools/registry.yml</code>)</li>
-<li><strong>Planning Docs:</strong> System design and implementation plans (<code>planning/</code>)</li>
+<li><strong>Toolbox Registry:</strong> Tool definitions and metadata (<code>platforms/common/.config/toolbox/registry.yml</code>)</li>
+<li><strong>Planning Docs:</strong> System design and implementation plans (<code>.planning/</code>)</li>
 </ul>
 <hr />
 <h2 id="philosophy">Philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
@@ -2128,9 +2131,9 @@ Can be called from tmux popup or Alfred/Raycast for quick access.</p>
 <p>No shell aliases by default. Commands are easy to remember and type:</p>
 <ul>
 <li><code>sess</code> - Session management</li>
-<li><code>tools</code> - Tool discovery</li>
+<li><code>toolbox</code> - Tool discovery</li>
 <li><code>theme-sync</code> - Theme management</li>
-<li><code>nb</code> - Note taking</li>
+<li><code>notes</code> / <code>zk</code> - Note taking</li>
 <li><code>menu</code> - Quick reference</li>
 </ul>
 <p>Compose with <code>fzf</code>, <code>gum</code>, <code>awk</code>, <code>grep</code> as needed for interactive selection or filtering.</p>

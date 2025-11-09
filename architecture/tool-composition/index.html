@@ -374,7 +374,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -651,8 +651,6 @@
       
         
       
-        
-      
     
     
     
@@ -713,29 +711,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1111,6 +1086,8 @@
       
         
       
+        
+      
     
     
     
@@ -1156,12 +1133,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -1877,343 +1877,315 @@
 
 
 <h1 id="tool-composition-architecture">Tool Composition Architecture<a class="headerlink" href="#tool-composition-architecture" title="Permanent link">&para;</a></h1>
-<p>This document explains how the workflow tools in this dotfiles system are designed to work together, following the Unix philosophy of small, focused, composable tools.</p>
+<p>How the workflow tools in this dotfiles system work together, following the Unix philosophy.</p>
 <h2 id="core-philosophy">Core Philosophy<a class="headerlink" href="#core-philosophy" title="Permanent link">&para;</a></h2>
-<p>The workflow tools follow these architectural principles:</p>
-<h3 id="1-separation-of-data-and-presentation">1. Separation of Data and Presentation<a class="headerlink" href="#1-separation-of-data-and-presentation" title="Permanent link">&para;</a></h3>
-<p>Tools are <strong>data providers</strong>, not UI frameworks. They output clean, parseable data that can be composed with external UI tools.</p>
-<p><strong>Pattern: Data Provider + External UI</strong></p>
-<p><code>text
-Tool outputs data → External UI (fzf/gum) → Tool processes selection</code>text</p>
-<p><strong>Example:</strong></p>
-<p>```bash</p>
-<h1 id="sess-provides-session-data">sess provides session data<a class="headerlink" href="#sess-provides-session-data" title="Permanent link">&para;</a></h1>
-<p>sess list | fzf | xargs sess</p>
-<h1 id="tools-provides-tool-information">tools provides tool information<a class="headerlink" href="#tools-provides-tool-information" title="Permanent link">&para;</a></h1>
-<p>tools list | fzf --preview='tools show {1}'</p>
-<h1 id="theme-sync-provides-theme-names">theme-sync provides theme names<a class="headerlink" href="#theme-sync-provides-theme-names" title="Permanent link">&para;</a></h1>
-<p>theme-sync favorites | fzf | xargs theme-sync apply
-```text</p>
-<p>This pattern is inspired by <a href="https://github.com/joshmedeski/sesh">sesh</a> - the integration happens at the shell level, not within the tool itself.</p>
-<h3 id="2-single-responsibility">2. Single Responsibility<a class="headerlink" href="#2-single-responsibility" title="Permanent link">&para;</a></h3>
-<p>Each tool has one clear purpose:</p>
-<ul>
-<li><strong>sess</strong> - Tmux session management (create, list, switch)</li>
-<li><strong>tools</strong> - Tool discovery and documentation</li>
-<li><strong>theme-sync</strong> - Base16 theme synchronization</li>
-<li><strong>nb</strong> - Note taking and knowledge management</li>
-<li><strong>menu</strong> - Quick reference and launcher (documentation in executable form)</li>
-</ul>
-<p>No tool tries to do everything. No "mega-tool" that handles sessions AND themes AND notes.</p>
-<h3 id="3-clean-output">3. Clean Output<a class="headerlink" href="#3-clean-output" title="Permanent link">&para;</a></h3>
-<p>Tools output clean, machine-readable data by default, with optional formatting.</p>
-<p><strong>Good output (parseable):</strong></p>
-<p><code>bash
-$ sess list
-● dotfiles (4 windows)
-● ichrisbirch (1 window)
-○ learning (2 windows)</code>text</p>
-<p><strong>Good output (structured):</strong></p>
-<p><code>bash
-$ tools list
-bat                       [file-viewer] Syntax-highlighting cat replacement
-eza                       [file-lister] Modern ls replacement with git integration
-fd                        [file-finder] Fast, user-friendly alternative to find</code>text</p>
-<p><strong>Good output (plain text):</strong></p>
-<p><code>bash
-$ theme-sync favorites
-rose-pine
-rose-pine-moon
-gruvbox-dark-hard
-kanagawa</code>text</p>
-<h3 id="4-composability-over-integration">4. Composability Over Integration<a class="headerlink" href="#4-composability-over-integration" title="Permanent link">&para;</a></h3>
-<p>Instead of building fzf/gum INTO each tool, we make tools that OUTPUT FOR them.</p>
-<p><strong>Anti-pattern (integration):</strong></p>
-<p>```bash</p>
-<h1 id="tool-has-built-in-fzf-mode">Tool has built-in fzf mode<a class="headerlink" href="#tool-has-built-in-fzf-mode" title="Permanent link">&para;</a></h1>
-<p>sess --fzf          # Bad: now sess depends on fzf
-```text</p>
-<p><strong>Better (composition):</strong></p>
-<p>```bash</p>
-<h1 id="tool-outputs-clean-data-shell-composes-with-fzf">Tool outputs clean data, shell composes with fzf<a class="headerlink" href="#tool-outputs-clean-data-shell-composes-with-fzf" title="Permanent link">&para;</a></h1>
-<p>sess list | fzf     # Good: sess doesn't know about fzf
-```text</p>
-<p><strong>Benefits:</strong></p>
-<ul>
-<li>Tools stay lightweight</li>
-<li>Users can choose their UI (fzf, gum, rofi, dmenu, etc.)</li>
-<li>Easier to test (pure functions, predictable output)</li>
+<p><strong>Small, focused, composable tools.</strong></p>
+<p>Each tool:</p>
+<ol>
+<li>Does one thing well</li>
+<li>Outputs clean, parseable data</li>
+<li>Composes with external UI tools (fzf, gum)</li>
 <li>Works in scripts and interactive use</li>
+</ol>
+<p><strong>Separation of data and presentation</strong>: Tools are data providers, not UI frameworks.</p>
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Tool outputs data → External UI (fzf/gum) → Tool processes selection
+</span></code></pre></div>
+<p>Inspired by <a href="https://github.com/joshmedeski/sesh">sesh</a> - integration happens at the shell level, not within the tool.</p>
+<h2 id="the-tools">The Tools<a class="headerlink" href="#the-tools" title="Permanent link">&para;</a></h2>
+<p><strong>sess</strong> (<code>apps/sess/</code>) - Go application</p>
+<ul>
+<li>Tmux session management</li>
+<li>Aggregates: tmux sessions, tmuxinator projects, default configs</li>
+<li>Commands: <code>sess</code>, <code>sess list</code>, <code>sess &lt;name&gt;</code>, <code>sess last</code></li>
 </ul>
-<h2 id="how-tools-work-together">How Tools Work Together<a class="headerlink" href="#how-tools-work-together" title="Permanent link">&para;</a></h2>
-<h3 id="layer-1-data-sources">Layer 1: Data Sources<a class="headerlink" href="#layer-1-data-sources" title="Permanent link">&para;</a></h3>
-<p>Each tool manages its own data source:</p>
-<p><code>text
-sess        → tmux sessions + tmuxinator projects + config file
-tools       → YAML registry (docs/tools/registry.yml)
-theme-sync  → tinty + Base16 themes
-nb          → Git-backed markdown notebooks</code>text</p>
-<h3 id="layer-2-core-logic">Layer 2: Core Logic<a class="headerlink" href="#layer-2-core-logic" title="Permanent link">&para;</a></h3>
-<p>Each tool provides commands for its domain:</p>
-<p>```text
-sess list           → Get all available sessions
-sess <name>         → Create or switch to session</p>
-<p>tools list          → Get all tools from registry
-tools show <name>   → Get detailed tool info</p>
-<p>theme-sync current  → Get active theme
-theme-sync apply    → Set theme across applications</p>
-<p>nb add              → Create note
-nb search           → Find notes
-```text</p>
-<h3 id="layer-3-output-formats">Layer 3: Output Formats<a class="headerlink" href="#layer-3-output-formats" title="Permanent link">&para;</a></h3>
-<p>Tools output in formats suitable for composition:</p>
-<p><code>text
-Plain Text    → For piping to fzf, grep, awk
-Structured    → For parsing (consistent format)
-Rich          → For direct viewing (icons, colors)</code>text</p>
-<h3 id="layer-4-external-composition">Layer 4: External Composition<a class="headerlink" href="#layer-4-external-composition" title="Permanent link">&para;</a></h3>
-<p>Users compose at the shell level:</p>
-<p>```bash</p>
-<h1 id="filtering">Filtering<a class="headerlink" href="#filtering" title="Permanent link">&para;</a></h1>
-<p>tools list | grep cli-utility</p>
-<h1 id="interactive-selection">Interactive selection<a class="headerlink" href="#interactive-selection" title="Permanent link">&para;</a></h1>
-<p>sess list | fzf</p>
-<h1 id="transformation">Transformation<a class="headerlink" href="#transformation" title="Permanent link">&para;</a></h1>
-<p>theme-sync favorites | shuf | head -1</p>
-<h1 id="chaining">Chaining<a class="headerlink" href="#chaining" title="Permanent link">&para;</a></h1>
-<p>tools show $(tools list | fzf | awk '{print $1}')
-```text</p>
+<p><strong>toolbox</strong> (<code>apps/common/toolbox</code>) - Bash script</p>
+<ul>
+<li>CLI tool discovery and documentation</li>
+<li>Registry: <code>platforms/common/.config/toolbox/registry.yml</code></li>
+<li>Commands: <code>list</code>, <code>show</code>, <code>search</code>, <code>random</code>, <code>installed</code></li>
+</ul>
+<p><strong>theme-sync</strong> (<code>apps/common/theme-sync</code>) - Bash script</p>
+<ul>
+<li>Base16 theme synchronization across tmux/bat/fzf/shell</li>
+<li>Wraps tinty with favorites management</li>
+<li>Commands: <code>current</code>, <code>apply</code>, <code>favorites</code>, <code>random</code>, <code>list</code></li>
+</ul>
+<p><strong>notes</strong> (<code>apps/common/notes</code>) - Bash wrapper</p>
+<ul>
+<li>Auto-discovers zk notebook sections</li>
+<li>Interactive gum menu for quick access</li>
+<li>Direct zk commands: <code>zk journal</code>, <code>zk devnote</code>, <code>zk learn</code></li>
+</ul>
+<p><strong>menu</strong> (<code>apps/common/menu</code>) - Bash launcher</p>
+<ul>
+<li>Shows available tools and workflows</li>
+<li>Interactive gum menu with <code>menu launch</code></li>
+<li>Documentation in executable form</li>
+</ul>
 <h2 id="composition-patterns">Composition Patterns<a class="headerlink" href="#composition-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="pattern-1-filter-select-execute">Pattern 1: Filter → Select → Execute<a class="headerlink" href="#pattern-1-filter-select-execute" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="list-all-items-filter-interactively-execute-action">List all items → Filter interactively → Execute action<a class="headerlink" href="#list-all-items-filter-interactively-execute-action" title="Permanent link">&para;</a></h1>
-<p>tools list | fzf --preview='tools show {1}'
-sess list | fzf | xargs sess
-theme-sync favorites | fzf | xargs theme-sync apply
-```text</p>
-<h3 id="pattern-2-search-process-output">Pattern 2: Search → Process → Output<a class="headerlink" href="#pattern-2-search-process-output" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="search-across-data-process-results-format-output">Search across data → Process results → Format output<a class="headerlink" href="#search-across-data-process-results-format-output" title="Permanent link">&para;</a></h1>
-<p>nb search "algorithm" --all | grep -i "binary" | wc -l
-tools list | grep file-viewer | awk '{print $1}'
-```text</p>
-<h3 id="pattern-3-generate-transform-apply">Pattern 3: Generate → Transform → Apply<a class="headerlink" href="#pattern-3-generate-transform-apply" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="generate-data-transform-apply-changes">Generate data → Transform → Apply changes<a class="headerlink" href="#generate-data-transform-apply-changes" title="Permanent link">&para;</a></h1>
-<p>theme-sync favorites | shuf | head -1 | xargs theme-sync apply
-sess list | awk '{print $2}' | xargs -I {} tmux kill-session -t {}
-```text</p>
-<h3 id="pattern-4-conditional-logic">Pattern 4: Conditional Logic<a class="headerlink" href="#pattern-4-conditional-logic" title="Permanent link">&para;</a></h3>
-<p>```bash</p>
-<h1 id="check-state-decide-execute">Check state → Decide → Execute<a class="headerlink" href="#check-state-decide-execute" title="Permanent link">&para;</a></h1>
-<p>if sess list | grep -q "dotfiles"; then
-  sess dotfiles
-else
-  sess dotfiles
-fi</p>
-<h1 id="time-based-theme-switching">Time-based theme switching<a class="headerlink" href="#time-based-theme-switching" title="Permanent link">&para;</a></h1>
-<p>hour=$(date +%H)
-if [ $hour -ge 6 ] &amp;&amp; [ $hour -lt 18 ]; then
-  theme-sync apply rose-pine-dawn
-else
-  theme-sync apply rose-pine
-fi
-```text</p>
-<h2 id="integration-points">Integration Points<a class="headerlink" href="#integration-points" title="Permanent link">&para;</a></h2>
-<h3 id="tmux-integration">Tmux Integration<a class="headerlink" href="#tmux-integration" title="Permanent link">&para;</a></h3>
-<p>Tools integrate with tmux through bindings and popups:</p>
-<p>```bash</p>
-<h1 id="tmuxconf-example">tmux.conf example<a class="headerlink" href="#tmuxconf-example" title="Permanent link">&para;</a></h1>
-<p>bind-key "s" run-shell "tmux popup -E 'sess'"
-bind-key "t" run-shell "tmux popup -E 'tools list | fzf'"
-```text</p>
-<h3 id="shell-integration">Shell Integration<a class="headerlink" href="#shell-integration" title="Permanent link">&para;</a></h3>
-<p>Tools are available in the shell PATH:</p>
-<p>```bash</p>
-<h1 id="zshrc-no-aliases-needed-commands-are-memorable">.zshrc - no aliases needed, commands are memorable<a class="headerlink" href="#zshrc-no-aliases-needed-commands-are-memorable" title="Permanent link">&para;</a></h1>
-<h1 id="tools-are-in-localbin-symlinked-from-dotfiles">Tools are in ~/.local/bin/ (symlinked from dotfiles)<a class="headerlink" href="#tools-are-in-localbin-symlinked-from-dotfiles" title="Permanent link">&para;</a></h1>
-<h1 id="optional-compositions-for-frequent-workflows">Optional compositions for frequent workflows<a class="headerlink" href="#optional-compositions-for-frequent-workflows" title="Permanent link">&para;</a></h1>
-<p>alias theme-pick='theme-sync favorites | fzf | xargs theme-sync apply'
-alias tool-find='tools list | fzf --preview="tools show {1}"'
-```text</p>
-<h3 id="alfredraycast-integration">Alfred/Raycast Integration<a class="headerlink" href="#alfredraycast-integration" title="Permanent link">&para;</a></h3>
-<p>Tools can be called from launcher applications:</p>
-<p>```bash</p>
-<h1 id="alfred-script-filter">Alfred Script Filter<a class="headerlink" href="#alfred-script-filter" title="Permanent link">&para;</a></h1>
-<p>/usr/local/bin/sess list</p>
-<h1 id="alfred-run-script">Alfred Run Script<a class="headerlink" href="#alfred-run-script" title="Permanent link">&para;</a></h1>
-<p>/usr/local/bin/menu launch
-```text</p>
-<h2 id="data-flow-example">Data Flow Example<a class="headerlink" href="#data-flow-example" title="Permanent link">&para;</a></h2>
-<p>Let's trace a complete workflow: "Switch to a tmux session"</p>
-<p><strong>Step 1: User initiates</strong></p>
-<p><code>bash
-sess</code>text</p>
-<p><strong>Step 2: sess gathers data</strong></p>
-<ul>
-<li>Check running tmux sessions (<code>tmux list-sessions</code>)</li>
-<li>Check tmuxinator projects (<code>~/.config/tmuxinator/</code>)</li>
-<li>Check default sessions config (<code>~/.config/menu/sessions/sessions-macos.yml</code>)</li>
-</ul>
-<p><strong>Step 3: sess formats output</strong></p>
-<p><code>text
-● dotfiles (4 windows)     # Active session
-○ ichrisbirch (1 window)   # Inactive session
-→ learning                 # Tmuxinator project
-+ work                     # Default session (not running)
-+ Create New Session</code>text</p>
-<p><strong>Step 4: sess calls gum</strong></p>
-<p><code>bash
-gum choose --header="Tmux Sessions" &lt;options&gt;</code>text</p>
-<p><strong>Step 5: User selects</strong>
-User chooses "learning"</p>
-<p><strong>Step 6: sess processes selection</strong></p>
-<ul>
-<li>If tmuxinator project: <code>tmuxinator start learning</code></li>
-<li>If running session: <code>tmux switch-client -t learning</code></li>
-<li>If default session: Create session based on config</li>
-</ul>
-<p><strong>Step 7: Session switched</strong>
-User is now in the "learning" tmux session.</p>
-<h2 id="alternative-composition">Alternative Composition<a class="headerlink" href="#alternative-composition" title="Permanent link">&para;</a></h2>
-<p>The same workflow can be composed differently:</p>
-<p>```bash</p>
-<h1 id="manual-composition-with-fzf-instead-of-gum">Manual composition with fzf instead of gum<a class="headerlink" href="#manual-composition-with-fzf-instead-of-gum" title="Permanent link">&para;</a></h1>
-<p>sess list | fzf | xargs sess</p>
-<h1 id="scripted-composition">Scripted composition<a class="headerlink" href="#scripted-composition" title="Permanent link">&para;</a></h1>
-<p>SESSION=$(sess list | awk '{print $2}' | sort | head -1)
-sess "$SESSION"</p>
-<h1 id="filtered-composition">Filtered composition<a class="headerlink" href="#filtered-composition" title="Permanent link">&para;</a></h1>
-<p>sess list | grep -v dotfiles | fzf | xargs sess
-```text</p>
-<p>The tool doesn't care HOW you use it - it just provides clean data and accepts clean input.</p>
+<h3 id="pattern-1-interactive-selection-with-fzf">Pattern 1: Interactive Selection with fzf<a class="headerlink" href="#pattern-1-interactive-selection-with-fzf" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Tools discovery</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;toolbox show {1}&#39;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Theme picker</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Session switcher</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sess
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Note browser</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>zk<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;bat {-1}&#39;</span>
+</span></code></pre></div>
+<p><strong>Why this works</strong>: Tools output clean data, fzf provides UI, xargs chains to action.</p>
+<h3 id="pattern-2-filtering-and-processing">Pattern 2: Filtering and Processing<a class="headerlink" href="#pattern-2-filtering-and-processing" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Find specific tools</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cli-utility
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Get session names only</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Count matching notes</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;algorithm&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Check which tools are installed</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>toolbox<span class="w"> </span>installed<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span></code></pre></div>
+<p><strong>Why this works</strong>: Structured output + standard Unix tools = powerful queries.</p>
+<h3 id="pattern-3-scripting-and-automation">Pattern 3: Scripting and Automation<a class="headerlink" href="#pattern-3-scripting-and-automation" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Auto-create session for current directory</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sess<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Time-based theme switching</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>rose-pine-dawn
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">else</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>rose-pine
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="k">fi</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Create daily journal automatically</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>date<span class="w"> </span><span class="s1">&#39;+%Y-%m-%d&#39;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span></code></pre></div>
+<p><strong>Why this works</strong>: Tools are scriptable, return predictable exit codes, output is parseable.</p>
+<h3 id="pattern-4-interactive-with-gum">Pattern 4: Interactive with gum<a class="headerlink" href="#pattern-4-interactive-with-gum" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Choose tool to explore</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">TOOL</span><span class="o">=</span><span class="k">$(</span>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>gum<span class="w"> </span>choose<span class="k">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>toolbox<span class="w"> </span>show<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOOL</span><span class="s2">&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Multi-step workflow</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>gum<span class="w"> </span>choose<span class="w"> </span>--height<span class="o">=</span><span class="m">10</span><span class="k">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>sess<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SESSION</span><span class="s2">&quot;</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1"># Input for note creation</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="nv">TITLE</span><span class="o">=</span><span class="k">$(</span>gum<span class="w"> </span>input<span class="w"> </span>--placeholder<span class="w"> </span><span class="s2">&quot;Note title&quot;</span><span class="k">)</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TITLE</span><span class="s2">&quot;</span>
+</span></code></pre></div>
+<p><strong>Why this works</strong>: gum provides beautiful TUI, tools remain simple.</p>
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
-<h3 id="why-not-build-ui-into-tools">Why Not Build UI Into Tools?<a class="headerlink" href="#why-not-build-ui-into-tools" title="Permanent link">&para;</a></h3>
-<p><strong>Considered:</strong> Adding <code>sess --fzf</code> flag for built-in fzf integration</p>
-<p><strong>Rejected because:</strong></p>
+<h3 id="why-not-build-fzfgum-into-each-tool">Why not build fzf/gum INTO each tool?<a class="headerlink" href="#why-not-build-fzfgum-into-each-tool" title="Permanent link">&para;</a></h3>
+<p><strong>Anti-pattern</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sess<span class="w"> </span>--fzf<span class="w">          </span><span class="c1"># Now sess depends on fzf</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>toolbox<span class="w"> </span>--interactive<span class="w">  </span><span class="c1"># Now toolbox needs gum</span>
+</span></code></pre></div>
+<p><strong>Better</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w">     </span><span class="c1"># sess is independent</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>gum<span class="w"> </span>choose<span class="w">  </span><span class="c1"># toolbox doesn&#39;t know about gum</span>
+</span></code></pre></div>
+<p><strong>Benefits</strong>:</p>
 <ul>
-<li>Adds dependency (what if user prefers gum? rofi? dmenu?)</li>
-<li>Increases code complexity</li>
-<li>Harder to test</li>
-<li>Less composable</li>
-<li>Goes against Unix philosophy</li>
+<li>Tools stay lightweight (no UI dependencies)</li>
+<li>Users choose their UI (fzf, gum, rofi, dmenu)</li>
+<li>Easier to test (pure functions, predictable output)</li>
+<li>Works in scripts without interactive flags</li>
 </ul>
-<p><strong>Chosen approach:</strong></p>
+<h3 id="why-bash-scripts-instead-of-one-go-application">Why bash scripts instead of one Go application?<a class="headerlink" href="#why-bash-scripts-instead-of-one-go-application" title="Permanent link">&para;</a></h3>
+<p><strong>Pragmatism over purity</strong>:</p>
 <ul>
-<li>Tools output clean data</li>
-<li>Shell scripts compose with preferred UI</li>
-<li>Users can swap UI tools without changing our tools</li>
+<li><strong>sess</strong> is Go because: Complex logic, concurrent operations, type safety for config parsing</li>
+<li><strong>toolbox/theme-sync/notes/menu</strong> are bash because: Simple text processing, YAML parsing with yq, shell integration</li>
 </ul>
-<h3 id="why-no-shell-aliases-by-default">Why No Shell Aliases by Default?<a class="headerlink" href="#why-no-shell-aliases-by-default" title="Permanent link">&para;</a></h3>
-<p><strong>Considered:</strong> Creating aliases like <code>s</code> for <code>sess</code>, <code>t</code> for <code>tools</code></p>
-<p><strong>Rejected because:</strong></p>
+<p><strong>Rule of thumb</strong>: If it's mostly calling other CLI tools and processing text, bash is simpler.</p>
+<h3 id="why-separate-tools-instead-of-one-workflow-command">Why separate tools instead of one "workflow" command?<a class="headerlink" href="#why-separate-tools-instead-of-one-workflow-command" title="Permanent link">&para;</a></h3>
+<p><strong>Unix philosophy over convenience</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Anti-pattern: Mega-tool</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>workflow<span class="w"> </span>sessions<span class="w">    </span><span class="c1"># subcommand</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>workflow<span class="w"> </span>tools<span class="w">      </span><span class="c1"># another subcommand</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>workflow<span class="w"> </span>themes<span class="w">     </span><span class="c1"># yet another subcommand</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Better: Focused tools</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>sess
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>toolbox
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>theme-sync
+</span></code></pre></div>
+<p><strong>Benefits</strong>:</p>
 <ul>
-<li>User preference: full names easier to remember</li>
-<li>Clarity over brevity: <code>sess</code> is already short</li>
-<li>Self-documenting: <code>tools list</code> is clearer than <code>t l</code></li>
-<li>Avoids conflicts: <code>s</code> might conflict with other tools</li>
+<li>Each tool has clear purpose and ownership</li>
+<li>Can be used independently or composed</li>
+<li>Easier to maintain (single responsibility)</li>
+<li>Natural command names (no subcommand memorization)</li>
 </ul>
-<p><strong>Chosen approach:</strong></p>
+<h2 id="data-flow-example">Data Flow Example<a class="headerlink" href="#data-flow-example" title="Permanent link">&para;</a></h2>
+<p><strong>Interactive theme selection and application</strong>:</p>
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>User runs:
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  theme-sync favorites | fzf | xargs theme-sync apply
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Flow:
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>  1. theme-sync favorites
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>     → Reads favorites from script
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>     → Outputs 12 theme names (one per line)
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>  2. | fzf
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>     → User selects one theme
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>     → Outputs selected theme name
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>  3. | xargs theme-sync apply
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>     → theme-sync receives theme name as arg
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>     → Calls: tinty apply &lt;theme&gt;
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>     → Updates: tmux colors, bat theme, fzf colors, shell prompt
+</span></code></pre></div>
+<p><strong>Session creation</strong>:</p>
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>User runs:
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  sess dotfiles
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Flow:
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  1. sess checks if &quot;dotfiles&quot; session exists
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>     → tmux has-session -t dotfiles
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>  2. If exists: switch
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>     → tmux switch-client -t dotfiles
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>  3. If not: check for default config
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>     → Reads ~/.config/sess/sessions-macos.yml
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>     → Finds dotfiles entry with directory ~/dotfiles
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>  4. Create from config
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>     → tmux new-session -s dotfiles -c ~/dotfiles
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>     → tmux switch-client -t dotfiles
+</span></code></pre></div>
+<h2 id="tool-relationships">Tool Relationships<a class="headerlink" href="#tool-relationships" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>┌──────────┐
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>│   menu   │  Simple launcher, references all tools
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>└────┬─────┘
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>     │
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>     ├─────┐
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>     │     │
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>┌────▼─┐ ┌─▼────────┐ ┌────────────┐ ┌─────────┐
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│ sess │ │ toolbox  │ │theme-sync  │ │ notes   │
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>└──────┘ └──────────┘ └────────────┘ └────┬────┘
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>   │         │              │               │
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>   │         │              │               │
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>┌──▼────┐ ┌─▼────────┐ ┌───▼──────┐ ┌─────▼───┐
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>│ tmux  │ │ registry │ │  tinty   │ │   zk    │
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>└───────┘ └──────────┘ └──────────┘ └─────────┘
+</span></code></pre></div>
+<p><strong>Independence</strong>: Each tool works standalone. menu just provides discovery.</p>
+<h2 id="integration-points">Integration Points<a class="headerlink" href="#integration-points" title="Permanent link">&para;</a></h2>
+<h3 id="shell-integration">Shell Integration<a class="headerlink" href="#shell-integration" title="Permanent link">&para;</a></h3>
+<p>Tools are in <code>~/.local/bin/</code> (symlinked from <code>apps/common/</code> and <code>apps/{platform}/</code>):</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># After task symlinks:link</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ls<span class="w"> </span>~/.local/bin/
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># sess toolbox theme-sync notes menu ghostty-theme aws-profiles</span>
+</span></code></pre></div>
+<p>All tools available in PATH, callable from anywhere.</p>
+<h3 id="configuration-files">Configuration Files<a class="headerlink" href="#configuration-files" title="Permanent link">&para;</a></h3>
+<p>Tools read from XDG-compliant locations:</p>
 <ul>
-<li>Use full, memorable command names</li>
-<li>Users can create their own aliases if desired</li>
-<li>Document composition patterns instead</li>
+<li><code>~/.config/sess/sessions-{platform}.yml</code> - Default sessions</li>
+<li><code>~/.config/toolbox/registry.yml</code> - Tool definitions</li>
+<li><code>~/.config/zk/config.toml</code> - Note configuration</li>
+<li><code>~/.config/tinty/config.toml</code> - Theme config</li>
 </ul>
-<h3 id="why-separate-workflow-tools-from-dotfiles-management">Why Separate Workflow Tools from Dotfiles Management?<a class="headerlink" href="#why-separate-workflow-tools-from-dotfiles-management" title="Permanent link">&para;</a></h3>
-<p><strong>Separation of concerns:</strong></p>
-<p><strong>Workflow Tools</strong> (sess, tools, theme-sync, nb, menu):</p>
+<p>Source files in <code>platforms/common/.config/</code> (symlinked to <code>~/.config/</code>).</p>
+<h3 id="data-sources">Data Sources<a class="headerlink" href="#data-sources" title="Permanent link">&para;</a></h3>
+<p>Each tool owns its data:</p>
 <ul>
-<li>Purpose: Daily development and note-taking workflows</li>
-<li>Storage: Live in dotfiles repo for convenience</li>
-<li>Usage: Direct commands (<code>sess</code>, <code>tools</code>)</li>
+<li><strong>sess</strong>: Aggregates tmux state + tmuxinator + config file</li>
+<li><strong>toolbox</strong>: Reads YAML registry</li>
+<li><strong>theme-sync</strong>: Wraps tinty (which manages theme files)</li>
+<li><strong>notes</strong>: Wraps zk (which manages <code>~/notes/</code>)</li>
 </ul>
-<p><strong>Dotfiles Management</strong> (task commands):</p>
-<ul>
-<li>Purpose: Configuration deployment and system setup</li>
-<li>Storage: Taskfiles and install scripts in dotfiles repo</li>
-<li>Usage: Task runner (<code>task symlinks:link</code>, <code>task install:macos</code>)</li>
-</ul>
-<p>These are <strong>different concerns</strong> that happen to share a repository. The tools help with daily work; the tasks help manage the dotfiles themselves.</p>
-<h2 id="comparison-with-alternatives">Comparison with Alternatives<a class="headerlink" href="#comparison-with-alternatives" title="Permanent link">&para;</a></h2>
-<h3 id="the-menu-approach-archived">The Menu Approach (Archived)<a class="headerlink" href="#the-menu-approach-archived" title="Permanent link">&para;</a></h3>
-<p><strong>What we had:</strong></p>
-<ul>
-<li>17MB Go binary with Bubbletea TUI</li>
-<li>Complex menu system with multiple implementations</li>
-<li>Tried to be "one tool to rule them all"</li>
-</ul>
-<p><strong>Why it didn't work:</strong></p>
-<ul>
-<li>Added layer of indirection ("press 's' to see sessions, then select session")</li>
-<li>Too heavy (17MB for a launcher?)</li>
-<li>Maintenance burden (3 different implementations)</li>
-<li>Cognitive overhead (remembering menu structure)</li>
-</ul>
-<p><strong>What we learned:</strong></p>
-<ul>
-<li>Menus add friction, not reduce it</li>
-<li>Better to have muscle memory for direct commands</li>
-<li>Documentation is a better "menu" than a TUI</li>
-</ul>
-<h3 id="the-integration-approach">The Integration Approach<a class="headerlink" href="#the-integration-approach" title="Permanent link">&para;</a></h3>
-<p><strong>What we could have done:</strong></p>
-<ul>
-<li>Add fzf integration to each tool</li>
-<li>Create "super tool" with all features</li>
-<li>Build custom TUI for everything</li>
-</ul>
-<p><strong>Why we didn't:</strong></p>
-<ul>
-<li>Violates single responsibility principle</li>
-<li>Creates dependencies between unrelated domains</li>
-<li>Harder to maintain</li>
-<li>Less flexible for users</li>
-</ul>
-<p><strong>What we chose instead:</strong></p>
-<ul>
-<li>Small, focused tools</li>
-<li>Clean data output</li>
-<li>Composition at shell level</li>
-<li>User choice of UI tools</li>
-</ul>
+<p>No shared database. No coupling.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
-<h3 id="for-tool-developers">For Tool Developers<a class="headerlink" href="#for-tool-developers" title="Permanent link">&para;</a></h3>
-<p>When adding new tools to this system:</p>
-<ol>
-<li><strong>Focus on one domain</strong> - Don't create multi-purpose tools</li>
-<li><strong>Output clean data</strong> - Make output parseable and predictable</li>
-<li><strong>Accept clean input</strong> - Simple arguments, no complex parsing</li>
-<li><strong>Don't integrate UI</strong> - Output FOR fzf/gum, don't integrate WITH them</li>
-<li><strong>Provide plain output</strong> - Default to machine-readable, add formatting as option</li>
-<li><strong>Document composition</strong> - Show examples of piping to other tools</li>
-</ol>
+<h3 id="for-tool-authors">For Tool Authors<a class="headerlink" href="#for-tool-authors" title="Permanent link">&para;</a></h3>
+<p><strong>Output clean data</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Good: one item per line, easy to parse</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>toolbox<span class="w"> </span>list
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># bat                       [file-viewer] ...</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># eza                       [file-lister] ...</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># Good: plain text for piping</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>theme-sync<span class="w"> </span>favorites
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># rose-pine</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1"># gruvbox-dark-hard</span>
+</span></code></pre></div>
+<p><strong>Provide structured and plain outputs</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Structured for humans</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>sess<span class="w"> </span>list
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># ● dotfiles (4 windows)</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># ○ learning (2 windows)</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># But parseable for scripts</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="w">  </span><span class="c1"># Still works</span>
+</span></code></pre></div>
+<p><strong>Return meaningful exit codes</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">if</span><span class="w"> </span>sess<span class="w"> </span>dotfiles<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Switched successfully&quot;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">else</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Session doesn&#39;t exist&quot;</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="k">fi</span>
+</span></code></pre></div>
 <h3 id="for-users">For Users<a class="headerlink" href="#for-users" title="Permanent link">&para;</a></h3>
-<p>When using these tools:</p>
-<ol>
-<li><strong>Learn direct commands first</strong> - Build muscle memory for <code>sess</code>, <code>tools</code>, etc.</li>
-<li><strong>Compose as needed</strong> - Add fzf/gum when you want interactivity</li>
-<li><strong>Create your own workflows</strong> - Tools are building blocks</li>
-<li><strong>Don't rely on menu</strong> - Use <code>menu</code> as reference, not as daily driver</li>
-<li><strong>Script repetitive tasks</strong> - These tools are designed for scripting</li>
-</ol>
-<h2 id="future-directions">Future Directions<a class="headerlink" href="#future-directions" title="Permanent link">&para;</a></h2>
-<p>As the system evolves, maintain these principles:</p>
+<p><strong>Compose at the shell level</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Don&#39;t ask for tool flags like: sess --fuzzy</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Instead: compose with fzf</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf
+</span></code></pre></div>
+<p><strong>Use aliases for common compositions</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># In .zshrc</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">st</span><span class="o">=</span><span class="s1">&#39;toolbox list | fzf --preview=&quot;toolbox show {1}&quot;&#39;</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">ts</span><span class="o">=</span><span class="s1">&#39;theme-sync favorites | fzf | xargs theme-sync apply&#39;</span>
+</span></code></pre></div>
+<p><strong>Leverage tool output in scripts</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># Create session for each project</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="k">for</span><span class="w"> </span>project<span class="w"> </span><span class="k">in</span><span class="w"> </span>~/code/*<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>sess<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$project</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="k">done</span>
+</span></code></pre></div>
+<h2 id="why-this-architecture-works">Why This Architecture Works<a class="headerlink" href="#why-this-architecture-works" title="Permanent link">&para;</a></h2>
+<p><strong>Simplicity</strong>: Each tool is simple enough to understand in minutes.</p>
+<p><strong>Testability</strong>: Pure functions with predictable output are easy to test.</p>
+<p><strong>Flexibility</strong>: Compose tools in ways the author never imagined.</p>
+<p><strong>Maintainability</strong>: Tools are independent. Change one without breaking others.</p>
+<p><strong>Portability</strong>: Bash + standard Unix tools work everywhere.</p>
+<p><strong>No Lock-in</strong>: Don't like fzf? Use gum. Don't like either? Use grep and awk.</p>
+<h2 id="comparison-with-alternatives">Comparison with Alternatives<a class="headerlink" href="#comparison-with-alternatives" title="Permanent link">&para;</a></h2>
+<p><strong>vs. Integrated mega-tools</strong> (like oh-my-zsh plugins):</p>
 <ul>
-<li>Keep tools focused and lightweight</li>
-<li>Favor composition over integration</li>
-<li>Output clean, parseable data</li>
-<li>Let users choose their UI</li>
-<li>Document patterns, not prescribe workflows</li>
+<li>✅ Simpler to understand and debug</li>
+<li>✅ Can use tools independently</li>
+<li>✅ No plugin manager needed</li>
+<li>❌ Requires composing at shell level</li>
+</ul>
+<p><strong>vs. GUI applications</strong>:</p>
+<ul>
+<li>✅ Faster (CLI startup time)</li>
+<li>✅ Scriptable and automatable</li>
+<li>✅ Works over SSH</li>
+<li>❌ Steeper learning curve initially</li>
+</ul>
+<p><strong>vs. Language-specific tools</strong> (pure Go/Rust/Python):</p>
+<ul>
+<li>✅ Easier to modify (bash is readable)</li>
+<li>✅ Better shell integration</li>
+<li>❌ Less type safety (use Go when needed like sess)</li>
 </ul>
 <h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../reference/quick-reference/">Quick Reference</a> - Command reference for all tools</li>
-<li><a href="../../workflows/note-taking/">Note Taking Workflows</a> - nb usage patterns</li>
-<li><a href="../development/symlinks.md">Symlinks Management</a> - Dotfiles deployment</li>
-<li>Planning documents:</li>
-<li><code>planning/dotfiles-system-redesign-2025-11.md</code> - Overall redesign plan</li>
-<li><code>planning/phase1-complete-summary.md</code> - Menu simplification</li>
-<li><code>planning/phase2-complete-summary.md</code> - nb setup</li>
+<li><a href="../../reference/quick-reference/">Quick Reference</a> - Command examples</li>
+<li><a href="../../reference/workflow-tools-cheatsheet/">Workflow Tools Cheatsheet</a> - Quick lookup</li>
+<li><a href="../menu-system/">Menu System</a> - Launcher architecture</li>
+<li><a href="../../workflows/note-taking/">Note Taking</a> - zk workflow guide</li>
 </ul>
 
 

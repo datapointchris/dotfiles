@@ -380,7 +380,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../testing.md" class="md-tabs__link">
+        <a href="../testing/" class="md-tabs__link">
           
   
   
@@ -657,8 +657,6 @@
       
         
       
-        
-      
     
     
     
@@ -719,29 +717,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1119,6 +1094,8 @@
       
         
       
+        
+      
     
     
     
@@ -1165,12 +1142,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../testing.md" class="md-nav__link">
+      <a href="../testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -2418,9 +2418,9 @@
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nt">mockname</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Mock{{.InterfaceName}}&quot;</span>
 </span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nt">outpkg</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{.PackageName}}&quot;</span>
 </span></code></pre></div>
-<p>Run with:
+<p>Run with:</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mockery<span class="w">  </span><span class="c1"># Generates mock_*.go files</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="8-goreleaser-setup">8. GoReleaser Setup<a class="headerlink" href="#8-goreleaser-setup" title="Permanent link">&para;</a></h3>
 <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># .goreleaser.yaml</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
@@ -2530,11 +2530,11 @@
 </span></code></pre></div>
 <h2 id="common-gotchas">Common Gotchas<a class="headerlink" href="#common-gotchas" title="Permanent link">&para;</a></h2>
 <h3 id="1-circular-dependencies">1. Circular Dependencies<a class="headerlink" href="#1-circular-dependencies" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong>
+<p><strong>Problem:</strong></p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>tmux/ imports menu/
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>menu/ imports tmux/  ← ERROR
-</span></code></pre></div></p>
-<p><strong>Solution:</strong>
+</span></code></pre></div>
+<p><strong>Solution:</strong></p>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>model/          # Shared types
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>  └── item.go
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
@@ -2543,15 +2543,15 @@
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
 </span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>menu/           # Imports model and tmux
 </span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>  └── menu.go
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="2-testing-external-commands">2. Testing External Commands<a class="headerlink" href="#2-testing-external-commands" title="Permanent link">&para;</a></h3>
-<p><strong>Don't:</strong>
+<p><strong>Don't:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestTmux</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="c1">// Actually calls tmux!</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nx">output</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">exec</span><span class="p">.</span><span class="nx">Command</span><span class="p">(</span><span class="s">&quot;tmux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;list-sessions&quot;</span><span class="p">).</span><span class="nx">Output</span><span class="p">()</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Do:</strong>
+</span></code></pre></div>
+<p><strong>Do:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestTmux</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span><span class="nx">mockShell</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">new</span><span class="p">(</span><span class="nx">shell</span><span class="p">.</span><span class="nx">MockShell</span><span class="p">)</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nx">mockShell</span><span class="p">.</span><span class="nx">On</span><span class="p">(</span><span class="s">&quot;Cmd&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;tmux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;list-sessions&quot;</span><span class="p">).</span><span class="nx">Return</span><span class="p">(</span><span class="s">&quot;output&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
@@ -2559,9 +2559,9 @@
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nx">tmux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NewTmux</span><span class="p">(</span><span class="nx">mockShell</span><span class="p">)</span>
 </span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="nx">result</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">tmux</span><span class="p">.</span><span class="nx">ListSessions</span><span class="p">()</span>
 </span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h3 id="3-bubbletea-message-handling">3. Bubbletea Message Handling<a class="headerlink" href="#3-bubbletea-message-handling" title="Permanent link">&para;</a></h3>
-<p><strong>Don't:</strong>
+<p><strong>Don't:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">Model</span><span class="p">)</span><span class="w"> </span><span class="nx">Update</span><span class="p">(</span><span class="nx">msg</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">Msg</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">tea</span><span class="p">.</span><span class="nx">Model</span><span class="p">,</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="c1">// Mutating outside switch</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">selected</span><span class="o">++</span>
@@ -2571,8 +2571,8 @@
 </span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">        </span><span class="c1">// ...</span>
 </span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Do:</strong>
+</span></code></pre></div>
+<p><strong>Do:</strong></p>
 <div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">Model</span><span class="p">)</span><span class="w"> </span><span class="nx">Update</span><span class="p">(</span><span class="nx">msg</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">Msg</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">tea</span><span class="p">.</span><span class="nx">Model</span><span class="p">,</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="nx">msg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">msg</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">KeyMsg</span><span class="p">:</span>
@@ -2583,7 +2583,7 @@
 </span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w">  </span><span class="c1">// Return new state</span>
 </span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span></code></pre></div>
 <h2 id="checklist-for-new-project">Checklist for New Project<a class="headerlink" href="#checklist-for-new-project" title="Permanent link">&para;</a></h2>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Initialize Go module: <code>go mod init github.com/user/project</code></li>
@@ -2604,15 +2604,17 @@
 </ul>
 <h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Bubbletea:</strong> https://github.com/charmbracelet/bubbletea</li>
-<li><strong>Cobra:</strong> https://github.com/spf13/cobra</li>
-<li><strong>Mockery:</strong> https://github.com/vektra/mockery</li>
-<li><strong>GoReleaser:</strong> https://goreleaser.com</li>
-<li><strong>Go Testing:</strong> https://go.dev/doc/tutorial/add-a-test</li>
+<li><strong>Bubbletea:</strong> <a href="https://github.com/charmbracelet/bubbletea">https://github.com/charmbracelet/bubbletea</a></li>
+<li><strong>Cobra:</strong> <a href="https://github.com/spf13/cobra">https://github.com/spf13/cobra</a></li>
+<li><strong>Mockery:</strong> <a href="https://github.com/vektra/mockery">https://github.com/vektra/mockery</a></li>
+<li><strong>GoReleaser:</strong> <a href="https://goreleaser.com">https://goreleaser.com</a></li>
+<li><strong>Go Testing:</strong> <a href="https://go.dev/doc/tutorial/add-a-test">https://go.dev/doc/tutorial/add-a-test</a></li>
 </ul>
-<p>For detailed analysis, see:
-- <a href="/learnings/go-cli-architecture-analysis">Go CLI Architecture Analysis</a>
-- <a href="/architecture/sesh-architecture-diagram">sesh Architecture Diagram</a></p>
+<p>For detailed analysis, see:</p>
+<ul>
+<li><a href="../../learnings/go-cli-architecture-analysis/">Go CLI Architecture Analysis</a></li>
+<li><a href="../architecture/sesh-architecture-diagram.md">sesh Architecture Diagram</a></li>
+</ul>
 
 
 

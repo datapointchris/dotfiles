@@ -380,7 +380,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/testing.md" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -657,8 +657,6 @@
       
         
       
-        
-      
     
     
     
@@ -719,29 +717,6 @@
   
   <span class="md-ellipsis">
     Menu System
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/sesh-architecture-diagram/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    sesh Architecture
     
   </span>
   
@@ -1419,6 +1394,8 @@
       
         
       
+        
+      
     
     
     
@@ -1464,12 +1441,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing.md" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     VM Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Notes System Setup
     
   </span>
   
@@ -2263,16 +2263,19 @@
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>📝 **Reminder**: 2 commit(s) made during this response
 </span></code></pre></div>
 <h3 id="posttooluse-hook-markdown-formatter">PostToolUse Hook - Markdown Formatter<a class="headerlink" href="#posttooluse-hook-markdown-formatter" title="Permanent link">&para;</a></h3>
-<p><strong>Purpose</strong>: Automatically formats markdown files after Claude edits them.</p>
+<p><strong>Purpose</strong>: Automatically adds missing language tags to code blocks in markdown files.</p>
 <p><strong>Location</strong>: <code>.claude/hooks/markdown_formatter.py</code></p>
-<p><strong>When it runs</strong>: After any Edit, MultiEdit, or Write tool operation.</p>
+<p><strong>When it runs</strong>: After any Edit, MultiEdit, or Write tool operation on markdown files.</p>
 <p><strong>What it does</strong>:</p>
 <ul>
-<li>Detects if the modified file is markdown (.md extension)</li>
-<li>Runs prettier formatting on the file</li>
-<li>Ensures consistent markdown formatting across the repository</li>
+<li>Reads JSON from stdin containing the edited file path (PostToolUse hook format)</li>
+<li>Only processes .md and .mdx files (exits silently for other file types)</li>
+<li>Detects and adds missing language specifiers to fenced code blocks</li>
+<li>Automatically identifies language from code content (javascript, python, bash, sql, yaml, json, etc.)</li>
+<li>Fixes spacing issues outside code blocks (collapses excessive blank lines)</li>
+<li>Only modifies file if changes are needed</li>
 </ul>
-<p><strong>Why it exists</strong>: Prevents markdown formatting inconsistencies and reduces the need for manual formatting fixes.</p>
+<p><strong>Why it exists</strong>: Prevents MD040 markdownlint errors (fenced-code-language) by automatically adding language tags to code blocks. This ensures proper syntax highlighting and reduces manual fixes during pre-commit.</p>
 <h3 id="notification-hook">Notification Hook<a class="headerlink" href="#notification-hook" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose</strong>: Sends desktop notifications for important Claude Code events.</p>
 <p><strong>Location</strong>: <code>.claude/hooks/notification-desktop</code></p>
@@ -2488,7 +2491,7 @@
 </ol>
 <h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../.claude/hooks-implementation-plan.md">Hooks Implementation Plan</a> - Full implementation roadmap</li>
+<li>Hooks Implementation Plan (<code>.claude/hooks-implementation-plan.md</code>) - Full implementation roadmap</li>
 <li><a href="https://docs.claude.com/en/docs/claude-code/hooks-guide">Claude Code Hooks Guide</a> - Official documentation</li>
 <li><a href="https://www.conventionalcommits.org/">Conventional Commits</a> - Commit message standard</li>
 <li><a href="https://pre-commit.com/">pre-commit framework</a> - Git hook management</li>
