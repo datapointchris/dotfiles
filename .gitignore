@@ -82,7 +82,7 @@ venv/
 !*.secret
 
 **/__pycache__
-TESTING.*
+/TESTING.*
 .env
 **/tmux/plugins/*
 **/.zcompdump*
