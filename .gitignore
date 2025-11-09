@@ -47,9 +47,7 @@ cover/
 .venv
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
+
 # mkdocs documentation
 /site
 
@@ -102,17 +100,6 @@ TESTING.*
 # Test coverage reports
 **/coverage.html
 **/coverage.out
-# Binaries in tools directories
-tools/*/menu
-tools/*/session
-tools/session-go/sess
 
-# Archive build artifacts
-archive/*/menu
-archive/*/menu-go
-archive/*/menu-cli
-archive/*/cmd/menu-cli/
-archive/*/internal/cli/
-archive/*/internal/formatter/
-archive/*/scripts/
-tools/sess/sess
+# Binaries for apps
+apps/sess/sess

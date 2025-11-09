@@ -89,6 +89,8 @@ tasks:
       - task: npm:install
       - task: uv:install
       - task: shell:install
+      - echo "Building Go apps..."
+      - cd apps/sess && task install
       - task: symlinks:link
       - echo "Setting up theme system..."
       - tinty install
@@ -113,6 +115,8 @@ tasks:
       - task: npm:install
       - task: uv:install
       - task: shell:install
+      - echo "Building Go apps..."
+      - cd apps/sess && task install
       - task: symlinks:link
       - echo "Setting up theme system..."
       - tinty install
@@ -139,6 +143,8 @@ tasks:
       - task: npm:install
       - task: uv:install
       - task: shell:install
+      - echo "Building Go apps..."
+      - cd apps/sess && task install
       - task: symlinks:link
       - echo "Setting up theme system..."
       - tinty install
