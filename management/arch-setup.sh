@@ -4,7 +4,7 @@
 # ================================================================
 # Minimal script to install Taskfile and delegate to taskfiles
 # Bootstrap should ONLY install what's needed to run Task
-# All package installation is handled by taskfiles/arch.yml
+# All package installation is handled by management/taskfiles/arch.yml
 # ================================================================
 
 set -euo pipefail
