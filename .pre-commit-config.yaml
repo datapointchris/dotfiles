@@ -13,37 +13,52 @@ repos:
     hooks:
       - id: check-yaml
         args: [--unsafe]
+        stages: [pre-commit]
       - id: check-toml
+        stages: [pre-commit]
       - id: end-of-file-fixer
+        stages: [pre-commit]
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        stages: [pre-commit]
       - id: check-executables-have-shebangs
+        stages: [pre-commit]
       - id: check-shebang-scripts-are-executable
+        stages: [pre-commit]
       - id: check-added-large-files
         args: ['--maxkb=1000']
+        stages: [pre-commit]
       - id: check-merge-conflict
+        stages: [pre-commit]
       - id: mixed-line-ending
         args: ['--fix=lf']
+        stages: [pre-commit]
       - id: check-case-conflict
+        stages: [pre-commit]
       - id: detect-private-key
+        stages: [pre-commit]
   - repo: https://gitlab.com/bmares/check-json5
     rev: v1.0.0
     hooks:
       - id: check-json5
+        stages: [pre-commit]
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.42.0
     hooks:
       - id: markdownlint
         args: [--fix]
+        stages: [pre-commit]
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0
     hooks:
       - id: shellcheck
+        stages: [pre-commit]
       #       args: ["--severity=warning"]  # Optionally only show errors and warnings
   - repo: https://github.com/JohnnyMorganz/StyLua
     rev: v0.20.0
     hooks:
       - id: stylua # or stylua-system / stylua-github
+        stages: [pre-commit]
 
   # Custom local hooks for documentation enforcement
   - repo: local
