@@ -3,9 +3,9 @@
 This page provides a quick reference for the workflow tools available in your dotfiles system. These tools help with daily development work and happen to live in the dotfiles repository for convenience.
 
 !!! note "Workflow Tools vs Dotfiles Management"
-    This reference covers **workflow tools** (sess, tools, theme-sync, nb, menu) for daily development work.
+    This reference covers **workflow tools** (sess, toolbox, theme-sync, notes, menu) for daily development work.
 
-    For **dotfiles management** (configuration deployment), see [Symlinks Management](../development/symlinks.md) and use `task symlinks:*` commands.
+    For **dotfiles management** (configuration deployment), see [Symlinks Management](./symlinks.md) and use `task symlinks:*` commands.
 
 ## Core Workflow Tools
 
@@ -31,40 +31,40 @@ sess list | fzf --preview='tmux display-message -p "#{session_name}"'
 
 **Configuration:**
 
-- Sessions defined in: `~/.config/menu/sessions/sessions-macos.yml`
+- Sessions defined in: `~/.config/sess/sessions-macos.yml`
 - Tmuxinator projects: `~/.config/tmuxinator/`
 - Built with Go for type safety and testing
 
 ---
 
-### tools - Tool Discovery
+### toolbox - Tool Discovery
 
 CLI for exploring 30+ curated development tools.
 
 **Quick Commands:**
 
 ```bash
-tools list           # List all tools with descriptions
-tools show <name>    # Show detailed info for a tool
-tools search <query> # Search tools by name or description
-tools random         # Discover a random tool
-tools installed      # Show only installed tools
+toolbox list           # List all tools with descriptions
+toolbox show <name>    # Show detailed info for a tool
+toolbox search <query> # Search tools by name or description
+toolbox random         # Discover a random tool
+toolbox installed      # Show only installed tools
 ```
 
 **Integration:**
 
 ```bash
 # Interactive tool exploration with fzf
-tools list | fzf \
-  --preview='tools show {1}' \
+toolbox list | fzf \
+  --preview='toolbox show {1}' \
   --preview-window=right:60%:wrap \
   --header='Tools - Press Enter to see details'
 ```
 
 **Configuration:**
 
-- Registry: `docs/tools/registry.yml`
-- Bash script: `common/.local/bin/tools`
+- Registry: `platforms/common/.config/toolbox/registry.yml`
+- Bash script: `apps/common/toolbox`
 
 ---
 
@@ -108,47 +108,48 @@ theme-sync favorites | fzf \
 
 ---
 
-### nb - Note Taking
+### notes - Note Taking
 
-Git-backed note taking and knowledge management.
+Plain text note-taking with zk, wiki-links, and LSP support.
 
 **Quick Commands:**
 
 ```bash
-nb                      # Interactive menu
-nb add                  # Create new note
-nb learning:add "Topic" # Add to specific notebook
-nb search "keyword"     # Search current notebook
-nb search "text" --all  # Search all notebooks
-nb list                 # List notes in current notebook
-nb show <id>            # Show note content
-nb edit <id>            # Edit a note
-nb browse --gui         # Visual interface
+notes                   # Interactive menu (auto-discovers sections)
+notes journal           # Create journal entry
+notes devnotes          # Create dev note
+notes learning          # Create learning note
+
+# Direct zk access
+zk journal "Daily standup"     # Create journal entry
+zk devnote "Bug fix notes"     # Create dev note
+zk learn "Database indexing"   # Create learning note
+zk list --match "API"          # Search notes
+zk edit --interactive          # Browse and edit
 ```
 
-**Notebooks:**
+**Notebook Structure:**
 
-- `learning` - Semester-based learning (public repo)
-- `notes` - General notes (private repo)
-- `ideas` - Quick capture (private repo)
+Single notebook at `~/notes/` with auto-discovered sections:
 
-**Cross-Notebook Links:**
+- `journal/` - Daily entries (iCloud only)
+- `devnotes/` - Work notes (git tracked)
+- `learning/` - Study notes (git tracked)
+- `ideas/` - Quick capture (iCloud only)
+- `projects/` - Project planning (iCloud only)
+- `dreams/` - Dream journal (iCloud only)
+
+**Wiki-Links:**
 
 ```markdown
-# In learning notebook:
-[[notes:work/database-design]]
-
-# In notes notebook:
-[[learning:2024-fall/computer-science/algorithms]]
+# In any note:
+See [[jwt-tokens]] for token handling.
+Related: [[api-security]], [[session-management]]
 ```
 
-**Git Sync:**
+**Git Tracking:**
 
-```bash
-nb learning:sync        # Sync learning notebook
-nb notes:sync           # Sync notes notebook
-nb ideas:sync           # Sync ideas notebook
-```
+Only `devnotes/` and `learning/` are git-tracked. Personal sections stay iCloud-only.
 
 See [Note Taking Workflows](../workflows/note-taking.md) for detailed guide.
 
@@ -167,7 +168,7 @@ menu launch       # Interactive launcher with gum
 
 **What It Shows:**
 
-- Available workflow tools (sess, tools, theme-sync, nb)
+- Available workflow tools (sess, toolbox, theme-sync, notes)
 - Quick workflow examples
 - Dotfiles management commands
 - Documentation locations
@@ -220,7 +221,7 @@ These tools follow the Unix philosophy: do one thing well, output clean data, co
 
 ```bash
 # Tools with fzf preview
-tools list | fzf --preview='tools show {1}'
+toolbox list | fzf --preview='toolbox show {1}'
 
 # Themes with fzf
 theme-sync favorites | fzf | xargs theme-sync apply
@@ -229,20 +230,20 @@ theme-sync favorites | fzf | xargs theme-sync apply
 sess list | fzf | xargs sess
 
 # Notes with fzf
-nb list --all | fzf --preview='nb show {1}'
+zk list | fzf --preview='bat {-1}'
 ```
 
 ### Pattern 2: Filtering and Processing
 
 ```bash
 # Find tools by category
-tools list | grep '\[cli-utility\]'
+toolbox list | grep '\[cli-utility\]'
 
 # Get session names only
 sess list | awk '{print $2}'
 
 # Search notes and count results
-nb search "algorithm" --all | wc -l
+zk list --match "algorithm" | wc -l
 ```
 
 ### Pattern 3: Scripting
@@ -273,11 +274,11 @@ sess
 # Check current theme
 theme-sync current
 
-# Review learning notes
-nb learning:list
+# Review recent notes
+zk list --sort modified- --limit 10
 
-# Browse work notes
-nb notes:work/
+# Browse learning notes
+zk list --group learning
 ```
 
 ### Theme Exploration
@@ -294,29 +295,31 @@ theme-sync random
 
 ```bash
 # Explore tools interactively
-tools list | fzf --preview='tools show {1}' --preview-window=right:60%:wrap
+toolbox list | fzf --preview='toolbox show {1}' --preview-window=right:60%:wrap
 
 # Find CLI utilities
-tools list | grep cli-utility
+toolbox list | grep cli-utility
 
 # Learn about a specific tool
-tools show bat
+toolbox show bat
 ```
 
 ### Note Taking
 
 ```bash
 # Quick note capture
-nb add "Quick thought"
+notes
 
-# Add to specific notebook
-nb learning:2024-fall/computer-science/add "Algorithm notes"
+# Create specific note types
+zk journal "Daily reflections"
+zk devnote "API refactoring"
+zk learn "Docker networking"
 
-# Search across all notebooks
-nb search "database" --all
+# Search notes
+zk list --match "database"
 
-# Visual browsing
-nb browse --gui
+# Interactive browsing
+zk edit --interactive
 ```
 
 ---
@@ -325,8 +328,8 @@ nb browse --gui
 
 - **MkDocs Site:** `http://localhost:8000` (run `task docs:serve`)
 - **CLAUDE.md:** Development context and guidelines (`~/dotfiles/CLAUDE.md`)
-- **Tool Registries:** Tool definitions and metadata (`docs/tools/registry.yml`)
-- **Planning Docs:** System design and implementation plans (`planning/`)
+- **Toolbox Registry:** Tool definitions and metadata (`platforms/common/.config/toolbox/registry.yml`)
+- **Planning Docs:** System design and implementation plans (`.planning/`)
 
 ---
 
@@ -343,9 +346,9 @@ These tools embody the following principles:
 No shell aliases by default. Commands are easy to remember and type:
 
 - `sess` - Session management
-- `tools` - Tool discovery
+- `toolbox` - Tool discovery
 - `theme-sync` - Theme management
-- `nb` - Note taking
+- `notes` / `zk` - Note taking
 - `menu` - Quick reference
 
 Compose with `fzf`, `gum`, `awk`, `grep` as needed for interactive selection or filtering.
