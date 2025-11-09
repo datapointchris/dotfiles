@@ -5,7 +5,7 @@
 # ------------ Terminal ------------ #
 
 # Remove all previous aliases, some from oh-my-zsh and unnecessary git shit
-unalias -a
+# unalias -a
 
 # Enable aliases to be sudo’ed
 alias sudo='sudo '
