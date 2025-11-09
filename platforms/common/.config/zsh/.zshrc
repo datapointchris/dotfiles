@@ -198,6 +198,7 @@ ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
 # Load git-open (manually cloned for cross-platform compatibility)
 if [[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]]; then
     export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
+    echo "$check load  : $ZSH_PLUGINS_DIR/git-open/git-open"
   else
     echo "$error git-open plugin not found at $ZSH_PLUGINS_DIR/git-open"
 fi
@@ -205,6 +206,7 @@ fi
 # Load zsh-vi-mode (manually cloned for cross-platform compatibility)
 if [[ -f "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh" ]]; then
     source "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
+    echo "$check load  : $ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
   else
     echo "$error zsh-vi-mode plugin not found at $ZSH_PLUGINS_DIR/zsh-vi-mode"
 fi
@@ -212,7 +214,9 @@ fi
 # Load forgit (interactive git commands with fzf)
 if [[ -f "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh" ]]; then
     source "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
-    echo "$check Load  : forgit"
+    echo "$check Load  : $ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
+    fpath+=($ZSH_PLUGINS_DIR/forgit/completions)
+    echo "$check Load  : $ZSH_PLUGINS_DIR/forgit/completions"
   else
     echo "$error forgit plugin not found at $ZSH_PLUGINS_DIR/forgit"
 fi
@@ -247,6 +251,7 @@ echo "$check Load  : $SHELLS/fzf-functions.sh"
 function add_path() {
     if [[ -d "$1" ]]; then
         export PATH="$1:$PATH"
+        echo "$check Path  : $1"
     fi
 }
 
@@ -311,7 +316,7 @@ echo "$check Load  : Paths"
 
 # ---------- zoxide ---------- #
 eval "$(zoxide init --cmd z zsh)"
-
+echo "$check Setup : zoxide"
 
 # ---------- fzf ---------- #
 source <(fzf --zsh)
@@ -350,7 +355,7 @@ _fzf_compgen_path() {
 _fzf_compgen_dir() {
     fd --type d --hidden --follow --exclude .git . "$1"
 }
-
+echo "$check Setup : fzf"
 
 # ---------- nvm ---------- #
 export NVM_DIR="$HOME/.config/nvm"
