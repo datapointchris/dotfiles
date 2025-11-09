@@ -103,14 +103,16 @@ def relink(
     platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, arch, etc.)"),
 ):
     """Complete refresh: unlink platform, unlink common, check, link common, link platform."""
-    platform_dir = settings.dotfiles_dir / platform
+    platform_dir = settings.dotfiles_dir / "platforms" / platform
 
     if not platform_dir.exists():
         console.print(f"[red]✗[/] Platform directory does not exist: {platform}")
-        console.print(f"[dim]Available platforms in {settings.dotfiles_dir}:[/]")
-        for item in settings.dotfiles_dir.iterdir():
-            if item.is_dir() and item.name not in [".git", "tools", "docs", "scripts", "common"]:
-                console.print(f"  - {item.name}")
+        platforms_dir = settings.dotfiles_dir / "platforms"
+        console.print(f"[dim]Available platforms in {platforms_dir}:[/]")
+        if platforms_dir.exists():
+            for item in platforms_dir.iterdir():
+                if item.is_dir() and not item.name.startswith("."):
+                    console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
     manager = SymlinkManager()
