@@ -6,13 +6,20 @@ How the dotfiles repository is organized and why.
 
 ```text
 dotfiles/
-├── common/          # Shared configs (all platforms)
-├── macos/           # macOS-specific overrides
-├── wsl/             # WSL Ubuntu overrides
-├── arch/            # Arch Linux overrides
-├── taskfiles/       # Task automation
-├── scripts/install/ # Bootstrap scripts
-└── tools/symlinks/  # Symlink management tool
+├── platforms/          # System configurations
+│   ├── common/         # Shared configs (all platforms)
+│   ├── macos/          # macOS-specific overrides
+│   ├── wsl/            # WSL Ubuntu overrides
+│   └── arch/           # Arch Linux overrides
+├── apps/               # Personal CLI applications
+│   ├── common/         # Cross-platform tools
+│   ├── macos/          # macOS-specific tools
+│   └── sess/           # Session manager (Go)
+└── management/         # Repository tooling
+    ├── symlinks/       # Symlink management tool
+    ├── taskfiles/      # Task automation
+    ├── packages.yml    # Package definitions
+    └── *.sh            # Bootstrap scripts
 ```
 
 ## Symlink System
@@ -25,11 +32,11 @@ Two-layer approach: common base + platform overlay.
 symlinks link common
 ```
 
-Links `common/` to `$HOME`:
+Links `platforms/common/` to `$HOME`:
 
 ```text
-common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
-common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
+platforms/common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
+platforms/common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
 ```
 
 **Step 2**: Overlay platform files
@@ -41,11 +48,26 @@ symlinks link macos
 Overlays platform-specific files:
 
 ```text
-macos/.gitconfig → ~/.gitconfig  (overrides common if it existed)
-macos/.profile → ~/.profile
+platforms/macos/.gitconfig → ~/.gitconfig  (overrides common if it existed)
+platforms/macos/.profile → ~/.profile
 ```
 
 Platform files override common files when both exist.
+
+**Step 3**: Link apps
+
+```sh
+# Apps are linked to ~/.local/bin/ automatically
+```
+
+Symlinks applications:
+
+```text
+apps/common/menu → ~/.local/bin/menu
+apps/common/notes → ~/.local/bin/notes
+apps/common/toolbox → ~/.local/bin/toolbox
+apps/common/theme-sync → ~/.local/bin/theme-sync
+```
 
 ## Package Management
 
@@ -57,7 +79,7 @@ Platform files override common files when both exist.
 
 ## Platform Detection
 
-**Shell** (`common/.config/zsh/.zshrc`):
+**Shell** (`platforms/common/.config/zsh/.zshrc`):
 
 ```sh
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -90,7 +112,7 @@ Configurations use inheritance: shared base with platform overrides.
 
 **Example: Git Config**
 
-macOS (`macos/.gitconfig`):
+macOS (`platforms/macos/.gitconfig`):
 
 ```gitconfig
 [core]
@@ -99,7 +121,7 @@ macOS (`macos/.gitconfig`):
     helper = osxkeychain
 ```
 
-WSL (`wsl/.gitconfig`):
+WSL (`platforms/wsl/.gitconfig`):
 
 ```gitconfig
 [core]
@@ -110,7 +132,7 @@ WSL (`wsl/.gitconfig`):
 
 **Example: Neovim**
 
-Common (`common/.config/nvim/`): Base LSP, core plugins, keybindings
+Common (`platforms/common/.config/nvim/`): Base LSP, core plugins, keybindings
 
 Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs
 
@@ -128,7 +150,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Minimal Duplication**: Only platform differences exist in platform directories.
 
-**Clear Separation**: common/ for shared, platform dirs for quirks only.
+**Clear Separation**: platforms/common/ for shared, platform dirs for quirks only, apps/ for tools, management/ for repo tooling.
 
 **Easy Maintenance**: Update shared config once, all platforms benefit.
 
@@ -138,6 +160,6 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Symlink Complexity**: Two-layer system adds complexity, but `symlinks` tool handles it with clear errors.
 
-**Platform Knowledge**: Need to know whether to edit `common/` or platform dir. Experience makes this clear.
+**Platform Knowledge**: Need to know whether to edit `platforms/common/` or platform dir. Experience makes this clear.
 
 See [Platform Differences](../reference/platforms.md) for platform-specific quirks.

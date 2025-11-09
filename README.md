@@ -30,17 +30,24 @@ See the [quickstart guide](https://datapointchris.github.io/dotfiles/getting-sta
 
 ```text
 dotfiles/
-├── common/         # Shared configs (zsh, nvim, tmux, etc.)
-├── macos/          # macOS-specific configs and overrides
-├── wsl/            # WSL Ubuntu-specific configs
-├── arch/           # Arch Linux-specific configs
-├── tools/          # Custom tools (symlinks manager, session manager)
-├── install/        # Platform bootstrap scripts
-├── taskfiles/      # Task automation (modular design)
-└── docs/           # Documentation (because future you will forget)
+├── platforms/        # System configurations (deployed to $HOME)
+│   ├── common/       # Shared configs (zsh, nvim, tmux, git)
+│   ├── macos/        # macOS-specific overrides
+│   ├── wsl/          # WSL Ubuntu-specific overrides
+│   └── arch/         # Arch Linux-specific overrides
+├── apps/             # Personal CLI applications
+│   ├── common/       # Cross-platform tools (menu, notes, toolbox, theme-sync)
+│   ├── macos/        # macOS-specific tools
+│   └── sess/         # Session manager (Go)
+├── management/       # Repository management
+│   ├── symlinks/     # Symlinks manager (Python)
+│   ├── taskfiles/    # Task automation (modular)
+│   ├── packages.yml  # Package definitions
+│   └── *.sh          # Platform bootstrap scripts
+└── docs/             # Documentation (because future you will forget)
 ```
 
-The core philosophy: write configs once in `common/`, override only what's platform-specific.
+The core philosophy: write configs once in `platforms/common/`, override only what's platform-specific.
 
 ## Package Management
 
@@ -58,13 +65,13 @@ See [CLAUDE.md](CLAUDE.md) for the full philosophy (it's longer than it needs to
 
 ## Tool Discovery
 
-Installed something six months ago and forgot about it? The `tools` command has you covered:
+Installed something six months ago and forgot about it? The `toolbox` command has you covered:
 
 ```bash
-tools list              # See everything
-tools show ripgrep      # Details, examples, why you installed it
-tools search git        # Find git-related tools
-tools random            # Discover something you forgot existed
+toolbox list              # See everything
+toolbox show ripgrep      # Details, examples, why you installed it
+toolbox search git        # Find git-related tools
+toolbox random            # Discover something you forgot existed
 ```
 
 Currently 31 tools documented in the registry with usage examples and tips. More getting added as I remember they exist.
@@ -83,7 +90,7 @@ task update                             # Update everything
 task symlinks:link                      # Deploy configs (also: relink, check, unlink)
 
 # Discovery
-tools search python                     # Find Python tools
+toolbox search python                   # Find Python tools
 ```
 
 Run `task --list` to see all available tasks.
