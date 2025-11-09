@@ -233,14 +233,58 @@ class SymlinkManager:
 
         return count
 
+    def link_apps(self, platform: str) -> int:
+        """Link apps from apps/{platform}/ to ~/.local/bin/
+
+        Args:
+            platform: Platform name (common, macos, wsl)
+
+        Returns:
+            Number of apps linked
+        """
+        apps_dir = self.dotfiles_dir / "apps" / platform
+        if not apps_dir.exists():
+            return 0
+
+        target_bin = self.target_dir / ".local" / "bin"
+        target_bin.mkdir(parents=True, exist_ok=True)
+
+        print(f"[blue]Linking {platform} apps to ~/.local/bin/...[/]")
+        count = 0
+
+        for app in apps_dir.iterdir():
+            # Skip directories (like sess/ which needs building)
+            if app.is_dir():
+                continue
+
+            if should_exclude(app):
+                continue
+
+            target = target_bin / app.name
+
+            # Remove existing symlink or file
+            if target.exists() or target.is_symlink():
+                target.unlink()
+
+            # Create relative symlink
+            relative_source = make_relative_symlink(app, target)
+            target.symlink_to(relative_source)
+            print(f"  [green]✓[/] {app.name} → ~/.local/bin/{app.name}")
+            count += 1
+
+        if count > 0:
+            print(f"[green]Linked {count} apps[/]")
+        return count
+
     def relink(self, platform: str):
         """Complete refresh: remove old, check for broken, create new.
 
         Args:
             platform: Platform name (e.g., "macos", "wsl", "arch")
         """
-        platform_dir = self.dotfiles_dir / platform
-        common_dir = self.dotfiles_dir / "common"
+        # Updated paths for new structure
+        platform_dir = self.dotfiles_dir / "platforms" / platform
+        common_dir = self.dotfiles_dir / "platforms" / "common"
 
         if not platform_dir.exists():
             print(f"[red]✗[/] Platform directory does not exist: {platform}")
@@ -249,24 +293,29 @@ class SymlinkManager:
         print(f"[bold cyan]Complete relink for {platform}[/]")
         print()
 
-        print("[yellow]Step [green]1/5[/green]: Removing platform symlinks[/yellow]")
+        print("[yellow]Step [green]1/6[/green]: Removing platform symlinks[/yellow]")
         self.remove_symlinks(platform_dir, platform)
         print()
 
-        print("[yellow]Step [green]2/5[/green]: Removing common symlinks[/yellow]")
+        print("[yellow]Step [green]2/6[/green]: Removing common symlinks[/yellow]")
         self.remove_symlinks(common_dir, "common")
         print()
 
-        print("[yellow]Step [green]3/5[/green]: Checking for broken symlinks[/yellow]")
+        print("[yellow]Step [green]3/6[/green]: Checking for broken symlinks[/yellow]")
         self.check_and_clean()
         print()
 
-        print("[yellow]Step [green]4/5[/green]: Creating common base layer[/yellow]")
+        print("[yellow]Step [green]4/6[/green]: Creating common base layer[/yellow]")
         self.create_symlinks(common_dir, "common")
         print()
 
-        print("[yellow]Step [green]5/5[/green]: Creating platform overlay[/yellow]")
+        print("[yellow]Step [green]5/6[/green]: Creating platform overlay[/yellow]")
         self.create_symlinks(platform_dir, platform)
+        print()
+
+        print("[yellow]Step [green]6/6[/green]: Linking apps[/yellow]")
+        self.link_apps("common")
+        self.link_apps(platform)
         print()
 
         print(f"[bold green]✓ Relink complete![/] {platform} environment refreshed.")
