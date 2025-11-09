@@ -71,9 +71,7 @@ end
 if not vim.g.vscode then
   -- Resize window with larger amounts, using winresize to resize intuitively
   local resize = function(win, amt, dir)
-    return function()
-      require('winresize').resize(win, amt, dir)
-    end
+    return function() require('winresize').resize(win, amt, dir) end
   end
   vim.keymap.set('n', '<leader>rh', resize(0, 10, 'left'), { desc = 'Resize window left' })
   vim.keymap.set('n', '<leader>rj', resize(0, 10, 'down'), { desc = 'Resize window down' })
@@ -205,9 +203,12 @@ end
 -- VSCode has native file navigation, Oil is Neovim-specific
 if not vim.g.vscode then
   vim.keymap.set('n', '<leader>-', '<cmd>Oil --float<CR>', { desc = 'Open parent directory' })
-  vim.keymap.set('n', 'g^', function()
-    require('oil').set_columns({ 'icon', 'permissions', 'size', 'mtime' })
-  end, { desc = 'Show file details' })
+  vim.keymap.set(
+    'n',
+    'g^',
+    function() require('oil').set_columns({ 'icon', 'permissions', 'size', 'mtime' }) end,
+    { desc = 'Show file details' }
+  )
 end
 
 --------------------------------------------------------------------------------
@@ -231,9 +232,10 @@ if not vim.g.vscode then
       end,
       sorter = require('telescope.sorters').get_generic_fuzzy_sorter({ sorting_strategy = 'ascending' }),
       finder = require('telescope.finders').new_table({
-        results = vim.tbl_filter(function(colorscheme)
-          return vim.tbl_contains(good_colorschemes, colorscheme)
-        end, vim.fn.getcompletion('', 'color')),
+        results = vim.tbl_filter(
+          function(colorscheme) return vim.tbl_contains(good_colorschemes, colorscheme) end,
+          vim.fn.getcompletion('', 'color')
+        ),
       }),
     })
   end
@@ -250,13 +252,18 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>fk', tb.keymaps, { desc = 'Find: Keymaps' })
   vim.keymap.set('n', '<leader>ft', tb.treesitter, { desc = 'Find: Treesitter' })
   vim.keymap.set('n', '<leader>fz', filtered_colorschemes, { desc = 'Find: Colorschemes' })
-  vim.keymap.set('n', '<leader>fn', function()
-    tb.find_files({
-      cwd = vim.fn.stdpath('config'),
-      hidden = true,
-      follow = true,
-    })
-  end, { desc = 'Find: Neovim config files' })
+  vim.keymap.set(
+    'n',
+    '<leader>fn',
+    function()
+      tb.find_files({
+        cwd = vim.fn.stdpath('config'),
+        hidden = true,
+        follow = true,
+      })
+    end,
+    { desc = 'Find: Neovim config files' }
+  )
 end
 
 --------------------------------------------------------------------------------
@@ -284,24 +291,30 @@ vim.api.nvim_set_keymap('v', '<leader>zf', ":'<,'>ZkMatch<CR>", { noremap = true
 -- Zen Mode ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode has native zen mode, this conflicts with VSCode zen mode keybinding
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>zz', '<cmd>ZenMode<CR>', { desc = 'Toggle Zen Mode' })
-end
+if not vim.g.vscode then vim.keymap.set('n', '<leader>zz', '<cmd>ZenMode<CR>', { desc = 'Toggle Zen Mode' }) end
 
 --------------------------------------------------------------------------------
 -- LSP Format ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode handles formatting natively, these conflict with VSCode formatting keybindings
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>fmt', function()
-    require('utils.formatter').format_buffer({ async = true, show_notifications = true })
-  end, { desc = '[F]ormat buffer' })
-  vim.keymap.set('n', '<leader>fmi', function()
-    vim.lsp.buf.code_action({
-      context = { only = { 'source.fixAll' }, diagnostics = {} },
-      apply = true,
-    })
-  end, { desc = '[F]ix all linting' })
+  vim.keymap.set(
+    'n',
+    '<leader>fmt',
+    function() require('utils.formatter').format_buffer({ async = true, show_notifications = true }) end,
+    { desc = '[F]ormat buffer' }
+  )
+  vim.keymap.set(
+    'n',
+    '<leader>fmi',
+    function()
+      vim.lsp.buf.code_action({
+        context = { only = { 'source.fixAll' }, diagnostics = {} },
+        apply = true,
+      })
+    end,
+    { desc = '[F]ix all linting' }
+  )
 end
 
 --------------------------------------------------------------------------------
@@ -309,11 +322,7 @@ end
 --------------------------------------------------------------------------------
 -- Custom workflow system is Neovim-specific
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>hw', function()
-    require('utils.workflows').show_workflow_picker()
-  end, { desc = 'Help: Workflows' })
-  vim.keymap.set('n', '<leader>hk', function()
-    require('utils.workflows').show_all_keymaps()
-  end, { desc = 'Help: All keymaps' })
+  vim.keymap.set('n', '<leader>hw', function() require('utils.workflows').show_workflow_picker() end, { desc = 'Help: Workflows' })
+  vim.keymap.set('n', '<leader>hk', function() require('utils.workflows').show_all_keymaps() end, { desc = 'Help: All keymaps' })
   vim.keymap.set('n', '<leader>hh', '<leader>?', { desc = 'Help: Buffer keymaps', remap = true })
 end

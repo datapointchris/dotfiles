@@ -42,14 +42,10 @@ return {
               callback = function(args)
                 -- Simple ripgrep search
                 local pattern = args and args.pattern or ''
-                if pattern == '' then
-                  return "Please provide a search pattern: @ripgrep_search pattern='your_search'"
-                end
+                if pattern == '' then return "Please provide a search pattern: @ripgrep_search pattern='your_search'" end
 
                 local results = vim.fn.systemlist("rg --line-number --context=2 '" .. pattern .. "'")
-                if #results == 0 then
-                  return 'No results found for: ' .. pattern
-                end
+                if #results == 0 then return 'No results found for: ' .. pattern end
 
                 -- Limit results to prevent overflow
                 local limited_results = {}
@@ -76,9 +72,7 @@ return {
 
                   local result = 'Repository Overview:\n'
                   result = result .. '==================\n'
-                  if git_branch ~= '' then
-                    result = result .. 'Git branch: ' .. git_branch .. '\n'
-                  end
+                  if git_branch ~= '' then result = result .. 'Git branch: ' .. git_branch .. '\n' end
                   result = result .. 'Total files: ' .. total_files .. '\n'
                   result = result .. 'File types:\n' .. table.concat(file_types, '\n')
 
@@ -92,15 +86,9 @@ return {
                   local requirements = vim.fn.systemlist('fd requirements.txt .')
                   local cargo_toml = vim.fn.systemlist('fd Cargo.toml .')
 
-                  if #package_json > 0 then
-                    table.insert(deps, 'Found Node.js project: ' .. package_json[1])
-                  end
-                  if #requirements > 0 then
-                    table.insert(deps, 'Found Python project: ' .. requirements[1])
-                  end
-                  if #cargo_toml > 0 then
-                    table.insert(deps, 'Found Rust project: ' .. cargo_toml[1])
-                  end
+                  if #package_json > 0 then table.insert(deps, 'Found Node.js project: ' .. package_json[1]) end
+                  if #requirements > 0 then table.insert(deps, 'Found Python project: ' .. requirements[1]) end
+                  if #cargo_toml > 0 then table.insert(deps, 'Found Rust project: ' .. cargo_toml[1]) end
 
                   local lua_requires = vim.fn.systemlist('rg "require\\(" --type lua | head -5')
                   if #lua_requires > 0 then
@@ -136,9 +124,7 @@ return {
             },
           },
           roles = {
-            llm = function(adapter)
-              return 'Claude (' .. adapter.formatted_name .. ')'
-            end,
+            llm = function(adapter) return 'Claude (' .. adapter.formatted_name .. ')' end,
             user = 'Me',
           },
         },
@@ -184,9 +170,7 @@ return {
         web = {
           callback = function(args)
             local query = args and table.concat(args, ' ') or ''
-            if query == '' then
-              return 'Usage: /web your search query here'
-            end
+            if query == '' then return 'Usage: /web your search query here' end
 
             local search_url = 'https://duckduckgo.com/?q=' .. vim.fn.shellescape(query)
             local result = '🔍 Web Search: ' .. query .. '\n\n'
@@ -204,9 +188,7 @@ return {
             local git_branch = vim.fn.system('git branch --show-current 2>/dev/null'):gsub('%s+', '')
 
             local result = '📁 Repository Overview\n'
-            if git_branch ~= '' then
-              result = result .. 'Branch: ' .. git_branch .. '\n'
-            end
+            if git_branch ~= '' then result = result .. 'Branch: ' .. git_branch .. '\n' end
             result = result .. '\nKey files:\n' .. table.concat(files, '\n')
 
             return result
@@ -220,9 +202,7 @@ return {
         web_search = {
           callback = function(args)
             local query = args and args.query or ''
-            if query == '' then
-              return "Usage: @web_search query='your search terms'"
-            end
+            if query == '' then return "Usage: @web_search query='your search terms'" end
 
             local escaped_query = query:gsub(' ', '+')
             local cmd = string.format("curl -s 'https://api.duckduckgo.com/?q=%s&format=json&no_redirect=1&skip_disambig=1'", escaped_query)
@@ -236,9 +216,7 @@ return {
               if success and json and json.AbstractText and json.AbstractText ~= '' then
                 local result = '🌐 Web Search: ' .. query .. '\n\n'
                 result = result .. json.AbstractText
-                if json.AbstractURL then
-                  result = result .. '\n\nSource: ' .. json.AbstractURL
-                end
+                if json.AbstractURL then result = result .. '\n\nSource: ' .. json.AbstractURL end
                 return result
               else
                 return '🌐 Web Search: '
@@ -259,14 +237,10 @@ return {
         quick_search = {
           callback = function(args)
             local pattern = args and args.pattern or ''
-            if pattern == '' then
-              return "Usage: @quick_search pattern='search term'"
-            end
+            if pattern == '' then return "Usage: @quick_search pattern='search term'" end
 
             local results = vim.fn.systemlist("rg --line-number --context=1 --max-count=10 '" .. pattern .. "'")
-            if #results == 0 then
-              return 'No results found for: ' .. pattern
-            end
+            if #results == 0 then return 'No results found for: ' .. pattern end
 
             return '🔍 Quick Search: ' .. pattern .. '\n\n' .. table.concat(results, '\n')
           end,
@@ -342,9 +316,7 @@ return {
       use_default_actions = true,
     },
 
-    config = function(_, opts)
-      require('codecompanion').setup(opts)
-    end,
+    config = function(_, opts) require('codecompanion').setup(opts) end,
   },
 
   {

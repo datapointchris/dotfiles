@@ -18,14 +18,10 @@ return {
     local default_sources = { 'lsp', 'path', 'snippets', 'buffer', 'lazydev' }
 
     -- Only add copilot if AI is enabled and not in VSCode
-    if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then
-      table.insert(default_sources, 'copilot')
-    end
+    if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then table.insert(default_sources, 'copilot') end
 
     return {
-      enabled = function()
-        return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype)
-      end,
+      enabled = function() return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype) end,
       -- Keymap configuration
       keymap = {
         preset = 'none', -- We'll define custom keymaps
@@ -134,9 +130,7 @@ return {
             module = 'blink-cmp-copilot',
             score_offset = 100, -- Prioritize Copilot suggestions
             async = true,
-            enabled = function()
-              return vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode
-            end,
+            enabled = function() return vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode end,
           },
           lsp = {
             name = 'LSP',
@@ -148,9 +142,7 @@ return {
             opts = {
               trailing_slash = false,
               label_trailing_slash = true,
-              get_cwd = function(context)
-                return vim.fn.expand(('#%d:p:h'):format(context.bufnr))
-              end,
+              get_cwd = function(context) return vim.fn.expand(('#%d:p:h'):format(context.bufnr)) end,
               show_hidden_files_by_default = true,
             },
           },

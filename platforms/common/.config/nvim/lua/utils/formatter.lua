@@ -23,9 +23,7 @@ local function format_with_external(formatter, file_path)
   local args = vim.list_extend({}, formatter.args) -- Copy args
 
   -- Check if formatter is available
-  if vim.fn.executable(cmd) ~= 1 then
-    return false, cmd .. ' not found'
-  end
+  if vim.fn.executable(cmd) ~= 1 then return false, cmd .. ' not found' end
 
   -- For formatters that work in-place (like stylua, rustfmt, gofmt)
   if cmd == 'stylua' or cmd == 'rustfmt' or cmd == 'gofmt' then
@@ -55,9 +53,7 @@ local function format_with_external(formatter, file_path)
       -- Replace buffer content with formatted result
       local formatted_lines = vim.split(result, '\n')
       -- Remove trailing empty line if it exists
-      if formatted_lines[#formatted_lines] == '' then
-        table.remove(formatted_lines)
-      end
+      if formatted_lines[#formatted_lines] == '' then table.remove(formatted_lines) end
       vim.api.nvim_buf_set_lines(0, 0, -1, false, formatted_lines)
       return true, 'Formatted with ' .. cmd
     else
@@ -89,14 +85,10 @@ function M.format_buffer(opts)
   if formatter then
     local success, message = format_with_external(formatter, file_path)
     if success then
-      if show_notifications then
-        vim.notify(message, vim.log.levels.INFO)
-      end
+      if show_notifications then vim.notify(message, vim.log.levels.INFO) end
       return true
     else
-      if show_notifications then
-        vim.notify(message .. ', falling back to LSP', vim.log.levels.WARN)
-      end
+      if show_notifications then vim.notify(message .. ', falling back to LSP', vim.log.levels.WARN) end
     end
   end
 

@@ -8,9 +8,7 @@ return {
     lazy = false,
     priority = 1000,
     cond = not vim.g.vscode,
-    config = function()
-      require('github-theme').setup()
-    end,
+    config = function() require('github-theme').setup() end,
   },
   {
     'rose-pine/neovim',
@@ -70,9 +68,7 @@ return {
 
       -- === GIT-BASED PERSISTENCE ===
       local data_path = vim.fn.stdpath('data') .. '/git_colorschemes'
-      local function ensure_data_dir()
-        vim.fn.mkdir(data_path, 'p')
-      end
+      local function ensure_data_dir() vim.fn.mkdir(data_path, 'p') end
       local function find_git_root()
         local current_dir = vim.fn.getcwd()
         local git_dir = vim.fn.finddir('.git', current_dir .. ';')
@@ -107,9 +103,7 @@ return {
 
       local function save_colorscheme()
         local git_root = find_git_root()
-        if not git_root then
-          return
-        end
+        if not git_root then return end
 
         local current_colorscheme = vim.g.colors_name
         if current_colorscheme then
@@ -163,17 +157,13 @@ return {
       local function setup_auto_save()
         vim.api.nvim_create_autocmd('ColorScheme', {
           group = vim.api.nvim_create_augroup('GitColorschemePersiestence', { clear = true }),
-          callback = function()
-            save_colorscheme()
-          end,
+          callback = function() save_colorscheme() end,
         })
 
         -- Auto-load when changing directories
         vim.api.nvim_create_autocmd('DirChanged', {
           group = vim.api.nvim_create_augroup('GitColorschemePersiestenceDirChange', { clear = true }),
-          callback = function()
-            load_colorscheme()
-          end,
+          callback = function() load_colorscheme() end,
         })
       end
 
@@ -183,9 +173,7 @@ return {
         get_random_colorscheme = get_random_colorscheme,
       }
 
-      if not load_colorscheme() then
-        vim.cmd('colorscheme github_dark_dimmed')
-      end
+      if not load_colorscheme() then vim.cmd('colorscheme github_dark_dimmed') end
 
       setup_auto_save()
     end,
