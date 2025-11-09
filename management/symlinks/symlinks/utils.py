@@ -69,6 +69,17 @@ def cleanup_empty_directories(base_dir: Path, dirs_to_clean: list[Path]) -> list
     Returns:
         List of directories that were removed (relative to base_dir)
     """
+    # Directories that should NEVER be removed, even if empty
+    protected_dirs = {
+        ".local/state/claude",
+        ".local/state/claude/locks",
+        ".local/state/nvim",
+        ".local/share/nvim",
+        ".cache",
+        ".venv",
+        ".git",
+    }
+
     removed = []
     for cleanup_dir in dirs_to_clean:
         if not cleanup_dir.exists():
@@ -76,18 +87,33 @@ def cleanup_empty_directories(base_dir: Path, dirs_to_clean: list[Path]) -> list
 
         # Walk from deepest to shallowest
         for dirpath in sorted(cleanup_dir.rglob("*"), key=lambda p: len(p.parts), reverse=True):
-            if dirpath.is_dir() and not any(dirpath.iterdir()):
+            if not dirpath.is_dir() or any(dirpath.iterdir()):
+                continue
+
+            # Check if this directory is protected
+            try:
+                relative = dirpath.relative_to(base_dir)
+                is_protected = any(
+                    str(relative) == protected or str(relative).startswith(f"{protected}/")
+                    for protected in protected_dirs
+                )
+                if is_protected:
+                    continue
+            except ValueError:
+                pass
+
+            # Safe to remove
+            try:
+                dirpath.rmdir()
+                # Store relative path from base_dir for cleaner output
                 try:
-                    dirpath.rmdir()
-                    # Store relative path from base_dir for cleaner output
-                    try:
-                        relative = dirpath.relative_to(base_dir)
-                        removed.append(relative)
-                    except ValueError:
-                        # If can't make relative, use full path
-                        removed.append(dirpath)
-                except (OSError, PermissionError):
-                    pass
+                    relative = dirpath.relative_to(base_dir)
+                    removed.append(relative)
+                except ValueError:
+                    # If can't make relative, use full path
+                    removed.append(dirpath)
+            except (OSError, PermissionError):
+                pass
 
     return removed
 
