@@ -252,6 +252,295 @@ tools:
     tags: [vcs, syntax-highlighting, git]
     docs_url: "https://github.com/dandavison/delta"
 
+  # Forgit - Interactive Git Commands with fzf
+  # Installed via: task shell:install
+
+  git-forgit-log:
+    category: version-control
+    description: "Interactive git log viewer with fzf"
+    installed_via: dotfiles
+    usage: "git forgit log"
+    why_use: "Browse git history interactively, preview commits, search by content"
+    examples:
+      - cmd: "git forgit log"
+        desc: "Interactive commit history browser"
+    see_also: [git, lazygit, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-reflog:
+    category: version-control
+    description: "Interactive git reflog viewer with fzf"
+    installed_via: dotfiles
+    usage: "git forgit reflog"
+    why_use: "Browse reflog interactively to recover lost commits or understand history changes"
+    examples:
+      - cmd: "git forgit reflog"
+        desc: "Interactive reflog browser"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-diff:
+    category: version-control
+    description: "Interactive git diff viewer with fzf"
+    installed_via: dotfiles
+    usage: "git forgit diff"
+    why_use: "Interactively select files to view diffs with syntax highlighting"
+    examples:
+      - cmd: "git forgit diff"
+        desc: "Interactive diff file selector"
+    see_also: [git, git-delta, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-show:
+    category: version-control
+    description: "Interactive git show commit viewer with fzf"
+    installed_via: dotfiles
+    usage: "git forgit show"
+    why_use: "Interactively select and view commit details with diffs"
+    examples:
+      - cmd: "git forgit show"
+        desc: "Interactive commit viewer"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-add:
+    category: version-control
+    description: "Interactive git add file selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit add"
+    why_use: "Visually select files to stage with preview of changes"
+    examples:
+      - cmd: "git forgit add"
+        desc: "Interactive file staging"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, staging]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-reset-head:
+    category: version-control
+    description: "Interactive git reset HEAD file selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit reset_head"
+    why_use: "Interactively unstage files with preview"
+    examples:
+      - cmd: "git forgit reset_head"
+        desc: "Interactive unstaging"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, staging]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-ignore:
+    category: version-control
+    description: "Interactive .gitignore generator with fzf"
+    installed_via: dotfiles
+    usage: "git forgit ignore"
+    why_use: "Add gitignore patterns from gitignore.io templates interactively"
+    examples:
+      - cmd: "git forgit ignore"
+        desc: "Generate .gitignore entries"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-checkout-file:
+    category: version-control
+    description: "Interactive git checkout file selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit checkout_file"
+    why_use: "Interactively select files to discard changes with preview"
+    examples:
+      - cmd: "git forgit checkout_file"
+        desc: "Interactive file checkout/discard"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-checkout-branch:
+    category: version-control
+    description: "Interactive git branch checkout selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit checkout_branch"
+    why_use: "Fuzzy search and switch branches with preview of branch info"
+    examples:
+      - cmd: "git forgit checkout_branch"
+        desc: "Interactive branch switching"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, branches]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-checkout-tag:
+    category: version-control
+    description: "Interactive git tag checkout selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit checkout_tag"
+    why_use: "Interactively select and checkout tags"
+    examples:
+      - cmd: "git forgit checkout_tag"
+        desc: "Interactive tag checkout"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, tags]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-checkout-commit:
+    category: version-control
+    description: "Interactive git commit checkout selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit checkout_commit"
+    why_use: "Interactively select and checkout specific commits"
+    examples:
+      - cmd: "git forgit checkout_commit"
+        desc: "Interactive commit checkout"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-branch-delete:
+    category: version-control
+    description: "Interactive git branch delete selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit branch_delete"
+    why_use: "Safely delete branches with interactive selection and confirmation"
+    examples:
+      - cmd: "git forgit branch_delete"
+        desc: "Interactive branch deletion"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, branches]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-revert-commit:
+    category: version-control
+    description: "Interactive git revert commit selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit revert_commit"
+    why_use: "Interactively select commits to revert with preview"
+    examples:
+      - cmd: "git forgit revert_commit"
+        desc: "Interactive commit revert"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-clean:
+    category: version-control
+    description: "Interactive git clean untracked files selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit clean"
+    why_use: "Safely remove untracked files with preview and selection"
+    examples:
+      - cmd: "git forgit clean"
+        desc: "Interactive untracked file removal"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-stash-show:
+    category: version-control
+    description: "Interactive git stash viewer with fzf"
+    installed_via: dotfiles
+    usage: "git forgit stash_show"
+    why_use: "Browse and view stash entries interactively with diff preview"
+    examples:
+      - cmd: "git forgit stash_show"
+        desc: "Interactive stash browser"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, stash]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-stash-push:
+    category: version-control
+    description: "Interactive git stash push file selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit stash_push"
+    why_use: "Selectively stash files with interactive selection"
+    examples:
+      - cmd: "git forgit stash_push"
+        desc: "Interactive selective stashing"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, stash]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-cherry-pick:
+    category: version-control
+    description: "Interactive git cherry-pick commit selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit cherry_pick"
+    why_use: "Interactively select commits to cherry-pick from branches"
+    examples:
+      - cmd: "git forgit cherry_pick"
+        desc: "Interactive cherry-pick"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-rebase:
+    category: version-control
+    description: "Interactive git rebase -i commit selector with fzf"
+    installed_via: dotfiles
+    usage: "git forgit rebase"
+    why_use: "Interactively select base commit for interactive rebase"
+    examples:
+      - cmd: "git forgit rebase"
+        desc: "Interactive rebase selector"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, rebase]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-blame:
+    category: version-control
+    description: "Interactive git blame viewer with fzf"
+    installed_via: dotfiles
+    usage: "git forgit blame"
+    why_use: "Interactively view file blame with commit details"
+    examples:
+      - cmd: "git forgit blame"
+        desc: "Interactive blame viewer"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-fixup:
+    category: version-control
+    description: "Interactive commit fixup with autosquash"
+    installed_via: dotfiles
+    usage: "git forgit fixup"
+    why_use: "Interactively create fixup commits for previous commits"
+    examples:
+      - cmd: "git forgit fixup"
+        desc: "Interactive fixup commit creation"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, rebase]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-squash:
+    category: version-control
+    description: "Interactive commit squash with autosquash"
+    installed_via: dotfiles
+    usage: "git forgit squash"
+    why_use: "Interactively create squash commits for combining with previous commits"
+    examples:
+      - cmd: "git forgit squash"
+        desc: "Interactive squash commit creation"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, rebase]
+    docs_url: "https://github.com/wfxr/forgit"
+
+  git-forgit-reword:
+    category: version-control
+    description: "Interactive commit reword with autosquash"
+    installed_via: dotfiles
+    usage: "git forgit reword"
+    why_use: "Interactively reword previous commit messages"
+    examples:
+      - cmd: "git forgit reword"
+        desc: "Interactive commit message editing"
+    see_also: [git, fzf]
+    tags: [vcs, git, interactive, fzf, rebase]
+    docs_url: "https://github.com/wfxr/forgit"
+
   # =================================================================
   # DEVELOPMENT TOOLS
   # =================================================================
