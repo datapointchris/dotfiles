@@ -1,200 +1,101 @@
 # Tool Composition Architecture
 
-This document explains how the workflow tools in this dotfiles system are designed to work together, following the Unix philosophy of small, focused, composable tools.
+How the workflow tools in this dotfiles system work together, following the Unix philosophy.
 
 ## Core Philosophy
 
-The workflow tools follow these architectural principles:
+**Small, focused, composable tools.**
 
-### 1. Separation of Data and Presentation
+Each tool:
 
-Tools are **data providers**, not UI frameworks. They output clean, parseable data that can be composed with external UI tools.
+1. Does one thing well
+2. Outputs clean, parseable data
+3. Composes with external UI tools (fzf, gum)
+4. Works in scripts and interactive use
 
-**Pattern: Data Provider + External UI**
+**Separation of data and presentation**: Tools are data providers, not UI frameworks.
 
 ```text
 Tool outputs data → External UI (fzf/gum) → Tool processes selection
-```text
+```
 
-**Example:**
+Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at the shell level, not within the tool.
 
-```bash
-# sess provides session data
-sess list | fzf | xargs sess
+## The Tools
 
-# tools provides tool information
-tools list | fzf --preview='tools show {1}'
+**sess** (`apps/sess/`) - Go application
 
-# theme-sync provides theme names
-theme-sync favorites | fzf | xargs theme-sync apply
-```text
+- Tmux session management
+- Aggregates: tmux sessions, tmuxinator projects, default configs
+- Commands: `sess`, `sess list`, `sess <name>`, `sess last`
 
-This pattern is inspired by [sesh](https://github.com/joshmedeski/sesh) - the integration happens at the shell level, not within the tool itself.
+**toolbox** (`apps/common/toolbox`) - Bash script
 
-### 2. Single Responsibility
+- CLI tool discovery and documentation
+- Registry: `platforms/common/.config/toolbox/registry.yml`
+- Commands: `list`, `show`, `search`, `random`, `installed`
 
-Each tool has one clear purpose:
+**theme-sync** (`apps/common/theme-sync`) - Bash script
 
-- **sess** - Tmux session management (create, list, switch)
-- **tools** - Tool discovery and documentation
-- **theme-sync** - Base16 theme synchronization
-- **nb** - Note taking and knowledge management
-- **menu** - Quick reference and launcher (documentation in executable form)
+- Base16 theme synchronization across tmux/bat/fzf/shell
+- Wraps tinty with favorites management
+- Commands: `current`, `apply`, `favorites`, `random`, `list`
 
-No tool tries to do everything. No "mega-tool" that handles sessions AND themes AND notes.
+**notes** (`apps/common/notes`) - Bash wrapper
 
-### 3. Clean Output
+- Auto-discovers zk notebook sections
+- Interactive gum menu for quick access
+- Direct zk commands: `zk journal`, `zk devnote`, `zk learn`
 
-Tools output clean, machine-readable data by default, with optional formatting.
+**menu** (`apps/common/menu`) - Bash launcher
 
-**Good output (parseable):**
-
-```bash
-$ sess list
-● dotfiles (4 windows)
-● ichrisbirch (1 window)
-○ learning (2 windows)
-```text
-
-**Good output (structured):**
-
-```bash
-$ tools list
-bat                       [file-viewer] Syntax-highlighting cat replacement
-eza                       [file-lister] Modern ls replacement with git integration
-fd                        [file-finder] Fast, user-friendly alternative to find
-```text
-
-**Good output (plain text):**
-
-```bash
-$ theme-sync favorites
-rose-pine
-rose-pine-moon
-gruvbox-dark-hard
-kanagawa
-```text
-
-### 4. Composability Over Integration
-
-Instead of building fzf/gum INTO each tool, we make tools that OUTPUT FOR them.
-
-**Anti-pattern (integration):**
-
-```bash
-# Tool has built-in fzf mode
-sess --fzf          # Bad: now sess depends on fzf
-```text
-
-**Better (composition):**
-
-```bash
-# Tool outputs clean data, shell composes with fzf
-sess list | fzf     # Good: sess doesn't know about fzf
-```text
-
-**Benefits:**
-
-- Tools stay lightweight
-- Users can choose their UI (fzf, gum, rofi, dmenu, etc.)
-- Easier to test (pure functions, predictable output)
-- Works in scripts and interactive use
-
-## How Tools Work Together
-
-### Layer 1: Data Sources
-
-Each tool manages its own data source:
-
-```text
-sess        → tmux sessions + tmuxinator projects + config file
-tools       → YAML registry (docs/tools/registry.yml)
-theme-sync  → tinty + Base16 themes
-nb          → Git-backed markdown notebooks
-```text
-
-### Layer 2: Core Logic
-
-Each tool provides commands for its domain:
-
-```text
-sess list           → Get all available sessions
-sess <name>         → Create or switch to session
-
-tools list          → Get all tools from registry
-tools show <name>   → Get detailed tool info
-
-theme-sync current  → Get active theme
-theme-sync apply    → Set theme across applications
-
-nb add              → Create note
-nb search           → Find notes
-```text
-
-### Layer 3: Output Formats
-
-Tools output in formats suitable for composition:
-
-```text
-Plain Text    → For piping to fzf, grep, awk
-Structured    → For parsing (consistent format)
-Rich          → For direct viewing (icons, colors)
-```text
-
-### Layer 4: External Composition
-
-Users compose at the shell level:
-
-```bash
-# Filtering
-tools list | grep cli-utility
-
-# Interactive selection
-sess list | fzf
-
-# Transformation
-theme-sync favorites | shuf | head -1
-
-# Chaining
-tools show $(tools list | fzf | awk '{print $1}')
-```text
+- Shows available tools and workflows
+- Interactive gum menu with `menu launch`
+- Documentation in executable form
 
 ## Composition Patterns
 
-### Pattern 1: Filter → Select → Execute
+### Pattern 1: Interactive Selection with fzf
 
 ```bash
-# List all items → Filter interactively → Execute action
-tools list | fzf --preview='tools show {1}'
-sess list | fzf | xargs sess
+# Tools discovery
+toolbox list | fzf --preview='toolbox show {1}'
+
+# Theme picker
 theme-sync favorites | fzf | xargs theme-sync apply
-```text
 
-### Pattern 2: Search → Process → Output
+# Session switcher
+sess list | fzf | xargs sess
 
-```bash
-# Search across data → Process results → Format output
-nb search "algorithm" --all | grep -i "binary" | wc -l
-tools list | grep file-viewer | awk '{print $1}'
-```text
+# Note browser
+zk list | fzf --preview='bat {-1}'
+```
 
-### Pattern 3: Generate → Transform → Apply
+**Why this works**: Tools output clean data, fzf provides UI, xargs chains to action.
 
-```bash
-# Generate data → Transform → Apply changes
-theme-sync favorites | shuf | head -1 | xargs theme-sync apply
-sess list | awk '{print $2}' | xargs -I {} tmux kill-session -t {}
-```text
-
-### Pattern 4: Conditional Logic
+### Pattern 2: Filtering and Processing
 
 ```bash
-# Check state → Decide → Execute
-if sess list | grep -q "dotfiles"; then
-  sess dotfiles
-else
-  sess dotfiles
-fi
+# Find specific tools
+toolbox list | grep cli-utility
+
+# Get session names only
+sess list | awk '{print $2}'
+
+# Count matching notes
+zk list --match "algorithm" | wc -l
+
+# Check which tools are installed
+toolbox installed | wc -l
+```
+
+**Why this works**: Structured output + standard Unix tools = powerful queries.
+
+### Pattern 3: Scripting and Automation
+
+```bash
+# Auto-create session for current directory
+sess $(basename "$PWD")
 
 # Time-based theme switching
 hour=$(date +%H)
@@ -203,246 +104,297 @@ if [ $hour -ge 6 ] && [ $hour -lt 18 ]; then
 else
   theme-sync apply rose-pine
 fi
-```text
 
-## Integration Points
+# Create daily journal automatically
+zk journal "$(date '+%Y-%m-%d')"
+```
 
-### Tmux Integration
+**Why this works**: Tools are scriptable, return predictable exit codes, output is parseable.
 
-Tools integrate with tmux through bindings and popups:
-
-```bash
-# tmux.conf example
-bind-key "s" run-shell "tmux popup -E 'sess'"
-bind-key "t" run-shell "tmux popup -E 'tools list | fzf'"
-```text
-
-### Shell Integration
-
-Tools are available in the shell PATH:
+### Pattern 4: Interactive with gum
 
 ```bash
-# .zshrc - no aliases needed, commands are memorable
-# Tools are in ~/.local/bin/ (symlinked from dotfiles)
+# Choose tool to explore
+TOOL=$(toolbox list | awk '{print $1}' | gum choose)
+toolbox show "$TOOL"
 
-# Optional compositions for frequent workflows
-alias theme-pick='theme-sync favorites | fzf | xargs theme-sync apply'
-alias tool-find='tools list | fzf --preview="tools show {1}"'
-```text
-
-### Alfred/Raycast Integration
-
-Tools can be called from launcher applications:
-
-```bash
-# Alfred Script Filter
-/usr/local/bin/sess list
-
-# Alfred Run Script
-/usr/local/bin/menu launch
-```text
-
-## Data Flow Example
-
-Let's trace a complete workflow: "Switch to a tmux session"
-
-**Step 1: User initiates**
-
-```bash
-sess
-```text
-
-**Step 2: sess gathers data**
-
-- Check running tmux sessions (`tmux list-sessions`)
-- Check tmuxinator projects (`~/.config/tmuxinator/`)
-- Check default sessions config (`~/.config/menu/sessions/sessions-macos.yml`)
-
-**Step 3: sess formats output**
-
-```text
-● dotfiles (4 windows)     # Active session
-○ ichrisbirch (1 window)   # Inactive session
-→ learning                 # Tmuxinator project
-+ work                     # Default session (not running)
-+ Create New Session
-```text
-
-**Step 4: sess calls gum**
-
-```bash
-gum choose --header="Tmux Sessions" <options>
-```text
-
-**Step 5: User selects**
-User chooses "learning"
-
-**Step 6: sess processes selection**
-
-- If tmuxinator project: `tmuxinator start learning`
-- If running session: `tmux switch-client -t learning`
-- If default session: Create session based on config
-
-**Step 7: Session switched**
-User is now in the "learning" tmux session.
-
-## Alternative Composition
-
-The same workflow can be composed differently:
-
-```bash
-# Manual composition with fzf instead of gum
-sess list | fzf | xargs sess
-
-# Scripted composition
-SESSION=$(sess list | awk '{print $2}' | sort | head -1)
+# Multi-step workflow
+SESSION=$(sess list | gum choose --height=10)
 sess "$SESSION"
 
-# Filtered composition
-sess list | grep -v dotfiles | fzf | xargs sess
-```text
+# Input for note creation
+TITLE=$(gum input --placeholder "Note title")
+zk devnote "$TITLE"
+```
 
-The tool doesn't care HOW you use it - it just provides clean data and accepts clean input.
+**Why this works**: gum provides beautiful TUI, tools remain simple.
 
 ## Design Decisions
 
-### Why Not Build UI Into Tools?
+### Why not build fzf/gum INTO each tool?
 
-**Considered:** Adding `sess --fzf` flag for built-in fzf integration
+**Anti-pattern**:
 
-**Rejected because:**
+```bash
+sess --fzf          # Now sess depends on fzf
+toolbox --interactive  # Now toolbox needs gum
+```
 
-- Adds dependency (what if user prefers gum? rofi? dmenu?)
-- Increases code complexity
-- Harder to test
-- Less composable
-- Goes against Unix philosophy
+**Better**:
 
-**Chosen approach:**
+```bash
+sess list | fzf     # sess is independent
+toolbox list | gum choose  # toolbox doesn't know about gum
+```
 
-- Tools output clean data
-- Shell scripts compose with preferred UI
-- Users can swap UI tools without changing our tools
+**Benefits**:
 
-### Why No Shell Aliases by Default?
+- Tools stay lightweight (no UI dependencies)
+- Users choose their UI (fzf, gum, rofi, dmenu)
+- Easier to test (pure functions, predictable output)
+- Works in scripts without interactive flags
 
-**Considered:** Creating aliases like `s` for `sess`, `t` for `tools`
+### Why bash scripts instead of one Go application?
 
-**Rejected because:**
+**Pragmatism over purity**:
 
-- User preference: full names easier to remember
-- Clarity over brevity: `sess` is already short
-- Self-documenting: `tools list` is clearer than `t l`
-- Avoids conflicts: `s` might conflict with other tools
+- **sess** is Go because: Complex logic, concurrent operations, type safety for config parsing
+- **toolbox/theme-sync/notes/menu** are bash because: Simple text processing, YAML parsing with yq, shell integration
 
-**Chosen approach:**
+**Rule of thumb**: If it's mostly calling other CLI tools and processing text, bash is simpler.
 
-- Use full, memorable command names
-- Users can create their own aliases if desired
-- Document composition patterns instead
+### Why separate tools instead of one "workflow" command?
 
-### Why Separate Workflow Tools from Dotfiles Management?
+**Unix philosophy over convenience**:
 
-**Separation of concerns:**
+```bash
+# Anti-pattern: Mega-tool
+workflow sessions    # subcommand
+workflow tools      # another subcommand
+workflow themes     # yet another subcommand
 
-**Workflow Tools** (sess, tools, theme-sync, nb, menu):
+# Better: Focused tools
+sess
+toolbox
+theme-sync
+```
 
-- Purpose: Daily development and note-taking workflows
-- Storage: Live in dotfiles repo for convenience
-- Usage: Direct commands (`sess`, `tools`)
+**Benefits**:
 
-**Dotfiles Management** (task commands):
+- Each tool has clear purpose and ownership
+- Can be used independently or composed
+- Easier to maintain (single responsibility)
+- Natural command names (no subcommand memorization)
 
-- Purpose: Configuration deployment and system setup
-- Storage: Taskfiles and install scripts in dotfiles repo
-- Usage: Task runner (`task symlinks:link`, `task install:macos`)
+## Data Flow Example
 
-These are **different concerns** that happen to share a repository. The tools help with daily work; the tasks help manage the dotfiles themselves.
+**Interactive theme selection and application**:
 
-## Comparison with Alternatives
+```text
+User runs:
+  theme-sync favorites | fzf | xargs theme-sync apply
 
-### The Menu Approach (Archived)
+Flow:
+  1. theme-sync favorites
+     → Reads favorites from script
+     → Outputs 12 theme names (one per line)
 
-**What we had:**
+  2. | fzf
+     → User selects one theme
+     → Outputs selected theme name
 
-- 17MB Go binary with Bubbletea TUI
-- Complex menu system with multiple implementations
-- Tried to be "one tool to rule them all"
+  3. | xargs theme-sync apply
+     → theme-sync receives theme name as arg
+     → Calls: tinty apply <theme>
+     → Updates: tmux colors, bat theme, fzf colors, shell prompt
+```
 
-**Why it didn't work:**
+**Session creation**:
 
-- Added layer of indirection ("press 's' to see sessions, then select session")
-- Too heavy (17MB for a launcher?)
-- Maintenance burden (3 different implementations)
-- Cognitive overhead (remembering menu structure)
+```text
+User runs:
+  sess dotfiles
 
-**What we learned:**
+Flow:
+  1. sess checks if "dotfiles" session exists
+     → tmux has-session -t dotfiles
 
-- Menus add friction, not reduce it
-- Better to have muscle memory for direct commands
-- Documentation is a better "menu" than a TUI
+  2. If exists: switch
+     → tmux switch-client -t dotfiles
 
-### The Integration Approach
+  3. If not: check for default config
+     → Reads ~/.config/sess/sessions-macos.yml
+     → Finds dotfiles entry with directory ~/dotfiles
 
-**What we could have done:**
+  4. Create from config
+     → tmux new-session -s dotfiles -c ~/dotfiles
+     → tmux switch-client -t dotfiles
+```
 
-- Add fzf integration to each tool
-- Create "super tool" with all features
-- Build custom TUI for everything
+## Tool Relationships
 
-**Why we didn't:**
+```text
+┌──────────┐
+│   menu   │  Simple launcher, references all tools
+└────┬─────┘
+     │
+     ├─────┐
+     │     │
+┌────▼─┐ ┌─▼────────┐ ┌────────────┐ ┌─────────┐
+│ sess │ │ toolbox  │ │theme-sync  │ │ notes   │
+└──────┘ └──────────┘ └────────────┘ └────┬────┘
+   │         │              │               │
+   │         │              │               │
+┌──▼────┐ ┌─▼────────┐ ┌───▼──────┐ ┌─────▼───┐
+│ tmux  │ │ registry │ │  tinty   │ │   zk    │
+└───────┘ └──────────┘ └──────────┘ └─────────┘
+```
 
-- Violates single responsibility principle
-- Creates dependencies between unrelated domains
-- Harder to maintain
-- Less flexible for users
+**Independence**: Each tool works standalone. menu just provides discovery.
 
-**What we chose instead:**
+## Integration Points
 
-- Small, focused tools
-- Clean data output
-- Composition at shell level
-- User choice of UI tools
+### Shell Integration
+
+Tools are in `~/.local/bin/` (symlinked from `apps/common/` and `apps/{platform}/`):
+
+```bash
+# After task symlinks:link
+ls ~/.local/bin/
+# sess toolbox theme-sync notes menu ghostty-theme aws-profiles
+```
+
+All tools available in PATH, callable from anywhere.
+
+### Configuration Files
+
+Tools read from XDG-compliant locations:
+
+- `~/.config/sess/sessions-{platform}.yml` - Default sessions
+- `~/.config/toolbox/registry.yml` - Tool definitions
+- `~/.config/zk/config.toml` - Note configuration
+- `~/.config/tinty/config.toml` - Theme config
+
+Source files in `platforms/common/.config/` (symlinked to `~/.config/`).
+
+### Data Sources
+
+Each tool owns its data:
+
+- **sess**: Aggregates tmux state + tmuxinator + config file
+- **toolbox**: Reads YAML registry
+- **theme-sync**: Wraps tinty (which manages theme files)
+- **notes**: Wraps zk (which manages `~/notes/`)
+
+No shared database. No coupling.
 
 ## Best Practices
 
-### For Tool Developers
+### For Tool Authors
 
-When adding new tools to this system:
+**Output clean data**:
 
-1. **Focus on one domain** - Don't create multi-purpose tools
-2. **Output clean data** - Make output parseable and predictable
-3. **Accept clean input** - Simple arguments, no complex parsing
-4. **Don't integrate UI** - Output FOR fzf/gum, don't integrate WITH them
-5. **Provide plain output** - Default to machine-readable, add formatting as option
-6. **Document composition** - Show examples of piping to other tools
+```bash
+# Good: one item per line, easy to parse
+toolbox list
+# bat                       [file-viewer] ...
+# eza                       [file-lister] ...
+
+# Good: plain text for piping
+theme-sync favorites
+# rose-pine
+# gruvbox-dark-hard
+```
+
+**Provide structured and plain outputs**:
+
+```bash
+# Structured for humans
+sess list
+# ● dotfiles (4 windows)
+# ○ learning (2 windows)
+
+# But parseable for scripts
+sess list | awk '{print $2}'  # Still works
+```
+
+**Return meaningful exit codes**:
+
+```bash
+if sess dotfiles; then
+  echo "Switched successfully"
+else
+  echo "Session doesn't exist"
+fi
+```
 
 ### For Users
 
-When using these tools:
+**Compose at the shell level**:
 
-1. **Learn direct commands first** - Build muscle memory for `sess`, `tools`, etc.
-2. **Compose as needed** - Add fzf/gum when you want interactivity
-3. **Create your own workflows** - Tools are building blocks
-4. **Don't rely on menu** - Use `menu` as reference, not as daily driver
-5. **Script repetitive tasks** - These tools are designed for scripting
+```bash
+# Don't ask for tool flags like: sess --fuzzy
+# Instead: compose with fzf
+sess list | fzf
+```
 
-## Future Directions
+**Use aliases for common compositions**:
 
-As the system evolves, maintain these principles:
+```bash
+# In .zshrc
+alias st='toolbox list | fzf --preview="toolbox show {1}"'
+alias ts='theme-sync favorites | fzf | xargs theme-sync apply'
+```
 
-- Keep tools focused and lightweight
-- Favor composition over integration
-- Output clean, parseable data
-- Let users choose their UI
-- Document patterns, not prescribe workflows
+**Leverage tool output in scripts**:
+
+```bash
+#!/usr/bin/env bash
+# Create session for each project
+for project in ~/code/*; do
+  sess "$(basename "$project")"
+done
+```
+
+## Why This Architecture Works
+
+**Simplicity**: Each tool is simple enough to understand in minutes.
+
+**Testability**: Pure functions with predictable output are easy to test.
+
+**Flexibility**: Compose tools in ways the author never imagined.
+
+**Maintainability**: Tools are independent. Change one without breaking others.
+
+**Portability**: Bash + standard Unix tools work everywhere.
+
+**No Lock-in**: Don't like fzf? Use gum. Don't like either? Use grep and awk.
+
+## Comparison with Alternatives
+
+**vs. Integrated mega-tools** (like oh-my-zsh plugins):
+
+- ✅ Simpler to understand and debug
+- ✅ Can use tools independently
+- ✅ No plugin manager needed
+- ❌ Requires composing at shell level
+
+**vs. GUI applications**:
+
+- ✅ Faster (CLI startup time)
+- ✅ Scriptable and automatable
+- ✅ Works over SSH
+- ❌ Steeper learning curve initially
+
+**vs. Language-specific tools** (pure Go/Rust/Python):
+
+- ✅ Easier to modify (bash is readable)
+- ✅ Better shell integration
+- ❌ Less type safety (use Go when needed like sess)
 
 ## Related Documentation
 
-- [Quick Reference](../reference/quick-reference.md) - Command reference for all tools
-- [Note Taking Workflows](../workflows/note-taking.md) - nb usage patterns
-- [Symlinks Management](../development/symlinks.md) - Dotfiles deployment
-- Planning documents:
-  - `planning/dotfiles-system-redesign-2025-11.md` - Overall redesign plan
-  - `planning/phase1-complete-summary.md` - Menu simplification
-  - `planning/phase2-complete-summary.md` - nb setup
+- [Quick Reference](../reference/quick-reference.md) - Command examples
+- [Workflow Tools Cheatsheet](../reference/workflow-tools-cheatsheet.md) - Quick lookup
+- [Menu System](./menu-system.md) - Launcher architecture
+- [Note Taking](../workflows/note-taking.md) - zk workflow guide
