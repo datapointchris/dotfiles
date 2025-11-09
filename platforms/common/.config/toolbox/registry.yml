@@ -662,17 +662,21 @@ tools:
 
   notes:
     category: custom-tools
-    description: "Quick notes and Obsidian vault access"
+    description: "Interactive wrapper for zk note-taking with auto-discovery"
     installed_via: dotfiles
-    usage: "notes [vault-name]"
-    why_use: "Fast access to Obsidian vaults from command line"
+    usage: "notes [section]"
+    why_use: "Quick access to zk notebook sections with gum menu interface"
     examples:
       - cmd: "notes"
-        desc: "Open default notes directory"
-      - cmd: "notes vault-name"
-        desc: "Open specific Obsidian vault"
-    see_also: [nb, buku]
-    tags: [dotfiles, notes, obsidian]
+        desc: "Open interactive menu (auto-discovers sections)"
+      - cmd: "notes journal"
+        desc: "Create journal entry"
+      - cmd: "notes devnotes"
+        desc: "Create dev note"
+      - cmd: "notes learning"
+        desc: "Create learning note"
+    see_also: [zk, gum, menu]
+    tags: [dotfiles, notes, zk, productivity]
 
   shelldocsparser:
     category: custom-tools
