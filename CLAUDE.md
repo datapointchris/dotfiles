@@ -67,13 +67,21 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
 
 **Directory Structure**:
 
-- `common/` - Shared configurations (Neovim, tmux, zsh, git)
-- `macos/` - macOS-specific dotfiles and GUI app configs
-- `wsl/` - Ubuntu WSL configurations for restricted work environment
+- `platforms/` - Platform configurations (what gets deployed)
+  - `common/` - Shared configurations (Neovim, tmux, zsh, git)
+  - `macos/` - macOS-specific dotfiles and GUI app configs
+  - `wsl/` - Ubuntu WSL configurations for restricted work environment
+  - `arch/` - Arch Linux configurations
+- `apps/` - Personal CLI applications
+  - `common/` - Cross-platform tools (menu, notes, toolbox, theme-sync)
+  - `macos/` - macOS-specific tools (ghostty-theme, aws-profiles)
+  - `sess/` - Session manager (Go application)
+- `management/` - Repository management tools
+  - `symlinks/` - Symlinks manager (Python)
+  - `taskfiles/` - Modular Task automation
+  - `*.sh` - Platform setup scripts
+  - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
-- `tools/` - Custom CLI tools (symlinks manager, theme-sync, tools discovery)
-- `install/` - Platform-specific installation scripts
-- `taskfiles/` - Modular Task automation
 - `.claude/` - Skills and hooks for Claude Code integration
 
 **Key Systems**:
@@ -120,8 +128,10 @@ docs/
 **Symlinks Manager**:
 
 - Deploy/verify dotfiles from repo to home directory
-- Platform-aware with common/platform-specific configs
+- Platform-aware with platforms/common and platforms/{platform} configs
+- Handles apps/ → ~/.local/bin/ symlinking
 - Run via Task: `task symlinks:link`, `task symlinks:check`, `task symlinks:show`
+- Location: `management/symlinks/`
 - See `.claude/skills/symlinks-developer` for detailed documentation
 
 **Theme Sync** (`theme-sync`):
@@ -139,7 +149,7 @@ docs/
 
 **Task Automation**:
 
-- Modular Taskfile system in `taskfiles/` directory
+- Modular Taskfile system in `management/taskfiles/` directory
 - Tasks for building, testing, package management, documentation
 - Run `task --list-all` to see available tasks
 
