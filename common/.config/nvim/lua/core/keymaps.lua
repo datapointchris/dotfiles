@@ -200,18 +200,6 @@ if not vim.g.vscode then
 end
 
 --------------------------------------------------------------------------------
---- Obsidian -------------------------------------------------------------------
---------------------------------------------------------------------------------
-vim.keymap.set('n', '<leader>oc', "<cmd>lua require('obsidian').util.toggle_checkbox()<CR>", { desc = 'Obsidian Check Checkbox' })
-vim.keymap.set('n', '<leader>ot', '<cmd>ObsidianNewFromTemplate<CR>', { desc = 'Create New Note from Template' })
-vim.keymap.set('n', '<leader>oo', '<cmd>ObsidianOpen<CR>', { desc = 'Open in Obsidian App' })
-vim.keymap.set('n', '<leader>ob', '<cmd>ObsidianBacklinks<CR>', { desc = 'Show ObsidianBacklinks' })
-vim.keymap.set('n', '<leader>ol', '<cmd>ObsidianLinks<CR>', { desc = 'Show ObsidianLinks' })
-vim.keymap.set('n', '<leader>on', '<cmd>ObsidianNew<CR>', { desc = 'Create New Note' })
-vim.keymap.set('n', '<leader>os', '<cmd>ObsidianSearch<CR>', { desc = 'Search Obsidian' })
-vim.keymap.set('n', '<leader>oq', '<cmd>ObsidianQuickSwitch<CR>', { desc = 'Quick Switch' })
-
---------------------------------------------------------------------------------
 --- Oil ------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode has native file navigation, Oil is Neovim-specific
@@ -272,11 +260,32 @@ if not vim.g.vscode then
 end
 
 --------------------------------------------------------------------------------
+-- ZK --------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Create a new note after asking for its title.
+vim.api.nvim_set_keymap('n', '<leader>zn', "<Cmd>ZkNew { title = vim.fn.input('Title: ') }<CR>", { noremap = true, silent = false })
+
+-- Open notes.
+vim.api.nvim_set_keymap('n', '<leader>zo', "<Cmd>ZkNotes { sort = { 'modified' } }<CR>", { noremap = true, silent = false })
+-- Open notes associated with the selected tags.
+vim.api.nvim_set_keymap('n', '<leader>zt', '<Cmd>ZkTags<CR>', { noremap = true, silent = false })
+
+-- Search for the notes matching a given query.
+vim.api.nvim_set_keymap(
+  'n',
+  '<leader>zf',
+  "<Cmd>ZkNotes { sort = { 'modified' }, match = { vim.fn.input('Search: ') } }<CR>",
+  { noremap = true, silent = false }
+)
+-- Search for the notes matching the current visual selection.
+vim.api.nvim_set_keymap('v', '<leader>zf', ":'<,'>ZkMatch<CR>", { noremap = true, silent = false })
+
+--------------------------------------------------------------------------------
 -- Zen Mode ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode has native zen mode, this conflicts with VSCode zen mode keybinding
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>z', '<cmd>ZenMode<CR>', { desc = 'Toggle Zen Mode' })
+  vim.keymap.set('n', '<leader>zz', '<cmd>ZenMode<CR>', { desc = 'Toggle Zen Mode' })
 end
 
 --------------------------------------------------------------------------------

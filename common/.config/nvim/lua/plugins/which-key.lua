@@ -4,10 +4,10 @@ return {
   cond = not vim.g.vscode, -- VSCode doesn't need keymap popup hints
   opts = {
     -- Modern which-key v3 configuration
-    preset = 'modern', -- Use modern preset for better appearance
-    delay = 150, -- Delay before showing which-key popup
+    preset = 'helix', -- Use modern preset for better appearance
+    delay = 5, -- Delay before showing which-key popup
     sort = { 'local', 'order', 'group', 'alphanum', 'mod' }, -- Sort order
-    expand = 0, -- Always expand groups (show all items instead of "+X more")
+    expand = 1, -- Always expand groups (show all items instead of "+X more")
 
     -- Configure icons (requires mini.icons or nvim-web-devicons)
     icons = {
@@ -34,7 +34,6 @@ return {
 
       -- File & project management
       { '<leader>t', group = 'Tabs' },
-      { '<leader>o', group = 'Obsidian Notes' },
       { '<leader>h', group = 'Help & Guides' },
 
       -- Text manipulation

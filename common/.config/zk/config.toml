@@ -1,0 +1,38 @@
+[notebook]
+dir = "~/Documents/notes"
+
+[group.journal]
+
+paths = ["journal"]
+
+[group.journal.note]
+filename = "{{format-date now '%Y-%m-%d'}}-{{slug (format-date now '%A')}}-{{format-date now '%H:%M'}}-{{slug title}}"
+extension = "md"
+template = "daily.md"
+
+[group.learning]
+
+paths = ["learning"]
+
+[alias]
+
+journal = 'zk new "$ZK_NOTEBOOK_DIR/journal" --title "$@"'
+
+[lsp]
+
+[lsp.diagnostics]
+# Report titles of wiki-links as hints.
+wiki-title = "hint"
+# Warn for dead links between notes.
+dead-link = "error"
+
+[lsp.completion]
+# Show the note title in the completion pop-up, or fallback on its path if empty.
+note-label = "{{title-or-path}}"
+# Filter out the completion pop-up using the note title or its path.
+note-filter-text = "{{title}} {{path}}"
+# Show the note filename without extension as detail.
+note-detail = "{{filename-stem}}"
+
+[tool]
+fzf-preview = "bat -p --color always {-1}"
