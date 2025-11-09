@@ -1,6 +1,6 @@
 # Tool Reference
 
-Quick reference for installed tools. For detailed info, use `tools show <name>`.
+Quick reference for installed tools. For detailed info, use `toolbox show <name>`.
 
 ## Package Management
 
@@ -21,7 +21,7 @@ symlinks relink macos       # Complete refresh (unlink + link)
 symlinks check              # Check for broken symlinks
 ```
 
-Supports layered architecture (common base + platform overlay) with intelligent conflict detection. See `tools/symlinks/README.md` for full documentation.
+Supports layered architecture (common base + platform overlay) with intelligent conflict detection. See `management/symlinks/README.md` for full documentation.
 
 ## Core Tools by Category
 

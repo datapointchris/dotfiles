@@ -1,27 +1,27 @@
 # Tool Discovery
 
-The `tools` command helps discover and learn about the 30+ CLI tools installed in your dotfiles without heavy usage tracking or complex wrappers.
+The `toolbox` command helps discover and learn about the 30+ CLI toolbox installed in your dotfiles without heavy usage tracking or complex wrappers.
 
 ## Commands
 
-### tools list
+### toolbox list
 
 List all installed tools with categories.
 
 ```bash
-tools          # same as tools list
-tools list
+toolbox        # same as toolbox list
+toolbox list
 ```
 
 Shows tools grouped by category with brief descriptions.
 
-### tools show
+### toolbox show
 
 Show detailed information about a specific tool.
 
 ```bash
-tools show bat
-tools show ripgrep
+toolbox show bat
+toolbox show ripgrep
 ```
 
 **Displays**:
@@ -34,14 +34,14 @@ tools show ripgrep
 - Documentation URL
 - Installation status
 
-### tools search
+### toolbox search
 
 Search tools by description, tags, or name.
 
 ```bash
-tools search git
-tools search syntax
-tools search linter
+toolbox search git
+toolbox search syntax
+toolbox search linter
 ```
 
 Returns matching tools with brief context.
@@ -66,22 +66,22 @@ tools count
 
 Shows count per category plus which tools are in each category.
 
-### tools random
+### toolbox random
 
 Discover a random tool.
 
 ```bash
-tools random
+toolbox random
 ```
 
 Picks a random tool and shows full details. Useful for learning about tools you might have forgotten.
 
-### tools installed
+### toolbox installed
 
 Check installation status of all tools.
 
 ```bash
-tools installed
+toolbox installed
 ```
 
 Shows which tools are found in PATH vs not installed.
@@ -141,7 +141,7 @@ Edit `docs/tools/registry.yml` and add new entry following the format above.
 - tags (improve searchability)
 - docs_url (quick reference)
 
-After adding tools, run `tools list` to verify they appear.
+After adding tools, run `toolbox list` to verify they appear.
 
 ## Philosophy
 
@@ -167,19 +167,19 @@ The tool discovery system prioritizes **discovery over tracking**.
 
 ```bash
 # Forgot what bat does?
-tools show bat
+toolbox show bat
 
 # What git tools are available?
-tools search git
+toolbox search git
 
 # Learn something new
-tools random
+toolbox random
 
 # Quick category reference
 tools categories
 
 # Verify everything installed
-tools installed
+toolbox installed
 ```
 
 ## Integration
@@ -218,7 +218,7 @@ The `tools` command integrates with other dotfiles systems:
 
 - Search is case-insensitive substring match
 - Try broader terms ("lint" instead of "linter")
-- Use `tools list` to see all tools
+- Use `toolbox list` to see all tools
 
 ## See Also
 
