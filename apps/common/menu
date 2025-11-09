@@ -32,12 +32,12 @@ show_help() {
   echo "  $(color_cyan "sess")                - Manage tmux sessions"
   echo "  $(color_cyan "toolbox [cmd]")       - Discover and learn about installed tools"
   echo "  $(color_cyan "theme-sync [cmd]")    - Manage color themes across applications"
-  echo "  $(color_cyan "nb [cmd]")            - Note taking and knowledge management"
+  echo "  $(color_cyan "notes [cmd]")         - Note taking with zk"
   echo ""
   color_yellow "Quick Workflows:"
   echo "  $(color_cyan "toolbox list | fzf --preview='toolbox show {1}'")  - Explore tools interactively"
   echo "  $(color_cyan "theme-sync favorites | fzf")                        - Pick a theme"
-  echo "  $(color_cyan "nb browse --gui")                                   - Visual note browsing"
+  echo "  $(color_cyan "notes list | fzf")                                  - Browse notes with fzf"
   echo ""
   color_yellow "Dotfiles Management:"
   echo "  $(color_cyan "task symlinks:link")     - Deploy dotfiles to home directory"
@@ -107,12 +107,12 @@ launch_menu() {
       ;;
 
     "Take/find a note")
-      # Check if nb is installed
-      if command -v nb &>/dev/null; then
-        nb
+      # Check if notes/zk is installed
+      if command -v notes &>/dev/null; then
+        notes
       else
-        color_yellow "nb is not installed."
-        echo "Install with: brew install nb"
+        color_yellow "notes command not found."
+        echo "zk must be installed. Install with: brew install zk"
       fi
       ;;
 
