@@ -46,9 +46,9 @@ func NewLoader() *Loader {
 // LoadDefaultSessions loads default sessions for the given platform
 func (l *Loader) LoadDefaultSessions(platform string) ([]session.SessionConfig, error) {
 	// Build the path to the sessions config file
-	// e.g., ~/.config/sess/sessions/sessions-macos.yml
+	// e.g., ~/.config/sess/sessions-macos.yml
 	filename := fmt.Sprintf("sessions-%s.yml", platform)
-	configPath := filepath.Join(l.configDir, "sessions", filename)
+	configPath := filepath.Join(l.configDir, filename)
 
 	// Read the file
 	// os.ReadFile() is the modern way to read an entire file into memory

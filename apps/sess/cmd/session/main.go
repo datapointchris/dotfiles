@@ -116,7 +116,7 @@ func showInteractiveList() {
 		fmt.Println("No sessions found.")
 		fmt.Println("")
 		fmt.Println("Create a new session with: session <name>")
-		fmt.Println("Or add default sessions to ~/.config/sess/sessions/sessions-" + detectPlatform() + ".yml")
+		fmt.Println("Or add default sessions to ~/.config/sess/sessions-" + detectPlatform() + ".yml")
 		return
 	}
 
