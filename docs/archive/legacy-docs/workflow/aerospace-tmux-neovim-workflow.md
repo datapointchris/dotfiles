@@ -6,7 +6,7 @@ This document provides a comprehensive analysis of how to efficiently use AeroSp
 
 ## Table of Contents
 
-1. [The Hierarchy & Nesting Model](#1-the-hierarchy--nesting-model)
+1. [The Hierarchy & Nesting Model](#1-the-hierarchy-nesting-model)
 2. [When to Use Each Layer](#2-when-to-use-each-layer)
 3. [The Decision Tree](#3-the-decision-tree-where-should-i-split-next)
 4. [Complete Keybinding Reference](#4-complete-keybinding-reference)

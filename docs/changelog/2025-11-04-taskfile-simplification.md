@@ -238,4 +238,3 @@ Task execution with `silent: false` (default) shows both the command AND its out
 ## Related
 
 - [Taskfile Best Practices](https://taskfile.dev/docs/guide)
-- [Package Management Philosophy](../architecture/package-management.md)

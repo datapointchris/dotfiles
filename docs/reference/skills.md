@@ -204,5 +204,5 @@ Expected output shows activated skills:
 ## See Also
 
 - [Claude Code Hooks](hooks.md) - Full hooks system documentation
-- [.claude/README.md](../../.claude/README.md) - Complete hooks and skills reference
+- Claude Code README (`.claude/README.md`) - Complete hooks and skills reference
 - [Symlinks Tool](symlinks.md) - Tool that symlinks-developer skill supports

@@ -220,8 +220,8 @@ function lsalias() {
 
 - [fzf documentation](https://github.com/junegunn/fzf)
 - [Cobra CLI framework](https://github.com/spf13/cobra)
-- [Original menu architecture](../../docs/architecture/menu-system.md)
-- [Menu reference guide](../../docs/reference/menu-system.md)
+- [Original menu architecture](../../../../architecture/menu-system.md)
+- [Menu reference guide](../../../../reference/menu-system.md)
 
 ## Notes
 

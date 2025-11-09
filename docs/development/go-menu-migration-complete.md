@@ -32,7 +32,7 @@ A fast tmux session manager that aggregates:
 
 **Example Output**:
 
-```
+```text
 ● dotfiles (4 windows)
 ● ichrisbirch (1 window)
 ⚙ ichrisbirch-development (tmuxinator)
@@ -64,7 +64,7 @@ A function-based knowledge and workflow manager with:
 
 ### Session Manager Architecture
 
-```
+```text
 sess/
 ├── cmd/session/          # Main entry point with Cobra CLI
 ├── internal/
@@ -93,7 +93,7 @@ sess/
 
 ### Menu System Architecture
 
-```
+```text
 menu-go/
 ├── cmd/menu/             # Main entry point
 ├── internal/
@@ -292,7 +292,7 @@ Not everything was migrated - some things are better in bash:
 
 **Session Manager** (15 files):
 
-```
+```text
 tools/sess/
 ├── cmd/session/main.go
 ├── internal/
@@ -316,7 +316,7 @@ tools/sess/
 
 **Menu System** (9 files):
 
-```
+```text
 menu-go/
 ├── cmd/menu/main.go
 ├── internal/
@@ -470,14 +470,14 @@ rm ~/.local/bin/session
 rm ~/.local/bin/menu
 ```
 
-2. **Ensure bash scripts are executable**:
+1. **Ensure bash scripts are executable**:
 
 ```bash
 chmod +x common/.local/bin/sess
 chmod +x common/.local/bin/menu
 ```
 
-3. **Verify symlinks**:
+1. **Verify symlinks**:
 
 ```bash
 task symlinks:check
@@ -525,5 +525,3 @@ The migration to Go was highly successful:
 - [Go Migration Strategy](./go-migration-strategy.md) - Original planning doc
 - [Go Migration Quick Start](./go-migration-quick-start.md) - Phase 1 kickoff
 - [Go TUI Ecosystem Research](../learnings/go-tui-ecosystem-research.md) - Library research
-- [Session Manager README](../../tools/sess/README.md) - Usage guide
-- [Menu System README](../../tools/menu-go/README.md) - Usage guide

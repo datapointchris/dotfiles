@@ -10,7 +10,7 @@ This document outlines a comprehensive strategy for migrating the bash-based men
 
 ## Migration Overview
 
-```
+```text
 Phase 1: Session Manager (1-2 weeks)
 ├── sess (329 lines bash) → sess
 ├── YAML config parser
@@ -142,7 +142,7 @@ Phase 3: Enhanced Features (Ongoing)
 
 ### Platform-Specific Boundaries
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │            Go Binary (menu-go)              │
 │  - YAML parsing                             │
@@ -400,7 +400,7 @@ Phase 3: Enhanced Features (Ongoing)
 
 ## Directory Structure
 
-```
+```text
 dotfiles/
 ├── tools/
 │   ├── sess/              # Phase 1
@@ -1139,4 +1139,4 @@ func init() {
 - [Cobra CLI Framework](https://github.com/spf13/cobra)
 - [Bubbletea TUI Framework](https://github.com/charmbracelet/bubbletea)
 - [YAML v3 Docs](https://pkg.go.dev/gopkg.in/yaml.v3)
-- [Symlinks Python Tool](../../tools/symlinks/) - Reference implementation
+- Symlinks Python Tool (`tools/symlinks/`) - Reference implementation

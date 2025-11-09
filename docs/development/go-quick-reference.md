@@ -29,7 +29,7 @@ go install github.com/vektra/mockery/v3@latest  # Mock generation
 
 ## Project Structure Template
 
-```
+```text
 project/
 ├── main.go                      # Entry point + logging setup
 ├── cmd/                         # Cobra commands
@@ -335,6 +335,7 @@ outpkg: "{{.PackageName}}"
 ```
 
 Run with:
+
 ```bash
 mockery  # Generates mock_*.go files
 ```
@@ -460,13 +461,15 @@ func setupLogging() {
 ### 1. Circular Dependencies
 
 **Problem:**
-```
+
+```text
 tmux/ imports menu/
 menu/ imports tmux/  ← ERROR
 ```
 
 **Solution:**
-```
+
+```text
 model/          # Shared types
   └── item.go
 
@@ -480,6 +483,7 @@ menu/           # Imports model and tmux
 ### 2. Testing External Commands
 
 **Don't:**
+
 ```go
 func TestTmux(t *testing.T) {
     // Actually calls tmux!
@@ -488,6 +492,7 @@ func TestTmux(t *testing.T) {
 ```
 
 **Do:**
+
 ```go
 func TestTmux(t *testing.T) {
     mockShell := new(shell.MockShell)
@@ -501,6 +506,7 @@ func TestTmux(t *testing.T) {
 ### 3. Bubbletea Message Handling
 
 **Don't:**
+
 ```go
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     // Mutating outside switch
@@ -514,6 +520,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 ```
 
 **Do:**
+
 ```go
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
@@ -547,12 +554,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 ## Resources
 
-- **Bubbletea:** https://github.com/charmbracelet/bubbletea
-- **Cobra:** https://github.com/spf13/cobra
-- **Mockery:** https://github.com/vektra/mockery
-- **GoReleaser:** https://goreleaser.com
-- **Go Testing:** https://go.dev/doc/tutorial/add-a-test
+- **Bubbletea:** <https://github.com/charmbracelet/bubbletea>
+- **Cobra:** <https://github.com/spf13/cobra>
+- **Mockery:** <https://github.com/vektra/mockery>
+- **GoReleaser:** <https://goreleaser.com>
+- **Go Testing:** <https://go.dev/doc/tutorial/add-a-test>
 
 For detailed analysis, see:
-- [Go CLI Architecture Analysis](/learnings/go-cli-architecture-analysis)
-- [sesh Architecture Diagram](/architecture/sesh-architecture-diagram)
+
+- [Go CLI Architecture Analysis](../learnings/go-cli-architecture-analysis.md)
+- [sesh Architecture Diagram](../architecture/sesh-architecture-diagram.md)

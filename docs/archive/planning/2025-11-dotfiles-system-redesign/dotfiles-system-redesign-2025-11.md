@@ -20,9 +20,8 @@
 3. [Core Philosophy](#core-philosophy)
 4. [Proposed Architecture](#proposed-architecture)
 5. [Individual Tool Plans](#individual-tool-plans)
-6. [Notes & Learning System](#notes--learning-system)
-7. [Data Organization](#data-organization)
-8. [Implementation Plan](#implementation-plan)
+6. [Data Organization](#data-organization)
+7. [Implementation Plan](#implementation-plan)
 
 ---
 

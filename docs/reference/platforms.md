@@ -4,14 +4,14 @@ This document provides a comprehensive reference for platform-specific differenc
 
 ## Quick Reference
 
-| Aspect | macOS | Ubuntu/WSL | Arch Linux |
-|--------|-------|------------|------------|
-| **Package Manager** | brew | apt | pacman |
-| **Update Command** | `brew update && brew upgrade` | `sudo apt update && sudo apt upgrade` | `sudo pacman -Syu` |
-| **Install Command** | `brew install <pkg>` | `sudo apt install <pkg>` | `sudo pacman -S <pkg>` |
-| **Homebrew Location** | `/usr/local` (Intel) <br> `/opt/homebrew` (Apple Silicon) | N/A | N/A |
-| **Shell Config** | `~/.config/zsh/.zshrc` | `~/.config/zsh/.zshrc` | `~/.config/zsh/.zshrc` |
-| **PATH Priority** | brew bins → system | system → local | system → local |
+| Aspect                | macOS                                                     | Ubuntu/WSL                            | Arch Linux             |
+| --------------------- | --------------------------------------------------------- | ------------------------------------- | ---------------------- |
+| **Package Manager**   | brew                                                      | apt                                   | pacman                 |
+| **Update Command**    | `brew update && brew upgrade`                             | `sudo apt update && sudo apt upgrade` | `sudo pacman -Syu`     |
+| **Install Command**   | `brew install <pkg>`                                      | `sudo apt install <pkg>`              | `sudo pacman -S <pkg>` |
+| **Homebrew Location** | `/usr/local` (Intel) <br> `/opt/homebrew` (Apple Silicon) | N/A                                   | N/A                    |
+| **Shell Config**      | `~/.config/zsh/.zshrc`                                    | `~/.config/zsh/.zshrc`                | `~/.config/zsh/.zshrc` |
+| **PATH Priority**     | brew bins → system                                        | system → local                        | system → local         |
 
 ---
 
@@ -19,24 +19,24 @@ This document provides a comprehensive reference for platform-specific differenc
 
 Many tools have different package names across platforms. This table maps the tool name to its package name on each platform.
 
-| Tool Name | macOS (brew) | Ubuntu (apt) | Arch (pacman) | Notes |
-|-----------|--------------|--------------|---------------|-------|
-| **bat** | `bat` | `bat` | `bat` | Ubuntu installs as `batcat` binary |
-| **eza** | `eza` | via cargo | `eza` | Not in Ubuntu apt repos |
-| **fd** | `fd` | `fd-find` | `fd` | Ubuntu installs as `fdfind` binary |
-| **ripgrep** | `ripgrep` | `ripgrep` | `ripgrep` | All platforms use `rg` binary |
-| **fzf** | `fzf` | `fzf` | `fzf` | ✅ Consistent |
-| **zoxide** | `zoxide` | `zoxide` | `zoxide` | ✅ Consistent |
-| **neovim** | `neovim` | `neovim` | `neovim` | All use `nvim` binary |
-| **tmux** | `tmux` | `tmux` | `tmux` | ✅ Consistent |
-| **lazygit** | `lazygit` | via snap/release | `lazygit` | Ubuntu needs manual install |
-| **yazi** | `yazi` | via cargo | `yazi` | Ubuntu needs cargo install |
-| **git-delta** | `git-delta` | via cargo | `git-delta` | Ubuntu needs cargo install |
-| **jq** | `jq` | `jq` | `jq` | ✅ Consistent |
-| **yq** | `yq` | snap or binary | `yq` | Ubuntu via snap or manual |
-| **htop** | `htop` | `htop` | `htop` | ✅ Consistent |
-| **tree** | `tree` | `tree` | `tree` | ✅ Consistent |
-| **go-task** | `go-task` | via script | `go-task` | Binary name: `task` |
+| Tool Name     | macOS (brew) | Ubuntu (apt)     | Arch (pacman) | Notes                              |
+| ------------- | ------------ | ---------------- | ------------- | ---------------------------------- |
+| **bat**       | `bat`        | `bat`            | `bat`         | Ubuntu installs as `batcat` binary |
+| **eza**       | `eza`        | via cargo        | `eza`         | Not in Ubuntu apt repos            |
+| **fd**        | `fd`         | `fd-find`        | `fd`          | Ubuntu installs as `fdfind` binary |
+| **ripgrep**   | `ripgrep`    | `ripgrep`        | `ripgrep`     | All platforms use `rg` binary      |
+| **fzf**       | `fzf`        | `fzf`            | `fzf`         | ✅ Consistent                      |
+| **zoxide**    | `zoxide`     | `zoxide`         | `zoxide`      | ✅ Consistent                      |
+| **neovim**    | `neovim`     | `neovim`         | `neovim`      | All use `nvim` binary              |
+| **tmux**      | `tmux`       | `tmux`           | `tmux`        | ✅ Consistent                      |
+| **lazygit**   | `lazygit`    | via snap/release | `lazygit`     | Ubuntu needs manual install        |
+| **yazi**      | `yazi`       | via cargo        | `yazi`        | Ubuntu needs cargo install         |
+| **git-delta** | `git-delta`  | via cargo        | `git-delta`   | Ubuntu needs cargo install         |
+| **jq**        | `jq`         | `jq`             | `jq`          | ✅ Consistent                      |
+| **yq**        | `yq`         | snap or binary   | `yq`          | Ubuntu via snap or manual          |
+| **htop**      | `htop`       | `htop`           | `htop`        | ✅ Consistent                      |
+| **tree**      | `tree`       | `tree`           | `tree`        | ✅ Consistent                      |
+| **go-task**   | `go-task`    | via script       | `go-task`     | Binary name: `task`                |
 
 ### Binary Name Differences
 
@@ -62,48 +62,48 @@ ln -sf /usr/bin/fdfind ~/.local/bin/fd
 
 ### Installation Commands
 
-| Action | macOS (brew) | Ubuntu (apt) | Arch (pacman) |
-|--------|--------------|--------------|---------------|
-| **Update package lists** | `brew update` | `sudo apt update` | `sudo pacman -Sy` |
-| **Install package** | `brew install <pkg>` | `sudo apt install <pkg>` | `sudo pacman -S <pkg>` |
-| **Remove package** | `brew uninstall <pkg>` | `sudo apt remove <pkg>` | `sudo pacman -R <pkg>` |
-| **Upgrade all** | `brew upgrade` | `sudo apt upgrade` | `sudo pacman -Syu` |
-| **Search packages** | `brew search <query>` | `apt search <query>` | `pacman -Ss <query>` |
-| **Show package info** | `brew info <pkg>` | `apt show <pkg>` | `pacman -Si <pkg>` |
-| **List installed** | `brew list` | `apt list --installed` | `pacman -Q` |
-| **Clean cache** | `brew cleanup` | `sudo apt autoclean` | `sudo pacman -Sc` |
+| Action                   | macOS (brew)           | Ubuntu (apt)             | Arch (pacman)          |
+| ------------------------ | ---------------------- | ------------------------ | ---------------------- |
+| **Update package lists** | `brew update`          | `sudo apt update`        | `sudo pacman -Sy`      |
+| **Install package**      | `brew install <pkg>`   | `sudo apt install <pkg>` | `sudo pacman -S <pkg>` |
+| **Remove package**       | `brew uninstall <pkg>` | `sudo apt remove <pkg>`  | `sudo pacman -R <pkg>` |
+| **Upgrade all**          | `brew upgrade`         | `sudo apt upgrade`       | `sudo pacman -Syu`     |
+| **Search packages**      | `brew search <query>`  | `apt search <query>`     | `pacman -Ss <query>`   |
+| **Show package info**    | `brew info <pkg>`      | `apt show <pkg>`         | `pacman -Si <pkg>`     |
+| **List installed**       | `brew list`            | `apt list --installed`   | `pacman -Q`            |
+| **Clean cache**          | `brew cleanup`         | `sudo apt autoclean`     | `sudo pacman -Sc`      |
 
 ### Package Manager Features
 
-| Feature | macOS (brew) | Ubuntu (apt) | Arch (pacman) |
-|---------|--------------|--------------|---------------|
-| **GUI Applications** | ✅ Casks | ❌ | ❌ |
-| **Taps (3rd party repos)** | ✅ | ✅ (PPAs) | ✅ (AUR) |
-| **Binary packages** | ✅ | ✅ | ✅ |
-| **Source builds** | ✅ (rare) | ❌ | ✅ (AUR) |
-| **Automatic updates** | ❌ | ✅ (optional) | ❌ |
-| **Parallel downloads** | ✅ | ❌ | ✅ (configurable) |
+| Feature                    | macOS (brew) | Ubuntu (apt)  | Arch (pacman)     |
+| -------------------------- | ------------ | ------------- | ----------------- |
+| **GUI Applications**       | ✅ Casks     | ❌            | ❌                |
+| **Taps (3rd party repos)** | ✅           | ✅ (PPAs)     | ✅ (AUR)          |
+| **Binary packages**        | ✅           | ✅            | ✅                |
+| **Source builds**          | ✅ (rare)    | ❌            | ✅ (AUR)          |
+| **Automatic updates**      | ❌           | ✅ (optional) | ❌                |
+| **Parallel downloads**     | ✅           | ❌            | ✅ (configurable) |
 
 ---
 
 ## Tool Availability by Platform
 
-| Tool | macOS | Ubuntu | Arch | Installation Method |
-|------|-------|--------|------|---------------------|
-| **bat** | ✅ brew | ✅ apt | ✅ pacman | Native package managers |
-| **eza** | ✅ brew | ⚠️ cargo | ✅ pacman | Ubuntu needs Rust |
-| **fd** | ✅ brew | ✅ apt | ✅ pacman | Different package name on Ubuntu |
-| **ripgrep** | ✅ brew | ✅ apt | ✅ pacman | Consistent across platforms |
-| **fzf** | ✅ brew | ✅ apt | ✅ pacman | Consistent across platforms |
-| **zoxide** | ✅ brew | ✅ apt | ✅ pacman | Consistent across platforms |
-| **neovim** | ✅ brew | ✅ apt | ✅ pacman | Consistent across platforms |
-| **tmux** | ✅ brew | ✅ apt | ✅ pacman | Consistent across platforms |
-| **lazygit** | ✅ brew | ⚠️ manual | ✅ pacman | Ubuntu needs snap or manual install |
-| **yazi** | ✅ brew | ⚠️ cargo | ✅ pacman | Ubuntu needs Rust |
-| **git-delta** | ✅ brew | ⚠️ cargo | ✅ pacman | Ubuntu needs Rust |
-| **aerospace** | ✅ cask | ❌ | ❌ | macOS-only window manager |
-| **borders** | ✅ brew | ❌ | ❌ | macOS-only |
-| **sketchybar** | ✅ brew | ❌ | ❌ | macOS-only |
+| Tool           | macOS   | Ubuntu    | Arch      | Installation Method                 |
+| -------------- | ------- | --------- | --------- | ----------------------------------- |
+| **bat**        | ✅ brew | ✅ apt    | ✅ pacman | Native package managers             |
+| **eza**        | ✅ brew | ⚠️ cargo  | ✅ pacman | Ubuntu needs Rust                   |
+| **fd**         | ✅ brew | ✅ apt    | ✅ pacman | Different package name on Ubuntu    |
+| **ripgrep**    | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
+| **fzf**        | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
+| **zoxide**     | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
+| **neovim**     | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
+| **tmux**       | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
+| **lazygit**    | ✅ brew | ⚠️ manual | ✅ pacman | Ubuntu needs snap or manual install |
+| **yazi**       | ✅ brew | ⚠️ cargo  | ✅ pacman | Ubuntu needs Rust                   |
+| **git-delta**  | ✅ brew | ⚠️ cargo  | ✅ pacman | Ubuntu needs Rust                   |
+| **aerospace**  | ✅ cask | ❌        | ❌        | macOS-only window manager           |
+| **borders**    | ✅ brew | ❌        | ❌        | macOS-only                          |
+| **sketchybar** | ✅ brew | ❌        | ❌        | macOS-only                          |
 
 **Legend**:
 
@@ -167,11 +167,11 @@ These paths are added by version managers (nvm, uv) and take precedence:
 
 ### Shell Config File Locations
 
-| Platform | Shell | Main Config |
-|----------|-------|-------------|
-| **macOS** | zsh | `~/.config/zsh/.zshrc` |
-| **Ubuntu** | zsh | `~/.config/zsh/.zshrc` |
-| **Arch** | zsh | `~/.config/zsh/.zshrc` |
+| Platform   | Shell | Main Config            |
+| ---------- | ----- | ---------------------- |
+| **macOS**  | zsh   | `~/.config/zsh/.zshrc` |
+| **Ubuntu** | zsh   | `~/.config/zsh/.zshrc` |
+| **Arch**   | zsh   | `~/.config/zsh/.zshrc` |
 
 ### ZSHDOTDIR Configuration
 
@@ -216,8 +216,6 @@ export ZSHDOTDIR="$HOME/.config/zsh"
 
 Some tools require Rust/Cargo, especially on Ubuntu where they're not available via apt.
 
-### Installation
-
 **All Platforms**:
 
 ```bash
@@ -243,13 +241,11 @@ On **macOS** and **Arch**, these are available via native package managers.
 
 ## Theme System (tinty)
 
-### Installation
-
-| Platform | Installation Method |
-|----------|---------------------|
-| **macOS** | `brew install tinted-theming/tinted/tinty` |
+| Platform   | Installation Method                        |
+| ---------- | ------------------------------------------ |
+| **macOS**  | `brew install tinted-theming/tinted/tinty` |
 | **Ubuntu** | `cargo install tinty` (after Rust install) |
-| **Arch** | `yay -S tinty` or `cargo install tinty` |
+| **Arch**   | `yay -S tinty` or `cargo install tinty`    |
 
 ### Configuration
 
@@ -265,8 +261,6 @@ Theme configuration is **consistent across all platforms**:
 
 nvm provides **consistent Node.js management** across all platforms.
 
-### Installation
-
 **All Platforms**:
 
 ```bash
@@ -278,7 +272,7 @@ nvm install --lts
 nvm alias default lts/*
 ```
 
-### Configuration
+### nvm Configuration
 
 nvm directory: `~/.config/nvm` (consistent across platforms)
 
@@ -294,8 +288,6 @@ export NVM_DIR="$HOME/.config/nvm"
 ## Python (via uv)
 
 uv provides **consistent Python management** across all platforms.
-
-### Installation
 
 **All Platforms**:
 
@@ -320,7 +312,7 @@ Tools installed to: `~/.local/bin` (consistent across platforms)
 
 ## Platform-Specific Quirks
 
-### macOS
+### macOS Quirks
 
 **GNU Coreutils**:
 
@@ -334,7 +326,7 @@ Tools installed to: `~/.local/bin` (consistent across platforms)
 - Apple Silicon: `/opt/homebrew`
 - Scripts should detect automatically
 
-### Ubuntu/WSL
+### Ubuntu/WSL Quirks
 
 **WSL-Specific Configuration** (`/etc/wsl.conf`):
 
@@ -359,7 +351,7 @@ default=chris
 - Some tools only available via snap
 - Snap integration varies
 
-### Arch Linux
+### Arch Linux Quirks
 
 **AUR Helper** (yay):
 
@@ -385,7 +377,7 @@ default=chris
 
 When testing installations, verify these platform-specific items:
 
-### macOS
+### macOS Testing
 
 - [ ] Homebrew location correct for architecture
 - [ ] All Brewfile packages install
@@ -393,7 +385,7 @@ When testing installations, verify these platform-specific items:
 - [ ] Symlinks created in expected locations
 - [ ] GNU coreutils NOT in PATH by default
 
-### Ubuntu/WSL
+### Ubuntu/WSL Testing
 
 - [ ] bat and fd symlinks created
 - [ ] Cargo tools install (eza, yazi, git-delta)
@@ -401,7 +393,7 @@ When testing installations, verify these platform-specific items:
 - [ ] WSL-specific config applied (/etc/wsl.conf)
 - [ ] systemd enabled if needed
 
-### Arch Linux
+### Arch Linux Testing
 
 - [ ] yay AUR helper installed
 - [ ] pacman.conf configured (color, parallel downloads)

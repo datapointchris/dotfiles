@@ -409,7 +409,7 @@ The hook system enforces these principles:
 
 ## Related Documentation
 
-- [Hooks Implementation Plan](../.claude/hooks-implementation-plan.md) - Full implementation roadmap
+- Hooks Implementation Plan (`.claude/hooks-implementation-plan.md`) - Full implementation roadmap
 - [Claude Code Hooks Guide](https://docs.claude.com/en/docs/claude-code/hooks-guide) - Official documentation
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message standard
 - [pre-commit framework](https://pre-commit.com/) - Git hook management

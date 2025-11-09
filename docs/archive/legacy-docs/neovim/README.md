@@ -58,9 +58,7 @@ The source priority order matters for debugging: `lazydev` (group 0) takes prece
 |-----------|---------|----------------------|
 | [colorscheme-manager.md](./colorscheme-manager.md) | Git-based project colorscheme persistence | Custom plugin with telescope integration |
 | [formatter.md](./formatter.md) | Unified formatting system | External formatter priority with LSP fallback |
-| [lsp.md](./lsp.md) | Language server configuration | Native LSP setup for 20+ languages |
-| [plugins.md](./plugins.md) | Plugin organization | Modular lazy-loading architecture |
-| [core.md](./core.md) | Base configuration | Keymaps, options, autocmds |
+| [LSP Configuration](../2024-10-22-lsp.md) | Language server configuration | Native LSP setup for 20+ languages |
 
 ## Configuration Structure
 
