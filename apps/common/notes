@@ -1,106 +1,162 @@
 #!/usr/bin/env bash
 # ================================================================
-# notes - Note taking wrapper around zk
+# notes - Quick note-taking with zk
 # ================================================================
-# Simple wrapper to make zk commands more discoverable
+# Auto-discovers notebook directories for easy note creation
 # ================================================================
 
 set -euo pipefail
+
+NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
 
 # Color output helpers
 color_green() { echo -e "\033[32m$1\033[0m"; }
 color_yellow() { echo -e "\033[33m$1\033[0m"; }
 color_cyan() { echo -e "\033[36m$1\033[0m"; }
+color_blue() { echo -e "\033[34m$1\033[0m"; }
 
 show_help() {
   cat << EOF
-$(color_cyan "notes - Note taking with zk")
+$(color_cyan "notes - Quick note-taking with zk")
 
-Simple wrapper around zk for note management.
+Auto-discovers notebook sections and makes note creation easy.
 
 $(color_yellow "USAGE:")
-  notes [command] [args]
-
-$(color_yellow "COMMANDS:")
-  new [title]       Create a new note
-  journal [title]   Create a journal entry
-  list              List all notes
-  search <query>    Search notes
-  edit <note>       Edit a note
-  help              Show this help
+  notes              Interactive menu (discovers sections automatically)
+  notes [section]    Create note in specific section
+  notes help         Show this help
 
 $(color_yellow "EXAMPLES:")
-  notes new "My Note Title"
-  notes journal "Today's thoughts"
-  notes list
-  notes search git
-  notes edit my-note.md
+  notes              # Show menu of available sections
+  notes journal      # Create journal entry
+  notes devnotes     # Create dev note
 
 $(color_yellow "DIRECT ZK ACCESS:")
   For full zk functionality, use 'zk' directly:
   - zk list
-  - zk new --group learning
   - zk edit --interactive
+  - zk journal "My entry"
 
-$(color_yellow "CONFIGURATION:")
-  Notes directory: ~/Documents/notes
-  Config file: ~/.config/zk/config.toml
+$(color_yellow "NOTEBOOK:")
+  Location: $NOTES_DIR
+  Config: ~/.config/zk/config.toml
 EOF
 }
 
 # Check if zk is installed
 if ! command -v zk &>/dev/null; then
-  echo "$(color_red "Error:") zk is not installed"
+  echo "$(color_yellow "Error:") zk is not installed"
   echo "Install with: brew install zk"
   exit 1
 fi
 
-case "${1:-help}" in
-  new)
-    if [[ -z "${2:-}" ]]; then
-      color_yellow "Creating new note..."
-      zk new --interactive
-    else
-      shift
-      zk new --title "$*"
+# Check if notes directory exists
+if [[ ! -d "$NOTES_DIR" ]]; then
+  echo "$(color_yellow "Error:") Notes directory not found: $NOTES_DIR"
+  echo "Run: zk init $NOTES_DIR"
+  exit 1
+fi
+
+# Discover sections (top-level directories, excluding hidden)
+discover_sections() {
+  find "$NOTES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; | sort
+}
+
+# Interactive mode
+interactive_mode() {
+  # Get available sections
+  mapfile -t sections < <(discover_sections)
+
+  if [[ ${#sections[@]} -eq 0 ]]; then
+    echo "$(color_yellow "No sections found in:") $NOTES_DIR"
+    echo "Create a directory like: mkdir $NOTES_DIR/journal"
+    exit 1
+  fi
+
+  # Add special options
+  local choices=(
+    "Browse recent notes"
+    "Search all notes"
+    "---"
+  )
+
+  # Add discovered sections
+  for section in "${sections[@]}"; do
+    choices+=("New note: $section")
+  done
+
+  # Show menu with gum
+  if ! command -v gum &>/dev/null; then
+    color_yellow "gum not installed - showing available sections:"
+    echo ""
+    for section in "${sections[@]}"; do
+      echo "  - $section"
+    done
+    echo ""
+    echo "Run: notes <section>"
+    echo "Or install gum: brew install gum"
+    exit 0
+  fi
+
+  choice=$(gum choose "${choices[@]}")
+
+  case "$choice" in
+    "Browse recent notes")
+      zk list --sort modified- --limit 20 | fzf --preview 'bat -p --color always {-1}' --preview-window=right:60%
+      ;;
+
+    "Search all notes")
+      query=$(gum input --placeholder "Search query")
+      if [[ -n "$query" ]]; then
+        zk list --match "$query" | fzf --preview 'bat -p --color always {-1}' --preview-window=right:60%
+      fi
+      ;;
+
+    "---")
+      exit 0
+      ;;
+
+    "New note: "*)
+      section="${choice#New note: }"
+      create_note "$section"
+      ;;
+  esac
+}
+
+# Create note in section
+create_note() {
+  local section="$1"
+
+  # Check if section has a zk group/alias configured
+  # If so, use it; otherwise create in the directory
+
+  # Try to use zk alias first (e.g., zk journal)
+  if zk "$section" --help &>/dev/null; then
+    title=$(gum input --placeholder "Note title")
+    if [[ -n "$title" ]]; then
+      zk "$section" "$title"
     fi
-    ;;
-
-  journal)
-    shift
-    zk journal "$*"
-    ;;
-
-  list|ls)
-    zk list "${@:2}"
-    ;;
-
-  search|find)
-    if [[ -z "${2:-}" ]]; then
-      echo "Error: Search query required"
-      echo "Usage: notes search <query>"
-      exit 1
+  else
+    # Fallback: create in directory
+    title=$(gum input --placeholder "Note title")
+    if [[ -n "$title" ]]; then
+      zk new "$NOTES_DIR/$section" --title "$title"
     fi
-    shift
-    zk list --match "$*"
-    ;;
+  fi
+}
 
-  edit)
-    if [[ -z "${2:-}" ]]; then
-      zk edit --interactive
-    else
-      zk edit "$2"
-    fi
-    ;;
-
+# Main logic
+case "${1:-interactive}" in
   help|--help|-h)
     show_help
     ;;
 
+  interactive)
+    interactive_mode
+    ;;
+
   *)
-    echo "Unknown command: $1"
-    echo ""
-    show_help
-    exit 1
+    # Direct section specified
+    create_note "$1"
     ;;
 esac

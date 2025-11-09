@@ -1,8 +1,21 @@
 [notebook]
-dir = "~/Documents/notes"
+dir = "~/notes"
 
+# Default note settings
+[note]
+filename = "{{slug title}}"
+extension = "md"
+template = "default.md"
+id-charset = "alphanum"
+id-length = 8
+id-case = "lower"
+
+# ================================================================
+# GROUPS - Organized by section
+# ================================================================
+
+# Journal - daily entries with timestamps
 [group.journal]
-
 paths = ["journal"]
 
 [group.journal.note]
@@ -10,29 +23,92 @@ filename = "{{format-date now '%Y-%m-%d'}}-{{slug (format-date now '%A')}}-{{for
 extension = "md"
 template = "daily.md"
 
+# Learning - study notes and resources
 [group.learning]
-
 paths = ["learning"]
 
-[alias]
+[group.learning.note]
+filename = "{{format-date now '%Y-%m-%d'}}-{{slug title}}"
+template = "learning.md"
 
-journal = 'zk new "$ZK_NOTEBOOK_DIR/journal" --title "$@"'
+# Dev notes - work-related technical notes
+[group.devnotes]
+paths = ["devnotes"]
+
+[group.devnotes.note]
+filename = "{{format-date now '%Y-%m-%d'}}-{{slug title}}"
+template = "devnote.md"
+
+# Ideas - quick capture
+[group.ideas]
+paths = ["ideas"]
+
+[group.ideas.note]
+filename = "{{format-date now '%Y-%m-%d'}}-{{slug title}}"
+template = "idea.md"
+
+# Projects - project planning notes
+[group.projects]
+paths = ["projects"]
+
+[group.projects.note]
+filename = "{{slug title}}"
+template = "project.md"
+
+# Dreams - dream journal
+[group.dreams]
+paths = ["dreams"]
+
+[group.dreams.note]
+filename = "{{format-date now '%Y-%m-%d'}}-dream"
+template = "dream.md"
+
+# ================================================================
+# ALIASES - Convenient commands
+# ================================================================
+
+[alias]
+# Quick note creation
+journal = 'zk new --group journal --title "$@"'
+learn = 'zk new --group learning --title "$@"'
+devnote = 'zk new --group devnotes --title "$@"'
+idea = 'zk new --group ideas --title "$@"'
+project = 'zk new --group projects --title "$@"'
+dream = 'zk new --group dreams --title "Dream"'
+
+# Browsing and searching
+recent = 'zk list --sort modified- --limit 20'
+today = 'zk list --created-after "today"'
+last = 'zk edit --limit 1 --sort modified-'
+
+# Quick searches by section
+journal-list = 'zk list --group journal --sort modified-'
+learning-list = 'zk list --group learning --sort modified-'
+devnotes-list = 'zk list --group devnotes --sort modified-'
+
+# ================================================================
+# LSP CONFIGURATION
+# ================================================================
 
 [lsp]
 
 [lsp.diagnostics]
-# Report titles of wiki-links as hints.
+# Report titles of wiki-links as hints
 wiki-title = "hint"
-# Warn for dead links between notes.
+# Warn for dead links between notes
 dead-link = "error"
 
 [lsp.completion]
-# Show the note title in the completion pop-up, or fallback on its path if empty.
+# Show the note title in the completion pop-up, or fallback on its path if empty
 note-label = "{{title-or-path}}"
-# Filter out the completion pop-up using the note title or its path.
+# Filter out the completion pop-up using the note title or its path
 note-filter-text = "{{title}} {{path}}"
-# Show the note filename without extension as detail.
+# Show the note filename without extension as detail
 note-detail = "{{filename-stem}}"
+
+# ================================================================
+# TOOL CONFIGURATION
+# ================================================================
 
 [tool]
 fzf-preview = "bat -p --color always {-1}"
