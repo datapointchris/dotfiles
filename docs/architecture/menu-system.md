@@ -1,590 +1,245 @@
-# Universal Menu System - Architecture
+# Menu System - Architecture
 
-The universal menu system represents a fundamental shift in personal knowledge management - organizing information by function (what you're trying to accomplish) rather than by type (command, bookmark, note).
+Simple workflow tools launcher providing quick access to common development tools and commands.
 
-## Design Principles
+## What It Is
 
-### 1. Function Over Type
+A lightweight bash script that serves as a unified interface for accessing workflow tools:
 
-**Problem:** Traditional organization by type creates artificial barriers.
+- `sess` - tmux session management
+- `toolbox` - CLI tools discovery
+- `theme-sync` - theme management
+- `notes` - note-taking with zk
 
-When learning Neovim quickfix lists, you have:
+**Philosophy**: Simple launcher, not a knowledge management system. Each tool is responsible for its own functionality.
 
-- Bookmarked tutorials (in browser)
-- YouTube videos (in bookmarks)
-- Study notes (in Obsidian)
-- Keybindings (in Neovim config)
-- Example workflows (scattered)
+## Implementation
 
-To access this knowledge, you search across 5 different systems.
+**Location**: `apps/common/menu` (174 lines of bash)
 
-**Solution:** Organize by what you're learning.
+**Core Approach**: Uses `gum` for interactive menus and formatted output.
 
-```
-Learning: Neovim Quickfix/
-├── Tutorials (bookmarks)
-├── Videos (bookmarks with tags)
-├── Study notes (Obsidian)
-├── Keybindings (workflows)
-└── Practice exercises
-```
+### Two Modes
 
-Now one search gives you everything about quickfix lists.
+**1. Help Mode** (`menu` or `menu help`):
 
-### 2. Single Source of Truth
-
-All knowledge lives in version-controlled YAML files in your dotfiles:
-
-- `commands.yml` - What commands do and when to use them
-- `workflows.yml` - How to accomplish multi-step tasks
-- `learning.yml` - What you're learning and all related resources
-
-No duplicate information. No scattered notes. One place to search.
-
-### 3. Progressive Disclosure
-
-Start with a simple list, drill down for details:
-
-```
-Menu (10 categories)
-  ↓
-Commands (13 entries)
-  ↓
-fcd → Fuzzy find directory
-  ↓
-[Full details: description, examples, notes, related commands]
-```
-
-Only load what you need, when you need it.
-
-## System Components
-
-### Core Components
-
-```
-┌─────────────────────────────────────────────┐
-│              User Interface                  │
-│  ┌────────┐ ┌────────┐ ┌──────────────┐    │
-│  │  menu  │ │  sess  │ │ notes (future)│   │
-│  └───┬────┘ └───┬────┘ └──────┬───────┘    │
-└──────┼──────────┼─────────────┼────────────┘
-       │          │              │
-┌──────┼──────────┼──────────────┼────────────┐
-│      │   Configuration Layer   │            │
-│  ┌───▼────────────────────┐ ┌──▼─────────┐ │
-│  │  Registry YAML Files   │ │  Sessions  │ │
-│  │ • commands.yml         │ │  Config    │ │
-│  │ • workflows.yml        │ └────────────┘ │
-│  │ • learning.yml         │                 │
-│  └────────────────────────┘                 │
-└─────────────────────────────────────────────┘
-       │
-┌──────┼─────────────────────────────────────┐
-│      │      Tool Integration               │
-│  ┌───▼────┐ ┌──────┐ ┌──────┐ ┌─────────┐ │
-│  │  gum   │ │  nb  │ │ buku │ │ forgit  │ │
-│  └────────┘ └──────┘ └──────┘ └─────────┘ │
-│  ┌─────────┐ ┌────────────┐ ┌────────────┐│
-│  │   fzf   │ │  Obsidian  │ │ tmuxinator ││
-│  └─────────┘ └────────────┘ └────────────┘│
-└─────────────────────────────────────────────┘
-```
-
-### Data Flow
-
-**Opening a command:**
-
-```
-User presses: menu → c → fcd
-  ↓
-menu script parses commands.yml
-  ↓
-Extracts all command entries
-  ↓
-Displays list with gum choose
-  ↓
-User selects "fcd"
-  ↓
-Extracts fcd details from YAML
-  ↓
-Displays with gum pager:
-  - Description
-  - Examples
-  - Notes
-  - Related commands
-```
-
-**Session switching:**
-
-```
-User runs: sess
-  ↓
-sess gathers from 3 sources:
-  1. Active tmux sessions
-  2. Tmuxinator projects
-  3. Default sessions (YAML)
-  ↓
-Displays combined list with gum
-  ↓
-User selects session
-  ↓
-sess determines type and:
-  - Tmux: switch with tmux switch-client
-  - Tmuxinator: launch with tmuxinator start
-  - Default: create from YAML config
-```
-
-## Registry Schema
-
-### Command Entry
-
-```yaml
-- name: string (required)
-  type: enum [alias, function, system_tool, script, forgit_alias]
-  category: string (required)
-  description: string (required, 1-2 sentences)
-  keywords: array[string] (required, for searching)
-  command: string (the actual command)
-  examples:
-    - command: string
-      description: string
-  notes: string (multiline, optional)
-  related: array[string] (related command names)
-  provided_by: string (e.g., "forgit", "fzf")
-  use_tldr: boolean (show tldr if available)
-  platform: enum [all, macos, linux, wsl]
-```
-
-**Example:**
-
-```yaml
-- name: rg
-  type: system_tool
-  category: Commands
-  description: Ripgrep - blazing fast recursive grep
-  keywords: [search, grep, find, text, fast]
-  command: rg [pattern] [path]
-  use_tldr: true
-  examples:
-    - command: rg 'TODO' --type py
-      description: Find TODOs in Python files
-  notes: |
-    Much faster than grep. Respects .gitignore by default.
-    Use --type to filter by file type.
-  related: [grep, fd]
-  platform: all
-```
-
-### Workflow Entry
-
-```yaml
-- name: string (required)
-  category: string (required)
-  description: string (required)
-  keywords: array[string] (required)
-  steps:  # for sequential workflows
-    - key: string
-      description: string
-  techniques:  # for alternative approaches
-    - name: string
-      key: string
-      when: string
-  keybindings:  # related keybindings
-    - key: string
-      description: string
-  notes: string (multiline)
-  related_workflows: array[string]
-  platform: enum [all, macos, linux, wsl]
-```
-
-**Example:**
-
-```yaml
-- name: Quickfix List - Search and Replace
-  category: Vim Workflows
-  description: Search entire repo, send to quickfix, batch replace
-  keywords: [search, replace, quickfix, batch, grep]
-  steps:
-    - key: "<leader>fg"
-      description: "Live grep to search repo"
-    - key: "<C-q>"
-      description: "Send results to quickfix list"
-    - key: ":cdo s/old/new/g"
-      description: "Replace in all quickfix entries"
-    - key: ":cfdo update"
-      description: "Save all modified files"
-  keybindings:
-    - key: ":cn"
-      description: "Next quickfix item"
-    - key: ":copen"
-      description: "Open quickfix window"
-  notes: |
-    Incredibly powerful for repo-wide refactoring.
-    The quickfix list persists until you replace it.
-  platform: all
-```
-
-### Learning Topic Entry
-
-```yaml
-- name: string (required)
-  category: string (usually "Learning Topics")
-  status: enum [planned, active, paused, completed]
-  description: string (required)
-  keywords: array[string] (required)
-  progress:
-    started: date
-    last_practiced: date
-    confidence: enum [beginner, intermediate, advanced]
-  resources:
-    bookmarks:
-      - url: string
-        title: string
-        tags: array[string]
-        status: enum [to-read, reading, completed, reference]
-    notes:
-      - path: string (~/Documents/notes/...)
-        description: string
-    videos:
-      - url: string
-        title: string
-        tags: array[string]
-        status: enum [to-watch, watching, completed]
-        duration: string
-  practice_exercises: array[string]
-  related_workflows: array[string]
-  platform: enum [all, macos, linux, wsl]
-```
-
-## Session Management Architecture
-
-### Session Sources
-
-`sess` aggregates three sources:
-
-**1. Active Tmux Sessions:**
+Shows available tools and quick workflows:
 
 ```bash
-tmux list-sessions -F "#{session_name}:#{session_windows}"
+Workflow Tools:
+  sess                - Manage tmux sessions
+  toolbox [cmd]       - Discover and learn about installed tools
+  theme-sync [cmd]    - Manage color themes
+  notes [cmd]         - Note taking with zk
+
+Quick Workflows:
+  toolbox list | fzf --preview='toolbox show {1}'  - Explore tools
+  theme-sync favorites | fzf                       - Pick a theme
+  notes list | fzf                                 - Browse notes
+
+Dotfiles Management:
+  task symlinks:link     - Deploy dotfiles
+  task --list-all        - Show all tasks
 ```
 
-**2. Tmuxinator Projects:**
+**2. Launch Mode** (`menu launch`):
+
+Interactive gum menu with choices:
+
+- Switch tmux session → `sess`
+- Find a tool → `toolbox list | fzf`
+- Change theme → `theme-sync favorites | fzf`
+- Take/find a note → `notes` (interactive menu)
+- Browse documentation → Opens MkDocs link
+- Manage symlinks → `task symlinks:link`
+- View help → `menu help`
+
+## Architecture
+
+```text
+┌─────────────────────────────────────┐
+│        menu (bash launcher)         │
+│  - help: Show tool reference        │
+│  - launch: Interactive gum menu     │
+└─────────────┬───────────────────────┘
+              │
+    ┌─────────┴─────────┐
+    │                   │
+    ▼                   ▼
+┌─────────┐      ┌──────────────┐
+│  Tools  │      │   Workflow   │
+│         │      │   Commands   │
+│ - sess  │      │              │
+│ - notes │      │ - fzf pipes  │
+│ - theme │      │ - task calls │
+│ - tool  │      │              │
+└─────────┘      └──────────────┘
+```
+
+### Tool Integration
+
+Each tool is independent:
+
+**sess** (`apps/sess/`):
+
+- Go application for tmux session management
+- Reads from `~/.config/sess/sessions-{platform}.yml`
+- Aggregates tmux sessions, tmuxinator projects, defaults
+
+**toolbox** (`apps/common/toolbox`):
+
+- Bash script with tool registry at `platforms/common/.config/toolbox/registry.yml`
+- Commands: list, show, search, random, installed
+- 31+ documented tools with examples
+
+**theme-sync** (`apps/common/theme-sync`):
+
+- Wrapper around tinty (Base16 theme manager)
+- Syncs themes across tmux, bat, fzf, shell
+- Favorites list, apply, current, random
+
+**notes** (`apps/common/notes`):
+
+- Wrapper around zk (note-taking tool)
+- Auto-discovers notebook sections
+- Interactive gum menu for quick access
+
+## Design Decisions
+
+**Why not a complex knowledge system?**
+
+- Simple is maintainable
+- Each tool handles its own data
+- No central YAML registry to maintain
+- Tools can be used independently
+
+**Why gum?**
+
+- Beautiful terminal UI
+- Simple API (choose, style, input)
+- Cross-platform
+- Fast startup
+
+**Why separate tools instead of one menu?**
+
+- Tools useful independently (`toolbox show ripgrep`)
+- Easier testing and maintenance
+- Single responsibility principle
+- Can use tools in scripts and aliases
+
+## Usage Patterns
+
+### Quick Launch From Anywhere
 
 ```bash
-tmuxinator list | tail -n +2
+menu              # Show help
+menu launch       # Interactive menu
 ```
 
-**3. Default Sessions (YAML):**
-
-```yaml
-defaults:
-  - name: dotfiles
-    directory: ~/dotfiles
-    tmuxinator_project: null
-    windows:
-      - name: main
-        panes: [nvim]
-```
-
-### Session Creation Logic
-
-```
-User selects: "dotfiles"
-  ↓
-Check: Is there a tmuxinator project?
-  Yes → tmuxinator start dotfiles
-  No ↓
-Check: Is it in defaults YAML?
-  Yes → Create from YAML config
-  No ↓
-Create simple tmux session
-```
-
-### Platform-Specific Sessions
-
-Sessions can vary by platform:
-
-**macOS:**
-
-```yaml
-# ~/.config/menu/sessions/sessions-macos.yml
-- name: ichrisbirch-dev
-  tmuxinator_project: ichrisbirch-development
-```
-
-**WSL:**
-
-```yaml
-# ~/.config/menu/sessions/sessions-wsl.yml
-- name: work-project
-  directory: /mnt/c/projects/work
-  windows: [...]
-```
-
-## Tool Integration
-
-### Forgit
-
-Interactive git commands integrated into registry:
-
-```yaml
-- name: ga
-  type: forgit_alias
-  category: Git Workflows
-  provided_by: forgit
-  description: Interactive git add with preview
-```
-
-**Installation:**
-
-1. Defined in `config/packages.yml`
-2. Cloned via `task shell:install` to `~/.config/zsh/plugins/forgit`
-3. Sourced in `.zshrc`
-4. Commands added to registry
-
-### nb (Notes & Bookmarks)
-
-Plain-text notes and bookmarks:
+### Direct Tool Access
 
 ```bash
-nb bookmark https://example.com "Docker Tutorial" learning,docker,to-read
-  ↓
-Downloads and converts to markdown
-  ↓
-Saves as: ~/Documents/notes/bookmarks/example-com.md
-  ↓
-Can be referenced in learning registry:
-resources:
-  bookmarks:
-    - path: bookmarks/example-com.md
+sess              # Open session picker
+toolbox search git  # Find git tools
+theme-sync current  # Show current theme
+notes             # Interactive note menu
 ```
 
-### Obsidian
-
-Notes are stored in Obsidian vault but can be referenced from anywhere:
-
-```yaml
-learning:
-  - name: Neovim
-    resources:
-      notes:
-        - path: "~/Documents/notes/dev/neovim-study.md"
-```
-
-## Future Enhancements
-
-### Phase 3: Enhanced Notes Management
+### With fzf Integration
 
 ```bash
-notes workflow quickfix    # Create workflow note
-notes reference docker     # Create reference note
-notes daily                # Open daily note
+# Explore tools interactively
+toolbox list | fzf --preview='toolbox show {1}'
+
+# Pick a theme
+theme-sync favorites | fzf | xargs theme-sync apply
+
+# Browse notes
+notes list | fzf
 ```
 
-**Templates:**
-
-- `workflow.md` - Multi-step processes
-- `reference.md` - Quick reference guides
-- `learning.md` - Learning resources
-
-### Phase 4: Learning Manager
+### From tmux
 
 ```bash
-learn                      # Browse topics
-learn neovim              # Show all neovim resources
-learn add docker          # Add new topic
-learn bookmark <url> docker  # Add bookmark to topic
-learn note docker          # Create note for topic
+# tmux binding: Ctrl-Space + m
+bind m run-shell "menu launch"
 ```
 
-**Integration:**
+## File Structure
 
-- Uses nb for bookmarks
-- Uses Obsidian for notes
-- Links everything in learning.yml
+```text
+apps/common/
+├── menu              # Main launcher script
+├── toolbox           # Tools discovery
+├── theme-sync        # Theme management
+└── notes             # Note-taking wrapper
 
-### Phase 5: Search & Discovery
+apps/sess/            # Session manager (Go)
+└── ...
 
-```bash
-menu search "quickfix"     # Search all registries
-menu recent                # Recently accessed items
-menu suggest               # Suggest related content
+platforms/common/.config/
+├── toolbox/
+│   └── registry.yml  # Tool definitions
+└── zk/
+    └── config.toml   # Note configuration
+
+~/.config/sess/
+└── sessions-{platform}.yml  # Session defaults
 ```
 
-## Implementation Details
+## Error Handling
 
-### YAML Parsing
-
-Menu uses basic YAML parsing with fallback:
+Graceful fallbacks:
 
 ```bash
-# Prefer yq if available
-if command -v yq &>/dev/null; then
-  yq eval ".commands[].name" commands.yml
+# If fzf not available
+if command -v fzf &>/dev/null; then
+  toolbox list | fzf --preview='toolbox show {1}'
 else
-  # Fallback to grep/sed
-  grep "^  - name:" commands.yml | sed 's/.*name: //'
+  toolbox list
+  echo "Tip: Install fzf for interactive exploration"
 fi
 ```
 
-### Error Handling
-
-Graceful degradation:
+Tools fail gracefully:
 
 ```bash
-if [[ ! -f "$registry" ]]; then
-  gum style --foreground 196 "Registry not found: $registry"
-  read -n 1 -s -r -p "Press any key to go back..."
-  return
+# If zk not installed
+if ! command -v zk &>/dev/null; then
+  echo "Error: zk is not installed"
+  echo "Install with: brew install zk"
+  exit 1
 fi
 ```
 
-### Context Detection
+## Platform Awareness
 
-Menu adapts to current environment:
+Menu works identically across platforms. Tools handle platform differences:
 
-```bash
-is_in_git_repo() {
-  git rev-parse --is-inside-work-tree &>/dev/null
-}
+- `sess` reads `sessions-macos.yml` vs `sessions-wsl.yml`
+- `toolbox` marks tools as available/not installed per platform
+- `theme-sync` adjusts tinty config based on installed apps
 
-has_taskfile() {
-  is_in_git_repo && [[ -f "$(git rev-parse --show-toplevel)/Taskfile.yml" ]]
-}
+## Extension Points
 
-# Show Tasks category only if in project with Taskfile
-if has_taskfile; then
-  categories+=("t → Tasks")
-fi
-```
+**Adding a new tool to menu**:
 
-## Best Practices
+1. Create tool script in `apps/common/`
+2. Add to menu help output
+3. Add to launch menu choices
+4. Test independently and via menu
 
-### Registry Maintenance
-
-**Do:**
-
-- Add commands you actually forget
-- Document pain points you've struggled with
-- Link related items together
-- Keep descriptions concise but informative
-- Update as you learn more
-
-**Don't:**
-
-- Add every possible command (quality > quantity)
-- Copy entire man pages (link to tldr instead)
-- Duplicate information across registries
-- Leave TODOs or incomplete entries
-
-### Workflow Documentation
-
-**Good workflow:**
-
-```yaml
-- name: Quickfix List - Search and Replace
-  steps:
-    - key: "<leader>fg"
-      description: "Live grep"
-    - key: "<C-q>"
-      description: "Send to quickfix"
-  notes: |
-    Use this for repo-wide refactoring.
-    Example: Rename a function across all files.
-```
-
-**Bad workflow:**
-
-```yaml
-- name: Use quickfix
-  description: For searching
-  notes: It's useful
-```
-
-### Learning Topic Management
-
-**Active learning:**
-
-```yaml
-- name: Docker Compose
-  status: active
-  resources:
-    bookmarks: [tutorials...]
-    notes: [study-guide.md]
-  practice_exercises:
-    - "Create multi-service app"
-    - "Add healthchecks"
-```
-
-**Completed learning:**
-
-```yaml
-- name: Git Basics
-  status: completed
-  resources:
-    notes: [git-reference.md]  # Keep as reference
-  practice_exercises: []  # Clear exercises
-```
-
-## Security & Privacy
-
-### Sensitive Information
-
-**Never commit:**
-
-- API keys
-- Passwords
-- Private URLs
-- Confidential project names
-
-**Instead:**
-
-- Use placeholders: `export API_KEY=<your-key>`
-- Reference documentation: `See 1Password for credentials`
-- Keep private notes outside version control
-
-### Git Ignore
-
-```gitignore
-# Private notes (not in dotfiles)
-**/notes/private/
-**/notes/work/
-
-# Sensitive bookmarks
-**/registry/private-*.yml
-```
+**No central registry needed** - just add the integration points in menu script.
 
 ## Performance
 
-### Startup Time
-
-Menu is fast because it:
-
-- Only parses YAML when needed
-- Uses grep/sed for simple searches
-- Loads categories dynamically
-- No database or indexing overhead
-
-### Memory Usage
-
-Minimal memory footprint:
-
-- No daemon processes
-- Scripts exit after use
-- YAML files loaded on demand
-
-### Scaling
-
-System scales well:
-
-- 100+ commands: Still instant
-- 50+ workflows: No slowdown
-- 20+ learning topics: Fast browsing
-
-YAML parsing is the bottleneck, but yq is very fast.
+- **Startup time**: <50ms (bash + gum)
+- **Memory**: Minimal (scripts exit after use)
+- **Dependencies**: gum (required), fzf (optional but recommended)
 
 ## See Also
 
-- [Menu System Reference](../reference/menu-system.md) - User guide
-- [Session Management](../configuration/tmux.md) - Tmux/tmuxinator setup
-- [Tools Discovery](../reference/tools.md) - CLI tools registry
+- [Menu System Reference](../reference/menu-system.md) - User guide and workflows
+- [Tool Discovery](../reference/tool-discovery.md) - toolbox registry
+- [Note Taking](../workflows/note-taking.md) - zk workflow guide
+- [sess Documentation](../../apps/sess/README.md) - Session manager details
