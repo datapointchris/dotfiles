@@ -294,7 +294,7 @@ if [[ ! -f "$REGISTRY" ]]; then
   exit 1
 fi
 
-case "${1:-list}" in
+case "${1:-help}" in
   list|ls)
     list_tools
     ;;
@@ -320,9 +320,14 @@ case "${1:-list}" in
     show_help
     ;;
   *)
-    echo "$(color_red "Error:") Unknown command: $1"
-    echo ""
-    show_help
-    exit 1
+    # Treat unknown single arguments as search queries
+    if [[ -z "${2:-}" ]]; then
+      search_tools "$1"
+    else
+      echo "$(color_red "Error:") Unknown command: $1"
+      echo ""
+      show_help
+      exit 1
+    fi
     ;;
 esac

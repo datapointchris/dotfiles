@@ -931,24 +931,6 @@ tools:
     tags: [dotfiles, tmux, workflow, tui, go]
     docs_url: "tools/sess/README.md"
 
-  tools:
-    category: custom-tools
-    description: "Tool discovery and documentation system"
-    installed_via: dotfiles
-    usage: "tools [command]"
-    why_use: "Discover installed tools, view usage examples, search by keyword"
-    examples:
-      - cmd: "tools list"
-        desc: "List all documented tools"
-      - cmd: "tools show ripgrep"
-        desc: "Show detailed info about ripgrep"
-      - cmd: "tools search git"
-        desc: "Find git-related tools"
-      - cmd: "tools random"
-        desc: "Discover a random tool"
-    see_also: [menu]
-    tags: [dotfiles, discovery, documentation]
-
   notes:
     category: custom-tools
     description: "Interactive wrapper for zk note-taking with auto-discovery"
@@ -966,6 +948,508 @@ tools:
         desc: "Create learning note"
     see_also: [zk, gum, menu]
     tags: [dotfiles, notes, zk, productivity]
+
+  # SHELL UTILITY FUNCTIONS
+  # =================================================================
+
+  # Info/Listing Functions
+  lsalias:
+    category: custom-tools
+    description: "List all shell aliases with descriptions"
+    installed_via: dotfiles
+    usage: "lsalias [filter]"
+    why_use: "Quickly find and remember available aliases, grouped by platform"
+    examples:
+      - cmd: "lsalias"
+        desc: "List all aliases"
+      - cmd: "lsalias git"
+        desc: "Find git-related aliases"
+    see_also: [lsfunc]
+    tags: [shell, aliases, discovery]
+
+  lsfunc:
+    category: custom-tools
+    description: "List all shell functions with descriptions"
+    installed_via: dotfiles
+    usage: "lsfunc [filter]"
+    why_use: "Quickly find and remember available shell functions"
+    examples:
+      - cmd: "lsfunc"
+        desc: "List all functions"
+      - cmd: "lsfunc git"
+        desc: "Find git-related functions"
+    see_also: [lsalias, toolbox]
+    tags: [shell, functions, discovery]
+
+  lscommits:
+    category: custom-tools
+    description: "List conventional commit types with descriptions"
+    installed_via: dotfiles
+    usage: "lscommits"
+    why_use: "Quick reference for conventional commit message formats"
+    examples:
+      - cmd: "lscommits"
+        desc: "Show all commit types"
+    see_also: [commithelp]
+    tags: [git, commits, reference]
+
+  commithelp:
+    category: custom-tools
+    description: "Suggest commit type based on staged files"
+    installed_via: dotfiles
+    usage: "commithelp"
+    why_use: "Get intelligent suggestions for conventional commit types based on file patterns"
+    examples:
+      - cmd: "commithelp"
+        desc: "Analyze staged files and suggest commit type"
+    see_also: [lscommits]
+    tags: [git, commits, automation]
+
+  lsterm:
+    category: custom-tools
+    description: "Display terminal tool information and command syntax"
+    installed_via: dotfiles
+    usage: "lsterm"
+    why_use: "Quick reference for ripgrep, fzf, zoxide, watch, and eza syntax"
+    examples:
+      - cmd: "lsterm"
+        desc: "Show terminal tools reference"
+    see_also: [lsneovim, lstmux]
+    tags: [reference, terminal, tools]
+
+  lsneovim:
+    category: custom-tools
+    description: "List neovim/vim commands and keybindings"
+    installed_via: dotfiles
+    usage: "lsneovim [filter]"
+    why_use: "Quick reference for vim motions, editing, search, buffers, windows"
+    examples:
+      - cmd: "lsneovim"
+        desc: "Show all vim commands"
+      - cmd: "lsneovim buffer"
+        desc: "Find buffer-related commands"
+    see_also: [nvim]
+    tags: [vim, neovim, reference, keybindings]
+
+  lstmux:
+    category: custom-tools
+    description: "List tmux commands and keybindings"
+    installed_via: dotfiles
+    usage: "lstmux [filter]"
+    why_use: "Quick reference for tmux windows, panes, sessions, and keybindings"
+    examples:
+      - cmd: "lstmux"
+        desc: "Show all tmux commands"
+      - cmd: "lstmux pane"
+        desc: "Find pane-related commands"
+    see_also: [tmux, sess]
+    tags: [tmux, reference, keybindings]
+
+  lsnano:
+    category: custom-tools
+    description: "List nano editor commands and keybindings"
+    installed_via: dotfiles
+    usage: "lsnano [filter]"
+    why_use: "Quick reference for nano editing, search, file handling"
+    examples:
+      - cmd: "lsnano"
+        desc: "Show all nano commands"
+      - cmd: "lsnano search"
+        desc: "Find search-related commands"
+    tags: [nano, editor, reference, keybindings]
+
+  # Git/Version Control Functions
+  fad:
+    category: version-control
+    description: "Git add modified files matching pattern"
+    installed_via: dotfiles
+    usage: "fad <pattern>"
+    why_use: "Quickly stage modified files by name pattern using grep"
+    examples:
+      - cmd: "fad init"
+        desc: "Stage all modified files with 'init' in name"
+      - cmd: "fad test"
+        desc: "Stage all modified test files"
+    see_also: [git, git-forgit-add]
+    tags: [git, staging, workflow]
+
+  gdp:
+    category: version-control
+    description: "Git diff preview for modified files using fzf and delta"
+    installed_via: dotfiles
+    usage: "gdp"
+    why_use: "Interactively preview diffs of modified files with syntax highlighting"
+    examples:
+      - cmd: "gdp"
+        desc: "Launch interactive diff preview"
+    see_also: [git-delta, fzf, git-forgit-diff]
+    tags: [git, diff, fzf, interactive]
+
+  adcomp:
+    category: version-control
+    description: "Git add all, commit with message, and push"
+    installed_via: dotfiles
+    usage: "adcomp <message>"
+    why_use: "Quick workflow for small commits: stage, commit, push in one command"
+    examples:
+      - cmd: 'adcomp "fix: update readme"'
+        desc: "Stage all, commit, and push"
+    see_also: [git, gm]
+    tags: [git, workflow, commit]
+
+  gm:
+    category: version-control
+    description: "Git commit with message"
+    installed_via: dotfiles
+    usage: "gm <message>"
+    why_use: "Quick commit shorthand"
+    examples:
+      - cmd: 'gm "feat: add new feature"'
+        desc: "Create commit with message"
+    see_also: [git, adcomp]
+    tags: [git, commit]
+
+  git-old-branches:
+    category: version-control
+    description: "Find old branches merged into master with no recent commits"
+    installed_via: dotfiles
+    usage: "git-old-branches [--remote]"
+    why_use: "Identify stale branches for cleanup (older than 1 month)"
+    examples:
+      - cmd: "git-old-branches"
+        desc: "Find old local branches"
+      - cmd: "git-old-branches --remote"
+        desc: "Find old remote branches"
+    see_also: [git, git-forgit-branch-delete]
+    tags: [git, cleanup, branches]
+
+  # File/Directory Management Functions
+  findup:
+    category: file-management
+    description: "Find file or directory by searching up the directory tree"
+    installed_via: dotfiles
+    usage: "findup <name>"
+    why_use: "Search for files/dirs in parent directories (e.g., find .git, package.json)"
+    examples:
+      - cmd: "findup .git"
+        desc: "Find git root directory"
+      - cmd: "findup package.json"
+        desc: "Find nearest package.json"
+    see_also: [fd, find]
+    tags: [file-search, navigation]
+
+  mkd:
+    category: file-management
+    description: "Create a new directory and cd into it"
+    installed_via: dotfiles
+    usage: "mkd <directory>"
+    why_use: "Shortcut for mkdir -p && cd in one command"
+    examples:
+      - cmd: "mkd ~/projects/new-project"
+        desc: "Create directory and enter it"
+    see_also: [mkdir, cd]
+    tags: [directory, navigation]
+
+  cl:
+    category: file-management
+    description: "Move to directory and list contents"
+    installed_via: dotfiles
+    usage: "cl <directory>"
+    why_use: "Combine cd and ls in one command"
+    examples:
+      - cmd: "cl ~/projects"
+        desc: "Change to directory and list files"
+    see_also: [cd, eza]
+    tags: [directory, navigation]
+
+  touchdate:
+    category: file-management
+    description: "Create file with timestamp prefix"
+    installed_via: dotfiles
+    usage: "touchdate <filename>"
+    why_use: "Create timestamped files (YYYY-MM-DD_HHMMSS-filename)"
+    examples:
+      - cmd: "touchdate notes.md"
+        desc: "Creates 2025-11-09_143022-notes.md"
+    see_also: [touch, date]
+    tags: [file-creation, timestamp]
+
+  sizeof:
+    category: file-management
+    description: "Determine size of file or total size of directory"
+    installed_via: dotfiles
+    usage: "sizeof [path]"
+    why_use: "Human-readable file/directory sizes"
+    examples:
+      - cmd: "sizeof"
+        desc: "Show sizes of all files in current directory"
+      - cmd: "sizeof ~/projects"
+        desc: "Show total size of directory"
+    see_also: [du, dust]
+    tags: [file-info, disk-usage]
+
+  extract:
+    category: file-management
+    description: "Auto-extract any archive type (tar, zip, gz, etc.)"
+    installed_via: dotfiles
+    usage: "extract <archive>"
+    why_use: "Universal extraction without remembering archive-specific commands"
+    examples:
+      - cmd: "extract file.tar.gz"
+        desc: "Extract tarball"
+      - cmd: "extract archive.zip"
+        desc: "Extract zip file"
+    see_also: [tar, unzip]
+    tags: [archive, extraction, compression]
+
+  gzipsize:
+    category: file-management
+    description: "Compare original and gzipped file size"
+    installed_via: dotfiles
+    usage: "gzipsize <file>"
+    why_use: "See compression ratio before actually compressing"
+    examples:
+      - cmd: "gzipsize large-file.txt"
+        desc: "Show compression savings"
+    see_also: [gzip]
+    tags: [compression, file-info]
+
+  opendir:
+    category: file-management
+    description: "Open current directory or specified location in file browser"
+    installed_via: dotfiles
+    usage: "opendir [path]"
+    why_use: "Quick access to GUI file browser from terminal"
+    examples:
+      - cmd: "opendir"
+        desc: "Open current directory"
+      - cmd: "opendir ~/Downloads"
+        desc: "Open specific directory"
+    see_also: [open]
+    tags: [file-browser, gui]
+
+  # System/Process/Network Functions
+  ubuntu-docker:
+    category: containerization
+    description: "Create new Ubuntu Docker container and ssh into it"
+    installed_via: dotfiles
+    usage: "ubuntu-docker"
+    why_use: "Quick disposable Ubuntu environment for testing"
+    examples:
+      - cmd: "ubuntu-docker"
+        desc: "Launch and enter Ubuntu container"
+    see_also: [docker, colima]
+    tags: [docker, ubuntu, testing]
+
+  pkill:
+    category: system-monitoring
+    description: "Kill process by name using interactive fzf selection"
+    installed_via: dotfiles
+    usage: "pkill"
+    why_use: "Safely select and kill processes with preview"
+    examples:
+      - cmd: "pkill"
+        desc: "Launch interactive process selector"
+    see_also: [ps, fzf, htop]
+    tags: [process, kill, fzf, interactive]
+
+  listening:
+    category: system-monitoring
+    description: "List applications listening on ports"
+    installed_via: dotfiles
+    usage: "listening [pattern]"
+    why_use: "Find what's using specific ports or show all listening services"
+    examples:
+      - cmd: "listening"
+        desc: "Show all listening ports"
+      - cmd: "listening 3000"
+        desc: "Find what's on port 3000"
+    see_also: [lsof, netstat]
+    tags: [network, ports, debugging]
+
+  hosts:
+    category: system-monitoring
+    description: "Display /etc/hosts file with syntax highlighting"
+    installed_via: dotfiles
+    usage: "hosts [pattern]"
+    why_use: "Quick view of host file entries"
+    examples:
+      - cmd: "hosts"
+        desc: "Show all host entries"
+      - cmd: "hosts local"
+        desc: "Search for localhost entries"
+    see_also: [bat]
+    tags: [network, dns, hosts]
+
+  resetroute:
+    category: system-monitoring
+    description: "Reset network and flush routing table"
+    installed_via: dotfiles
+    usage: "resetroute"
+    why_use: "Fix network connectivity issues by resetting interfaces"
+    examples:
+      - cmd: "resetroute"
+        desc: "Flush routes and reset network"
+    tags: [network, troubleshooting, macOS]
+
+  external-ip:
+    category: system-monitoring
+    description: "Get external/public IP address"
+    installed_via: dotfiles
+    usage: "external-ip"
+    why_use: "Quick check of public IP from terminal"
+    examples:
+      - cmd: "external-ip"
+        desc: "Show your public IP"
+    see_also: [local-ip, curl]
+    tags: [network, ip, public]
+
+  local-ip:
+    category: system-monitoring
+    description: "Get local IP address"
+    installed_via: dotfiles
+    usage: "local-ip"
+    why_use: "Find your local network IP"
+    examples:
+      - cmd: "local-ip"
+        desc: "Show local IP address"
+    see_also: [external-ip, ifconfig]
+    tags: [network, ip, local]
+
+  all-local-ips:
+    category: system-monitoring
+    description: "Show all local IP addresses (IPv4 and IPv6)"
+    installed_via: dotfiles
+    usage: "all-local-ips"
+    why_use: "See all network interfaces and their IPs"
+    examples:
+      - cmd: "all-local-ips"
+        desc: "List all IPs"
+    see_also: [local-ip, ifconfig]
+    tags: [network, ip]
+
+  ifactive:
+    category: system-monitoring
+    description: "Show only active network interfaces"
+    installed_via: dotfiles
+    usage: "ifactive"
+    why_use: "Filter ifconfig to show only active connections"
+    examples:
+      - cmd: "ifactive"
+        desc: "List active network interfaces"
+    see_also: [ifconfig, local-ip]
+    tags: [network, interfaces]
+
+  colored-log:
+    category: text-processing
+    description: "Tail log file with colored output by log level"
+    installed_via: dotfiles
+    usage: "colored-log <logfile>"
+    why_use: "Colorize log levels (ERROR, WARNING, INFO, DEBUG) for better readability"
+    examples:
+      - cmd: "colored-log app.log"
+        desc: "Tail log with colors"
+    see_also: [tail, bat]
+    tags: [logs, monitoring, tail]
+
+  server:
+    category: file-viewer
+    description: "Start HTTP server on port 2222 and open browser"
+    installed_via: dotfiles
+    usage: "server"
+    why_use: "Quick local file server for testing static sites"
+    examples:
+      - cmd: "server"
+        desc: "Serve current directory on http://localhost:2222"
+    see_also: [python]
+    tags: [http, server, testing]
+
+  digga:
+    category: system-monitoring
+    description: "Run dig and display most useful DNS information"
+    installed_via: dotfiles
+    usage: "digga <domain>"
+    why_use: "Simplified dig output for common DNS lookups"
+    examples:
+      - cmd: "digga google.com"
+        desc: "Get DNS info for domain"
+    see_also: [dig, nslookup]
+    tags: [dns, network, debugging]
+
+  # Development/Language Functions
+  checknode:
+    category: language-manager
+    description: "Display node and npm version and location"
+    installed_via: dotfiles
+    usage: "checknode"
+    why_use: "Verify which node/npm version is active (useful with nvm)"
+    examples:
+      - cmd: "checknode"
+        desc: "Show node and npm info"
+    see_also: [nvm, node, npm]
+    tags: [node, npm, version]
+
+  venv:
+    category: language-manager
+    description: "Activate Python venv by searching up directory tree"
+    installed_via: dotfiles
+    usage: "venv"
+    why_use: "Auto-find and activate .venv in current or parent directories"
+    examples:
+      - cmd: "venv"
+        desc: "Activate nearest Python venv"
+    see_also: [uv, python, findup]
+    tags: [python, venv, activation]
+
+  pytestloop:
+    category: automation
+    description: "Run pytest continuously in a loop"
+    installed_via: dotfiles
+    usage: "pytestloop"
+    why_use: "Watch mode for pytest (activates venv, runs continuously)"
+    examples:
+      - cmd: "pytestloop"
+        desc: "Start continuous testing"
+    see_also: [pytest, venv]
+    tags: [python, testing, automation]
+
+  new-py-project:
+    category: automation
+    description: "Create new Python project with poetry and pre-commit"
+    installed_via: dotfiles
+    usage: "new-py-project <name>"
+    why_use: "Scaffold complete Python project with best practices"
+    examples:
+      - cmd: "new-py-project my-app"
+        desc: "Create new Python project"
+    see_also: [poetry, uv]
+    tags: [python, scaffold, automation]
+
+  package-lambda:
+    category: automation
+    description: "Package Python Lambda function with dependencies"
+    installed_via: dotfiles
+    usage: "package-lambda <function.py> [requirements.txt]"
+    why_use: "Create deployment package for AWS Lambda"
+    examples:
+      - cmd: "package-lambda handler.py"
+        desc: "Package function with requirements"
+      - cmd: "package-lambda handler.py no-requirements"
+        desc: "Package without dependencies"
+    see_also: [make-lambda-layer, python]
+    tags: [aws, lambda, python, deployment]
+
+  make-lambda-layer:
+    category: automation
+    description: "Create AWS Lambda layer with Python packages"
+    installed_via: dotfiles
+    usage: "make-lambda-layer <layer-name> <packages...>"
+    why_use: "Build Lambda layer for shared dependencies"
+    examples:
+      - cmd: "make-lambda-layer requests-layer requests boto3"
+        desc: "Create layer with packages"
+    see_also: [package-lambda, python]
+    tags: [aws, lambda, python, deployment]
 
   shelldocsparser:
     category: custom-tools
