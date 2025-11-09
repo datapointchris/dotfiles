@@ -266,25 +266,15 @@ fi
 # Local bin (always)
 add_path "$HOME/.local/bin"
 
-# Dotfiles utility scripts
-add_path "$HOME/dotfiles/scripts/utils"
+# forgit bin for getting git forgit commands
+add_path "$ZSH_PLUGINS_DIR/forgit/bin"
 
 # Platform-specific PATH setup
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS specific paths
-    # Spark is installed into /usr/local/bin (Already in PATH)
-
-    if command -v scala &>/dev/null; then
-        SCALA_HOME="/usr/local/opt/scala@2.12"
-        export SCALA_HOME
-        add_path "$SCALA_HOME/bin"
-    fi
 
     # Postgres 16, `postgres` points to Postgres 14
     add_path "/usr/local/opt/postgresql@16/bin"
-
-    # SnowSQL since it is an Application
-    add_path "/Applications/SnowSQL.app/Contents/MacOS"
 
     # npm installed global packages
     add_path "$HOME/.local/share/npm/bin"
