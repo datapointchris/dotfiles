@@ -1,19 +1,38 @@
 # Tool Discovery
 
-The `toolbox` command helps discover and learn about the 30+ CLI toolbox installed in your dotfiles without heavy usage tracking or complex wrappers.
+The `toolbox` command helps discover and learn about the 98 tools installed in your dotfiles. Written in Go for speed and reliability, with beautiful interactive menus powered by gum.
+
+## Quick Start
+
+```bash
+toolbox              # Show help
+toolbox git          # Search for git tools (shortcut)
+toolbox list         # List all tools by category
+toolbox categories   # Interactive category browser (gum)
+toolbox show bat     # Detailed info about bat
+```
 
 ## Commands
 
-### toolbox list
+### toolbox
 
-List all installed tools with categories.
+Show help by default when run without arguments.
 
 ```bash
-toolbox        # same as toolbox list
+toolbox
+toolbox --help
+toolbox help
+```
+
+### toolbox list
+
+List all tools grouped by category, sorted alphabetically.
+
+```bash
 toolbox list
 ```
 
-Shows tools grouped by category with brief descriptions.
+Shows tools organized by category with descriptions. Categories and tools are both sorted alphabetically for easy browsing.
 
 ### toolbox show
 
@@ -36,59 +55,38 @@ toolbox show ripgrep
 
 ### toolbox search
 
-Search tools by description, tags, or name.
+Search tools by description, tags, name, or why_use field. Case-insensitive.
 
 ```bash
 toolbox search git
 toolbox search syntax
-toolbox search linter
+toolbox search docker
+
+# Shortcut: just type the query directly
+toolbox git       # Same as: toolbox search git
+toolbox python    # Same as: toolbox search python
 ```
 
-Returns matching tools with brief context.
+Returns matching tools with category and description.
 
-### tools categories
+### toolbox categories
 
-List tool categories with counts.
+**Interactive mode** - Browse tools with gum's beautiful menus.
 
 ```bash
-tools categories
+toolbox categories
 ```
 
-Shows categories like: file-viewer, search, version-control, linter, etc.
+Two-level interactive picker:
 
-### tools count
+1. Select a category → Shows count and preview
+2. Select a tool → Shows full tool details
 
-Detailed breakdown by category with tool names.
-
-```bash
-tools count
-```
-
-Shows count per category plus which tools are in each category.
-
-### toolbox random
-
-Discover a random tool.
-
-```bash
-toolbox random
-```
-
-Picks a random tool and shows full details. Useful for learning about tools you might have forgotten.
-
-### toolbox installed
-
-Check installation status of all tools.
-
-```bash
-toolbox installed
-```
-
-Shows which tools are found in PATH vs not installed.
+Requires [gum](https://github.com/charmbracelet/gum) to be installed.
 
 ## Registry
 
-Tools are defined in `docs/tools/registry.yml` with structured metadata.
+Tools are defined in `~/.config/toolbox/registry.yml` (or `$DOTFILES_REGISTRY`) with structured YAML metadata.
 
 **Tool entry format**:
 
@@ -124,7 +122,9 @@ tool-name:
 
 ## Adding Tools
 
-Edit `docs/tools/registry.yml` and add new entry following the format above.
+Edit `platforms/common/.config/toolbox/registry.yml` and add new entry following the format above.
+
+The registry is deployed via symlinks to `~/.config/toolbox/registry.yml`.
 
 **Required fields**:
 
@@ -143,6 +143,31 @@ Edit `docs/tools/registry.yml` and add new entry following the format above.
 
 After adding tools, run `toolbox list` to verify they appear.
 
+## Implementation
+
+Toolbox is written in **Go** for speed, reliability, and testability.
+
+**Why Go**:
+
+- **Fast**: Instant search (~1ms)
+- **Type-safe**: Catches bugs at compile time
+- **Testable**: Built-in testing framework
+- **Reliable**: No bash string manipulation bugs
+- **Cross-platform**: Single binary, no dependencies
+
+**Architecture**:
+
+```text
+apps/common/toolbox/
+├── main.go          # CLI commands (cobra)
+├── types.go         # Data structures
+├── registry.go      # YAML loading
+├── search.go        # Search/filter logic
+├── display.go       # Colored output
+├── interactive.go   # Gum integration
+└── search_test.go   # Test coverage
+```
+
 ## Philosophy
 
 The tool discovery system prioritizes **discovery over tracking**.
@@ -151,7 +176,8 @@ The tool discovery system prioritizes **discovery over tracking**.
 
 - Help remember what tools are available
 - Show usage examples when needed
-- Discover tools via random/search
+- Search across 98 tools instantly
+- Interactive browsing with gum
 - Quick reference without leaving terminal
 
 **What it doesn't do**:
@@ -170,55 +196,90 @@ The tool discovery system prioritizes **discovery over tracking**.
 toolbox show bat
 
 # What git tools are available?
-toolbox search git
+toolbox git              # Shortcut
+toolbox search git       # Explicit
 
-# Learn something new
-toolbox random
+# Browse by category (interactive)
+toolbox categories
 
-# Quick category reference
-tools categories
+# List everything
+toolbox list
 
-# Verify everything installed
-toolbox installed
+# Find network-related tools
+toolbox network
 ```
 
 ## Integration
 
-The `tools` command integrates with other dotfiles systems:
+The `toolbox` command integrates with other dotfiles systems:
 
-**Installation**: Available after `symlinks relink <platform>` (symlinked from `common/.local/bin/tools`)
+**Installation**: Built from source during `task symlinks:link`
 
-**Registry**: Lives in `docs/tools/registry.yml` for easy editing and version control
+```bash
+# Binary compiled to: apps/common/toolbox/toolbox
+# Symlinked to: ~/.local/bin/toolbox
+```
 
-**Task automation**: `task install` ensures all tools in registry are installed
+**Registry**: Lives in `platforms/common/.config/toolbox/registry.yml`
 
-**Documentation**: Tools also documented in `docs/reference/tools.md` (overview) and this file (detailed reference)
+- Synced via symlinks to `~/.config/toolbox/registry.yml`
+- Version controlled for easy editing
+- Currently contains 98 tools
+
+**Task automation**: `task shell:install` handles building and linking
+
+**Documentation**:
+
+- Quick reference: `docs/reference/tools.md`
+- Detailed reference: This file
+- Code documentation: `apps/common/toolbox/README.md`
+
+## Building from Source
+
+```bash
+cd apps/common/toolbox
+go build -o toolbox
+```
+
+The binary is automatically built and symlinked during `task symlinks:link`.
+
+## Testing
+
+```bash
+cd apps/common/toolbox
+go test -v           # Run tests
+go test -cover       # With coverage
+```
 
 ## Troubleshooting
 
 **Command not found**:
 
-- Run `symlinks relink macos` (or wsl/arch)
-- Verify `~/dotfiles/common/.local/bin` is in PATH
-- Check script is executable: `chmod +x common/.local/bin/tools`
+- Run `task symlinks:link` to rebuild and link
+- Verify `~/.local/bin` is in PATH
+- Check binary exists: `ls -la ~/.local/bin/toolbox`
 
-**Tool shows as not installed but it is**:
+**Tool shows as "Shell function" but it's a binary**:
 
-- Tool may not be in PATH
-- Reload shell: `exec zsh`
-- Check with `which <tool-name>`
+- Shell functions (from `functions.sh`) won't be in PATH
+- This is correct - they're sourced by your shell, not in PATH
 
 **Registry not found**:
 
-- Set `DOTFILES_REGISTRY` environment variable if dotfiles not in `~/dotfiles`
-- Verify `docs/tools/registry.yml` exists
-- Check YAML syntax with `yq . docs/tools/registry.yml`
+- Verify symlink: `ls -la ~/.config/toolbox/registry.yml`
+- Should point to: `~/dotfiles/platforms/common/.config/toolbox/registry.yml`
+- Run `task symlinks:link` if missing
 
 **Search returns no results**:
 
-- Search is case-insensitive substring match
-- Try broader terms ("lint" instead of "linter")
-- Use `toolbox list` to see all tools
+- Search is case-insensitive and searches all fields
+- Check exact tool name with `toolbox list`
+- Try broader terms ("git" instead of "git-delta")
+
+**Interactive categories not working**:
+
+- Install gum: `brew install gum`
+- Check it's in PATH: `which gum`
 
 ## See Also
 
