@@ -2164,17 +2164,19 @@
 </span></code></pre></div>
 <h3 id="tool-integration">Tool Integration<a class="headerlink" href="#tool-integration" title="Permanent link">&para;</a></h3>
 <p>Each tool is independent:</p>
-<p><strong>sess</strong> (<code>apps/sess/</code>):</p>
+<p><strong>sess</strong> (<code>apps/common/sess/</code>):</p>
 <ul>
 <li>Go application for tmux session management</li>
 <li>Reads from <code>~/.config/sess/sessions-{platform}.yml</code></li>
 <li>Aggregates tmux sessions, tmuxinator projects, defaults</li>
+<li>Built and installed via Task to <code>~/go/bin/</code></li>
 </ul>
-<p><strong>toolbox</strong> (<code>apps/common/toolbox</code>):</p>
+<p><strong>toolbox</strong> (<code>apps/common/toolbox/</code>):</p>
 <ul>
-<li>Bash script with tool registry at <code>platforms/common/.config/toolbox/registry.yml</code></li>
-<li>Commands: list, show, search, random, installed</li>
-<li>31+ documented tools with examples</li>
+<li>Go application with tool registry at <code>platforms/common/.config/toolbox/registry.yml</code></li>
+<li>Commands: list, show, search, random, installed, categories</li>
+<li>98+ documented tools with examples</li>
+<li>Built and installed via Task to <code>~/go/bin/</code></li>
 </ul>
 <p><strong>theme-sync</strong> (<code>apps/common/theme-sync</code>):</p>
 <ul>
@@ -2237,22 +2239,30 @@
 </span></code></pre></div>
 <h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>apps/common/
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── menu              # Main launcher script
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── toolbox           # Tools discovery
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├── theme-sync        # Theme management
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>└── notes             # Note-taking wrapper
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>apps/sess/            # Session manager (Go)
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>└── ...
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>platforms/common/.config/
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>├── toolbox/
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>│   └── registry.yml  # Tool definitions
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>└── zk/
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    └── config.toml   # Note configuration
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>~/.config/sess/
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>└── sessions-{platform}.yml  # Session defaults
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── menu              # Main launcher script (bash)
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── theme-sync        # Theme management (bash)
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├── notes             # Note-taking wrapper (bash)
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├── sess/             # Session manager (Go)
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>│   ├── *.go
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>│   ├── Taskfile.yml
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>│   └── .gitignore
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>└── toolbox/          # Tools discovery (Go)
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    ├── *.go
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    ├── Taskfile.yml
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    └── .gitignore
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>platforms/common/.config/
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>├── toolbox/
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>│   └── registry.yml  # Tool definitions
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>└── zk/
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>    └── config.toml   # Note configuration
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>~/.config/sess/
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>└── sessions-{platform}.yml  # Session defaults
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>~/go/bin/             # Installed Go binaries
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>├── sess
+</span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>└── toolbox
 </span></code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
 <p>Graceful fallbacks:</p>
@@ -2299,7 +2309,8 @@
 <li><a href="../../reference/menu-system/">Menu System Reference</a> - User guide and workflows</li>
 <li><a href="../../reference/tool-discovery/">Tool Discovery</a> - toolbox registry</li>
 <li><a href="../../workflows/note-taking/">Note Taking</a> - zk workflow guide</li>
-<li><a href="../../apps/sess/README.md">sess Documentation</a> - Session manager details</li>
+<li><a href="../../apps/common/sess/README.md">sess Documentation</a> - Session manager details</li>
+<li><a href="../../apps/common/toolbox/README.md">toolbox Documentation</a> - Tool discovery system</li>
 </ul>
 
 

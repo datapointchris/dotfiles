@@ -1892,17 +1892,19 @@
 </span></code></pre></div>
 <p>Inspired by <a href="https://github.com/joshmedeski/sesh">sesh</a> - integration happens at the shell level, not within the tool.</p>
 <h2 id="the-tools">The Tools<a class="headerlink" href="#the-tools" title="Permanent link">&para;</a></h2>
-<p><strong>sess</strong> (<code>apps/sess/</code>) - Go application</p>
+<p><strong>sess</strong> (<code>apps/common/sess/</code>) - Go application</p>
 <ul>
 <li>Tmux session management</li>
 <li>Aggregates: tmux sessions, tmuxinator projects, default configs</li>
 <li>Commands: <code>sess</code>, <code>sess list</code>, <code>sess &lt;name&gt;</code>, <code>sess last</code></li>
+<li>Built and installed via Task to <code>~/go/bin/</code></li>
 </ul>
-<p><strong>toolbox</strong> (<code>apps/common/toolbox</code>) - Bash script</p>
+<p><strong>toolbox</strong> (<code>apps/common/toolbox/</code>) - Go application</p>
 <ul>
 <li>CLI tool discovery and documentation</li>
 <li>Registry: <code>platforms/common/.config/toolbox/registry.yml</code></li>
-<li>Commands: <code>list</code>, <code>show</code>, <code>search</code>, <code>random</code>, <code>installed</code></li>
+<li>Commands: <code>list</code>, <code>show</code>, <code>search</code>, <code>random</code>, <code>installed</code>, <code>categories</code></li>
+<li>Built and installed via Task to <code>~/go/bin/</code></li>
 </ul>
 <p><strong>theme-sync</strong> (<code>apps/common/theme-sync</code>) - Bash script</p>
 <ul>
@@ -2081,12 +2083,17 @@
 <p><strong>Independence</strong>: Each tool works standalone. menu just provides discovery.</p>
 <h2 id="integration-points">Integration Points<a class="headerlink" href="#integration-points" title="Permanent link">&para;</a></h2>
 <h3 id="shell-integration">Shell Integration<a class="headerlink" href="#shell-integration" title="Permanent link">&para;</a></h3>
-<p>Tools are in <code>~/.local/bin/</code> (symlinked from <code>apps/common/</code> and <code>apps/{platform}/</code>):</p>
+<p><strong>Bash/Shell scripts</strong> are in <code>~/.local/bin/</code> (symlinked from <code>apps/common/</code> and <code>apps/{platform}/</code>):</p>
 <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># After task symlinks:link</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ls<span class="w"> </span>~/.local/bin/
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># sess toolbox theme-sync notes menu ghostty-theme aws-profiles</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># theme-sync notes menu bashbox (and platform-specific: ghostty-theme, aws-profiles)</span>
 </span></code></pre></div>
-<p>All tools available in PATH, callable from anywhere.</p>
+<p><strong>Go binaries</strong> are in <code>~/go/bin/</code> (built and installed via Task):</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># After task install in each Go project</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ls<span class="w"> </span>~/go/bin/
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># sess toolbox</span>
+</span></code></pre></div>
+<p>All tools available in PATH (both <code>~/.local/bin/</code> and <code>~/go/bin/</code> are in PATH), callable from anywhere.</p>
 <h3 id="configuration-files">Configuration Files<a class="headerlink" href="#configuration-files" title="Permanent link">&para;</a></h3>
 <p>Tools read from XDG-compliant locations:</p>
 <ul>
@@ -2108,49 +2115,49 @@
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <h3 id="for-tool-authors">For Tool Authors<a class="headerlink" href="#for-tool-authors" title="Permanent link">&para;</a></h3>
 <p><strong>Output clean data</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Good: one item per line, easy to parse</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>toolbox<span class="w"> </span>list
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># bat                       [file-viewer] ...</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># eza                       [file-lister] ...</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># Good: plain text for piping</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>theme-sync<span class="w"> </span>favorites
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># rose-pine</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1"># gruvbox-dark-hard</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Good: one item per line, easy to parse</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>toolbox<span class="w"> </span>list
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># bat                       [file-viewer] ...</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># eza                       [file-lister] ...</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># Good: plain text for piping</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>theme-sync<span class="w"> </span>favorites
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1"># rose-pine</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="c1"># gruvbox-dark-hard</span>
 </span></code></pre></div>
 <p><strong>Provide structured and plain outputs</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Structured for humans</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>sess<span class="w"> </span>list
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># ● dotfiles (4 windows)</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># ○ learning (2 windows)</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># But parseable for scripts</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="w">  </span><span class="c1"># Still works</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Structured for humans</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>sess<span class="w"> </span>list
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># ● dotfiles (4 windows)</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># ○ learning (2 windows)</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># But parseable for scripts</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="w">  </span><span class="c1"># Still works</span>
 </span></code></pre></div>
 <p><strong>Return meaningful exit codes</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">if</span><span class="w"> </span>sess<span class="w"> </span>dotfiles<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Switched successfully&quot;</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">else</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Session doesn&#39;t exist&quot;</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="k">fi</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">if</span><span class="w"> </span>sess<span class="w"> </span>dotfiles<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Switched successfully&quot;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">else</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Session doesn&#39;t exist&quot;</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">fi</span>
 </span></code></pre></div>
 <h3 id="for-users">For Users<a class="headerlink" href="#for-users" title="Permanent link">&para;</a></h3>
 <p><strong>Compose at the shell level</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Don&#39;t ask for tool flags like: sess --fuzzy</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Instead: compose with fzf</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Don&#39;t ask for tool flags like: sess --fuzzy</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># Instead: compose with fzf</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf
 </span></code></pre></div>
 <p><strong>Use aliases for common compositions</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># In .zshrc</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">st</span><span class="o">=</span><span class="s1">&#39;toolbox list | fzf --preview=&quot;toolbox show {1}&quot;&#39;</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">ts</span><span class="o">=</span><span class="s1">&#39;theme-sync favorites | fzf | xargs theme-sync apply&#39;</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># In .zshrc</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">st</span><span class="o">=</span><span class="s1">&#39;toolbox list | fzf --preview=&quot;toolbox show {1}&quot;&#39;</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">ts</span><span class="o">=</span><span class="s1">&#39;theme-sync favorites | fzf | xargs theme-sync apply&#39;</span>
 </span></code></pre></div>
 <p><strong>Leverage tool output in scripts</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="ch">#!/usr/bin/env bash</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># Create session for each project</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="k">for</span><span class="w"> </span>project<span class="w"> </span><span class="k">in</span><span class="w"> </span>~/code/*<span class="p">;</span><span class="w"> </span><span class="k">do</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>sess<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$project</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="k">done</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="c1"># Create session for each project</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="k">for</span><span class="w"> </span>project<span class="w"> </span><span class="k">in</span><span class="w"> </span>~/code/*<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>sess<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$project</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="k">done</span>
 </span></code></pre></div>
 <h2 id="why-this-architecture-works">Why This Architecture Works<a class="headerlink" href="#why-this-architecture-works" title="Permanent link">&para;</a></h2>
 <p><strong>Simplicity</strong>: Each tool is simple enough to understand in minutes.</p>

@@ -2074,13 +2074,46 @@
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>multipass<span class="w"> </span>shell<span class="w"> </span>dotfiles-test
 </span></code></pre></div>
 <p><strong>Automated test script</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="ch">#!/usr/bin/env bash</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">VM_NAME</span><span class="o">=</span><span class="s2">&quot;dotfiles-test&quot;</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>multipass<span class="w"> </span>launch<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--cpus<span class="w"> </span><span class="m">2</span><span class="w"> </span>--mem<span class="w"> </span>2G
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>multipass<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/user/dotfiles.git
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>multipass<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>dotfiles/management/wsl-setup.sh
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>multipass<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;cd dotfiles &amp;&amp; task verify&quot;</span>
+<p>The repository includes <code>management/test-wsl-setup.sh</code> for automated testing:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>./management/test-wsl-setup.sh
+</span></code></pre></div>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Real-time output display with simultaneous logging to <code>~/dotfiles/test-wsl-setup.log</code></li>
+<li>Timing information for each step and overall execution (MM:SS format)</li>
+<li>Colored output with section headers and timestamps</li>
+<li>Comprehensive summary with VM info and next steps</li>
+<li>10 CPUs, 32GB RAM allocation for faster testing</li>
+</ul>
+<p><strong>Example output</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>STEP<span class="w"> </span><span class="m">1</span>/4:<span class="w"> </span>Launching<span class="w"> </span>Multipass<span class="w"> </span>VM
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>Launched:<span class="w"> </span>dotfiles-wsl-test
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>⏱<span class="w"> </span>Step<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Launch<span class="w"> </span>VM<span class="w"> </span>completed<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">02</span>:15
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>TIMING<span class="w"> </span>SUMMARY
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span>Step<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Launch<span class="w"> </span>VM<span class="w">          </span><span class="m">02</span>:15
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span>Step<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>Clone<span class="w"> </span>dotfiles<span class="w">     </span><span class="m">00</span>:45
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">  </span>Step<span class="w"> </span><span class="m">3</span>:<span class="w"> </span>WSL<span class="w"> </span>setup<span class="w">          </span><span class="m">12</span>:30
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">  </span>Step<span class="w"> </span><span class="m">4</span>:<span class="w"> </span>Verification<span class="w">       </span><span class="m">01</span>:05
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">  </span>─────────────────────────────────────────────
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">  </span>Total<span class="w"> </span>time:<span class="w">                </span><span class="m">16</span>:35
+</span></code></pre></div>
+<p><strong>Manual test script</strong>:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">VM_NAME</span><span class="o">=</span><span class="s2">&quot;dotfiles-test&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>multipass<span class="w"> </span>launch<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--cpus<span class="w"> </span><span class="m">2</span><span class="w"> </span>--mem<span class="w"> </span>2G
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>multipass<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/user/dotfiles.git
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>multipass<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>dotfiles/management/wsl-setup.sh
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>multipass<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VM_NAME</span><span class="s2">&quot;</span><span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;cd dotfiles &amp;&amp; task verify&quot;</span>
 </span></code></pre></div>
 <h2 id="arch-linux-testing">Arch Linux Testing<a class="headerlink" href="#arch-linux-testing" title="Permanent link">&para;</a></h2>
 <p><strong>Using UTM</strong>:</p>
@@ -2091,13 +2124,13 @@
 <li>Test dotfiles installation</li>
 </ol>
 <p><strong>Using QEMU</strong>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Create disk</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>qemu-img<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>qcow2<span class="w"> </span>arch-test.qcow2<span class="w"> </span>20G
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Boot installer</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>qemu-system-x86_64<span class="w"> </span>-cdrom<span class="w"> </span>archlinux-x86_64.iso<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>-boot<span class="w"> </span><span class="nv">order</span><span class="o">=</span>d<span class="w"> </span>-drive<span class="w"> </span><span class="nv">file</span><span class="o">=</span>arch-test.qcow2,format<span class="o">=</span>qcow2<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>-m<span class="w"> </span>2G<span class="w"> </span>-enable-kvm
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Create disk</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>qemu-img<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>qcow2<span class="w"> </span>arch-test.qcow2<span class="w"> </span>20G
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Boot installer</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>qemu-system-x86_64<span class="w"> </span>-cdrom<span class="w"> </span>archlinux-x86_64.iso<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>-boot<span class="w"> </span><span class="nv">order</span><span class="o">=</span>d<span class="w"> </span>-drive<span class="w"> </span><span class="nv">file</span><span class="o">=</span>arch-test.qcow2,format<span class="o">=</span>qcow2<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>-m<span class="w"> </span>2G<span class="w"> </span>-enable-kvm
 </span></code></pre></div>
 <h2 id="macos-testing">macOS Testing<a class="headerlink" href="#macos-testing" title="Permanent link">&para;</a></h2>
 <p><strong>Use separate user account</strong>:</p>
@@ -2110,22 +2143,22 @@
 <p>macOS VMs are too complex and resource-intensive. Fresh user accounts provide clean testing environment.</p>
 <h2 id="verification-checklist">Verification Checklist<a class="headerlink" href="#verification-checklist" title="Permanent link">&para;</a></h2>
 <p>After installation in VM:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Check installations</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>task<span class="w"> </span>--version
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>toolbox<span class="w"> </span>list
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>theme-sync<span class="w"> </span>current
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># Check tools work</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>bat<span class="w"> </span>--version
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>eza<span class="w"> </span>--version
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>rg<span class="w"> </span>--version
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># Check shell</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$SHELL</span><span class="w">  </span><span class="c1"># Should be /bin/zsh</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$PATH</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;.local/bin&quot;</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1"># Check Neovim</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>nvim<span class="w"> </span>--version<span class="w">  </span><span class="c1"># Should be 0.11+</span>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Check installations</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>task<span class="w"> </span>--version
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>toolbox<span class="w"> </span>list
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>theme-sync<span class="w"> </span>current
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Check tools work</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>bat<span class="w"> </span>--version
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>eza<span class="w"> </span>--version
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>rg<span class="w"> </span>--version
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1"># Check shell</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$SHELL</span><span class="w">  </span><span class="c1"># Should be /bin/zsh</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$PATH</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;.local/bin&quot;</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1"># Check Neovim</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>nvim<span class="w"> </span>--version<span class="w">  </span><span class="c1"># Should be 0.11+</span>
 </span></code></pre></div>
 <h2 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h2>
 <p><strong>VM network slow</strong>: Use wired connection, check corporate proxy settings</p>
