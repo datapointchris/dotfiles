@@ -56,6 +56,46 @@ multipass shell dotfiles-test
 
 **Automated test script**:
 
+The repository includes `management/test-wsl-setup.sh` for automated testing:
+
+```sh
+cd ~/dotfiles
+./management/test-wsl-setup.sh
+```
+
+**Features**:
+
+- Real-time output display with simultaneous logging to `~/dotfiles/test-wsl-setup.log`
+- Timing information for each step and overall execution (MM:SS format)
+- Colored output with section headers and timestamps
+- Comprehensive summary with VM info and next steps
+- 10 CPUs, 32GB RAM allocation for faster testing
+
+**Example output**:
+
+```bash
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1/4: Launching Multipass VM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Launched: dotfiles-wsl-test
+
+⏱ Step 1: Launch VM completed in 02:15
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TIMING SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Step 1: Launch VM          02:15
+  Step 2: Clone dotfiles     00:45
+  Step 3: WSL setup          12:30
+  Step 4: Verification       01:05
+  ─────────────────────────────────────────────
+  Total time:                16:35
+```
+
+**Manual test script**:
+
 ```sh
 #!/usr/bin/env bash
 VM_NAME="dotfiles-test"
