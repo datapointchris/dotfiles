@@ -6,7 +6,8 @@ version: "3"
 vars:
   BINARY_NAME: sess
   BUILD_DIR: .
-  INSTALL_DIR: "{{.HOME}}/.local/bin"
+  # Install to standard Go bin directory
+  INSTALL_DIR: "{{.HOME}}/go/bin"
   CMD_DIR: ./cmd/session
   # Use shell commands for dynamic variables
   VERSION:
@@ -52,7 +53,7 @@ tasks:
       - coverage.html
 
   install:
-    desc: Build and install to ~/.local/bin
+    desc: Build and install to ~/go/bin
     deps:
       - build
     cmds:
@@ -61,8 +62,6 @@ tasks:
       - cp {{.BUILD_DIR}}/{{.BINARY_NAME}} {{.INSTALL_DIR}}/{{.BINARY_NAME}}
       - chmod +x {{.INSTALL_DIR}}/{{.BINARY_NAME}}
       - echo "Installed{{":"}} {{.INSTALL_DIR}}/{{.BINARY_NAME}}"
-      - echo ""
-      - echo "Make sure {{.INSTALL_DIR}} is in your PATH"
 
   clean:
     desc: Remove build artifacts

@@ -1,0 +1,9 @@
+# Compiled binary
+sess
+
+# Test binary
+*.test
+
+# Test coverage reports
+coverage.out
+coverage.html

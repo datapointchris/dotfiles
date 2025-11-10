@@ -80,17 +80,19 @@ Interactive gum menu with choices:
 
 Each tool is independent:
 
-**sess** (`apps/sess/`):
+**sess** (`apps/common/sess/`):
 
 - Go application for tmux session management
 - Reads from `~/.config/sess/sessions-{platform}.yml`
 - Aggregates tmux sessions, tmuxinator projects, defaults
+- Built and installed via Task to `~/go/bin/`
 
-**toolbox** (`apps/common/toolbox`):
+**toolbox** (`apps/common/toolbox/`):
 
-- Bash script with tool registry at `platforms/common/.config/toolbox/registry.yml`
-- Commands: list, show, search, random, installed
-- 31+ documented tools with examples
+- Go application with tool registry at `platforms/common/.config/toolbox/registry.yml`
+- Commands: list, show, search, random, installed, categories
+- 98+ documented tools with examples
+- Built and installed via Task to `~/go/bin/`
 
 **theme-sync** (`apps/common/theme-sync`):
 
@@ -169,13 +171,17 @@ bind m run-shell "menu launch"
 
 ```text
 apps/common/
-├── menu              # Main launcher script
-├── toolbox           # Tools discovery
-├── theme-sync        # Theme management
-└── notes             # Note-taking wrapper
-
-apps/sess/            # Session manager (Go)
-└── ...
+├── menu              # Main launcher script (bash)
+├── theme-sync        # Theme management (bash)
+├── notes             # Note-taking wrapper (bash)
+├── sess/             # Session manager (Go)
+│   ├── *.go
+│   ├── Taskfile.yml
+│   └── .gitignore
+└── toolbox/          # Tools discovery (Go)
+    ├── *.go
+    ├── Taskfile.yml
+    └── .gitignore
 
 platforms/common/.config/
 ├── toolbox/
@@ -185,6 +191,10 @@ platforms/common/.config/
 
 ~/.config/sess/
 └── sessions-{platform}.yml  # Session defaults
+
+~/go/bin/             # Installed Go binaries
+├── sess
+└── toolbox
 ```
 
 ## Error Handling
@@ -242,4 +252,5 @@ Menu works identically across platforms. Tools handle platform differences:
 - [Menu System Reference](../reference/menu-system.md) - User guide and workflows
 - [Tool Discovery](../reference/tool-discovery.md) - toolbox registry
 - [Note Taking](../workflows/note-taking.md) - zk workflow guide
-- [sess Documentation](../../apps/sess/README.md) - Session manager details
+- [sess Documentation](../../apps/common/sess/README.md) - Session manager details
+- [toolbox Documentation](../../apps/common/toolbox/README.md) - Tool discovery system

@@ -88,6 +88,47 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 - Directory vs directory: Merged (both symlinked)
 - File vs directory: Error (must resolve manually)
 
+## Apps Directory Handling
+
+The symlinks manager has **special handling for the `apps/` directory**:
+
+**Executable scripts** (`apps/common/*.sh`, etc.):
+
+- Symlinked to `~/.local/bin/` automatically
+- Used for bash/python/shell scripts
+- Examples: `menu`, `notes`, `bashbox`
+
+**Go binaries** (`apps/common/sess/`, `apps/common/toolbox/`):
+
+- **NOT symlinked** - directories are intentionally skipped
+- Built via `task build` in each project
+- Installed via `task install` to `~/go/bin/`
+- Separation of concerns: source code (dotfiles) vs build artifacts (~/go/bin)
+
+**Why this pattern**:
+
+- Dotfiles repository = source code (version controlled)
+- Build artifacts are gitignored locally (`.gitignore` in each Go project)
+- Installation happens outside the repo (`~/go/bin` for Go, `~/.local/bin` for scripts)
+- No symlinks for compiled binaries (they need building first)
+
+**Go project structure**:
+
+```text
+apps/common/sess/
+├── *.go              # Source code (tracked)
+├── Taskfile.yml      # Build automation
+├── .gitignore        # Ignores: sess, *.test, coverage.*
+└── sess              # Build artifact (gitignored, NOT symlinked)
+```
+
+**To install Go binaries**:
+
+```bash
+cd apps/common/sess && task install      # Builds and copies to ~/go/bin/sess
+cd apps/common/toolbox && task install   # Builds and copies to ~/go/bin/toolbox
+```
+
 ## Usage
 
 The symlinks tool runs via `uv run` from the dotfiles root directory. Use Task commands for the best experience:

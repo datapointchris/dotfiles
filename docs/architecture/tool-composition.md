@@ -23,17 +23,19 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 
 ## The Tools
 
-**sess** (`apps/sess/`) - Go application
+**sess** (`apps/common/sess/`) - Go application
 
 - Tmux session management
 - Aggregates: tmux sessions, tmuxinator projects, default configs
 - Commands: `sess`, `sess list`, `sess <name>`, `sess last`
+- Built and installed via Task to `~/go/bin/`
 
-**toolbox** (`apps/common/toolbox`) - Bash script
+**toolbox** (`apps/common/toolbox/`) - Go application
 
 - CLI tool discovery and documentation
 - Registry: `platforms/common/.config/toolbox/registry.yml`
-- Commands: `list`, `show`, `search`, `random`, `installed`
+- Commands: `list`, `show`, `search`, `random`, `installed`, `categories`
+- Built and installed via Task to `~/go/bin/`
 
 **theme-sync** (`apps/common/theme-sync`) - Bash script
 
@@ -256,15 +258,23 @@ Flow:
 
 ### Shell Integration
 
-Tools are in `~/.local/bin/` (symlinked from `apps/common/` and `apps/{platform}/`):
+**Bash/Shell scripts** are in `~/.local/bin/` (symlinked from `apps/common/` and `apps/{platform}/`):
 
 ```bash
 # After task symlinks:link
 ls ~/.local/bin/
-# sess toolbox theme-sync notes menu ghostty-theme aws-profiles
+# theme-sync notes menu bashbox (and platform-specific: ghostty-theme, aws-profiles)
 ```
 
-All tools available in PATH, callable from anywhere.
+**Go binaries** are in `~/go/bin/` (built and installed via Task):
+
+```bash
+# After task install in each Go project
+ls ~/go/bin/
+# sess toolbox
+```
+
+All tools available in PATH (both `~/.local/bin/` and `~/go/bin/` are in PATH), callable from anywhere.
 
 ### Configuration Files
 

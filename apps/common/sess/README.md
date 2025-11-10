@@ -15,14 +15,30 @@ A fast tmux session manager written in Go with gum for interactive selection.
 
 ## Installation
 
+Sess uses Task for building and installing (standard Go project pattern):
+
 ```bash
-# From the sess directory
+# Build the binary (creates apps/common/sess/sess)
+cd apps/common/sess
+task build
+
+# Build and install to ~/go/bin
 task install
 ```
 
-This will build the binary and install it to `~/.local/bin/sess`.
+**Important**: The built binary `apps/common/sess/sess` is a build artifact (gitignored). The actual installation copies it to `~/go/bin/sess` (standard Go location, already in PATH).
 
-Make sure `~/.local/bin` is in your PATH.
+### Build vs Install
+
+- **Build**: Creates `apps/common/sess/sess` (local, gitignored)
+- **Install**: Copies to `~/go/bin/sess` (standard Go binary location)
+
+This follows dotfiles best practice:
+
+- Source code lives in dotfiles repo
+- Build artifacts are gitignored
+- Installation happens outside the repo
+- No symlinks for binaries (separation of concerns)
 
 ## Usage
 
@@ -129,7 +145,7 @@ task --list-all
 The project follows Go best practices with dependency injection for testability:
 
 ```text
-sess/
+apps/common/sess/
 ├── cmd/session/          # Main entry point (CLI)
 ├── internal/
 │   ├── session/          # Core session management
@@ -144,7 +160,8 @@ sess/
 │   │   └── loader.go     # Config file parsing
 │   └── ui/               # Bubbletea TUI
 │       └── list.go       # Interactive list interface
-└── Taskfile.yml          # Task automation (build, test, install)
+├── Taskfile.yml          # Task automation (build, test, install)
+└── .gitignore            # Build artifacts (sess binary, coverage files)
 ```
 
 ## Dependencies

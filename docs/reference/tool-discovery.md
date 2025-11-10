@@ -213,11 +213,12 @@ toolbox network
 
 The `toolbox` command integrates with other dotfiles systems:
 
-**Installation**: Built from source during `task symlinks:link`
+**Installation**: Built via Task and installed to standard Go location
 
 ```bash
-# Binary compiled to: apps/common/toolbox/toolbox
-# Symlinked to: ~/.local/bin/toolbox
+cd apps/common/toolbox
+task build    # Creates apps/common/toolbox/toolbox (gitignored)
+task install  # Installs to ~/go/bin/toolbox (already in PATH)
 ```
 
 **Registry**: Lives in `platforms/common/.config/toolbox/registry.yml`
@@ -226,7 +227,7 @@ The `toolbox` command integrates with other dotfiles systems:
 - Version controlled for easy editing
 - Currently contains 98 tools
 
-**Task automation**: `task shell:install` handles building and linking
+**Build pattern**: Follows standard Go project structure (same as sess)
 
 **Documentation**:
 
@@ -238,10 +239,11 @@ The `toolbox` command integrates with other dotfiles systems:
 
 ```bash
 cd apps/common/toolbox
-go build -o toolbox
+task build    # Build binary locally (gitignored)
+task install  # Install to ~/go/bin
 ```
 
-The binary is automatically built and symlinked during `task symlinks:link`.
+See `apps/common/toolbox/README.md` for full build instructions.
 
 ## Testing
 
@@ -255,9 +257,9 @@ go test -cover       # With coverage
 
 **Command not found**:
 
-- Run `task symlinks:link` to rebuild and link
-- Verify `~/.local/bin` is in PATH
-- Check binary exists: `ls -la ~/.local/bin/toolbox`
+- Run `cd apps/common/toolbox && task install` to rebuild and install
+- Verify `~/go/bin` is in PATH
+- Check binary exists: `which toolbox` or `ls -la ~/go/bin/toolbox`
 
 **Tool shows as "Shell function" but it's a binary**:
 

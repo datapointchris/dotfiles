@@ -97,10 +97,6 @@ venv/
 
 # Task build cache
 **/.task/
-# Test coverage reports
-**/coverage.html
-**/coverage.out
-
-# Binaries for apps (build artifacts, not source)
-apps/sess/sess
-apps/common/toolbox/toolbox
+# Test coverage reports (handled by local .gitignore in each Go project)
+# Build artifacts are now managed by local .gitignore files in each Go project
+# See apps/common/sess/.gitignore and apps/common/toolbox/.gitignore
