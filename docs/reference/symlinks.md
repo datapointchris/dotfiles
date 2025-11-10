@@ -8,13 +8,23 @@ All symlinks commands are run via Task from the dotfiles root directory. The too
 
 ### task symlinks:link
 
-Deploy symlinks for current platform (common + platform layers).
+Deploy symlinks for current platform (common + platform layers). Additive only - creates new symlinks without removing existing ones.
 
 ```bash
-task symlinks:link         # Complete refresh (recommended after changes)
+task symlinks:link         # Create symlinks (safe, no removal)
 ```
 
-Use after adding/removing files in dotfiles repo to ensure symlinks are current.
+Use when adding new dotfiles to create their symlinks without disturbing existing ones.
+
+### task symlinks:relink
+
+Complete refresh - removes all symlinks and recreates them.
+
+```bash
+task symlinks:relink       # Full refresh (removes + links)
+```
+
+Use after removing files from dotfiles repo or when you need a clean slate.
 
 ### task symlinks:check
 
@@ -39,8 +49,8 @@ task symlinks:show-platform # Show platform layer only
 ### Additional Commands
 
 ```bash
-task symlinks:link-common    # Link common base layer only
-task symlinks:link-platform  # Link platform overlay only
+task symlinks:link-common    # Link common base layer only (additive)
+task symlinks:link-platform  # Link platform overlay only (additive)
 task symlinks:unlink         # Remove all symlinks
 task symlinks:check-clean    # Check and remove broken symlinks
 ```
@@ -83,20 +93,28 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 The symlinks tool runs via `uv run` from the dotfiles root directory. Use Task commands for the best experience:
 
 ```bash
-task symlinks:link    # Deploy all symlinks (recommended)
-task symlinks:check   # Verify symlinks
-task symlinks:show    # Display current symlinks
+task symlinks:link     # Create symlinks (additive, safe)
+task symlinks:relink   # Full refresh (removes + recreates)
+task symlinks:check    # Verify symlinks
+task symlinks:show     # Display current symlinks
 ```
 
 No installation required - `uv run` executes the tool in-place.
 
-## When to Relink
+## When to Link vs Relink
 
-Run `task symlinks:link` after:
+**Use `task symlinks:link`** (additive, safe):
 
 - Adding new files to dotfiles repo
+- Adding new dotfile directories
+- After fresh install or setup
+
+**Use `task symlinks:relink`** (full refresh):
+
 - Removing files from dotfiles repo
 - Moving files between directories
+- Fixing broken or stale symlinks
+- When you need a clean slate
 - Changing platform (macos → wsl, etc.)
 - Symlink errors or broken links
 

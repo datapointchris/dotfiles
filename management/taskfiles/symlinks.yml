@@ -24,7 +24,8 @@ tasks:
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
-      - uv run symlinks relink {{.PLATFORM}}
+      - uv run symlinks link common
+      - uv run symlinks link {{.PLATFORM}}
 
   link-common:
     desc: Create symlinks for common layer only
