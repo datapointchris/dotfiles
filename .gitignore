@@ -101,5 +101,6 @@ venv/
 **/coverage.html
 **/coverage.out
 
-# Binaries for apps
+# Binaries for apps (build artifacts, not source)
 apps/sess/sess
+apps/common/toolbox/toolbox
