@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-set -e  # Exit on error
+set -eou pipefail  # Exit on error
 
-VM_NAME="dotfiles-wsl-test"
+VM_NAME="dotfiles-wsl-test-$(date '+%Y-%m-%d_%H%M%S')"
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_FILE="${DOTFILES_DIR}/test-wsl-setup.log"
 
@@ -62,7 +62,7 @@ OVERALL_START=$(date +%s)
 STEP_START=$(date +%s)
 {
   log_section "STEP 1/4: Launching Multipass VM"
-  multipass launch --name "$VM_NAME" --cpus 10 --mem 32G
+  multipass launch --name "$VM_NAME" --cpus 6 --memory 16G
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

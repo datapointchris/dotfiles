@@ -64,11 +64,10 @@ echo ""
 echo -e "${BLUE}[2/2] Running main installation...${NC}"
 echo ""
 
-# Change to dotfiles directory (assumes script is in dotfiles/scripts/install/)
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DOTFILES_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
-
-cd "$DOTFILES_DIR"
+cd "$HOME/dotfiles" || {
+    echo -e "${RED}Error: Could not change to dotfiles directory${NC}"
+    exit 1
+}
 
 # Run installation
 task install-wsl
