@@ -93,6 +93,9 @@ venv/
 .claude/sessions/
 .planning/
 
+# Test artifacts
+test-wsl-setup.log
+
 ### GO BUILD ARTIFACTS
 
 # Task build cache
