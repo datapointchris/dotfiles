@@ -113,6 +113,10 @@ shell_plugins:
     repo: https://github.com/wfxr/forgit.git
     description: Interactive git commands with fzf
 
+  - name: zsh-syntax-highlighting
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+    description: Fish-like syntax highlighting for ZSH
+
 # ================================================================
 # NOTES
 # ================================================================

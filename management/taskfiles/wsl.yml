@@ -7,6 +7,13 @@
 version: '3'
 
 vars:
+  # Installation directories (user space)
+  LOCAL_BIN: "{{.HOME}}/.local/bin"
+  LOCAL_DIR: "{{.HOME}}/.local"
+  CARGO_HOME: "{{.HOME}}/.cargo"
+  TMP_DIR: "/tmp"
+
+  # Update logging
   UPDATE_LOG_DIR: "{{.HOME}}/.local/state/dotfiles/update-history"
   UPDATE_LOG_FILE: "{{.UPDATE_LOG_DIR}}/{{now | date \"2006-01-02\"}}.log"
 
@@ -56,9 +63,12 @@ tasks:
           git \
           curl \
           wget \
+          unzip \
           build-essential \
           ca-certificates \
-          gnupg
+          gnupg \
+          pkg-config \
+          libssl-dev
 
   install-dev-tools:
     internal: true
@@ -67,29 +77,121 @@ tasks:
       - |
         echo " Installing development tools..."
         sudo apt install -y \
-          bat \
-          fd-find \
+          zsh \
           ripgrep \
-          fzf \
-          zoxide \
           tmux \
-          neovim \
           tree \
           htop \
-          jq
+          jq \
+          ffmpeg \
+          7zip \
+          poppler-utils \
+          imagemagick \
+          chafa
 
-        # Create symlinks for differently-named packages
-        # bat is installed as batcat on Ubuntu
-        if ! command -v bat >/dev/null 2>&1; then
-          mkdir -p ~/.local/bin
-          ln -sf /usr/bin/batcat ~/.local/bin/bat
+        # Note: The following tools are installed via other methods for latest versions:
+        # - bat, fd-find, zoxide: cargo-binstall (Rust tools with no naming conflicts)
+        # - fzf: Build from source with Go (22 versions ahead of apt)
+        # - neovim: GitHub releases (apt has 0.9.5, we need 0.11+)
+        # - golang-go: GitHub releases (apt has 1.22, we want 1.23+)
+        # - zsh-syntax-highlighting: Git clone to ~/.config/zsh/plugins (managed in shell.yml)
+
+  # ================================================================
+  # YQ (YAML Processor)
+  # ================================================================
+
+  install-yq:
+    desc: Install yq (Go version) from GitHub
+    cmds:
+      - |
+        # Check if Python version is installed and remove it
+        if command -v yq >/dev/null 2>&1; then
+          if ! yq --version 2>&1 | grep -q "mikefarah"; then
+            echo " Removing Python yq..."
+            sudo apt remove -y yq 2>/dev/null || true
+          fi
         fi
 
-        # fd is installed as fdfind on Ubuntu
-        if ! command -v fd >/dev/null 2>&1; then
-          mkdir -p ~/.local/bin
-          ln -sf /usr/bin/fdfind ~/.local/bin/fd
-        fi
+        echo " Installing yq (Go version)..."
+        YQ_VERSION=$(curl -s "https://api.github.com/repos/mikefarah/yq/releases/latest" | grep -Po '"tag_name": *"v\K[^"]*')
+        curl -Lo /tmp/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64"
+        chmod +x /tmp/yq
+        sudo mv /tmp/yq /usr/local/bin/yq
+
+        echo " yq installed: $(yq --version)"
+    status:
+      - command -v yq >/dev/null 2>&1 && yq --version 2>&1 | grep -q "mikefarah"
+
+  # ================================================================
+  # UV (Python Package Manager)
+  # ================================================================
+
+  install-uv:
+    desc: Install uv Python package manager
+    cmds:
+      - |
+        echo " Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+
+        # Add to PATH for current session
+        export PATH="$HOME/.local/bin:$PATH"
+
+        echo " uv installed: $(uv --version)"
+    status:
+      - command -v uv >/dev/null 2>&1
+
+  # ================================================================
+  # GO (Build Toolchain)
+  # ================================================================
+
+  install-go:
+    desc: Install latest Go from go.dev (required for building fzf)
+    cmds:
+      - bash management/taskfiles/scripts/install-go.sh
+    # No status check - script handles version checking internally
+
+  # ================================================================
+  # FZF (Fuzzy Finder)
+  # ================================================================
+
+  install-fzf:
+    desc: Build and install latest fzf from source
+    deps:
+      - install-go
+    cmds:
+      - bash management/taskfiles/scripts/install-fzf.sh
+    # No status check - script handles version checking internally
+
+  # ================================================================
+  # LAZYGIT (Git TUI)
+  # ================================================================
+
+  install-lazygit:
+    desc: Install latest lazygit from GitHub releases to ~/.local/bin
+    cmds:
+      - bash management/taskfiles/scripts/install-lazygit.sh
+    # No status check - script handles version checking internally
+
+  # ================================================================
+  # NEOVIM (Text Editor)
+  # ================================================================
+
+  install-neovim:
+    desc: Install latest neovim from GitHub releases to ~/.local/bin
+    cmds:
+      - bash management/taskfiles/scripts/install-neovim.sh
+    # No status check - script handles version checking internally
+
+  # ================================================================
+  # YAZI (Terminal File Manager)
+  # ================================================================
+
+  install-yazi:
+    desc: Install yazi terminal file manager with flavors and plugins
+    cmds:
+      - bash management/taskfiles/scripts/install-yazi.sh
+    # Note: No status check - always run to ensure plugins/flavors are up to date
+    # The script itself checks if binary is installed and skips binary installation
 
   # ================================================================
   # RUST & CARGO (for additional tools)
@@ -110,17 +212,115 @@ tasks:
     status:
       - command -v cargo >/dev/null 2>&1
 
-  install-cargo-tools:
-    desc: Install tools via cargo
+  install-cargo-binstall:
+    desc: Install cargo-binstall for fast binary installation
     deps:
       - install-rust
     cmds:
       - |
-        echo " Installing cargo tools..."
-        cargo install eza       # Modern ls replacement
-        cargo install yazi-fm   # Terminal file manager
-        cargo install git-delta # Git diff viewer
-        cargo install zoxide    # Smarter cd (if not via apt)
+        # Ensure cargo is available
+        source "$HOME/.cargo/env"
+
+        if command -v cargo-binstall >/dev/null 2>&1; then
+          echo " cargo-binstall already installed"
+        else
+          echo " Installing cargo-binstall..."
+          cargo install cargo-binstall
+          echo " cargo-binstall installed"
+        fi
+    status:
+      - command -v cargo-binstall >/dev/null 2>&1
+
+  install-cargo-tools:
+    desc: Install Rust CLI tools via cargo-binstall (fast pre-compiled binaries)
+    deps:
+      - install-cargo-binstall
+    cmds:
+      - |
+        # Ensure cargo is available
+        source "$HOME/.cargo/env"
+        echo " Installing Rust CLI tools via cargo-binstall..."
+
+        # Helper function to install via cargo-binstall if not already installed
+        binstall_if_missing() {
+          local package=$1
+          local command_name=${2:-$(echo $package | cut -d- -f1)}  # Extract command from package name
+
+          if command -v "$command_name" >/dev/null 2>&1; then
+            echo "  $command_name already installed, skipping"
+          else
+            echo "  Installing $package..."
+            cargo binstall -y "$package"
+          fi
+        }
+
+        # Install Rust CLI tools (pre-compiled binaries, much faster than cargo install!)
+        # These override apt versions and have correct naming (fd not fdfind, bat not batcat)
+        binstall_if_missing bat
+        binstall_if_missing fd-find fd
+        binstall_if_missing zoxide
+        binstall_if_missing eza
+        binstall_if_missing git-delta delta
+        binstall_if_missing tinty
+        binstall_if_missing cargo-update cargo-install-update
+
+        echo " Rust CLI tools installation complete"
+        echo " Installed to: ~/.cargo/bin (highest PATH priority)"
+
+  # ================================================================
+  # TMUX PLUGINS
+  # ================================================================
+
+  install-tpm:
+    desc: Install Tmux Plugin Manager (TPM)
+    silent: true
+    cmds:
+      - |
+        TPM_DIR="$HOME/.config/tmux/plugins/tpm"
+        if [[ ! -d "$TPM_DIR" ]]; then
+          echo " Installing TPM..."
+          git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
+          echo " TPM installed"
+        else
+          echo " TPM already installed"
+        fi
+    status:
+      - test -d "$HOME/.config/tmux/plugins/tpm"
+
+  install-tmux-plugins:
+    desc: Install all tmux plugins via TPM
+    deps:
+      - install-tpm
+    silent: true
+    cmds:
+      - |
+        echo " Installing tmux plugins..."
+        # Run TPM's install script
+        TPM_DIR="$HOME/.config/tmux/plugins/tpm"
+        if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
+          "$TPM_DIR/bin/install_plugins"
+          echo " Tmux plugins installed"
+        else
+          echo " TPM install script not found"
+          exit 1
+        fi
+
+  # ================================================================
+  # NEOVIM PLUGINS
+  # ================================================================
+
+  install-nvim-plugins:
+    desc: Install Neovim plugins via Lazy.nvim
+    silent: true
+    cmds:
+      - |
+        echo " Installing Neovim plugins..."
+        # Run nvim headless to install all plugins
+        # --headless: run without UI
+        # +Lazy! sync: sync all plugins
+        # +qa: quit all windows
+        nvim --headless "+Lazy! sync" +qa 2>&1 | grep -v "^$" || true
+        echo " Neovim plugins installed"
 
   # ================================================================
   # UPDATE ALL
@@ -318,36 +518,6 @@ tasks:
   # WSL-SPECIFIC CONFIGURATION
   # ================================================================
 
-  configure-wsl:
-    desc: Apply WSL-specific configurations
-    cmds:
-      - echo "  Configuring WSL..."
-      - task: configure-wsl-conf
-      - echo " WSL configured!"
-
-  configure-wsl-conf:
-    desc: Configure /etc/wsl.conf
-    cmds:
-      - |
-        echo "  Configuring /etc/wsl.conf..."
-
-        WSL_CONF="/etc/wsl.conf"
-
-        if [[ -f "$WSL_CONF" ]]; then
-          echo " /etc/wsl.conf already exists"
-        else
-          echo "Creating /etc/wsl.conf..."
-          echo "[boot]" | sudo tee "$WSL_CONF" > /dev/null
-          echo "systemd=true" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "[interop]" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "appendWindowsPath=false" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "[user]" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "default=chris" | sudo tee -a "$WSL_CONF" > /dev/null
-          echo "/etc/wsl.conf created"
-          echo "Restart WSL to apply: wsl.exe --shutdown"
-        fi
 
   # ================================================================
   # UTILITIES

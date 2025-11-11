@@ -177,7 +177,6 @@ brew "terminal-notifier" # macOS notifications from terminal
 brew "bash"             # updated bash shell
 brew "tmuxinator"       # tmux session manager
 brew "tmuxinator-completion" # tmux completion
-brew "zsh-syntax-highlighting" # ZSH syntax highlighting
 
 # ================================================================
 # PYTHON PACKAGES (Homebrew Dependencies)
