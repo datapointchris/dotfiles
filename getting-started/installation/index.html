@@ -657,6 +657,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="macOS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-install-macos" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post-Install (macOS)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -665,6 +680,21 @@
       WSL Ubuntu
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="WSL Ubuntu">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-install-wsl-ubuntu" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post-Install (WSL Ubuntu)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -767,6 +797,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -821,6 +855,52 @@
   
   
     <li class="md-nav__item">
+      <a href="../../architecture/package-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Package Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/path-ordering-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PATH Ordering Strategy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../architecture/menu-system/" class="md-nav__link">
         
   
@@ -852,6 +932,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1018,6 +1102,52 @@
   
   <span class="md-ellipsis">
     Task Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/script-formatting-library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Script Formatting Library
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nerd-fonts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Nerd Fonts
     
   </span>
   
@@ -1535,6 +1665,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1580,6 +1718,98 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    App Installation Patterns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Idempotent Installation Patterns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WSL Ubuntu Package Versions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/package-version-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Package Version Analysis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -2007,51 +2237,121 @@
 <li>Intel: <code>/usr/local</code></li>
 <li>Apple Silicon: <code>/opt/homebrew</code></li>
 </ul>
+<h3 id="post-install-macos">Post-Install (macOS)<a class="headerlink" href="#post-install-macos" title="Permanent link">&para;</a></h3>
+<p><strong>Nerd Font</strong>: Required for proper terminal icons. Download from <a href="https://www.nerdfonts.com/">nerdfonts.com</a>.</p>
+<p>Recommended fonts: FiraCode Nerd Font, JetBrainsMono Nerd Font, Hack Nerd Font.</p>
+<p>Install by double-clicking font files or copying to <code>~/Library/Fonts/</code>:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cp<span class="w"> </span>/path/to/your/fonts/*.<span class="o">{</span>ttf,otf<span class="o">}</span><span class="w"> </span>~/Library/Fonts/
+</span></code></pre></div>
+<p><strong>Set zsh as default shell</strong> (if not already):</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>chsh<span class="w"> </span>-s<span class="w"> </span><span class="k">$(</span>which<span class="w"> </span>zsh<span class="k">)</span>
+</span></code></pre></div>
+<p><strong>Restart terminal</strong>: After installation, restart your terminal or run <code>exec zsh</code> to load new configuration.</p>
 <h2 id="wsl-ubuntu">WSL Ubuntu<a class="headerlink" href="#wsl-ubuntu" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>bash<span class="w"> </span>management/wsl-setup.sh
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>bash<span class="w"> </span>management/wsl-setup.sh
 </span></code></pre></div>
 <p>Bootstrap script installs Taskfile, then delegates all package installation to <code>task install-wsl</code>.</p>
 <p>Time: ~15-20 minutes</p>
+<p><strong>Installation Phases</strong>: The installation is organized into 9 distinct phases:</p>
+<ol>
+<li><strong>System Packages (apt)</strong> - Core utilities (zsh, tmux, ripgrep, multimedia tools)</li>
+<li><strong>GitHub Release Tools</strong> - yq, Go, fzf, neovim, lazygit, yazi</li>
+<li><strong>Rust/Cargo Tools</strong> - bat, fd, eza, zoxide, delta, tinty (via cargo-binstall)</li>
+<li><strong>Language Package Managers</strong> - nvm, npm, uv</li>
+<li><strong>Shell Configuration</strong> - ZSH plugins</li>
+<li><strong>Custom Go Applications</strong> - sess, toolbox</li>
+<li><strong>Symlinking Dotfiles</strong> - Link configs to home directory</li>
+<li><strong>Theme System</strong> - tinty themes</li>
+<li><strong>Plugin Installation</strong> - Tmux and Neovim plugins</li>
+</ol>
 <p><strong>ZSHDOTDIR Required</strong>: Add to <code>/etc/zsh/zshenv</code>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ZSHDOTDIR=&quot;$HOME/.config/zsh&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/zsh/zshenv
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ZSHDOTDIR=&quot;$HOME/.config/zsh&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/zsh/zshenv
 </span></code></pre></div>
-<p><strong>Binary Symlinks</strong>: Script creates symlinks for <code>batcat</code> → <code>bat</code> and <code>fdfind</code> → <code>fd</code>.</p>
-<p><strong>Cargo Tools</strong>: Installs eza, yazi, git-delta via cargo (not available in apt).</p>
+<p><strong>Universal Installation Strategy</strong>: We prioritize latest versions and cross-platform consistency:</p>
+<ul>
+<li><strong>cargo-binstall</strong> (Rust CLI tools) - Pre-compiled binaries, latest versions, no naming conflicts</li>
+<li>
+<p><code>bat</code> (not <code>batcat</code>), <code>fd</code> (not <code>fdfind</code>), <code>zoxide</code>, <code>eza</code>, <code>git-delta</code>, <code>tinty</code></p>
+</li>
+<li>
+<p><strong>GitHub Releases</strong> (Core tools) - Latest stable versions</p>
+</li>
+<li><code>go</code> (1.23+ vs apt's 1.22)</li>
+<li><code>fzf</code> (0.66.1 vs apt's 0.44.1 - <strong>22 versions ahead!</strong>)</li>
+<li><code>neovim</code> (0.11+ vs apt's 0.9.5)</li>
+<li>
+<p><code>lazygit</code>, <code>yazi</code>, <code>yq</code></p>
+</li>
+<li>
+<p><strong>apt</strong> (System utilities) - Stable, infrequent updates</p>
+</li>
+<li><code>zsh</code>, <code>tmux</code>, <code>ripgrep</code>, <code>jq</code>, multimedia tools (ffmpeg, imagemagick, etc.)</li>
+</ul>
+<p>See <a href="../../learnings/package-version-analysis/">Package Version Analysis</a> for detailed comparison and rationale.</p>
+<h3 id="post-install-wsl-ubuntu">Post-Install (WSL Ubuntu)<a class="headerlink" href="#post-install-wsl-ubuntu" title="Permanent link">&para;</a></h3>
+<p><strong>ZSHDOTDIR Configuration</strong>: If zsh doesn't start properly, ensure <code>/etc/zsh/zshenv</code> contains:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ZSHDOTDIR=&quot;$HOME/.config/zsh&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/zsh/zshenv
+</span></code></pre></div>
+<p><strong>Nerd Font</strong> (Optional): WSL can use Windows fonts.</p>
+<p><strong>Option 1</strong> - Install in Windows (easiest):</p>
+<ul>
+<li>Right-click font files → "Install for all users"</li>
+<li>WSL automatically has access</li>
+</ul>
+<p><strong>Option 2</strong> - Install in WSL:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.local/share/fonts
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>cp<span class="w"> </span>/path/to/your/fonts/*.<span class="o">{</span>ttf,otf<span class="o">}</span><span class="w"> </span>~/.local/share/fonts/
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>fc-cache<span class="w"> </span>-fv
+</span></code></pre></div>
+<p><strong>WSL Configuration</strong>: If you modified <code>/etc/wsl.conf</code> during installation, restart WSL:</p>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>wsl.exe<span class="w"> </span>--shutdown
+</span></code></pre></div>
+<p><strong>Restart terminal</strong>: After installation, restart your terminal or run <code>exec zsh</code> to load new configuration.</p>
 <h2 id="arch-linux">Arch Linux<a class="headerlink" href="#arch-linux" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>bash<span class="w"> </span>management/arch-setup.sh
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>bash<span class="w"> </span>management/arch-setup.sh
 </span></code></pre></div>
 <p>Bootstrap script installs Taskfile, then delegates all package installation to <code>task install-arch</code>.</p>
 <p>Time: ~15-20 minutes</p>
 <p><strong>ZSHDOTDIR Required</strong>: Add to <code>/etc/zsh/zshenv</code>:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ZSHDOTDIR=&quot;$HOME/.config/zsh&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/zsh/zshenv
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ZSHDOTDIR=&quot;$HOME/.config/zsh&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/zsh/zshenv
 </span></code></pre></div>
 <p><strong>AUR Helper</strong>: yay is installed automatically.</p>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>task<span class="w"> </span>--list<span class="w">           </span><span class="c1"># Should show available tasks</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>toolbox<span class="w"> </span>list<span class="w">          </span><span class="c1"># Should show installed tools</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>theme-sync<span class="w"> </span>current<span class="w">    </span><span class="c1"># Should show current theme</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>node<span class="w"> </span>--version<span class="w">        </span><span class="c1"># Should show Node.js version</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>uv<span class="w"> </span>--version<span class="w">          </span><span class="c1"># Should show uv version</span>
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>task<span class="w"> </span>--list<span class="w">           </span><span class="c1"># Should show available tasks</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>toolbox<span class="w"> </span>list<span class="w">          </span><span class="c1"># Should show installed tools</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>theme-sync<span class="w"> </span>current<span class="w">    </span><span class="c1"># Should show current theme</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>node<span class="w"> </span>--version<span class="w">        </span><span class="c1"># Should show Node.js version</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>uv<span class="w"> </span>--version<span class="w">          </span><span class="c1"># Should show uv version</span>
 </span></code></pre></div>
 <p>Restart terminal: <code>exec zsh</code></p>
 <h2 id="what-gets-installed">What Gets Installed<a class="headerlink" href="#what-gets-installed" title="Permanent link">&para;</a></h2>
 <p><strong>Package Managers</strong>: Homebrew (macOS), apt (Ubuntu), pacman (Arch)</p>
-<p><strong>Version Managers</strong>: nvm (Node.js), uv (Python)</p>
-<p><strong>CLI Tools</strong>: bat, eza, fd, ripgrep, fzf, zoxide, yazi, lazygit, tmux, neovim, git-delta, and more. Run <code>toolbox list</code> for complete list.</p>
+<p><strong>Version Managers</strong>: nvm (Node.js), uv (Python), cargo-binstall (Rust binaries)</p>
+<p><strong>Build Toolchains</strong>: Go (1.23+), Rust (rustup)</p>
+<p><strong>CLI Tools</strong> (organized by installation method):</p>
+<ul>
+<li><strong>Rust Tools</strong> (cargo-binstall → <code>~/.cargo/bin</code>): bat, fd, eza, zoxide, git-delta, tinty</li>
+<li><strong>GitHub Releases</strong> (→ <code>~/.local/bin</code>): fzf, neovim, lazygit, yazi, yq</li>
+<li><strong>System Packages</strong> (apt/brew): zsh, tmux, ripgrep, jq, tree, htop</li>
+<li><strong>Language Servers</strong> (npm): typescript-language-server, bash-language-server, yaml-language-server</li>
+<li><strong>Custom Apps</strong> (Go → <code>~/go/bin</code>): sess, toolbox</li>
+</ul>
+<p>Run <code>tools list</code> to see all 30+ installed tools with descriptions.</p>
 <p><strong>Theme System</strong>: tinty + theme-sync script</p>
-<p><strong>Automation</strong>: Taskfile for coordination tasks</p>
+<p><strong>Automation</strong>: Taskfile for coordinating all installation phases</p>
+<p>See <a href="../../architecture/path-ordering-strategy/">PATH Ordering Strategy</a> to understand tool resolution priority.</p>
 <h2 id="manual-alternative">Manual Alternative<a class="headerlink" href="#manual-alternative" title="Permanent link">&para;</a></h2>
 <p>If bootstrap script fails or you already have task installed:</p>
-<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>task<span class="w"> </span>install<span class="w">          </span><span class="c1"># Auto-detects platform</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Or specific platform:</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>task<span class="w"> </span>install-macos
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>task<span class="w"> </span>install-wsl
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>task<span class="w"> </span>install-arch
+<div class="language-sh highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>task<span class="w"> </span>install<span class="w">          </span><span class="c1"># Auto-detects platform</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># Or specific platform:</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>task<span class="w"> </span>install-macos
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>task<span class="w"> </span>install-wsl
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>task<span class="w"> </span>install-arch
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>See <a href="../../reference/troubleshooting/">Troubleshooting Guide</a> for common issues.</p>
