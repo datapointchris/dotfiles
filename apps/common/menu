@@ -9,8 +9,7 @@
 
 set -euo pipefail
 
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+# Formatting functions are available in shell environment via .zshrc
 
 gum style \
   --border=rounded \

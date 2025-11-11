@@ -8,38 +8,37 @@
 
 set -euo pipefail
 
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+# Formatting functions are available in shell environment via .zshrc
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
 
 show_help() {
   cat << EOF
-$(color_cyan "notes - Quick note-taking with zk")
+$(print_cyan "notes - Quick note-taking with zk")
 
 Command-line interface for managing notes across sections.
 
-$(color_yellow "COMMANDS:")
+$(print_yellow "COMMANDS:")
   notes                  Show this help
   notes search           Search across all notes (full-text)
   notes new [section]    Create a new note (optionally specify section)
   notes recent           Browse recent notes
   notes browse           Browse notes by section
 
-$(color_yellow "EXAMPLES:")
+$(print_yellow "EXAMPLES:")
   notes search           # Full-text search, type to filter results
   notes new              # Pick a section, then create a note
   notes new dev          # Create a note directly in 'dev' section
   notes recent           # Browse last 50 notes
   notes browse           # Pick a section, browse its notes
 
-$(color_yellow "DIRECT ZK ACCESS:")
+$(print_yellow "DIRECT ZK ACCESS:")
   For full zk functionality, use 'zk' directly:
   - zk list              # List all notes
   - zk journal "..."     # Create journal entry
   - zk edit              # Edit notes
 
-$(color_yellow "NOTEBOOK:")
+$(print_yellow "NOTEBOOK:")
   Location: $NOTES_DIR
   Config: ~/.config/zk/config.toml
 EOF
@@ -47,14 +46,14 @@ EOF
 
 # Check if zk is installed
 if ! command -v zk &>/dev/null; then
-  echo "$(color_yellow "Error:") zk is not installed"
+  echo "$(print_yellow "Error:") zk is not installed"
   echo "Install with: brew install zk"
   exit 1
 fi
 
 # Check if notes directory exists
 if [[ ! -d "$NOTES_DIR" ]]; then
-  echo "$(color_yellow "Error:") Notes directory not found: $NOTES_DIR"
+  echo "$(print_yellow "Error:") Notes directory not found: $NOTES_DIR"
   echo "Run: zk init $NOTES_DIR"
   exit 1
 fi
@@ -67,7 +66,7 @@ discover_sections() {
 # Search across all notes (full-text)
 cmd_search() {
   if ! command -v rg &>/dev/null; then
-    echo "$(color_yellow "Error:") ripgrep is required for full-text search"
+    echo "$(print_yellow "Error:") ripgrep is required for full-text search"
     echo "Install with: brew install ripgrep"
     exit 1
   fi
@@ -101,13 +100,13 @@ cmd_new() {
   mapfile -t sections < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
-    echo "$(color_yellow "No sections found in:") $NOTES_DIR"
+    echo "$(print_yellow "No sections found in:") $NOTES_DIR"
     echo "Create a directory like: mkdir $NOTES_DIR/journal"
     exit 1
   fi
 
   if ! command -v gum &>/dev/null; then
-    echo "$(color_yellow "Error:") gum is required for interactive selection"
+    echo "$(print_yellow "Error:") gum is required for interactive selection"
     echo "Install with: brew install gum"
     exit 1
   fi
@@ -124,7 +123,7 @@ cmd_new() {
     done
 
     if [[ $found -eq 0 ]]; then
-      color_yellow "Section '$section' does not exist"
+      print_yellow "Section '$section' does not exist"
       # Fall through to interactive selection
       section=""
     fi
@@ -177,12 +176,12 @@ cmd_browse() {
   mapfile -t sections < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
-    echo "$(color_yellow "No sections found in:") $NOTES_DIR"
+    echo "$(print_yellow "No sections found in:") $NOTES_DIR"
     exit 1
   fi
 
   if ! command -v gum &>/dev/null; then
-    echo "$(color_yellow "Error:") gum is required for interactive selection"
+    echo "$(print_yellow "Error:") gum is required for interactive selection"
     echo "Install with: brew install gum"
     exit 1
   fi
