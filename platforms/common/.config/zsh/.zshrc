@@ -1,46 +1,60 @@
 #shellcheck disable=all
-# ================================================================== #
+# ------------------------------------------------------------------ #
 # SHARED ZSH CONFIGURATION
 # Platform-agnostic configuration sourced by platform-specific configs
-# ================================================================== #
+# ------------------------------------------------------------------ #
 
 echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
 
 # ------------------------------------------------------------------ #
-# ENVIRONMENT VALIDATION
+# BOOTSTRAP: Load environment and utilities
 # ------------------------------------------------------------------ #
-local check=" ✔️"
-local error=" ❌"
+ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
 
-SHELLS="$HOME/.shell"
-source "$SHELLS/colors.sh"
-source "$SHELLS/formatting.sh"
+# Load .env first (sets ZSHRC_DEBUG if present)
+[[ -f "$HOME/.env" ]] && source "$HOME/.env" && ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
 
-# Check for .env file and required variables
-if [[ -f "$HOME/.env" ]]; then
-    source "$HOME/.env"
-    echo "$check Load  : $HOME/.env"
-
-    # Validate required environment variables
-    if [[ -n "$PLATFORM" ]]; then
-      echo "$check Env   : $(color_cyan "PLATFORM")=$(color_green "$PLATFORM")"
-    else
-        color_red "$error Env   : PLATFORM not set in .env"
-    fi
-
-    if [[ -n "$NVIM_AI_ENABLED" ]]; then
-      echo "$check Env   : $(color_cyan "NVIM_AI_ENABLED")=$(color_green "$NVIM_AI_ENABLED")"
-    else
-        color_red "$error Env   : NVIM_AI_ENABLED not set in .env"
-    fi
+# Load formatting library (or define fallback)
+SHELLS="$HOME/shell"
+if [[ -f "$SHELLS/formatting.sh" ]]; then
+  source "$SHELLS/formatting.sh"
 else
-    echo "$error .env file not found at $HOME/.env"
+  # Fallback logging if formatting.sh not found
+  echo "  ✗ Error  : formatting.sh not found at $SHELLS/formatting.sh" >&2
+  log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  %-6s : %s\n" "$1" "$2"; }
+  log_error() { printf "  ✗ %-6s : %s\n" "$1" "$2" >&2; }
 fi
+
+# Define logging functions using formatting library
+log() {
+  [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  ✓ %-6s : %s\n" "$1" "$2"
+}
+
+log_error() {
+  printf "  ✗ %-6s : %s\n" "$1" "$2" >&2
+}
+
+# Log environment
+[[ -f "$HOME/.env" ]] && log "Load" "$HOME/.env" || log_error "Load" "$HOME/.env"
+
+# Validate required environment variables
+if [[ -n "$PLATFORM" ]]; then
+  log "Env" "$(color_cyan "PLATFORM")=$(color_green "$PLATFORM")"
+else
+  log_error "Env" "PLATFORM not set in .env"
+fi
+
+if [[ -n "$NVIM_AI_ENABLED" ]]; then
+  log "Env" "$(color_cyan "NVIM_AI_ENABLED")=$(color_green "$NVIM_AI_ENABLED")"
+else
+  log_error "Env" "NVIM_AI_ENABLED not set in .env"
+fi
+
+log "Load" "$SHELLS/formatting.sh"
 
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
-DEBUG=1
 # Enable extended globbing, parameter expansion, command substitution, and arithmetic expansion
 setopt EXTENDED_GLOB
 setopt PROMPT_SUBST
@@ -62,9 +76,13 @@ zle -N down-line-or-beginning-search
 bindkey "^[[A" up-line-or-beginning-search    # Up arrow
 bindkey "^[[B" down-line-or-beginning-search  # Down arrow
 
-# Create history directory if it doesn't exist
-[[ ! -d "$HOME/.local/state/zsh" ]] && mkdir -p "$HOME/.local/state/zsh"
-echo "$check Setup : History Search & Command Editing"
+# Create history directory if needed
+if [[ ! -d "$HOME/.local/state/zsh" ]]; then
+  mkdir -p "$HOME/.local/state/zsh"
+  log "Setup" "Created $HOME/.local/state/zsh"
+fi
+
+log "Setup" "History & Command Editing"
 
 # ------------------------------------------------------------------ #
 # GENERAL SETTINGS
@@ -73,15 +91,19 @@ export EDITOR="nvim"
 export HOMEBREW_NO_AUTO_UPDATE=1
 export BAT_THEME="gruvbox-dark"
 
+# Tool directories
+export CARGO_HOME="$HOME/.cargo"
+export NVM_DIR="$HOME/.config/nvm"
+
 # ------------------------------------------------------------------ #
-# CONFIG FILE LOCATIONS (XDG Base Directory)
+# XDG BASE DIRECTORY
 # ------------------------------------------------------------------ #
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 
-# Config
+# Config locations
 export BASH_COMPLETION_USER_FILE="$XDG_CONFIG_HOME/bash-completion/bash_completion"
 export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
 export INPUTRC="$XDG_CONFIG_HOME/readline/inputrc"
@@ -93,27 +115,31 @@ export PSQLRC="$XDG_CONFIG_HOME/pg/psqlrc"
 export REDISCLI_RCFILE="$XDG_CONFIG_HOME/redis/redisclirc"
 export RIPGREP_CONFIG_PATH="$XDG_CONFIG_HOME/ripgrep/ripgreprc"
 
-# State
+# State locations
 export PSQL_HISTORY="$XDG_STATE_HOME/psql_history"
 export PYTHON_HISTORY="$XDG_STATE_HOME/python/history"
 
-# Cache
+# Cache locations
 export KUBECACHEDIR="$XDG_CACHE_HOME/kube"
 export PYTHONPYCACHEPREFIX="$XDG_CACHE_HOME/python"
 
-# Data
+# Data locations
 export AZURE_CONFIG_DIR="$XDG_DATA_HOME/azure"
 export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
-echo "$check Setup : XDG Directories"
+
+log "Setup" "XDG Directories"
 
 # ------------------------------------------------------------------ #
 # COMPLETIONS
 # ------------------------------------------------------------------ #
 # Create cache directories
-[[ ! -d "$XDG_CACHE_HOME/zsh" ]] && mkdir -p "$XDG_CACHE_HOME/zsh"
+if [[ ! -d "$XDG_CACHE_HOME/zsh" ]]; then
+  mkdir -p "$XDG_CACHE_HOME/zsh"
+  log "Setup" "Created $XDG_CACHE_HOME/zsh"
+fi
 
 # Set the cache path for Zsh completion to a directory within the XDG cache home.
 # This helps in storing completion cache files in a standardized location.
@@ -124,36 +150,45 @@ zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
 # Using a version-specific file ensures compatibility with the current Zsh version.
 autoload -Uz compinit
 compinit -d "$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
+log "Setup" "compinit"
 
 # Completion styling
 zstyle ':completion:*' menu select
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*:descriptions' format "%B--- %d%b"
-zstyle ':completion:*' cache-path "$XDG_CACHE_HOME/zsh/zcompcache"
 
-# Enable alias completion
 setopt COMPLETE_ALIASES
 
-# Terraform completion (if installed)
+# Terraform completion
 if command -v terraform >/dev/null 2>&1; then
     autoload -U +X bashcompinit && bashcompinit
     complete -o nospace -C terraform terraform
+    log "Setup" "terraform completions"
 fi
 
-echo "$check Setup : ZSH Completions"
+# GitHub CLI completions
+if command -v gh >/dev/null 2>&1; then
+    eval "$(gh completion -s zsh)"
+    log "Setup" "gh completions"
+fi
+
+log "Setup" "Completions"
 
 # ------------------------------------------------------------------ #
-# PROMPT AND THEME
+# PROMPT
 # ------------------------------------------------------------------ #
-# Load prompt configuration from separate file
-source "$HOME/.config/zsh/prompt.zsh"
-echo "$check Load  : $HOME/.config/zsh/prompt.zsh"
+if [[ -f "$HOME/.config/zsh/prompt.zsh" ]]; then
+  source "$HOME/.config/zsh/prompt.zsh"
+  log "Load" "$HOME/.config/zsh/prompt.zsh"
+else
+  log_error "Load" "$HOME/.config/zsh/prompt.zsh"
+fi
 
 # ------------------------------------------------------------------ #
-# OH-MY-ZSH PLUGIN REPLACEMENTS (Cross-Platform)
+# PLUGIN REPLACEMENTS
 # ------------------------------------------------------------------ #
 
-# ========== colored-man-pages plugin replacement ==========
+# colored-man-pages
 export LESS_TERMCAP_mb=$'\e[1;32m'     # begin bold
 export LESS_TERMCAP_md=$'\e[1;32m'     # begin blink
 export LESS_TERMCAP_so=$'\e[01;33m'    # begin reverse video
@@ -163,228 +198,181 @@ export LESS_TERMCAP_se=$'\e[0m'        # reset reverse video
 export LESS_TERMCAP_ue=$'\e[0m'        # reset underline
 export GROFF_NO_SGR=1                  # for groff compatibility
 
-# ========== gh plugin replacement ==========
-# GitHub CLI completions (available via package managers on all platforms)
-if command -v gh >/dev/null 2>&1; then
-    eval "$(gh completion -s zsh)"
-fi
-
-# ========== gnu-utils plugin replacement ==========
-# Platform-specific GNU coreutils setup
-# NOTE: GNU coreutils on macOS are installed via Homebrew but NOT added to PATH
-# to avoid conflicts with system tools and GMP build issues.
-# They remain available with 'g' prefix: gls, gsed, gtar, ggrep
-# This follows standard macOS Homebrew practice.
-#
-# if [[ "$OSTYPE" == "darwin"* ]]; then
-#     # macOS: Use GNU coreutils from Homebrew
-#     gnu_paths=(
-#         "/usr/local/opt/coreutils/libexec/gnubin"
-#         "/usr/local/opt/gnu-sed/libexec/gnubin"
-#         "/usr/local/opt/gnu-tar/libexec/gnubin"
-#         "/usr/local/opt/grep/libexec/gnubin"
-#     )
-#     for gnu_path in "${gnu_paths[@]}"; do
-#         [[ -d "$gnu_path" ]] && export PATH="$gnu_path:$PATH"
-#     done
-# else
-#     # Linux: GNU coreutils are already default, no changes needed
-#     :
-# fi
-
-# ========== Manual plugin loading from ~/.config/zsh/plugins ==========
-ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
-
-# Load git-open (manually cloned for cross-platform compatibility)
-if [[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]]; then
-    export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
-    echo "$check load  : $ZSH_PLUGINS_DIR/git-open/git-open"
-  else
-    echo "$error git-open plugin not found at $ZSH_PLUGINS_DIR/git-open"
-fi
-
-# Load zsh-vi-mode (manually cloned for cross-platform compatibility)
-if [[ -f "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh" ]]; then
-    source "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
-    echo "$check load  : $ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
-  else
-    echo "$error zsh-vi-mode plugin not found at $ZSH_PLUGINS_DIR/zsh-vi-mode"
-fi
-
-# Load forgit (interactive git commands with fzf)
-if [[ -f "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh" ]]; then
-    source "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
-    echo "$check Load  : $ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
-    fpath+=($ZSH_PLUGINS_DIR/forgit/completions)
-    echo "$check Load  : $ZSH_PLUGINS_DIR/forgit/completions"
-  else
-    echo "$error forgit plugin not found at $ZSH_PLUGINS_DIR/forgit"
-fi
-
-echo "$check Load  : $ZSH_PLUGINS_DIR"
-# ================================================================== #
-
 # ------------------------------------------------------------------ #
 # SHELL CONFIG
 # ------------------------------------------------------------------ #
 
-# Platform-specific shell integrations
+# File paths
+iterm2_integration="$HOME/.iterm2_shell_integration.zsh"
+aliases_file="$SHELLS/aliases.sh"
+platform_aliases_file="$SHELLS/$PLATFORM-aliases.sh"
+functions_file="$SHELLS/functions.sh"
+fzf_functions_file="$SHELLS/fzf-functions.sh"
+platform_functions_file="$SHELLS/$PLATFORM-functions.sh"
+
+# Platform-specific integrations
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS specific
-    iterm2_shell_integration="$HOME/.iterm2_shell_integration.zsh"
-    [[ -f $iterm2_shell_integration ]] && source $iterm2_shell_integration && echo "$check Load  : $iterm2_shell_integration"
+  [[ -f "$iterm2_integration" ]] && source "$iterm2_integration" && log "Load" "$iterm2_integration"
 fi
 
-source "$SHELLS/aliases.sh"
-echo "$check Load  : $SHELLS/aliases.sh"
-[[ -f "$SHELLS/$PLATFORM-aliases.sh" ]] && source "$SHELLS/$PLATFORM-aliases.sh" && echo "$check Load  : $SHELLS/$PLATFORM-aliases.sh"
+# Aliases
+[[ -f "$aliases_file" ]] && source "$aliases_file" && log "Load" "$aliases_file" || log_error "Load" "$aliases_file"
+[[ -f "$platform_aliases_file" ]] && source "$platform_aliases_file" && log "Load" "$platform_aliases_file"
 
-source "$SHELLS/functions.sh"
-echo "$check Load  : $SHELLS/functions.sh"
-source "$SHELLS/fzf-functions.sh"
-echo "$check Load  : $SHELLS/fzf-functions.sh"
-[[ -f "$SHELLS/$PLATFORM-functions.sh" ]] && source "$SHELLS/$PLATFORM-functions.sh" && echo "$check Load  : $SHELLS/$PLATFORM-functions.sh"
+# Functions
+[[ -f "$functions_file" ]] && source "$functions_file" && log "Load" "$functions_file" || log_error "Load" "$functions_file"
+[[ -f "$fzf_functions_file" ]] && source "$fzf_functions_file" && log "Load" "$fzf_functions_file" || log_error "Load" "$fzf_functions_file"
+[[ -f "$platform_functions_file" ]] && source "$platform_functions_file" && log "Load" "$platform_functions_file"
 
-# ------------------------------------------------------------------- #
-# PATH AND ENVIRONMENT SETUP (Platform-Specific)
-# ------------------------------------------------------------------- #
+# ------------------------------------------------------------------ #
+# PATH SETUP
+# ------------------------------------------------------------------ #
+# Strategy: User tools > Language ecosystems > System
+# add_path PREPENDS, so last call = highest priority
+
 function add_path() {
-    if [[ -d "$1" ]]; then
-        export PATH="$1:$PATH"
-        echo "$check Path  : $1"
-    fi
+  [[ -d "$1" ]] && export PATH="$1:$PATH" && log "Path" "$1"
 }
 
-# Common tools
-
-if command -v cargo &>/dev/null; then
-    CARGO_HOME="$XDG_DATA_HOME/cargo"
-    export CARGO_HOME
-    add_path "$CARGO_HOME/bin"
-fi
-
-# Local bin (always)
-add_path "$HOME/.local/bin"
-
-# forgit bin for getting git forgit commands
-add_path "$ZSH_PLUGINS_DIR/forgit/bin"
-
-# Platform-specific PATH setup
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS specific paths
-
-    # Postgres 16, `postgres` points to Postgres 14
-    add_path "/usr/local/opt/postgresql@16/bin"
-
-    # npm installed global packages
-    add_path "$HOME/.local/share/npm/bin"
-
-    # go installed packages
-    add_path "$HOME/go/bin"
-
-else
-    # Linux/WSL specific paths
-    add_path "/snap/bin"
-    add_path "/opt/nvim"
-    add_path "/usr/local/go/bin"
-    :
-fi
-
-# NOTE: add_path prepends to PATH, so items added last appear first
-# Add system bin first (will end up last in PATH, lowest priority)
+# Tier 3: System (lowest priority - added first, ends up last)
 add_path "/usr/bin"
-
-# Add Homebrew bins (will end up early in PATH, high priority)
 add_path "/usr/local/bin"
 add_path "/usr/local/sbin"
 
-echo "$check Load  : Paths"
+# Tier 2: Platform-specific
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  add_path "/usr/local/opt/postgresql@16/bin"
+  add_path "$HOME/go/bin"
+else
+  add_path "/snap/bin"
+  add_path "/usr/local/go/bin"
+  add_path "$HOME/go/bin"
+fi
+
+# Tier 1: User tools (highest priority - added last, ends up first)
+add_path "$ZSH_PLUGINS_DIR/forgit/bin"
+add_path "$HOME/.local/bin"
+add_path "$CARGO_HOME/bin"
 
 # ------------------------------------------------------------------ #
 # TERMINAL APPS
 # ------------------------------------------------------------------ #
 
-# ---------- zoxide ---------- #
-eval "$(zoxide init --cmd z zsh)"
-echo "$check Setup : zoxide"
-
-# ---------- fzf ---------- #
-source <(fzf --zsh)
-
-# fzf uses find by default but change to fd because it is faster and better
-export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_COMMAND="fd --type-d --hidden --strip-cwd-prefix --exclude .git"
-
-show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
-
-export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
-export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
-
-# Advanced customization of fzf options via _fzf_comprun function
-# - The first argument to the function is the name of the command.
-# - You should make sure to pass the rest of the arguments to fzf.
-_fzf_comprun() {
-    local command=$1
-    shift
-
-    case "$command" in
-    cd) fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
-    export | unset) fzf --preview "eval 'echo $'{}" "$@" ;;
-    ssh) fzf --preview 'dig {}' "$@" ;;
-    *) fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
-    esac
-}
-
-# for ** completion of files
-_fzf_compgen_path() {
-    fd --hidden --follow --exclude .git . "$1"
-}
-
-# for ** completion of directories
-_fzf_compgen_dir() {
-    fd --type d --hidden --follow --exclude .git . "$1"
-}
-echo "$check Setup : fzf"
-
-# ---------- nvm ---------- #
-export NVM_DIR="$HOME/.config/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-
-# ---------- uv ---------- #
-if command -v uv >/dev/null 2>&1; then
-    eval "$(uv generate-shell-completion zsh)"
+# zoxide
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init --cmd z zsh)"
+  log "Setup" "zoxide"
+else
+  log_error "Setup" "zoxide not found"
 fi
 
+# fzf
+if command -v fzf >/dev/null 2>&1; then
+  source <(fzf --zsh)
 
-# ---------- yazi ---------- #
-function yy() {
+  export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_COMMAND="fd --type-d --hidden --strip-cwd-prefix --exclude .git"
+
+  show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
+  export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
+  export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
+
+  _fzf_comprun() {
+    local command=$1
+    shift
+    case "$command" in
+      cd) fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
+      export | unset) fzf --preview "eval 'echo $'{}" "$@" ;;
+      ssh) fzf --preview 'dig {}' "$@" ;;
+      *) fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
+    esac
+  }
+
+  _fzf_compgen_path() { fd --hidden --follow --exclude .git . "$1"; }
+  _fzf_compgen_dir() { fd --type d --hidden --follow --exclude .git . "$1"; }
+
+  log "Setup" "fzf"
+else
+  log_error "Setup" "fzf not found"
+fi
+
+# nvm
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  source "$NVM_DIR/nvm.sh"
+  source "$NVM_DIR/bash_completion"
+  log "Setup" "nvm"
+else
+  log_error "Setup" "nvm not found at $NVM_DIR/nvm.sh"
+fi
+
+# uv
+if command -v uv >/dev/null 2>&1; then
+  eval "$(uv generate-shell-completion zsh)"
+  log "Setup" "uv"
+else
+  log_error "Setup" "uv not found"
+fi
+
+# yazi
+if command -v yazi >/dev/null 2>&1; then
+  yy() {
     local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
     yazi "$@" --cwd-file="$tmp"
     IFS= read -r -d '' cwd <"$tmp"
     [[ -n "$cwd" ]] && [[ "$cwd" != "$PWD" ]] && builtin cd -- "$cwd" || return
     rm -f -- "$tmp"
-}
-
-echo "$check Setup : Terminal Apps"
-
-# ------------------------------------------------------------------ #
-# SYNTAX HIGHLIGHTING (Load at end - cross-platform)
-# ------------------------------------------------------------------ #
-# Check common paths for different systems
-if [[ -f "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    source "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    echo "$check Load  : /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh (Linux)"
-elif [[ -f "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    source "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    echo "$check Load  : /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh (macOS Homebrew)"
-elif [[ -f "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    source "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-    echo "$check Load  : /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh (macOS Intel Homebrew)"
+  }
+  log "Setup" "yazi"
 else
-    echo "Could not find zsh syntax highlighting (checked Linux, macOS Homebrew paths)"
+  log_error "Setup" "yazi not found"
+fi
+
+# ------------------------------------------------------------------ #
+# ZSH PLUGINS (manually cloned to ~/.config/zsh/plugins)
+# ------------------------------------------------------------------ #
+# NOTE: zsh-syntax-highlighting MUST be loaded last per their docs
+ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
+
+# Plugin file paths
+git_open_file="$ZSH_PLUGINS_DIR/git-open/git-open"
+zsh_vi_mode_file="$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
+forgit_file="$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
+forgit_completions="$ZSH_PLUGINS_DIR/forgit/completions"
+syntax_highlighting_file="$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+
+# git-open
+if [[ -f "$git_open_file" ]]; then
+  export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH"
+  log "Load" "$git_open_file"
+else
+  log_error "Load" "$git_open_file"
+fi
+
+# zsh-vi-mode
+if [[ -f "$zsh_vi_mode_file" ]]; then
+  source "$zsh_vi_mode_file"
+  log "Load" "$zsh_vi_mode_file"
+else
+  log_error "Load" "$zsh_vi_mode_file"
+fi
+
+# forgit
+if [[ -f "$forgit_file" ]]; then
+  source "$forgit_file"
+  log "Load" "$forgit_file"
+  fpath+=($forgit_completions)
+  log "Load" "$forgit_completions"
+else
+  log_error "Load" "$forgit_file"
+fi
+
+# zsh-syntax-highlighting (MUST load last)
+if [[ -f "$syntax_highlighting_file" ]]; then
+  source "$syntax_highlighting_file"
+  log "Load" "$syntax_highlighting_file"
+else
+  log_error "Load" "$syntax_highlighting_file"
 fi
 
 echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
