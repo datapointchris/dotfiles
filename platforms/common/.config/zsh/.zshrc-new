@@ -1,0 +1,283 @@
+#shellcheck disable=all
+# ================================================================== #
+# SHARED ZSH CONFIGURATION
+# Platform-agnostic configuration sourced by platform-specific configs
+# ================================================================== #
+
+echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
+
+# ================================================================== #
+# BOOTSTRAP: Load environment and utilities
+# ================================================================== #
+ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
+
+# Load .env first (sets ZSHRC_DEBUG if present)
+[[ -f "$HOME/.env" ]] && source "$HOME/.env" && ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
+
+# Load formatting library (or define fallback)
+SHELLS="$HOME/shell"
+if [[ -f "$SHELLS/formatting.sh" ]]; then
+  source "$SHELLS/formatting.sh"
+else
+  # Fallback logging if formatting.sh not found
+  echo "  ✗ Error  : formatting.sh not found at $SHELLS/formatting.sh" >&2
+  log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  %-6s : %s\n" "$1" "$2"; }
+  log_error() { printf "  ✗ %-6s : %s\n" "$1" "$2" >&2; }
+fi
+
+# Define logging functions using formatting library
+log() {
+  [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  ✓ %-6s : %s\n" "$1" "$2"
+}
+
+log_error() {
+  printf "  ✗ %-6s : %s\n" "$1" "$2" >&2
+}
+
+# Log environment
+[[ -f "$HOME/.env" ]] && log "Load" "$HOME/.env" || log_error "Load" ".env not found"
+[[ -n "$PLATFORM" ]] && log "Env" "PLATFORM=$PLATFORM" || log_error "Env" "PLATFORM not set"
+[[ -n "$NVIM_AI_ENABLED" ]] && log "Env" "NVIM_AI_ENABLED=$NVIM_AI_ENABLED"
+
+log "Load" "$SHELLS/formatting.sh"
+
+# ================================================================== #
+# ZSH CONFIGURATION
+# ================================================================== #
+setopt EXTENDED_GLOB
+setopt PROMPT_SUBST
+
+# History settings
+HISTFILE="$HOME/.local/state/zsh/history"
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt HIST_REDUCE_BLANKS
+setopt SHARE_HISTORY
+
+# History search
+autoload -U up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey "^[[A" up-line-or-beginning-search
+bindkey "^[[B" down-line-or-beginning-search
+
+[[ ! -d "$HOME/.local/state/zsh" ]] && mkdir -p "$HOME/.local/state/zsh"
+log "Setup" "History & Command Editing"
+
+# ================================================================== #
+# GENERAL SETTINGS
+# ================================================================== #
+export EDITOR="nvim"
+export HOMEBREW_NO_AUTO_UPDATE=1
+export BAT_THEME="gruvbox-dark"
+
+# ================================================================== #
+# XDG BASE DIRECTORY
+# ================================================================== #
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
+
+# Config locations
+export BASH_COMPLETION_USER_FILE="$XDG_CONFIG_HOME/bash-completion/bash_completion"
+export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
+export INPUTRC="$XDG_CONFIG_HOME/readline/inputrc"
+export KUBECONFIG="$XDG_CONFIG_HOME/kube"
+export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/npmrc"
+export PGPASSFILE="$XDG_CONFIG_HOME/pg/pgpass"
+export PGSERVICEFILE="$XDG_CONFIG_HOME/pg/pg_service.conf"
+export PSQLRC="$XDG_CONFIG_HOME/pg/psqlrc"
+export REDISCLI_RCFILE="$XDG_CONFIG_HOME/redis/redisclirc"
+export RIPGREP_CONFIG_PATH="$XDG_CONFIG_HOME/ripgrep/ripgreprc"
+
+# State locations
+export PSQL_HISTORY="$XDG_STATE_HOME/psql_history"
+export PYTHON_HISTORY="$XDG_STATE_HOME/python/history"
+
+# Cache locations
+export KUBECACHEDIR="$XDG_CACHE_HOME/kube"
+export PYTHONPYCACHEPREFIX="$XDG_CACHE_HOME/python"
+
+# Data locations
+export AZURE_CONFIG_DIR="$XDG_DATA_HOME/azure"
+export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
+export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
+export PYTHONUSERBASE="$XDG_DATA_HOME/python"
+export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
+
+log "Setup" "XDG Directories"
+
+# ================================================================== #
+# COMPLETIONS
+# ================================================================== #
+[[ ! -d "$XDG_CACHE_HOME/zsh" ]] && mkdir -p "$XDG_CACHE_HOME/zsh"
+
+zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
+zstyle ':completion:*' menu select
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*:descriptions' format "%B--- %d%b"
+
+autoload -Uz compinit
+compinit -d "$XDG_CACHE_HOME/zsh/zcompdump-$ZSH_VERSION"
+
+setopt COMPLETE_ALIASES
+
+# Terraform completion
+command -v terraform >/dev/null 2>&1 && autoload -U +X bashcompinit && bashcompinit && complete -o nospace -C terraform terraform
+
+log "Setup" "Completions"
+
+# ================================================================== #
+# PROMPT
+# ================================================================== #
+[[ -f "$HOME/.config/zsh/prompt.zsh" ]] && source "$HOME/.config/zsh/prompt.zsh" && log "Load" "prompt.zsh"
+
+# ================================================================== #
+# OH-MY-ZSH PLUGIN REPLACEMENTS
+# ================================================================== #
+
+# colored-man-pages
+export LESS_TERMCAP_mb=$'\e[1;32m'
+export LESS_TERMCAP_md=$'\e[1;32m'
+export LESS_TERMCAP_so=$'\e[01;33m'
+export LESS_TERMCAP_us=$'\e[01;4;31m'
+export LESS_TERMCAP_me=$'\e[0m'
+export LESS_TERMCAP_se=$'\e[0m'
+export LESS_TERMCAP_ue=$'\e[0m'
+export GROFF_NO_SGR=1
+
+# gh completions
+command -v gh >/dev/null 2>&1 && eval "$(gh completion -s zsh)"
+
+# ================================================================== #
+# ZSH PLUGINS (manually cloned to ~/.config/zsh/plugins)
+# ================================================================== #
+ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
+
+# git-open
+[[ -f "$ZSH_PLUGINS_DIR/git-open/git-open" ]] && export PATH="$ZSH_PLUGINS_DIR/git-open:$PATH" && log "Load" "git-open"
+
+# zsh-vi-mode
+[[ -f "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh" ]] && source "$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh" && log "Load" "zsh-vi-mode"
+
+# forgit
+if [[ -f "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh" ]]; then
+  source "$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
+  fpath+=($ZSH_PLUGINS_DIR/forgit/completions)
+  log "Load" "forgit"
+fi
+
+# zsh-syntax-highlighting (load last)
+[[ -f "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" && log "Load" "zsh-syntax-highlighting"
+
+# ================================================================== #
+# SHELL CONFIG
+# ================================================================== #
+
+# Platform-specific integrations
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  [[ -f "$HOME/.iterm2_shell_integration.zsh" ]] && source "$HOME/.iterm2_shell_integration.zsh" && log "Load" "iterm2 integration"
+fi
+
+# Aliases
+[[ -f "$SHELLS/aliases.sh" ]] && source "$SHELLS/aliases.sh" && log "Load" "aliases.sh"
+[[ -f "$SHELLS/$PLATFORM-aliases.sh" ]] && source "$SHELLS/$PLATFORM-aliases.sh" && log "Load" "$PLATFORM-aliases.sh"
+
+# Functions
+[[ -f "$SHELLS/functions.sh" ]] && source "$SHELLS/functions.sh" && log "Load" "functions.sh"
+[[ -f "$SHELLS/fzf-functions.sh" ]] && source "$SHELLS/fzf-functions.sh" && log "Load" "fzf-functions.sh"
+[[ -f "$SHELLS/$PLATFORM-functions.sh" ]] && source "$SHELLS/$PLATFORM-functions.sh" && log "Load" "$PLATFORM-functions.sh"
+
+# ================================================================== #
+# PATH SETUP
+# ================================================================== #
+# Strategy: User tools > Language ecosystems > System
+# add_path PREPENDS, so last call = highest priority
+
+add_path() {
+  [[ -d "$1" ]] && export PATH="$1:$PATH" && log "Path" "$1"
+}
+
+# Tier 3: System (lowest priority)
+add_path "/usr/bin"
+add_path "/usr/local/bin"
+add_path "/usr/local/sbin"
+
+# Tier 2: Platform-specific
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  add_path "/usr/local/opt/postgresql@16/bin"
+  add_path "$HOME/.local/share/npm/bin"
+  add_path "$HOME/go/bin"
+else
+  add_path "/snap/bin"
+  add_path "/opt/nvim/bin"
+  add_path "/usr/local/go/bin"
+  add_path "$HOME/go/bin"
+fi
+
+# Tier 1: User tools (highest priority)
+add_path "$ZSH_PLUGINS_DIR/forgit/bin"
+export CARGO_HOME="$HOME/.cargo"
+add_path "$HOME/.local/bin"
+add_path "$CARGO_HOME/bin"
+
+# ================================================================== #
+# TERMINAL APPS
+# ================================================================== #
+
+# zoxide
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init --cmd z zsh)" && log "Setup" "zoxide"
+
+# fzf
+if command -v fzf >/dev/null 2>&1; then
+  source <(fzf --zsh)
+
+  export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_COMMAND="fd --type-d --hidden --strip-cwd-prefix --exclude .git"
+
+  show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
+  export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
+  export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
+
+  _fzf_comprun() {
+    local command=$1
+    shift
+    case "$command" in
+      cd) fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
+      export | unset) fzf --preview "eval 'echo $'{}" "$@" ;;
+      ssh) fzf --preview 'dig {}' "$@" ;;
+      *) fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
+    esac
+  }
+
+  _fzf_compgen_path() { fd --hidden --follow --exclude .git . "$1"; }
+  _fzf_compgen_dir() { fd --type d --hidden --follow --exclude .git . "$1"; }
+
+  log "Setup" "fzf"
+fi
+
+# nvm
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && log "Setup" "nvm"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# uv
+command -v uv >/dev/null 2>&1 && eval "$(uv generate-shell-completion zsh)" && log "Setup" "uv"
+
+# yazi
+if command -v yazi >/dev/null 2>&1; then
+  yy() {
+    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    yazi "$@" --cwd-file="$tmp"
+    IFS= read -r -d '' cwd <"$tmp"
+    [[ -n "$cwd" ]] && [[ "$cwd" != "$PWD" ]] && builtin cd -- "$cwd" || return
+    rm -f -- "$tmp"
+  }
+  log "Setup" "yazi"
+fi
+
+echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"

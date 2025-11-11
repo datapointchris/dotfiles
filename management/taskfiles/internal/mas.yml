@@ -18,11 +18,6 @@ tasks:
     silent: true
     cmds:
       - |
-        if ! command -v mas >/dev/null 2>&1; then
-          echo "  mas not installed - skipping Mac App Store updates"
-          exit 0
-        fi
-
         echo "  Updating Mac App Store apps..."
         mas upgrade
         echo "  Mac App Store apps updated"

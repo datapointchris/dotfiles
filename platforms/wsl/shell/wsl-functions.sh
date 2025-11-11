@@ -4,5 +4,5 @@
 # *For the word formatting that comes from .color-and-formatting
 
 # DOTFILES="$HOME/dotfiles"
-SHELLS="$HOME/.shell"
+SHELLS="$HOME/shell"
 source "$SHELLS/colors.sh"

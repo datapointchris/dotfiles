@@ -112,6 +112,126 @@ tasks:
       - command -v yay >/dev/null 2>&1
 
   # ================================================================
+  # GO (Build Toolchain)
+  # ================================================================
+
+  install-go:
+    desc: Install latest Go from go.dev
+    cmds:
+      - bash management/taskfiles/scripts/install-go.sh
+
+  # ================================================================
+  # FZF (Fuzzy Finder)
+  # ================================================================
+
+  install-fzf:
+    desc: Build and install latest fzf from source
+    deps:
+      - install-go
+    cmds:
+      - bash management/taskfiles/scripts/install-fzf.sh
+
+  # ================================================================
+  # LAZYGIT (Git TUI)
+  # ================================================================
+
+  install-lazygit:
+    desc: Install latest lazygit from GitHub releases to ~/.local/bin
+    cmds:
+      - bash management/taskfiles/scripts/install-lazygit.sh
+
+  # ================================================================
+  # NEOVIM (Text Editor)
+  # ================================================================
+
+  install-neovim:
+    desc: Install latest neovim from GitHub releases to ~/.local/bin
+    cmds:
+      - bash management/taskfiles/scripts/install-neovim.sh
+
+  # ================================================================
+  # YAZI (Terminal File Manager)
+  # ================================================================
+
+  install-yazi:
+    desc: Install yazi terminal file manager with flavors and plugins
+    cmds:
+      - bash management/taskfiles/scripts/install-yazi.sh
+
+  # ================================================================
+  # RUST & CARGO (for additional tools)
+  # ================================================================
+
+  install-rust:
+    desc: Install Rust and Cargo
+    cmds:
+      - |
+        if command -v cargo >/dev/null 2>&1; then
+          echo " Rust already installed"
+        else
+          echo " Installing Rust..."
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
+          echo " Rust installed"
+        fi
+    status:
+      - command -v cargo >/dev/null 2>&1
+
+  install-cargo-binstall:
+    desc: Install cargo-binstall for fast binary installation
+    deps:
+      - install-rust
+    cmds:
+      - |
+        # Ensure cargo is available
+        source "$HOME/.cargo/env"
+
+        if command -v cargo-binstall >/dev/null 2>&1; then
+          echo " cargo-binstall already installed"
+        else
+          echo " Installing cargo-binstall..."
+          cargo install cargo-binstall
+          echo " cargo-binstall installed"
+        fi
+    status:
+      - command -v cargo-binstall >/dev/null 2>&1
+
+  install-cargo-tools:
+    desc: Install Rust CLI tools via cargo-binstall
+    deps:
+      - install-cargo-binstall
+    cmds:
+      - |
+        # Ensure cargo is available
+        source "$HOME/.cargo/env"
+        echo " Installing Rust CLI tools via cargo-binstall..."
+
+        # Helper function to install via cargo-binstall if not already installed
+        binstall_if_missing() {
+          local package=$1
+          local command_name=${2:-$(echo $package | cut -d- -f1)}
+
+          if command -v "$command_name" >/dev/null 2>&1; then
+            echo "  $command_name already installed, skipping"
+          else
+            echo "  Installing $package..."
+            cargo binstall -y "$package"
+          fi
+        }
+
+        # Install Rust CLI tools
+        binstall_if_missing bat
+        binstall_if_missing fd-find fd
+        binstall_if_missing zoxide
+        binstall_if_missing eza
+        binstall_if_missing git-delta delta
+        binstall_if_missing tinty
+        binstall_if_missing cargo-update cargo-install-update
+
+        echo " Rust CLI tools installation complete"
+        echo " Installed to: ~/.cargo/bin (highest PATH priority)"
+
+  # ================================================================
   # AUR PACKAGES
   # ================================================================
 

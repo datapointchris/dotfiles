@@ -84,76 +84,212 @@ tasks:
     silent: true
     cmds:
       - echo "Starting macOS dotfiles installation..."
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 1: System Tools (Homebrew)"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: macos:install-homebrew
+      - task: macos:install-xcode-tools
       - task: brew:install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 2: GitHub Release Tools"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: macos:install-go
+      - task: macos:install-fzf
+      - task: macos:install-neovim
+      - task: macos:install-lazygit
+      - task: macos:install-yazi
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 3: Rust/Cargo Tools"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: macos:install-rust
+      - task: macos:install-cargo-tools
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 4: Language Package Managers"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: nvm:install
       - task: npm:install
       - task: uv:install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 5: Shell Configuration"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: shell:install
-      - echo "Building Go apps..."
-      - cd apps/sess && task install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 6: Custom Go Applications"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - cd apps/common/sess && task install
+      - cd apps/common/toolbox && task install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 7: Symlinking Dotfiles"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: symlinks:link
-      - echo "Setting up theme system..."
-      - tinty install
-      - tinty sync
-      - echo "macOS installation complete!"
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 8: Theme System"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - bash -c 'source "$HOME/.cargo/env" && tinty install'
+      - bash -c 'source "$HOME/.cargo/env" && tinty sync'
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " macOS Installation Complete!"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - echo ""
       - 'echo "Next steps:"'
       - 'echo "  1. Restart your terminal"'
       - 'echo "  2. Run ''task --list'' to see available commands"'
       - 'echo "  3. Run ''tools list'' to see installed tools"'
       - 'echo "  4. Run ''theme-sync current'' to see current theme"'
+      - echo ""
 
   install-wsl:
     desc: Full WSL Ubuntu installation
     silent: true
     cmds:
       - echo "Starting WSL Ubuntu dotfiles installation..."
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 1: System Packages (apt)"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: wsl:install-packages
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 2: GitHub Release Tools"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: wsl:install-yq
+      - task: wsl:install-go
+      - task: wsl:install-fzf
+      - task: wsl:install-neovim
+      - task: wsl:install-lazygit
+      - task: wsl:install-yazi
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 3: Rust/Cargo Tools"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: wsl:install-rust
       - task: wsl:install-cargo-tools
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 4: Language Package Managers"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: nvm:install
       - task: npm:install
+      - task: wsl:install-uv
       - task: uv:install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 5: Shell Configuration"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: shell:install
-      - echo "Building Go apps..."
-      - cd apps/sess && task install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 6: Custom Go Applications"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - cd apps/common/sess && task install
+      - cd apps/common/toolbox && task install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 7: Symlinking Dotfiles"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: symlinks:link
-      - echo "Setting up theme system..."
-      - tinty install
-      - tinty sync
-      - task: wsl:configure-wsl
-      - echo "WSL Ubuntu installation complete!"
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 8: Theme System"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - bash -c 'source "$HOME/.cargo/env" && tinty install'
+      - bash -c 'source "$HOME/.cargo/env" && tinty sync'
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 9: Plugin Installation"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: wsl:install-tpm
+      - task: wsl:install-tmux-plugins
+      - task: wsl:install-nvim-plugins
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " WSL Ubuntu Installation Complete!"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - echo ""
       - 'echo "Next steps:"'
-      - 'echo "  1. Restart your terminal"'
+      - 'echo "  1. Restart your terminal (or logout/login for shell change)"'
       - 'echo "  2. Run ''task --list'' to see available commands"'
       - 'echo "  3. Run ''tools list'' to see installed tools"'
       - 'echo "  4. Run ''theme-sync current'' to see current theme"'
       - echo ""
-      - 'echo "Note: If you modified /etc/wsl.conf, restart WSL with: wsl.exe --shutdown"'
 
   install-arch:
     desc: Full Arch Linux installation
     silent: true
     cmds:
       - echo "Starting Arch Linux dotfiles installation..."
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 1: System Packages (pacman)"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: arch:install-packages
       - task: arch:install-aur-helper
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 2: GitHub Release Tools"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: arch:install-go
+      - task: arch:install-fzf
+      - task: arch:install-neovim
+      - task: arch:install-lazygit
+      - task: arch:install-yazi
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 3: Rust/Cargo Tools"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - task: arch:install-rust
+      - task: arch:install-cargo-tools
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 4: Language Package Managers"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: nvm:install
       - task: npm:install
       - task: uv:install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 5: Shell Configuration"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: shell:install
-      - echo "Building Go apps..."
-      - cd apps/sess && task install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 6: Custom Go Applications"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - cd apps/common/sess && task install
+      - cd apps/common/toolbox && task install
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 7: Symlinking Dotfiles"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: symlinks:link
-      - echo "Setting up theme system..."
-      - tinty install
-      - tinty sync
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 8: Theme System"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - bash -c 'source "$HOME/.cargo/env" && tinty install'
+      - bash -c 'source "$HOME/.cargo/env" && tinty sync'
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Phase 9: System Configuration"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - task: arch:configure
-      - echo "Arch Linux installation complete!"
+      - echo ""
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+      - 'echo " Arch Linux Installation Complete!"'
+      - 'echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
       - echo ""
       - 'echo "Next steps:"'
       - 'echo "  1. Restart your terminal"'
       - 'echo "  2. Run ''task --list'' to see available commands"'
       - 'echo "  3. Run ''tools list'' to see installed tools"'
       - 'echo "  4. Run ''theme-sync current'' to see current theme"'
+      - echo ""

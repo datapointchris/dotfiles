@@ -141,6 +141,8 @@ nav:
       - First Configuration: getting-started/first-config.md
   - Architecture:
       - Overview: architecture/index.md
+      - Package Management: architecture/package-management.md
+      - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Menu System: architecture/menu-system.md
   - Reference:
       - Platform Differences: reference/platforms.md
@@ -148,6 +150,8 @@ nav:
       - Tool Reference: reference/tools.md
       - Tool Discovery: reference/tool-discovery.md
       - Task Reference: reference/tasks.md
+      - Script Formatting Library: reference/script-formatting-library.md
+      - Nerd Fonts: reference/nerd-fonts.md
       - Symlinks Manager: reference/symlinks.md
       - Skills System: reference/skills.md
       - Claude Code Hooks: reference/hooks.md
@@ -168,6 +172,10 @@ nav:
       - Publishing Docs: publishing.md
   - Learnings:
       - Overview: learnings/index.md
+      - App Installation Patterns: learnings/app-installation-patterns.md
+      - Idempotent Installation Patterns: learnings/idempotent-installation-patterns.md
+      - WSL Ubuntu Package Versions: learnings/wsl-ubuntu-package-versions.md
+      - Package Version Analysis: learnings/package-version-analysis.md
       - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md
       - Git History Rewriting: learnings/git-history-rewriting.md
       - Relative Path Calculation: learnings/relative-path-calculation.md

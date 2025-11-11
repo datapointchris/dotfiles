@@ -20,21 +20,24 @@ console = Console()
 def link(
     target: str = typer.Argument(..., help="Target to link (common, macos, wsl, arch, etc.)"),
 ):
-    """Create symlinks for common or platform layer."""
-    source_dir = settings.dotfiles_dir / target
+    """Create symlinks for common or platform layer, including apps."""
+    source_dir = settings.dotfiles_dir / "platforms" / target
 
     if not source_dir.exists():
-        console.print(f"[red]✗[/] Directory does not exist: {target}")
-        console.print(f"[dim]Available directories in {settings.dotfiles_dir}:[/]")
-        for item in settings.dotfiles_dir.iterdir():
-            if item.is_dir() and item.name not in [".git", "tools", "docs", "scripts"]:
-                console.print(f"  - {item.name}")
+        console.print(f"[red]✗[/] Platform directory does not exist: {target}")
+        platforms_dir = settings.dotfiles_dir / "platforms"
+        console.print(f"[dim]Available platforms in {platforms_dir}:[/]")
+        if platforms_dir.exists():
+            for item in platforms_dir.iterdir():
+                if item.is_dir() and not item.name.startswith("."):
+                    console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
     manager = SymlinkManager()
     count = manager.create_symlinks(source_dir, target)
+    app_count = manager.link_apps(target)
 
-    if count == 0:
+    if count == 0 and app_count == 0:
         console.print("[yellow]No symlinks created[/]")
         raise typer.Exit(1)
 
@@ -44,10 +47,10 @@ def unlink(
     target: str = typer.Argument(..., help="Target to unlink (common, macos, wsl, arch, etc.)"),
 ):
     """Remove symlinks for common or platform layer."""
-    source_dir = settings.dotfiles_dir / target
+    source_dir = settings.dotfiles_dir / "platforms" / target
 
     if not source_dir.exists():
-        console.print(f"[red]✗[/] Directory does not exist: {target}")
+        console.print(f"[red]✗[/] Platform directory does not exist: {target}")
         raise typer.Exit(1)
 
     manager = SymlinkManager()

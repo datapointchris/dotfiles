@@ -61,6 +61,7 @@ outer.right = 4
 
 cmd-h = []     # disable hide application
 cmd-alt-h = [] # disable hide others
+cmd-m = []     # disable minimize window
 
 alt-enter = 'exec-and-forget open -na Ghostty'
 alt-shift-m = 'exec-and-forget ghostty -e menu'

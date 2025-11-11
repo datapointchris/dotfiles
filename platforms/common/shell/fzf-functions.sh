@@ -1,3 +1,6 @@
+# shellcheck shell=bash
+# shellcheck disable=all
+# External fzf functions - disable all shellcheck warnings
 
 f() {
     # Run command/application and choose paths/files with fzf.

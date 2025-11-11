@@ -10,16 +10,5 @@ tasks:
     silent: true
     cmds:
       - echo "✅ Installing npm global packages..."
-
-        npm install -g typescript-language-server
-        npm install -g typescript
-        npm install -g bash-language-server
-        npm install -g yaml-language-server
-        npm install -g vscode-langservers-extracted
-        npm install -g gh-actions-language-server
-
-        npm install -g eslint
-        npm install -g prettier
-        npm install -g markdownlint-cli
-
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/taskfiles/scripts/npm-install-globals.sh
       - echo "✅ npm global packages installed!"

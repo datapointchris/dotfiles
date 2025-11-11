@@ -24,6 +24,22 @@
 - New documentation goes in appropriate subdirectories: `docs/reference/`, `docs/development/`, etc.
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
+**App Installation Patterns** (⚠️ Common source of confusion - 3rd time addressing this):
+
+Two distinct app types with different installation methods:
+
+1. **Go Apps** (sess/, toolbox/): Directories with source code
+   - Built with `task install` → installs to `~/go/bin/`
+   - **NEVER symlinked** - they install themselves
+   - Added via Taskfile.yml: `cd apps/common/{app} && task install`
+
+2. **Shell Script Apps** (menu, notes, theme-sync, etc.): Executable files
+   - Symlinked from `apps/{platform}/` → `~/.local/bin/`
+   - Handled by `link_apps()` in symlinks manager
+   - `link_apps()` skips directories, only symlinks files
+
+See `docs/learnings/app-installation-patterns.md` for full details.
+
 **Problem Solving Philosophy**:
 
 - Solve root causes, not symptoms - no band-aid solutions

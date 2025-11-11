@@ -1,6 +1,7 @@
 # Dotfiles
 
 Cross-platform dotfiles for macOS, WSL Ubuntu, and Arch Linux. Shared configurations with platform-specific overrides where needed.
+These are a PITA.
 
 ## Structure
 
@@ -38,15 +39,15 @@ See [Installation Guide](getting-started/installation.md) for details.
 
 ## Common Tasks
 
-| Command | Purpose |
-|---------|---------|
-| `task --list` | List all available tasks |
-| `theme-sync apply base16-rose-pine` | Apply a theme |
-| `theme-sync favorites` | List favorite themes |
-| `tools list` | List all installed tools |
-| `tools search <query>` | Search tools by name/tag |
-| `task update` | Update all packages |
-| `symlinks relink macos` | Update symlinks after file changes |
+| Command                             | Purpose                            |
+| ----------------------------------- | ---------------------------------- |
+| `task --list`                       | List all available tasks           |
+| `theme-sync apply base16-rose-pine` | Apply a theme                      |
+| `theme-sync favorites`              | List favorite themes               |
+| `tools list`                        | List all installed tools           |
+| `tools search <query>`              | Search tools by name/tag           |
+| `task update`                       | Update all packages                |
+| `symlinks relink macos`             | Update symlinks after file changes |
 
 ## Key Concepts
 

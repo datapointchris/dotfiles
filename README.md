@@ -49,6 +49,55 @@ dotfiles/
 
 The core philosophy: write configs once in `platforms/common/`, override only what's platform-specific.
 
+## Dotfiles Philosophy
+
+This setup follows some opinionated principles that make maintenance easier:
+
+**Fail Fast and Loud**: Scripts don't hide errors or work around problems silently. If something's wrong, you'll know immediately with a clear error message. No defensive programming that masks the real issue.
+
+**Explicit Over Hidden**: Platform-specific logic lives at the top level (bootstrap scripts, main Taskfile), not buried deep in install scripts. If there are OS conditionals, you see them upfront.
+
+**Straightforward and Simple**: Prefer some duplication over complex abstractions. Three similar install scripts (one per platform) are clearer than one script with conditional maze. The small amount of repeated code is worth the reduced cognitive load.
+
+**Linear and Predictable**: Installation follows clear phases in order. No surprises, no hidden dependencies being installed behind the scenes. You can follow exactly what's happening at each step.
+
+**Universal Tools**: Install scripts work on any platform with no OS detection. Platform logic stays in the taskfiles that call them.
+
+This means when something breaks (and it will), you can quickly find and fix it. When you come back six months later, the code still makes sense.
+
+## Visual Formatting and Emoji
+
+Scripts in this repo use colors, unicode characters, and emojis to make output scannable and easy to understand at a glance.
+
+**Default Assumption**: Output is for human consumption, not log aggregation systems. Readability trumps machine parsability.
+
+**Color-Coded Hierarchy**:
+
+- **Blue** thick borders (━━━): Main headers and footers
+- **Cyan** text: Section headings and subsections
+- **Green**: Success messages and status
+- **Red**: Errors and failures
+- **Yellow**: Warnings and cautions
+
+**Status Indicators**:
+
+- `✓` Unicode checkmarks for individual successes (keeps output compact)
+- `✅` Emoji checkbox for final success messages (high visibility)
+- `✗` Red X for errors
+- `⚠️` Warning sign for important notes
+- `•` Bullets for lists (cleaner than hyphens)
+
+**Guidelines**:
+
+- Use emojis sparingly but helpfully
+- If there would be 50+ checkboxes, use unicode `✓` instead
+- Never use decorative emojis (smileys, celebrations, etc.)
+- Add spacing around major sections for breathing room
+
+If a specific project's logs will be ingested by a log aggregation system (Splunk, ELK, etc.), dial back the colors and special characters. But that's rare for personal projects.
+
+See `platforms/common/shell/formatting.sh` and `platforms/common/shell/colors.sh` for reusable libraries that are sourced system-wide and can be copied to other projects.
+
 ## Package Management
 
 This setup uses different package managers for different purposes, because that's apparently the world we live in:

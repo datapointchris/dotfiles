@@ -12,6 +12,10 @@ vars:
         source "$HOME/.env" && echo "$PLATFORM"
       elif [ "$(uname)" = "Darwin" ]; then
         echo "macos"
+      elif grep -q "Microsoft" /proc/version 2>/dev/null; then
+        echo "wsl"
+      elif [ -f /etc/arch-release ]; then
+        echo "arch"
       else
         echo "linux"
       fi
@@ -20,7 +24,6 @@ tasks:
   link:
     desc: Create symlinks for dotfiles (common + platform layers)
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -30,7 +33,6 @@ tasks:
   link-common:
     desc: Create symlinks for common layer only
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -39,7 +41,6 @@ tasks:
   link-platform:
     desc: Create symlinks for platform layer only
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -48,7 +49,6 @@ tasks:
   unlink:
     desc: Remove all symlinks (common + platform layers)
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -58,7 +58,6 @@ tasks:
   unlink-common:
     desc: Remove symlinks for common layer only
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -67,7 +66,6 @@ tasks:
   unlink-platform:
     desc: Remove symlinks for platform layer only
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -76,7 +74,6 @@ tasks:
   show:
     desc: Show current symlinks
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -85,7 +82,6 @@ tasks:
   show-common:
     desc: Show common layer symlinks
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -94,7 +90,6 @@ tasks:
   show-platform:
     desc: Show platform layer symlinks
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -103,7 +98,6 @@ tasks:
   check:
     desc: Check for broken symlinks
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -112,7 +106,6 @@ tasks:
   check-clean:
     desc: Check and remove broken symlinks
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -121,7 +114,6 @@ tasks:
   info:
     desc: Show dotfiles configuration
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:
@@ -130,7 +122,6 @@ tasks:
   relink:
     desc: Complete refresh (unlink, check, link everything)
     silent: false
-    dir: '{{.SYMLINKS_DIR}}'
     env:
       UV_PROJECT: '{{.SYMLINKS_DIR}}'
     cmds:

@@ -1,10 +1,10 @@
-
-# shellcheck disable=SC2154
-# SC2154 = Variable is referenced but not assigned
-# *For the word formatting that comes from .color-and-formatting
+# shellcheck shell=bash
+# shellcheck disable=SC2016,SC2154
+# SC2016 = fzf preview commands use single quotes intentionally
+# SC2154 = Variables referenced but not assigned (from sourced files)
 
 # DOTFILES="$HOME/dotfiles"
-SHELLS="$HOME/.shell"
+SHELLS="$HOME/shell"
 source "$SHELLS/colors.sh"
 
 #@ubuntu-docker
@@ -439,6 +439,7 @@ function commithelp() {
 
   # Analyze patterns and suggest commit types
   local suggestions=()
+  # shellcheck disable=SC2034  # confidence reserved for future use
   local confidence=""
 
   # Check for dependency files (high confidence)
@@ -451,6 +452,7 @@ function commithelp() {
   if echo "$staged_files" | grep -qE '(package-lock\.json|Pipfile\.lock|go\.sum|Gemfile\.lock|yarn\.lock|pnpm-lock\.yaml|uv\.lock)$'; then
     if [ ${#suggestions[@]} -eq 0 ]; then
       suggestions+=("$(color_green "✓✓") $(color_blue "deps:") Lock file updates (very likely)")
+      # shellcheck disable=SC2034
       confidence="very-high"
     fi
   fi
@@ -494,6 +496,7 @@ function commithelp() {
 
   # Check file extensions for code vs docs vs config
   local has_code=false
+  # shellcheck disable=SC2034  # has_docs/has_config reserved for future use
   local has_docs=false
   local has_config=false
 
@@ -502,10 +505,12 @@ function commithelp() {
   fi
 
   if echo "$staged_files" | grep -qE '\.(md|txt|rst|adoc)$'; then
+    # shellcheck disable=SC2034
     has_docs=true
   fi
 
   if echo "$staged_files" | grep -qE '\.(json|yaml|yml|toml|ini|cfg)$'; then
+    # shellcheck disable=SC2034
     has_config=true
   fi
 
@@ -532,7 +537,7 @@ function commithelp() {
   echo "  $(color_green "✓")  High confidence based on file patterns"
   echo "  $(color_yellow "?")  Possible - depends on your changes"
   echo ""
-  echo "$(color_bright_black "Tip: Use 'lscommits' for full list or 'lscommits -d' for detailed examples")"
+  color_bright_black "Tip: Use 'lscommits' for full list or 'lscommits -d' for detailed examples"
   echo ""
 }
 

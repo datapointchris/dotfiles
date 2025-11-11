@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # fzf preview commands use single quotes intentionally
 # ================================================================
 # notes - Quick note-taking with zk
 # ================================================================
-# Auto-discovers notebook directories for easy note creation
+# Command-line interface for managing notes across sections
 # ================================================================
 
 set -euo pipefail
@@ -19,23 +20,27 @@ show_help() {
   cat << EOF
 $(color_cyan "notes - Quick note-taking with zk")
 
-Auto-discovers notebook sections and makes note creation easy.
+Command-line interface for managing notes across sections.
 
-$(color_yellow "USAGE:")
-  notes              Interactive menu (discovers sections automatically)
-  notes [section]    Create note in specific section
-  notes help         Show this help
+$(color_yellow "COMMANDS:")
+  notes                  Show this help
+  notes search           Search across all notes (full-text)
+  notes new [section]    Create a new note (optionally specify section)
+  notes recent           Browse recent notes
+  notes browse           Browse notes by section
 
 $(color_yellow "EXAMPLES:")
-  notes              # Show menu of available sections
-  notes journal      # Create journal entry
-  notes devnotes     # Create dev note
+  notes search           # Full-text search, type to filter results
+  notes new              # Pick a section, then create a note
+  notes new dev          # Create a note directly in 'dev' section
+  notes recent           # Browse last 50 notes
+  notes browse           # Pick a section, browse its notes
 
 $(color_yellow "DIRECT ZK ACCESS:")
   For full zk functionality, use 'zk' directly:
-  - zk list
-  - zk edit --interactive
-  - zk journal "My entry"
+  - zk list              # List all notes
+  - zk journal "..."     # Create journal entry
+  - zk edit              # Edit notes
 
 $(color_yellow "NOTEBOOK:")
   Location: $NOTES_DIR
@@ -59,12 +64,43 @@ fi
 
 # Discover sections (top-level directories, excluding hidden)
 discover_sections() {
-  find "$NOTES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; | sort
+  find -L "$NOTES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; | sort
 }
 
-# Interactive mode
-interactive_mode() {
-  # Get available sections
+# Search across all notes (full-text)
+cmd_search() {
+  if ! command -v rg &>/dev/null; then
+    echo "$(color_yellow "Error:") ripgrep is required for full-text search"
+    echo "Install with: brew install ripgrep"
+    exit 1
+  fi
+
+  # Full-text search with live reload
+  # Start with empty query, reload as user types
+  local selected
+  selected=$(
+    FZF_DEFAULT_COMMAND="find -L '$NOTES_DIR' -type f -name '*.md' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
+    fzf --layout=reverse \
+        --disabled \
+        --bind "change:reload:rg --files-with-matches --no-messages --ignore-case {q} '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}' || true" \
+        --bind "start:reload:rg --files-with-matches --no-messages --ignore-case '' '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
+        --delimiter '\t' \
+        --with-nth 1 \
+        --preview 'rg --color=always --context=5 --ignore-case --pretty -- {q} ~/notes/{2} 2>/dev/null | fold -s -w $(tput cols) || bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
+        --preview-window=right:60% \
+        --prompt 'Search: ' \
+        --header 'Type to search note content | Enter to open'
+  )
+
+  if [[ -n "$selected" ]]; then
+    local notepath=$(echo "$selected" | cut -f2)
+    ${EDITOR:-nvim} ~/notes/"$notepath"
+  fi
+}
+
+# Create new note (select section first)
+cmd_new() {
+  local section="$1"
   mapfile -t sections < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
@@ -73,90 +109,129 @@ interactive_mode() {
     exit 1
   fi
 
-  # Add special options
-  local choices=(
-    "Browse recent notes"
-    "Search all notes"
-    "---"
-  )
-
-  # Add discovered sections
-  for section in "${sections[@]}"; do
-    choices+=("New note: $section")
-  done
-
-  # Show menu with gum
   if ! command -v gum &>/dev/null; then
-    color_yellow "gum not installed - showing available sections:"
-    echo ""
-    for section in "${sections[@]}"; do
-      echo "  - $section"
+    echo "$(color_yellow "Error:") gum is required for interactive selection"
+    echo "Install with: brew install gum"
+    exit 1
+  fi
+
+  # If section provided as argument, validate it
+  if [[ -n "$section" ]]; then
+    # Check if section exists
+    local found=0
+    for s in "${sections[@]}"; do
+      if [[ "$s" == "$section" ]]; then
+        found=1
+        break
+      fi
     done
-    echo ""
-    echo "Run: notes <section>"
-    echo "Or install gum: brew install gum"
+
+    if [[ $found -eq 0 ]]; then
+      color_yellow "Section '$section' does not exist"
+      # Fall through to interactive selection
+      section=""
+    fi
+  fi
+
+  # If no section or invalid section, prompt for selection
+  if [[ -z "$section" ]]; then
+    section=$(printf "%s\n" "${sections[@]}" | gum choose --height=25)
+
+    if [[ -z "$section" ]]; then
+      exit 0
+    fi
+  fi
+
+  # Get note title
+  local title
+  title=$(gum input --placeholder "Note title")
+
+  if [[ -z "$title" ]]; then
     exit 0
   fi
 
-  choice=$(gum choose "${choices[@]}")
-
-  case "$choice" in
-    "Browse recent notes")
-      zk list --sort modified- --limit 20 | fzf --preview 'bat -p --color always {-1}' --preview-window=right:60%
-      ;;
-
-    "Search all notes")
-      query=$(gum input --placeholder "Search query")
-      if [[ -n "$query" ]]; then
-        zk list --match "$query" | fzf --preview 'bat -p --color always {-1}' --preview-window=right:60%
-      fi
-      ;;
-
-    "---")
-      exit 0
-      ;;
-
-    "New note: "*)
-      section="${choice#New note: }"
-      create_note "$section"
-      ;;
-  esac
-}
-
-# Create note in section
-create_note() {
-  local section="$1"
-
-  # Check if section has a zk group/alias configured
-  # If so, use it; otherwise create in the directory
-
   # Try to use zk alias first (e.g., zk journal)
   if zk "$section" --help &>/dev/null; then
-    title=$(gum input --placeholder "Note title")
-    if [[ -n "$title" ]]; then
-      zk "$section" "$title"
-    fi
+    zk "$section" "$title"
   else
     # Fallback: create in directory
-    title=$(gum input --placeholder "Note title")
-    if [[ -n "$title" ]]; then
-      zk new "$NOTES_DIR/$section" --title "$title"
-    fi
+    zk new "$NOTES_DIR/$section" --title "$title"
   fi
 }
 
-# Main logic
-case "${1:-interactive}" in
-  help|--help|-h)
+# Browse recent notes
+cmd_recent() {
+  local selected
+  selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" --sort modified- --limit 50 | \
+    fzf --layout=reverse \
+        --delimiter '\t' \
+        --with-nth 1 \
+        --preview "bat -p --color always --wrap never ~/notes/{2} | fold -s -w \$(tput cols)" \
+        --preview-window=right:60%)
+
+  if [[ -n "$selected" ]]; then
+    local notepath=$(echo "$selected" | cut -f2)
+    ${EDITOR:-nvim} ~/notes/"$notepath"
+  fi
+}
+
+# Browse notes by section
+cmd_browse() {
+  mapfile -t sections < <(discover_sections)
+
+  if [[ ${#sections[@]} -eq 0 ]]; then
+    echo "$(color_yellow "No sections found in:") $NOTES_DIR"
+    exit 1
+  fi
+
+  if ! command -v gum &>/dev/null; then
+    echo "$(color_yellow "Error:") gum is required for interactive selection"
+    echo "Install with: brew install gum"
+    exit 1
+  fi
+
+  # Select section
+  local section
+  section=$(printf "%s\n" "${sections[@]}" | gum choose --height=25)
+
+  if [[ -z "$section" ]]; then
+    exit 0
+  fi
+
+  # Browse notes in selected section
+  local selected
+  selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" "$section" | \
+    fzf --layout=reverse \
+        --delimiter '\t' \
+        --with-nth 1 \
+        --preview 'bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
+        --preview-window=right:60%)
+
+  if [[ -n "$selected" ]]; then
+    local notepath=$(echo "$selected" | cut -f2)
+    ${EDITOR:-nvim} ~/notes/"$notepath"
+  fi
+}
+
+# Main command routing
+case "${1:-}" in
+  search)
+    cmd_search
+    ;;
+
+  new)
+    cmd_new "${2:-}"
+    ;;
+
+  recent)
+    cmd_recent
+    ;;
+
+  browse)
+    cmd_browse
+    ;;
+
+  help|--help|-h|*)
     show_help
-    ;;
-
-  interactive)
-    interactive_mode
-    ;;
-
-  *)
-    # Direct section specified
-    create_note "$1"
     ;;
 esac

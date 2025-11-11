@@ -95,6 +95,8 @@ venv/
 
 # Test artifacts
 test-wsl-setup.log
+.last-test-vm
+.tmp-transfer/
 
 ### GO BUILD ARTIFACTS
 

@@ -3,7 +3,7 @@
 
 if [[ -o login ]]; then echo "Login shell"; else echo "Not Login shell"; fi
 
-SHELLS="$HOME/.shell"
+SHELLS="$HOME/shell"
 
 source "$SHELLS/exports.sh"
 source "$SHELLS/colors.sh"

@@ -49,34 +49,17 @@ tasks:
     desc: Install Node.js using nvm
     silent: true
     cmds:
-      - |
-        export NVM_DIR="{{.NVM_DIR}}"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-        if ! command -v nvm >/dev/null 2>&1; then
-          echo "❌ nvm not loaded properly"
-          exit 1
-        fi
-
-        echo "✅ Installing Node.js {{.NODE_VERSION}}..."
-        nvm install {{.NODE_VERSION}}
-        nvm use {{.NODE_VERSION}}
-        nvm alias default {{.NODE_VERSION}}
-        echo "✅ Node.js {{.NODE_VERSION}} installed and set as default"
+      - echo "✅ Installing Node.js {{.NODE_VERSION}}..."
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/taskfiles/scripts/nvm-install-node.sh {{.NODE_VERSION}}
+      - echo "✅ Node.js {{.NODE_VERSION}} installed and set as default"
 
   install-latest-lts:
     desc: Install latest LTS Node.js version
     silent: true
     cmds:
-      - |
-        export NVM_DIR="{{.NVM_DIR}}"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-        echo "✅ Installing latest LTS Node.js..."
-        nvm install --lts
-        nvm use --lts
-        nvm alias default 'lts/*'
-        echo "✅ Latest LTS Node.js installed"
+      - echo "✅ Installing latest LTS Node.js..."
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/taskfiles/scripts/nvm-install-lts.sh
+      - echo "✅ Latest LTS Node.js installed"
 
   # ================================================================
   # UPDATE

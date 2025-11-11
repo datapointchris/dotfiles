@@ -3,14 +3,13 @@
 
 if [[ -o login ]]; then echo "Login shell"; else echo "Not Login shell"; fi
 
-SHELLS="$HOME/.shell"
+SHELLS="$HOME/shell"
 
-source "$SHELLS/exports.sh"
 source "$SHELLS/colors.sh"
 source "$SHELLS/formatting.sh"
 source "$SHELLS/functions.sh"
+source "$SHELLS/aliases.sh"
 
-# Aliases
 # Load pyenv if installed
 if command -v pyenv &>/dev/null; then
     eval "$(pyenv init --path)"
@@ -21,14 +20,12 @@ if command -v jenv &>/dev/null; then
     eval "$(jenv init -)"
 fi
 
-if [[ $(uname) == "Linux" && $(whoami) == "ubuntu" ]]; then
-    source "$SHELLS/aliases-ec2.sh"
-
-    # Load neofetch on Linux if installed (last so everything else has loaded first)
-    if command -v neofetch &>/dev/null; then
-        neofetch
-    fi
-else
-    source "$SHELLS/aliases.sh"
+# Load neofetch on Linux if installed (last so everything else has loaded first)
+if command -v neofetch &>/dev/null; then
+    neofetch
 fi
-. "/Users/chris/.local/share/cargo/env"
+
+# Load cargo environment if it exists
+if [[ -f "$HOME/.cargo/env" ]]; then
+    source "$HOME/.cargo/env"
+fi
