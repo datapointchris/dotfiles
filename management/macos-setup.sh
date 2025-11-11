@@ -8,36 +8,25 @@
 
 set -euo pipefail
 
-# Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-# shellcheck disable=SC2034
-YELLOW='\033[1;33m'  # Reserved for future use
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Source formatting library from dotfiles repo
+# Change to dotfiles directory (assumes script is in dotfiles/management/)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DOTFILES_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 
-echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE} macOS Dotfiles Bootstrap${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
+print_header "macOS Dotfiles Bootstrap" "blue"
 
 # Detect if running on macOS
 if [[ "$(uname)" != "Darwin" ]]; then
-    echo -e "${RED}✗ Error: This script is for macOS only${NC}"
-    exit 1
+    die "This script is for macOS only"
 fi
 
 # Check if running as root
 if [[ $EUID -eq 0 ]]; then
-    echo -e "${RED}✗ Error: Do not run this script as root${NC}"
-    exit 1
+    die "Do not run this script as root"
 fi
 
-echo ""
-echo -e "${CYAN}[1/3] Checking Homebrew${NC}"
-echo ""
+print_section "[1/3] Checking Homebrew" "cyan"
 
 if ! command -v brew &> /dev/null; then
     echo "  Installing Homebrew..."
@@ -46,42 +35,32 @@ if ! command -v brew &> /dev/null; then
     # Add Homebrew to PATH for this session
     eval "$(/usr/local/bin/brew shellenv)"
 
-    echo -e "  ${GREEN}✓${NC} Homebrew installed"
+    print_success "Homebrew installed"
 else
-    echo -e "  ${GREEN}✓${NC} Homebrew already installed: $(brew --version | head -n1)"
+    print_success "Homebrew already installed: $(brew --version | head -n1)"
 fi
 
-echo ""
-echo -e "${CYAN}[2/3] Checking Taskfile${NC}"
-echo ""
+print_section "[2/3] Checking Taskfile" "cyan"
 
 if ! command -v task &> /dev/null; then
     echo "  Installing Taskfile..."
     brew install go-task
-    echo -e "  ${GREEN}✓${NC} Taskfile installed"
+    print_success "Taskfile installed"
 else
-    echo -e "  ${GREEN}✓${NC} Taskfile already installed: $(task --version)"
+    print_success "Taskfile already installed: $(task --version)"
 fi
 
-echo ""
-echo -e "${CYAN}[3/3] Running main installation${NC}"
-echo ""
-
-# Change to dotfiles directory (assumes script is in dotfiles/scripts/install/)
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DOTFILES_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
+print_section "[3/3] Running main installation" "cyan"
 
 cd "$DOTFILES_DIR"
 
 # Run installation
 task install-macos
 
+print_header_success "macOS Bootstrap Complete"
+
 echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN} ✅ macOS Bootstrap Complete${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo -e "${CYAN}Next Steps:${NC}"
+print_section "Next Steps" "cyan"
 echo "  1. Restart your terminal (or run: source ~/.zshrc)"
 echo "  2. Run 'task --list' to see available commands"
 echo "  3. Run 'tools list' to see installed tools"

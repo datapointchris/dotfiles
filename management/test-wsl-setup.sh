@@ -2,6 +2,11 @@
 
 set -eou pipefail  # Exit on error
 
+# Source formatting library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+
 # Show usage
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "Usage: $(basename "$0") [OPTIONS]"
@@ -77,12 +82,6 @@ fi
 
 LOG_FILE="${DOTFILES_DIR}/test-wsl-setup.log"
 
-# Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
 # Timing arrays
 declare -a STEP_NAMES
 declare -a STEP_TIMES
@@ -100,13 +99,10 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
 }
 
-# Function to log section headers
+# Function to log section headers with timestamp
 log_section() {
   echo ""
-  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')] $*${NC}"
-  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo ""
+  print_header "[$(date '+%Y-%m-%d %H:%M:%S')] $*" "blue"
 }
 
 # Function to log timing after each step
@@ -116,7 +112,7 @@ log_timing() {
   local formatted_time
   formatted_time=$(format_time "$elapsed")
   echo ""
-  echo -e "${CYAN}⏱  $step_name completed in $formatted_time${NC}"
+  print_info "⏱  $step_name completed in $formatted_time"
   echo ""
 }
 
@@ -132,9 +128,9 @@ if [[ "$REUSE_VM" == true ]]; then
   MODE_DESC="$MODE_DESC + REUSING VM"
 fi
 
-echo -e "${BLUE}Running in ${MODE_DESC}${NC}"
-echo -e "${BLUE}VM: ${VM_NAME}${NC}"
-echo -e "${BLUE}Log file: ${LOG_FILE}${NC}"
+print_info "Running in ${MODE_DESC}"
+print_info "VM: ${VM_NAME}"
+print_info "Log file: ${LOG_FILE}"
 echo ""
 
 # Track overall start time
@@ -264,27 +260,24 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
 # Summary
 {
   echo ""
+  print_header_success "Setup Complete"
   echo ""
-  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo -e "${GREEN} ✅ Setup Complete${NC}"
-  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo ""
-  echo -e "${CYAN}Timing Summary${NC}"
+  print_section "Timing Summary" "cyan"
   echo ""
   for i in "${!STEP_NAMES[@]}"; do
     formatted_time=$(format_time "${STEP_TIMES[$i]}")
-    printf "  ${GREEN}✓${NC} Step %d: %-20s %s\n" $((i + 1)) "${STEP_NAMES[$i]}" "$formatted_time"
+    printf "  %s Step %d: %-20s %s\n" "$(print_green "✓")" $((i + 1)) "${STEP_NAMES[$i]}" "$formatted_time"
   done
   echo "  ─────────────────────────────────────────────"
   formatted_total=$(format_time "$OVERALL_ELAPSED")
-  printf "  %-27s ${CYAN}%s${NC}\n" "Total time:" "$formatted_total"
+  printf "  %-27s %s\n" "Total time:" "$(print_cyan "$formatted_total")"
   echo ""
-  echo -e "${CYAN}VM Information${NC}"
+  print_section "VM Information" "cyan"
   echo ""
   echo "  VM name: $VM_NAME"
   echo "  Log file: $LOG_FILE"
   echo ""
-  echo -e "${CYAN}Next steps:${NC}"
+  print_section "Next steps" "cyan"
   echo "  • Review log: less $LOG_FILE"
   echo "  • Shell into VM: multipass shell $VM_NAME"
   echo "  • Stop VM: multipass stop $VM_NAME"

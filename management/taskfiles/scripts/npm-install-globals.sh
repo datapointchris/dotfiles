@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# Source formatting library
+source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+
 # Source nvm to get npm in PATH
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
 if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
@@ -29,9 +32,9 @@ install_if_missing() {
   local command_name=${2:-$package}  # Use package name as command if not specified
 
   if command -v "$command_name" >/dev/null 2>&1; then
-    echo "  $package already installed, skipping"
+    print_info "$package already installed, skipping"
   else
-    echo "  Installing $package..."
+    print_info "Installing $package..."
     npm install -g "$package"
   fi
 }

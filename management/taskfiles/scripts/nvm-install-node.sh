@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+# Source formatting library
+source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+
 NODE_VERSION="${1:-}"
 
 if [[ -z "$NODE_VERSION" ]]; then

@@ -9,14 +9,8 @@
 
 set -euo pipefail
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-# shellcheck disable=SC2034
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Source formatting library (runs after installation, can use $HOME/dotfiles)
+source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 # Counters
 TOTAL_CHECKS=0
@@ -40,13 +34,13 @@ check_command() {
       local version
       # Add timeout to prevent hanging on commands like yazi --version
       version=$(timeout 3 "$name" "$version_cmd" 2>&1 | head -n1 || echo "unknown")
-      echo -e "  ${GREEN}✓${NC} $name: $version"
+      print_success "$name: $version"
     else
-      echo -e "  ${GREEN}✓${NC} $name: installed"
+      print_success "$name: installed"
     fi
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    echo -e "  ${RED}✗${NC} $name: NOT FOUND"
+    print_error "$name: NOT FOUND"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     FAILED_TOOLS+=("$name")
   fi
@@ -58,30 +52,20 @@ check_file_exists() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
   if [ -f "$path" ] || [ -d "$path" ]; then
-    echo -e "  ${GREEN}✓${NC} $name: $path"
+    print_success "$name: $path"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    echo -e "  ${RED}✗${NC} $name: NOT FOUND at $path"
+    print_error "$name: NOT FOUND at $path"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     FAILED_TOOLS+=("$name")
   fi
-}
-
-print_section() {
-  echo ""
-  echo ""
-  echo -e "${CYAN}$1${NC}"
 }
 
 # ================================================================
 # Verification Checks
 # ================================================================
 
-echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}  Installation Verification${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
+print_header "Installation Verification" "blue"
 
 # ================================================================
 # Core Build Tools
@@ -318,35 +302,30 @@ else
   DETECTED_PLATFORM="linux"
 fi
 
-echo -e "  ${GREEN}✓${NC} Platform: $DETECTED_PLATFORM"
+print_success "Platform: $DETECTED_PLATFORM"
 
 # ================================================================
 # Summary
 # ================================================================
-echo ""
-echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}  Summary${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
+
+print_header "Summary" "blue"
 
 if [ $FAILED_CHECKS -gt 0 ]; then
-  echo -e "Total: ${TOTAL_CHECKS} checks"
-  echo -e "${GREEN}Passed: ${PASSED_CHECKS}${NC}"
-  echo -e "${RED}Failed: ${FAILED_CHECKS}${NC}"
+  echo "Total: ${TOTAL_CHECKS} checks"
+  print_green "Passed: ${PASSED_CHECKS}"
+  print_red "Failed: ${FAILED_CHECKS}"
   echo ""
-  echo -e "${RED}Failed tools:${NC}"
+  print_red "Failed tools:"
   for tool in "${FAILED_TOOLS[@]}"; do
-    echo -e "  • $tool"
+    echo "  • $tool"
   done
   echo ""
-  echo -e "${RED}❌ Verification FAILED${NC}"
-  echo ""
+  print_header_error "Verification FAILED"
   exit 1
 else
-  echo -e "Total: ${TOTAL_CHECKS} checks, ${GREEN}all passed${NC}"
+  echo "Total: ${TOTAL_CHECKS} checks,"
+  print_green "all passed"
   echo ""
-  echo -e "${GREEN}✅ All verified successfully${NC}"
-  echo ""
+  print_header_success "All verified successfully"
   exit 0
 fi

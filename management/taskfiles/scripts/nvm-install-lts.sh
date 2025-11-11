@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# Source formatting library
+source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+
 # Source nvm
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
 if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then

@@ -52,9 +52,9 @@ func colorBold(text string) string {
 func DisplayToolDetails(name string, tool Tool) {
 	// Print with formatting (%s = string placeholder)
 	// In Python: print(f"...")
-	fmt.Println(colorBlue("═══════════════════════════════════════════"))
+	fmt.Println(colorBlue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 	fmt.Println(colorBold(name))
-	fmt.Println(colorBlue("═══════════════════════════════════════════"))
+	fmt.Println(colorBlue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 	fmt.Println()
 
 	// Description
@@ -116,7 +116,7 @@ func DisplayToolDetails(name string, tool Tool) {
 		fmt.Printf("%s Shell function (source from dotfiles)\n", colorYellow("⚠"))
 	}
 
-	fmt.Println(colorBlue("═══════════════════════════════════════════"))
+	fmt.Println(colorBlue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 }
 
 // DisplaySearchResults shows search results in a compact list
