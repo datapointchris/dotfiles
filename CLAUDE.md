@@ -48,6 +48,14 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 - DRY principles - avoid duplication and unnecessary abstractions
 - When debugging, check symlinks first after structural changes
 
+**Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
+
+- `ZDOTDIR` is defined in `/etc/zshenv` (system-wide) pointing to `~/.config/zsh`
+- There is NO `.zprofile` or `.zshenv` in the home directory (and there should NOT be)
+- `.zshrc` is located in `~/.config/zsh/.zshrc` (symlinked from dotfiles repo)
+- This XDG-compliant setup is intentional and correct
+- Shell scripts in `apps/` must source formatting library because they run in their own bash process
+
 ## Package Management Philosophy
 
 This dotfiles setup maintains a clear separation between system package managers and language-specific version managers for cross-platform consistency.
