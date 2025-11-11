@@ -12,18 +12,17 @@
 #
 # DO NOT run as: ./aws-profiles (environment variables won't persist)
 
-CREDENTIALS_FILE="$HOME/.aws/credentials"
+# Source formatting library
+SHELLS="${SHELLS:-$HOME/shell}"
+source "$SHELLS/formatting.sh"
 
-color_red() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
-color_green() { echo "$(tput setaf 2)$1$(tput sgr0)"; }
-color_yellow() { echo "$(tput setaf 3)$1$(tput sgr0)"; }
-color_blue() { echo "$(tput setaf 4)$1$(tput sgr0)"; }
+CREDENTIALS_FILE="$HOME/.aws/credentials"
 
 function list_aws_profiles() {
     COUNT=0
     AWS_PROFILES=$(grep '\[*\]' "$CREDENTIALS_FILE" | cut -d "[" -f2 | cut -d "]" -f1)
-    echo -e "$(color_blue "Choose your AWS profile:")\n"
-    echo -e "0) $(color_yellow "Clear") current profile"
+    echo -e "$(print_blue "Choose your AWS profile:")\n"
+    echo -e "0) $(print_yellow "Clear") current profile"
     echo "$AWS_PROFILES" | while read -r line; do
         ((COUNT++))
         echo "${COUNT}) $line"
@@ -52,9 +51,9 @@ function set_aws_profile() {
     # Set the region if found
     if [[ -n "$region" ]]; then
         export AWS_REGION="$region"
-        echo -e "The AWS profile $(color_green "$AWS_PROFILE") and region $(color_blue "$region") have been set."
+        echo -e "The AWS profile $(print_green "$AWS_PROFILE") and region $(print_blue "$region") have been set."
     else
-        echo -e "The AWS profile $(color_green "$AWS_PROFILE") has been set."
+        echo -e "The AWS profile $(print_green "$AWS_PROFILE") has been set."
     fi
 }
 
@@ -62,7 +61,7 @@ function clear_aws_profile() {
     unset AWS_PROFILE
     unset AWS_REGION
     unset AWS_DEFAULT_REGION
-    echo -e "The AWS profile has been $(color_yellow "cleared.")"
+    echo -e "The AWS profile has been $(print_yellow "cleared.")"
 }
 
 function select_option() {
@@ -84,5 +83,5 @@ list_aws_profiles
 select_option
 
 # check that the profile is logged in and can make AWS CLI calls
-echo "Checking with $(color_blue "AWS CLI...")"
-color_green "$(aws sts get-caller-identity | jq -r '.Arn' | cut -d "/" -f2)"
+echo "Checking with $(print_blue "AWS CLI...")"
+print_green "$(aws sts get-caller-identity | jq -r '.Arn' | cut -d "/" -f2)"

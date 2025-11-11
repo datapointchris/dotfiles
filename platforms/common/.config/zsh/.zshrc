@@ -50,6 +50,8 @@ else
   log_error "Env" "NVIM_AI_ENABLED not set in .env"
 fi
 
+# Log formatting library (includes colors.sh)
+log "Load" "$SHELLS/colors.sh"
 log "Load" "$SHELLS/formatting.sh"
 
 # ------------------------------------------------------------------ #

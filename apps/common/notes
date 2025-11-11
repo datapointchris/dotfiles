@@ -8,40 +8,44 @@
 
 set -euo pipefail
 
-# Formatting functions are available in shell environment via .zshrc
+# Source formatting library
+SHELLS="${SHELLS:-$HOME/shell}"
+source "$SHELLS/formatting.sh"
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
 
 show_help() {
-  cat << EOF
-$(print_cyan "notes - Quick note-taking with zk")
+  print_header "Notes - Quick Note-Taking with zk" "brightcyan"
+  echo ""
+  echo "Command-line interface for managing notes across sections."
+  echo ""
 
-Command-line interface for managing notes across sections.
+  print_section "Commands" "brightmagenta"
+  echo "  $(print_cyan "notes")                  Show this help"
+  echo "  $(print_cyan "notes search")           Search across all notes (full-text)"
+  echo "  $(print_cyan "notes new") [section]    Create a new note (optionally specify section)"
+  echo "  $(print_cyan "notes recent")           Browse recent notes"
+  echo "  $(print_cyan "notes browse")           Browse notes by section"
+  echo ""
 
-$(print_yellow "COMMANDS:")
-  notes                  Show this help
-  notes search           Search across all notes (full-text)
-  notes new [section]    Create a new note (optionally specify section)
-  notes recent           Browse recent notes
-  notes browse           Browse notes by section
+  print_section "Examples" "brightyellow"
+  echo "  $(print_green "notes search")           # Full-text search, type to filter results"
+  echo "  $(print_green "notes new")              # Pick a section, then create a note"
+  echo "  $(print_green "notes new dev")          # Create a note directly in 'dev' section"
+  echo "  $(print_green "notes recent")           # Browse last 50 notes"
+  echo "  $(print_green "notes browse")           # Pick a section, browse its notes"
+  echo ""
 
-$(print_yellow "EXAMPLES:")
-  notes search           # Full-text search, type to filter results
-  notes new              # Pick a section, then create a note
-  notes new dev          # Create a note directly in 'dev' section
-  notes recent           # Browse last 50 notes
-  notes browse           # Pick a section, browse its notes
+  print_section "Direct zk Access" "orange"
+  echo "  For full zk functionality, use 'zk' directly:"
+  echo "  • $(print_yellow "zk list")              # List all notes"
+  echo "  • $(print_yellow "zk journal") \"...\"     # Create journal entry"
+  echo "  • $(print_yellow "zk edit")              # Edit notes"
+  echo ""
 
-$(print_yellow "DIRECT ZK ACCESS:")
-  For full zk functionality, use 'zk' directly:
-  - zk list              # List all notes
-  - zk journal "..."     # Create journal entry
-  - zk edit              # Edit notes
-
-$(print_yellow "NOTEBOOK:")
-  Location: $NOTES_DIR
-  Config: ~/.config/zk/config.toml
-EOF
+  print_section "Notebook" "brightblue"
+  echo "  Location: $(print_cyan "$NOTES_DIR")"
+  echo "  Config:   $(print_cyan "$HOME/.config/zk/config.toml")"
 }
 
 # Check if zk is installed

@@ -9,7 +9,9 @@
 
 set -euo pipefail
 
-# Formatting functions are available in shell environment via .zshrc
+# Source formatting library
+SHELLS="${SHELLS:-$HOME/shell}"
+source "$SHELLS/formatting.sh"
 
 gum style \
   --border=rounded \
@@ -48,12 +50,12 @@ case "$choice" in
     notes ;;
 
   "Browse documentation")
-    color_green "Opening documentation..."
+    print_green "Opening documentation..."
     open "https://datapointchris.github.io/dotfiles/"
     ;;
 
   "Manage symlinks")
-    color_green "Symlink Management Commands:"
+    print_green "Symlink Management Commands:"
     echo ""
     echo "  task symlinks:link   - Deploy dotfiles to home directory"
     echo "  task symlinks:check  - Verify symlinks are correct"

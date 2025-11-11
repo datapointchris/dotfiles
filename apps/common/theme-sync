@@ -12,7 +12,9 @@
 
 set -euo pipefail
 
-# Formatting functions are available in shell environment via .zshrc
+# Source formatting library
+SHELLS="${SHELLS:-$HOME/shell}"
+source "$SHELLS/formatting.sh"
 
 # Your favorite Base16 themes (matching neovim and ghostty favorites)
 FAVORITES=(
@@ -35,58 +37,53 @@ FAVORITES=(
 # ================================================================
 
 show_help() {
-  cat << EOF
-$(color_blue "Theme Sync - Base16 Theme Manager")
+  print_header "Theme Sync - Base16 Theme Manager" "brightmagenta"
+  echo ""
+  echo "Manage Base16 color schemes across tmux, bat, fzf, and shell."
+  echo ""
 
-Manage Base16 color schemes across tmux, bat, fzf, and shell.
+  print_section "Commands" "brightcyan"
+  echo "  apply <theme>     Apply a Base16 theme"
+  echo "  current           Show currently applied theme"
+  echo "  list              List all available Base16 themes"
+  echo "  favorites         List your favorite themes"
+  echo "  info <theme>      Show color palette for a theme"
+  echo "  random            Apply a random favorite theme"
+  echo "  reload            Reload theme in running applications"
+  echo "  verify            Verify theme system is working"
+  echo ""
 
-$(color_yellow "USAGE:")
-  theme-sync [command] [options]
+  print_section "Examples" "brightyellow"
+  echo "  $(print_cyan "theme-sync apply base16-rose-pine")"
+  echo "  $(print_cyan "theme-sync current")"
+  echo "  $(print_cyan "theme-sync favorites")"
+  echo "  $(print_cyan "theme-sync random")"
+  echo ""
 
-$(color_yellow "COMMANDS:")
-  apply <theme>     Apply a Base16 theme
-  current           Show currently applied theme
-  list              List all available Base16 themes
-  favorites         List your favorite themes
-  info <theme>      Show color palette for a theme
-  random            Apply a random favorite theme
-  reload            Reload theme in running applications
-  verify            Verify theme system is working
+  print_section "Quick Theme Shortcuts" "brightgreen"
+  echo "  • theme-sync apply base16-rose-pine"
+  echo "  • theme-sync apply base16-gruvbox-dark-hard"
+  echo "  • theme-sync apply base16-kanagawa"
+  echo "  • theme-sync apply base16-nord"
+  echo ""
 
-$(color_yellow "EXAMPLES:")
-  theme-sync apply base16-rose-pine
-  theme-sync current
-  theme-sync favorites
-  theme-sync random
-
-$(color_yellow "QUICK THEME SHORTCUTS:")
-  Use theme-sync with theme names:
-  - theme-sync apply base16-rose-pine
-  - theme-sync apply base16-gruvbox-dark-hard
-  - theme-sync apply base16-kanagawa
-  - theme-sync apply base16-nord
-
-$(color_yellow "NOTE:")
-  This works alongside your ghostty-theme script:
-  - Use ghostty-theme for Ghostty-specific themes
-  - Use theme-sync for tmux, bat, fzf, shell themes
-EOF
+  print_info "This works alongside ghostty-theme for terminal-specific themes"
 }
 
 apply_theme() {
   local theme="$1"
 
   if [[ -z "$theme" ]]; then
-    echo "$(color_red "Error:") Theme name required"
+    echo "$(print_red "Error:") Theme name required"
     echo "Usage: theme-sync apply <theme-name>"
     exit 1
   fi
 
-  echo "$(color_blue "Applying theme:") $theme"
+  echo "$(print_blue "Applying theme:") $theme"
 
   # Apply theme via tinty
   if ! tinty apply "$theme" 2>&1; then
-    echo "$(color_red "Error:") Failed to apply theme"
+    echo "$(print_red "Error:") Failed to apply theme"
     echo "Check if theme exists with: theme-sync list"
     exit 1
   fi
@@ -94,16 +91,16 @@ apply_theme() {
   # Reload tmux if running
   if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
     tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null || true
-    echo "$(color_green "✓") Tmux reloaded"
+    echo "$(print_green "✓") Tmux reloaded"
   fi
 
   # Rebuild bat cache
   if command -v bat &> /dev/null; then
     bat cache --build &>/dev/null || true
-    echo "$(color_green "✓") Bat cache rebuilt"
+    echo "$(print_green "✓") Bat cache rebuilt"
   fi
 
-  echo "$(color_green "✓") Theme applied: $theme"
+  echo "$(print_green "✓") Theme applied: $theme"
 }
 
 show_current() {
@@ -111,33 +108,33 @@ show_current() {
 
   if [[ -f "$current_file" ]]; then
     local current=$(cat "$current_file")
-    echo "$(color_blue "Current theme:") $current"
+    echo "$(print_blue "Current theme:") $current"
   else
-    color_yellow "No theme currently applied"
+    print_yellow "No theme currently applied"
   fi
 }
 
 list_themes() {
-  color_blue "Available Base16 Themes:"
+  print_blue "Available Base16 Themes:"
   echo ""
   tinty list
 }
 
 list_favorites() {
-  color_blue "Your Favorite Base16 Themes:"
+  print_blue "Your Favorite Base16 Themes:"
   echo ""
   for theme in "${FAVORITES[@]}"; do
     echo "  $theme"
   done
   echo ""
-  echo "Apply with: $(color_yellow "theme-sync apply <theme-name>")"
+  echo "Apply with: $(print_yellow "theme-sync apply <theme-name>")"
 }
 
 show_info() {
   local theme="$1"
 
   if [[ -z "$theme" ]]; then
-    echo "$(color_red "Error:") Theme name required"
+    echo "$(print_red "Error:") Theme name required"
     echo "Usage: theme-sync info <theme-name>"
     exit 1
   fi
@@ -147,65 +144,65 @@ show_info() {
 
 apply_random() {
   local random_theme="${FAVORITES[$RANDOM % ${#FAVORITES[@]}]}"
-  echo "$(color_blue "Randomly selected:") $random_theme"
+  echo "$(print_blue "Randomly selected:") $random_theme"
   apply_theme "$random_theme"
 }
 
 reload_apps() {
-  color_blue "Reloading theme in running applications..."
+  print_blue "Reloading theme in running applications..."
 
   # Reload tmux
   if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
-    tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null && echo "$(color_green "✓") Tmux reloaded"
+    tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null && echo "$(print_green "✓") Tmux reloaded"
   fi
 
   # Rebuild bat cache
   if command -v bat &> /dev/null; then
-    bat cache --build &>/dev/null && echo "$(color_green "✓") Bat cache rebuilt"
+    bat cache --build &>/dev/null && echo "$(print_green "✓") Bat cache rebuilt"
   fi
 
-  echo "$(color_green "✓") Theme reloaded"
+  echo "$(print_green "✓") Theme reloaded"
 }
 
 verify_system() {
-  color_blue "Verifying theme system..."
+  print_blue "Verifying theme system..."
   echo ""
 
   # Check tinty installation
   if command -v tinty &> /dev/null; then
-    echo "$(color_green "✓") tinty installed"
+    echo "$(print_green "✓") tinty installed"
   else
-    echo "$(color_red "✗") tinty not installed"
+    echo "$(print_red "✗") tinty not installed"
   fi
 
   # Check config file
   if [[ -f "$HOME/.config/tinty/config.toml" ]]; then
-    echo "$(color_green "✓") tinty config exists"
+    echo "$(print_green "✓") tinty config exists"
   else
-    echo "$(color_red "✗") tinty config missing"
+    echo "$(print_red "✗") tinty config missing"
   fi
 
   # Check current theme
   local current_file="$HOME/.local/share/tinted-theming/tinty/artifacts/current_scheme"
   if [[ -f "$current_file" ]]; then
     local current=$(cat "$current_file")
-    echo "$(color_green "✓") Current theme: $current"
+    echo "$(print_green "✓") Current theme: $current"
   else
-    echo "$(color_yellow "⚠") No theme applied"
+    echo "$(print_yellow "⚠") No theme applied"
   fi
 
   # Check tmux theme file
   if [[ -f "$HOME/.config/tmux/themes/current.conf" ]]; then
-    echo "$(color_green "✓") Tmux theme file exists"
+    echo "$(print_green "✓") Tmux theme file exists"
   else
-    echo "$(color_red "✗") Tmux theme file missing"
+    echo "$(print_red "✗") Tmux theme file missing"
   fi
 
   # Check bat themes
   if [[ -d "$(bat --config-dir)/themes" ]]; then
-    echo "$(color_green "✓") Bat themes directory exists"
+    echo "$(print_green "✓") Bat themes directory exists"
   else
-    echo "$(color_yellow "⚠") Bat themes directory missing"
+    echo "$(print_yellow "⚠") Bat themes directory missing"
   fi
 }
 
@@ -242,7 +239,7 @@ case "${1:-help}" in
     show_help
     ;;
   *)
-    echo "$(color_red "Error:") Unknown command: $1"
+    echo "$(print_red "Error:") Unknown command: $1"
     echo ""
     show_help
     exit 1

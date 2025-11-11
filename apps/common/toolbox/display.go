@@ -11,13 +11,15 @@ import (
 
 // ANSI color codes
 // In Python, you might use colorama.Fore.BLUE, etc.
+// Using bright variants (90-97) for better visibility
 const (
 	ansiReset  = "\033[0m"
-	ansiRed    = "\033[31m"
-	ansiGreen  = "\033[32m"
-	ansiYellow = "\033[33m"
-	ansiBlue   = "\033[34m"
-	ansiCyan   = "\033[36m"
+	ansiRed    = "\033[91m"    // Bright red
+	ansiGreen  = "\033[92m"    // Bright green
+	ansiYellow = "\033[93m"    // Bright yellow
+	ansiBlue   = "\033[94m"    // Bright blue
+	ansiCyan   = "\033[96m"    // Bright cyan
+	ansiMagenta = "\033[95m"   // Bright magenta
 	ansiBold   = "\033[1m"
 )
 
@@ -47,14 +49,18 @@ func colorBold(text string) string {
 	return ansiBold + text + ansiReset
 }
 
+func colorMagenta(text string) string {
+	return ansiMagenta + text + ansiReset
+}
+
 // DisplayToolDetails shows detailed information about a single tool
 // In Python: def display_tool_details(name: str, tool: Tool) -> None
 func DisplayToolDetails(name string, tool Tool) {
 	// Print with formatting (%s = string placeholder)
 	// In Python: print(f"...")
-	fmt.Println(colorBlue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
-	fmt.Println(colorBold(name))
-	fmt.Println(colorBlue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+	fmt.Println(colorMagenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+	fmt.Println(colorMagenta(" " + name))
+	fmt.Println(colorMagenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 	fmt.Println()
 
 	// Description
@@ -116,22 +122,22 @@ func DisplayToolDetails(name string, tool Tool) {
 		fmt.Printf("%s Shell function (source from dotfiles)\n", colorYellow("⚠"))
 	}
 
-	fmt.Println(colorBlue("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+	fmt.Println(colorMagenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 }
 
 // DisplaySearchResults shows search results in a compact list
 func DisplaySearchResults(results []SearchResult, query string) {
 	if len(results) == 0 {
-		fmt.Printf("%s No tools found matching '%s'\n", colorRed("Error:"), query)
+		fmt.Printf("%s No tools found matching '%s'\n", colorRed("✗ Error:"), query)
 		fmt.Println()
-		fmt.Println(colorBold("TIP:") + " Try searching for:")
+		fmt.Println(colorYellow("💡 TIP:") + " Try searching for:")
 		fmt.Printf("  - Category: %s\n", colorCyan("toolbox search file-management"))
 		fmt.Printf("  - Tag: %s\n", colorCyan("toolbox search git"))
 		fmt.Printf("  - Feature: %s\n", colorCyan("toolbox search syntax"))
 		return
 	}
 
-	fmt.Printf("%s %s\n", colorBlue("Search Results for:"), query)
+	fmt.Printf("%s %s\n", colorMagenta("Search Results for:"), query)
 	fmt.Println()
 
 	for _, result := range results {
@@ -148,7 +154,7 @@ func DisplaySearchResults(results []SearchResult, query string) {
 func DisplayListByCategory(registry *Registry) {
 	categories := GetCategoriesSorted(registry)
 
-	fmt.Println(colorBlue("Installed Tools") + fmt.Sprintf(" (%d total)", len(registry.Tools)))
+	fmt.Println(colorMagenta("Installed Tools") + fmt.Sprintf(" (%d total)", len(registry.Tools)))
 	fmt.Println()
 
 	for _, category := range categories {
@@ -164,7 +170,7 @@ func DisplayListByCategory(registry *Registry) {
 		fmt.Println()
 	}
 
-	fmt.Println(colorBold("TIP:") + " Use " + colorCyan("toolbox show <name>") + " to see detailed info and examples")
+	fmt.Println(colorYellow("💡 TIP:") + " Use " + colorCyan("toolbox show <name>") + " to see detailed info and examples")
 }
 
 // DisplayCategories shows just the category names with counts
@@ -172,7 +178,7 @@ func DisplayCategories(registry *Registry) {
 	categories := GetCategoriesSorted(registry)
 	categoryMap := registry.ByCategory()
 
-	fmt.Println(colorBlue("Tool Categories"))
+	fmt.Println(colorMagenta("Tool Categories"))
 	fmt.Println()
 
 	for _, category := range categories {
@@ -181,5 +187,5 @@ func DisplayCategories(registry *Registry) {
 	}
 
 	fmt.Println()
-	fmt.Println(colorBold("TIP:") + " Use " + colorCyan("toolbox list") + " to see tools by category")
+	fmt.Println(colorYellow("💡 TIP:") + " Use " + colorCyan("toolbox list") + " to see tools by category")
 }
