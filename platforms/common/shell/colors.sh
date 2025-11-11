@@ -28,6 +28,9 @@ export COLOR_BRIGHT_MAGENTA='\033[0;95m'
 export COLOR_BRIGHT_CYAN='\033[0;96m'
 export COLOR_BRIGHT_WHITE='\033[0;97m'
 
+# Extended colors (256-color palette)
+export COLOR_ORANGE='\033[38;5;208m'  # Orange (256-color)
+
 # Reset
 export COLOR_RESET='\033[0m'
 
@@ -61,6 +64,7 @@ color_bright_blue() { echo -e "${COLOR_BRIGHT_BLUE}$1${COLOR_RESET}"; }
 color_bright_magenta() { echo -e "${COLOR_BRIGHT_MAGENTA}$1${COLOR_RESET}"; }
 color_bright_cyan() { echo -e "${COLOR_BRIGHT_CYAN}$1${COLOR_RESET}"; }
 color_bright_white() { echo -e "${COLOR_BRIGHT_WHITE}$1${COLOR_RESET}"; }
+color_orange() { echo -e "${COLOR_ORANGE}$1${COLOR_RESET}"; }
 
 # Test function to display all colors
 allcolors() {
@@ -80,6 +84,7 @@ allcolors() {
   color_bright_magenta "bright magenta"
   color_bright_cyan "bright cyan"
   color_bright_white "bright white"
+  color_orange "orange"
 }
 
 # ================================================================

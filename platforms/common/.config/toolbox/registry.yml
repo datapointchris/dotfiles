@@ -3,7 +3,7 @@
 # Used by the `tools` command for discovery and learning
 
 version: "1.0"
-last_updated: "2025-11-03"
+last_updated: "2025-11-10"
 
 tools:
   # =================================================================
@@ -1058,6 +1058,501 @@ tools:
         desc: "Find search-related commands"
     tags: [nano, editor, reference, keybindings]
 
+  # Formatting Functions
+  print_header:
+    category: shell-formatting
+    description: "Print left-aligned header with thick borders and optional color"
+    installed_via: dotfiles
+    usage: "print_header <text> [color]"
+    why_use: "Create visually distinct section headers in scripts with optional customizable colors"
+    examples:
+      - cmd: 'print_header "Installation Starting"'
+        desc: "Print header with no color (default)"
+      - cmd: 'print_header "Installation Starting" "blue"'
+        desc: "Print header with blue thick borders"
+      - cmd: 'print_header "Warning" "orange"'
+        desc: "Print header with orange thick borders"
+    see_also: [print_title, print_section, print_banner, print_header_success]
+    tags: [shell, formatting, output, scripts, colors]
+
+  print_header_success:
+    category: shell-formatting
+    description: "Print left-aligned success header with checkmark"
+    installed_via: dotfiles
+    usage: "print_header_success <text>"
+    why_use: "Highlight successful completion of major operations with green styling"
+    examples:
+      - cmd: 'print_header_success "Installation Complete"'
+        desc: "Print green success header with ✅"
+    see_also: [print_header, print_header_error, print_success]
+    tags: [shell, formatting, output, scripts]
+
+  print_header_error:
+    category: shell-formatting
+    description: "Print left-aligned error header with X mark"
+    installed_via: dotfiles
+    usage: "print_header_error <text>"
+    why_use: "Highlight critical errors with red styling for immediate visibility"
+    examples:
+      - cmd: 'print_header_error "Installation Failed"'
+        desc: "Print red error header with ❌"
+    see_also: [print_header, print_header_success, print_error]
+    tags: [shell, formatting, output, scripts]
+
+  print_title:
+    category: shell-formatting
+    description: "Print centered title with thick borders and optional color (full terminal width)"
+    installed_via: dotfiles
+    usage: "print_title <text> [color]"
+    why_use: "Create prominent centered titles for script output with optional colors"
+    examples:
+      - cmd: 'print_title "System Configuration"'
+        desc: "Print centered title (no color)"
+      - cmd: 'print_title "Setup" "blue"'
+        desc: "Print centered title with blue borders"
+      - cmd: 'print_title "Database" "orange"'
+        desc: "Print centered title with orange borders"
+    see_also: [print_title_success, print_title_error, print_header, print_banner]
+    tags: [shell, formatting, output, scripts]
+
+  print_title_success:
+    category: shell-formatting
+    description: "Print centered success title with checkmark (full terminal width)"
+    installed_via: dotfiles
+    usage: "print_title_success <text>"
+    why_use: "Create prominent centered success message for script completion"
+    examples:
+      - cmd: 'print_title_success "Setup Complete"'
+        desc: "Print centered green success title"
+    see_also: [print_title, print_header_success]
+    tags: [shell, formatting, output, scripts]
+
+  print_banner:
+    category: shell-formatting
+    description: "Print banner with optional colored double-bar borders (═) and normal text"
+    installed_via: dotfiles
+    usage: "print_banner <text> [color]"
+    why_use: "Create distinctive tool or section banners with optional customizable colors"
+    examples:
+      - cmd: 'print_banner "Section Title"'
+        desc: "Print banner with no color (default)"
+      - cmd: 'print_banner "ripgrep" "orange"'
+        desc: "Print banner with orange borders"
+      - cmd: 'print_banner "Docker" "brightcyan"'
+        desc: "Print banner with bright cyan borders"
+    see_also: [print_banner_success, print_banner_error, print_header, print_section]
+    tags: [shell, formatting, output, scripts, colors]
+
+  print_section:
+    category: shell-formatting
+    description: "Print section label with thin underline and optional color"
+    installed_via: dotfiles
+    usage: "print_section <text> [color]"
+    why_use: "Create lightweight section dividers with clean underlines"
+    examples:
+      - cmd: 'print_section "Configuration"'
+        desc: "Print section with no color (default)"
+      - cmd: 'print_section "Setup" "blue"'
+        desc: "Print section with blue underline"
+      - cmd: 'print_section "Warning" "orange"'
+        desc: "Print section with orange underline"
+    see_also: [print_header, print_double_bar_header]
+    tags: [shell, formatting, output, scripts]
+
+  print_success:
+    category: shell-formatting
+    description: "Print success message with green unicode checkmark (✓)"
+    installed_via: dotfiles
+    usage: "print_success <message>"
+    why_use: "Indicate successful operations in script output (unicode icon, subtle for lists)"
+    examples:
+      - cmd: 'print_success "File created successfully"'
+        desc: "Print indented success message with ✓"
+    see_also: [print_error, print_warning, print_info, print_header_success]
+    tags: [shell, formatting, output, scripts, success]
+
+  print_error:
+    category: shell-formatting
+    description: "Print error message with red unicode X mark (✗)"
+    installed_via: dotfiles
+    usage: "print_error <message>"
+    why_use: "Indicate errors in script output (unicode icon, subtle for lists)"
+    examples:
+      - cmd: 'print_error "Operation failed"'
+        desc: "Print indented error message with ✗"
+    see_also: [print_success, print_warning, die, fatal, print_header_error]
+    tags: [shell, formatting, output, scripts, error]
+
+  print_warning:
+    category: shell-formatting
+    description: "Print warning message with yellow unicode triangle (▲)"
+    installed_via: dotfiles
+    usage: "print_warning <message>"
+    why_use: "Indicate non-critical issues (unicode icon, subtle for lists)"
+    examples:
+      - cmd: 'print_warning "Configuration file not found, using defaults"'
+        desc: "Print indented warning message with ▲"
+    see_also: [print_error, print_info, print_header_warning]
+    tags: [shell, formatting, output, scripts, warning]
+
+  print_info:
+    category: shell-formatting
+    description: "Print info message with cyan bullet (●)"
+    installed_via: dotfiles
+    usage: "print_info <message>"
+    why_use: "Provide informational messages in script output (unicode icon, subtle)"
+    examples:
+      - cmd: 'print_info "Using configuration from ~/.config"'
+        desc: "Print indented info message with ●"
+    see_also: [print_success, print_warning, print_error]
+    tags: [shell, formatting, output, scripts]
+
+  # Title variants (emoji icons for structural emphasis)
+  print_title_error:
+    category: shell-formatting
+    description: "Print centered error title with red borders and ❌ emoji"
+    installed_via: dotfiles
+    usage: "print_title_error <text>"
+    why_use: "Highlight critical failures with prominent centered display"
+    examples:
+      - cmd: 'print_title_error "Installation Failed"'
+        desc: "Print centered red error title"
+    see_also: [print_title, print_title_success, print_header_error]
+    tags: [shell, formatting, output, scripts, error]
+
+  print_title_warning:
+    category: shell-formatting
+    description: "Print centered warning title with yellow borders and ⚠️ emoji"
+    installed_via: dotfiles
+    usage: "print_title_warning <text>"
+    why_use: "Draw attention to important warnings with prominent display"
+    examples:
+      - cmd: 'print_title_warning "Caution Required"'
+        desc: "Print centered yellow warning title"
+    see_also: [print_title, print_title_error, print_header_warning]
+    tags: [shell, formatting, output, scripts, warning]
+
+  print_title_info:
+    category: shell-formatting
+    description: "Print centered info title with cyan borders and ℹ️ emoji"
+    installed_via: dotfiles
+    usage: "print_title_info <text>"
+    why_use: "Display important information with prominent centered format"
+    examples:
+      - cmd: 'print_title_info "System Information"'
+        desc: "Print centered cyan info title"
+    see_also: [print_title, print_title_success, print_header_info]
+    tags: [shell, formatting, output, scripts, info]
+
+  # Header variants (emoji icons for structural emphasis)
+  print_header_warning:
+    category: shell-formatting
+    description: "Print left-aligned warning header with yellow borders and ⚠️ emoji"
+    installed_via: dotfiles
+    usage: "print_header_warning <text>"
+    why_use: "Mark warning sections with clear yellow header and emoji"
+    examples:
+      - cmd: 'print_header_warning "Deprecated Features"'
+        desc: "Print yellow warning header with ⚠️"
+    see_also: [print_header, print_header_error, print_header_success]
+    tags: [shell, formatting, output, scripts, warning]
+
+  print_header_info:
+    category: shell-formatting
+    description: "Print left-aligned info header with cyan borders and ℹ️ emoji"
+    installed_via: dotfiles
+    usage: "print_header_info <text>"
+    why_use: "Mark informational sections with clear cyan header and emoji"
+    examples:
+      - cmd: 'print_header_info "Configuration Details"'
+        desc: "Print cyan info header with ℹ️"
+    see_also: [print_header, print_header_success, print_header_warning]
+    tags: [shell, formatting, output, scripts, info]
+
+  # Section variants (emoji icons for structural emphasis)
+  print_section_success:
+    category: shell-formatting
+    description: "Print section header with green underline and ✅ emoji"
+    installed_via: dotfiles
+    usage: "print_section_success <text>"
+    why_use: "Mark successful sections with green styling and checkmark"
+    examples:
+      - cmd: 'print_section_success "Tests Passed"'
+        desc: "Print green section with ✅"
+    see_also: [print_section, print_section_error, print_header_success]
+    tags: [shell, formatting, output, scripts, success]
+
+  print_section_error:
+    category: shell-formatting
+    description: "Print section header with red underline and ❌ emoji"
+    installed_via: dotfiles
+    usage: "print_section_error <text>"
+    why_use: "Mark failed sections with red styling and error mark"
+    examples:
+      - cmd: 'print_section_error "Build Failed"'
+        desc: "Print red section with ❌"
+    see_also: [print_section, print_section_success, print_header_error]
+    tags: [shell, formatting, output, scripts, error]
+
+  print_section_warning:
+    category: shell-formatting
+    description: "Print section header with yellow underline and ⚠️ emoji"
+    installed_via: dotfiles
+    usage: "print_section_warning <text>"
+    why_use: "Mark warning sections with yellow styling and warning sign"
+    examples:
+      - cmd: 'print_section_warning "Deprecated API"'
+        desc: "Print yellow section with ⚠️"
+    see_also: [print_section, print_section_error, print_header_warning]
+    tags: [shell, formatting, output, scripts, warning]
+
+  print_section_info:
+    category: shell-formatting
+    description: "Print section header with cyan underline and ℹ️ emoji"
+    installed_via: dotfiles
+    usage: "print_section_info <text>"
+    why_use: "Mark informational sections with cyan styling and info sign"
+    examples:
+      - cmd: 'print_section_info "Additional Notes"'
+        desc: "Print cyan section with ℹ️"
+    see_also: [print_section, print_section_success, print_header_info]
+    tags: [shell, formatting, output, scripts, info]
+
+  # Banner variants (emoji icons for structural emphasis)
+  print_banner_success:
+    category: shell-formatting
+    description: "Print success banner with green double bars and ✅ emoji"
+    installed_via: dotfiles
+    usage: "print_banner_success <text>"
+    why_use: "Create prominent success banners with green styling"
+    examples:
+      - cmd: 'print_banner_success "Deployment Complete"'
+        desc: "Print green banner with ✅"
+    see_also: [print_banner, print_banner_error, print_header_success]
+    tags: [shell, formatting, output, scripts, success]
+
+  print_banner_error:
+    category: shell-formatting
+    description: "Print error banner with red double bars and ❌ emoji"
+    installed_via: dotfiles
+    usage: "print_banner_error <text>"
+    why_use: "Create prominent error banners with red styling"
+    examples:
+      - cmd: 'print_banner_error "Deploy Failed"'
+        desc: "Print red banner with ❌"
+    see_also: [print_banner, print_banner_success, print_header_error]
+    tags: [shell, formatting, output, scripts, error]
+
+  print_banner_warning:
+    category: shell-formatting
+    description: "Print warning banner with yellow double bars and ⚠️ emoji"
+    installed_via: dotfiles
+    usage: "print_banner_warning <text>"
+    why_use: "Create prominent warning banners with yellow styling"
+    examples:
+      - cmd: 'print_banner_warning "Breaking Changes"'
+        desc: "Print yellow banner with ⚠️"
+    see_also: [print_banner, print_banner_error, print_header_warning]
+    tags: [shell, formatting, output, scripts, warning]
+
+  print_banner_info:
+    category: shell-formatting
+    description: "Print info banner with cyan double bars and ℹ️ emoji"
+    installed_via: dotfiles
+    usage: "print_banner_info <text>"
+    why_use: "Create prominent info banners with cyan styling"
+    examples:
+      - cmd: 'print_banner_info "System Status"'
+        desc: "Print cyan banner with ℹ️"
+    see_also: [print_banner, print_banner_success, print_header_info]
+    tags: [shell, formatting, output, scripts, info]
+
+  formatting_demo:
+    category: shell-formatting
+    description: "Display modular demo of formatting functions by type"
+    installed_via: dotfiles
+    usage: "formatting_demo [all|titles|headers|sections|banners|status|colors|utilities]"
+    why_use: "See visual examples of formatting options - view all or filter by type"
+    examples:
+      - cmd: "formatting_demo"
+        desc: "Show usage menu"
+      - cmd: "formatting_demo all"
+        desc: "Show complete demo of all formatting functions"
+      - cmd: "formatting_demo titles"
+        desc: "Show only title variants and colors"
+      - cmd: "formatting_demo banners"
+        desc: "Show only banner variants and colors"
+      - cmd: "formatting_demo status"
+        desc: "Show status message functions"
+    see_also: [allcolors, toolbox]
+    tags: [shell, formatting, demo, reference]
+
+  allcolors:
+    category: shell-formatting
+    description: "Display all available ANSI color codes with examples"
+    installed_via: dotfiles
+    usage: "allcolors"
+    why_use: "Quick visual reference for all standard and bright colors available in shell"
+    examples:
+      - cmd: "allcolors"
+        desc: "Show all colors: black, red, green, yellow, blue, magenta, cyan, white, and bright variants"
+    see_also: [formatting_demo, print_banner]
+    tags: [shell, colors, demo, reference]
+
+  # Color Functions
+  print_color:
+    category: shell-formatting
+    description: "Print colored text using simple color names"
+    installed_via: dotfiles
+    usage: "print_color <color> <message>"
+    why_use: "Apply colors to text dynamically using readable color names"
+    examples:
+      - cmd: 'print_color "blue" "Important message"'
+        desc: "Print text in blue"
+      - cmd: 'print_color "orange" "Warning text"'
+        desc: "Print text in orange"
+    see_also: [print_red, print_green, print_blue, formatting_demo]
+    tags: [shell, formatting, colors, output]
+
+  print_red:
+    category: shell-formatting
+    description: "Print text in red color"
+    installed_via: dotfiles
+    usage: "print_red <text>"
+    why_use: "Quick red text output for errors or important notes"
+    examples:
+      - cmd: 'print_red "Error occurred"'
+        desc: "Print text in red"
+    see_also: [print_error, print_green, print_color]
+    tags: [shell, formatting, colors, output]
+
+  print_green:
+    category: shell-formatting
+    description: "Print text in green color"
+    installed_via: dotfiles
+    usage: "print_green <text>"
+    why_use: "Quick green text output for success messages"
+    examples:
+      - cmd: 'print_green "Operation successful"'
+        desc: "Print text in green"
+    see_also: [print_success, print_red, print_color]
+    tags: [shell, formatting, colors, output]
+
+  print_yellow:
+    category: shell-formatting
+    description: "Print text in yellow color"
+    installed_via: dotfiles
+    usage: "print_yellow <text>"
+    why_use: "Quick yellow text output for warnings"
+    examples:
+      - cmd: 'print_yellow "Caution advised"'
+        desc: "Print text in yellow"
+    see_also: [print_warning, print_color]
+    tags: [shell, formatting, colors, output]
+
+  print_blue:
+    category: shell-formatting
+    description: "Print text in blue color"
+    installed_via: dotfiles
+    usage: "print_blue <text>"
+    why_use: "Quick blue text output for information"
+    examples:
+      - cmd: 'print_blue "Processing..."'
+        desc: "Print text in blue"
+    see_also: [print_info, print_color]
+    tags: [shell, formatting, colors, output]
+
+  print_cyan:
+    category: shell-formatting
+    description: "Print text in cyan color"
+    installed_via: dotfiles
+    usage: "print_cyan <text>"
+    why_use: "Quick cyan text output for highlights"
+    examples:
+      - cmd: 'print_cyan "Next steps:"'
+        desc: "Print text in cyan"
+    see_also: [print_info, print_color]
+    tags: [shell, formatting, colors, output]
+
+  # Utility Functions
+  die:
+    category: shell-formatting
+    description: "Print error message and exit with status 1"
+    installed_via: dotfiles
+    usage: "die <message>"
+    why_use: "Quick error-and-exit pattern for scripts"
+    examples:
+      - cmd: 'die "Configuration file not found"'
+        desc: "Print error and exit"
+      - cmd: 'require_command "git" || die "git is required"'
+        desc: "Exit if command not found"
+    see_also: [fatal, print_error, require_command]
+    tags: [shell, error-handling, scripts]
+
+  fatal:
+    category: shell-formatting
+    description: "Print error header and exit with status 1"
+    installed_via: dotfiles
+    usage: "fatal <message>"
+    why_use: "Exit with prominent error header for critical failures"
+    examples:
+      - cmd: 'fatal "Cannot connect to database"'
+        desc: "Print error header and exit"
+    see_also: [die, print_header_error]
+    tags: [shell, error-handling, scripts]
+
+  require_command:
+    category: shell-formatting
+    description: "Check if command exists (returns 0 if found, 1 if not)"
+    installed_via: dotfiles
+    usage: "require_command <command>"
+    why_use: "Validate dependencies before running script operations"
+    examples:
+      - cmd: 'require_command "git" && echo "Git found"'
+        desc: "Check if git is installed"
+      - cmd: 'require_command "docker" || die "Docker required"'
+        desc: "Exit if docker not found"
+    see_also: [die, fatal]
+    tags: [shell, validation, scripts]
+
+  center_text:
+    category: shell-formatting
+    description: "Center text in the terminal"
+    installed_via: dotfiles
+    usage: "center_text <text>"
+    why_use: "Center text dynamically based on terminal width"
+    examples:
+      - cmd: 'center_text "Welcome"'
+        desc: "Print centered text"
+    see_also: [print_title, terminal_width_separator]
+    tags: [shell, formatting, output]
+
+  section_separator:
+    category: shell-formatting
+    description: "Print full-width underlined separator"
+    installed_via: dotfiles
+    usage: "section_separator"
+    why_use: "Create visual separation between sections"
+    examples:
+      - cmd: "section_separator"
+        desc: "Print underlined full-width separator"
+    see_also: [terminal_width_separator, print_section]
+    tags: [shell, formatting, output]
+
+  terminal_width_separator:
+    category: shell-formatting
+    description: "Print full-width separator using specified character"
+    installed_via: dotfiles
+    usage: "terminal_width_separator <char>"
+    why_use: "Create custom separators that span terminal width"
+    examples:
+      - cmd: 'terminal_width_separator "="'
+        desc: "Print line of equals signs"
+      - cmd: 'terminal_width_separator "-"'
+        desc: "Print line of dashes"
+    see_also: [section_separator, print_section]
+    tags: [shell, formatting, output]
+
   # Git/Version Control Functions
   fad:
     category: version-control
@@ -1508,6 +2003,7 @@ categories:
   - infrastructure
   - automation
   - system-monitoring
+  - shell-formatting
   - custom-tools
 
 install_methods:
