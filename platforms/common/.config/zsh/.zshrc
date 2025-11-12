@@ -109,6 +109,7 @@ export XDG_STATE_HOME="$HOME/.local/state"
 export BASH_COMPLETION_USER_FILE="$XDG_CONFIG_HOME/bash-completion/bash_completion"
 export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
 export INPUTRC="$XDG_CONFIG_HOME/readline/inputrc"
+export JUPYTER_CONFIG_DIR="$XDG_CONFIG_HOME/jupyter"
 export KUBECONFIG="$XDG_CONFIG_HOME/kube"
 export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/npmrc"
 export PGPASSFILE="$XDG_CONFIG_HOME/pg/pgpass"
@@ -116,18 +117,27 @@ export PGSERVICEFILE="$XDG_CONFIG_HOME/pg/pg_service.conf"
 export PSQLRC="$XDG_CONFIG_HOME/pg/psqlrc"
 export REDISCLI_RCFILE="$XDG_CONFIG_HOME/redis/redisclirc"
 export RIPGREP_CONFIG_PATH="$XDG_CONFIG_HOME/ripgrep/ripgreprc"
+export TF_CLI_CONFIG_FILE="$XDG_CONFIG_HOME/terraform/terraformrc"
+export VIMINIT='let $MYVIMRC="$XDG_CONFIG_HOME/vim/vimrc" | source $MYVIMRC'
+export WGETRC="$XDG_CONFIG_HOME/wget/wgetrc"
 
 # State locations
 export PSQL_HISTORY="$XDG_STATE_HOME/psql_history"
 export PYTHON_HISTORY="$XDG_STATE_HOME/python/history"
+export LESSHISTFILE="$XDG_STATE_HOME/less/history"
 
 # Cache locations
+export GEM_SPEC_CACHE="$XDG_CACHE_HOME/gem"
 export KUBECACHEDIR="$XDG_CACHE_HOME/kube"
 export PYTHONPYCACHEPREFIX="$XDG_CACHE_HOME/python"
+export TF_PLUGIN_CACHE_DIR="$XDG_CACHE_HOME/terraform/plugins"
+export TLDR_CACHE_HOME="$XDG_CACHE_HOME/tldr"
 
 # Data locations
 export AZURE_CONFIG_DIR="$XDG_DATA_HOME/azure"
 export ELECTRUMDIR="$XDG_DATA_HOME/electrum"
+export GEM_HOME="$XDG_DATA_HOME/gem"
+export GNUPGHOME="$XDG_DATA_HOME/gnupg"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
