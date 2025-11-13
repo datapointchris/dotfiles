@@ -118,7 +118,6 @@ export PSQLRC="$XDG_CONFIG_HOME/pg/psqlrc"
 export REDISCLI_RCFILE="$XDG_CONFIG_HOME/redis/redisclirc"
 export RIPGREP_CONFIG_PATH="$XDG_CONFIG_HOME/ripgrep/ripgreprc"
 export TF_CLI_CONFIG_FILE="$XDG_CONFIG_HOME/terraform/terraformrc"
-export VIMINIT='let $MYVIMRC="$XDG_CONFIG_HOME/vim/vimrc" | source $MYVIMRC'
 export WGETRC="$XDG_CONFIG_HOME/wget/wgetrc"
 
 # State locations

@@ -42,7 +42,10 @@ vim.opt.swapfile = false
 -- Disable backup file creation
 vim.opt.backup = false
 -- Set the directory for undo files
-vim.opt.undodir = os.getenv('HOME') .. '/.vim/undodir'
+local undodir = os.getenv('XDG_STATE_HOME') or (os.getenv('HOME') .. '/.local/state')
+vim.opt.undodir = undodir .. '/nvim/undo'
+-- Create undo directory if it doesn't exist
+vim.fn.mkdir(vim.opt.undodir:get()[1], 'p')
 -- Enable persistent undo
 vim.opt.undofile = true
 
