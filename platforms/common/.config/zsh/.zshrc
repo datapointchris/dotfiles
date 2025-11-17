@@ -194,6 +194,7 @@ export GROFF_NO_SGR=1                  # for groff compatibility
 # ------------------------------------------------------------------ #
 
 # File paths
+SHELLS="$HOME/shell/"
 iterm2_integration="$HOME/.iterm2_shell_integration.zsh"
 aliases_file="$SHELLS/aliases.sh"
 platform_aliases_file="$SHELLS/$PLATFORM-aliases.sh"
