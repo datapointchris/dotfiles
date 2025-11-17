@@ -370,6 +370,6 @@ The new system is more comprehensive and platform-specific.
 ## See Also
 
 - [Installation Guide](../getting-started/installation.md) - Detailed platform-specific instructions
-- [Quickstart](../getting-started/quickstart.md) - Get up and running in 15 minutes
+- [Installation](../getting-started/installation.md) - Get up and running in 15-30 minutes
 - [Platform Differences](platforms.md) - Package managers and platform-specific considerations
 - [Taskfile Best Practices](https://taskfile.dev/docs/guide) - Official Taskfile documentation

@@ -6,7 +6,7 @@ Standards and best practices for Go development in the dotfiles project.
 
 Follow the [Standard Go Project Layout](https://github.com/golang-standards/project-layout):
 
-```
+```text
 tools/sess/
 ├── cmd/                    # Main applications
 │   ├── root.go            # Root command
@@ -123,7 +123,7 @@ if err := m.createSession(name); err != nil {
 
 **Test Organization:**
 
-```
+```text
 internal/
 ├── config/
 │   ├── config.go

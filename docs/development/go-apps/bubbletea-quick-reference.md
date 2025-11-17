@@ -406,4 +406,4 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 - Examples: github.com/charmbracelet/bubbletea/tree/main/examples
 - Gum source: github.com/charmbracelet/gum
 - Best practices: leg100.github.io/en/posts/building-bubbletea-programs
-- Detailed research: [Go TUI Ecosystem Research](../learnings/go-tui-ecosystem-research.md)
+- Detailed research: [Go TUI Ecosystem Research](../../learnings/go-tui-ecosystem-research.md)

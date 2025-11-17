@@ -377,6 +377,5 @@ fi
 
 ## See Also
 
-- [Dotfiles Philosophy](../../README.md#dotfiles-philosophy)
-- [Visual Formatting and Emoji](../../README.md#visual-formatting-and-emoji)
-- [~/CLAUDE.md](../../CLAUDE.md) - Global formatting guidelines
+- [Development Standards](go-apps/go-development.md) - Related development standards for Go apps
+- [Testing Guide](testing.md) - Testing shell scripts in VMs

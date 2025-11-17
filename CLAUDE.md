@@ -21,7 +21,6 @@
 
 - All markdown files use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
 - Exceptions: README.md and CLAUDE.md (standard conventions)
-- New documentation goes in appropriate subdirectories: `docs/reference/`, `docs/development/`, etc.
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
 **App Installation Patterns** (⚠️ Common source of confusion - 3rd time addressing this):
@@ -107,6 +106,7 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration
+- `.planning/` - Ephemeral planning guides and status or tracking, moved to archive when done
 
 **Key Systems**:
 
@@ -130,7 +130,7 @@ Documentation in this repository serves as a technical reference for future me (
 
 ```text
 docs/
-├── getting-started/     # Quick onboarding (15 minutes)
+├── {topic.md}           # High level or top level topics that do not need a directory for organization
 ├── architecture/        # HOW and WHY everything works
 ├── configuration/       # Customization guides
 ├── development/         # Testing and contributing
@@ -141,6 +141,10 @@ docs/
 
 **Writing Guidelines**:
 
+- ALWAYS write in the imperative tone.
+  - Good: "Copy the config file"
+  - Bad: "You should copy the config file"
+  - Bad: "Now you can copy the config file"
 - WHY over WHAT - explain decisions and trade-offs, not just commands
 - Conversational paragraphs over bulleted lists - maintain context and reasoning
 - Reference files instead of copying code examples

@@ -22,7 +22,7 @@ Radically simplified the Taskfile system from 86 tasks to 40 tasks (53% reductio
 
 **Philosophy:** Tasks are for coordinating multi-step workflows, not wrapping single commands. Users should run simple commands directly (`brew cleanup`, `npm update -g`, etc).
 
-See [detailed changelog](changelog/2025-11-04-taskfile-simplification.md) for complete analysis including all tasks removed, testing methodology, and key learnings.
+See detailed changelog in repository history for complete analysis including all tasks removed, testing methodology, and key learnings.
 
 **Files Changed:**
 
@@ -53,7 +53,7 @@ Bootstrap scripts install the minimum prerequisites to run Task. All package ins
 - Deleted: `install/lsp-corporate.sh`
 - Modified: `docs/getting-started/installation.md`, `docs/getting-started/quickstart.md`
 
-See [detailed changelog](changelog/2025-11-04.md#bootstrap-cleanup) for full details.
+See repository history for full details.
 
 ### Claude Code Hooks Implementation
 
@@ -80,7 +80,7 @@ Implemented comprehensive hooks system combining Claude Code hooks (AI workflow 
 
 Atomic commits with synchronized documentation. Feature commits include usage docs, changelog commits document the development journey separately.
 
-See [detailed changelog](changelog/2025-11-04.md#hooks-implementation) for full details.
+See repository history for full details.
 
 ### Skills and Auto-Activation (Phase 3)
 
@@ -113,7 +113,7 @@ Skills activate based on three trigger types:
 - Created: `.claude/skills/symlinks-developer/` (SKILL.md + 3 resource files)
 - Modified: `.claude/settings.json`
 
-See [detailed changelog](changelog/2025-11-04.md#skills-auto-activation) for full details.
+See repository history for full details.
 
 ### Task-Based Installation Automation
 
@@ -151,7 +151,7 @@ Implemented comprehensive Task-based automation system for platform-specific dot
 
 - Created: `Taskfile.yml`, `taskfiles/*.yml` (9 files)
 
-See [detailed changelog](changelog/2025-11-04.md#task-automation) for full details.
+See repository history for full details.
 
 ### Documentation Completion
 
@@ -222,7 +222,7 @@ Added Python-based symlinks manager for cross-platform dotfiles deployment with 
 - Created: `tools/symlinks/tests/` comprehensive test suite
 - Created: `tools/symlinks/pyproject.toml` uv tool configuration
 
-See [detailed changelog](changelog/2025-11-04.md#symlinks-tool) for full details.
+See repository history for full details.
 
 ### Tools Discovery CLI
 
@@ -266,7 +266,7 @@ Documentation already exists in Phase 5 changelog and docs/reference/tools.md.
 - Refactored learnings documentation with conciseness guidelines (30-50 lines max)
 - Condensed relative-path-calculation learning from 101 to 58 lines
 
-See [detailed changelog](changelog/2025-11-04.md#shell-config-improvements) for full details.
+See repository history for full details.
 
 ### Phase 6 Complete - Cross-Platform Expansion & VM Testing
 
@@ -294,7 +294,7 @@ Chose VM-based testing framework over manual testing. multipass for Ubuntu (fast
 - Created: `docs/platform_differences.md` (450+ lines)
 - Modified: `Taskfile.yml` (added install tasks, themes include)
 
-See [detailed changelog](changelog/2025-11-04.md#phase-6-cross-platform) for full implementation details, testing strategies, and platform-specific quirks.
+See repository history for full implementation details, testing strategies, and platform-specific quirks.
 
 ---
 
@@ -329,7 +329,7 @@ Task handles coordination, tools handle commands. No wrapper tasks for simple on
 - Moved: `macos/.local/bin/tools` → `common/.local/bin/tools`
 - Moved: 4 planning docs to `docs/archive/planning/`
 
-See [detailed changelog](changelog/2025-11-05.md) for complete analysis, error documentation, and lessons learned.
+See repository history for complete analysis, error documentation, and lessons learned.
 
 **Key Changes:**
 
@@ -353,7 +353,7 @@ Chose VM-based testing framework over manual testing. multipass for Ubuntu (fast
 - Created: `docs/platform_differences.md` (450+ lines)
 - Modified: `Taskfile.yml` (added install tasks, themes include)
 
-See [detailed changelog](changelog/2025-11-04.md#phase-6-cross-platform) for full implementation details, testing strategies, and platform-specific quirks.
+See repository history for full implementation details, testing strategies, and platform-specific quirks.
 
 ---
 
@@ -380,7 +380,7 @@ Chose "discovery over tracking" - no usage statistics, no function wrappers, no 
 - Modified: `Brewfile` (added yq)
 - Modified: `CLAUDE.md`
 
-See [detailed changelog](changelog/2025-11-04.md#phase-5-tool-discovery) for implementation details and design decisions.
+See repository history for implementation details and design decisions.
 
 ---
 
@@ -410,7 +410,7 @@ Chose parallel systems approach - ghostty-theme handles Ghostty's 600+ themes wi
 - Modified: `common/.config/tmux/tmux.conf`
 - Modified: `CLAUDE.md`
 
-See [detailed changelog](changelog/2025-11-04.md#phase-4-theme-sync) for full implementation details, testing results, and integration points.
+See repository history for full implementation details, testing results, and integration points.
 
 ---
 
@@ -435,7 +435,7 @@ Replaced nvim-cmp with blink.cmp for faster, more modern completion functionalit
 - Modified: `common/.config/nvim/lua/plugins/copilot.lua`
 - Backed up: `common/.config/nvim/lua/plugins/nvim-cmp.lua.bak`
 
-See [detailed changelog](changelog/2025-11-02.md#blink-cmp-migration) for troubleshooting steps and learnings.
+See repository history for troubleshooting steps and learnings.
 
 ### Enhanced Notification System with Fidget and Noice
 
@@ -453,6 +453,6 @@ Improved the notification system to make error messages more visible and searcha
 - Modified: `common/.config/nvim/lua/plugins/fidget.lua`
 - Modified: `common/.config/nvim/lua/plugins/noice.lua`
 
-See [detailed changelog](changelog/2025-11-02.md#notification-system) for configuration details.
+See repository history for configuration details.
 
 ---

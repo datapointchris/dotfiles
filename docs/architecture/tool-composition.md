@@ -404,7 +404,7 @@ done
 
 ## Related Documentation
 
-- [Quick Reference](../reference/quick-reference.md) - Command examples
-- [Workflow Tools Cheatsheet](../reference/workflow-tools-cheatsheet.md) - Quick lookup
+- [Workflow Tools](../reference/workflow-tools/toolbox.md) - Tool discovery and composition
+- [Tool Discovery Workflows](../workflows/tool-discovery.md) - Patterns for finding and using tools
 - [Menu System](./menu-system.md) - Launcher architecture
 - [Note Taking](../workflows/note-taking.md) - zk workflow guide

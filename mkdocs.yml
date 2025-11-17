@@ -136,40 +136,45 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started:
-      - Quick Start: getting-started/quickstart.md
       - Installation: getting-started/installation.md
       - First Configuration: getting-started/first-config.md
+      - Fonts: getting-started/fonts.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Menu System: architecture/menu-system.md
+      - Tool Composition: architecture/tool-composition.md
   - Reference:
       - Platform Differences: reference/platforms.md
-      - Menu System: reference/menu-system.md
-      - Tool Reference: reference/tools.md
-      - Tool Discovery: reference/tool-discovery.md
-      - Task Reference: reference/tasks.md
-      - Script Formatting Library: reference/script-formatting-library.md
-      - Nerd Fonts: reference/nerd-fonts.md
+      - Workflow Tools:
+          - Menu: reference/workflow-tools/menu.md
+          - Toolbox: reference/workflow-tools/toolbox.md
+          - Sessions: reference/workflow-tools/session.md
+          - Themes: reference/workflow-tools/theme-sync.md
+          - Notes: reference/workflow-tools/notes.md
       - Symlinks Manager: reference/symlinks.md
+      - Task Reference: reference/tasks.md
       - Skills System: reference/skills.md
       - Claude Code Hooks: reference/hooks.md
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
-      - GitHub Pages: reference/github-pages.md
+  - Workflows:
+      - Note Taking: workflows/note-taking.md
+      - Session Management: workflows/sessions.md
+      - Theme Customization: workflows/themes.md
+      - Git Operations: workflows/git.md
+      - Tool Discovery: workflows/tool-discovery.md
   - Development:
       - VM Testing: development/testing.md
       - Notes System Setup: development/notes-system-setup.md
-      - Go Migration Strategy: development/go-migration-strategy.md
-      - Go Migration Quick Start: development/go-migration-quick-start.md
-      - Go Migration Checklist: development/go-migration-checklist.md
-      - Go TUI Comparison: development/go-tui-comparison-summary.md
-      - Bubbletea Quick Reference: development/bubbletea-quick-reference.md
-      - Go Development Standards: development/go-development.md
-      - Go Quick Reference: development/go-quick-reference.md
-      - Go Migration Complete: development/go-menu-migration-complete.md
-      - Publishing Docs: publishing.md
+      - Go Applications:
+          - Overview: development/go-apps/overview.md
+          - Development Standards: development/go-apps/go-development.md
+          - Go Quick Reference: development/go-apps/go-quick-reference.md
+          - Bubbletea Reference: development/go-apps/bubbletea-quick-reference.md
+      - Shell Formatting: development/shell-formatting.md
+      - Publishing Docs: development/publishing-docs.md
   - Learnings:
       - Overview: learnings/index.md
       - App Installation Patterns: learnings/app-installation-patterns.md
@@ -188,6 +193,3 @@ nav:
       - Go CLI Architecture Analysis: learnings/go-cli-architecture-analysis.md
   - Changelog:
       - Summary: changelog.md
-      - 2025-11-05: changelog/2025-11-05.md
-      - 2025-11-04: changelog/2025-11-04.md
-      - 2025-11-02: changelog/2025-11-02.md

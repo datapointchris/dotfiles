@@ -562,5 +562,5 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 For detailed analysis, see:
 
-- [Go CLI Architecture Analysis](../learnings/go-cli-architecture-analysis.md)
-- [sesh Architecture Diagram](../architecture/sesh-architecture-diagram.md)
+- [Go CLI Architecture Analysis](../../learnings/go-cli-architecture-analysis.md)
+- [Go Development Standards](go-development.md)
