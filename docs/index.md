@@ -20,13 +20,13 @@ Fresh install:
 
 ```sh
 # macOS
-bash install/macos-setup.sh
+bash management/macos-setup.sh
 
 # WSL
-bash install/wsl-setup.sh
+bash management/wsl-setup.sh
 
 # Arch
-bash install/arch-setup.sh
+bash management/arch-setup.sh
 ```
 
 Already have brew and task installed:

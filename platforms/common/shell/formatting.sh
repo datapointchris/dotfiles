@@ -17,8 +17,12 @@
 # ================================================================
 
 # Source colors (single source of truth for color definitions)
-SHELLS="${SHELLS:-$HOME/shell}"
-source "$SHELLS/colors.sh"
+# Get from home, or use dotfiles if using for setup before symlinks are created, fail if neither found
+if [[ -f "$HOME/shell/colors.sh" ]]; then
+  source "$HOME/shell/colors.sh"
+else
+  source "$HOME/dotfiles/platforms/common/shell/colors.sh"
+fi
 
 # ================================================================
 # Unicode Characters
