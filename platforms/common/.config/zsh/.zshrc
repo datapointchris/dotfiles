@@ -9,33 +9,21 @@ echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
 # ------------------------------------------------------------------ #
 # BOOTSTRAP: Load environment and utilities
 # ------------------------------------------------------------------ #
-ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
-
+CHECK_MARK="☑️"
+ERROR_MARK="❌"
 # Load .env first (sets ZSHRC_DEBUG if present)
-[[ -f "$HOME/.env" ]] && source "$HOME/.env" && ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
+[[ -f "$HOME/.env" ]] && source "$HOME/.env" && ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}" || ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
 
-# Load formatting library (or define fallback)
-SHELLS="$HOME/shell"
-if [[ -f "$SHELLS/formatting.sh" ]]; then
-  source "$SHELLS/formatting.sh"
-else
-  # Fallback logging if formatting.sh not found
-  echo "  ✗ Error  : formatting.sh not found at $SHELLS/formatting.sh" >&2
-  log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  %-6s : %s\n" "$1" "$2"; }
-  log_error() { printf "  ✗ %-6s : %s\n" "$1" "$2" >&2; }
-fi
-
-# Define logging functions using formatting library
-log() {
-  [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  ✓ %-6s : %s\n" "$1" "$2"
-}
-
-log_error() {
-  printf "  ✗ %-6s : %s\n" "$1" "$2" >&2
-}
+log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  $CHECK_MARK %-6s : %s\n" "$1" "$2" }
+log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
 # Log environment
-[[ -f "$HOME/.env" ]] && log "Load" "$HOME/.env" || log_error "Load" "$HOME/.env"
+env_file="$HOME/.env"
+colors_file="$HOME/shell/colors.sh"
+formatting_file="$HOME/shell/formatting.sh"
+[[ -f $env_file ]] && source $env_file && log "Load" "$env_file" || log_error "Load" "$env_file"
+[[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
+[[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
 
 # Validate required environment variables
 if [[ -n "$PLATFORM" ]]; then
@@ -49,10 +37,6 @@ if [[ -n "$NVIM_AI_ENABLED" ]]; then
 else
   log_error "Env" "NVIM_AI_ENABLED not set in .env"
 fi
-
-# Log formatting library (includes colors.sh)
-log "Load" "$SHELLS/colors.sh"
-log "Load" "$SHELLS/formatting.sh"
 
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
@@ -188,12 +172,8 @@ log "Setup" "Completions"
 # ------------------------------------------------------------------ #
 # PROMPT
 # ------------------------------------------------------------------ #
-if [[ -f "$HOME/.config/zsh/prompt.zsh" ]]; then
-  source "$HOME/.config/zsh/prompt.zsh"
-  log "Load" "$HOME/.config/zsh/prompt.zsh"
-else
-  log_error "Load" "$HOME/.config/zsh/prompt.zsh"
-fi
+my_prompt="$HOME/.config/zsh/prompt.zsh"
+[[ -f $my_prompt ]] && source $my_prompt && log "Load" $my_prompt || log_error "Load" $my_prompt
 
 # ------------------------------------------------------------------ #
 # PLUGIN REPLACEMENTS
