@@ -3,13 +3,14 @@
 
 return {
   'saghen/blink.cmp',
-  version = '0.*',
+  -- version = '0.*',
+  build = 'cargo build --release',
   cond = not vim.g.vscode,
   dependencies = {
     'rafamadriz/friendly-snippets',
     {
       'giuxtaposition/blink-cmp-copilot',
-      cond = vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode,
+      cond = not vim.g.vscode,
     },
   },
 
@@ -18,13 +19,13 @@ return {
     local default_sources = { 'lsp', 'path', 'snippets', 'buffer', 'lazydev' }
 
     -- Only add copilot if AI is enabled and not in VSCode
+    -- This is the ONLY place to disable copilot and blink-cmp-copilot or it errors blink.cmp
     if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then table.insert(default_sources, 'copilot') end
 
     return {
       enabled = function() return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype) end,
-      -- Keymap configuration
       keymap = {
-        preset = 'none', -- We'll define custom keymaps
+        preset = 'none',
         ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
         ['<C-e>'] = { 'hide' },
         ['<C-n>'] = { 'select_next', 'fallback' },
@@ -87,7 +88,7 @@ return {
         },
         accept = {
           auto_brackets = {
-            enabled = true,
+            enabled = false,
           },
         },
         menu = {
@@ -108,7 +109,7 @@ return {
           },
         },
         ghost_text = {
-          enabled = false, -- Disable inline ghost text, use completion menu
+          enabled = true, -- Disable inline ghost text, use completion menu
         },
       },
 
@@ -130,7 +131,7 @@ return {
             module = 'blink-cmp-copilot',
             score_offset = 100, -- Prioritize Copilot suggestions
             async = true,
-            enabled = function() return vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode end,
+            enabled = function() return not vim.g.vscode end,
           },
           lsp = {
             name = 'LSP',
