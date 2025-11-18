@@ -6,9 +6,7 @@ source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 # Install yazi terminal file manager and packages (flavors + plugins)
 
-print_banner "
-Installing Yazi"
-print_banner "
+print_banner "Installing Yazi"
 
 # Install yazi binary if needed
 if ! command -v yazi >/dev/null 2>&1; then
@@ -38,7 +36,7 @@ export GIT_ASKPASS=/bin/true
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_SYSTEM=/dev/null
 
- Installing flavors..."
+print_info "Installing flavors..."
 ya pkg add BennyOe/tokyo-night || true
 ya pkg add dangooddd/kanagawa || true
 ya pkg add bennyyip/gruvbox-dark || true
@@ -46,11 +44,9 @@ ya pkg add kmlupreti/ayu-dark || true
 ya pkg add Chromium-3-Oxide/everforest-medium || true
 ya pkg add gosxrgxx/flexoki-dark || true
 
- Installing plugins..."
+print_info "Installing plugins..."
 ya pkg add AnirudhG07/nbpreview || true
 ya pkg add pirafrank/what-size || true
 ya pkg add yazi-rs/plugins:git || true
 
-print_banner "
-Yazi installation complete"
-print_banner "
+print_banner "Yazi installation complete"

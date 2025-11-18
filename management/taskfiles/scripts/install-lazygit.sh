@@ -14,14 +14,13 @@ source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 LAZYGIT_BIN="$HOME/.local/bin/lazygit"
 
-print_banner "
-Installing LazyGit"
-print_banner "
+print_banner "Installing LazyGit"
 
 # Check if LazyGit is already installed
 if [[ -f "$LAZYGIT_BIN" ]] && command -v lazygit >/dev/null 2>&1; then
   CURRENT_VERSION=$(lazygit --version | head -n1)
   print_info "Current version: $CURRENT_VERSION"
+  exit 0
 fi
 
 # Get latest version
@@ -30,7 +29,8 @@ LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/re
 print_info "Latest: v$LAZYGIT_VERSION"
 
 # Download URL
-LAZYGIT_URL="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+LAZYGIT_URL="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_linux_x86_64.tar.gz"
+LAZYGIT_URL="https://github.com/jesseduffield/lazygit/releases/download/v0.56.0/lazygit_0.56.0_linux_x86_64.tar.gz"
 LAZYGIT_TARBALL="/tmp/lazygit.tar.gz"
 
 # Download and install
