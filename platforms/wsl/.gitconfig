@@ -58,5 +58,8 @@ changes = log --pretty='short' --name-status
 [includeIf "gitdir:~/code/"]
   path = ~/code/.gitconfig
 
-[credential]
-	helper = /mnt/c/Program\\ Files/Git/mingw64/libexec/git-core/git-credential-wincred.exe
+[credential "https://github.com"]
+	helper = !/usr/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+	helper = !/usr/bin/gh auth git-credential
