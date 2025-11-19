@@ -182,6 +182,7 @@ nav:
       - WSL Ubuntu Package Versions: learnings/wsl-ubuntu-package-versions.md
       - Package Version Analysis: learnings/package-version-analysis.md
       - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md
+      - Task Shell Printf Compatibility: learnings/task-shell-printf-compatibility.md
       - Git History Rewriting: learnings/git-history-rewriting.md
       - Relative Path Calculation: learnings/relative-path-calculation.md
       - Directory Pattern Matching: learnings/directory-pattern-matching.md

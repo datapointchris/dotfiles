@@ -54,7 +54,12 @@ export BOX_DOUBLE='═'
 _separator() {
   local char="${1:-$BOX_THICK}"
   local width="${2:-50}"
-  printf '%*s\n' "$width" '' | tr ' ' "$char"
+  # Use printf loop instead of tr for proper Unicode support
+  local separator=""
+  for ((i=0; i<width; i++)); do
+    separator+="$char"
+  done
+  printf '%s\n' "$separator"
 }
 
 # Center text within a given width
@@ -64,7 +69,7 @@ _center_text() {
   local width="${2:-50}"
   local text_length=${#text}
   local padding=$(( (width - text_length) / 2 ))
-  printf "%*s%s%*s\n" $padding "" "$text" $padding ""
+  printf "%*s%s%*s\n" "$padding" "" "$text" "$padding" ""
 }
 
 # Additional utility functions using tput
@@ -79,7 +84,14 @@ section_separator() {
 }
 
 terminal_width_separator() {
-  printf "%0$(tput cols)d\n" 0 | tr '0' "${1:-_}"
+  local char="${1:-_}"
+  local width=$(tput cols 2>/dev/null || echo 80)
+  # Use printf loop instead of tr for proper Unicode support
+  local separator=""
+  for ((i=0; i<width; i++)); do
+    separator+="$char"
+  done
+  printf '%s\n' "$separator"
 }
 
 # ================================================================
@@ -286,7 +298,7 @@ print_title() {
     color_code=$(_get_color "$color")
   fi
 
-  local term_width=$(tput cols)
+  local term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))  # 5 spaces on each side
   local padding="     "
 
@@ -306,7 +318,7 @@ print_title() {
 # Centered success title (green + emoji)
 print_title_success() {
   local text="$1"
-  local term_width=$(tput cols)
+  local term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -319,7 +331,7 @@ print_title_success() {
 # Centered error title (red + emoji)
 print_title_error() {
   local text="$1"
-  local term_width=$(tput cols)
+  local term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -332,7 +344,7 @@ print_title_error() {
 # Centered warning title (yellow + emoji)
 print_title_warning() {
   local text="$1"
-  local term_width=$(tput cols)
+  local term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -345,7 +357,7 @@ print_title_warning() {
 # Centered info title (cyan + emoji)
 print_title_info() {
   local text="$1"
-  local term_width=$(tput cols)
+  local term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""

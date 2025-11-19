@@ -140,7 +140,7 @@ OVERALL_START=$(date +%s)
 if [[ "$REUSE_VM" == false ]]; then
   STEP_START=$(date +%s)
   {
-    log_section "STEP 1/4: Launching Multipass VM"
+    log_section "STEP 1/5: Launching Multipass VM"
     multipass launch --name "$VM_NAME" --cpus ${VM_CPUS} --memory ${VM_MEMORY} --disk ${VM_DISK}
   } 2>&1 | tee -a "$LOG_FILE"
   STEP_END=$(date +%s)
@@ -152,7 +152,7 @@ if [[ "$REUSE_VM" == false ]]; then
   } 2>&1 | tee -a "$LOG_FILE"
 else
   {
-    log_section "STEP 1/4: Reusing existing VM"
+    log_section "STEP 1/5: Reusing existing VM"
     echo "Using VM: $VM_NAME"
     echo ""
     multipass list | grep "$VM_NAME"
@@ -165,7 +165,7 @@ fi
 STEP_START=$(date +%s)
 if [[ "$DEV_MODE" == true ]]; then
   {
-    log_section "STEP 2/4: Transferring local dotfiles to VM"
+    log_section "STEP 2/5: Transferring local dotfiles to VM"
     # Remove old dotfiles if reusing to ensure clean transfer
     if [[ "$REUSE_VM" == true ]]; then
       echo "Removing old dotfiles directory..."
@@ -179,24 +179,31 @@ if [[ "$DEV_MODE" == true ]]; then
   } 2>&1 | tee -a "$LOG_FILE"
   STEP_NAME="Transfer dotfiles"
 else
+  # Determine step name before subshell
+  if [[ "$REUSE_VM" == true ]]; then
+    if multipass exec "$VM_NAME" -- test -d dotfiles; then
+      STEP_NAME="Pull dotfiles"
+    else
+      STEP_NAME="Clone dotfiles"
+    fi
+  else
+    STEP_NAME="Clone dotfiles"
+  fi
+
   {
     if [[ "$REUSE_VM" == true ]]; then
-      log_section "STEP 2/4: Updating dotfiles from GitHub"
+      log_section "STEP 2/5: Updating dotfiles from GitHub"
       # Check if dotfiles exists
       if multipass exec "$VM_NAME" -- test -d dotfiles; then
         echo "Dotfiles directory exists, pulling latest changes..."
         multipass exec "$VM_NAME" -- bash -c "cd dotfiles && git pull"
-        # shellcheck disable=SC2030
-        STEP_NAME="Pull dotfiles"
       else
         echo "Dotfiles directory not found, cloning..."
         multipass exec "$VM_NAME" -- git clone https://github.com/datapointchris/dotfiles.git
-        STEP_NAME="Clone dotfiles"
       fi
     else
-      log_section "STEP 2/4: Cloning dotfiles from GitHub"
+      log_section "STEP 2/5: Cloning dotfiles from GitHub"
       multipass exec "$VM_NAME" -- git clone https://github.com/datapointchris/dotfiles.git
-      STEP_NAME="Clone dotfiles"
     fi
   } 2>&1 | tee -a "$LOG_FILE"
 fi
@@ -213,7 +220,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # STEP 3: Run WSL setup
 STEP_START=$(date +%s)
 {
-  log_section "STEP 3/4: Running WSL setup script"
+  log_section "STEP 3/5: Running WSL setup script"
   echo "Creating ~/.env for testing..."
   multipass exec "$VM_NAME" -- bash -c 'cat > ~/.env <<EOF
 PLATFORM=wsl
@@ -233,7 +240,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # STEP 4: Verify installation
 STEP_START=$(date +%s)
 {
-  log_section "STEP 4/4: Verifying installation"
+  log_section "STEP 4/5: Verifying installation"
   echo "Running comprehensive verification in fresh shell..."
   echo "(This tests that all tools are properly configured and in PATH)"
   echo ""
@@ -251,6 +258,23 @@ STEP_NAMES+=("Verification")
 STEP_TIMES+=("$STEP_ELAPSED")
 {
   log_timing "Step 4: Verification" "$STEP_ELAPSED"
+} 2>&1 | tee -a "$LOG_FILE"
+
+# STEP 5: Test update-all
+STEP_START=$(date +%s)
+{
+  log_section "STEP 5/5: Testing update-all task"
+  echo "Running task wsl:update-all to verify update functionality..."
+  echo ""
+  # shellcheck disable=SC2016  # $HOME and \$ZSHDOTDIR need to expand on remote VM
+  multipass exec "$VM_NAME" -- bash -c 'cd dotfiles && ZSHDOTDIR=$HOME/.config/zsh zsh -c "source \$ZSHDOTDIR/.zshrc 2>/dev/null; task wsl:update-all"'
+} 2>&1 | tee -a "$LOG_FILE"
+STEP_END=$(date +%s)
+STEP_ELAPSED=$((STEP_END - STEP_START))
+STEP_NAMES+=("Update-all test")
+STEP_TIMES+=("$STEP_ELAPSED")
+{
+  log_timing "Step 5: Update-all test" "$STEP_ELAPSED"
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Calculate overall time
