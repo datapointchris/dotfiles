@@ -19,7 +19,7 @@ Scripts are called from taskfiles:
 tasks:
   install-node:
     cmds:
-      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/taskfiles/scripts/nvm-install-node.sh {{.NODE_VERSION}}
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/nvm-install-node.sh {{.NODE_VERSION}}
 ```
 
 ## Scripts

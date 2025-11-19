@@ -17,31 +17,26 @@ tap "homebrew/core"
 # CORE DEVELOPMENT TOOLS
 # ================================================================
 # Modern CLI replacements and essential dev tools
-brew "bat"              # cat with syntax highlighting
-brew "eza"              # modern ls replacement
-brew "fd"               # modern find replacement
+# NOTE: See management/packages.yml for tools installed via:
+#   - Cargo: bat, eza, fd, zoxide, git-delta, tinty
+#   - GitHub releases: neovim, fzf, lazygit, yazi, go
+#   - npm: language servers, linters
+#   - uv: Python tools
 brew "ripgrep"          # ultra-fast grep
-brew "fzf"              # fuzzy finder
-brew "zoxide"           # smarter cd
 brew "git"              # version control
 brew "gh"               # GitHub CLI
-brew "neovim"           # modern vim
 brew "tmux"             # terminal multiplexer
 brew "jq"               # JSON processor
-brew "yq"               # YAML processor (for tools command)
 
 # ================================================================
 # VERSION CONTROL & GIT TOOLS
 # ================================================================
-brew "git-delta"        # syntax-highlighting git diff
 brew "git-secrets"      # prevent committing secrets
-brew "lazygit"          # git TUI
 
 # ================================================================
 # FILE MANAGEMENT & VIEWING
 # ================================================================
 brew "tree"             # directory tree visualization
-brew "yazi"             # terminal file manager
 brew "duf"              # modern df alternative
 brew "duti"             # macOS file association manager
 brew "glow"             # markdown renderer
@@ -55,14 +50,11 @@ brew "gnu-sed"          # GNU sed (available as gsed)
 # ================================================================
 # PROGRAMMING LANGUAGES
 # ================================================================
-# NOTE: Python managed by uv, Node.js managed by nvm
-brew "go"               # Go programming language
+# NOTE: Python managed by uv, Node.js managed by nvm, Go via GitHub (see packages.yml)
 brew "ruby"             # Ruby programming language
 brew "lua"              # Lua scripting language
 brew "luajit"           # LuaJIT compiler
 brew "luarocks"         # Lua package manager
-brew "openjdk"          # OpenJDK Java
-brew "sbt"              # Scala build tool
 brew "sbcl"             # Steel Bank Common Lisp
 
 # ================================================================
@@ -113,7 +105,6 @@ brew "trivy"            # container vulnerability scanner
 # DATABASE TOOLS
 # ================================================================
 brew "postgresql@16"    # PostgreSQL database
-brew "pgloader"         # PostgreSQL data loader
 
 # ================================================================
 # BUILD & TASK AUTOMATION
@@ -137,7 +128,6 @@ brew "gnu-tar"          # GNU tar (available as gtar)
 brew "curl"             # transfer data with URLs
 brew "wget"             # file retrieval
 brew "nmap"             # network scanner
-brew "nginx"            # web server
 
 # Core utilities
 brew "coreutils"        # GNU coreutils (g-prefixed, not in PATH)
@@ -159,10 +149,7 @@ brew "gource"           # repository visualization
 # ================================================================
 # FUN & DEMO
 # ================================================================
-brew "cmatrix"          # matrix effect
 brew "figlet"           # ASCII art text
-brew "pipes-sh"         # animated pipes
-brew "sl"               # steam locomotive joke
 
 # ================================================================
 # MACOS-SPECIFIC TOOLS
@@ -179,19 +166,6 @@ brew "tmuxinator"       # tmux session manager
 brew "tmuxinator-completion" # tmux completion
 
 # ================================================================
-# PYTHON PACKAGES (Homebrew Dependencies)
-# ================================================================
-# NOTE: These are kept ONLY if required by brew packages
-# Development Python work uses uv-managed Python
-# Run periodically: brew uses --installed python@X.XX
-brew "python@3.12"      # Python 3.12 (check if needed)
-brew "python@3.13"      # Python 3.13 (check if needed)
-brew "python@3.14"      # Python 3.14 (check if needed)
-brew "pipx"             # install Python apps in isolated environments
-brew "pre-commit"       # git pre-commit hook framework
-brew "virtualenv"       # Python virtual environments
-
-# ================================================================
 # MACOS GUI APPLICATIONS (Casks)
 # ================================================================
 
@@ -204,7 +178,6 @@ cask "bettertouchtool"  # input customization
 
 # Development
 cask "dbeaver-community" # universal database GUI
-cask "iterm2"           # terminal emulator
 
 # Utilities
 cask "macs-fan-control" # fan control
@@ -222,9 +195,17 @@ cask "obsidian"         # note taking
 # ================================================================
 # NOTES
 # ================================================================
-# - ghostty terminal installed manually (not in Homebrew)
-# - docker-desktop managed separately (large cask)
-# - Fonts managed manually in ~/fonts directory
-# - GNU coreutils NOT in PATH (available with g-prefix)
-# - Node.js managed by nvm (not brew)
-# - Python development managed by uv (not brew)
+# Cross-platform packages defined in management/packages.yml:
+#   - Parsed by management/parse-packages.py (Python script)
+#   - Cargo tools: bat, eza, fd, zoxide, git-delta, tinty
+#   - GitHub binaries: neovim, fzf, lazygit, yazi, go
+#   - npm packages: language servers, linters (see packages.yml)
+#   - uv tools: Python linters, formatters (see packages.yml)
+#
+# macOS-specific notes:
+#   - ghostty terminal installed manually (not in Homebrew)
+#   - docker-desktop managed separately (large cask)
+#   - Fonts managed manually in ~/fonts directory
+#   - GNU coreutils NOT in PATH (available with g-prefix)
+#   - Node.js managed by nvm (not brew)
+#   - Python development managed by uv (not brew)

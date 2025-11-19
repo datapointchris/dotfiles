@@ -1,0 +1,26 @@
+version: "3"
+
+vars:
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
+  NVM_DIR: "{{.HOME}}/.config/nvm"
+
+tasks:
+  install:
+    desc: Install all npm global packages
+    silent: true
+    cmds:
+      - echo "✅ Installing npm global packages..."
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/npm-install-globals.sh
+      - echo "✅ npm global packages installed!"
+
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update all npm global packages
+    silent: true
+    cmds:
+      - echo "  Updating npm global packages..."
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/npm-install-globals.sh
+      - echo "  npm global packages updated"

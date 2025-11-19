@@ -23,3 +23,18 @@ tasks:
       - "{{.BREWFILE}}"
     generates:
       - "{{.BREWFILE_LOCK}}"
+
+  # ================================================================
+  # UPDATE
+  # ================================================================
+
+  update:
+    desc: Update Homebrew and upgrade all packages
+    silent: true
+    cmds:
+      - echo "  Updating Homebrew..."
+      - brew update
+      - echo "  Upgrading formulas and casks..."
+      - brew upgrade
+      - brew upgrade --cask --greedy
+      - echo "  Homebrew packages updated"

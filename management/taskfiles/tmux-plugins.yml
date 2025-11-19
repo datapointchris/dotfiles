@@ -16,7 +16,6 @@ tasks:
 
   update:
     desc: Update all tmux plugins via TPM
-    internal: true
     silent: true
     cmds:
       - |

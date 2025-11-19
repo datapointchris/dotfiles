@@ -3,7 +3,8 @@
 # Install Latest Neovim from GitHub Releases
 # ================================================================
 # Downloads and installs the latest stable Neovim release
-# Installation location: ~/.local/nvim-linux64/
+# Configuration read from: management/packages.yml
+# Installation location: ~/.local/nvim-linux-x86_64/
 # Binary symlink: ~/.local/bin/nvim
 # No sudo required (user space)
 # ================================================================
@@ -13,9 +14,16 @@ set -euo pipefail
 # Source formatting library
 source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
+# Source helper functions
+source "$(dirname "$0")/install-helpers.sh"
+
+# Read configuration from packages.yml
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+MIN_VERSION=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=min_version)
+REPO=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=repo)
+
 NVIM_INSTALL_DIR="$HOME/.local/nvim-linux-x86_64"
 NVIM_BIN_LINK="$HOME/.local/bin/nvim"
-REQUIRED_NVIM_VERSION="0.11"  # Minimum acceptable version
 
 print_banner "Installing Neovim"
 
@@ -25,33 +33,32 @@ if [[ -L "$NVIM_BIN_LINK" ]] && command -v nvim >/dev/null 2>&1; then
   print_info "Current version: $CURRENT_VERSION"
 
   # Simple version comparison (major.minor)
-  if [[ $(echo -e "$REQUIRED_NVIM_VERSION\n$CURRENT_VERSION" | sort -V | head -n1) == "$REQUIRED_NVIM_VERSION" ]]; then
-    print_success " Acceptable version (>= $REQUIRED_NVIM_VERSION), skipping"
+  if [[ $(echo -e "$MIN_VERSION\n$CURRENT_VERSION" | sort -V | head -n1) == "$MIN_VERSION" ]]; then
+    print_success " Acceptable version (>= $MIN_VERSION), skipping"
     exit 0
   fi
 
   print_info "Upgrading..."
 fi
 
-# Get latest version
-print_info "Fetching latest version..."
-NVIM_VERSION=$(curl -s "https://api.github.com/repos/neovim/neovim/releases/latest" | grep -Po '"tag_name": *"\K[^"]*')
-print_info "Latest: $NVIM_VERSION"
-
-# Download URL (neovim changed filename from nvim-linux64 to nvim-linux-x86_64)
-NVIM_URL="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
-NVIM_TARBALL="/tmp/nvim-linux-x86_64.tar.gz"
-
-# Download
-print_info "Downloading..."
-if ! curl -# -L "$NVIM_URL" -o "$NVIM_TARBALL"; then
-  print_error " Download failed"
+# Fetch latest version
+NVIM_VERSION=$(fetch_latest_version "$REPO")
+if [[ -z "$NVIM_VERSION" ]]; then
+  print_manual_install "neovim" "https://github.com/${REPO}/releases/latest" "latest" "nvim-linux-x86_64.tar.gz" \
+    "tar -C ~/.local -xzf ~/Downloads/nvim-linux-x86_64.tar.gz && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim"
   exit 1
 fi
 
-# Verify download
-if [[ ! -f "$NVIM_TARBALL" ]] || [[ ! -s "$NVIM_TARBALL" ]]; then
-  print_error " Downloaded file is missing or empty"
+print_info "Latest: $NVIM_VERSION"
+
+# Download URL
+NVIM_URL="https://github.com/${REPO}/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+NVIM_TARBALL="/tmp/nvim-linux-x86_64.tar.gz"
+
+# Download
+if ! download_file "$NVIM_URL" "$NVIM_TARBALL" "neovim"; then
+  print_manual_install "neovim" "$NVIM_URL" "$NVIM_VERSION" "nvim-linux-x86_64.tar.gz" \
+    "tar -C ~/.local -xzf ~/Downloads/nvim-linux-x86_64.tar.gz && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim"
   exit 1
 fi
 
@@ -59,6 +66,8 @@ fi
 if ! file "$NVIM_TARBALL" | grep -q "gzip compressed"; then
   print_error " Not a valid gzip archive: $(file "$NVIM_TARBALL")"
   print_info "URL: $NVIM_URL"
+  print_manual_install "neovim" "$NVIM_URL" "$NVIM_VERSION" "nvim-linux-x86_64.tar.gz" \
+    "tar -C ~/.local -xzf ~/Downloads/nvim-linux-x86_64.tar.gz && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim"
   exit 1
 fi
 

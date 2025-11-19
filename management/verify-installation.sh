@@ -114,7 +114,6 @@ check_command "jq"
 # File Processing Tools
 # ================================================================
 print_section "File Processing Tools"
-check_command "yq"
 check_command "ffmpeg" "-version"
 check_command "7z" "SKIP_VERSION"
 check_command "pdftoppm" "-v"
@@ -138,13 +137,20 @@ check_command "npm"
 check_command "uv"
 
 # Rust
+check_command "rustup"
 check_command "cargo"
 check_command "rustc"
+check_command "cargo-binstall" "--version"
+
+# Lua
+check_command "lua"
+check_command "luajit"
 
 # ================================================================
 # Git Tools
 # ================================================================
 print_section "Git Tools"
+check_command "gh"
 check_command "lazygit"
 check_command "delta"
 
@@ -179,6 +185,8 @@ check_command "typescript-language-server"
 check_command "tsc" "--version"  # typescript compiler
 check_command "bash-language-server"
 check_command "yaml-language-server"
+check_command "vscode-html-language-server" "--version"  # from vscode-langservers-extracted
+check_command "gh-actions-language-server"
 
 print_section "npm Global Packages (Linters/Formatters)"
 check_command "eslint"
@@ -186,11 +194,32 @@ check_command "prettier"
 check_command "markdownlint"
 
 # ================================================================
+# System Package Linters
+# ================================================================
+print_section "Shell Script Tools"
+check_command "shellcheck"
+check_command "shfmt"
+
+# ================================================================
 # Cargo Tools
 # ================================================================
 print_section "Cargo Tools"
-# Already checked: eza, delta, tinty
+# Already checked: bat, fd, eza, zoxide, delta, tinty
 check_command "cargo-install-update" "--version"
+
+# ================================================================
+# UV Tools (Python)
+# ================================================================
+print_section "UV Tools (Python)"
+check_command "ruff"
+check_command "mypy"
+check_command "basedpyright" "--version"
+check_command "codespell"
+check_command "sqlfluff"
+check_command "mdformat"
+check_command "djlint"
+check_command "keymap" "--version"
+check_command "nbpreview" "--version"
 
 # ================================================================
 # Shell Configuration

@@ -1,9 +1,336 @@
 # ================================================================
-# Package Configuration
+# Universal Package Configuration
 # ================================================================
-# Defines packages for language-specific package managers
-# Managed by Taskfile - changes committed automatically
-# Last updated: 2025-11-04
+# Single source of truth for ALL packages across ALL platforms
+# Parsed by management/parse-packages.py
+# Last updated: 2025-11-18
+
+# ================================================================
+# SYSTEM PACKAGES
+# ================================================================
+# Installed via OS package managers: apt (Ubuntu), pacman (Arch), brew (macOS)
+# Omit a platform if the tool is installed via other methods
+# See notes at bottom for exclusions (bat, eza, fd, neovim, etc.)
+
+system_packages:
+  # Essential Build Tools
+  - name: build-essential
+    apt: build-essential
+    pacman: base-devel
+    description: Compiler and build tools
+
+  - name: ca-certificates
+    apt: ca-certificates
+    pacman: ca-certificates
+    brew: ca-certificates
+    description: SSL/TLS certificates
+
+  - name: pkg-config
+    apt: pkg-config
+    pacman: pkgconf
+    brew: pkg-config
+    description: Build configuration tool
+
+  - name: libssl-dev
+    apt: libssl-dev
+    pacman: openssl
+    description: SSL development libraries
+
+  # Python YAML library (needed for parse-packages.py)
+  - name: python3-yaml
+    apt: python3-yaml
+    pacman: python-yaml
+    description: Python YAML library for parsing packages.yml
+
+  # Core Development Tools
+  - name: git
+    apt: git
+    pacman: git
+    brew: git
+    description: Version control system
+
+  - name: gh
+    apt: gh
+    pacman: github-cli
+    brew: gh
+    description: GitHub CLI
+
+  - name: curl
+    apt: curl
+    pacman: curl
+    brew: curl
+    description: Transfer data with URLs
+
+  - name: wget
+    apt: wget
+    pacman: wget
+    brew: wget
+    description: File retrieval
+
+  - name: unzip
+    apt: unzip
+    pacman: unzip
+    brew: unzip
+    description: Archive extraction
+
+  - name: ripgrep
+    apt: ripgrep
+    pacman: ripgrep
+    brew: ripgrep
+    description: Fast grep alternative
+
+  - name: tmux
+    apt: tmux
+    pacman: tmux
+    brew: tmux
+    description: Terminal multiplexer
+
+  - name: jq
+    apt: jq
+    pacman: jq
+    brew: jq
+    description: JSON processor
+
+  - name: tree
+    apt: tree
+    pacman: tree
+    brew: tree
+    description: Directory tree visualization
+
+  - name: htop
+    apt: htop
+    pacman: htop
+    brew: htop
+    description: Interactive process viewer
+
+  # Shell
+  - name: zsh
+    apt: zsh
+    pacman: zsh
+    description: Z shell (macOS has it pre-installed)
+
+  # Programming Languages
+  - name: lua
+    apt: lua5.4
+    pacman: lua
+    brew: lua
+    description: Lua scripting language
+
+  - name: luajit
+    apt: luajit
+    pacman: luajit
+    brew: luajit
+    description: LuaJIT compiler
+
+  - name: luarocks
+    pacman: luarocks
+    brew: luarocks
+    description: Lua package manager
+
+  - name: ruby
+    brew: ruby
+    description: Ruby programming language (macOS only in Brewfile)
+
+  # Language Servers
+  - name: lua-language-server
+    brew: lua-language-server
+    description: Lua LSP (macOS only for now)
+
+  # Linters & Formatters
+  - name: shellcheck
+    apt: shellcheck
+    pacman: shellcheck
+    brew: shellcheck
+    description: Shell script linter
+
+  - name: shfmt
+    apt: shfmt
+    pacman: shfmt
+    brew: shfmt
+    description: Shell script formatter
+
+  # Security
+  - name: gnupg
+    apt: gnupg
+    pacman: gnupg
+    brew: gnupg
+    description: GPG encryption
+
+  # Media Processing
+  - name: ffmpeg
+    apt: ffmpeg
+    pacman: ffmpeg
+    brew: ffmpeg
+    description: Video/audio processing
+
+  - name: imagemagick
+    apt: imagemagick
+    pacman: imagemagick
+    brew: imagemagick
+    description: Image processing
+
+  - name: poppler-utils
+    apt: poppler-utils
+    pacman: poppler
+    description: PDF utilities (Linux only)
+
+  - name: chafa
+    apt: chafa
+    pacman: chafa
+    description: Image to ASCII converter (Linux only)
+
+  # Archive Tools
+  - name: 7zip
+    apt: 7zip
+    pacman: p7zip
+    brew: sevenzip
+    description: 7-Zip compression
+
+  # Build & Task Automation
+  - name: go-task
+    brew: go-task
+    description: Task runner (apt/pacman install via script or AUR)
+
+  # macOS-Specific Tools
+  - name: gnu-sed
+    brew: gnu-sed
+    description: GNU sed (macOS only, available as gsed)
+
+  - name: gnu-tar
+    brew: gnu-tar
+    description: GNU tar (macOS only, available as gtar)
+
+  - name: grep
+    brew: grep
+    description: GNU grep (macOS only)
+
+  - name: coreutils
+    brew: coreutils
+    description: GNU core utilities (macOS only, g-prefixed)
+
+  - name: findutils
+    brew: findutils
+    description: GNU find utilities (macOS only)
+
+  - name: mas
+    brew: mas
+    description: Mac App Store CLI (macOS only)
+
+  - name: duti
+    brew: duti
+    description: File association manager (macOS only)
+
+  - name: glow
+    brew: glow
+    description: Markdown renderer (macOS Brewfile)
+
+  - name: duf
+    brew: duf
+    description: Modern df alternative (macOS Brewfile)
+
+  - name: git-secrets
+    brew: git-secrets
+    description: Prevent committing secrets (macOS Brewfile)
+
+# ================================================================
+# RUNTIME VERSIONS
+# ================================================================
+# Minimum acceptable versions for language runtimes
+
+runtimes:
+  go:
+    min_version: "1.23"
+    install_method: github_release
+    repo: golang/go
+
+  node:
+    version: "24.11.0"
+    install_method: nvm
+
+  rust:
+    install_method: rustup
+    url: https://sh.rustup.rs
+
+# ================================================================
+# GITHUB BINARY RELEASES
+# ================================================================
+# Tools installed via direct GitHub release downloads
+# Each has a dedicated install script that reads from this config
+
+github_binaries:
+  - name: neovim
+    repo: neovim/neovim
+    min_version: "0.11"
+    install_script: install-neovim.sh
+    binary_pattern: "nvim-linux-x86_64.tar.gz"
+    install_dir: "~/.local/nvim-linux-x86_64"
+    binary_link: "~/.local/bin/nvim"
+
+  - name: lazygit
+    repo: jesseduffield/lazygit
+    version: "0.56.0"
+    install_script: install-lazygit.sh
+    binary_pattern: "lazygit_{version}_linux_x86_64.tar.gz"
+    install_dir: "~/.local/bin"
+
+  - name: yazi
+    repo: sxyazi/yazi
+    install_script: install-yazi.sh
+    binary_pattern: "yazi-x86_64-unknown-linux-gnu.zip"
+    install_dir: "~/.local/bin"
+
+  - name: fzf
+    repo: junegunn/fzf
+    min_version: "0.50"
+    install_script: install-fzf.sh
+    build_method: go
+    install_dir: "~/.local/bin"
+
+# ================================================================
+# CARGO PACKAGES (Rust)
+# ================================================================
+# Installed via: cargo binstall -y <package>
+# Fast pre-compiled binaries (much faster than cargo install)
+
+cargo_packages:
+  - name: bat
+    command: bat
+    description: cat with syntax highlighting
+
+  - name: fd-find
+    command: fd
+    description: modern find replacement
+
+  - name: eza
+    command: eza
+    description: modern ls replacement
+
+  - name: zoxide
+    command: zoxide
+    description: smarter cd command
+
+  - name: git-delta
+    command: delta
+    description: syntax-highlighting git diff
+
+  - name: tinty
+    command: tinty
+    description: Base16 theme manager
+
+  - name: cargo-update
+    command: cargo-install-update
+    description: update installed cargo packages
+
+# ================================================================
+# TMUX PLUGINS
+# ================================================================
+# Installed via TPM (Tmux Plugin Manager)
+# Universal across all platforms
+
+tmux_plugins:
+  tpm:
+    repo: https://github.com/tmux-plugins/tpm
+    install_dir: ~/.config/tmux/plugins/tpm
 
 # ================================================================
 # NPM GLOBAL PACKAGES
@@ -86,6 +413,7 @@ uv_tools:
   # Utilities
   utilities:
     - name: keymap-drawer
+      command: keymap
       description: Generate keyboard layout diagrams
 
     - name: nbpreview
@@ -120,15 +448,39 @@ shell_plugins:
 # ================================================================
 # NOTES
 # ================================================================
-# Node.js Version: Managed by nvm (see .nvmrc or nvm list)
-# Python Version: Managed by uv (see .python-version)
+# This file is the single source of truth for package installation
+# Parsed by management/parse-packages.py (Python)
+#
+# Package Management Philosophy:
+#   - System packages: apt/pacman/brew for OS-level tools (see system_packages)
+#   - Language-specific managers: npm, uv, cargo (consistent across platforms)
+#   - GitHub binaries: For tools needing latest versions (neovim, lazygit, etc)
+#
+# Tools NOT in system_packages (installed via other methods):
+#   - bat, eza, fd-find, zoxide, git-delta, tinty: cargo-binstall
+#   - neovim, lazygit, yazi, fzf: GitHub releases
+#   - go: GitHub releases (not apt/pacman golang-go)
+#   - nvm, npm packages: nvm + npm (not system Node.js)
+#   - Python tools: uv (not system pip)
+#
+# Runtime Versions:
+#   - Node.js: Managed by nvm (see runtimes.node.version)
+#   - Python: Managed by uv
+#   - Go: Installed from GitHub releases (see runtimes.go.min_version)
+#   - Rust: Installed via rustup
+#
+# Parsing examples:
+#   python parse-packages.py --type=system --manager=apt
+#   python parse-packages.py --type=cargo
+#   python parse-packages.py --type=npm
+#   python parse-packages.py --get=runtimes.node.version
 #
 # To update all packages:
 #   task update           # Updates everything
-#   task update:npm       # Just npm globals
-#   task update:uv        # Just uv tools
+#   task macos:update-all # macOS-specific
+#   task wsl:update-all   # WSL-specific
 #
 # To add new packages:
-#   1. Add to this file
-#   2. Run: task install:npm or task install:uv
-#   3. Changes will be auto-committed
+#   1. Add to this file under the appropriate section
+#   2. Run: task install or platform-specific install task
+#   3. Commit changes

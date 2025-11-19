@@ -13,7 +13,6 @@ tasks:
 
   update:
     desc: Update all cargo packages (requires cargo-update)
-    internal: true
     silent: true
     cmds:
       - |

@@ -1,7 +1,7 @@
 # ================================================================
-# Yay (AUR) Package Update Tasks (Internal)
+# Pacman Package Update Tasks (Internal)
 # ================================================================
-# Internal tasks for updating AUR packages via yay
+# Internal tasks for updating system packages via pacman
 # These tasks are called by Arch Linux update-all command
 # Platform: Arch Linux
 
@@ -13,11 +13,10 @@ tasks:
   # ================================================================
 
   update:
-    desc: Update all AUR packages via yay
-    internal: true
+    desc: Update all pacman packages
     silent: true
     cmds:
       - |
-        echo "  Updating AUR packages..."
-        yay -Syu --noconfirm
-        echo "  AUR packages updated"
+        echo "  Updating Arch Linux system packages..."
+        sudo pacman -Syu --noconfirm
+        echo "  System packages updated"

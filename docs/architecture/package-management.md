@@ -257,19 +257,67 @@ See [Package Version Analysis](../learnings/package-version-analysis.md) for det
 
 ## Implementation
 
+### Single Source of Truth: packages.yml
+
+All package versions, repositories, and configurations are centralized in `management/packages.yml`:
+
+```yaml
+runtimes:
+  go:
+    min_version: "1.23"
+  node:
+    version: "24.11.0"
+  python:
+    min_version: "3.12"
+
+github_binaries:
+  - name: neovim
+    repo: neovim/neovim
+    version: "0.11.0"
+  - name: lazygit
+    repo: jesseduffield/lazygit
+    version: "0.44.1"
+  # ... more tools
+
+cargo_packages:
+  - bat
+  - fd-find
+  - eza
+  - zoxide
+  - git-delta
+  - tinty
+  - cargo-update
+
+uv_tools:
+  - name: ruff
+    package: ruff
+  # ... more tools
+```
+
+All installation scripts and taskfiles read from this single source. Change a version once, and it applies everywhere.
+
 ### Installation Scripts
 
-Located in `management/taskfiles/scripts/`:
+Located in `management/scripts/`:
 
-- `install-go.sh` - Latest Go from go.dev
-- `install-fzf.sh` - Build fzf from source with Go
-- `install-neovim.sh` - Extract neovim bundle, symlink binary
-- `install-lazygit.sh` - Download single binary
-- `install-yazi.sh` - Download binaries, install plugins
+- `install-helpers.sh` - Shared helper functions for all install scripts
+- `install-go.sh` - Latest Go from go.dev (reads version from packages.yml)
+- `install-fzf.sh` - Build fzf from source with Go (reads version from packages.yml)
+- `install-neovim.sh` - Extract neovim bundle, symlink binary (reads version from packages.yml)
+- `install-lazygit.sh` - Download single binary (reads version from packages.yml)
+- `install-yazi.sh` - Download binaries, install plugins (reads version from packages.yml)
+- `install-rust.sh` - Install Rust via rustup
+- `install-uv.sh` - Install uv for Python management
+- `install-cargo-binstall.sh` - Bootstrap cargo-binstall
+- `install-cargo-tools.sh` - Install all cargo packages from packages.yml
+- `install-tmux-plugins.sh` - Install tmux plugins
+- `npm-install-globals.sh` - Install npm global packages from packages.yml
+
+All scripts use shared helpers for consistent error handling and graceful firewall failure recovery.
 
 ### Taskfile Organization
 
-`management/taskfiles/wsl.yml` defines installation tasks:
+Platform taskfiles (`wsl.yml`, `macos.yml`, `arch.yml`) define installation tasks that call these scripts and read from packages.yml:
 
 ```yaml
 install-go:          # GitHub releases → /usr/local/go
@@ -279,7 +327,7 @@ install-lazygit:     # GitHub releases → ~/.local/bin
 install-yazi:        # GitHub releases → ~/.local/bin
 
 install-cargo-binstall:  # Bootstrap for Rust tools
-install-cargo-tools:     # bat, fd, eza, zoxide, delta, tinty
+install-cargo-tools:     # Reads package list from packages.yml
 ```
 
 ### Main Installation Flow

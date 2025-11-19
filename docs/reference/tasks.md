@@ -135,11 +135,17 @@ cd ~/.config/zsh/plugins/git-open && git pull
 Each component has an idempotent install task:
 
 ```sh
-task brew:install     # Install from Brewfile
-task npm:install      # Install npm global packages
-task uv:install       # Install uv tools
-task nvm:install      # Install nvm and Node.js
-task shell:install    # Install shell plugins
+task brew:install            # Install from Brewfile (macOS)
+task npm-global:install      # Install npm global packages
+task uv-tools:install        # Install uv tools
+task nvm:install             # Install nvm and Node.js
+task shell-plugins:install   # Install shell plugins
+task cargo:install           # Install cargo-binstall and cargo tools
+task tmux:install            # Install Tmux Plugin Manager (TPM) and plugins
+task apt:install             # Install apt packages (WSL/Ubuntu)
+task pacman:install          # Install pacman packages (Arch)
+task yay:install             # Install yay AUR helper and packages (Arch)
+task mas:install             # Install Mac App Store apps (macOS)
 ```
 
 ## Platform-Specific Tasks
@@ -236,35 +242,53 @@ Core components must be installed. Update tasks check for required tools and fai
 
 No silent failures or skipped updates.
 
-### Modular Internal Tasks
+### Modular Taskfile Organization
 
-Update logic is broken into internal modular tasks:
+Update and install logic is organized into modular taskfiles in `management/taskfiles/`:
 
-- `brew:update` (internal) - Homebrew update logic
-- `npm:update` (internal) - npm update logic
-- `uv:update` (internal) - uv update logic
-- `shell:update` (internal) - Shell plugin update logic
-- `cargo:update` (internal) - Rust package update logic
-- `mas:update` (internal) - Mac App Store update logic
-- `tmux:update` (internal) - Tmux plugin update logic
-- `apt:update` (internal) - APT update logic
-- `pacman:update` (internal) - Pacman update logic
-- `yay:update` (internal) - AUR update logic
+**Core taskfiles:**
 
-These are called by platform `update-all` tasks but hidden from `task --list`.
+- `brew.yml` - Homebrew installation and updates
+- `npm-global.yml` - npm global package management
+- `uv-tools.yml` - Python tool management via uv
+- `shell-plugins.yml` - ZSH plugin management
+- `cargo-update.yml` - Rust package updates
+- `tmux-plugins.yml` - Tmux plugin management
+- `apt.yml` - APT package management (WSL/Ubuntu)
+- `pacman.yml` - Pacman package management (Arch)
+- `yay.yml` - AUR package management (Arch)
+- `mas.yml` - Mac App Store management (macOS)
+- `nvm.yml` - Node.js version management
+
+**Platform taskfiles:**
+
+- `wsl.yml` - WSL Ubuntu orchestration
+- `macos.yml` - macOS orchestration
+- `arch.yml` - Arch Linux orchestration
+
+Each modular taskfile provides `install` and `update` tasks that are composed by platform `update-all` tasks.
 
 ### Idempotent by Default
 
 All install and update tasks can be run multiple times safely. They check for existing installations and skip or update as needed.
 
-### Single Source of Truth
+### Single Source of Truth: packages.yml
 
-- Homebrew packages: `Brewfile`
-- npm packages: Defined in `taskfiles/npm.yml`
-- uv tools: Defined in `taskfiles/uv.yml`
-- Shell plugins: `config/packages.yml`
-- Cargo packages: `config/packages.yml`
-- Tmux plugins: `config/packages.yml`
+All package versions, repositories, and configurations are centralized in `management/packages.yml`:
+
+- **Runtimes**: Go, Node, Python version requirements
+- **GitHub binaries**: neovim, lazygit, yazi, fzf with repos and versions
+- **Cargo packages**: bat, fd, eza, zoxide, git-delta, tinty
+- **npm global packages**: Language servers and CLI tools
+- **uv tools**: Python development tools (ruff, mypy, etc.)
+- **Shell plugins**: ZSH plugins with git repositories
+- **Tmux plugins**: TPM plugins with git repositories
+
+Additional sources:
+
+- **Homebrew packages**: `Brewfile` (macOS system packages and GUI apps)
+
+Change a version once in `packages.yml`, and it applies everywhere.
 
 ## Advanced Usage
 

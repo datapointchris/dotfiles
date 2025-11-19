@@ -1,96 +1,50 @@
-# ================================================================
-# Arch Linux-Specific Tasks
-# ================================================================
-# Platform-specific installation and configuration for Arch Linux
-# PLACEHOLDER: To be fully implemented when Arch system is set up
-
 version: '3'
 
-vars:
-  UPDATE_LOG_DIR: "{{.HOME}}/.local/state/dotfiles/update-history"
-  UPDATE_LOG_FILE: "{{.UPDATE_LOG_DIR}}/{{now | date \"2006-01-02\"}}.log"
+vars: {}
 
 includes:
-  npm:
-    taskfile: ./npm.yml
-    internal: true
-  uv:
-    taskfile: ./uv.yml
-    internal: true
-  shell:
-    taskfile: ./shell.yml
-    internal: true
+  npm-global:
+    taskfile: ./npm-global.yml
+  uv-tools:
+    taskfile: ./uv-tools.yml
+  shell-plugins:
+    taskfile: ./shell-plugins.yml
   cargo:
-    taskfile: ./internal/cargo.yml
-    internal: true
+    taskfile: ./cargo-update.yml
   tmux:
-    taskfile: ./internal/tmux-plugins.yml
-    internal: true
+    taskfile: ./tmux-plugins.yml
   pacman:
-    taskfile: ./internal/pacman.yml
-    internal: true
+    taskfile: ./pacman.yml
   yay:
-    taskfile: ./internal/yay.yml
-    internal: true
+    taskfile: ./yay.yml
 
 tasks:
-  # ================================================================
-  # PACKAGE INSTALLATION
-  # ================================================================
 
   install-packages:
     desc: Install system packages via pacman
+    silent: true
     cmds:
-      - echo " Installing Arch Linux packages..."
-      - task: update-system
-      - task: install-essential
-      - task: install-dev-tools
-      - task: install-aur-helper
-      - echo " Arch packages installed!"
-
-  update-system:
-    desc: Update pacman package database
-    cmds:
-      - echo " Updating package database..."
+      - echo "✅ Installing Arch Linux packages..."
+      - echo "  Updating package database..."
       - sudo pacman -Sy
+      - task: install-system-packages
+      - task: install-aur-helper
+      - echo "✅ Arch packages installed!"
 
-  install-essential:
+  install-system-packages:
     internal: true
     silent: true
     cmds:
       - |
-        echo " Installing essential tools..."
-        sudo pacman -S --needed --noconfirm \
-          git \
-          curl \
-          wget \
-          base-devel
+        echo "  Installing bootstrap packages..."
+        # Bootstrap: Install python-yaml first (needed for parse-packages.py)
+        sudo pacman -S --needed --noconfirm python-yaml
 
-  install-dev-tools:
-    internal: true
-    silent: true
-    cmds:
-      - |
-        echo " Installing development tools..."
-        sudo pacman -S --needed --noconfirm \
-          bat \
-          eza \
-          fd \
-          ripgrep \
-          fzf \
-          zoxide \
-          git-delta \
-          tmux \
-          neovim \
-          tree \
-          htop \
-          jq \
-          lazygit \
-          yazi \
-          go \
-          rust \
-          lua \
-          luajit
+        echo "  Installing system packages from packages.yml..."
+        # Get package list from packages.yml via Python parser
+        PACKAGES=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=pacman | tr '\n' ' ')
+        echo "  Packages: $PACKAGES"
+        sudo pacman -S --needed --noconfirm $PACKAGES
 
   install-aur-helper:
     desc: Install yay (AUR helper)
@@ -111,130 +65,6 @@ tasks:
     status:
       - command -v yay >/dev/null 2>&1
 
-  # ================================================================
-  # GO (Build Toolchain)
-  # ================================================================
-
-  install-go:
-    desc: Install latest Go from go.dev
-    cmds:
-      - bash management/taskfiles/scripts/install-go.sh
-
-  # ================================================================
-  # FZF (Fuzzy Finder)
-  # ================================================================
-
-  install-fzf:
-    desc: Build and install latest fzf from source
-    deps:
-      - install-go
-    cmds:
-      - bash management/taskfiles/scripts/install-fzf.sh
-
-  # ================================================================
-  # LAZYGIT (Git TUI)
-  # ================================================================
-
-  install-lazygit:
-    desc: Install latest lazygit from GitHub releases to ~/.local/bin
-    cmds:
-      - bash management/taskfiles/scripts/install-lazygit.sh
-
-  # ================================================================
-  # NEOVIM (Text Editor)
-  # ================================================================
-
-  install-neovim:
-    desc: Install latest neovim from GitHub releases to ~/.local/bin
-    cmds:
-      - bash management/taskfiles/scripts/install-neovim.sh
-
-  # ================================================================
-  # YAZI (Terminal File Manager)
-  # ================================================================
-
-  install-yazi:
-    desc: Install yazi terminal file manager with flavors and plugins
-    cmds:
-      - bash management/taskfiles/scripts/install-yazi.sh
-
-  # ================================================================
-  # RUST & CARGO (for additional tools)
-  # ================================================================
-
-  install-rust:
-    desc: Install Rust and Cargo
-    cmds:
-      - |
-        if command -v cargo >/dev/null 2>&1; then
-          echo " Rust already installed"
-        else
-          echo " Installing Rust..."
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source "$HOME/.cargo/env"
-          echo " Rust installed"
-        fi
-    status:
-      - command -v cargo >/dev/null 2>&1
-
-  install-cargo-binstall:
-    desc: Install cargo-binstall for fast binary installation
-    deps:
-      - install-rust
-    cmds:
-      - |
-        # Ensure cargo is available
-        source "$HOME/.cargo/env"
-
-        if command -v cargo-binstall >/dev/null 2>&1; then
-          echo " cargo-binstall already installed"
-        else
-          echo " Installing cargo-binstall..."
-          cargo install cargo-binstall
-          echo " cargo-binstall installed"
-        fi
-    status:
-      - command -v cargo-binstall >/dev/null 2>&1
-
-  install-cargo-tools:
-    desc: Install Rust CLI tools via cargo-binstall
-    deps:
-      - install-cargo-binstall
-    cmds:
-      - |
-        # Ensure cargo is available
-        source "$HOME/.cargo/env"
-        echo " Installing Rust CLI tools via cargo-binstall..."
-
-        # Helper function to install via cargo-binstall if not already installed
-        binstall_if_missing() {
-          local package=$1
-          local command_name=${2:-$(echo $package | cut -d- -f1)}
-
-          if command -v "$command_name" >/dev/null 2>&1; then
-            echo "  $command_name already installed, skipping"
-          else
-            echo "  Installing $package..."
-            cargo binstall -y "$package"
-          fi
-        }
-
-        # Install Rust CLI tools
-        binstall_if_missing bat
-        binstall_if_missing fd-find fd
-        binstall_if_missing zoxide
-        binstall_if_missing eza
-        binstall_if_missing git-delta delta
-        binstall_if_missing tinty
-        binstall_if_missing cargo-update cargo-install-update
-
-        echo " Rust CLI tools installation complete"
-        echo " Installed to: ~/.cargo/bin (highest PATH priority)"
-
-  # ================================================================
-  # AUR PACKAGES
-  # ================================================================
-
   install-aur-packages:
     desc: Install packages from AUR
     deps:
@@ -249,10 +79,6 @@ tasks:
         echo " No AUR packages configured yet"
         echo " AUR packages installed!"
 
-  # ================================================================
-  # DESKTOP ENVIRONMENT (if applicable)
-  # ================================================================
-
   install-desktop:
     desc: Install desktop environment (optional)
     cmds:
@@ -263,18 +89,12 @@ tasks:
         echo "   - KDE: sudo pacman -S plasma kde-applications"
         echo "   - i3: sudo pacman -S i3-wm i3status i3lock dmenu"
 
-  # ================================================================
-  # UPDATE ALL
-  # ================================================================
-
   update-all:
     desc: Update all Arch Linux packages and tools
     silent: true
     cmds:
       - task: check-core-components
-      - task: init-update-log
       - task: run-updates
-      - task: show-update-summary
 
   check-core-components:
     desc: Verify core package managers are installed
@@ -294,174 +114,12 @@ tasks:
           ERROR: uv is not installed (core component)
           Install with: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-  init-update-log:
-    desc: Initialize update logging
-    internal: true
-    silent: true
-    cmds:
-      - mkdir -p {{.UPDATE_LOG_DIR}}
-      - |
-        cat > {{.UPDATE_LOG_FILE}} <<EOF
-        ================================================================
-        Arch Linux Update Session
-        ================================================================
-        Date: $(date '+%Y-%m-%d %H:%M:%S')
-        Host: $(hostname)
-        Kernel: $(uname -r)
-
-        EOF
-
   run-updates:
     desc: Run all update tasks
     internal: true
     silent: true
     cmds:
-      - |
-        echo "================================================================"
-        echo "  Arch Linux Update All - Updating all packages and tools"
-        echo "================================================================"
-        echo ""
-
-        # Track start time
-        START_TIME=$(date +%s)
-
-        # Step 1: System packages
-        echo "Step 1/7 - System packages (pacman)"
-        STEP_START=$(date +%s)
-        task arch:pacman:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 2: AUR packages
-        echo "Step 2/7 - AUR packages (yay)" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task arch:yay:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 3: npm
-        echo "Step 3/7 - npm global packages" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task arch:npm:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 4: uv
-        echo "Step 4/7 - Python tools (uv)" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task arch:uv:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 5: cargo
-        echo "Step 5/7 - Rust packages (cargo)" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task arch:cargo:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 6: shell plugins
-        echo "Step 6/7 - Shell plugins" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task arch:shell:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 7: tmux plugins
-        echo "Step 7/7 - Tmux plugins" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task arch:tmux:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Calculate total time
-        END_TIME=$(date +%s)
-        TOTAL_DURATION=$((END_TIME - START_TIME))
-        echo "Total Duration: ${TOTAL_DURATION}s" >> {{.UPDATE_LOG_FILE}}
-
-  show-update-summary:
-    desc: Show update summary
-    internal: true
-    silent: true
-    cmds:
-      - |
-        echo ""
-        echo "================================================================"
-        echo "  Update Complete!"
-        echo "================================================================"
-        echo ""
-        TOTAL_DURATION=$(tail -1 {{.UPDATE_LOG_FILE}} | grep -oE '[0-9]+')
-        echo "Total time: ${TOTAL_DURATION}s"
-        echo "Log saved to: {{.UPDATE_LOG_FILE}}"
-        echo ""
-        echo "Run 'task arch:update-history' to view update history"
-        echo ""
-
-  update-history:
-    desc: View update history and statistics
-    silent: true
-    cmds:
-      - |
-        if [[ ! -d "{{.UPDATE_LOG_DIR}}" ]]; then
-          echo "No update history found"
-          exit 0
-        fi
-
-        echo "================================================================"
-        echo "  Arch Linux Update History"
-        echo "================================================================"
-        echo ""
-
-        # List all update logs
-        LOG_FILES=$(find {{.UPDATE_LOG_DIR}} -name "*.log" -type f | sort -r)
-
-        if [[ -z "$LOG_FILES" ]]; then
-          echo "No update logs found"
-          exit 0
-        fi
-
-        echo "Recent Updates:"
-        echo ""
-
-        for log in $LOG_FILES; do
-          BASENAME=$(basename "$log" .log)
-          DATE_FIELD=$(head -5 "$log" | grep "^Date:" | cut -d' ' -f2-)
-          DURATION=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "unknown")
-
-          echo "  $BASENAME"
-          echo "    Time: $DATE_FIELD"
-          echo "    Duration: ${DURATION}s"
-          echo ""
-        done
-
-        # Statistics
-        TOTAL_UPDATES=$(echo "$LOG_FILES" | wc -l | tr -d ' ')
-        echo "Statistics:"
-        echo "  Total updates: $TOTAL_UPDATES"
-
-        # Average duration
-        if [[ $TOTAL_UPDATES -gt 0 ]]; then
-          TOTAL_TIME=0
-          COUNT=0
-          for log in $LOG_FILES; do
-            DUR=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "0")
-            if [[ $DUR -gt 0 ]]; then
-              TOTAL_TIME=$((TOTAL_TIME + DUR))
-              COUNT=$((COUNT + 1))
-            fi
-          done
-          if [[ $COUNT -gt 0 ]]; then
-            AVG=$((TOTAL_TIME / COUNT))
-            echo "  Average duration: ${AVG}s"
-          fi
-        fi
+      - bash {{.ROOT_DIR}}/management/scripts/update-arch.sh
 
   # ================================================================
   # ARCH-SPECIFIC CONFIGURATION

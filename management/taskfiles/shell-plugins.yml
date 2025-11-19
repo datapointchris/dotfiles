@@ -10,7 +10,7 @@ vars:
   PLUGINS_DIR: "{{.HOME}}/.config/zsh/plugins"
   PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
   # Shell plugins defined in management/packages.yml under shell_plugins
-  # Using yq to read from YAML for single source of truth
+  # Using Python parser to read from YAML for single source of truth
 
 tasks:
   # ================================================================
@@ -23,8 +23,8 @@ tasks:
     cmds:
       - echo "✅ Installing shell plugins..."
       - |
-        # Read plugins from management/packages.yml
-        PLUGINS=$(yq eval '.shell_plugins[] | .name + "|" + .repo' {{.PACKAGES_CONFIG}})
+        # Read plugins from management/packages.yml via Python parser
+        PLUGINS=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=shell-plugins --format=name_repo)
 
         mkdir -p "{{.PLUGINS_DIR}}"
 
@@ -48,13 +48,12 @@ tasks:
 
   update:
     desc: Update all shell plugins
-    internal: true
     silent: true
     cmds:
       - echo "  Updating shell plugins..."
       - |
-        # Read plugins from management/packages.yml
-        PLUGINS=$(yq eval '.shell_plugins[].name' {{.PACKAGES_CONFIG}})
+        # Read plugins from management/packages.yml via Python parser
+        PLUGINS=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=shell-plugins --format=names)
 
         for name in $PLUGINS; do
           PLUGIN_DIR="{{.PLUGINS_DIR}}/$name"

@@ -24,33 +24,21 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Installing npm global packages..."
+echo "Installing npm global packages from packages.yml..."
 
-# Helper function to install package only if not already installed
-install_if_missing() {
-  local package=$1
-  local command_name=${2:-$package}  # Use package name as command if not specified
+# Get npm packages from packages.yml via Python parser
+DOTFILES_DIR="$HOME/dotfiles"
+NPM_PACKAGES=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
 
-  if command -v "$command_name" >/dev/null 2>&1; then
-    print_info "$package already installed, skipping"
+# Install each package (skip if already installed at same version)
+for package in $NPM_PACKAGES; do
+  if npm list -g "$package" --depth=0 &>/dev/null; then
+    echo "  $package already installed (skipping)"
   else
     print_info "Installing $package..."
     npm install -g "$package"
   fi
-}
-
-# Language servers
-install_if_missing typescript-language-server
-install_if_missing typescript tsc
-install_if_missing bash-language-server
-install_if_missing yaml-language-server
-install_if_missing vscode-langservers-extracted vscode-html-language-server
-install_if_missing gh-actions-language-server
-
-# Linters and formatters
-install_if_missing eslint
-install_if_missing prettier
-install_if_missing markdownlint-cli markdownlint
+done
 
 echo ""
 echo "npm global packages installed"

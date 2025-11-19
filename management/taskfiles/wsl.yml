@@ -1,9 +1,3 @@
-# ================================================================
-# WSL Ubuntu-Specific Tasks
-# ================================================================
-# Platform-specific installation and configuration for WSL Ubuntu
-# Work-computer restricted environment
-
 version: '3'
 
 vars:
@@ -13,34 +7,21 @@ vars:
   CARGO_HOME: "{{.HOME}}/.cargo"
   TMP_DIR: "/tmp"
 
-  # Update logging
-  UPDATE_LOG_DIR: "{{.HOME}}/.local/state/dotfiles/update-history"
-  UPDATE_LOG_FILE: "{{.UPDATE_LOG_DIR}}/{{now | date \"2006-01-02\"}}.log"
-
 includes:
-  npm:
-    taskfile: ./npm.yml
-    internal: true
-  uv:
-    taskfile: ./uv.yml
-    internal: true
-  shell:
-    taskfile: ./shell.yml
-    internal: true
+  npm-global:
+    taskfile: ./npm-global.yml
+  uv-tools:
+    taskfile: ./uv-tools.yml
+  shell-plugins:
+    taskfile: ./shell-plugins.yml
   cargo:
-    taskfile: ./internal/cargo.yml
-    internal: true
+    taskfile: ./cargo-update.yml
   tmux:
-    taskfile: ./internal/tmux-plugins.yml
-    internal: true
+    taskfile: ./tmux-plugins.yml
   apt:
-    taskfile: ./internal/apt.yml
-    internal: true
+    taskfile: ./apt.yml
 
 tasks:
-  # ================================================================
-  # PACKAGE INSTALLATION
-  # ================================================================
 
   install-packages:
     desc: Install system packages via apt
@@ -49,291 +30,29 @@ tasks:
       - echo "✅ Installing WSL Ubuntu packages..."
       - echo "  Updating package lists..."
       - sudo apt update
-      - task: install-essential
-      - task: install-dev-tools
+      - task: install-system-packages
       - echo "✅ WSL packages installed!"
 
-  install-essential:
+  install-system-packages:
     internal: true
     silent: true
     cmds:
       - |
-        echo " Installing essential tools..."
-        sudo apt install -y \
-          git \
-          curl \
-          wget \
-          unzip \
-          build-essential \
-          ca-certificates \
-          gnupg \
-          pkg-config \
-          libssl-dev
+        echo "  Installing bootstrap packages..."
+        # Bootstrap: Install python3-yaml first (needed for parse-packages.py)
+        sudo apt install -y python3-yaml
 
-  install-dev-tools:
-    internal: true
-    silent: true
-    cmds:
-      - |
-        echo " Installing development tools..."
-        sudo apt install -y \
-          zsh \
-          ripgrep \
-          tmux \
-          tree \
-          htop \
-          jq \
-          ffmpeg \
-          7zip \
-          poppler-utils \
-          imagemagick \
-          chafa
-
-        # Note: The following tools are installed via other methods for latest versions:
-        # - bat, fd-find, zoxide: cargo-binstall (Rust tools with no naming conflicts)
-        # - fzf: Build from source with Go (22 versions ahead of apt)
-        # - neovim: GitHub releases (apt has 0.9.5, we need 0.11+)
-        # - golang-go: GitHub releases (apt has 1.22, we want 1.23+)
-        # - zsh-syntax-highlighting: Git clone to ~/.config/zsh/plugins (managed in shell.yml)
-
-  # ================================================================
-  # YQ (YAML Processor)
-  # ================================================================
-
-  install-yq:
-    desc: Install yq (Go version) from GitHub
-    cmds:
-      - |
-        # Check if Python version is installed and remove it
-        if command -v yq >/dev/null 2>&1; then
-          if ! yq --version 2>&1 | grep -q "mikefarah"; then
-            echo " Removing Python yq..."
-            sudo apt remove -y yq 2>/dev/null || true
-          fi
-        fi
-
-        echo " Installing yq (Go version)..."
-        YQ_VERSION=$(curl -s "https://api.github.com/repos/mikefarah/yq/releases/latest" | grep -Po '"tag_name": *"v\K[^"]*')
-        curl -Lo /tmp/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64"
-        chmod +x /tmp/yq
-        sudo mv /tmp/yq /usr/local/bin/yq
-
-        echo " yq installed: $(yq --version)"
-    status:
-      - command -v yq >/dev/null 2>&1 && yq --version 2>&1 | grep -q "mikefarah"
-
-  # ================================================================
-  # UV (Python Package Manager)
-  # ================================================================
-
-  install-uv:
-    desc: Install uv Python package manager
-    cmds:
-      - |
-        echo " Installing uv..."
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-
-        # Add to PATH for current session
-        export PATH="$HOME/.local/bin:$PATH"
-
-        echo " uv installed: $(uv --version)"
-    status:
-      - command -v uv >/dev/null 2>&1
-
-  # ================================================================
-  # GO (Build Toolchain)
-  # ================================================================
-
-  install-go:
-    desc: Install latest Go from go.dev (required for building fzf)
-    cmds:
-      - bash management/taskfiles/scripts/install-go.sh
-    # No status check - script handles version checking internally
-
-  # ================================================================
-  # FZF (Fuzzy Finder)
-  # ================================================================
-
-  install-fzf:
-    desc: Build and install latest fzf from source
-    deps:
-      - install-go
-    cmds:
-      - bash management/taskfiles/scripts/install-fzf.sh
-    # No status check - script handles version checking internally
-
-  # ================================================================
-  # LAZYGIT (Git TUI)
-  # ================================================================
-
-  install-lazygit:
-    desc: Install latest lazygit from GitHub releases to ~/.local/bin
-    cmds:
-      - bash management/taskfiles/scripts/install-lazygit.sh
-    # No status check - script handles version checking internally
-
-  # ================================================================
-  # NEOVIM (Text Editor)
-  # ================================================================
-
-  install-neovim:
-    desc: Install latest neovim from GitHub releases to ~/.local/bin
-    cmds:
-      - bash management/taskfiles/scripts/install-neovim.sh
-    # No status check - script handles version checking internally
-
-  # ================================================================
-  # YAZI (Terminal File Manager)
-  # ================================================================
-
-  install-yazi:
-    desc: Install yazi terminal file manager with flavors and plugins
-    cmds:
-      - bash management/taskfiles/scripts/install-yazi.sh
-    # Note: No status check - always run to ensure plugins/flavors are up to date
-    # The script itself checks if binary is installed and skips binary installation
-
-  # ================================================================
-  # RUST & CARGO (for additional tools)
-  # ================================================================
-
-  install-rust:
-    desc: Install Rust and Cargo
-    cmds:
-      - |
-        if command -v cargo >/dev/null 2>&1; then
-          echo " Rust already installed"
-        else
-          echo " Installing Rust..."
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-          source "$HOME/.cargo/env"
-          echo " Rust installed"
-        fi
-    status:
-      - command -v cargo >/dev/null 2>&1
-
-  install-cargo-binstall:
-    desc: Install cargo-binstall for fast binary installation
-    deps:
-      - install-rust
-    cmds:
-      - |
-        # Ensure cargo is available
-        source "$HOME/.cargo/env"
-
-        if command -v cargo-binstall >/dev/null 2>&1; then
-          echo " cargo-binstall already installed"
-        else
-          echo " Installing cargo-binstall..."
-          cargo install cargo-binstall
-          echo " cargo-binstall installed"
-        fi
-    status:
-      - command -v cargo-binstall >/dev/null 2>&1
-
-  install-cargo-tools:
-    desc: Install Rust CLI tools via cargo-binstall (fast pre-compiled binaries)
-    deps:
-      - install-cargo-binstall
-    cmds:
-      - |
-        # Ensure cargo is available
-        source "$HOME/.cargo/env"
-        echo " Installing Rust CLI tools via cargo-binstall..."
-
-        # Helper function to install via cargo-binstall if not already installed
-        binstall_if_missing() {
-          local package=$1
-          local command_name=${2:-$(echo $package | cut -d- -f1)}  # Extract command from package name
-
-          if command -v "$command_name" >/dev/null 2>&1; then
-            echo "  $command_name already installed, skipping"
-          else
-            echo "  Installing $package..."
-            cargo binstall -y "$package"
-          fi
-        }
-
-        # Install Rust CLI tools (pre-compiled binaries, much faster than cargo install!)
-        # These override apt versions and have correct naming (fd not fdfind, bat not batcat)
-        binstall_if_missing bat
-        binstall_if_missing fd-find fd
-        binstall_if_missing zoxide
-        binstall_if_missing eza
-        binstall_if_missing git-delta delta
-        binstall_if_missing tinty
-        binstall_if_missing cargo-update cargo-install-update
-
-        echo " Rust CLI tools installation complete"
-        echo " Installed to: ~/.cargo/bin (highest PATH priority)"
-
-  # ================================================================
-  # TMUX PLUGINS
-  # ================================================================
-
-  install-tpm:
-    desc: Install Tmux Plugin Manager (TPM)
-    silent: true
-    cmds:
-      - |
-        TPM_DIR="$HOME/.config/tmux/plugins/tpm"
-        if [[ ! -d "$TPM_DIR" ]]; then
-          echo " Installing TPM..."
-          git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
-          echo " TPM installed"
-        else
-          echo " TPM already installed"
-        fi
-    status:
-      - test -d "$HOME/.config/tmux/plugins/tpm"
-
-  install-tmux-plugins:
-    desc: Install all tmux plugins via TPM
-    deps:
-      - install-tpm
-    silent: true
-    cmds:
-      - |
-        echo " Installing tmux plugins..."
-        # Run TPM's install script
-        TPM_DIR="$HOME/.config/tmux/plugins/tpm"
-        if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
-          "$TPM_DIR/bin/install_plugins"
-          echo " Tmux plugins installed"
-        else
-          echo " TPM install script not found"
-          exit 1
-        fi
-
-  # ================================================================
-  # NEOVIM PLUGINS
-  # ================================================================
-
-  install-nvim-plugins:
-    desc: Install Neovim plugins via Lazy.nvim
-    silent: true
-    cmds:
-      - |
-        echo " Installing Neovim plugins..."
-        # Run nvim headless to install all plugins
-        # --headless: run without UI
-        # +Lazy! sync: sync all plugins
-        # +qa: quit all windows
-        nvim --headless "+Lazy! sync" +qa 2>&1 | grep -v "^$" || true
-        echo " Neovim plugins installed"
-
-  # ================================================================
-  # UPDATE ALL
-  # ================================================================
+        echo "  Installing system packages from packages.yml..."
+        PACKAGES=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=apt | tr '\n' ' ')
+        echo "  Packages: $PACKAGES"
+        sudo apt install -y $PACKAGES
 
   update-all:
     desc: Update all WSL Ubuntu packages and tools
     silent: true
     cmds:
       - task: check-core-components
-      - task: init-update-log
       - task: run-updates
-      - task: show-update-summary
 
   check-core-components:
     desc: Verify core package managers are installed
@@ -353,206 +72,9 @@ tasks:
           ERROR: uv is not installed (core component)
           Install with: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-  init-update-log:
-    desc: Initialize update logging
-    internal: true
-    silent: true
-    cmds:
-      - mkdir -p {{.UPDATE_LOG_DIR}}
-      - |
-        cat > {{.UPDATE_LOG_FILE}} <<EOF
-        ================================================================
-        WSL Ubuntu Update Session
-        ================================================================
-        Date: $(date '+%Y-%m-%d %H:%M:%S')
-        Host: $(hostname)
-        Ubuntu: $(lsb_release -d | cut -f2)
-
-        EOF
-
   run-updates:
     desc: Run all update tasks
     internal: true
     silent: true
     cmds:
-      - |
-        echo "================================================================"
-        echo "  WSL Ubuntu Update All - Updating all packages and tools"
-        echo "================================================================"
-        echo ""
-
-        # Track start time
-        START_TIME=$(date +%s)
-
-        # Step 1: System packages
-        echo "Step 1/6 - System packages (apt)"
-        STEP_START=$(date +%s)
-        task wsl:apt:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 2: npm
-        echo "Step 2/6 - npm global packages" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task wsl:npm:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 3: uv
-        echo "Step 3/6 - Python tools (uv)" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task wsl:uv:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 4: cargo
-        echo "Step 4/6 - Rust packages (cargo)" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task wsl:cargo:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 5: shell plugins
-        echo "Step 5/6 - Shell plugins" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task wsl:shell:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Step 6: tmux plugins
-        echo "Step 6/6 - Tmux plugins" | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_START=$(date +%s)
-        task wsl:tmux:update 2>&1 | tee -a {{.UPDATE_LOG_FILE}}
-        STEP_END=$(date +%s)
-        echo "  Duration: $((STEP_END - STEP_START))s" | tee -a {{.UPDATE_LOG_FILE}}
-        echo "" | tee -a {{.UPDATE_LOG_FILE}}
-
-        # Calculate total time
-        END_TIME=$(date +%s)
-        TOTAL_DURATION=$((END_TIME - START_TIME))
-        echo "Total Duration: ${TOTAL_DURATION}s" >> {{.UPDATE_LOG_FILE}}
-
-  show-update-summary:
-    desc: Show update summary
-    internal: true
-    silent: true
-    cmds:
-      - |
-        echo ""
-        echo "================================================================"
-        echo "  Update Complete!"
-        echo "================================================================"
-        echo ""
-        TOTAL_DURATION=$(tail -1 {{.UPDATE_LOG_FILE}} | grep -oE '[0-9]+')
-        echo "Total time: ${TOTAL_DURATION}s"
-        echo "Log saved to: {{.UPDATE_LOG_FILE}}"
-        echo ""
-        echo "Run 'task wsl:update-history' to view update history"
-        echo ""
-
-  update-history:
-    desc: View update history and statistics
-    silent: true
-    cmds:
-      - |
-        if [[ ! -d "{{.UPDATE_LOG_DIR}}" ]]; then
-          echo "No update history found"
-          exit 0
-        fi
-
-        echo "================================================================"
-        echo "  WSL Ubuntu Update History"
-        echo "================================================================"
-        echo ""
-
-        # List all update logs
-        LOG_FILES=$(find {{.UPDATE_LOG_DIR}} -name "*.log" -type f | sort -r)
-
-        if [[ -z "$LOG_FILES" ]]; then
-          echo "No update logs found"
-          exit 0
-        fi
-
-        echo "Recent Updates:"
-        echo ""
-
-        for log in $LOG_FILES; do
-          BASENAME=$(basename "$log" .log)
-          DATE_FIELD=$(head -5 "$log" | grep "^Date:" | cut -d' ' -f2-)
-          DURATION=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "unknown")
-
-          echo "  $BASENAME"
-          echo "    Time: $DATE_FIELD"
-          echo "    Duration: ${DURATION}s"
-          echo ""
-        done
-
-        # Statistics
-        TOTAL_UPDATES=$(echo "$LOG_FILES" | wc -l | tr -d ' ')
-        echo "Statistics:"
-        echo "  Total updates: $TOTAL_UPDATES"
-
-        # Average duration
-        if [[ $TOTAL_UPDATES -gt 0 ]]; then
-          TOTAL_TIME=0
-          COUNT=0
-          for log in $LOG_FILES; do
-            DUR=$(tail -1 "$log" | grep -oE '[0-9]+' || echo "0")
-            if [[ $DUR -gt 0 ]]; then
-              TOTAL_TIME=$((TOTAL_TIME + DUR))
-              COUNT=$((COUNT + 1))
-            fi
-          done
-          if [[ $COUNT -gt 0 ]]; then
-            AVG=$((TOTAL_TIME / COUNT))
-            echo "  Average duration: ${AVG}s"
-          fi
-        fi
-
-  # ================================================================
-  # WSL-SPECIFIC CONFIGURATION
-  # ================================================================
-
-
-  # ================================================================
-  # UTILITIES
-  # ================================================================
-  # For system maintenance, use apt directly:
-  #   sudo apt update && sudo apt upgrade -y
-  #   sudo apt autoremove && sudo apt clean
-
-  # ================================================================
-  # DOCKER (if needed)
-  # ================================================================
-
-  install-docker:
-    desc: Install Docker on WSL
-    cmds:
-      - |
-        echo " Installing Docker on WSL..."
-
-        # Install Docker's official GPG key
-        sudo install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-        # Add Docker repository
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-        # Install Docker Engine
-        sudo apt update
-        sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-        # Add user to docker group
-        sudo usermod -aG docker $USER
-
-        echo " Docker installed!"
-        echo " Log out and back in for group changes to take effect"
+      - bash {{.ROOT_DIR}}/management/scripts/update-wsl.sh

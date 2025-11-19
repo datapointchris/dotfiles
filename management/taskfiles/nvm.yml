@@ -17,7 +17,8 @@ version: '3'
 vars:
   NVM_DIR: "{{.HOME}}/.config/nvm"
   NVM_INSTALL_SCRIPT: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
-  NODE_VERSION: "24.11.0"  # Current LTS or preferred version
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
+  # NODE_VERSION is read at runtime in install-node task via Python parser
 
 tasks:
   # ================================================================
@@ -49,16 +50,19 @@ tasks:
     desc: Install Node.js using nvm
     silent: true
     cmds:
-      - echo "✅ Installing Node.js {{.NODE_VERSION}}..."
-      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/taskfiles/scripts/nvm-install-node.sh {{.NODE_VERSION}}
-      - echo "✅ Node.js {{.NODE_VERSION}} installed and set as default"
+      - |
+        # Read Node version from packages.yml using Python parser
+        NODE_VERSION=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --get=runtimes.node.version)
+        echo "✅ Installing Node.js ${NODE_VERSION}..."
+        NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/nvm-install-node.sh "${NODE_VERSION}"
+        echo "✅ Node.js ${NODE_VERSION} installed and set as default"
 
   install-latest-lts:
     desc: Install latest LTS Node.js version
     silent: true
     cmds:
       - echo "✅ Installing latest LTS Node.js..."
-      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/taskfiles/scripts/nvm-install-lts.sh
+      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/nvm-install-lts.sh
       - echo "✅ Latest LTS Node.js installed"
 
   # ================================================================
