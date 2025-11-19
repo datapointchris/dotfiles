@@ -145,6 +145,8 @@ nav:
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Menu System: architecture/menu-system.md
       - Tool Composition: architecture/tool-composition.md
+  - Configuration:
+      - Neovim AI Assistants: configuration/neovim-ai-assistants.md
   - Reference:
       - Platform Differences: reference/platforms.md
       - Workflow Tools:

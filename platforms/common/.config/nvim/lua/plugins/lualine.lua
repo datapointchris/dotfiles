@@ -8,8 +8,8 @@ return {
         icons_enabled = true,
         theme = 'auto',
         component_separators = {
-          left = '',
-          right = '',
+          left = '❯',
+          right = '',
         },
         section_separators = {
           --   left = '',
@@ -32,8 +32,8 @@ return {
       },
       sections = {
         lualine_a = { 'mode' },
-        lualine_b = { 'branch', 'diff', 'diagnostics' },
-        lualine_c = { 'filename' },
+        lualine_b = { 'diff' },
+        lualine_c = { { 'filename', path = 3, shorting_target = 30 } },
         lualine_x = { 'copilot', 'filetype' },
         lualine_y = { 'progress' },
         lualine_z = { 'location' },
