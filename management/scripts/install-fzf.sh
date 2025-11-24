@@ -59,7 +59,7 @@ if [[ -d "$FZF_BUILD_DIR" ]]; then
   rm -rf "$FZF_BUILD_DIR"
 fi
 
-if ! git clone --depth 1 "https://github.com/${REPO}.git" "$FZF_BUILD_DIR" 2>/dev/null; then
+if ! git clone "https://github.com/${REPO}.git" "$FZF_BUILD_DIR" 2>/dev/null; then
   print_error " Failed to clone repository"
   print_manual_install "fzf" "https://github.com/${REPO}/releases/latest" "latest" "fzf-*-linux_amd64.tar.gz" \
     "tar -xzf ~/Downloads/fzf-*-linux_amd64.tar.gz -C ~/.local/bin && chmod +x ~/.local/bin/fzf"
@@ -69,7 +69,7 @@ fi
 # Build
 print_info "Building from source..."
 cd "$FZF_BUILD_DIR"
-if ! make 2>/dev/null; then
+if ! make; then
   print_error " Build failed"
   rm -rf "$FZF_BUILD_DIR"
   exit 1
