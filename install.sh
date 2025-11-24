@@ -30,8 +30,8 @@ export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 
-# Check if running as root
-if [[ $EUID -eq 0 ]]; then
+# Check if running as root (allow for Docker testing)
+if [[ $EUID -eq 0 ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
     die "Do not run this script as root"
 fi
 
@@ -159,8 +159,8 @@ install_macos() {
 install_wsl() {
     print_header "WSL Ubuntu Dotfiles Installation" "blue"
 
-    # Platform warning
-    if ! grep -q "Microsoft" /proc/version 2>/dev/null; then
+    # Platform warning (consistent with detect_platform logic)
+    if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
         print_warning "Warning: This script is designed for WSL Ubuntu"
         print_warning "Continuing anyway..."
         echo ""
