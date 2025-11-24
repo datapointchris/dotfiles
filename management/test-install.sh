@@ -217,16 +217,24 @@ STEP_TIMES+=("$STEP_ELAPSED")
   log_timing "Step 2: $STEP_NAME" "$STEP_ELAPSED"
 } 2>&1 | tee -a "$LOG_FILE"
 
-# STEP 3: Run WSL setup
+# STEP 3: Prepare clean environment and run install.sh
 STEP_START=$(date +%s)
 {
-  log_section "STEP 3/5: Running install.sh script"
+  log_section "STEP 3/5: Preparing clean environment"
+  echo "Removing pre-installed Python packages to simulate fresh WSL..."
+  echo "(This ensures bootstrap dependencies are tested correctly)"
+  # Remove python3-pyyaml if it exists in base image
+  multipass exec "$VM_NAME" -- bash -c 'sudo apt remove -y python3-yaml python3-pyyaml 2>/dev/null || true'
+  echo ""
+
   echo "Creating ~/.env for testing..."
   multipass exec "$VM_NAME" -- bash -c 'cat > ~/.env <<EOF
 PLATFORM=wsl
 NVIM_AI_ENABLED=false
 EOF'
   echo ""
+
+  log_section "Running install.sh script"
   multipass exec "$VM_NAME" -- bash dotfiles/install.sh
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -243,6 +251,9 @@ STEP_START=$(date +%s)
   log_section "STEP 4/5: Verifying installation"
   echo "Running comprehensive verification in fresh shell..."
   echo "(This tests that all tools are properly configured and in PATH)"
+  echo ""
+  echo "Note: The verification includes testing parse-packages.py works correctly"
+  echo "with the yaml module to catch bootstrap dependency issues"
   echo ""
 
   # Run verification script in a fresh zsh shell

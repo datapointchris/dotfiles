@@ -313,6 +313,22 @@ else
 fi
 
 # ================================================================
+# Package Management Scripts
+# ================================================================
+print_section "Package Management Scripts"
+
+# Test parse-packages.py can run and import yaml
+TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+if python3 "$HOME/dotfiles/management/parse-packages.py" --type=system --manager=apt >/dev/null 2>&1; then
+  print_success "parse-packages.py: working (yaml module available)"
+  PASSED_CHECKS=$((PASSED_CHECKS + 1))
+else
+  print_error "parse-packages.py: FAILED (yaml module missing or script error)"
+  FAILED_CHECKS=$((FAILED_CHECKS + 1))
+  FAILED_TOOLS+=("parse-packages.py")
+fi
+
+# ================================================================
 # Platform Detection
 # ================================================================
 print_section "Platform Detection"
