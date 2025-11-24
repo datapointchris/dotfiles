@@ -8,27 +8,31 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/archive/analysis/2024-10-22-dotfiles-management-analysis/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/learnings/testing-bootstrap-dependencies/">
       
       
+        <link rel="prev" href="../idempotent-installation-patterns/">
+      
+      
+        <link rel="next" href="../wsl-ubuntu-package-versions/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
-        <title>Dotfiles Management Strategy Analysis - Dotfiles</title>
+        <title>Testing Bootstrap Dependencies - Dotfiles</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
   
@@ -112,11 +116,11 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -141,7 +145,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#dotfiles-management-strategy-analysis" class="md-skip">
+        <a href="#testing-bootstrap-dependencies" class="md-skip">
           Skip to content
         </a>
       
@@ -157,7 +161,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -177,7 +181,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Dotfiles Management Strategy Analysis
+              Testing Bootstrap Dependencies
             
           </span>
         </div>
@@ -289,7 +293,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -310,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../getting-started/installation/" class="md-tabs__link">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
           
   
   
@@ -332,7 +336,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../architecture/" class="md-tabs__link">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   
@@ -354,7 +358,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../configuration/neovim-ai-assistants/" class="md-tabs__link">
+        <a href="../../configuration/neovim-ai-assistants/" class="md-tabs__link">
           
   
   
@@ -376,7 +380,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/platforms/" class="md-tabs__link">
+        <a href="../../reference/platforms/" class="md-tabs__link">
           
   
   
@@ -398,7 +402,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../workflows/note-taking/" class="md-tabs__link">
+        <a href="../../workflows/note-taking/" class="md-tabs__link">
           
   
   
@@ -420,7 +424,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../development/testing/" class="md-tabs__link">
+        <a href="../../development/testing/" class="md-tabs__link">
           
   
   
@@ -438,11 +442,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../learnings/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -464,7 +470,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../changelog/" class="md-tabs__link">
+        <a href="../../changelog/" class="md-tabs__link">
           
   
   
@@ -508,7 +514,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -538,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -627,7 +633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -655,7 +661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/first-config/" class="md-nav__link">
+      <a href="../../getting-started/first-config/" class="md-nav__link">
         
   
   
@@ -683,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/fonts/" class="md-nav__link">
+      <a href="../../getting-started/fonts/" class="md-nav__link">
         
   
   
@@ -751,7 +757,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../architecture/" class="md-nav__link ">
+            <a href="../../architecture/" class="md-nav__link ">
               
   
   
@@ -795,7 +801,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/package-management/" class="md-nav__link">
+      <a href="../../architecture/package-management/" class="md-nav__link">
         
   
   
@@ -823,7 +829,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/path-ordering-strategy/" class="md-nav__link">
+      <a href="../../architecture/path-ordering-strategy/" class="md-nav__link">
         
   
   
@@ -851,7 +857,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/menu-system/" class="md-nav__link">
+      <a href="../../architecture/menu-system/" class="md-nav__link">
         
   
   
@@ -879,7 +885,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/tool-composition/" class="md-nav__link">
+      <a href="../../architecture/tool-composition/" class="md-nav__link">
         
   
   
@@ -972,7 +978,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../configuration/neovim-ai-assistants/" class="md-nav__link">
+      <a href="../../configuration/neovim-ai-assistants/" class="md-nav__link">
         
   
   
@@ -1079,7 +1085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/platforms/" class="md-nav__link">
+      <a href="../../reference/platforms/" class="md-nav__link">
         
   
   
@@ -1173,7 +1179,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/workflow-tools/menu/" class="md-nav__link">
+      <a href="../../reference/workflow-tools/menu/" class="md-nav__link">
         
   
   
@@ -1201,7 +1207,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/workflow-tools/toolbox/" class="md-nav__link">
+      <a href="../../reference/workflow-tools/toolbox/" class="md-nav__link">
         
   
   
@@ -1229,7 +1235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/workflow-tools/session/" class="md-nav__link">
+      <a href="../../reference/workflow-tools/session/" class="md-nav__link">
         
   
   
@@ -1257,7 +1263,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/workflow-tools/theme-sync/" class="md-nav__link">
+      <a href="../../reference/workflow-tools/theme-sync/" class="md-nav__link">
         
   
   
@@ -1285,7 +1291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/workflow-tools/notes/" class="md-nav__link">
+      <a href="../../reference/workflow-tools/notes/" class="md-nav__link">
         
   
   
@@ -1321,7 +1327,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/symlinks/" class="md-nav__link">
+      <a href="../../reference/symlinks/" class="md-nav__link">
         
   
   
@@ -1349,7 +1355,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tasks/" class="md-nav__link">
+      <a href="../../reference/tasks/" class="md-nav__link">
         
   
   
@@ -1377,7 +1383,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/skills/" class="md-nav__link">
+      <a href="../../reference/skills/" class="md-nav__link">
         
   
   
@@ -1405,7 +1411,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/hooks/" class="md-nav__link">
+      <a href="../../reference/hooks/" class="md-nav__link">
         
   
   
@@ -1433,7 +1439,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/troubleshooting/" class="md-nav__link">
+      <a href="../../reference/troubleshooting/" class="md-nav__link">
         
   
   
@@ -1461,7 +1467,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/corporate/" class="md-nav__link">
+      <a href="../../reference/corporate/" class="md-nav__link">
         
   
   
@@ -1562,7 +1568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../workflows/note-taking/" class="md-nav__link">
+      <a href="../../workflows/note-taking/" class="md-nav__link">
         
   
   
@@ -1590,7 +1596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../workflows/sessions/" class="md-nav__link">
+      <a href="../../workflows/sessions/" class="md-nav__link">
         
   
   
@@ -1618,7 +1624,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../workflows/themes/" class="md-nav__link">
+      <a href="../../workflows/themes/" class="md-nav__link">
         
   
   
@@ -1646,7 +1652,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../workflows/git/" class="md-nav__link">
+      <a href="../../workflows/git/" class="md-nav__link">
         
   
   
@@ -1674,7 +1680,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../workflows/tool-discovery/" class="md-nav__link">
+      <a href="../../workflows/tool-discovery/" class="md-nav__link">
         
   
   
@@ -1775,7 +1781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/testing/" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
@@ -1803,7 +1809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/notes-system-setup/" class="md-nav__link">
+      <a href="../../development/notes-system-setup/" class="md-nav__link">
         
   
   
@@ -1895,7 +1901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/overview/" class="md-nav__link">
+      <a href="../../development/go-apps/overview/" class="md-nav__link">
         
   
   
@@ -1923,7 +1929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/go-development/" class="md-nav__link">
+      <a href="../../development/go-apps/go-development/" class="md-nav__link">
         
   
   
@@ -1951,7 +1957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/go-quick-reference/" class="md-nav__link">
+      <a href="../../development/go-apps/go-quick-reference/" class="md-nav__link">
         
   
   
@@ -1979,7 +1985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
+      <a href="../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
         
   
   
@@ -2015,7 +2021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/shell-formatting/" class="md-nav__link">
+      <a href="../../development/shell-formatting/" class="md-nav__link">
         
   
   
@@ -2043,7 +2049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/publishing-docs/" class="md-nav__link">
+      <a href="../../development/publishing-docs/" class="md-nav__link">
         
   
   
@@ -2075,6 +2081,8 @@
       
   
   
+    
+  
   
   
     
@@ -2120,22 +2128,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../learnings/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -2153,13 +2162,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2179,7 +2188,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/app-installation-patterns/" class="md-nav__link">
+      <a href="../app-installation-patterns/" class="md-nav__link">
         
   
   
@@ -2207,7 +2216,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+      <a href="../idempotent-installation-patterns/" class="md-nav__link">
         
   
   
@@ -2232,10 +2241,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Bootstrap Dependencies
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -2251,6 +2287,105 @@
   
 
       </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-learnings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Learnings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Approach
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-vs-vm-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker vs VM Comparison
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2263,7 +2398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+      <a href="../wsl-ubuntu-package-versions/" class="md-nav__link">
         
   
   
@@ -2291,7 +2426,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/package-version-analysis/" class="md-nav__link">
+      <a href="../package-version-analysis/" class="md-nav__link">
         
   
   
@@ -2319,7 +2454,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+      <a href="../bash-testing-frameworks-guide/" class="md-nav__link">
         
   
   
@@ -2347,7 +2482,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+      <a href="../task-shell-printf-compatibility/" class="md-nav__link">
         
   
   
@@ -2375,7 +2510,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/git-history-rewriting/" class="md-nav__link">
+      <a href="../git-history-rewriting/" class="md-nav__link">
         
   
   
@@ -2403,7 +2538,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="../relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -2431,7 +2566,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="../directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -2459,7 +2594,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="../cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -2487,7 +2622,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+      <a href="../documentation-consolidation-principles/" class="md-nav__link">
         
   
   
@@ -2515,7 +2650,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+      <a href="../go-tui-testing-strategies/" class="md-nav__link">
         
   
   
@@ -2543,7 +2678,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-testing-examples/" class="md-nav__link">
+      <a href="../go-testing-examples/" class="md-nav__link">
         
   
   
@@ -2571,7 +2706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+      <a href="../go-tui-ecosystem-research/" class="md-nav__link">
         
   
   
@@ -2599,7 +2734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+      <a href="../go-cli-architecture-analysis/" class="md-nav__link">
         
   
   
@@ -2692,7 +2827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../changelog/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
@@ -2738,6 +2873,46 @@
   
 
 
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Learnings
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
               
               <article class="md-content__inner md-typeset">
                 
@@ -2748,293 +2923,125 @@
   
 
 
-<h1 id="dotfiles-management-strategy-analysis">Dotfiles Management Strategy Analysis<a class="headerlink" href="#dotfiles-management-strategy-analysis" title="Permanent link">&para;</a></h1>
-<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
-<p>After analyzing your dotfiles repository structure and implementation, I recommend a <strong>Hybrid Layered Approach</strong> that combines direct shared linking with platform-specific overlays. This would provide better maintainability, reduce duplication, and simplify the management of complex configurations like Neovim while preserving the flexibility for platform-specific customizations.</p>
-<h2 id="current-architecture-analysis">Current Architecture Analysis<a class="headerlink" href="#current-architecture-analysis" title="Permanent link">&para;</a></h2>
-<h3 id="how-it-works-now">How It Works Now<a class="headerlink" href="#how-it-works-now" title="Permanent link">&para;</a></h3>
+<h1 id="testing-bootstrap-dependencies">Testing Bootstrap Dependencies<a class="headerlink" href="#testing-bootstrap-dependencies" title="Permanent link">&para;</a></h1>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, <code>python3-pyyaml</code> is required before <code>parse-packages.py</code> can parse the package list.</p>
+<h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
+<p>Installation failed on fresh WSL during Phase 1 (system packages) with:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># wsl.yml:43 - Wrong package name</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-yaml<span class="w">  </span><span class="c1"># Package doesn&#39;t exist</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># wsl.yml:46 - Script tries to run immediately after</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python3<span class="w"> </span>parse-packages.py<span class="w"> </span>--type<span class="o">=</span>system<span class="w"> </span>--manager<span class="o">=</span>apt
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># ImportError: No module named &#39;yaml&#39;</span>
+</span></code></pre></div>
+<p><strong>The test suite passed but real installation failed</strong> because:</p>
 <ol>
-<li><strong>Two-Stage Linking</strong>: <code>shared/</code> → platform directories → <code>$HOME</code></li>
-<li><strong>Symlink Script Management</strong>: Universal symlink manager with safety checks</li>
-<li><strong>Platform Detection</strong>: ZSH configuration detects platform and adjusts behavior</li>
-<li><strong>Duplication Problem</strong>: Significant config duplication, especially for Neovim</li>
+<li>Wrong package name: <code>python3-yaml</code> instead of <code>python3-pyyaml</code></li>
+<li><strong>Test environment (Multipass Ubuntu cloud image) had <code>python3-pyyaml</code> pre-installed</strong></li>
+<li>Even though bootstrap step tried to install wrong package, script could still run</li>
+<li>Fresh WSL installations don't have PyYAML pre-installed, exposing the bug</li>
 </ol>
-<h3 id="current-structure-assessment">Current Structure Assessment<a class="headerlink" href="#current-structure-assessment" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>├── shared/              # Common configurations
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│   └── .config/         # zsh, tmux, yazi, zellij, neofetch, eza
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── macos/              # macOS-specific + duplicated shared configs
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── .config/        # nvim, borders, vectorcode, tmuxinator, readline
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── .gitconfig      # VS Code editor, OSX keychain
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   └── iterm2 configs
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── wsl/                # WSL-specific + duplicated shared configs  
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   ├── .config/        # nvim, ripgrep, vectorcode, tmuxinator, readline
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   └── .gitconfig      # nvim editor, wincred helper
+<h2 id="the-solution">The Solution<a class="headerlink" href="#the-solution" title="Permanent link">&para;</a></h2>
+<p><strong>Root Fix: Use Docker with Official WSL Rootfs</strong></p>
+<p>Instead of guessing what packages differ between test and production, use the exact WSL environment for testing:</p>
+<p><strong>1. Install the correct package</strong> (<code>management/taskfiles/wsl.yml:43</code>):</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pyyaml<span class="w">  </span><span class="c1"># Correct package name</span>
 </span></code></pre></div>
-<p><strong>Key Findings:</strong></p>
-<ul>
-<li><strong>Neovim configs differ significantly</strong>: 15+ file differences between platforms</li>
-<li><strong>Shell configs are mostly shared</strong>: ZSH configuration already platform-aware</li>
-<li><strong>Git configs have clear platform patterns</strong>: Editor choice, credential helpers</li>
-<li><strong>Current symlink complexity</strong>: Two-stage process creates management overhead</li>
-</ul>
-<h2 id="alternative-approaches-analysis">Alternative Approaches Analysis<a class="headerlink" href="#alternative-approaches-analysis" title="Permanent link">&para;</a></h2>
-<h3 id="1-direct-shared-linking-with-platform-overlays-recommended">1. Direct Shared Linking with Platform Overlays (RECOMMENDED)<a class="headerlink" href="#1-direct-shared-linking-with-platform-overlays-recommended" title="Permanent link">&para;</a></h3>
-<p><strong>How it works:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Stage 1: Link shared directly to $HOME</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>./symlinks<span class="w"> </span>shared<span class="w"> </span>link-to-home
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Stage 2: Overlay platform-specific files</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>./symlinks<span class="w"> </span>macos<span class="w"> </span>overlay
+<p><strong>2. Use Docker with WSL rootfs for testing</strong> (<code>management/test-wsl-docker.sh</code>):</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Download official WSL Ubuntu rootfs (one-time, cached)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>curl<span class="w"> </span>-L<span class="w"> </span>https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Import into Docker (100% exact WSL environment, 563 packages)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>gunzip<span class="w"> </span>-c<span class="w"> </span>ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>import<span class="w"> </span>-<span class="w"> </span>wsl-ubuntu:24.04
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Run tests in authentic WSL environment</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>./management/test-wsl-docker.sh
 </span></code></pre></div>
-<p><strong>Implementation Changes:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># New symlink operations</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>link-to-home<span class="w">     </span><span class="c1"># shared/ → $HOME directly</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>overlay<span class="w">          </span><span class="c1"># platform/ → $HOME (only files that exist in platform/)</span>
+<p>This provides <strong>100% accurate testing</strong> - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.</p>
+<p><strong>3. Verify the script works</strong> (<code>management/verify-installation.sh:322</code>):</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span>python3<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/dotfiles/management/parse-packages.py&quot;</span><span class="w"> </span>--type<span class="o">=</span>system<span class="w"> </span>--manager<span class="o">=</span>apt<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>print_success<span class="w"> </span><span class="s2">&quot;parse-packages.py: working (yaml module available)&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">else</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>print_error<span class="w"> </span><span class="s2">&quot;parse-packages.py: FAILED (yaml module missing)&quot;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">fi</span>
 </span></code></pre></div>
-<p><strong>Pros:</strong></p>
+<p>Defense in depth - catches issues even if test environment differs.</p>
+<h2 id="key-learnings">Key Learnings<a class="headerlink" href="#key-learnings" title="Permanent link">&para;</a></h2>
+<p><strong>Use the exact production environment for testing</strong>: Don't guess what's different - use official images. For WSL, Microsoft publishes the actual WSL rootfs that Docker can import. This eliminates all guesswork and provides 100% accurate testing.</p>
+<p><strong>Test environments often differ from production in subtle ways</strong>:</p>
 <ul>
-<li>✅ <strong>Eliminates duplication</strong>: Shared configs exist only in <code>shared/</code></li>
-<li>✅ <strong>Simpler mental model</strong>: Base + overrides (like Docker Compose)</li>
-<li>✅ <strong>Easier synchronization</strong>: Edit once in shared, applies everywhere</li>
-<li>✅ <strong>Clear separation</strong>: Platform files only contain actual differences</li>
-<li>✅ <strong>Preserves existing structure</strong>: Minimal migration needed</li>
+<li>Multipass Ubuntu cloud images: ~426 packages</li>
+<li>Docker ubuntu:24.04: ~100-150 packages</li>
+<li>WSL Ubuntu 24.04: 563 packages (official rootfs)</li>
 </ul>
-<p><strong>Cons:</strong></p>
+<p>These differences cause tests to pass when they shouldn't.</p>
+<p><strong>Bootstrap failures happen during installation, not verification</strong>: The installation should fail immediately when trying to use a missing dependency. If your test passes but production fails during Phase 1, your test environment differs from production.</p>
+<p><strong>Containers &gt; VMs for testing</strong>: Docker with official rootfs is faster, lighter, and more accurate than VMs with approximated environments. Startup time is seconds vs minutes.</p>
+<p><strong>Package names vary across platforms</strong>:</p>
 <ul>
-<li>⚠️ <strong>Breaking changes</strong>: Requires migration script</li>
-<li>⚠️ <strong>Overlay order matters</strong>: Must ensure platform overrides work correctly</li>
+<li>Ubuntu/Debian: <code>python3-pyyaml</code></li>
+<li>Arch Linux: <code>python-yaml</code></li>
+<li>macOS (Homebrew): Usually handled differently via pip/uv</li>
 </ul>
-<p><strong>Directory Structure After:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>├── shared/              # Base layer - linked directly to $HOME
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>│   └── .config/         # zsh, tmux, yazi, zellij, neofetch, eza, nvim-base
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── macos/              # Overlay layer - only differences
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   ├── .config/nvim/    # macOS-specific nvim additions/overrides
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── .gitconfig       # VS Code editor, OSX keychain  
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   └── iterm2 configs
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── wsl/                # Overlay layer - only differences
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>│   ├── .config/nvim/    # WSL-specific nvim additions/overrides
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│   └── .gitconfig       # nvim editor, wincred helper
-</span></code></pre></div>
-<h3 id="2-environment-variable-driven-single-configuration">2. Environment Variable-Driven Single Configuration<a class="headerlink" href="#2-environment-variable-driven-single-configuration" title="Permanent link">&para;</a></h3>
-<p><strong>How it works:</strong></p>
-<ul>
-<li>Single configuration files with conditional logic using <code>$MACOS</code>, <code>$WSL</code> environment variables</li>
-<li>Platform detection in individual config files</li>
-</ul>
-<p><strong>Example Implementation:</strong></p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- nvim init.lua</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kr">if</span><span class="w"> </span><span class="nb">os.getenv</span><span class="p">(</span><span class="s2">&quot;MACOS&quot;</span><span class="p">)</span><span class="w"> </span><span class="kr">then</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.codecompanion&#39;</span><span class="p">)</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.copilot&#39;</span><span class="p">)</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kr">elseif</span><span class="w"> </span><span class="nb">os.getenv</span><span class="p">(</span><span class="s2">&quot;WSL&quot;</span><span class="p">)</span><span class="w"> </span><span class="kr">then</span><span class="w">  </span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.python-venv-selector&#39;</span><span class="p">)</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="kr">end</span>
-</span></code></pre></div>
-<p><strong>Pros:</strong></p>
-<ul>
-<li>✅ <strong>No duplication</strong>: Single source of truth for all configs</li>
-<li>✅ <strong>Atomic updates</strong>: Changes affect all platforms simultaneously</li>
-<li>✅ <strong>Simpler symlinks</strong>: Only one linking stage needed</li>
-</ul>
-<p><strong>Cons:</strong></p>
-<ul>
-<li>❌ <strong>Complex configuration files</strong>: Each file becomes a web of conditionals</li>
-<li>❌ <strong>Hard to maintain</strong>: Platform logic scattered across many files</li>
-<li>❌ <strong>Testing complexity</strong>: Must test all platform combinations</li>
-<li>❌ <strong>Version control noise</strong>: Unrelated platform changes in same commits</li>
-</ul>
-<h3 id="3-git-branches-per-platform">3. Git Branches per Platform<a class="headerlink" href="#3-git-branches-per-platform" title="Permanent link">&para;</a></h3>
-<p><strong>How it works:</strong></p>
-<ul>
-<li><code>main</code> branch contains shared configuration</li>
-<li><code>macos</code> and <code>wsl</code> branches contain platform-specific versions</li>
-<li>Use git worktrees or branch switching</li>
-</ul>
-<p><strong>Pros:</strong></p>
-<ul>
-<li>✅ <strong>Git-native</strong>: Uses built-in version control features</li>
-<li>✅ <strong>Clean separation</strong>: Each platform is a complete environment</li>
-</ul>
-<p><strong>Cons:</strong></p>
-<ul>
-<li>❌ <strong>Merge conflicts</strong>: Shared changes require merging to multiple branches</li>
-<li>❌ <strong>Synchronization nightmare</strong>: Must keep branches in sync manually</li>
-<li>❌ <strong>No atomic cross-platform changes</strong>: Can't update shared config once</li>
-<li>❌ <strong>Complex workflow</strong>: Branch switching for configuration changes</li>
-</ul>
-<h3 id="4-template-based-generation">4. Template-Based Generation<a class="headerlink" href="#4-template-based-generation" title="Permanent link">&para;</a></h3>
-<p><strong>How it works:</strong></p>
-<ul>
-<li>Template files with platform-specific variables</li>
-<li>Build system generates platform configurations</li>
-</ul>
-<p><strong>Example:</strong></p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">-- nvim.template.lua</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="p">{</span><span class="o">%</span><span class="w"> </span><span class="kr">if</span><span class="w"> </span><span class="nv">platform</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;macos&quot;</span><span class="w"> </span><span class="o">%</span><span class="p">}</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.codecompanion&#39;</span><span class="p">)</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">{</span><span class="o">%</span><span class="w"> </span><span class="nv">elif</span><span class="w"> </span><span class="nv">platform</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;wsl&quot;</span><span class="w"> </span><span class="o">%</span><span class="p">}</span><span class="w">  </span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.python-venv-selector&#39;</span><span class="p">)</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">{</span><span class="o">%</span><span class="w"> </span><span class="nv">endif</span><span class="w"> </span><span class="o">%</span><span class="p">}</span>
-</span></code></pre></div>
-<p><strong>Pros:</strong></p>
-<ul>
-<li>✅ <strong>Clean output</strong>: Generated files are platform-pure</li>
-<li>✅ <strong>No runtime conditionals</strong>: Templates resolve at build time</li>
-</ul>
-<p><strong>Cons:</strong></p>
-<ul>
-<li>❌ <strong>Build complexity</strong>: Requires template engine and build process</li>
-<li>❌ <strong>Two-step editing</strong>: Edit templates, then regenerate</li>
-<li>❌ <strong>Debugging difficulty</strong>: Must trace template → generated file</li>
-</ul>
-<h3 id="5-multiple-dotfiles-repositories">5. Multiple Dotfiles Repositories<a class="headerlink" href="#5-multiple-dotfiles-repositories" title="Permanent link">&para;</a></h3>
-<p><strong>How it works:</strong></p>
-<ul>
-<li>Separate repositories for shared, macos, and wsl configurations</li>
-<li>Git submodules or manual synchronization</li>
-</ul>
-<p><strong>Pros:</strong></p>
-<ul>
-<li>✅ <strong>Complete separation</strong>: No platform conflicts</li>
-<li>✅ <strong>Independent versioning</strong>: Each platform evolves separately</li>
-</ul>
-<p><strong>Cons:</strong></p>
-<ul>
-<li>❌ <strong>Synchronization burden</strong>: Manual effort to keep shared configs in sync</li>
-<li>❌ <strong>Fragmentation</strong>: Related configurations scattered across repos</li>
-<li>❌ <strong>No unified versioning</strong>: Can't track cross-platform changes together</li>
-</ul>
-<h2 id="detailed-current-problems">Detailed Current Problems<a class="headerlink" href="#detailed-current-problems" title="Permanent link">&para;</a></h2>
-<h3 id="neovim-configuration-chaos">Neovim Configuration Chaos<a class="headerlink" href="#neovim-configuration-chaos" title="Permanent link">&para;</a></h3>
-<p>Current nvim differences show the core problem:</p>
-<ul>
-<li><strong>File organization differs</strong>: <code>macos/</code> has flat plugin structure, <code>wsl/</code> has <code>lsp/</code> subdirectory</li>
-<li><strong>Plugin differences</strong>: macOS has CodeCompanion/Copilot, WSL has Python venv selector</li>
-<li><strong>Lock file drift</strong>: Different plugin versions between platforms</li>
-<li><strong>Maintenance burden</strong>: Same fix must be applied twice</li>
-</ul>
-<h3 id="git-configuration-patterns">Git Configuration Patterns<a class="headerlink" href="#git-configuration-patterns" title="Permanent link">&para;</a></h3>
-<p>The git configs show good platform differentiation:</p>
-<div class="language-properties highlight"><span class="filename">Properties</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># macos/.gitconfig</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="na">[core]</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="na">editor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">code --wait</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="na">[credential]</span><span class="w">  </span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="na">helper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">osxkeychain</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># wsl/.gitconfig  </span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="na">[core]</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="na">editor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">nvim</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="na">[credential]</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="na">helper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/mnt/c/Program</span><span class="se">\\</span><span class="s"> Files/Git/mingw64/libexec/git-core/git-credential-wincred.exe</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="na">[includeIf</span><span class="w"> </span><span class="s">&quot;gitdir:~/code/&quot;]</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="na">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">~/code/.gitconfig</span>
-</span></code></pre></div>
-<p>This is exactly the type of platform-specific configuration that should remain separate.</p>
-<h3 id="shell-configuration-success-story">Shell Configuration Success Story<a class="headerlink" href="#shell-configuration-success-story" title="Permanent link">&para;</a></h3>
-<p>The ZSH configuration demonstrates excellent platform-aware design:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Platform detection with graceful fallbacks</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="c1"># macOS specific paths and settings</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">else</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="c1"># Linux/WSL specific paths and settings  </span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">fi</span>
-</span></code></pre></div>
-<p>This pattern works well because:</p>
-<ul>
-<li>Single source of truth</li>
-<li>Runtime platform detection</li>
-<li>Clear separation of platform logic</li>
-<li>Graceful degradation</li>
-</ul>
-<h2 id="migration-strategy-for-recommended-approach">Migration Strategy for Recommended Approach<a class="headerlink" href="#migration-strategy-for-recommended-approach" title="Permanent link">&para;</a></h2>
-<h3 id="phase-1-prepare-new-structure">Phase 1: Prepare New Structure<a class="headerlink" href="#phase-1-prepare-new-structure" title="Permanent link">&para;</a></h3>
+<p><strong>Defense in depth</strong>: Even with perfect test environment, add verification checks that test functionality (not just presence) to catch edge cases.</p>
+<h2 id="testing-approach">Testing Approach<a class="headerlink" href="#testing-approach" title="Permanent link">&para;</a></h2>
+<p>Best practice for testing system installations:</p>
 <ol>
-<li><strong>Backup current state</strong>: <code>cp -r macos macos.backup &amp;&amp; cp -r wsl wsl.backup</code></li>
-<li><strong>Create migration script</strong>: Identify truly platform-specific files</li>
-<li><strong>Move shared configs</strong>: Extract duplicated configs to <code>shared/</code></li>
+<li><strong>Use official production images</strong>: Download actual WSL rootfs, not approximations</li>
+<li><strong>Docker for WSL testing</strong>: Fast, lightweight, 100% accurate</li>
+<li><strong>Install dependencies correctly</strong>: Use proper package names for target platform</li>
+<li><strong>Let <code>set -e</code> catch errors</strong>: Installation fails immediately on first error</li>
+<li><strong>Add verification checks</strong>: Defense in depth for edge cases</li>
+<li><strong>Document environment specs</strong>: Record package counts and key differences if using alternatives</li>
 </ol>
-<h3 id="phase-2-update-symlink-script">Phase 2: Update Symlink Script<a class="headerlink" href="#phase-2-update-symlink-script" title="Permanent link">&para;</a></h3>
-<p>Add new operations to <code>symlinks</code> script:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>link-to-home<span class="w">     </span><span class="c1"># shared/ → $HOME directly</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>overlay<span class="w">          </span><span class="c1"># platform/ → $HOME (overwrites shared)</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>migrate<span class="w">          </span><span class="c1"># One-time migration helper</span>
-</span></code></pre></div>
-<h3 id="phase-3-neovim-restructure">Phase 3: Neovim Restructure<a class="headerlink" href="#phase-3-neovim-restructure" title="Permanent link">&para;</a></h3>
-<p>Create base Neovim config in <code>shared/</code> with platform-specific additions:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>shared/.config/nvim/          # Base configuration
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── init.lua                  # Loads core + platform-specific
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>├── lua/core/                 # Shared core functionality  
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>├── lua/plugins/shared/       # Cross-platform plugins
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>└── lua/platform/            # Platform loader
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>macos/.config/nvim/
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>└── lua/plugins/macos/       # macOS-only plugins (codecompanion, copilot)
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>wsl/.config/nvim/  
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>└── lua/plugins/wsl/         # WSL-only plugins (python-venv-selector)
-</span></code></pre></div>
-<h3 id="phase-4-testing-and-validation">Phase 4: Testing and Validation<a class="headerlink" href="#phase-4-testing-and-validation" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>Test on macOS</strong>: Verify all configurations work</li>
-<li><strong>Test on WSL</strong>: Ensure no regressions</li>
-<li><strong>Compare with backup</strong>: Validate functional equivalence</li>
-<li><strong>Document new workflow</strong>: Update README and docs</li>
-</ol>
-<h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
-<h3 id="modified-symlink-script-functions">Modified Symlink Script Functions<a class="headerlink" href="#modified-symlink-script-functions" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>handle_shared_to_home<span class="o">()</span><span class="w"> </span><span class="o">{</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="c1"># Link shared/ directly to $HOME</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span>create_symlinks<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/shared&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;Shared → \$HOME&quot;</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="o">}</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>handle_platform_overlay<span class="o">()</span><span class="w"> </span><span class="o">{</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">platform</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">platform_dir</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/</span><span class="nv">$platform</span><span class="s2">&quot;</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="c1"># Only overlay files that exist in platform directory</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">    </span><span class="c1"># This preserves shared configs unless explicitly overridden</span>
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span>create_overlay_symlinks<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$platform_dir</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$platform</span><span class="s2"> overlay → \$HOME&quot;</span>
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="o">}</span>
-</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>
-</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>create_overlay_symlinks<span class="o">()</span><span class="w"> </span><span class="o">{</span>
-</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">    </span><span class="c1"># Same as create_symlinks but only links files that exist in source</span>
-</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">    </span><span class="c1"># Removes any existing symlinks that point to shared/ first</span>
-</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="o">}</span>
-</span></code></pre></div>
-<h3 id="environment-variable-integration">Environment Variable Integration<a class="headerlink" href="#environment-variable-integration" title="Permanent link">&para;</a></h3>
-<p>Leverage existing <code>.env</code> pattern but enhance it:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># ~/.env (created by platform setup)</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MACOS</span><span class="o">=</span><span class="nb">true</span><span class="w">        </span><span class="c1"># or WSL=true</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PLATFORM</span><span class="o">=</span>macos<span class="w">    </span><span class="c1"># or wsl  </span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DOTFILES_PLATFORM</span><span class="o">=</span>macos<span class="w">  </span><span class="c1"># Used by configs</span>
-</span></code></pre></div>
-<h3 id="neovim-platform-loader">Neovim Platform Loader<a class="headerlink" href="#neovim-platform-loader" title="Permanent link">&para;</a></h3>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">-- shared/.config/nvim/lua/platform/init.lua</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kd">local</span><span class="w"> </span><span class="nv">platform</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">os.getenv</span><span class="p">(</span><span class="s2">&quot;DOTFILES_PLATFORM&quot;</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s2">&quot;shared&quot;</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kd">local</span><span class="w"> </span><span class="nv">platform_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;platform.&quot;</span><span class="w"> </span><span class="o">..</span><span class="w"> </span><span class="nv">platform</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="kd">local</span><span class="w"> </span><span class="nv">ok</span><span class="p">,</span><span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">pcall</span><span class="p">(</span><span class="nb">require</span><span class="p">,</span><span class="w"> </span><span class="nv">platform_path</span><span class="p">)</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="kr">if</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="nv">ok</span><span class="w"> </span><span class="kr">then</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="c1">-- Fallback to shared platform if platform-specific doesn&#39;t exist</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nb">require</span><span class="p">(</span><span class="s2">&quot;platform.shared&quot;</span><span class="p">)</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="kr">end</span>
-</span></code></pre></div>
-<h2 id="recommendation-summary">Recommendation Summary<a class="headerlink" href="#recommendation-summary" title="Permanent link">&para;</a></h2>
-<h3 id="choose-approach-1-direct-shared-linking-with-platform-overlays">Choose Approach #1: Direct Shared Linking with Platform Overlays<a class="headerlink" href="#choose-approach-1-direct-shared-linking-with-platform-overlays" title="Permanent link">&para;</a></h3>
-<p><strong>Why this approach wins:</strong></p>
-<ol>
-<li><strong>Solves the core problem</strong>: Eliminates configuration duplication  </li>
-<li><strong>Preserves existing investment</strong>: Builds on current symlink script</li>
-<li><strong>Clear mental model</strong>: Base configuration + platform overrides</li>
-<li><strong>Maintains flexibility</strong>: Platform-specific files remain separate</li>
-<li><strong>Simplifies maintenance</strong>: Edit shared configs once, applies everywhere</li>
-<li><strong>Reduces cognitive load</strong>: Fewer places to look for configuration</li>
-<li><strong>Easier debugging</strong>: Clear hierarchy of where settings come from</li>
-</ol>
-<p><strong>Migration effort</strong>: Medium (2-3 days)<br />
-<strong>Maintenance improvement</strong>: High<br />
-<strong>Risk level</strong>: Low (easily reversible)</p>
-<p>This approach respects your existing architecture while solving the fundamental duplication problem, especially for complex configurations like Neovim. It provides a clear path forward that will make your dotfiles more maintainable across current and future platforms.</p>
+<h2 id="docker-vs-vm-comparison">Docker vs VM Comparison<a class="headerlink" href="#docker-vs-vm-comparison" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Docker + WSL Rootfs</th>
+<th>Multipass Cloud Image</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>100% (563 packages)</td>
+<td>~75% (426 packages)</td>
+</tr>
+<tr>
+<td>Startup</td>
+<td>&lt;5 seconds</td>
+<td>1-2 minutes</td>
+</tr>
+<tr>
+<td>Resources</td>
+<td>Lightweight</td>
+<td>VM overhead</td>
+</tr>
+<tr>
+<td>Cleanup</td>
+<td>Instant</td>
+<td>10-20 seconds</td>
+</tr>
+<tr>
+<td>Use Case</td>
+<td>Primary testing</td>
+<td>Backup/fallback</td>
+</tr>
+</tbody>
+</table>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>management/test-wsl-docker.sh</code> - Docker-based WSL testing (recommended)</li>
+<li><code>management/wsl-docker-images.sh</code> - Manage WSL Docker images</li>
+<li><code>management/test-install.sh</code> - Multipass testing (alternative)</li>
+<li><code>management/taskfiles/wsl.yml</code> - Bootstrap package installation</li>
+<li><code>management/verify-installation.sh</code> - Installation verification</li>
+<li><code>management/parse-packages.py</code> - Package list parser</li>
+<li><code>docs/development/testing.md</code> - Testing documentation</li>
+</ul>
 
 
 
@@ -3103,10 +3110,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "toc.follow", "toc.integrate", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
       
     
   </body>
