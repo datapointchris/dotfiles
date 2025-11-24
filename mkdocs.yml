@@ -181,6 +181,7 @@ nav:
       - Overview: learnings/index.md
       - App Installation Patterns: learnings/app-installation-patterns.md
       - Idempotent Installation Patterns: learnings/idempotent-installation-patterns.md
+      - Testing Bootstrap Dependencies: learnings/testing-bootstrap-dependencies.md
       - WSL Ubuntu Package Versions: learnings/wsl-ubuntu-package-versions.md
       - Package Version Analysis: learnings/package-version-analysis.md
       - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md

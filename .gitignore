@@ -95,8 +95,11 @@ venv/
 
 # Test artifacts
 test-wsl-setup.log
+test-install.log
+test-wsl-docker.log
 .last-test-vm
 .tmp-transfer/
+.wsl-rootfs-cache/
 
 ### GO BUILD ARTIFACTS
 
