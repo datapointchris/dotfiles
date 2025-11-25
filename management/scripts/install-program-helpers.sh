@@ -74,13 +74,13 @@ download_file() {
 }
 
 # Fetch latest release version from GitHub
-fetch_latest_version() {
+get_latest_github_release() {
   local repo="$1"
   local version
 
   print_info "Fetching latest version..." >&2
 
-  if ! version=$(curl -sf "https://api.github.com/repos/${repo}/releases/latest" | grep -Po '"tag_name": *"\K[^"]*'); then
+  if ! version=$(curl -sf "https://api.github.com/repos/${repo}/releases/latest" | jq -r .tag_name); then
     print_error " Failed to fetch release information from GitHub" >&2
     print_info "GitHub API may be blocked or rate limited" >&2
     return 1
