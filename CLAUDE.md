@@ -17,6 +17,16 @@
 - NEVER add "Co-Authored-By: Claude" lines
 - Keep commits clean and professional (prepare-commit-msg hook handles this)
 
+**Git Hygiene** (⚠️ CRITICAL - Perfect git hygiene is non-negotiable):
+
+- ALWAYS review what will be committed: `git status`, `git diff --staged` before every commit
+- NEVER use `git add -A` or `git add .` without carefully reviewing what's being staged
+- ONLY stage files relevant to the specific change - use explicit `git add <file>` for each file
+- Each commit must be atomic and focused on ONE logical change
+- If something goes wrong, STOP and figure out the correct solution - do not rush
+- Do not create commits that mix unrelated changes or that will need to be fixed later
+- Take time to ensure commits are correct the first time
+
 **File Naming and Organization**:
 
 - All markdown files use lowercase names: `github-pages.md` NOT `GITHUB_PAGES_SETUP.md`
