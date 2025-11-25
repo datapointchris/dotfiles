@@ -18,8 +18,8 @@ source "$(dirname "$0")/install-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-LAZYGIT_VERSION=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=lazygit --field=version)
-REPO=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=lazygit --field=repo)
+LAZYGIT_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=lazygit --field=version)
+REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=lazygit --field=repo)
 
 LAZYGIT_BIN="$HOME/.local/bin/lazygit"
 

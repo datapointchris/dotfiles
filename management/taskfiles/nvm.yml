@@ -52,7 +52,7 @@ tasks:
     cmds:
       - |
         # Read Node version from packages.yml using Python parser
-        NODE_VERSION=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --get=runtimes.node.version)
+        NODE_VERSION=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --get=runtimes.node.version)
         echo "✅ Installing Node.js ${NODE_VERSION}..."
         NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/nvm-install-node.sh "${NODE_VERSION}"
         echo "✅ Node.js ${NODE_VERSION} installed and set as default"

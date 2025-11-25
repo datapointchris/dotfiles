@@ -42,7 +42,7 @@ tasks:
 
         echo "  Installing system packages from packages.yml..."
         # Get package list from packages.yml via Python parser
-        PACKAGES=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=pacman | tr '\n' ' ')
+        PACKAGES=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=pacman | tr '\n' ' ')
         echo "  Packages: $PACKAGES"
         sudo pacman -S --needed --noconfirm $PACKAGES
 

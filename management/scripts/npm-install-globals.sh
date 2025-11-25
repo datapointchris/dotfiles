@@ -28,7 +28,7 @@ echo "Installing npm global packages from packages.yml..."
 
 # Get npm packages from packages.yml via Python parser
 DOTFILES_DIR="$HOME/dotfiles"
-NPM_PACKAGES=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
+NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
 
 # Install each package (skip if already installed at same version)
 for package in $NPM_PACKAGES; do

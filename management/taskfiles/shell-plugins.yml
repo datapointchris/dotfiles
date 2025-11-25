@@ -24,7 +24,7 @@ tasks:
       - echo "✅ Installing shell plugins..."
       - |
         # Read plugins from management/packages.yml via Python parser
-        PLUGINS=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=shell-plugins --format=name_repo)
+        PLUGINS=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=shell-plugins --format=name_repo)
 
         mkdir -p "{{.PLUGINS_DIR}}"
 
@@ -53,7 +53,7 @@ tasks:
       - echo "  Updating shell plugins..."
       - |
         # Read plugins from management/packages.yml via Python parser
-        PLUGINS=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=shell-plugins --format=names)
+        PLUGINS=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=shell-plugins --format=names)
 
         for name in $PLUGINS; do
           PLUGIN_DIR="{{.PLUGINS_DIR}}/$name"

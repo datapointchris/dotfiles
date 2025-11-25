@@ -21,7 +21,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 # Get cargo packages from packages.yml via Python parser
 print_info "Reading packages from packages.yml..."
-python3 "$DOTFILES_DIR/management/parse-packages.py" --type=cargo | while read -r package; do
+/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=cargo | while read -r package; do
   print_info "Installing $package..."
   cargo binstall -y "$package"
 done

@@ -10,7 +10,7 @@ get_package_config() {
   local field="$2"
   local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
 
-  python3 "$dotfiles_dir/management/parse-packages.py" --github-binary="$tool_name" --field="$field"
+  /usr/bin/python3 "$dotfiles_dir/management/parse-packages.py" --github-binary="$tool_name" --field="$field"
 }
 
 # Print manual installation instructions when download fails

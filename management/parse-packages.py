@@ -14,6 +14,10 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
+
+# Debug: Print which Python is being used (to stderr so it doesn't interfere with output)
+print(f"DEBUG: Using Python: {sys.executable}", file=sys.stderr)
+
 import yaml
 
 

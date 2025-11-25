@@ -18,7 +18,7 @@ source "$(dirname "$0")/install-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-REPO=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=yazi --field=repo)
+REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=yazi --field=repo)
 
 print_banner "Installing Yazi"
 

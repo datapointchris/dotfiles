@@ -18,8 +18,8 @@ source "$(dirname "$0")/install-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-MIN_VERSION=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=fzf --field=min_version)
-REPO=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=fzf --field=repo)
+MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=fzf --field=min_version)
+REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=fzf --field=repo)
 
 FZF_BIN="$HOME/.local/bin/fzf"
 FZF_BUILD_DIR="/tmp/fzf-build"

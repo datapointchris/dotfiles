@@ -43,7 +43,7 @@ tasks:
         sudo apt install -y python3-yaml
 
         echo "  Installing system packages from packages.yml..."
-        PACKAGES=$(python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=apt | tr '\n' ' ')
+        PACKAGES=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=apt | tr '\n' ' ')
         echo "  Packages: $PACKAGES"
         sudo apt install -y $PACKAGES
 

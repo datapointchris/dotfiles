@@ -19,8 +19,8 @@ source "$(dirname "$0")/install-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-MIN_VERSION=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=min_version)
-REPO=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=repo)
+MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=min_version)
+REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=repo)
 
 NVIM_INSTALL_DIR="$HOME/.local/nvim-linux-x86_64"
 NVIM_BIN_LINK="$HOME/.local/bin/nvim"

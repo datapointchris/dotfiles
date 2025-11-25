@@ -18,7 +18,7 @@ source "$(dirname "$0")/install-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-MIN_VERSION=$(python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.go.min_version)
+MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.go.min_version)
 
 print_banner "Installing Go"
 
