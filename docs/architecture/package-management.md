@@ -35,9 +35,12 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 - `yq` - YAML processor (single binary)
 - `go` - Build toolchain (extract to `/usr/local/go` per official docs)
 - `fzf` - Fuzzy finder (build from source with Go)
-- `neovim` - Editor (extract to `~/.local/nvim-linux64/`, symlink binary)
+- `neovim` - Editor (extract to `~/.local/nvim-linux-x86_64/`, symlink binary)
 - `lazygit` - Git TUI (single binary)
 - `yazi` - File manager (single binary + plugins)
+- `glow` - Markdown renderer (single binary)
+- `duf` - Disk usage utility (single binary)
+- `awscli` - AWS command line tool (platform-specific installer)
 
 **Advantages**:
 
@@ -300,24 +303,40 @@ All installation scripts and taskfiles read from this single source. Change a ve
 
 Located in `management/scripts/`:
 
-- `install-helpers.sh` - Shared helper functions for all install scripts
-- `install-go.sh` - Latest Go from go.dev (reads version from packages.yml)
-- `install-fzf.sh` - Build fzf from source with Go (reads version from packages.yml)
-- `install-neovim.sh` - Extract neovim bundle, symlink binary (reads version from packages.yml)
-- `install-lazygit.sh` - Download single binary (reads version from packages.yml)
-- `install-yazi.sh` - Download binaries, install plugins (reads version from packages.yml)
+**Core Helpers**:
+
+- `install-program-helpers.sh` - Shared functions for GitHub binary installation, version checking, manual install instructions
+
+**GitHub Release Tools**:
+
+- `install-go.sh` - Latest Go from go.dev
+- `install-fzf.sh` - Build fzf from source with Go
+- `install-neovim.sh` - Extract neovim bundle, symlink binary
+- `install-lazygit.sh` - Download single binary
+- `install-yazi.sh` - Download binaries, install plugins
+- `install-glow.sh` - Markdown renderer
+- `install-duf.sh` - Disk usage utility
+- `install-awscli.sh` - AWS CLI v2 (platform-specific)
+
+**Language Ecosystems**:
+
 - `install-rust.sh` - Install Rust via rustup
 - `install-uv.sh` - Install uv for Python management
 - `install-cargo-binstall.sh` - Bootstrap cargo-binstall
 - `install-cargo-tools.sh` - Install all cargo packages from packages.yml
-- `install-tmux-plugins.sh` - Install tmux plugins
 - `npm-install-globals.sh` - Install npm global packages from packages.yml
 
-All scripts use shared helpers for consistent error handling and graceful firewall failure recovery.
+**Plugins**:
+
+- `install-tmux-plugins.sh` - Install tmux plugins
+
+All GitHub release scripts use `install-program-helpers.sh` for consistent error handling, version checking, and graceful firewall failure recovery with manual installation instructions.
 
 ### Taskfile Organization
 
-Platform taskfiles (`wsl.yml`, `macos.yml`, `arch.yml`) define installation tasks that call these scripts and read from packages.yml:
+Platform taskfiles (`wsl.yml`, `macos.yml`, `arch.yml`) and specialized taskfiles define installation tasks:
+
+**Main Installation Tasks**:
 
 ```yaml
 install-go:          # GitHub releases → /usr/local/go
@@ -325,10 +344,20 @@ install-fzf:         # Build from source → ~/.local/bin
 install-neovim:      # GitHub releases → ~/.local/bin (symlink)
 install-lazygit:     # GitHub releases → ~/.local/bin
 install-yazi:        # GitHub releases → ~/.local/bin
+install-glow:        # GitHub releases → ~/.local/bin
+install-duf:         # GitHub releases → ~/.local/bin
+install-awscli:      # AWS official installer
 
 install-cargo-binstall:  # Bootstrap for Rust tools
 install-cargo-tools:     # Reads package list from packages.yml
 ```
+
+**Specialized Taskfiles** (`management/taskfiles/`):
+
+- `go-tools.yml` - Go CLI tools installed via `go install` (cheat, etc.)
+- `brew.yml` - Homebrew package management (macOS)
+- `mas.yml` - Mac App Store applications (macOS)
+- Platform-specific taskfiles for each supported OS
 
 ### Main Installation Flow
 
