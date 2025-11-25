@@ -159,6 +159,9 @@ nav:
       - Task Reference: reference/tasks.md
       - Skills System: reference/skills.md
       - Claude Code Hooks: reference/hooks.md
+      - Claude Code:
+          - Usage Guide: claude-code/usage-guide.md
+          - Log Monitoring Research: claude-code/log-monitoring-research.md
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
   - Workflows:
