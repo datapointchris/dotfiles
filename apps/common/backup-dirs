@@ -1,0 +1,650 @@
+#!/bin/bash
+#
+# backup-dirs - Create compressed backup archive of specified directories
+#
+# Usage: backup-dirs [OPTIONS] <dir1> [dir2] [dir3...]
+#
+# Creates a timestamped tar.gz archive of the specified directories (relative to HOME)
+# with smart exclusions, progress tracking, and comprehensive statistics.
+#
+# Options:
+#   -d, --dest <path>    Destination directory (default: ~/Documents)
+#   -h, --help           Show this help message
+#
+# Examples:
+#   backup-dirs .claude notes learning
+#   backup-dirs --dest ~/Backups .config dotfiles
+#
+# Note: Excludes common bloat (.venv, node_modules, caches) but keeps .git for recovery
+
+set -euo pipefail
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+
+# Source required shell libraries
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/shell/colors.sh"
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Progress display tuning
+readonly COLOR_CYCLE_FILES=20           # Change rainbow color every N files
+readonly UPDATE_INTERVAL_NS=90000000    # File count update interval in nanoseconds (0.09s)
+readonly ANALYSIS_SPINNER_SLEEP=0.05    # Animation speed for analysis spinner
+readonly ARCHIVE_SPINNER_SLEEP=0.02     # Animation speed for archive spinner
+readonly PROGRESS_PADDING_PERCENT=100   # No padding needed - estimates are accurate
+
+# Spinner animation characters
+readonly SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+# Rainbow colors for cycling through (Red, Yellow, Green, Cyan, Blue, Magenta)
+readonly COLORS=("91" "93" "92" "96" "94" "95")
+
+# Colors for directory display (Green, Cyan, Yellow, Magenta, Blue)
+readonly DIR_COLORS=("92" "96" "93" "95" "94")
+
+# Exclusion patterns for tar (common bloat to skip)
+readonly EXCLUDE_PATTERNS=(
+  '.venv'
+  'node_modules'
+  '__pycache__'
+  '.mypy_cache'
+  '.ruff_cache'
+  '.pytest_cache'
+  'build'
+  'dist'
+  'modules'
+  'zephyr'
+  '*.pyc'
+  '.DS_Store'
+)
+
+# ============================================================================
+# Global Variables
+# ============================================================================
+
+# Command line arguments
+DEST_DIR="$HOME/Documents"
+DIRS_TO_BACKUP=()
+
+# Timing
+OVERALL_START_TIME=""
+ARCHIVE_START_TIME=""
+
+# Progress tracking
+ANALYSIS_SPINNER_PID=""
+ARCHIVE_SPINNER_PID=""
+
+# Temp files for IPC
+ANALYSIS_COUNT_FILE=""
+ANALYSIS_SIZE_FILE=""
+ANALYSIS_RUNNING_FILE=""
+PROGRESS_FILE=""
+
+# ============================================================================
+# Usage and Help
+# ============================================================================
+
+usage() {
+  echo ""
+  print_banner "backup-dirs" "cyan"
+  echo ""
+  echo "  $(color_bright_white "Create timestamped compressed backup archives with progress tracking")"
+  echo ""
+
+  print_section "Usage" "brightcyan"
+  echo ""
+  echo "  $(color_bright_yellow "backup-dirs") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<dir1>") [dir2] [dir3...]"
+  echo ""
+
+  print_section "Options" "brightcyan"
+  echo ""
+  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")    Destination directory $(color_bright_black "(default: ~/Documents)")"
+  echo "  $(color_bright_magenta "-h, --help")             Show this help message"
+  echo ""
+
+  print_section "Arguments" "brightcyan"
+  echo ""
+  echo "  $(color_bright_green "<dir1> [dir2]...")    Directories to backup $(color_bright_black "(relative to HOME or absolute)")"
+  echo ""
+
+  print_section "Examples" "brightcyan"
+  echo ""
+  echo "  $(color_bright_black "# Backup specific directories to Documents")"
+  echo "  $(color_bright_yellow "backup-dirs") $(color_green ".claude notes learning")"
+  echo ""
+  echo "  $(color_bright_black "# Backup to custom destination")"
+  echo "  $(color_bright_yellow "backup-dirs") $(color_magenta "--dest ~/Backups") $(color_green ".config dotfiles")"
+  echo ""
+  echo "  $(color_bright_black "# Use absolute paths")"
+  echo "  $(color_bright_yellow "backup-dirs") $(color_green "\$HOME/learning /tmp/backups")"
+  echo ""
+
+  print_section "Features" "brightcyan"
+  echo ""
+  echo "  $(color_cyan "•") Archive format:  $(color_bright_white "backup-dirs_YYYY-MM-DD_HHMMSS.tar.gz")"
+  echo "  $(color_cyan "•") Smart excludes:  $(color_bright_black ".venv, node_modules, caches, build artifacts")"
+  echo "  $(color_cyan "•") Git included:    $(color_bright_white ".git") $(color_bright_black "directories kept for recovery")"
+  echo "  $(color_cyan "•") Live progress:   $(color_bright_white "Rainbow") $(color_red "c")$(color_yellow "o")$(color_green "l")$(color_cyan "o")$(color_blue "r")$(color_magenta "s") $(color_bright_white "and smooth animations")"
+  echo "  $(color_cyan "•") Statistics:      $(color_bright_white "Files, sizes, compression, timing")"
+  echo ""
+}
+
+# ============================================================================
+# Cleanup Handler
+# ============================================================================
+
+cleanup() {
+  # Kill any running background spinners
+  [[ -n "${ANALYSIS_SPINNER_PID:-}" ]] && kill "$ANALYSIS_SPINNER_PID" 2>/dev/null
+  [[ -n "${ARCHIVE_SPINNER_PID:-}" ]] && kill "$ARCHIVE_SPINNER_PID" 2>/dev/null
+
+  # Remove temp files
+  [[ -n "${ANALYSIS_RUNNING_FILE:-}" ]] && rm -f "$ANALYSIS_RUNNING_FILE"
+  [[ -n "${ANALYSIS_COUNT_FILE:-}" ]] && rm -f "$ANALYSIS_COUNT_FILE"
+  [[ -n "${ANALYSIS_SIZE_FILE:-}" ]] && rm -f "$ANALYSIS_SIZE_FILE"
+  [[ -n "${PROGRESS_FILE:-}" ]] && rm -f "$PROGRESS_FILE"
+
+  # Clear the line
+  printf "\r\033[K"
+}
+
+# Set up cleanup trap
+trap cleanup EXIT INT TERM
+
+# ============================================================================
+# Argument Parsing
+# ============================================================================
+
+parse_arguments() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -d|--dest)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --dest requires a directory path" >&2
+          exit 1
+        fi
+        DEST_DIR="$2"
+        shift 2
+        ;;
+      -*)
+        echo "Error: Unknown option: $1" >&2
+        usage
+        exit 1
+        ;;
+      *)
+        DIRS_TO_BACKUP+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Show usage if no directories specified
+  if [[ ${#DIRS_TO_BACKUP[@]} -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+}
+
+# ============================================================================
+# Directory Validation
+# ============================================================================
+
+validate_directories() {
+  local existing_dirs=()
+  local missing_dirs=()
+  local dir_idx=0
+
+  echo ""
+  print_banner "Backup Directories" "orange"
+
+  # Check each directory
+  for dir in "${DIRS_TO_BACKUP[@]}"; do
+    # Normalize path: if absolute, use as-is; if relative, prepend HOME
+    local full_path
+    if [[ "$dir" = /* ]]; then
+      # Absolute path - use as-is
+      full_path="$dir"
+    else
+      # Relative path - prepend HOME
+      full_path="$HOME/$dir"
+    fi
+
+    # Convert to relative path from HOME for tar (if inside HOME)
+    local relative_dir="$dir"
+    if [[ "$dir" = /* ]]; then
+      # If absolute path starts with HOME, make it relative
+      if [[ "$dir" = "$HOME"* ]]; then
+        relative_dir="${dir#"$HOME"/}"
+      else
+        # Outside HOME - keep absolute
+        relative_dir="$dir"
+      fi
+    fi
+
+    if [[ -e "$full_path" ]]; then
+      existing_dirs+=("$relative_dir")
+      local color_code="${DIR_COLORS[$dir_idx]}"
+      echo -e "  ✓ Found: \033[${color_code}m$full_path\033[0m"
+      dir_idx=$(( (dir_idx + 1) % ${#DIR_COLORS[@]} ))
+    else
+      missing_dirs+=("$relative_dir")
+      echo -e "  ⊘ Skipping: \033[90m$full_path\033[0m \033[33m(not found)\033[0m"
+    fi
+  done
+
+  echo ""
+
+  # Check if we have anything to backup
+  if [[ ${#existing_dirs[@]} -eq 0 ]]; then
+    color_red "Error: No directories found to backup"
+    exit 1
+  fi
+
+  # Check if destination directory exists
+  if [[ ! -d "$DEST_DIR" ]]; then
+    color_red "Error: Destination directory not found: $DEST_DIR"
+    exit 1
+  fi
+
+  # Return the lists via arrays (caller reads from these globals)
+  EXISTING_DIRS=("${existing_dirs[@]}")
+  if [[ ${#missing_dirs[@]} -gt 0 ]]; then
+    MISSING_DIRS=("${missing_dirs[@]}")
+  else
+    MISSING_DIRS=()
+  fi
+}
+
+# ============================================================================
+# Analysis Phase - Count files and estimate size
+# ============================================================================
+
+analyze_directories() {
+  local existing_dirs=("$@")
+
+  color_blue "Analyzing directories..."
+
+  local estimated_files=0
+  local estimated_dirs=0
+  local estimated_size=0
+  local spinner_idx=0
+
+  # Set up temp files for IPC
+  ANALYSIS_COUNT_FILE="/tmp/backup_analysis_count_$$"
+  ANALYSIS_SIZE_FILE="/tmp/backup_analysis_size_$$"
+  ANALYSIS_RUNNING_FILE="/tmp/backup_analysis_running_$$"
+
+  echo "0" > "$ANALYSIS_COUNT_FILE"
+  echo "0" > "$ANALYSIS_SIZE_FILE"
+  touch "$ANALYSIS_RUNNING_FILE"
+
+  # Start background spinner for live progress display
+  set +m  # Disable job control messages
+  (
+    while [[ -f "$ANALYSIS_RUNNING_FILE" ]]; do
+      local count=$(cat "$ANALYSIS_COUNT_FILE" 2>/dev/null || echo "0")
+      local size=$(cat "$ANALYSIS_SIZE_FILE" 2>/dev/null || echo "0")
+      local size_hr=$(numfmt --to=iec-i --suffix=B "$size" 2>/dev/null || echo "0")
+      local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
+
+      # Rainbow color based on count
+      local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
+      local color_code="${COLORS[$color_idx]}"
+
+      printf "\r  \033[96m%s\033[0m \033[95mScanning...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m (\033[92m%s\033[0m)    " \
+        "$spinner_char" "$count" "$size_hr"
+      spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
+      sleep "$ANALYSIS_SPINNER_SLEEP"
+    done
+  ) &
+  ANALYSIS_SPINNER_PID=$!
+  disown  # Prevent job control messages
+  set -m  # Re-enable job control
+
+  # Build exclude arguments for fd
+  local exclude_args=()
+  for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+    exclude_args+=("--exclude" "$pattern")
+  done
+
+  # Count files and size using fast fd command
+  local last_update=$(date +%s%N)
+  local update_interval=$UPDATE_INTERVAL_NS
+
+  for dir in "${existing_dirs[@]}"; do
+    # Normalize path: if relative, prepend HOME; if absolute, use as-is
+    local search_path
+    if [[ "$dir" = /* ]]; then
+      search_path="$dir"
+    else
+      search_path="$HOME/$dir"
+    fi
+
+    while IFS= read -r file; do
+      ((estimated_files++))
+      local size=$(stat --format='%s' "$file" 2>/dev/null || echo 0)
+      estimated_size=$((estimated_size + size))
+
+      # Update progress based on time interval for organic feel
+      local now=$(date +%s%N)
+      local elapsed=$((now - last_update))
+      if [[ $elapsed -ge $update_interval ]]; then
+        echo "$estimated_files" > "$ANALYSIS_COUNT_FILE"
+        echo "$estimated_size" > "$ANALYSIS_SIZE_FILE"
+        last_update=$now
+      fi
+    done < <(fd --type f \
+      --no-ignore \
+      --hidden \
+      "${exclude_args[@]}" \
+      --absolute-path \
+      . "$search_path" 2>/dev/null)
+  done
+
+  # Count directories (tar counts these too)
+  for dir in "${existing_dirs[@]}"; do
+    # Normalize path
+    local search_path
+    if [[ "$dir" = /* ]]; then
+      search_path="$dir"
+    else
+      search_path="$HOME/$dir"
+    fi
+
+    while IFS= read -r _dir; do
+      ((estimated_dirs++))
+      # Update progress to show total count (files + dirs)
+      local now=$(date +%s%N)
+      local elapsed=$((now - last_update))
+      if [[ $elapsed -ge $update_interval ]]; then
+        echo "$((estimated_files + estimated_dirs))" > "$ANALYSIS_COUNT_FILE"
+        last_update=$now
+      fi
+    done < <(fd --type d \
+      --no-ignore \
+      --hidden \
+      "${exclude_args[@]}" \
+      --absolute-path \
+      . "$search_path" 2>/dev/null)
+  done
+
+  # Final update with total count
+  local total_entries=$((estimated_files + estimated_dirs))
+  echo "$total_entries" > "$ANALYSIS_COUNT_FILE"
+  echo "$estimated_size" > "$ANALYSIS_SIZE_FILE"
+  sleep 0.2  # Let spinner show final values
+
+  # Stop analysis spinner and cleanup
+  rm -f "$ANALYSIS_RUNNING_FILE"
+  wait "$ANALYSIS_SPINNER_PID" 2>/dev/null
+  rm -f "$ANALYSIS_COUNT_FILE" "$ANALYSIS_SIZE_FILE"
+
+  # Clear the spinner line
+  printf "\r\033[K"
+
+  # Return values via globals (total entries = files + dirs, just like tar)
+  ESTIMATED_FILES=$total_entries
+  ESTIMATED_SIZE=$estimated_size
+}
+
+# ============================================================================
+# Archive Phase - Create compressed tar.gz with progress
+# ============================================================================
+
+create_archive() {
+  local backup_dest="$1"
+  shift
+  local existing_dirs=("$@")
+
+  print_info "Creating backup archive..."
+  echo "  Destination: $(color_bright_magenta "$backup_dest")"
+  echo ""
+
+  # Start timing
+  ARCHIVE_START_TIME=$(date +%s)
+
+  # Determine working directory for tar:
+  # - If all paths are relative or inside HOME: cd to HOME, use relative paths
+  # - If any path is absolute outside HOME: use absolute paths from current dir
+  local use_home=true
+  local tar_dirs=()
+
+  for dir in "${existing_dirs[@]}"; do
+    if [[ "$dir" = /* ]]; then
+      # Absolute path - check if it's inside HOME
+      if [[ "$dir" != "$HOME"/* ]]; then
+        use_home=false
+      fi
+    fi
+  done
+
+  if [[ "$use_home" == true ]]; then
+    # All paths are relative or inside HOME - use HOME as base
+    cd "$HOME" || exit 1
+    for dir in "${existing_dirs[@]}"; do
+      if [[ "$dir" = /* ]]; then
+        # Absolute path inside HOME - make relative
+        tar_dirs+=("${dir#"$HOME"/}")
+      else
+        # Already relative
+        tar_dirs+=("$dir")
+      fi
+    done
+  else
+    # Has paths outside HOME - use absolute paths
+    for dir in "${existing_dirs[@]}"; do
+      if [[ "$dir" = /* ]]; then
+        tar_dirs+=("$dir")
+      else
+        tar_dirs+=("$HOME/$dir")
+      fi
+    done
+  fi
+
+  # Initialize progress tracking
+  local processed=0
+  local spinner_idx=0
+  PROGRESS_FILE="/tmp/backup_dirs_$$_progress"
+
+  echo "0" > "$PROGRESS_FILE"
+
+  # Start background spinner with rainbow colors
+  set +m  # Disable job control messages
+  (
+    local start=$ARCHIVE_START_TIME
+    while [[ -f "$PROGRESS_FILE" ]]; do
+      if [[ -r "$PROGRESS_FILE" ]]; then
+        local count=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
+
+        # Calculate elapsed time
+        local now=$(date +%s)
+        local elapsed=$((now - start))
+        local minutes=$((elapsed / 60))
+        local seconds=$((elapsed % 60))
+        local time_str=$(printf "%02d:%02d" $minutes $seconds)
+
+        # Calculate percentage (capped at 100%)
+        local percent=0
+        if [[ $ESTIMATED_FILES -gt 0 ]]; then
+          local padded_estimate=$((ESTIMATED_FILES * PROGRESS_PADDING_PERCENT / 100))
+          percent=$((count * 100 / padded_estimate))
+          [[ $percent -gt 100 ]] && percent=100
+        fi
+
+        # Rainbow color based on count
+        local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
+        local color_code="${COLORS[$color_idx]}"
+
+        # Color for percentage (green if 100%, cyan otherwise)
+        local percent_color="96"  # Cyan
+        [[ $percent -eq 100 ]] && percent_color="92"  # Green
+
+        local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
+        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m (\033[${percent_color}m%d%%\033[0m)    " \
+          "$spinner_char" "$time_str" "$count" "$percent"
+        spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
+      fi
+      sleep "$ARCHIVE_SPINNER_SLEEP"
+    done
+  ) &
+  ARCHIVE_SPINNER_PID=$!
+  disown  # Prevent job control messages
+  set -m  # Re-enable job control
+
+  # Build tar exclude arguments
+  local exclude_args=()
+  for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+    exclude_args+=("--exclude=$pattern")
+  done
+
+  # Run tar and count files as they're processed
+  local last_update=$(date +%s%N)
+  local update_interval=$UPDATE_INTERVAL_NS
+
+  tar -czf "$backup_dest" \
+    "${exclude_args[@]}" \
+    -v \
+    "${tar_dirs[@]}" 2>&1 | \
+  {
+    local processed=0
+    local last_update=$(date +%s%N)
+    while IFS= read -r _line; do
+      ((processed++))
+      # Update progress based on time interval for smooth organic counting
+      local now=$(date +%s%N)
+      local elapsed=$((now - last_update))
+      if [[ $elapsed -ge $update_interval ]]; then
+        echo "$processed" > "$PROGRESS_FILE"
+        last_update=$now
+      fi
+    done
+    # Write final count after loop completes
+    echo "$processed" > "$PROGRESS_FILE"
+  }
+
+  local tar_exit=$?
+
+  # Read final file count BEFORE deleting the progress file
+  sleep 0.1  # Brief pause to let final write complete
+  PROCESSED_FILES=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
+
+  # Stop spinner and cleanup
+  rm -f "$PROGRESS_FILE"
+  wait "$ARCHIVE_SPINNER_PID" 2>/dev/null
+
+  # Clear the progress line
+  printf "\r\033[K"
+
+  return $tar_exit
+}
+
+# ============================================================================
+# Statistics Display
+# ============================================================================
+
+display_statistics() {
+  local backup_dest="$1"
+  local num_dirs="$2"
+  local num_missing="$3"
+
+  # Calculate timing
+  local end_time=$(date +%s)
+  local analysis_elapsed=$((ARCHIVE_START_TIME - OVERALL_START_TIME))
+  local archive_elapsed=$((end_time - ARCHIVE_START_TIME))
+  local total_elapsed=$((end_time - OVERALL_START_TIME))
+
+  local analysis_time_str=$(printf "%02d:%02d" $((analysis_elapsed / 60)) $((analysis_elapsed % 60)))
+  local archive_time_str=$(printf "%02d:%02d" $((archive_elapsed / 60)) $((archive_elapsed % 60)))
+  local total_time_str=$(printf "%02d:%02d" $((total_elapsed / 60)) $((total_elapsed % 60)))
+
+  # Get compressed size
+  local compressed_size=$(stat --format='%s' "$backup_dest" 2>/dev/null || echo 0)
+  local compressed_size_hr=$(numfmt --to=iec-i --suffix=B "$compressed_size" 2>/dev/null || echo "$((compressed_size / 1048576))M")
+  local estimated_size_hr=$(numfmt --to=iec-i --suffix=B "$ESTIMATED_SIZE" 2>/dev/null || echo "$((ESTIMATED_SIZE / 1048576))M")
+
+  # Calculate compression ratio
+  local compression_percent=0
+  if [[ $ESTIMATED_SIZE -gt 0 ]]; then
+    compression_percent=$(( (ESTIMATED_SIZE - compressed_size) * 100 / ESTIMATED_SIZE ))
+  fi
+
+  # Display statistics
+  echo ""
+  print_section "Backup Statistics" "brightcyan"
+  echo ""
+  echo "  Location:        $(color_bright_blue "$backup_dest")"
+  echo "  Entries:         $(color_bright_green "$PROCESSED_FILES") $(color_bright_black "(estimated: $ESTIMATED_FILES)")"
+  echo "  Original size:   $(color_bright_yellow "$estimated_size_hr")"
+  echo "  Compressed size: $(color_bright_green "$compressed_size_hr")"
+  echo "  Compression:     $(color_bright_magenta "${compression_percent}%") saved"
+  echo "  Directories:     $(color_bright_green "$num_dirs") backed up"
+  echo ""
+  echo "  Time - Analysis: $(color_bright_cyan "$analysis_time_str")"
+  echo "  Time - Archive:  $(color_bright_cyan "$archive_time_str")"
+  echo "  Time - Total:    $(color_bright_green "$total_time_str")"
+
+  if [[ $num_missing -gt 0 ]]; then
+    echo "  Skipped:         $(color_orange "$num_missing")"
+  fi
+
+  echo ""
+  print_section "Notes" "brightyellow"
+  echo ""
+  echo "  $(color_cyan "•") Excludes: $(color_bright_black "${EXCLUDE_PATTERNS[*]:0:3}, ...")"
+  echo "  $(color_cyan "•") Git history $(color_bright_black "(.git)") included for recovery"
+  echo "  $(color_cyan "•") Backup saved to: $(color_bright_blue "$DEST_DIR")"
+  echo ""
+
+  # Success message
+  echo ""
+  echo -e "  \033[92m✓ Backup completed successfully!\033[0m"
+  echo ""
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+main() {
+  # Start timing
+  OVERALL_START_TIME=$(date +%s)
+
+  # Parse command line arguments
+  parse_arguments "$@"
+
+  # Validate directories exist and build lists
+  validate_directories
+
+  # Create backup filename
+  local date_stamp=$(date '+%Y-%m-%d_%H%M%S')
+  local backup_name="backup-dirs_${date_stamp}.tar.gz"
+  local backup_dest="$DEST_DIR/$backup_name"
+
+  # Analysis phase - count files and estimate size
+  analyze_directories "${EXISTING_DIRS[@]}"
+
+  # Archive phase - create compressed backup
+  if create_archive "$backup_dest" "${EXISTING_DIRS[@]}"; then
+    # Display final statistics
+    display_statistics "$backup_dest" "${#EXISTING_DIRS[@]}" "${#MISSING_DIRS[@]}"
+  else
+    echo ""
+    color_red "✗ Backup failed"
+    exit 1
+  fi
+}
+
+# Run main if executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

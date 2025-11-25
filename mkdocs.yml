@@ -165,6 +165,7 @@ nav:
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
   - Workflows:
+      - Backup: workflows/backup.md
       - Note Taking: workflows/note-taking.md
       - Session Management: workflows/sessions.md
       - Theme Customization: workflows/themes.md
@@ -183,11 +184,13 @@ nav:
   - Learnings:
       - Overview: learnings/index.md
       - App Installation Patterns: learnings/app-installation-patterns.md
+      - Arch Git libpcre2 Warning: learnings/arch-git-libpcre2-warning.md
       - Idempotent Installation Patterns: learnings/idempotent-installation-patterns.md
       - Testing Bootstrap Dependencies: learnings/testing-bootstrap-dependencies.md
       - WSL Ubuntu Package Versions: learnings/wsl-ubuntu-package-versions.md
       - Package Version Analysis: learnings/package-version-analysis.md
       - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md
+      - Bash Script Testing: learnings/bash-script-testing.md
       - Task Shell Printf Compatibility: learnings/task-shell-printf-compatibility.md
       - Git History Rewriting: learnings/git-history-rewriting.md
       - Relative Path Calculation: learnings/relative-path-calculation.md

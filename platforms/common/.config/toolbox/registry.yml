@@ -1983,6 +1983,36 @@ tools:
     tags: [dotfiles, theme, tmux, internal]
     notes: "Parses tinty YAML scheme files and generates tmux configuration. Used internally by theme-sync system."
 
+  backup-dirs:
+    category: custom-tools
+    description: "Create compressed backup archive of specified directories with progress tracking"
+    installed_via: dotfiles
+    usage: "backup-dirs [OPTIONS] <dir1> [dir2...]"
+    why_use: "Generic backup tool with smart exclusions (.venv, node_modules), rainbow progress indicators, and comprehensive statistics"
+    examples:
+      - cmd: "backup-dirs .claude notes learning"
+        desc: "Backup directories to ~/Documents"
+      - cmd: "backup-dirs --dest ~/Backups .config dotfiles"
+        desc: "Backup to custom destination"
+      - cmd: "backup-dirs --help"
+        desc: "Show all options and usage"
+    see_also: [tar, fd, backup-important]
+    tags: [backup, compression, progress, universal]
+    notes: "Excludes common bloat but keeps .git. Uses fd for fast scanning. Archive name: backup-dirs_YYYY-MM-DD_HHMMSS.tar.gz"
+
+backup-important:
+    category: custom-tools
+    description: "Backup critical home directories to Documents (iCloud synced) - alias for backup-dirs"
+    installed_via: dotfiles
+    usage: "backup-important"
+    why_use: "Quick safety backup of important files before potentially destructive operations"
+    examples:
+      - cmd: "backup-important"
+        desc: "Backup .claude, learning, notes, obsession to ~/Documents"
+    see_also: [backup-dirs, tar]
+    tags: [backup, safety, icloud, macOS, alias]
+    notes: "Alias that calls: backup-dirs .claude learning notes obsession. macOS-specific for iCloud Documents sync."
+
 # =================================================================
 # Metadata
 # =================================================================
