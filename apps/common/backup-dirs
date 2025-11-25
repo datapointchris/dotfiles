@@ -389,8 +389,12 @@ analyze_directories() {
   wait "$ANALYSIS_SPINNER_PID" 2>/dev/null
   rm -f "$ANALYSIS_COUNT_FILE" "$ANALYSIS_SIZE_FILE"
 
-  # Clear the spinner line
+  # Clear the spinner line and print analysis summary
   printf "\r\033[K"
+  local size_hr=$(numfmt --to=iec-i --suffix=B "$estimated_size" 2>/dev/null || echo "0")
+  local entries_formatted=$(printf "%'d" "$total_entries")
+  echo "  $(color_bright_green "✓") Analysis complete: $(color_bright_cyan "$entries_formatted") entries found ($(color_bright_yellow "$size_hr"))"
+  echo ""
 
   # Return values via globals (total entries = files + dirs, just like tar)
   ESTIMATED_FILES=$total_entries
@@ -458,7 +462,8 @@ create_archive() {
 
   echo "0" > "$PROGRESS_FILE"
 
-  # Start background spinner with rainbow colors
+  # Start background spinner with rainbow colors IMMEDIATELY after progress file creation
+  # This ensures continuous visual feedback without gaps
   set +m  # Disable job control messages
   (
     local start=$ARCHIVE_START_TIME
