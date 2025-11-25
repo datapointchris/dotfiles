@@ -32,111 +32,95 @@ brew install --cask multipass
 brew install --cask utm
 ```
 
-## WSL Ubuntu Testing (Docker - Recommended)
+## Testing with Docker (Recommended)
 
-### Why Docker for WSL Testing
+### Unified Test Dispatcher
 
-Docker with official WSL rootfs provides **100% exact match** to actual WSL Ubuntu installations:
-
-- **563 pre-installed packages** (same as WSL Ubuntu 24.04)
-- Official Microsoft/Canonical WSL distribution
-- Fast container startup (~seconds vs minutes for VMs)
-- Lightweight resource usage
-- No guessing about environment differences
-
-### Automated Test Script
-
-Run the comprehensive Docker-based test:
+The `management/test-install.sh` script provides a unified interface for testing across all platforms:
 
 ```sh
 cd ~/dotfiles
-./management/test-wsl-docker.sh
+
+# Test specific platform
+./management/test-install.sh -p wsl        # WSL Ubuntu (Docker)
+./management/test-install.sh -p arch       # Arch Linux (Docker)
+./management/test-install.sh -p macos      # macOS (local user)
+
+# Keep container after test for debugging
+./management/test-install.sh -p wsl -k
+./management/test-install.sh -p arch -k
+
+# Show help
+./management/test-install.sh --help
 ```
 
-**Options**:
+### Platform-Specific Test Scripts
 
-```sh
-./management/test-wsl-docker.sh              # Test Ubuntu 24.04 (default)
-./management/test-wsl-docker.sh -v 22.04     # Test Ubuntu 22.04
-./management/test-wsl-docker.sh -k           # Keep container for debugging
-```
+Located in `management/testing/`:
 
-**First Run**: Downloads official WSL rootfs (~340MB, cached for future tests)
+- `test-wsl-install-docker.sh` - WSL Ubuntu testing with Docker
+- `test-arch-install-docker.sh` - Arch Linux testing with Docker
+- `test-macos-install-user.sh` - macOS testing with fresh user account
+- `test-install-helpers.sh` - Shared utilities for formatting and timing
+
+### Why Docker for Testing
+
+Docker provides **100% exact match** to real environments:
+
+**WSL Ubuntu**:
+
+- 563 pre-installed packages (same as WSL Ubuntu 24.04)
+- Official Microsoft/Canonical WSL distribution
+- Fast container startup (~seconds vs minutes for VMs)
+
+**Arch Linux**:
+
+- Official Arch Linux base image
+- Latest rolling release packages
+- Realistic Arch environment
+
+**Advantages**:
+
+- Lightweight resource usage
+- Fast iteration (destroy, fix, test again)
+- No guessing about environment differences
+- Automated cleanup (or keep with `-k` flag)
 
 ### Test Phases
 
-The Docker test script runs 6 comprehensive phases:
+Docker test scripts run 7 comprehensive phases:
 
-1. **Prepare Docker Image** - Download and import WSL rootfs (one-time, cached)
+1. **Prepare Docker Image** - Pull/update official platform image
 2. **Start Container** - Launch container with dotfiles mounted
-3. **Prepare Environment** - Configure test environment
+3. **Prepare Environment** - Create test user and copy dotfiles
 4. **Run Installation** - Execute `install.sh` script
-5. **Verify Installation** - Run comprehensive verification checks
-6. **Test Updates** - Run `task wsl:update-all`
+5. **Verify Installation** - Run `verify-installation.sh` checks
+6. **Detect Alternates** - Run `detect-alternate-installations.sh`
+7. **Test Updates** - Run platform-specific `update-all` task
 
 ### Features
 
-- Real-time output with logging to `test-wsl-docker.log`
+- Real-time output with logging (`test-{platform}-docker.log`)
 - Timing for each step (MM:SS format)
 - Colored output with section headers
 - Automatic cleanup (or keep with `-k` flag)
-- Tests with exact WSL environment (563 packages)
+- Comprehensive verification and duplicate detection
 
-### Managing Docker Images
+### Test Logs
 
-Use the helper script to manage WSL Docker images:
+Each test run creates a detailed log file:
 
-```sh
-# List available WSL images
-./management/wsl-docker-images.sh list
+- WSL: `test-wsl-docker.log`
+- Arch: `test-arch-docker.log`
+- macOS: `test-macos.log`
 
-# Build/rebuild an image
-./management/wsl-docker-images.sh build 24.04
+Logs include all installation output, timing information, and test results.
 
-# Show cache and image info
-./management/wsl-docker-images.sh info
+## Alternative Testing Methods
 
-# Remove image
-./management/wsl-docker-images.sh remove 24.04
+### Multipass (WSL Ubuntu Alternative)
 
-# Clean cached rootfs files
-./management/wsl-docker-images.sh clean
-
-# Remove everything (images + cache)
-./management/wsl-docker-images.sh clean-all
-```
-
-### Manual Docker Testing
-
-For custom testing scenarios:
-
-```sh
-# Build image (if not exists)
-./management/wsl-docker-images.sh build 24.04
-
-# Run container with dotfiles mounted
-docker run -it --rm \
-  --mount type=bind,source="$PWD",target=/dotfiles,readonly \
-  wsl-ubuntu:24.04 bash
-
-# Inside container: copy dotfiles and test
-cp -r /dotfiles /root/dotfiles
-cd /root/dotfiles
-bash install.sh
-```
-
-## WSL Ubuntu Testing (Multipass - Alternative)
-
-Multipass uses Ubuntu cloud images (~426 packages) which differ from WSL (563 packages). Use Docker for accurate testing, but Multipass works as a backup method.
-
-### Automated Test Script
-
-```sh
-cd ~/dotfiles
-./management/test-install.sh
-```
-
-### Manual Multipass Testing
+Multipass uses Ubuntu cloud images (~426 packages) which differ from WSL (563 packages). Docker testing is more accurate, but Multipass works as a backup:
 
 ```sh
 # Create VM
@@ -156,22 +140,21 @@ multipass delete dotfiles-test
 multipass purge
 ```
 
-## Arch Linux Testing
+### VM Testing (Arch Linux Alternative)
 
-**Using UTM**:
+For testing without Docker, use VMs:
 
-1. Download Arch ISO: <https://archlinux.org/download/>
-2. Create new VM in UTM with ISO
+**UTM (recommended)**:
+
+1. Download Arch ISO from <https://archlinux.org/download/>
+2. Create new VM in UTM
 3. Boot, install base system
 4. Test dotfiles installation
 
-**Using QEMU**:
+**QEMU**:
 
 ```sh
-# Create disk
 qemu-img create -f qcow2 arch-test.qcow2 20G
-
-# Boot installer
 qemu-system-x86_64 -cdrom archlinux-x86_64.iso \
   -boot order=d -drive file=arch-test.qcow2,format=qcow2 \
   -m 2G -enable-kvm
@@ -188,27 +171,31 @@ qemu-system-x86_64 -cdrom archlinux-x86_64.iso \
 
 macOS VMs are too complex and resource-intensive. Fresh user accounts provide clean testing environment.
 
-## Verification Checklist
+## Verification
 
-After installation in VM:
+The test scripts automatically run comprehensive verification using `management/verify-installation.sh`. This checks:
+
+- Core build tools (git, curl, wget, make)
+- Task runner installation
+- Shell and terminal tools (zsh, tmux, bat, fd, fzf, ripgrep, zoxide, eza)
+- Development tools (neovim, lazygit, yazi, glow, duf)
+- Version managers (nvm, uv, cargo-binstall)
+- Language servers and Go tools
+- Platform-specific tools
+
+The verification script validates that tools are installed in the expected locations (e.g., `~/.local/bin/`, `~/.cargo/bin/`) and reports any duplicate installations.
+
+### Manual Verification
+
+If testing manually without the automated scripts:
 
 ```sh
-# Check installations
-task --version
-toolbox list
-theme-sync current
+# Run comprehensive verification
+cd ~/dotfiles
+bash management/verify-installation.sh
 
-# Check tools work
-bat --version
-eza --version
-rg --version
-
-# Check shell
-echo $SHELL  # Should be /bin/zsh
-echo $PATH | grep ".local/bin"
-
-# Check Neovim
-nvim --version  # Should be 0.11+
+# Check for duplicate installations
+bash management/detect-alternate-installations.sh
 ```
 
 ## Common Issues
