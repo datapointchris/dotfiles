@@ -120,7 +120,7 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 7 - Symlinking Dotfiles" "cyan"
-    cd "$DOTFILES_DIR" && task symlinks:link
+    cd "$DOTFILES_DIR" && task symlinks:relink
     echo ""
 
     print_header "Phase 8 - Theme System" "cyan"
