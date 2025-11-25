@@ -140,9 +140,9 @@ STEP_START=$(date +%s)
 {
   log_section "STEP 3/7: Preparing Container Environment"
 
-  # Update package database (required for fresh Arch containers)
-  echo "Updating package database..."
-  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm
+  # Update package database and install sudo (required for fresh Arch containers)
+  echo "Updating package database and installing sudo..."
+  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo
 
   # Create non-root user for realistic Arch testing
   echo "Creating test user 'archuser' for realistic testing..."
@@ -151,11 +151,12 @@ STEP_START=$(date +%s)
     echo 'archuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
   "
 
+  # Set container home directory for archuser
   CONTAINER_HOME="/home/archuser"
 
   # Create ~/.env for testing
   echo "Creating ~/.env..."
-  docker exec --user archuser "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
+  docker exec --user archuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
 PLATFORM=arch
 NVIM_AI_ENABLED=false
 DOTFILES_DOCKER_TEST=true
@@ -163,7 +164,7 @@ EOF"
 
   # Copy dotfiles to writable location (install script modifies files)
   echo "Copying dotfiles to writable location..."
-  docker exec --user archuser "$CONTAINER_NAME" bash -c "
+  docker exec --user archuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "
     shopt -s dotglob
     for item in /dotfiles/*; do
       [[ \$(basename \"\$item\") == '.git' ]] && continue
@@ -191,8 +192,7 @@ STEP_START=$(date +%s)
   echo "Executing Arch Linux installation in container..."
   echo ""
 
-  CONTAINER_HOME=$(docker exec --user archuser "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec --user archuser "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh"
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/install.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -212,12 +212,11 @@ STEP_START=$(date +%s)
   echo "(This tests that all tools are properly configured and in PATH)"
   echo ""
 
-  CONTAINER_HOME=$(docker exec --user archuser "$CONTAINER_NAME" bash -c 'echo $HOME')
   # Run verification script (continue even if verification fails)
-  docker exec --user archuser "$CONTAINER_NAME" bash -c "
-    ZSHDOTDIR=${CONTAINER_HOME}/.config/zsh
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
+    ZSHDOTDIR=/home/archuser/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/management/verify-installation.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /home/archuser/dotfiles/management/verify-installation.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -237,8 +236,7 @@ STEP_START=$(date +%s)
   echo "Running detect-alternate-installations.sh to check for duplicates..."
   echo ""
 
-  CONTAINER_HOME=$(docker exec --user archuser "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec --user archuser "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/management/detect-alternate-installations.sh"
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/management/detect-alternate-installations.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -257,10 +255,9 @@ STEP_START=$(date +%s)
   echo "Running task arch:update-all to verify update functionality..."
   echo ""
 
-  CONTAINER_HOME=$(docker exec --user archuser "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec --user archuser "$CONTAINER_NAME" bash -c "
-    cd ${CONTAINER_HOME}/dotfiles
-    ZSHDOTDIR=${CONTAINER_HOME}/.config/zsh
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
+    cd /home/archuser/dotfiles
+    ZSHDOTDIR=/home/archuser/.config/zsh
     export ZSHDOTDIR
     zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; task arch:update-all\"
   "

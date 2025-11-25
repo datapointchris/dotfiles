@@ -178,7 +178,14 @@ fi
 # ================================================================
 print_section "File Processing Tools (Universal)"
 check_command "ffmpeg" "-version"
-check_command "7zz" "SKIP_VERSION"  # official 7-Zip provides 7zz on all platforms
+
+# 7-Zip: Arch provides 7z, others provide 7zz
+if [[ "$DETECTED_PLATFORM" == "arch" ]]; then
+  check_command "7z" "SKIP_VERSION"
+else
+  check_command "7zz" "SKIP_VERSION"
+fi
+
 check_command "pdftoppm" "-v"
 check_command "convert" "-version"  # imagemagick
 check_command "chafa"

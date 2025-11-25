@@ -504,6 +504,9 @@ fi
 
 echo ""
 print_warning "Found ${#CLEANUP_COMMANDS[@]} alternate installations"
+# Output generic warning message that will be caught by log summarizers
+echo "WARNING: Detected ${#CLEANUP_COMMANDS[@]} tools installed in multiple locations"
+echo "WARNING: Multiple installations may cause PATH conflicts or version mismatches"
 
 if [[ "$CLEAN_MODE" == false ]]; then
   echo ""

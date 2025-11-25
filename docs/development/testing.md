@@ -42,17 +42,47 @@ The `management/test-install.sh` script provides a unified interface for testing
 cd ~/dotfiles
 
 # Test specific platform
-./management/test-install.sh -p wsl        # WSL Ubuntu (Docker)
-./management/test-install.sh -p arch       # Arch Linux (Docker)
-./management/test-install.sh -p macos      # macOS (local user)
+bash management/test-install.sh -p wsl        # WSL Ubuntu (Docker)
+bash management/test-install.sh -p arch       # Arch Linux (Docker)
+bash management/test-install.sh -p macos      # macOS (local user)
 
 # Keep container after test for debugging
-./management/test-install.sh -p wsl -k
-./management/test-install.sh -p arch -k
+bash management/test-install.sh -p wsl -k
+bash management/test-install.sh -p arch -k
 
 # Show help
-./management/test-install.sh --help
+bash management/test-install.sh --help
 ```
+
+### Run and Summarize (Context-Friendly Testing)
+
+For long-running tests, use `run-and-summarize.sh` to avoid context overload when working with Claude Code:
+
+```sh
+# Run test with periodic updates every 30 seconds
+bash management/run-and-summarize.sh "bash management/test-install.sh -p arch --keep" test-arch.log 30
+
+# What this does:
+# - Runs test in background
+# - Shows progress every 30 seconds
+# - Shows last 5 lines every 5 checks
+# - Generates concise summary when complete
+# - Saves full logs to test-arch.log
+
+# Why use this:
+# - Prevents flooding context with verbose installation output
+# - Get periodic updates without full log streaming
+# - Claude receives only summary, not thousands of log lines
+```
+
+The summarize script creates `.summary` files with:
+
+- File size and line count
+- Success/failure counts
+- Final result status
+- Last 20 lines of output (most important context)
+
+This is especially useful for CI/CD integration or when repeatedly testing installations.
 
 ### Platform-Specific Test Scripts
 
@@ -78,6 +108,8 @@ Docker provides **100% exact match** to real environments:
 - Official Arch Linux base image
 - Latest rolling release packages
 - Realistic Arch environment
+- Automatic library linking fixes (pcre2 for git)
+- Binary naming differences (7z vs 7zz) handled automatically
 
 **Advantages**:
 

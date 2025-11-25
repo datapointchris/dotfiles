@@ -28,6 +28,7 @@ tasks:
       - echo "  Updating package database..."
       - sudo pacman -Sy
       - task: install-system-packages
+      - task: fix-library-links
       - task: install-aur-helper
       - echo "✅ Arch packages installed!"
 
@@ -45,6 +46,24 @@ tasks:
         PACKAGES=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=pacman | tr '\n' ' ')
         echo "  Packages: $PACKAGES"
         sudo pacman -S --needed --noconfirm $PACKAGES
+
+  fix-library-links:
+    desc: Fix library linking issues (pcre2 for git)
+    internal: true
+    silent: true
+    cmds:
+      - |
+        echo "  Fixing library links..."
+        # Fix pcre2 version symbols for git
+        # This resolves "no version information available" warnings
+
+        # Reinstall pcre2 to ensure proper version symbols
+        sudo pacman -S --noconfirm pcre2 2>/dev/null || true
+
+        # Rebuild library cache to ensure proper linking
+        sudo ldconfig 2>/dev/null || true
+
+        echo "  Library links fixed"
 
   install-aur-helper:
     desc: Install yay (AUR helper)
