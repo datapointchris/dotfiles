@@ -21,10 +21,37 @@ set -euo pipefail
 # SETUP & INITIALIZATION
 # ================================================================
 
+# Parse arguments
+FORCE_INSTALL=false
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --force|-f)
+      FORCE_INSTALL=true
+      shift
+      ;;
+    --help|-h)
+      echo "Usage: $(basename "$0") [OPTIONS]"
+      echo ""
+      echo "Install dotfiles and development tools"
+      echo ""
+      echo "Options:"
+      echo "  --force, -f    Force reinstall of all tools even if already installed"
+      echo "  --help, -h     Show this help message"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Run with --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
 # Get script and dotfiles directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
 export DOTFILES_DIR
+export FORCE_INSTALL
 
 # Source formatting library
 export TERM=${TERM:-xterm}
@@ -33,6 +60,12 @@ source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 # Check if running as root (allow for Docker testing)
 if [[ $EUID -eq 0 ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
     die "Do not run this script as root"
+fi
+
+# Show force install status if enabled
+if [[ "$FORCE_INSTALL" == "true" ]]; then
+    print_warning "Force install mode enabled - will reinstall all tools"
+    echo ""
 fi
 
 # ================================================================
@@ -91,10 +124,14 @@ install_task() {
 install_common_phases() {
     print_header "Phase 2 - GitHub Release Tools" "cyan"
     bash "$DOTFILES_DIR/management/scripts/install-go.sh"
+    cd "$DOTFILES_DIR" && PATH="/usr/local/go/bin:$PATH" task go-tools:install
     bash "$DOTFILES_DIR/management/scripts/install-fzf.sh"
     bash "$DOTFILES_DIR/management/scripts/install-neovim.sh"
     bash "$DOTFILES_DIR/management/scripts/install-lazygit.sh"
     bash "$DOTFILES_DIR/management/scripts/install-yazi.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-glow.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-duf.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-awscli.sh"
     echo ""
 
     print_header "Phase 3 - Rust/Cargo Tools" "cyan"
@@ -145,9 +182,10 @@ install_macos() {
 
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
     cd "$DOTFILES_DIR" && task macos:install-homebrew
-    cd "$DOTFILES_DIR" && task macos:install-xcode-tools
     cd "$DOTFILES_DIR" && task macos:install-python-yaml
     cd "$DOTFILES_DIR" && task brew:install
+    cd "$DOTFILES_DIR" && task mas:install
+    cd "$DOTFILES_DIR" && task macos:setup-xcode
     echo ""
 
     install_common_phases
@@ -298,6 +336,10 @@ main() {
     echo "  • Restart your shell or run: exec zsh"
     echo "  • Update packages: task ${PLATFORM}:update-all"
     echo "  • Customize dotfiles in ~/.config/"
+    echo ""
+    print_info "💡 Tip: Check for alternate installations from previous setups:"
+    echo "   bash management/detect-alternate-installations.sh"
+    echo "   bash management/detect-alternate-installations.sh --clean  # to remove"
     echo ""
 }
 
