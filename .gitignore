@@ -97,6 +97,7 @@ venv/
 test-wsl-setup.log
 test-install.log
 test-wsl-docker.log
+test-arch-*
 .last-test-vm
 .tmp-transfer/
 .wsl-rootfs-cache/
