@@ -244,6 +244,7 @@ fi
 # Tier 1: User tools (highest priority - added last, ends up first)
 add_path "$ZSH_PLUGINS_DIR/forgit/bin"
 add_path "$HOME/.local/bin"
+add_path "$HOME/.local/share/npm/bin"  # npm global packages
 add_path "$CARGO_HOME/bin"
 
 # ------------------------------------------------------------------ #
