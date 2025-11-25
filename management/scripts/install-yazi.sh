@@ -14,7 +14,7 @@ set -euo pipefail
 source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 # Source helper functions
-source "$(dirname "$0")/install-helpers.sh"
+source "$(dirname "$0")/install-program-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -22,25 +22,59 @@ REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-bi
 
 print_banner "Installing Yazi"
 
+# Detect platform and architecture
+PLATFORM=$(uname -s)
+ARCH=$(uname -m)
+
+case $PLATFORM in
+  Darwin)
+    if [[ "$ARCH" == "x86_64" ]]; then
+      YAZI_TARGET="x86_64-apple-darwin"
+    else
+      YAZI_TARGET="aarch64-apple-darwin"
+    fi
+    ;;
+  Linux)
+    YAZI_TARGET="x86_64-unknown-linux-gnu"
+    ;;
+  *)
+    print_error "Unsupported platform: $PLATFORM"
+    exit 1
+    ;;
+esac
+
 # Install yazi binary if needed
-if ! command -v yazi >/dev/null 2>&1; then
+if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/yazi" ]; then
+  print_success "yazi already installed, skipping"
+  exit 0
+fi
+
+if [ ! -f "$HOME/.local/bin/yazi" ]; then
+  # Check for alternate installations
+  if command -v yazi >/dev/null 2>&1; then
+    ALTERNATE_LOCATION=$(command -v yazi)
+    print_warning " yazi found at $ALTERNATE_LOCATION"
+    print_info "Installing to ~/.local/bin/yazi anyway (PATH priority will use this one)"
+  fi
+
   # Fetch latest version
   print_info "Fetching latest version..."
-  YAZI_VERSION=$(fetch_latest_version "$REPO")
+  YAZI_VERSION=$(get_latest_github_release "$REPO")
   if [[ -z "$YAZI_VERSION" ]]; then
-    print_manual_install "yazi" "https://github.com/${REPO}/releases/latest" "latest" "yazi-x86_64-unknown-linux-gnu.zip" \
-      "unzip ~/Downloads/yazi-x86_64-unknown-linux-gnu.zip -d /tmp && mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi ~/.local/bin/ && mv /tmp/yazi-x86_64-unknown-linux-gnu/ya ~/.local/bin/"
+    print_manual_install "yazi" "https://github.com/${REPO}/releases/latest" "latest" "yazi-${YAZI_TARGET}.zip" \
+      "unzip ~/Downloads/yazi-${YAZI_TARGET}.zip -d /tmp && mv /tmp/yazi-${YAZI_TARGET}/yazi ~/.local/bin/ && mv /tmp/yazi-${YAZI_TARGET}/ya ~/.local/bin/"
     exit 1
   fi
 
-  YAZI_URL="https://github.com/${REPO}/releases/download/${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip"
+  print_info "Target: $YAZI_VERSION ($PLATFORM/$ARCH → $YAZI_TARGET)"
+  YAZI_URL="https://github.com/${REPO}/releases/download/${YAZI_VERSION}/yazi-${YAZI_TARGET}.zip"
 
   # Download
   print_info "Downloading..."
   YAZI_ZIP="/tmp/yazi.zip"
   if ! download_file "$YAZI_URL" "$YAZI_ZIP" "yazi"; then
-    print_manual_install "yazi" "$YAZI_URL" "$YAZI_VERSION" "yazi-x86_64-unknown-linux-gnu.zip" \
-      "unzip ~/Downloads/yazi-x86_64-unknown-linux-gnu.zip -d /tmp && mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi ~/.local/bin/ && mv /tmp/yazi-x86_64-unknown-linux-gnu/ya ~/.local/bin/"
+    print_manual_install "yazi" "$YAZI_URL" "$YAZI_VERSION" "yazi-${YAZI_TARGET}.zip" \
+      "unzip ~/Downloads/yazi-${YAZI_TARGET}.zip -d /tmp && mv /tmp/yazi-${YAZI_TARGET}/yazi ~/.local/bin/ && mv /tmp/yazi-${YAZI_TARGET}/ya ~/.local/bin/"
     exit 1
   fi
 
@@ -49,9 +83,9 @@ if ! command -v yazi >/dev/null 2>&1; then
   cd /tmp
   unzip -q yazi.zip
   mkdir -p ~/.local/bin
-  mv yazi-x86_64-unknown-linux-gnu/yazi ~/.local/bin/
-  mv yazi-x86_64-unknown-linux-gnu/ya ~/.local/bin/
-  rm -rf yazi.zip yazi-x86_64-unknown-linux-gnu
+  mv "yazi-${YAZI_TARGET}/yazi" ~/.local/bin/
+  mv "yazi-${YAZI_TARGET}/ya" ~/.local/bin/
+  rm -rf yazi.zip "yazi-${YAZI_TARGET}"
 
   print_success " Yazi and ya installed"
 else

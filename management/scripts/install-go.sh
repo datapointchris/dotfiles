@@ -14,7 +14,7 @@ set -euo pipefail
 source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 # Source helper functions
-source "$(dirname "$0")/install-helpers.sh"
+source "$(dirname "$0")/install-program-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -31,7 +31,7 @@ elif [[ -x "/usr/local/go/bin/go" ]]; then
   GO_BIN="/usr/local/go/bin/go"
 fi
 
-if [[ -n "$GO_BIN" ]]; then
+if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
   CURRENT_VERSION=$($GO_BIN version | awk '{print $3}' | sed 's/go//')
   print_info "Current version: $CURRENT_VERSION"
 
@@ -50,7 +50,15 @@ if [[ -n "$GO_BIN" ]]; then
   print_info "Upgrading from $CURRENT_VERSION..."
 fi
 
-# Detect architecture
+# Check for alternate installations
+if [[ ! -x "/usr/local/go/bin/go" ]] && command -v go >/dev/null 2>&1; then
+  ALTERNATE_LOCATION=$(command -v go)
+  print_warning " go found at $ALTERNATE_LOCATION"
+  print_info "Installing to /usr/local/go/bin/go anyway (PATH priority will use this one)"
+fi
+
+# Detect platform and architecture
+PLATFORM=$(uname -s)
 ARCH=$(uname -m)
 case $ARCH in
   x86_64)
@@ -65,25 +73,39 @@ case $ARCH in
     ;;
 esac
 
+# Detect platform
+case $PLATFORM in
+  Darwin)
+    GO_OS="darwin"
+    ;;
+  Linux)
+    GO_OS="linux"
+    ;;
+  *)
+    print_error " Unsupported platform: $PLATFORM"
+    exit 1
+    ;;
+esac
+
 # Get latest version
 print_info "Fetching latest version..."
 if ! GO_VERSION=$(curl -sf https://go.dev/VERSION?m=text | head -n1); then
   print_error " Failed to fetch Go version from go.dev"
-  print_manual_install "go" "https://go.dev/dl/" "latest" "go*.linux-${GO_ARCH}.tar.gz" \
-    "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/go*.linux-${GO_ARCH}.tar.gz"
+  print_manual_install "go" "https://go.dev/dl/" "latest" "go*.${GO_OS}-${GO_ARCH}.tar.gz" \
+    "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/go*.${GO_OS}-${GO_ARCH}.tar.gz"
   exit 1
 fi
 
-print_info "Latest: $GO_VERSION ($ARCH → $GO_ARCH)"
+print_info "Latest: $GO_VERSION ($PLATFORM/$ARCH → $GO_OS/$GO_ARCH)"
 
 # Download URL
-GO_URL="https://go.dev/dl/${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
-GO_TARBALL="/tmp/${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
+GO_URL="https://go.dev/dl/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
+GO_TARBALL="/tmp/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
 
 # Download
 if ! download_file "$GO_URL" "$GO_TARBALL" "go"; then
-  print_manual_install "go" "$GO_URL" "$GO_VERSION" "${GO_VERSION}.linux-${GO_ARCH}.tar.gz" \
-    "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
+  print_manual_install "go" "$GO_URL" "$GO_VERSION" "${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz" \
+    "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
   exit 1
 fi
 

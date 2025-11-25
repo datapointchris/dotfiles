@@ -12,7 +12,7 @@ source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 print_banner "Installing uv"
 
-if command -v uv >/dev/null 2>&1; then
+if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v uv >/dev/null 2>&1; then
   print_success "uv already installed: $(uv --version)"
 else
   print_info "Installing uv Python package manager..."

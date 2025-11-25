@@ -13,7 +13,7 @@ source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 print_banner "Installing Rust"
 
-if command -v cargo >/dev/null 2>&1; then
+if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v cargo >/dev/null 2>&1; then
   print_success "Rust already installed: $(rustc --version)"
 else
   print_info "Installing Rust..."

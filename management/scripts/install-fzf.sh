@@ -14,7 +14,7 @@ set -euo pipefail
 source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 # Source helper functions
-source "$(dirname "$0")/install-helpers.sh"
+source "$(dirname "$0")/install-program-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -42,7 +42,7 @@ GO_VERSION=$(go version | awk '{print $3}')
 print_info "Using $GO_VERSION"
 
 # Check if fzf is already installed
-if [[ -f "$FZF_BIN" ]] && command -v fzf >/dev/null 2>&1; then
+if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -f "$FZF_BIN" ]] && command -v fzf >/dev/null 2>&1; then
   CURRENT_VERSION=$(fzf --version | awk '{print $1}')
   print_info "Current version: $CURRENT_VERSION"
 
@@ -51,6 +51,13 @@ if [[ -f "$FZF_BIN" ]] && command -v fzf >/dev/null 2>&1; then
     print_success "Acceptable version (>= $MIN_VERSION), skipping"
     exit 0
   fi
+fi
+
+# Check for alternate installations
+if [[ ! -f "$FZF_BIN" ]] && command -v fzf >/dev/null 2>&1; then
+  ALTERNATE_LOCATION=$(command -v fzf)
+  print_warning " fzf found at $ALTERNATE_LOCATION"
+  print_info "Installing to $FZF_BIN anyway (PATH priority will use this one)"
 fi
 
 # Clone repository
@@ -78,7 +85,7 @@ fi
 # Install
 print_info "Installing to ~/.local/bin..."
 mkdir -p "$HOME/.local/bin"
-cp target/fzf-linux_* "$FZF_BIN" 2>/dev/null || cp bin/fzf "$FZF_BIN"
+cp target/fzf-* "$FZF_BIN" 2>/dev/null || cp bin/fzf "$FZF_BIN"
 chmod +x "$FZF_BIN"
 
 # Cleanup
