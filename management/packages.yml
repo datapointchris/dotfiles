@@ -177,14 +177,17 @@ system_packages:
   - name: chafa
     apt: chafa
     pacman: chafa
-    description: Image to ASCII converter (Linux only)
+    brew: chafa
+    description: Image to ASCII converter (used by Yazi for image preview)
+
+  # Note: resvg removed - now embedded in Yazi as a Rust crate (not needed separately)
 
   # Archive Tools
   - name: 7zip
-    apt: 7zip
-    pacman: p7zip
+    apt: 7zip-standalone
+    pacman: 7zip
     brew: sevenzip
-    description: 7-Zip compression
+    description: 7-Zip compression (provides 7zz command on all platforms)
 
   # Build & Task Automation
   - name: go-task
@@ -220,13 +223,7 @@ system_packages:
     brew: duti
     description: File association manager (macOS only)
 
-  - name: glow
-    brew: glow
-    description: Markdown renderer (macOS Brewfile)
-
-  - name: duf
-    brew: duf
-    description: Modern df alternative (macOS Brewfile)
+  # Note: glow and duf moved to github_binaries for universal installation
 
   - name: git-secrets
     brew: git-secrets
@@ -284,6 +281,18 @@ github_binaries:
     min_version: "0.50"
     install_script: install-fzf.sh
     build_method: go
+    install_dir: "~/.local/bin"
+
+  - name: glow
+    repo: charmbracelet/glow
+    install_script: install-glow.sh
+    binary_pattern: "glow_{version}_linux_x86_64.tar.gz"
+    install_dir: "~/.local/bin"
+
+  - name: duf
+    repo: muesli/duf
+    install_script: install-duf.sh
+    binary_pattern: "duf_{version}_linux_x86_64.tar.gz"
     install_dir: "~/.local/bin"
 
 # ================================================================
@@ -423,6 +432,18 @@ uv_tools:
       description: Numerical computing (for various tools)
 
 # ================================================================
+# GO TOOLS
+# ================================================================
+# Installed via: go install <package>@latest
+# Managed by Go toolchain (installed in Phase 2)
+# These are Go CLI tools installed globally
+
+go_tools:
+  - name: cheat
+    package: github.com/cheat/cheat/cmd/cheat
+    description: Interactive cheatsheet CLI
+
+# ================================================================
 # SHELL PLUGINS
 # ================================================================
 # Manually cloned into ~/.config/zsh/plugins
@@ -446,6 +467,75 @@ shell_plugins:
     description: Fish-like syntax highlighting for ZSH
 
 # ================================================================
+# MAC APP STORE APPS
+# ================================================================
+# Installed via: mas install <id>
+# Platform: macOS only
+# Note: mas (Mac App Store CLI) may fail on certain macOS versions
+# These apps can be manually installed via the App Store GUI if needed
+
+mas_apps:
+  - name: Color Picker
+    id: 1545870783
+    description: Color picker utility for macOS
+
+  - name: Dark Reader for Safari
+    id: 1438243180
+    description: Dark mode for Safari websites
+
+  - name: Dato
+    id: 1470584107
+    description: Menu bar calendar and time zones
+
+  - name: Forecast Bar
+    id: 982710545
+    description: Weather forecast in menu bar
+
+  - name: IPEVO Annotator
+    id: 1237562727
+    description: Screen annotation and drawing tool
+
+  - name: KnowledgeBase Builder
+    id: 1398145161
+    description: Knowledge base and documentation tool
+
+  - name: Microsoft Excel
+    id: 462058435
+    description: Spreadsheet application
+
+  - name: Microsoft PowerPoint
+    id: 462062816
+    description: Presentation software
+
+  - name: Microsoft Remote Desktop
+    id: 1295203466
+    description: Remote desktop client for macOS
+
+  - name: Microsoft Word
+    id: 462054704
+    description: Word processing application
+
+  - name: NiBoard
+    id: 1511409657
+    description: Whiteboard and sketching app
+
+  - name: Pixelstyle Photo Editor
+    id: 1244649277
+    description: Photo editing application
+
+  - name: Slack
+    id: 803453959
+    description: Team communication platform
+
+  - name: Todoist
+    id: 585829637
+    description: Task management and to-do list
+
+  - name: Xcode
+    id: 497799835
+    description: Apple's IDE for macOS and iOS development
+
+# ================================================================
 # NOTES
 # ================================================================
 # This file is the single source of truth for package installation
@@ -453,7 +543,7 @@ shell_plugins:
 #
 # Package Management Philosophy:
 #   - System packages: apt/pacman/brew for OS-level tools (see system_packages)
-#   - Language-specific managers: npm, uv, cargo (consistent across platforms)
+#   - Language-specific managers: npm, uv, cargo, go (consistent across platforms)
 #   - GitHub binaries: For tools needing latest versions (neovim, lazygit, etc)
 #
 # Tools NOT in system_packages (installed via other methods):
@@ -462,6 +552,7 @@ shell_plugins:
 #   - go: GitHub releases (not apt/pacman golang-go)
 #   - nvm, npm packages: nvm + npm (not system Node.js)
 #   - Python tools: uv (not system pip)
+#   - Go tools: go install (see go_tools)
 #
 # Runtime Versions:
 #   - Node.js: Managed by nvm (see runtimes.node.version)
@@ -473,6 +564,8 @@ shell_plugins:
 #   python parse-packages.py --type=system --manager=apt
 #   python parse-packages.py --type=cargo
 #   python parse-packages.py --type=npm
+#   python parse-packages.py --type=go
+#   python parse-packages.py --type=mas
 #   python parse-packages.py --get=runtimes.node.version
 #
 # To update all packages:

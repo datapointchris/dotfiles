@@ -7,6 +7,8 @@ Usage:
     python parse-packages.py --type=cargo
     python parse-packages.py --type=npm
     python parse-packages.py --type=uv
+    python parse-packages.py --type=go
+    python parse-packages.py --type=mas
     python parse-packages.py --type=github
     python parse-packages.py --get=runtimes.node.version
 """
@@ -14,9 +16,6 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
-
-# Debug: Print which Python is being used (to stderr so it doesn't interfere with output)
-print(f"DEBUG: Using Python: {sys.executable}", file=sys.stderr)
 
 import yaml
 
@@ -94,6 +93,20 @@ def get_uv_packages(data):
     return packages
 
 
+def get_go_packages(data):
+    """Extract go tool package paths."""
+    if 'go_tools' not in data:
+        return []
+    return [pkg['package'] for pkg in data['go_tools']]
+
+
+def get_mas_apps(data):
+    """Extract Mac App Store app IDs."""
+    if 'mas_apps' not in data:
+        return []
+    return [str(pkg['id']) for pkg in data['mas_apps']]
+
+
 def get_github_packages(data):
     """Extract GitHub binary package names."""
     if 'github_binaries' not in data:
@@ -129,7 +142,7 @@ def get_github_binary_field(data, name, field):
 
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'github', 'shell-plugins'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'go', 'mas', 'github', 'shell-plugins'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew'],
                         help='Package manager for system packages')
@@ -180,6 +193,10 @@ def main():
         packages = get_npm_packages(data)
     elif args.type == 'uv':
         packages = get_uv_packages(data)
+    elif args.type == 'go':
+        packages = get_go_packages(data)
+    elif args.type == 'mas':
+        packages = get_mas_apps(data)
     elif args.type == 'github':
         packages = get_github_packages(data)
     elif args.type == 'shell-plugins':
