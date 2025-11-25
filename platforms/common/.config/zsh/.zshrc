@@ -231,6 +231,17 @@ add_path "/usr/bin"
 add_path "/usr/local/bin"
 add_path "/usr/local/sbin"
 
+# Tier 2.5: GNU utilities (macOS only - override system utilities)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # Add GNU coreutils, findutils, and other GNU tools without g-prefix
+  add_path "/usr/local/opt/coreutils/libexec/gnubin"
+  add_path "/usr/local/opt/findutils/libexec/gnubin"
+  add_path "/usr/local/opt/gnu-sed/libexec/gnubin"
+  add_path "/usr/local/opt/gnu-tar/libexec/gnubin"
+  add_path "/usr/local/opt/grep/libexec/gnubin"
+  add_path "/usr/local/opt/gawk/libexec/gnubin"
+fi
+
 # Tier 2: Platform-specific
 if [[ "$OSTYPE" == "darwin"* ]]; then
   add_path "/usr/local/opt/postgresql@16/bin"

@@ -36,7 +36,8 @@ brew "duti"             # macOS file association manager
 # SEARCH & TEXT PROCESSING
 # ================================================================
 brew "grep"             # GNU grep
-brew "gnu-sed"          # GNU sed (available as gsed)
+brew "gnu-sed"          # GNU sed
+brew "gawk"             # GNU awk
 
 # ================================================================
 # PROGRAMMING LANGUAGES
@@ -111,7 +112,7 @@ brew "coretemp"         # CPU temperature monitoring
 
 # Archive & Compression
 brew "sevenzip"         # 7zip compression
-brew "gnu-tar"          # GNU tar (available as gtar)
+brew "gnu-tar"          # GNU tar
 
 # Network
 brew "curl"             # transfer data with URLs
@@ -119,7 +120,7 @@ brew "wget"             # file retrieval
 brew "nmap"             # network scanner
 
 # Core utilities
-brew "coreutils"        # GNU coreutils (g-prefixed, not in PATH)
+brew "coreutils"        # GNU coreutils (prepended to PATH via .zshrc)
 brew "findutils"        # GNU findutils
 
 # macOS specific
@@ -204,6 +205,6 @@ cask "obsidian"         # note taking
 #   - ghostty terminal installed manually (not in Homebrew)
 #   - docker-desktop managed separately (large cask)
 #   - Fonts managed manually in ~/fonts directory
-#   - GNU coreutils NOT in PATH (available with g-prefix)
+#   - GNU coreutils prepended to PATH in .zshrc (unprefixed)
 #   - Node.js managed by nvm (not brew)
 #   - Python development managed by uv (not brew)

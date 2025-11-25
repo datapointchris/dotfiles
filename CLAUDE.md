@@ -90,7 +90,7 @@ This dotfiles setup maintains a clear separation between system package managers
 
 **Platform Notes**:
 
-- GNU coreutils on macOS stay `g`-prefixed to avoid conflicts with system tools
+- GNU coreutils on macOS are prepended to PATH (unprefixed) for universal use in both interactive shells and scripts
 - Homebrew Python only kept if required by `brew uses --installed python@X.XX`
 - All development uses uv-managed Python, not system Python
 
