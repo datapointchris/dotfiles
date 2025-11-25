@@ -50,6 +50,19 @@ tasks:
           echo "Run 'task macos:install-xcode-tools' again after installation completes"
         fi
 
+  install-python-yaml:
+    desc: Install PyYAML for system Python (bootstrap dependency)
+    silent: true
+    cmds:
+      - |
+        if /usr/bin/python3 -c "import yaml" &>/dev/null; then
+          echo "PyYAML already installed for system Python"
+        else
+          echo "Installing PyYAML for system Python..."
+          /usr/bin/python3 -m pip install --user PyYAML
+          echo "✅ PyYAML installed"
+        fi
+
   update-all:
     desc: Update all macOS packages and tools
     silent: true

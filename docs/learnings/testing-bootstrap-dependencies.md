@@ -26,17 +26,40 @@ python3 parse-packages.py --type=system --manager=apt
 
 ## The Solution
 
-**Root Fix: Use Docker with Official WSL Rootfs**
+**Root Fix: Use System Python Explicitly**
 
-Instead of guessing what packages differ between test and production, use the exact WSL environment for testing:
+To ensure parse-packages.py works across all platforms regardless of which Python is in PATH:
 
-**1. Install the correct package** (`management/taskfiles/wsl.yml:43`):
+**1. Use system Python via shebang** (`management/parse-packages.py:1`):
+
+```python
+#!/usr/bin/python3  # System Python, not #!/usr/bin/env python3
+```
+
+This ensures the script always uses `/usr/bin/python3` even if uv-managed Python is in PATH.
+
+**2. Install PyYAML for system Python on each platform**:
+
+WSL/Debian (`management/taskfiles/wsl.yml:43`):
 
 ```bash
 sudo apt install -y python3-pyyaml  # Correct package name
 ```
 
-**2. Use Docker with WSL rootfs for testing** (`management/test-wsl-docker.sh`):
+Arch Linux (`management/packages.yml`):
+
+```yaml
+- name: python3-yaml
+  pacman: python-yaml
+```
+
+macOS (`management/taskfiles/macos.yml`):
+
+```bash
+/usr/bin/python3 -m pip install --user PyYAML
+```
+
+**3. Use Docker with WSL rootfs for testing** (`management/test-wsl-docker.sh`):
 
 ```bash
 # Download official WSL Ubuntu rootfs (one-time, cached)
@@ -51,7 +74,7 @@ gunzip -c ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz | docker import - wsl-ubuntu:
 
 This provides **100% accurate testing** - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.
 
-**3. Verify the script works** (`management/verify-installation.sh:322`):
+**4. Verify the script works** (`management/verify-installation.sh:322`):
 
 ```bash
 if python3 "$HOME/dotfiles/management/parse-packages.py" --type=system --manager=apt >/dev/null 2>&1; then
@@ -81,9 +104,9 @@ These differences cause tests to pass when they shouldn't.
 
 **Package names vary across platforms**:
 
-- Ubuntu/Debian: `python3-pyyaml`
-- Arch Linux: `python-yaml`
-- macOS (Homebrew): Usually handled differently via pip/uv
+- Ubuntu/Debian: `python3-pyyaml` (system package via apt)
+- Arch Linux: `python-yaml` (system package via pacman)
+- macOS: `PyYAML` (installed via pip --user to system Python)
 
 **Defense in depth**: Even with perfect test environment, add verification checks that test functionality (not just presence) to catch edge cases.
 

@@ -146,6 +146,7 @@ install_macos() {
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
     cd "$DOTFILES_DIR" && task macos:install-homebrew
     cd "$DOTFILES_DIR" && task macos:install-xcode-tools
+    cd "$DOTFILES_DIR" && task macos:install-python-yaml
     cd "$DOTFILES_DIR" && task brew:install
     echo ""
 
