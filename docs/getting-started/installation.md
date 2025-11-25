@@ -11,7 +11,7 @@ Clone the repository and run the platform-specific bootstrap script:
     ```bash
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash management/macos-setup.sh
+    bash install.sh
     ```
 
     **Time**: ~20-30 minutes (includes Homebrew installation)
@@ -21,7 +21,7 @@ Clone the repository and run the platform-specific bootstrap script:
     ```bash
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash management/wsl-setup.sh
+    bash install.sh
     ```
 
     **Time**: ~15-20 minutes
@@ -37,7 +37,7 @@ Clone the repository and run the platform-specific bootstrap script:
     ```bash
     git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
     cd ~/dotfiles
-    bash management/arch-setup.sh
+    bash install.sh
     ```
 
     **Time**: ~15-20 minutes
@@ -52,26 +52,28 @@ After installation completes, restart your terminal or run `exec zsh` to load th
 
 ## How Installation Works
 
-All platforms follow the same two-step pattern:
+The `install.sh` script provides a unified installation experience across all platforms:
 
-1. **Bootstrap script** - Installs minimal prerequisites needed to run Task
-2. **Task automation** - Handles all package installation and configuration
+1. **Platform Detection** - Automatically detects macOS, WSL, or Arch Linux
+2. **Prerequisites** - Installs platform-specific requirements (Homebrew on macOS, Task on all)
+3. **Task Automation** - Delegates to Task for complete package installation and configuration
 
-This separation keeps bootstrap scripts simple and makes the installation fully reproducible via Task.
+The installation is fully automated and idempotent - you can safely re-run it to update or fix issues.
 
 ## Platform-Specific Details
 
 === "macOS"
 
-    ### Bootstrap Script
+    ### Installation Process
 
-    `management/macos-setup.sh` performs these steps:
+    `install.sh` performs these steps:
 
-    1. Install Homebrew if not present (Apple Silicon: `/opt/homebrew`, Intel: `/usr/local`)
-    2. Install Taskfile via Homebrew
-    3. Run `task install-macos` for complete package installation
+    1. Detect macOS platform (Apple Silicon or Intel)
+    2. Install Homebrew if not present (Apple Silicon: `/opt/homebrew`, Intel: `/usr/local`)
+    3. Install prerequisites (Python, YAML parser, Taskfile)
+    4. Run platform-specific installation phases
 
-    ### Package Installation
+    ### Package Installation Phases
 
     `task install-macos` installs:
 
@@ -111,14 +113,15 @@ This separation keeps bootstrap scripts simple and makes the installation fully 
 
 === "WSL Ubuntu"
 
-    ### Bootstrap Script
+    ### Installation Process
 
-    `management/wsl-setup.sh` performs these steps:
+    `install.sh` performs these steps:
 
-    1. Install Taskfile (downloads GitHub release binary)
-    2. Run `task install-wsl` for complete package installation
+    1. Detect WSL/Ubuntu platform
+    2. Install prerequisites (Task, Python, build tools)
+    3. Run platform-specific installation phases
 
-    ### Package Installation
+    ### Package Installation Phases
 
     `task install-wsl` executes 9 phases sequentially:
 
@@ -183,15 +186,15 @@ This separation keeps bootstrap scripts simple and makes the installation fully 
 
 === "Arch Linux"
 
-    ### Bootstrap Script
+    ### Installation Process
 
-    `management/arch-setup.sh` performs these steps:
+    `install.sh` performs these steps:
 
-    1. Install Taskfile (downloads GitHub release binary)
-    2. Install yay if not present (AUR helper)
-    3. Run `task install-arch` for complete package installation
+    1. Detect Arch Linux platform
+    2. Install prerequisites (Task, yay AUR helper)
+    3. Run platform-specific installation phases
 
-    ### Package Installation
+    ### Package Installation Phases
 
     `task install-arch` installs:
 
