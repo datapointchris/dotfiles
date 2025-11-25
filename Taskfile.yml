@@ -17,6 +17,12 @@ includes:
   brew:
     taskfile: ./management/taskfiles/brew.yml
     optional: true
+  mas:
+    taskfile: ./management/taskfiles/mas.yml
+    optional: true
+  go-tools:
+    taskfile: ./management/taskfiles/go-tools.yml
+    optional: true
   nvm:
     taskfile: ./management/taskfiles/nvm.yml
     optional: true
