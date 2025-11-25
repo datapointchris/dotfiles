@@ -2,20 +2,40 @@
 # ================================================================
 # Run and Summarize - Auto-monitoring wrapper for long processes
 # ================================================================
-# Runs a command in background, waits for completion, generates summary
+# Purpose:
+#   Runs commands in the background and monitors them with periodic updates.
+#   Designed to prevent context overload when working with Claude Code by only
+#   showing progress updates instead of streaming verbose output.
 #
 # Usage:
 #   run-and-summarize.sh "<command>" <logfile> [check_interval_seconds]
 #
-# Examples:
-#   run-and-summarize.sh "bash install.sh" install.log
-#   run-and-summarize.sh "task build" build.log 30
+# Parameters:
+#   command               - Command to run (must be quoted)
+#   logfile              - Path to store full command output
+#   check_interval       - Optional: seconds between checks (default: 60)
 #
-# The script will:
-# 1. Run command in background with output to logfile
-# 2. Monitor process for completion
-# 3. Generate intelligent summary when done
-# 4. Write summary to <logfile>.summary
+# Examples:
+#   run-and-summarize.sh "bash management/test-install.sh -p arch" test.log 30
+#   run-and-summarize.sh "task build" build.log
+#
+# What it does:
+#   1. Runs command in background, redirecting output to logfile
+#   2. Shows progress check every N seconds (timestamp, elapsed time)
+#   3. Shows last 5 lines every 5 checks for quick status
+#   4. When complete, generates concise summary using summarize-log.sh
+#   5. Saves summary to <logfile>.summary
+#
+# When to use:
+#   - Long-running installations or tests
+#   - Processes with verbose output that would burn context
+#   - When you want periodic updates without full log streaming
+#
+# Tips:
+#   - Run this script directly in your terminal (not in background)
+#   - You'll see periodic updates and final summary
+#   - Full verbose logs are in <logfile> if needed for debugging
+#   - Use 30s interval for faster-moving processes, 60s for slow ones
 # ================================================================
 
 set -euo pipefail

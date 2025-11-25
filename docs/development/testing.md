@@ -75,7 +75,7 @@ bash management/run-and-summarize.sh "bash management/test-install.sh -p arch --
 # - Claude receives only summary, not thousands of log lines
 ```
 
-The summarize script creates `.summary` files with:
+The summarize script (`management/summarize-log.sh`) creates `.summary` files with:
 
 - File size and line count
 - Success/failure counts
@@ -83,6 +83,8 @@ The summarize script creates `.summary` files with:
 - Last 20 lines of output (most important context)
 
 This is especially useful for CI/CD integration or when repeatedly testing installations.
+
+Scripts are located in `management/` directory alongside other testing tools.
 
 ### Platform-Specific Test Scripts
 
