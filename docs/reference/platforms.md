@@ -326,6 +326,13 @@ Tools installed to: `~/.local/bin` (consistent across platforms)
 - Apple Silicon: `/opt/homebrew`
 - Scripts should detect automatically
 
+**macOS-Specific Aliases**:
+
+- `backup-important` - Backs up critical directories to ~/Documents (iCloud synced)
+  - Directories: .claude, learning, notes, obsession, code
+  - Uses the universal `backup-dirs` utility
+  - See `docs/workflows/backup.md` for details
+
 ### Ubuntu/WSL Quirks
 
 **WSL-Specific Configuration** (`/etc/wsl.conf`):

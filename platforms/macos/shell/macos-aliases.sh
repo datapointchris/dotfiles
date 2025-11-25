@@ -35,9 +35,6 @@ alias locallogs="z /usr/local/var/log; ls -l"
 # Start Github Issues Flask Server
 alias issues='$HOME/code/python-projects/github-issues/.venv/bin/python $HOME/code/python-projects/github-issues/github_issues/main.py'
 
-# Reset JAVA_HOME after changing with jenv
-alias jenv-set-java-home='export JAVA_HOME="$HOME/.jenv/versions/`jenv version-name`"'
-
 # Reload audio driver
 alias reload-audio='sudo killall coreaudiod'
 
@@ -74,6 +71,11 @@ alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
 
 # Source aws-profiles script to set profile (must be sourced for environment variables to persist)
 alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
+
+# ---------- Backup ---------- #
+
+# Backup important directories to iCloud Documents
+alias backup-important='backup-dirs .claude learning notes obsession code'
 
 # ---------- Environment ---------- #
 
