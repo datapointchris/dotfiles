@@ -1,22 +1,99 @@
 # ================================================================
-# Mac App Store Update Tasks (Internal)
+# Mac App Store Package Management Tasks
 # ================================================================
-# Internal tasks for updating Mac App Store apps via mas
-# These tasks are called by macOS-specific update-all command
-# Platform: macOS only
+# Platform: macOS
+# Manages Mac App Store apps using mas CLI
 
-version: '3'
+version: "3"
+
+vars:
+  PACKAGES_CONFIG: "{{.ROOT_DIR}}/management/packages.yml"
 
 tasks:
-  # ================================================================
-  # UPDATE
-  # ================================================================
+  install:
+    desc: Install all Mac App Store apps from packages.yml
+    silent: true
+    platforms: [darwin]
+    cmds:
+      - |
+        echo "✅ Installing Mac App Store apps..."
+        echo ""
+
+        # Check if mas is installed
+        if ! command -v mas >/dev/null 2>&1; then
+          echo "  ⚠️  mas not found - install with: brew install mas"
+          echo "  ℹ️  Apps can be manually installed via the App Store GUI"
+          exit 0
+        fi
+
+        # Check if signed in
+        if ! mas account >/dev/null 2>&1; then
+          echo "  ⚠️  Not signed into Mac App Store"
+          echo "  ℹ️  Sign in via System Settings > Apple ID"
+          echo "  ℹ️  Apps can be manually installed via the App Store GUI"
+          exit 0
+        fi
+
+        INSTALLED=0
+        FAILED=0
+        SKIPPED=0
+
+        # Install each app
+        /usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=mas | while read -r app_id; do
+          # Check if already installed
+          if mas list | grep -q "^$app_id "; then
+            SKIPPED=$((SKIPPED + 1))
+            continue
+          fi
+
+          echo "  Installing app ID: $app_id..."
+          if mas install "$app_id" 2>&1; then
+            INSTALLED=$((INSTALLED + 1))
+            echo "    ✓ Installed"
+          else
+            FAILED=$((FAILED + 1))
+            echo "    ✗ Failed (possibly requires manual purchase or macOS compatibility issue)"
+          fi
+        done
+
+        echo ""
+        echo "  Summary:"
+        [ $INSTALLED -gt 0 ] && echo "    Installed: $INSTALLED"
+        [ $SKIPPED -gt 0 ] && echo "    Already installed: $SKIPPED"
+        [ $FAILED -gt 0 ] && echo "    Failed: $FAILED (can install manually via App Store)"
+        echo ""
+        echo "  ℹ️  Note: mas may fail on certain macOS versions (15.7.2, 26.1+)"
+        echo "  ℹ️  Failed apps can be manually installed via the App Store GUI"
+        echo ""
+        echo "✅ Mac App Store installation complete!"
+
+  list:
+    desc: List all installed Mac App Store apps
+    silent: true
+    platforms: [darwin]
+    cmds:
+      - |
+        if ! command -v mas >/dev/null 2>&1; then
+          echo "  ⚠️  mas not found - install with: brew install mas"
+          exit 1
+        fi
+        echo "  Installed Mac App Store apps:"
+        mas list
 
   update:
     desc: Update all Mac App Store apps
     silent: true
+    platforms: [darwin]
     cmds:
       - |
+        if ! command -v mas >/dev/null 2>&1; then
+          echo "  ⚠️  mas not found - install with: brew install mas"
+          exit 1
+        fi
         echo "  Updating Mac App Store apps..."
-        mas upgrade
-        echo "  Mac App Store apps updated"
+        if mas upgrade 2>&1; then
+          echo "  ✓ Mac App Store apps updated"
+        else
+          echo "  ⚠️  Update failed (mas may be incompatible with your macOS version)"
+          echo "  ℹ️  You can update apps manually via the App Store GUI"
+        fi

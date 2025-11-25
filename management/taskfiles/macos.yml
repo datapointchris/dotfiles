@@ -36,19 +36,32 @@ tasks:
     status:
       - command -v brew >/dev/null 2>&1
 
-  install-xcode-tools:
-    desc: Install Xcode Command Line Tools
+  setup-xcode:
+    desc: Accept Xcode license and run first launch setup
     silent: true
     cmds:
       - |
-        if xcode-select -p &>/dev/null; then
-          echo "Xcode Command Line Tools already installed"
-        else
-          echo "Installing Xcode Command Line Tools..."
-          xcode-select --install
-          echo "Complete the installation in the GUI prompt"
-          echo "Run 'task macos:install-xcode-tools' again after installation completes"
+        if ! command -v xcodebuild &>/dev/null; then
+          echo "⚠️  Xcode not installed (install via: mas install 497799835)"
+          exit 0
         fi
+
+        echo "Setting up Xcode..."
+
+        # Check if license is already accepted
+        if sudo -n xcodebuild -license status &>/dev/null; then
+          echo "  ✓ Xcode license already accepted"
+        else
+          echo "  ⚠️  Xcode license not accepted"
+          echo "  ℹ️  Run manually: sudo xcodebuild -license accept"
+          exit 0
+        fi
+
+        # Run first launch setup
+        echo "  Running first launch setup..."
+        xcodebuild -runFirstLaunch 2>/dev/null || true
+
+        echo "✅ Xcode setup complete"
 
   install-python-yaml:
     desc: Install PyYAML for system Python (bootstrap dependency)

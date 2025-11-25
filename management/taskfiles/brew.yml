@@ -15,7 +15,6 @@ tasks:
     desc: Install all packages from Brewfile
     silent: true
     cmds:
-      - task: check-brewfile
       - echo "✅ Installing Homebrew packages from Brewfile..."
       - brew bundle install --file={{.BREWFILE}}
       - echo "✅ Homebrew packages installed!"

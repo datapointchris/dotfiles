@@ -6,14 +6,6 @@
 # Last auto-generated: 2025-11-04
 
 # ================================================================
-# TAPS
-# ================================================================
-tap "homebrew/bundle"
-tap "homebrew/cask"
-tap "homebrew/cask-fonts"
-tap "homebrew/core"
-
-# ================================================================
 # CORE DEVELOPMENT TOOLS
 # ================================================================
 # Modern CLI replacements and essential dev tools
@@ -37,9 +29,8 @@ brew "git-secrets"      # prevent committing secrets
 # FILE MANAGEMENT & VIEWING
 # ================================================================
 brew "tree"             # directory tree visualization
-brew "duf"              # modern df alternative
 brew "duti"             # macOS file association manager
-brew "glow"             # markdown renderer
+# Note: glow and duf installed via GitHub binaries (see packages.yml github_binaries)
 
 # ================================================================
 # SEARCH & TEXT PROCESSING
@@ -88,10 +79,8 @@ brew "terraformer"      # import existing infrastructure
 brew "terrascan"        # terraform security scanner
 brew "tflint"           # terraform linter
 
-# ================================================================
-# CLOUD & DEVOPS
-# ================================================================
-brew "awscli"           # AWS command-line interface
+# AWS
+brew "awscli"           # AWS command line interface
 
 # ================================================================
 # SECURITY
@@ -143,6 +132,8 @@ brew "ffmpeg"           # video/audio processing
 brew "mpv"              # media player
 brew "yt-dlp"           # YouTube downloader
 brew "imagemagick"      # image processing
+brew "chafa"            # image to ASCII converter (for Yazi)
+brew "resvg"            # SVG rendering tool (for Yazi)
 brew "graphviz"         # graph visualization
 brew "gource"           # repository visualization
 
@@ -191,6 +182,13 @@ cask "zoom"             # video conferencing
 
 # Notes & Knowledge
 cask "obsidian"         # note taking
+
+# ================================================================
+# MAC APP STORE APPLICATIONS
+# ================================================================
+# NOTE: Mac App Store apps are now managed via task mas:install
+# See management/packages.yml (mas_apps section) for the full list
+# This separation prevents mas failures from blocking brew install
 
 # ================================================================
 # NOTES
