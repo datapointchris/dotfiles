@@ -381,6 +381,14 @@
          <lastmod>2025-11-25</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/claude-code/log-monitoring-research/</loc>
+         <lastmod>2025-11-25</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/claude-code/usage-guide/</loc>
+         <lastmod>2025-11-25</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/neovim-ai-assistants/</loc>
          <lastmod>2025-11-25</lastmod>
     </url>
@@ -434,6 +442,14 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/app-installation-patterns/</loc>
+         <lastmod>2025-11-25</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/learnings/arch-git-libpcre2-warning/</loc>
+         <lastmod>2025-11-25</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/learnings/bash-script-testing/</loc>
          <lastmod>2025-11-25</lastmod>
     </url>
     <url>
@@ -542,6 +558,10 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/toolbox/</loc>
+         <lastmod>2025-11-25</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/workflows/backup/</loc>
          <lastmod>2025-11-25</lastmod>
     </url>
     <url>

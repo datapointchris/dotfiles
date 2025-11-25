@@ -404,7 +404,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../workflows/note-taking/" class="md-tabs__link">
+        <a href="../../workflows/backup/" class="md-tabs__link">
           
   
   
@@ -1271,6 +1271,8 @@
       
         
       
+        
+      
     
     
     
@@ -1678,6 +1680,130 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Claude Code
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/usage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/log-monitoring-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Log Monitoring Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../reference/troubleshooting/" class="md-nav__link">
         
@@ -1754,6 +1880,8 @@
       
         
       
+        
+      
     
     
     
@@ -1800,6 +1928,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2362,6 +2518,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2433,6 +2593,34 @@
     
   
     App Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arch Git libpcre2 Warning
   
 
     
@@ -2573,6 +2761,34 @@
     
   
     Bash Testing Frameworks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-script-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash Script Testing
   
 
     
@@ -3062,9 +3278,12 @@
 <li><code>yq</code> - YAML processor (single binary)</li>
 <li><code>go</code> - Build toolchain (extract to <code>/usr/local/go</code> per official docs)</li>
 <li><code>fzf</code> - Fuzzy finder (build from source with Go)</li>
-<li><code>neovim</code> - Editor (extract to <code>~/.local/nvim-linux64/</code>, symlink binary)</li>
+<li><code>neovim</code> - Editor (extract to <code>~/.local/nvim-linux-x86_64/</code>, symlink binary)</li>
 <li><code>lazygit</code> - Git TUI (single binary)</li>
 <li><code>yazi</code> - File manager (single binary + plugins)</li>
+<li><code>glow</code> - Markdown renderer (single binary)</li>
+<li><code>duf</code> - Disk usage utility (single binary)</li>
+<li><code>awscli</code> - AWS command line tool (platform-specific installer)</li>
 </ul>
 <p><strong>Advantages</strong>:</p>
 <ul>
@@ -3333,32 +3552,56 @@
 <p>All installation scripts and taskfiles read from this single source. Change a version once, and it applies everywhere.</p>
 <h3 id="installation-scripts">Installation Scripts<a class="headerlink" href="#installation-scripts" title="Permanent link">&para;</a></h3>
 <p>Located in <code>management/scripts/</code>:</p>
+<p><strong>Core Helpers</strong>:</p>
 <ul>
-<li><code>install-helpers.sh</code> - Shared helper functions for all install scripts</li>
-<li><code>install-go.sh</code> - Latest Go from go.dev (reads version from packages.yml)</li>
-<li><code>install-fzf.sh</code> - Build fzf from source with Go (reads version from packages.yml)</li>
-<li><code>install-neovim.sh</code> - Extract neovim bundle, symlink binary (reads version from packages.yml)</li>
-<li><code>install-lazygit.sh</code> - Download single binary (reads version from packages.yml)</li>
-<li><code>install-yazi.sh</code> - Download binaries, install plugins (reads version from packages.yml)</li>
+<li><code>install-program-helpers.sh</code> - Shared functions for GitHub binary installation, version checking, manual install instructions</li>
+</ul>
+<p><strong>GitHub Release Tools</strong>:</p>
+<ul>
+<li><code>install-go.sh</code> - Latest Go from go.dev</li>
+<li><code>install-fzf.sh</code> - Build fzf from source with Go</li>
+<li><code>install-neovim.sh</code> - Extract neovim bundle, symlink binary</li>
+<li><code>install-lazygit.sh</code> - Download single binary</li>
+<li><code>install-yazi.sh</code> - Download binaries, install plugins</li>
+<li><code>install-glow.sh</code> - Markdown renderer</li>
+<li><code>install-duf.sh</code> - Disk usage utility</li>
+<li><code>install-awscli.sh</code> - AWS CLI v2 (platform-specific)</li>
+</ul>
+<p><strong>Language Ecosystems</strong>:</p>
+<ul>
 <li><code>install-rust.sh</code> - Install Rust via rustup</li>
 <li><code>install-uv.sh</code> - Install uv for Python management</li>
 <li><code>install-cargo-binstall.sh</code> - Bootstrap cargo-binstall</li>
 <li><code>install-cargo-tools.sh</code> - Install all cargo packages from packages.yml</li>
-<li><code>install-tmux-plugins.sh</code> - Install tmux plugins</li>
 <li><code>npm-install-globals.sh</code> - Install npm global packages from packages.yml</li>
 </ul>
-<p>All scripts use shared helpers for consistent error handling and graceful firewall failure recovery.</p>
+<p><strong>Plugins</strong>:</p>
+<ul>
+<li><code>install-tmux-plugins.sh</code> - Install tmux plugins</li>
+</ul>
+<p>All GitHub release scripts use <code>install-program-helpers.sh</code> for consistent error handling, version checking, and graceful firewall failure recovery with manual installation instructions.</p>
 <h3 id="taskfile-organization">Taskfile Organization<a class="headerlink" href="#taskfile-organization" title="Permanent link">&para;</a></h3>
-<p>Platform taskfiles (<code>wsl.yml</code>, <code>macos.yml</code>, <code>arch.yml</code>) define installation tasks that call these scripts and read from packages.yml:</p>
+<p>Platform taskfiles (<code>wsl.yml</code>, <code>macos.yml</code>, <code>arch.yml</code>) and specialized taskfiles define installation tasks:</p>
+<p><strong>Main Installation Tasks</strong>:</p>
 <div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">install-go</span><span class="p">:</span><span class="w">          </span><span class="c1"># GitHub releases → /usr/local/go</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">install-fzf</span><span class="p">:</span><span class="w">         </span><span class="c1"># Build from source → ~/.local/bin</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">install-neovim</span><span class="p">:</span><span class="w">      </span><span class="c1"># GitHub releases → ~/.local/bin (symlink)</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">install-lazygit</span><span class="p">:</span><span class="w">     </span><span class="c1"># GitHub releases → ~/.local/bin</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">install-yazi</span><span class="p">:</span><span class="w">        </span><span class="c1"># GitHub releases → ~/.local/bin</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nt">install-cargo-binstall</span><span class="p">:</span><span class="w">  </span><span class="c1"># Bootstrap for Rust tools</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nt">install-cargo-tools</span><span class="p">:</span><span class="w">     </span><span class="c1"># Reads package list from packages.yml</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nt">install-glow</span><span class="p">:</span><span class="w">        </span><span class="c1"># GitHub releases → ~/.local/bin</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nt">install-duf</span><span class="p">:</span><span class="w">         </span><span class="c1"># GitHub releases → ~/.local/bin</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nt">install-awscli</span><span class="p">:</span><span class="w">      </span><span class="c1"># AWS official installer</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">install-cargo-binstall</span><span class="p">:</span><span class="w">  </span><span class="c1"># Bootstrap for Rust tools</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="nt">install-cargo-tools</span><span class="p">:</span><span class="w">     </span><span class="c1"># Reads package list from packages.yml</span>
 </span></code></pre></div>
+<p><strong>Specialized Taskfiles</strong> (<code>management/taskfiles/</code>):</p>
+<ul>
+<li><code>go-tools.yml</code> - Go CLI tools installed via <code>go install</code> (cheat, etc.)</li>
+<li><code>brew.yml</code> - Homebrew package management (macOS)</li>
+<li><code>mas.yml</code> - Mac App Store applications (macOS)</li>
+<li>Platform-specific taskfiles for each supported OS</li>
+</ul>
 <h3 id="main-installation-flow">Main Installation Flow<a class="headerlink" href="#main-installation-flow" title="Permanent link">&para;</a></h3>
 <p><code>Taskfile.yml</code> orchestrates 9 phases:</p>
 <ol>

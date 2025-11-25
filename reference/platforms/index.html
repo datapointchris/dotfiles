@@ -404,7 +404,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../workflows/note-taking/" class="md-tabs__link">
+        <a href="../../workflows/backup/" class="md-tabs__link">
           
   
   
@@ -1016,6 +1016,8 @@
   
     
     
+      
+        
       
         
       
@@ -1961,6 +1963,133 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Claude Code
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/usage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/log-monitoring-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Log Monitoring Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../troubleshooting/" class="md-nav__link">
         
@@ -2037,6 +2166,8 @@
       
         
       
+        
+      
     
     
     
@@ -2083,6 +2214,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2645,6 +2804,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2716,6 +2879,34 @@
     
   
     App Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arch Git libpcre2 Warning
   
 
     
@@ -2856,6 +3047,34 @@
     
   
     Bash Testing Frameworks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-script-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash Script Testing
   
 
     
@@ -3925,6 +4144,13 @@
 <li>Intel Mac: <code>/usr/local</code></li>
 <li>Apple Silicon: <code>/opt/homebrew</code></li>
 <li>Scripts should detect automatically</li>
+</ul>
+<p><strong>macOS-Specific Aliases</strong>:</p>
+<ul>
+<li><code>backup-important</code> - Backs up critical directories to ~/Documents (iCloud synced)</li>
+<li>Directories: .claude, learning, notes, obsession, code</li>
+<li>Uses the universal <code>backup-dirs</code> utility</li>
+<li>See <code>docs/workflows/backup.md</code> for details</li>
 </ul>
 <h3 id="ubuntuwsl-quirks">Ubuntu/WSL Quirks<a class="headerlink" href="#ubuntuwsl-quirks" title="Permanent link">&para;</a></h3>
 <p><strong>WSL-Specific Configuration</strong> (<code>/etc/wsl.conf</code>):</p>
