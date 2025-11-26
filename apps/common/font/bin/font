@@ -1,0 +1,390 @@
+#!/usr/bin/env bash
+# Font management - built on tested library
+# fzf integration layer on top of font library
+
+set -euo pipefail
+
+# Source the library (handle symlinks)
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+if [[ -L "$SCRIPT_PATH" ]]; then
+  # Get absolute path of symlink target
+  SCRIPT_PATH="$(python3 -c "import os; print(os.path.realpath('$SCRIPT_PATH'))")"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$FONT_APP_DIR/lib/lib.sh"
+
+# Data directory
+FONT_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/font"
+FONT_LOG="$FONT_DATA_DIR/font-testing-log.md"
+
+# Config file locations
+GHOSTTY_CONFIG="$HOME/.config/ghostty/config"
+NVIM_FONT_CONFIG="$HOME/.config/nvim/lua/config/font.lua"
+
+# Favorites list
+FAVORITES=(
+  "SeriousShanns Nerd Font Propo"
+  "FiraCode Nerd Font"
+  "JetBrains Mono Nerd Font"
+)
+
+usage() {
+  cat <<EOF
+Font testing and management workflow
+
+Usage: font <command> [args]
+
+Commands:
+  list                List main font families (Bold/Italic/etc filtered out)
+  favorites           Show favorite fonts
+  current             Show currently active font
+  apply <font>        Apply font to Ghostty/Neovim
+  test <font>         Start testing a font (logs start date)
+  like <font>         Mark current/specified font as liked
+  dislike <font>      Mark current/specified font as disliked
+  notes <font> <msg>  Add notes about a font
+  log                 View testing log
+  preview             Interactive font picker with fzf and image previews
+  random              Apply random font from favorites
+  adventure           Apply random font from ALL fonts
+  generate-previews   Pre-generate all preview images (for faster browsing)
+  clear-cache         Clear preview cache
+
+Examples:
+  font list                 # Show main font families
+  font preview              # Interactive selection with previews
+  font apply "Fira Code"
+  font random               # Random from favorites
+
+Note: Style variations (Bold, Italic, Light, etc.) are automatically filtered.
+      Only main font families are shown.
+EOF
+}
+
+#==============================================================================
+# LOG MANAGEMENT
+# ==============================================================================
+
+init_log() {
+  mkdir -p "$FONT_DATA_DIR"
+
+  if [[ ! -f "$FONT_LOG" ]]; then
+    cat > "$FONT_LOG" <<'LOGEOF'
+# Font Testing Log
+
+## Currently Testing
+
+None
+
+## Liked (Keepers)
+
+- SeriousShanns Nerd Font Propo - Comic sans style, fun and readable
+
+## Disliked (Can Remove)
+
+## Testing History
+
+LOGEOF
+  fi
+}
+
+show_favorites() {
+  printf '%s\n' "${FAVORITES[@]}"
+}
+
+get_current_font() {
+  if [[ -f "$GHOSTTY_CONFIG" ]]; then
+    grep "^font-family" "$GHOSTTY_CONFIG" | cut -d= -f2 | xargs
+  else
+    echo "Unknown"
+  fi
+}
+
+apply_font() {
+  local font="$1"
+
+  echo "Applying font: $font"
+
+  # Update Ghostty
+  if [[ -f "$GHOSTTY_CONFIG" ]]; then
+    cp "$GHOSTTY_CONFIG" "$GHOSTTY_CONFIG.bak"
+    sed -i "s|^font-family = .*|font-family = \"${font}\"|" "$GHOSTTY_CONFIG"
+    echo "✓ Updated Ghostty config"
+  fi
+
+  # Update Neovim if config exists
+  if [[ -f "$NVIM_FONT_CONFIG" ]]; then
+    cp "$NVIM_FONT_CONFIG" "$NVIM_FONT_CONFIG.bak"
+    sed -i "s|vim.o.guifont = .*|vim.o.guifont = \"${font}:h15\"|" "$NVIM_FONT_CONFIG"
+    echo "✓ Updated Neovim config"
+  fi
+
+  echo ""
+  echo "Font applied! Restart Ghostty to see changes."
+  echo "Run: font test \"$font\" to start tracking this test"
+}
+
+start_test() {
+  local font="${1:-$(get_current_font)}"
+  local date=$(date +%Y-%m-%d)
+
+  init_log
+
+  sed -i "/^## Currently Testing/,/^## / s/None/${font} (started ${date})/" "$FONT_LOG"
+  echo "- **${font}** - Started ${date}" >> "$FONT_LOG"
+
+  echo "Started testing: $font"
+}
+
+mark_liked() {
+  local font="${1:-$(get_current_font)}"
+  local date=$(date +%Y-%m-%d)
+
+  init_log
+
+  sed -i "/^## Liked (Keepers)/a\\
+- ${font} - Added ${date}
+" "$FONT_LOG"
+
+  sed -i "/^## Currently Testing/,/^## / s/${font}.*$/None/" "$FONT_LOG"
+
+  echo "✓ Added $font to liked fonts"
+}
+
+mark_disliked() {
+  local font="${1:-$(get_current_font)}"
+  local date=$(date +%Y-%m-%d)
+
+  init_log
+
+  sed -i "/^## Disliked (Can Remove)/a\\
+- ${font} - Added ${date}
+" "$FONT_LOG"
+
+  sed -i "/^## Currently Testing/,/^## / s/${font}.*$/None/" "$FONT_LOG"
+
+  echo "✓ Added $font to disliked fonts"
+}
+
+add_notes() {
+  local font="$1"
+  shift
+  local note="$*"
+  local date=$(date +%Y-%m-%d)
+
+  init_log
+
+  echo "  - [$date] $note" >> "$FONT_LOG"
+  echo "✓ Added note for $font"
+}
+
+show_log() {
+  init_log
+
+  if command -v bat &>/dev/null; then
+    bat "$FONT_LOG"
+  else
+    cat "$FONT_LOG"
+  fi
+}
+
+#==============================================================================
+# FZF PREVIEW INTEGRATION
+# ==============================================================================
+
+preview_fonts() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  if ! command -v magick &>/dev/null; then
+    echo "Error: ImageMagick not found. Install with: brew install imagemagick"
+    exit 1
+  fi
+
+  # Check for image display tool
+  if ! command -v chafa &>/dev/null && ! command -v viu &>/dev/null; then
+    echo "Note: Install 'chafa' or 'viu' for image preview support"
+    echo "  brew install chafa"
+    echo ""
+    echo "Continuing with text-based preview..."
+    sleep 2
+  fi
+
+  # Create cache directory
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  # Create a simple preview script
+  local preview_script="/tmp/font-fzf-preview-$$.sh"
+  cat > "$preview_script" <<PREVIEW_EOF
+#!/bin/bash
+# Load library functions
+source "$FONT_APP_DIR/lib/lib.sh"
+
+font="\$1"
+
+# Get or generate preview
+if preview_file=$(get_or_generate_preview "$font" 2>/dev/null); then
+  # Display it (optimized for speed)
+  if command -v chafa &>/dev/null; then
+    chafa -f kitty --speed 10 --dither none "$preview_file" 2>/dev/null || echo "Preview: $font"
+  elif command -v viu &>/dev/null; then
+    viu -w 80 "$preview_file" 2>/dev/null || echo "Preview: $font"
+  else
+    echo "Font: $font"
+    echo ""
+    echo "(Install chafa or viu for image preview)"
+  fi
+else
+  echo "Failed to generate preview for: $font"
+fi
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  # Run fzf
+  local selected
+  selected=$(list_fonts | fzf \
+    --prompt="Select font > " \
+    --height=100% \
+    --preview="$preview_script {}" \
+    --preview-window=right:80%)
+
+  # Cleanup
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    apply_font "$selected"
+  fi
+}
+
+random_favorite() {
+  local random_font="${FAVORITES[$RANDOM % ${#FAVORITES[@]}]}"
+  echo "🎲 Randomly selected from favorites: $random_font"
+  echo ""
+  apply_font "$random_font"
+}
+
+adventure_mode() {
+  mapfile -t all_fonts < <(list_fonts)
+
+  if [[ ${#all_fonts[@]} -eq 0 ]]; then
+    echo "Error: No fonts found"
+    exit 1
+  fi
+
+  local random_font="${all_fonts[$RANDOM % ${#all_fonts[@]}]}"
+
+  echo "🎲 ADVENTURE MODE: Randomly selected from ALL fonts"
+  echo "Font: $random_font"
+  echo ""
+  apply_font "$random_font"
+
+  echo ""
+  start_test "$random_font"
+}
+
+generate_all_previews() {
+  echo "Pre-generating all font previews..."
+  echo "This will take a few minutes but makes browsing instant."
+  echo ""
+
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  local total=$(list_fonts | wc -l | xargs)
+  local current=0
+
+  while IFS= read -r font; do
+    current=$((current + 1))
+    printf "[%d/%d] Generating preview for: %s\n" "$current" "$total" "$font"
+
+    local cache_file=$(get_cached_preview_path "$font")
+
+    # Skip if already exists and is valid
+    if [[ -f "$cache_file" ]] && validate_preview_image "$cache_file" &>/dev/null; then
+      echo "  ✓ Already exists"
+      continue
+    fi
+
+    if generate_font_preview "$font" "$cache_file" 2>/dev/null; then
+      echo "  ✓ Generated"
+    else
+      echo "  ✗ Failed"
+    fi
+  done < <(list_fonts)
+
+  echo ""
+  echo "✓ All previews generated!"
+  echo "  Cache location: $PREVIEW_CACHE_DIR"
+  echo "  Run 'font preview' for instant browsing"
+}
+
+#==============================================================================
+# MAIN COMMAND DISPATCHER
+# ==============================================================================
+
+main() {
+  case "${1:-}" in
+    list)
+      list_fonts
+      ;;
+    favorites)
+      show_favorites
+      ;;
+    current)
+      echo "Current font: $(get_current_font)"
+      ;;
+    apply)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: Font name required"
+        usage
+        exit 1
+      fi
+      apply_font "$2"
+      ;;
+    test)
+      start_test "${2:-}"
+      ;;
+    like)
+      mark_liked "${2:-}"
+      ;;
+    dislike)
+      mark_disliked "${2:-}"
+      ;;
+    notes)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: Font name and notes required"
+        usage
+        exit 1
+      fi
+      add_notes "$2" "${@:3}"
+      ;;
+    log)
+      show_log
+      ;;
+    preview)
+      preview_fonts
+      ;;
+    random)
+      random_favorite
+      ;;
+    adventure)
+      adventure_mode
+      ;;
+    generate-previews)
+      generate_all_previews
+      ;;
+    clear-cache)
+      clear_preview_cache
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+init_log
+main "$@"

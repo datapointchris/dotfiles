@@ -1,0 +1,57 @@
+Character Test & Differentiation:
+AaBbCc DdEeFf GgHhIi JjKkLl MmNnOo PpQqRr SsTtUu VvWwXx YyZz
+0O 1lI 5S 8B !|¦ .,;: <>«» {}[]() =-+*/% &@#$^~\|
+Ligatures: == != === !== <= >= => -> <-> ++ -- && ||
+
+Python:
+from typing import Dict, List, Optional
+import asyncio
+
+@functools.lru_cache(maxsize=128)
+def process(data: Dict[str, any]) -> Optional[List]:
+    return [x**2 for x in data if x > 0]
+
+class DataProcessor:
+    def __init__(self, config: Dict[str, any]) -> None:
+        self.stats = {"processed": 0, "errors": 0}
+
+    async def transform(self, items: List[str]) -> Dict:
+        return {k: await self._process(v) for k, v in items}
+
+Go:
+package main
+
+type Processor interface {
+    Process(ctx context.Context) (Result, error)
+}
+
+func HandleRequest(items []string) error {
+    for idx, item := range items {
+        if err := process(item); err != nil {
+            return fmt.Errorf("item %d failed: %w", idx, err)
+        }
+    }
+    return nil
+}
+
+Rust:
+use std::collections::HashMap;
+
+pub struct Config<T> where T: Clone {
+    data: HashMap<String, T>,
+}
+
+impl<T: Clone> Config<T> {
+    pub fn get(&self, key: &str) -> Option<T> {
+        self.data.get(key).cloned()
+    }
+}
+
+Bash:
+#!/usr/bin/env bash
+declare -A config=([host]="localhost" [port]="8080")
+
+for file in "${dir}"/**/*.log; do
+    [[ -f "$file" ]] || continue
+    result=$(awk -F"|" '{sum+=$3} END {print sum}' "$file")
+done
