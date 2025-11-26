@@ -167,17 +167,6 @@ format_duration() {
   fi
 }
 
-get_font_info() {
-  local font="$1"
-  local info_file="$FONT_DATA_DIR/font-info.json"
-
-  if [[ -f "$info_file" ]] && command -v jq &>/dev/null; then
-    jq -r --arg font "$font" '.[$font] // {}' "$info_file"
-  else
-    echo "{}"
-  fi
-}
-
 #==============================================================================
 # FONT OPERATIONS
 # ==============================================================================
@@ -390,63 +379,7 @@ show_current_font() {
     return
   fi
 
-  echo ""
-  echo "Current Font: $font"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-
-  # Get stats from history
-  local stats
-  stats=$(get_font_stats "$font" 2>/dev/null)
-
-  if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
-    local score=$(echo "$stats" | jq -r '.score // 0')
-    local likes=$(echo "$stats" | jq -r '.likes // 0')
-    local dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
-    local notes=$(echo "$stats" | jq -r '.notes // 0')
-    local applies=$(echo "$stats" | jq -r '.applies // 0')
-    local platforms=$(echo "$stats" | jq -r '.platforms | join(", ") // "none"')
-
-    # Calculate usage time
-    local usage_times
-    usage_times=$(calculate_usage_time "$font")
-    local usage_seconds=$(echo "$usage_times" | jq -r --arg font "$font" '.[$font] // 0')
-    local usage_time="not used"
-    if [[ "$usage_seconds" -gt 0 ]]; then
-      usage_time=$(format_duration "$usage_seconds")
-    fi
-
-    echo "Stats:"
-    printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
-    printf "  Usage time: %s\n" "$usage_time"
-    printf "  Notes: %d\n" "$notes"
-    printf "  Times applied: %d\n" "$applies"
-    printf "  Platforms: %s\n" "$platforms"
-  fi
-
-  # Get font description/info
-  local font_info
-  font_info=$(get_font_info "$font")
-
-  if [[ -n "$font_info" ]] && [[ "$font_info" != "{}" ]]; then
-    local description=$(echo "$font_info" | jq -r '.description // empty')
-    local known_for=$(echo "$font_info" | jq -r '.known_for // empty')
-    local creator=$(echo "$font_info" | jq -r '.creator // empty')
-    local year=$(echo "$font_info" | jq -r '.year // empty')
-    local url=$(echo "$font_info" | jq -r '.url // empty')
-
-    if [[ -n "$description" ]]; then
-      echo ""
-      echo "About:"
-      echo "  $description"
-      [[ -n "$known_for" ]] && echo "  Known for: $known_for"
-      [[ -n "$creator" ]] && echo "  Creator: $creator"
-      [[ -n "$year" ]] && echo "  Year: $year"
-      [[ -n "$url" ]] && echo "  URL: $url"
-    fi
-  fi
-
-  echo ""
+  display_font_details "$font" "full"
 }
 
 show_log() {
@@ -517,27 +450,49 @@ change_font() {
 
   # Create a simple preview script
   local preview_script="/tmp/font-fzf-preview-$$.sh"
+  local preview_log="/tmp/font-preview-debug.log"
   cat > "$preview_script" <<PREVIEW_EOF
 #!/bin/bash
+# Debug: Log to file
+exec 2>>"$preview_log"
+echo "=== Preview for: \$1 ===" >>"$preview_log"
+echo "FONT_APP_DIR: $FONT_APP_DIR" >>"$preview_log"
+
 # Load library functions
-source "$FONT_APP_DIR/lib/lib.sh"
+if ! source "$FONT_APP_DIR/lib/lib.sh" 2>>"$preview_log"; then
+  echo "ERROR: Failed to source $FONT_APP_DIR/lib/lib.sh"
+  echo "Check $preview_log for details"
+  exit 1
+fi
 
 font="\$1"
 
 # Get or generate preview
-if preview_file=\$(get_or_generate_preview "\$font" 2>/dev/null); then
-  # Display it (optimized for speed)
+if [[ -n "\${TMUX:-}" ]]; then
+  # Graphics preview doesn't work in tmux - show text details only
+  display_font_details "\$font" "compact"
+  echo ""
+  echo "Graphics preview not available in tmux."
+  echo "Open a regular terminal window to see font preview."
+elif preview_file=\$(get_or_generate_preview "\$font" 2>>"$preview_log"); then
+  echo "Preview file: \$preview_file" >>"$preview_log"
+  # Display font details at the top
+  display_font_details "\$font" "compact"
+  # Add blank lines to push graphics down (so they don't overlap the text)
+  echo ""
+  echo ""
+  echo ""
+  # Display graphics preview below the text
   if command -v chafa &>/dev/null; then
-    chafa -f kitty --speed 10 --dither none "\$preview_file" 2>/dev/null || echo "Preview: \$font"
+    chafa -f kitty --speed 10 --dither none "\$preview_file" 2>>"$preview_log" || echo "Preview: \$font"
   elif command -v viu &>/dev/null; then
-    viu -w 80 "\$preview_file" 2>/dev/null || echo "Preview: \$font"
+    viu -w 80 "\$preview_file" 2>>"$preview_log" || echo "Preview: \$font"
   else
-    echo "Font: \$font"
-    echo ""
     echo "(Install chafa or viu for image preview)"
   fi
 else
-  echo "Failed to generate preview for: \$font"
+  echo "Failed to generate preview"
+  echo "Check $preview_log for details"
 fi
 PREVIEW_EOF
 

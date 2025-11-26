@@ -152,7 +152,7 @@ get_preview_text() {
 generate_font_preview() {
   local font_name="$1"
   local output_file="$2"
-  local font_file temp_html temp_png
+  local font_file
 
   # Get font file path
   if ! font_file=$(get_font_file_path "$font_name"); then
@@ -191,6 +191,7 @@ _generate_plain_preview() {
   local font_family=$(fc-list "$font_file" : family | cut -d: -f2 | xargs | head -1)
 
   # Create preview with consistent 35px line spacing and 50px section gaps
+  # shellcheck disable=SC2016
   magick -size 1200x1600 xc:'#1e1e1e' \
     -font "$font_file" -pointsize 18 \
     `# Font family and style at top (25px spacing for header)` \
@@ -229,8 +230,9 @@ _generate_plain_preview() {
     -fill '#d4d4d4' -annotate +80+1070 'result=$(awk -F"|" '\''{sum+=$3} END {print sum}'\'' "$file")' \
     -fill '#d4d4d4' -annotate +40+1105 'done' \
     -quality 100 \
-    "$output_file" 2>/dev/null
+    "$output_file"
 
+  # shellcheck disable=SC2181
   if [[ $? -ne 0 ]]; then
     echo "Error: ImageMagick failed to generate preview" >&2
     return 1
@@ -277,6 +279,7 @@ get_cached_preview_path() {
   local safe_name
 
   # Convert font name to safe filename
+  # shellcheck disable=SC2001
   safe_name=$(echo "$font_name" | sed 's/[^a-zA-Z0-9]/_/g')
 
   echo "$PREVIEW_CACHE_DIR/${safe_name}.png"
@@ -346,4 +349,119 @@ clear_preview_cache() {
 # Count available fonts
 count_fonts() {
   list_fonts | wc -l | xargs
+}
+
+# ==============================================================================
+# FONT INFO DISPLAY
+# ==============================================================================
+
+# Get font information from font-info.json
+# Args: $1 - font name
+# Returns: JSON object with font info
+get_font_info() {
+  local font="$1"
+  local info_file="$FONT_APP_DIR/data/font-info.json"
+
+  if [[ -f "$info_file" ]] && command -v jq &>/dev/null; then
+    jq -r --arg font "$font" '.[$font] // {}' "$info_file"
+  else
+    echo "{}"
+  fi
+}
+
+# Display font details (stats + info) - used by both 'font current' and preview
+# Args: $1 - font name
+#       $2 - format ("full" for font current, "compact" for preview)
+display_font_details() {
+  local font="$1"
+  local format="${2:-full}"
+
+  # Source storage.sh if needed (for preview script)
+  if ! type -t get_font_stats &>/dev/null; then
+    source "$FONT_APP_DIR/lib/storage.sh" 2>/dev/null || true
+  fi
+
+  if [[ "$format" == "full" ]]; then
+    echo ""
+    echo "Current Font: $font"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+  else
+    echo "━━━ $font ━━━"
+  fi
+
+  # Get stats from history
+  if type -t get_font_stats &>/dev/null; then
+    local stats
+    stats=$(get_font_stats "$font" 2>/dev/null)
+
+    if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
+      local score=$(echo "$stats" | jq -r '.score // 0')
+      local likes=$(echo "$stats" | jq -r '.likes // 0')
+      local dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+      local notes=$(echo "$stats" | jq -r '.notes // 0')
+      local applies=$(echo "$stats" | jq -r '.applies // 0')
+      local platforms=$(echo "$stats" | jq -r '.platforms | join(", ") // "none"')
+
+      # Calculate usage time
+      if type -t calculate_usage_time &>/dev/null; then
+        local usage_times
+        usage_times=$(calculate_usage_time "$font")
+        local usage_seconds=$(echo "$usage_times" | jq -r --arg font "$font" '.[$font] // 0')
+        local usage_time="not used"
+        if [[ "$usage_seconds" -gt 0 ]] && type -t format_duration &>/dev/null; then
+          usage_time=$(format_duration "$usage_seconds")
+        fi
+      fi
+
+      if [[ "$format" == "full" ]]; then
+        echo "Stats:"
+        printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+        [[ -n "$usage_time" ]] && printf "  Usage time: %s\n" "$usage_time"
+        printf "  Notes: %d\n" "$notes"
+        printf "  Times applied: %d\n" "$applies"
+        printf "  Platforms: %s\n" "$platforms"
+      else
+        # Compact format for preview
+        printf "Score: %+d (%d↑ %d↓)" "$score" "$likes" "$dislikes"
+        [[ -n "$usage_time" ]] && printf " | Used: %s" "$usage_time"
+        echo ""
+      fi
+    fi
+  fi
+
+  # Get font description/info
+  local font_info
+  font_info=$(get_font_info "$font")
+
+  if [[ -n "$font_info" ]] && [[ "$font_info" != "{}" ]]; then
+    local description=$(echo "$font_info" | jq -r '.description // empty')
+    local known_for=$(echo "$font_info" | jq -r '.known_for // empty')
+    local creator=$(echo "$font_info" | jq -r '.creator // empty')
+    local year=$(echo "$font_info" | jq -r '.year // empty')
+    local url=$(echo "$font_info" | jq -r '.url // empty')
+
+    if [[ -n "$description" ]]; then
+      if [[ "$format" == "full" ]]; then
+        echo ""
+        echo "About:"
+        echo "  $description"
+        [[ -n "$known_for" ]] && echo "  Known for: $known_for"
+        [[ -n "$creator" ]] && echo "  Creator: $creator"
+        [[ -n "$year" ]] && echo "  Year: $year"
+        [[ -n "$url" ]] && echo "  URL: $url"
+      else
+        # Compact format for preview
+        echo "$description"
+        [[ -n "$known_for" ]] && echo "Known for: $known_for"
+        [[ -n "$creator" ]] && echo "Creator: $creator ($year)"
+      fi
+    fi
+  fi
+
+  if [[ "$format" == "full" ]]; then
+    echo ""
+  else
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  fi
 }
