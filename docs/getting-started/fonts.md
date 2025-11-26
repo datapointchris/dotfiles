@@ -1,18 +1,40 @@
-# Nerd Fonts Reference
+# Installing Nerd Fonts
 
-Quick reference for installing Nerd Fonts across platforms.
+Quick reference for installing and configuring Nerd Fonts across platforms.
 
-## Why Nerd Fonts?
+## What Are Nerd Fonts?
 
-Required for proper terminal icons and glyphs in tmux, neovim, yazi, and other CLI tools.
+Nerd Fonts patches popular programming fonts with 3,600+ icons and glyphs from Font Awesome, Material Design Icons, Octicons, Powerline symbols, and more. These icons enable rich visual interfaces in terminal emulators, Neovim, tmux, file managers (yazi, ranger), and shell prompts (starship).
 
-## Recommended Fonts
+Without Nerd Fonts, icons display as empty boxes (☐) or question marks (?).
 
-- **FiraCode Nerd Font** - Ligatures, excellent for coding
-- **JetBrainsMono Nerd Font** - Designed for developers
-- **Hack Nerd Font** - Clean, readable
-- **CascadiaCode Nerd Font** - Microsoft's coding font
-- **Meslo Nerd Font** - macOS default terminal compatible
+## Which Fonts to Install
+
+Start with one or two popular fonts, then explore:
+
+**For ligature lovers**:
+
+- **FiraCode Nerd Font** - Extensive ligatures, modern
+- **JetBrains Mono Nerd Font** - Clean with good ligatures
+
+**For no-ligature preference**:
+
+- **Hack Nerd Font** - Clean, excellent readability
+- **Source Code Pro Nerd Font** - Professional, Adobe quality
+
+**For maximum code density**:
+
+- **Iosevka Nerd Font** - Narrow, fits more code
+
+**For macOS users**:
+
+- **Meslo Nerd Font** - Based on macOS Menlo
+
+**For fun/personality**:
+
+- **Comic Code Nerd Font** - Comic sans style
+
+See [Font Comparison](../reference/fonts/font-comparison.md) for detailed comparisons.
 
 ## Download
 
@@ -122,3 +144,43 @@ Font files are typically large (2-5MB each). Store them outside the dotfiles rep
 
 - Ensure fonts installed "for all users" in Windows
 - Check font installed: `fc-list | grep FontName` in WSL
+
+## Using font-sync for Testing
+
+This dotfiles repository includes `font-sync` for systematic font testing:
+
+```bash
+# List available fonts
+font-sync list
+
+# Apply a font
+font-sync apply "FiraCode Nerd Font Mono"
+
+# Start testing and track progress
+font-sync test
+
+# After a week, mark your decision
+font-sync like      # or: font-sync dislike
+
+# View testing log
+font-sync log
+```
+
+See [Font Testing Workflow](../workflows/font-testing.md) for the complete systematic testing approach.
+
+## Next Steps
+
+After installation:
+
+1. Configure terminal to use the Nerd Font
+2. Restart terminal to apply changes
+3. Verify icons display correctly in neovim, tmux, yazi
+4. Use `font-sync` to test and find favorites
+5. Archive fonts you don't use
+
+## Further Reading
+
+- **[Font Testing Workflow](../workflows/font-testing.md)** - Systematic approach to finding favorites
+- **[Nerd Fonts Explained](../reference/fonts/nerd-fonts-explained.md)** - Understanding Mono/Propo variants
+- **[Font Comparison](../reference/fonts/font-comparison.md)** - Detailed comparison of popular fonts
+- **[Terminal Fonts Guide](../reference/fonts/terminal-fonts-guide.md)** - Why monospace matters

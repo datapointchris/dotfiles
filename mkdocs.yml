@@ -138,7 +138,7 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - First Configuration: getting-started/first-config.md
-      - Fonts: getting-started/fonts.md
+      - Installing Fonts: getting-started/fonts.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
@@ -154,7 +154,13 @@ nav:
           - Toolbox: reference/workflow-tools/toolbox.md
           - Sessions: reference/workflow-tools/session.md
           - Themes: reference/workflow-tools/theme-sync.md
+          - Fonts: reference/workflow-tools/font-sync.md
           - Notes: reference/workflow-tools/notes.md
+      - Fonts:
+          - Nerd Fonts Explained: reference/fonts/nerd-fonts-explained.md
+          - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
+          - Terminal Fonts Guide: reference/fonts/terminal-fonts-guide.md
+          - Font Comparison: reference/fonts/font-comparison.md
       - Symlinks Manager: reference/symlinks.md
       - Task Reference: reference/tasks.md
       - Skills System: reference/skills.md
@@ -169,6 +175,7 @@ nav:
       - Note Taking: workflows/note-taking.md
       - Session Management: workflows/sessions.md
       - Theme Customization: workflows/themes.md
+      - Font Testing: workflows/font-testing.md
       - Git Operations: workflows/git.md
       - Tool Discovery: workflows/tool-discovery.md
   - Development:
