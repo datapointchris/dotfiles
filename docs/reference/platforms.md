@@ -331,7 +331,7 @@ Tools installed to: `~/.local/bin` (consistent across platforms)
 - `backup-important` - Backs up critical directories to ~/Documents (iCloud synced)
   - Directories: .claude, learning, notes, obsession, code
   - Uses the universal `backup-dirs` utility
-  - See `docs/workflows/backup.md` for details
+  - See [Backup Dirs](../apps/backup-dirs.md) for details
 
 ### Ubuntu/WSL Quirks
 

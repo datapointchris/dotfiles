@@ -26,7 +26,7 @@ task install
 - Platform-specific default sessions (configured in `~/.config/sess/sessions-{platform}.yml`)
 - Fast startup and low memory footprint
 
-See [Session Manager Reference](../../reference/workflow-tools/session.md) for usage details.
+See [Session Manager Reference](../../apps/sess.md) for usage details.
 
 ### toolbox - Tool Discovery
 
@@ -50,7 +50,7 @@ task install
 - Interactive category browser
 - Registry-based architecture (YAML configuration)
 
-See [Toolbox Reference](../../reference/workflow-tools/toolbox.md) for usage details.
+See [Toolbox Reference](../../apps/toolbox.md) for usage details.
 
 ## Development Workflow
 

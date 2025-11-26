@@ -404,7 +404,6 @@ done
 
 ## Related Documentation
 
-- [Workflow Tools](../reference/workflow-tools/toolbox.md) - Tool discovery and composition
-- [Tool Discovery Workflows](../workflows/tool-discovery.md) - Patterns for finding and using tools
+- [Workflow Tools](../apps/toolbox.md) - Tool discovery and composition
 - [Menu System](./menu-system.md) - Launcher architecture
-- [Note Taking](../workflows/note-taking.md) - zk workflow guide
+- [Note Taking](../apps/notes.md) - zk workflow guide

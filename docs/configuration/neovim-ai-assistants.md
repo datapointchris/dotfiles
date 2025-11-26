@@ -127,5 +127,5 @@ Test terminal: Press `<leader>tt` → Terminal should open
 
 ## Related
 
-- [Workflow Tools](../reference/workflow-tools/menu.md) - Menu system for tool discovery
+- [Menu](../apps/menu.md) - Menu system for tool discovery
 - [Claude Code Hooks](../reference/hooks.md) - Claude Code integration

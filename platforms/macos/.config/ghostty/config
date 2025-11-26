@@ -8,7 +8,7 @@ window-padding-y = 16
 window-padding-balance = true
 
 # Font configuration to match WezTerm
-font-family = "Fira Code"
+font-family = "Comic Mono"
 font-style = Regular
 font-size = 15
 adjust-cell-height = 3

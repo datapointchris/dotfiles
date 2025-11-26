@@ -249,8 +249,8 @@ Menu works identically across platforms. Tools handle platform differences:
 
 ## See Also
 
-- [Menu System Reference](../reference/workflow-tools/menu.md) - User guide and workflows
-- [Tool Discovery](../reference/workflow-tools/toolbox.md) - toolbox registry and commands
-- [Note Taking](../workflows/note-taking.md) - zk workflow guide
-- [Session Management](../reference/workflow-tools/session.md) - Session manager reference
+- [Menu System Reference](../apps/menu.md) - User guide and workflows
+- [Tool Discovery](../apps/toolbox.md) - toolbox registry and commands
+- [Note Taking](../apps/notes.md) - zk workflow guide
+- [Session Management](../apps/sess.md) - Session manager reference
 - [Go Apps Overview](../development/go-apps/overview.md) - Go applications development

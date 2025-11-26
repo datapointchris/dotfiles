@@ -186,10 +186,10 @@ zk learn "Docker networking patterns"
 
 **Reference**:
 
-- **Workflow Tools**: [Menu](reference/workflow-tools/menu.md) | [Toolbox](reference/workflow-tools/toolbox.md) | [Sessions](reference/workflow-tools/session.md) | [Themes](reference/workflow-tools/theme-sync.md) | [Notes](reference/workflow-tools/notes.md)
+- **Apps**: [Menu](apps/menu.md) | [Toolbox](apps/toolbox.md) | [Sessions](apps/sess.md) | [Theme Sync](apps/theme-sync.md) | [Notes](apps/notes.md) | [Font](apps/font.md) | [Backup Dirs](apps/backup-dirs.md)
 - **System**: [Platforms](reference/platforms.md) | [Symlinks](reference/symlinks.md) | [Tasks](reference/tasks.md) | [Troubleshooting](reference/troubleshooting.md)
 
-**Workflows**: [Note Taking](workflows/note-taking.md) | [Sessions](workflows/sessions.md) | [Themes](workflows/themes.md) | [Git](workflows/git.md) | [Tool Discovery](workflows/tool-discovery.md)
+**Workflows**: [Git Operations](workflows/git.md)
 
 **Development**: [Testing](development/testing.md) | [Go Apps](development/go-apps/overview.md) | [Publishing Docs](development/publishing-docs.md)
 
