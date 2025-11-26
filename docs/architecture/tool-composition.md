@@ -404,6 +404,6 @@ done
 
 ## Related Documentation
 
-- [Workflow Tools](../apps/toolbox.md) - Tool discovery and composition
-- [Menu System](./menu-system.md) - Launcher architecture
-- [Note Taking](../apps/notes.md) - zk workflow guide
+- [Toolbox](../apps/toolbox.md) - Tool discovery and composition
+- [Menu](../apps/menu.md) - Simple launcher
+- [Notes](../apps/notes.md) - zk workflow guide

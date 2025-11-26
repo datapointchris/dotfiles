@@ -6,67 +6,63 @@ How the dotfiles repository is organized and why.
 
 ```text
 dotfiles/
-├── platforms/          # System configurations
-│   ├── common/         # Shared configs (all platforms)
-│   ├── macos/          # macOS-specific overrides
-│   ├── wsl/            # WSL Ubuntu overrides
-│   └── arch/           # Arch Linux overrides
-├── apps/               # Personal CLI applications
-│   ├── common/         # Cross-platform tools
-│   ├── macos/          # macOS-specific tools
-│   └── sess/           # Session manager (Go)
-└── management/         # Repository tooling
-    ├── symlinks/       # Symlink management tool
-    ├── taskfiles/      # Task automation
-    ├── packages.yml    # Package definitions
-    └── *.sh            # Bootstrap scripts
+├── platforms/           # Platform configurations
+│   ├── common/          # Shared configs (all platforms)
+│   ├── macos/           # macOS-specific overrides
+│   ├── wsl/             # WSL Ubuntu overrides
+│   └── arch/            # Arch Linux overrides
+├── apps/                # Custom CLI applications
+│   ├── common/          # Cross-platform tools
+│   │   ├── sess/        # Session manager (Go)
+│   │   ├── toolbox/     # Tool discovery (Go)
+│   │   ├── menu         # Universal menu system (bash)
+│   │   ├── notes        # Note-taking wrapper
+│   │   └── theme-sync   # Theme synchronization
+│   ├── macos/           # macOS-specific tools
+│   └── wsl/             # WSL-specific tools
+├── management/          # Repository management
+│   ├── symlinks/        # Symlinks manager (Python)
+│   ├── taskfiles/       # Modular Task automation
+│   ├── *.sh             # Platform setup scripts
+│   └── packages.yml     # Package definitions
+└── docs/                # MkDocs documentation
 ```
 
 ## Symlink System
 
 Two-layer approach: common base + platform overlay.
 
-**Step 1**: Link common files
+```bash
+# Step 1: Link common files
+# Links platforms/common/ to $HOME
+# Example results:
+#   platforms/common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
+#   platforms/common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
+task symlinks:link
 
-```sh
-symlinks link common
-```
+# Step 2: Overlay platform files
+# Overlays platform-specific files, overriding common if both exist
+# Example results:
+#   platforms/macos/.gitconfig → ~/.gitconfig  (overrides common)
+#   platforms/macos/.profile → ~/.profile
+# Platform is auto-detected (macos, wsl, or arch)
 
-Links `platforms/common/` to `$HOME`:
+# Step 3: Link apps to ~/.local/bin/
+# Apps are automatically linked during Step 1
+# Example results:
+#   apps/common/menu → ~/.local/bin/menu
+#   apps/common/notes → ~/.local/bin/notes
+#   apps/common/theme-sync → ~/.local/bin/theme-sync
+# Go apps (sess, toolbox) are built and installed to ~/go/bin/ via Task
 
-```text
-platforms/common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
-platforms/common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
-```
+# Verify symlinks are correct
+task symlinks:check
 
-**Step 2**: Overlay platform files
+# Show all symlinks
+task symlinks:show
 
-```sh
-symlinks link macos
-```
-
-Overlays platform-specific files:
-
-```text
-platforms/macos/.gitconfig → ~/.gitconfig  (overrides common if it existed)
-platforms/macos/.profile → ~/.profile
-```
-
-Platform files override common files when both exist.
-
-**Step 3**: Link apps
-
-```sh
-# Apps are linked to ~/.local/bin/ automatically
-```
-
-Symlinks applications:
-
-```text
-apps/common/menu → ~/.local/bin/menu
-apps/common/notes → ~/.local/bin/notes
-apps/common/toolbox → ~/.local/bin/toolbox
-apps/common/theme-sync → ~/.local/bin/theme-sync
+# Complete refresh (remove all symlinks and recreate)
+task symlinks:relink
 ```
 
 ## Package Management

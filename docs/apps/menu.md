@@ -1,257 +1,157 @@
 # Menu
 
-Knowledge management system organizing commands, workflows, and learning topics by function rather than type. Quick access to accumulated knowledge through single-key navigation.
+Simple workflow tools launcher providing quick access to common development tools.
 
 ## Quick Start
 
 ```bash
-menu              # Launch menu
-prefix + m        # From tmux (Ctrl-Space + m)
+menu                    # Launch interactive menu
+menu launch             # Same as above
+menu help               # Show available tools
 ```
 
-Single-key navigation:
+**From tmux**: `Ctrl-Space + m`
 
-- `s` - Sessions (tmux/tmuxinator)
-- `t` - Tasks (current project)
-- `n` - Notes (zk)
-- `c` - Commands & Aliases
-- `g` - Git Workflows
-- `f` - File Operations
-- `v` - Vim Workflows
-- `k` - Vim Keybindings
-- `l` - Learning Topics
+## Commands
+
+**Interactive Menu** (`menu` or `menu launch`):
+
+- Switch tmux session → `sess`
+- Find a tool → `toolbox categories`
+- Change theme → Pick from favorites with fzf
+- Take/find a note → `notes`
+- Browse documentation → Opens MkDocs link
+- Manage symlinks → `task symlinks:link`
+- View help → `menu help`
+
+**Help Mode** (`menu help`):
+Shows quick reference for workflow tools and common commands.
 
 ## How It Works
 
-Menu organizes knowledge by what you're trying to accomplish. Instead of hunting through bookmarks, notes, aliases, and functions separately, search for a topic and get all related resources in one place.
+Menu is a simple gum-based launcher - not a knowledge management system. It provides quick access to the actual workflow tools:
 
-The system stores knowledge in three YAML files at `~/.config/menu/registry/`:
+- **sess** - Tmux session management (Go app)
+- **toolbox** - CLI tools discovery (Go app)
+- **theme-sync** - Theme synchronization (bash script)
+- **notes** - Note-taking with zk (bash wrapper)
 
-- `commands.yml` - Shell commands, aliases, functions, tools
-- `workflows.yml` - Multi-step processes
-- `learning.yml` - Learning topics with resources
+**Philosophy**: Simple launcher, not a complex system. Each tool handles its own data and functionality independently.
 
-### Commands Registry
+## Tool Integration
 
-Store tools and functions with examples:
+**Session Manager** (`apps/common/sess/`):
 
-```yaml
-- name: fcd
-  type: function
-  category: File Operations
-  description: Fuzzy find directory and cd into it
-  keywords: [navigate, directory, find, cd, fzf]
-  command: fcd [directory]
-  examples:
-    - command: fcd ~/code
-      description: Search for directories in ~/code
-  notes: |
-    Uses fzf with preview. Respects .gitignore.
-  related: [fd, fzf, z]
-  platform: all
-```
+- Go application for tmux sessions
+- Reads `~/.config/sess/sessions-{platform}.yml`
+- Aggregates tmux sessions, tmuxinator projects, defaults
 
-Each entry captures what the command does, how to use it, when it's useful, and what other commands relate to it.
+**Toolbox** (`apps/common/toolbox/`):
 
-### Workflows Registry
+- Go application with registry at `platforms/common/.config/toolbox/registry.yml`
+- Commands: list, show, search, random, categories
+- 98+ documented tools
 
-Document multi-step processes:
+**Theme Sync** (`apps/common/theme-sync`):
 
-```yaml
-- name: Quickfix List - Search and Replace
-  category: Vim Workflows
-  description: Search entire repo, send to quickfix, batch replace
-  keywords: [search, replace, quickfix, batch]
-  steps:
-    - key: "<leader>fg"
-      description: "Live grep to search repo"
-    - key: "<C-q>"
-      description: "Send results to quickfix list"
-  notes: |
-    Incredibly powerful for repo-wide refactoring.
-```
+- Wraps tinty for Base16 themes
+- Syncs across tmux, bat, fzf, shell
+- Favorites list, apply, current, random
 
-Workflows capture techniques you've learned but might forget. The step-by-step format reminds you of the exact sequence.
+**Notes** (`apps/common/notes`):
 
-### Learning Registry
-
-Active learning topics organize all resources in one place:
-
-```yaml
-- name: Neovim Quickfix Lists
-  category: Learning Topics
-  status: active  # active, planned, completed
-  description: Master quickfix lists for batch operations
-  resources:
-    bookmarks:
-      - url: "https://vim.fandom.com/wiki/Quickfix"
-        title: "Vim Tips Wiki"
-        tags: [reference]
-    notes:
-      - path: "~/Documents/notes/dev/learning/neovim-quickfix.md"
-  practice_exercises:
-    - "Search for all TODOs, replace with DONE"
-```
-
-Learning topics capture the "what I'm studying" mindset. Everything related to learning that topic lives together.
-
-## Adding Content
-
-Edit YAML files directly at `~/.config/menu/registry/` (symlinked from dotfiles).
-
-Add a command:
-
-```yaml
-- name: my-command
-  type: function
-  category: Commands
-  description: What it does
-  keywords: [search, terms]
-  command: the command
-  examples:
-    - command: example usage
-      description: what this does
-  notes: |
-    Additional context
-  related: [other, commands]
-  platform: all
-```
-
-Add a workflow:
-
-```yaml
-- name: My Workflow
-  category: Vim Workflows
-  description: Step-by-step process
-  keywords: [relevant, keywords]
-  steps:
-    - key: "<leader>something"
-      description: "What this step does"
-  notes: |
-    When to use this workflow
-```
-
-Add a learning topic:
-
-```yaml
-- name: New Topic
-  category: Learning Topics
-  status: active
-  description: What you're learning
-  resources:
-    bookmarks:
-      - url: "https://..."
-        title: "Tutorial Name"
-        tags: [tutorial]
-    notes:
-      - path: "~/Documents/notes/topic.md"
-  practice_exercises:
-    - "Exercise to practice"
-```
-
-## Configuration
-
-**Main config:** `~/.config/menu/config.yml`
-
-```yaml
-menu:
-  height: 20
-  preview_enabled: true
-  search_enabled: true
-
-tools:
-  gum: gum
-  fzf: fzf
-  zk: zk
-  bat: bat
-```
-
-**Categories:** `~/.config/menu/categories.yml`
-
-**File structure:**
-
-```text
-~/.config/menu/
-├── config.yml              # Main configuration
-├── categories.yml          # Category definitions
-└── registry/
-    ├── commands.yml        # Commands, aliases, functions
-    ├── workflows.yml       # Multi-step processes
-    └── learning.yml        # Learning topics
-```
-
-Source files live in `~/dotfiles/platforms/common/.config/menu/` under version control. Run `task symlinks:link` after editing.
-
-## Integrated Tools
-
-**Session Management:**
-
-```bash
-sess              # Interactive selection
-sess dotfiles     # Direct switch by name
-sess last         # Jump to previous session
-```
-
-See [Session Manager](sess.md) for details.
-
-**Notes:**
-
-```bash
-notes             # Quick menu wrapper
-zk journal "..."  # Create journal entry
-zk devnote "..."  # Create dev note
-```
-
-See [Notes](notes.md) for details.
+- Wraps zk for note-taking
+- Auto-discovers notebook sections
+- Interactive gum menu
 
 ## Workflow
 
-Find a forgotten command:
+**Quick launch workflow**:
+
+1. Run `menu` (or `Ctrl-Space + m` in tmux)
+2. Select what you want to do from gum menu
+3. Tool launches and executes
+
+**Direct tool access** (bypass menu):
 
 ```bash
-menu              # Open menu
-c                 # Commands category
-# Search or select command
-# See details with examples
+sess                    # Open session picker
+toolbox search git      # Find git tools
+theme-sync current      # Show current theme
+notes                   # Interactive note menu
 ```
 
-Learn a Vim technique:
+**With fzf integration**:
 
 ```bash
-menu              # Open menu
-v                 # Vim Workflows
-# Select workflow
-# See step-by-step instructions
+toolbox list | fzf --preview='toolbox show {1}'
+theme-sync favorites | fzf | xargs theme-sync apply
 ```
 
-Review active learning:
+## Implementation
 
-```bash
-menu              # Open menu
-l                 # Learning Topics
-# Select topic
-# See resources and progress
+**Location**: `apps/common/menu` (174 lines of bash)
+
+**Dependencies**:
+
+- gum (required) - TUI components
+- fzf (optional) - fuzzy finding
+
+**File structure**:
+
+```text
+apps/common/
+├── menu              # Main launcher script
+├── theme-sync        # Theme management
+├── notes             # Note-taking wrapper
+├── sess/             # Session manager (Go)
+└── toolbox/          # Tools discovery (Go)
+
+~/go/bin/             # Installed Go binaries
+├── sess
+└── toolbox
 ```
 
-## Best Practices
+## Design Decisions
 
-Add knowledge as you encounter it. When you Google something and find the answer, add it immediately. When you learn a new workflow, document it while it's fresh.
+**Why simple launcher, not knowledge system?**
 
-Only add things you actually forget. If you use a command every day, it doesn't need documentation. If you Google it monthly, add it to menu.
+- Simple is maintainable
+- Each tool handles its own data
+- No central YAML registry to maintain
+- Tools can be used independently
 
-Link related items using the `related` field. This creates a web of knowledge where finding one thing helps you discover connected concepts.
+**Why gum?**
 
-## Troubleshooting
+- Beautiful terminal UI
+- Simple API
+- Cross-platform
+- Fast startup
 
-**Menu command not found**: Verify symlink with `which menu`. If not found, run `task symlinks:link`.
+**Why separate tools instead of one menu command?**
 
-**Config files missing**: Check `ls ~/.config/menu/`. If missing, run `task symlinks:link`.
+- Tools useful independently
+- Easier testing and maintenance
+- Single responsibility
+- Can use in scripts and aliases
 
-**Search YAML directly**: Use `rg "keyword" ~/.config/menu/registry/` to find and update entries.
+## Performance
+
+- Startup time: <50ms (bash + gum)
+- Memory: Minimal (script exits after use)
+- No background processes
+
+## Platform Awareness
+
+Menu works identically across platforms. Individual tools handle platform differences:
+
+- sess reads `sessions-macos.yml` vs `sessions-wsl.yml`
+- toolbox marks tools as available/not installed per platform
+- theme-sync adjusts tinty config based on installed apps
 
 ## See Also
 
-- [Session Manager](sess.md) - Complete sess reference
-- [Toolbox](toolbox.md) - Tool registry system
-- [Notes](notes.md) - zk note-taking workflow
-- [Symlinks](../reference/symlinks.md) - Dotfiles deployment
+- [Tool Composition](../architecture/tool-composition.md) - How tools work together
+- [Toolbox](toolbox.md) - Tool discovery
+- [Notes](notes.md) - Note-taking
+- [Sessions](sess.md) - Session manager
