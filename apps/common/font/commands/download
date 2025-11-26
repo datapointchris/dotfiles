@@ -28,7 +28,7 @@ DRY_RUN=false
 SKIP_FILTER=false  # Legacy compatibility
 
 # Progress tracking
-TOTAL=22
+TOTAL=23
 CURRENT=0
 
 # ================================================================
@@ -86,9 +86,9 @@ Available Families:
   jetbrains, cascadia, meslo, monaspace, iosevka, iosevka-base,
   sgr-iosevka, victor, firacode, firacodescript, nimbus, droid,
   commitmono, comicmono, seriousshanns, sourcecode, terminess,
-  hack, 3270, robotomono, spacemono
+  hack, 3270, robotomono, spacemono, intelone
 
-Downloads 22 font families with pruning to essential coding variants:
+Downloads 23 font families with pruning to essential coding variants:
   - Regular, Bold, Italic, BoldItalic only (when pruning enabled)
   - NerdFontMono spacing only (when pruning enabled)
   - ~70-80 files instead of 260+ (when pruning enabled)
@@ -118,6 +118,7 @@ list_families() {
   echo "  3270            - 3270 Nerd Font"
   echo "  robotomono      - RobotoMono Nerd Font"
   echo "  spacemono       - SpaceMono Nerd Font"
+  echo "  intelone        - Intel One Mono"
   echo ""
 }
 
@@ -447,6 +448,28 @@ download_spacemono() {
   download_nerd_font "SpaceMono Nerd Font" "SpaceMono" "SpaceMono" "ttf"
 }
 
+download_intelone() {
+  download_progress "Intel One Mono"
+
+  mkdir -p "$FONTS_DIR/IntelOneMono"
+
+  log_verbose "Fetching Intel One Mono latest release..."
+  local release_json=$(curl -fsSL https://api.github.com/repos/intel/intel-one-mono/releases/latest)
+  local intel_url=$(echo "$release_json" | grep -o '"browser_download_url": *"[^"]*ttf\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
+
+  if [[ -n "$intel_url" ]]; then
+    log_verbose "Downloading Intel One Mono from $intel_url..."
+    curl -fsSL "$intel_url" -o IntelOneMono.zip
+    unzip -qo IntelOneMono.zip
+    find ./ttf -type f -name "*.ttf" -exec mv {} "$FONTS_DIR/IntelOneMono/" \; 2>/dev/null || true
+
+    local downloaded=$(count_files "$FONTS_DIR/IntelOneMono")
+    print_success "Downloaded $downloaded files"
+  else
+    print_warning "Intel One Mono download URL not found, skipping"
+  fi
+}
+
 # ================================================================
 # Phase 2: Pruning Functions (Filter unwanted variants)
 # ================================================================
@@ -480,7 +503,6 @@ prune_font_family() {
   # Step 1: Remove unwanted weight variants
   log_verbose "Removing unwanted weights (ExtraLight, Light, Thin, Medium, SemiBold, ExtraBold, Black, Retina)..."
 
-  local weight_delete_count=0
   if [[ "$DRY_RUN" == "true" ]]; then
     local weight_files=$(find "$font_dir" -type f \( \
       -iname "*ExtraLight*" -o \
@@ -494,7 +516,6 @@ prune_font_family() {
     \) 2>/dev/null)
 
     if [[ -n "$weight_files" ]]; then
-      weight_delete_count=$(echo "$weight_files" | wc -l | tr -d ' ')
       echo "  Would delete weight variants:"
       echo "$weight_files" | while read -r file; do
         echo "    - $(basename "$file")"
@@ -516,12 +537,10 @@ prune_font_family() {
   # Step 2: Remove Propo spacing variants (keep both Mono and default)
   log_verbose "Removing Propo spacing variants (keeping both Mono and default)..."
 
-  local spacing_delete_count=0
   if [[ "$DRY_RUN" == "true" ]]; then
     local spacing_files=$(find "$font_dir" -type f -name "*NerdFontPropo-*" 2>/dev/null)
 
     if [[ -n "$spacing_files" ]]; then
-      spacing_delete_count=$(echo "$spacing_files" | wc -l | tr -d ' ')
       echo "  Would delete Propo spacing variants:"
       echo "$spacing_files" | while read -r file; do
         echo "    - $(basename "$file")"
@@ -571,7 +590,7 @@ prune_all_fonts() {
 
   local families=()
   while IFS= read -r -d '' dir; do
-    families+=($(basename "$dir"))
+    families+=("$(basename "$dir")")
   done < <(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
   if [[ ${#families[@]} -eq 0 ]]; then
@@ -641,7 +660,7 @@ standardize_all_fonts() {
 
   local families=()
   while IFS= read -r -d '' dir; do
-    families+=($(basename "$dir"))
+    families+=("$(basename "$dir")")
   done < <(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
   if [[ ${#families[@]} -eq 0 ]]; then
@@ -660,6 +679,36 @@ standardize_all_fonts() {
 # ================================================================
 # Main Download Orchestration
 # ================================================================
+
+# Map family name to directory name
+get_family_dir() {
+  local family="$1"
+  case "$family" in
+    jetbrains)      echo "JetBrainsMono" ;;
+    cascadia)       echo "CascadiaCode" ;;
+    meslo)          echo "Meslo" ;;
+    monaspace)      echo "Monaspace" ;;
+    iosevka)        echo "Iosevka-Nerd-Font" ;;
+    iosevka-base)   echo "Iosevka" ;;
+    sgr-iosevka)    echo "SGr-Iosevka" ;;
+    victor)         echo "VictorMono" ;;
+    firacode)       echo "FiraCode" ;;
+    firacodescript) echo "FiraCodeiScript" ;;
+    nimbus)         echo "NimbusMono" ;;
+    droid)          echo "DroidSansM-Nerd-Font" ;;
+    commitmono)     echo "CommitMono" ;;
+    comicmono)      echo "ComicMono" ;;
+    seriousshanns)  echo "SeriousShanns-Nerd-Font" ;;
+    sourcecode)     echo "SourceCodePro" ;;
+    terminess)      echo "Terminess-Nerd-Font" ;;
+    hack)           echo "Hack" ;;
+    3270)           echo "3270" ;;
+    robotomono)     echo "RobotoMono" ;;
+    spacemono)      echo "SpaceMono" ;;
+    intelone)       echo "IntelOneMono" ;;
+    *)              echo "$family" ;;
+  esac
+}
 
 download_single_family() {
   local family="$1"
@@ -686,6 +735,7 @@ download_single_family() {
     3270)           download_3270 ;;
     robotomono)     download_robotomono ;;
     spacemono)      download_spacemono ;;
+    intelone)       download_intelone ;;
     *)
       print_error "Unknown font family: $family"
       echo "Run 'font-download --list' to see available families"
@@ -716,6 +766,7 @@ download_all_families() {
   download_3270
   download_robotomono
   download_spacemono
+  download_intelone
 }
 
 # ================================================================
@@ -758,7 +809,8 @@ main() {
     echo ""
 
     if [[ -n "$DOWNLOAD_FAMILY" ]]; then
-      prune_font_family "$FONTS_DIR/$DOWNLOAD_FAMILY"
+      local family_dir=$(get_family_dir "$DOWNLOAD_FAMILY")
+      prune_font_family "$FONTS_DIR/$family_dir"
     else
       prune_all_fonts
     fi
@@ -787,7 +839,8 @@ main() {
     echo ""
 
     if [[ -n "$DOWNLOAD_FAMILY" ]]; then
-      standardize_font_family "$FONTS_DIR/$DOWNLOAD_FAMILY"
+      local family_dir=$(get_family_dir "$DOWNLOAD_FAMILY")
+      standardize_font_family "$FONTS_DIR/$family_dir"
     else
       standardize_all_fonts
     fi
@@ -807,7 +860,7 @@ main() {
     print_header "Font Download: $DOWNLOAD_FAMILY" "cyan"
     TOTAL=1
   else
-    print_header "Font Download (22 families)" "cyan"
+    print_header "Font Download (23 families)" "cyan"
   fi
 
   echo "Target directory: $FONTS_DIR"
@@ -840,7 +893,8 @@ main() {
     # Prune unwanted variants
     if [[ "$SKIP_FILTER" != "true" ]]; then
       if [[ -n "$DOWNLOAD_FAMILY" ]]; then
-        prune_font_family "$FONTS_DIR/$DOWNLOAD_FAMILY"
+        local family_dir=$(get_family_dir "$DOWNLOAD_FAMILY")
+        prune_font_family "$FONTS_DIR/$family_dir"
       else
         prune_all_fonts
       fi
@@ -849,7 +903,8 @@ main() {
 
     # Standardize names
     if [[ -n "$DOWNLOAD_FAMILY" ]]; then
-      standardize_font_family "$FONTS_DIR/$DOWNLOAD_FAMILY"
+      local family_dir=$(get_family_dir "$DOWNLOAD_FAMILY")
+      standardize_font_family "$FONTS_DIR/$family_dir"
     else
       standardize_all_fonts
     fi
@@ -861,7 +916,7 @@ main() {
   echo "Downloaded fonts in: $FONTS_DIR"
   echo ""
   echo "Font families:"
-  ls -1 "$FONTS_DIR" | grep -v "README.md"
+  find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
   echo ""
 
   local font_count=$(count_files "$FONTS_DIR")
