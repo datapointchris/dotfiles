@@ -145,6 +145,7 @@ nav:
       - Session Manager: apps/sess.md
       - Menu: apps/menu.md
       - Toolbox: apps/toolbox.md
+      - Backup Dirs: apps/backup-dirs.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
@@ -170,7 +171,6 @@ nav:
       - Troubleshooting: reference/troubleshooting.md
       - Corporate Setup: reference/corporate.md
   - Workflows:
-      - Backup: workflows/backup.md
       - Git Operations: workflows/git.md
   - Development:
       - VM Testing: development/testing.md
