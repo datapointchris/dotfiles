@@ -197,10 +197,10 @@ Copies font file from `~/Documents/code_fonts/` to `~/Library/Fonts/`. Run `fc-c
 
 ## Configuration
 
-Font testing log location (XDG-compliant):
+Font testing log location:
 
 ```text
-~/.local/share/font-sync/font-testing-log.md
+~/dotfiles/data/font-sync/font-testing-log.md
 ```
 
 Favorites list location:

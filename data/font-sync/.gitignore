@@ -1,0 +1,6 @@
+# Font testing log - personal testing data
+# Uncomment to exclude from git (regenerates on each system):
+# font-testing-log.md
+
+# Or commit it to sync testing decisions across systems
+# (default: commit it)
