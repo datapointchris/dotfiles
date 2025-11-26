@@ -9,15 +9,39 @@
          <lastmod>2025-11-26</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/apps/backup-dirs/</loc>
+         <lastmod>2025-11-26</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/font/</loc>
          <lastmod>2025-11-26</lastmod>
     </url>
     <url>
-         <loc>https://datapointchris.github.io/dotfiles/architecture/</loc>
+         <loc>https://datapointchris.github.io/dotfiles/apps/ghostty-theme/</loc>
          <lastmod>2025-11-26</lastmod>
     </url>
     <url>
-         <loc>https://datapointchris.github.io/dotfiles/architecture/menu-system/</loc>
+         <loc>https://datapointchris.github.io/dotfiles/apps/menu/</loc>
+         <lastmod>2025-11-26</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/apps/notes/</loc>
+         <lastmod>2025-11-26</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/apps/sess/</loc>
+         <lastmod>2025-11-26</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/apps/theme-sync/</loc>
+         <lastmod>2025-11-26</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/apps/toolbox/</loc>
+         <lastmod>2025-11-26</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/architecture/</loc>
          <lastmod>2025-11-26</lastmod>
     </url>
     <url>
@@ -397,10 +421,6 @@
          <lastmod>2025-11-26</lastmod>
     </url>
     <url>
-         <loc>https://datapointchris.github.io/dotfiles/development/notes-system-setup/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
          <loc>https://datapointchris.github.io/dotfiles/development/publishing-docs/</loc>
          <lastmod>2025-11-26</lastmod>
     </url>
@@ -426,14 +446,6 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/overview/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/getting-started/first-config/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/getting-started/installation/</loc>
          <lastmod>2025-11-26</lastmod>
     </url>
     <url>
@@ -558,54 +570,6 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/terminal-fonts-guide/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/font/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/menu/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/notes/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/session/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/theme-sync/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/reference/workflow-tools/toolbox/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/workflows/backup/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/workflows/git/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/workflows/note-taking/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/workflows/sessions/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/workflows/themes/</loc>
-         <lastmod>2025-11-26</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/workflows/tool-discovery/</loc>
          <lastmod>2025-11-26</lastmod>
     </url>
 </urlset>
