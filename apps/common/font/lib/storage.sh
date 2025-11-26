@@ -50,7 +50,8 @@ log_action() {
   local platform
   platform=$(detect_platform)
   local timestamp
-  timestamp=$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S%z)
+  # Store timestamps in UTC to avoid timezone conversion issues
+  timestamp=$(date -u -Iseconds 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
 
   # Per-platform history file - eliminates merge conflicts
   local history_file="$FONT_DATA_DIR/history-${platform}.jsonl"
@@ -123,10 +124,68 @@ get_font_stats() {
   '
 }
 
+calculate_usage_time() {
+  # Calculate total usage time for each font in seconds
+  # Usage = time between apply and next apply (or now if currently active)
+  local current_font="$1"
+
+  get_history | jq -r --arg current "$current_font" '
+    # Helper to parse ISO 8601 timestamps (handles both UTC and timezone offsets)
+    def parse_ts:
+      if test("[+-][0-9]{2}:[0-9]{2}$") then
+        # Old format with timezone - strip and treat as UTC (legacy handling)
+        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+      else
+        # New format in UTC
+        fromdateiso8601
+      end;
+
+    # Get all apply actions sorted by timestamp (across all fonts)
+    [map(select(.action == "apply")) | sort_by(.ts) | to_entries[]] as $applies |
+
+    # For each apply, calculate duration until next apply
+    ($applies | map(
+      . as $entry |
+      $entry.key as $idx |
+      $entry.value as $apply |
+
+      # Find next apply (any font)
+      if ($idx < (($applies | length) - 1)) then
+        # Duration = next apply time - current apply time
+        {
+          font: $apply.font,
+          duration: (($applies[$idx + 1].value.ts | parse_ts) - ($apply.ts | parse_ts))
+        }
+      elif $apply.font == $current then
+        # Last apply and it matches current font - add time until now
+        {
+          font: $apply.font,
+          duration: ((now | floor) - ($apply.ts | parse_ts))
+        }
+      else
+        # Last apply but not current font
+        null
+      end
+    ) | map(select(. != null))) as $durations |
+
+    # Group by font and sum durations
+    ($durations | group_by(.font) | map({
+      key: .[0].font,
+      value: (map(.duration) | add // 0)
+    }) | from_entries)
+  '
+}
+
 get_rankings() {
   # Aggregate and rank all fonts by likes/dislikes
   # Returns JSONL (compact JSON, one object per line)
-  get_history | jq -c '
+  local current_font
+  current_font=$(get_current_font 2>/dev/null || echo "")
+
+  local usage_times
+  usage_times=$(calculate_usage_time "$current_font")
+
+  get_history | jq -c --argjson usage "$usage_times" '
     group_by(.font) |
     map({
       font: .[0].font,
@@ -135,6 +194,7 @@ get_rankings() {
       score: (map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length),
       last_used: (map(select(.action == "apply")) | max_by(.ts) | .ts // "never"),
       platforms: [.[].platform] | unique | join(","),
+      usage_seconds: ($usage[.[0].font] // 0),
       # Add sort_key for proper ordering (never gets lowest timestamp)
       sort_key: (if (map(select(.action == "apply")) | length) > 0 then (map(select(.action == "apply")) | max_by(.ts) | .ts) else "0" end)
     }) |
@@ -246,6 +306,99 @@ validate_history_files() {
 }
 
 #==============================================================================
+# REJECTED FONTS TRACKING
+#==============================================================================
+
+REJECTED_FONTS_FILE="$FONT_DATA_DIR/rejected-fonts.json"
+
+# Mark a font as rejected with reason
+reject_font() {
+  local font="$1"
+  local reason="${2:-No reason provided}"
+
+  if [[ -z "$font" ]]; then
+    echo "Error: font name required" >&2
+    return 1
+  fi
+
+  local platform
+  platform=$(detect_platform)
+  local timestamp
+  # Store timestamps in UTC to avoid timezone conversion issues
+  timestamp=$(date -u -Iseconds 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  # Initialize rejected fonts file if it doesn't exist
+  if [[ ! -f "$REJECTED_FONTS_FILE" ]]; then
+    echo "{}" > "$REJECTED_FONTS_FILE"
+  fi
+
+  # Add or update rejected font entry
+  local temp_file="${REJECTED_FONTS_FILE}.tmp"
+  jq --arg font "$font" \
+     --arg reason "$reason" \
+     --arg platform "$platform" \
+     --arg ts "$timestamp" \
+     '.[$font] = {
+       "rejected_date": $ts,
+       "reason": $reason,
+       "platforms": ((.[$font].platforms // []) + [$platform] | unique)
+     }' "$REJECTED_FONTS_FILE" > "$temp_file"
+
+  mv "$temp_file" "$REJECTED_FONTS_FILE"
+}
+
+# Check if a font is rejected
+is_font_rejected() {
+  local font="$1"
+
+  if [[ ! -f "$REJECTED_FONTS_FILE" ]]; then
+    return 1
+  fi
+
+  jq -e --arg font "$font" '.[$font] != null' "$REJECTED_FONTS_FILE" >/dev/null 2>&1
+}
+
+# Get rejected font info
+get_rejected_font_info() {
+  local font="$1"
+
+  if [[ ! -f "$REJECTED_FONTS_FILE" ]]; then
+    echo "{}"
+    return
+  fi
+
+  jq --arg font "$font" '.[$font] // {}' "$REJECTED_FONTS_FILE"
+}
+
+# List all rejected fonts
+list_rejected_fonts() {
+  if [[ ! -f "$REJECTED_FONTS_FILE" ]]; then
+    echo "[]"
+    return
+  fi
+
+  jq -c 'to_entries | map({font: .key, rejected_date: .value.rejected_date, reason: .value.reason, platforms: .value.platforms | join(",")}) | sort_by(.rejected_date) | reverse | .[]' "$REJECTED_FONTS_FILE"
+}
+
+# Remove font from rejected list
+unreject_font() {
+  local font="$1"
+
+  if [[ -z "$font" ]]; then
+    echo "Error: font name required" >&2
+    return 1
+  fi
+
+  if [[ ! -f "$REJECTED_FONTS_FILE" ]]; then
+    return 0
+  fi
+
+  local temp_file="${REJECTED_FONTS_FILE}.tmp"
+  jq --arg font "$font" 'del(.[$font])' "$REJECTED_FONTS_FILE" > "$temp_file"
+  mv "$temp_file" "$REJECTED_FONTS_FILE"
+}
+
+#==============================================================================
 # INITIALIZATION
 #==============================================================================
 
@@ -262,6 +415,11 @@ init_storage() {
 
   if [[ ! -f "$history_file" ]]; then
     touch "$history_file"
+  fi
+
+  # Ensure rejected fonts file exists
+  if [[ ! -f "$REJECTED_FONTS_FILE" ]]; then
+    echo "{}" > "$REJECTED_FONTS_FILE"
   fi
 }
 

@@ -62,10 +62,10 @@ View file locations with `font log`.
 
 ## How It Works
 
-Each action appends a timestamped JSON record:
+Each action appends a timestamped JSON record (in UTC):
 
 ```json
-{"ts":"2025-11-26T11:06:21-05:00","platform":"macos","font":"Fira Code","action":"like","message":"Great ligatures"}
+{"ts":"2025-11-26T17:24:03+00:00","platform":"macos","font":"Fira Code","action":"like","message":"Great ligatures"}
 ```
 
 Rankings aggregate likes/dislikes to calculate scores:
