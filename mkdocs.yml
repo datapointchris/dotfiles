@@ -146,6 +146,7 @@ nav:
       - Menu: apps/menu.md
       - Toolbox: apps/toolbox.md
       - Backup Dirs: apps/backup-dirs.md
+      - Ghostty Theme: apps/ghostty-theme.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
