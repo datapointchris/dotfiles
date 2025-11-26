@@ -226,19 +226,19 @@ source "$FONT_APP_DIR/lib/lib.sh"
 font="\$1"
 
 # Get or generate preview
-if preview_file=$(get_or_generate_preview "$font" 2>/dev/null); then
+if preview_file=\$(get_or_generate_preview "\$font" 2>/dev/null); then
   # Display it (optimized for speed)
   if command -v chafa &>/dev/null; then
-    chafa -f kitty --speed 10 --dither none "$preview_file" 2>/dev/null || echo "Preview: $font"
+    chafa -f kitty --speed 10 --dither none "\$preview_file" 2>/dev/null || echo "Preview: \$font"
   elif command -v viu &>/dev/null; then
-    viu -w 80 "$preview_file" 2>/dev/null || echo "Preview: $font"
+    viu -w 80 "\$preview_file" 2>/dev/null || echo "Preview: \$font"
   else
-    echo "Font: $font"
+    echo "Font: \$font"
     echo ""
     echo "(Install chafa or viu for image preview)"
   fi
 else
-  echo "Failed to generate preview for: $font"
+  echo "Failed to generate preview for: \$font"
 fi
 PREVIEW_EOF
 
