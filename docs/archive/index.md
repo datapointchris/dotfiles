@@ -19,6 +19,11 @@ Documentation from each major project phase implementation:
 
 Historical planning and strategy documents:
 
+- [Recent Planning (Nov 2025)](planning/2025-11-recent/) - *Nov 25-26, 2025*
+  - Documentation consolidation phases
+  - Backup-dirs robustness enhancements
+  - Font refactoring plans
+  - Verification system improvements
 - [Theme Sync Strategy](planning/2025-11-03-theme-sync-strategy.md) - *Nov 3, 2025*
   - Original two-phase approach for implementing tinty-based theme synchronization
 - [VM Testing Plan](planning/2025-11-04-vm-testing-plan.md) - *Nov 4, 2025*
