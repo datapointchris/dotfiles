@@ -144,6 +144,7 @@ nav:
       - Notes: apps/notes.md
       - Session Manager: apps/sess.md
       - Menu: apps/menu.md
+      - Toolbox: apps/toolbox.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
@@ -154,8 +155,6 @@ nav:
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
   - Reference:
       - Platform Differences: reference/platforms.md
-      - Workflow Tools:
-          - Toolbox: reference/workflow-tools/toolbox.md
       - Fonts:
           - Nerd Fonts Explained: reference/fonts/nerd-fonts-explained.md
           - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
@@ -173,7 +172,6 @@ nav:
   - Workflows:
       - Backup: workflows/backup.md
       - Git Operations: workflows/git.md
-      - Tool Discovery: workflows/tool-discovery.md
   - Development:
       - VM Testing: development/testing.md
       - Notes System Setup: development/notes-system-setup.md
