@@ -189,8 +189,6 @@ zk learn "Docker networking patterns"
 - **Apps**: [Menu](apps/menu.md) | [Toolbox](apps/toolbox.md) | [Sessions](apps/sess.md) | [Theme Sync](apps/theme-sync.md) | [Notes](apps/notes.md) | [Font](apps/font.md) | [Backup Dirs](apps/backup-dirs.md)
 - **System**: [Platforms](reference/platforms.md) | [Symlinks](reference/symlinks.md) | [Tasks](reference/tasks.md) | [Troubleshooting](reference/troubleshooting.md)
 
-**Workflows**: [Git Operations](workflows/git.md)
-
 **Development**: [Testing](development/testing.md) | [Go Apps](development/go-apps/overview.md) | [Publishing Docs](development/publishing-docs.md)
 
 ## Tips
