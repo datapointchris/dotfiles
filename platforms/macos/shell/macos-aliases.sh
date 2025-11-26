@@ -75,7 +75,7 @@ alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
 # ---------- Backup ---------- #
 
 # Backup important directories to iCloud Documents
-alias backup-important='backup-dirs .claude learning notes obsession code'
+alias backup-important='backup-dirs --fast .claude learning notes obsession code'
 
 # ---------- Environment ---------- #
 
