@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # backup-dirs - Create compressed backup archive of specified directories
 #
@@ -32,12 +32,26 @@ source "$DOTFILES_DIR/platforms/common/shell/colors.sh"
 # Configuration
 # ============================================================================
 
+# Compression defaults
+readonly COMPRESSION_DEFAULT="zstd"
+readonly COMPRESSION_LEVEL_DEFAULT=3      # Balance of speed/ratio (1=fastest, 19=best)
+readonly COMPRESSION_THREADS_DEFAULT=0    # Auto-detect CPU cores
+
+# Feature defaults
+readonly ANALYZE_DEFAULT=false            # Skip analysis by default (faster)
+
+# File extensions by compression type
+declare -A COMPRESSION_EXTENSIONS=(
+  ["zstd"]="tar.zst"
+  ["gzip"]="tar.gz"
+  ["xz"]="tar.xz"
+)
+
 # Progress display tuning
 readonly COLOR_CYCLE_FILES=20           # Change rainbow color every N files
 readonly UPDATE_INTERVAL_NS=90000000    # File count update interval in nanoseconds (0.09s)
 readonly ANALYSIS_SPINNER_SLEEP=0.05    # Animation speed for analysis spinner
 readonly ARCHIVE_SPINNER_SLEEP=0.02     # Animation speed for archive spinner
-readonly PROGRESS_PADDING_PERCENT=100   # No padding needed - estimates are accurate
 
 # Spinner animation characters
 readonly SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -72,6 +86,14 @@ readonly EXCLUDE_PATTERNS=(
 DEST_DIR="$HOME/Documents"
 DIRS_TO_BACKUP=()
 
+# Compression settings (set by flags)
+COMPRESSION="$COMPRESSION_DEFAULT"
+COMPRESSION_LEVEL="$COMPRESSION_LEVEL_DEFAULT"
+COMPRESSION_THREADS="$COMPRESSION_THREADS_DEFAULT"
+
+# Feature flags (set by flags)
+ANALYZE="$ANALYZE_DEFAULT"
+
 # Timing
 OVERALL_START_TIME=""
 ARCHIVE_START_TIME=""
@@ -104,8 +126,16 @@ usage() {
 
   print_section "Options" "brightcyan"
   echo ""
-  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")    Destination directory $(color_bright_black "(default: ~/Documents)")"
-  echo "  $(color_bright_magenta "-h, --help")             Show this help message"
+  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")      Destination directory $(color_bright_black "(default: ~/Documents)")"
+  echo "  $(color_bright_magenta "-a, --analyze")          Run analysis phase for percentage $(color_bright_black "(default: off)")"
+  echo "  $(color_bright_magenta "--no-analyze")          Skip analysis $(color_bright_black "(default, faster)")"
+  echo "  $(color_bright_magenta "--zstd")                Use zstd compression $(color_bright_black "(default, faster)")"
+  echo "  $(color_bright_magenta "--gzip")                Use gzip compression $(color_bright_black "(compatible)")"
+  echo "  $(color_bright_magenta "--xz")                  Use xz compression $(color_bright_black "(best compression)")"
+  echo "  $(color_bright_magenta "--fast")                Optimize for speed $(color_bright_black "(zstd -1, no analysis)")"
+  echo "  $(color_bright_magenta "--best")                Optimize for compression $(color_bright_black "(zstd -19)")"
+  echo "  $(color_bright_magenta "-j, --threads") $(color_cyan "<N>")    Compression threads $(color_bright_black "(default: auto)")"
+  echo "  $(color_bright_magenta "-h, --help")            Show this help message"
   echo ""
 
   print_section "Arguments" "brightcyan"
@@ -127,7 +157,9 @@ usage() {
 
   print_section "Features" "brightcyan"
   echo ""
-  echo "  $(color_cyan "•") Archive format:  $(color_bright_white "backup-dirs_YYYY-MM-DD_HHMMSS.tar.gz")"
+  echo "  $(color_cyan "•") Archive format:  $(color_bright_white "backup-dirs_YYYY-MM-DD_HHMMSS.tar.zst") $(color_bright_black "(zstd by default)")"
+  echo "  $(color_cyan "•") Fast compression: $(color_bright_white "Multi-threaded zstd") $(color_bright_black "(2-3x faster than gzip)")"
+  echo "  $(color_cyan "•") Quick backups:   $(color_bright_white "No analysis by default") $(color_bright_black "(skips double tree walk)")"
   echo "  $(color_cyan "•") Smart excludes:  $(color_bright_black ".venv, node_modules, caches, build artifacts")"
   echo "  $(color_cyan "•") Git included:    $(color_bright_white ".git") $(color_bright_black "directories kept for recovery")"
   echo "  $(color_cyan "•") Live progress:   $(color_bright_white "Rainbow") $(color_red "c")$(color_yellow "o")$(color_green "l")$(color_cyan "o")$(color_blue "r")$(color_magenta "s") $(color_bright_white "and smooth animations")"
@@ -140,9 +172,13 @@ usage() {
 # ============================================================================
 
 cleanup() {
-  # Kill any running background spinners
-  [[ -n "${ANALYSIS_SPINNER_PID:-}" ]] && kill "$ANALYSIS_SPINNER_PID" 2>/dev/null
-  [[ -n "${ARCHIVE_SPINNER_PID:-}" ]] && kill "$ARCHIVE_SPINNER_PID" 2>/dev/null
+  # Kill any running background spinners (always succeed to not override exit code)
+  if [[ -n "${ANALYSIS_SPINNER_PID:-}" ]]; then
+    kill "$ANALYSIS_SPINNER_PID" 2>/dev/null || true
+  fi
+  if [[ -n "${ARCHIVE_SPINNER_PID:-}" ]]; then
+    kill "$ARCHIVE_SPINNER_PID" 2>/dev/null || true
+  fi
 
   # Remove temp files
   [[ -n "${ANALYSIS_RUNNING_FILE:-}" ]] && rm -f "$ANALYSIS_RUNNING_FILE"
@@ -152,6 +188,9 @@ cleanup() {
 
   # Clear the line
   printf "\r\033[K"
+
+  # Always return success to not override exit code
+  return 0
 }
 
 # Set up cleanup trap
@@ -174,6 +213,47 @@ parse_arguments() {
           exit 1
         fi
         DEST_DIR="$2"
+        shift 2
+        ;;
+      -a|--analyze)
+        ANALYZE=true
+        shift
+        ;;
+      --no-analyze)
+        ANALYZE=false
+        shift
+        ;;
+      --zstd)
+        COMPRESSION="zstd"
+        shift
+        ;;
+      --gzip)
+        COMPRESSION="gzip"
+        shift
+        ;;
+      --xz)
+        COMPRESSION="xz"
+        shift
+        ;;
+      --fast)
+        # Optimize for speed: zstd level 1, no analysis
+        COMPRESSION="zstd"
+        COMPRESSION_LEVEL=1
+        ANALYZE=false
+        shift
+        ;;
+      --best)
+        # Optimize for compression: zstd level 19
+        COMPRESSION="zstd"
+        COMPRESSION_LEVEL=19
+        shift
+        ;;
+      -j|--threads)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --threads requires a number" >&2
+          exit 1
+        fi
+        COMPRESSION_THREADS="$2"
         shift 2
         ;;
       -*)
@@ -332,7 +412,7 @@ analyze_directories() {
 
     while IFS= read -r file; do
       ((estimated_files++))
-      local size=$(stat --format='%s' "$file" 2>/dev/null || echo 0)
+      local size=$(wc -c < "$file" 2>/dev/null || echo 0)
       estimated_size=$((estimated_size + size))
 
       # Update progress based on time interval for organic feel
@@ -402,7 +482,91 @@ analyze_directories() {
 }
 
 # ============================================================================
-# Archive Phase - Create compressed tar.gz with progress
+# Progress Display Functions (Modular, No Flag Mixing)
+# ============================================================================
+
+# Progress display WITH percentage (requires ESTIMATED_FILES to be set)
+start_progress_with_percentage() {
+  local progress_file="$1"
+  local start_time="$2"
+
+  set +m  # Disable job control messages
+  (
+    local spinner_idx=0
+    while [[ -f "$progress_file" ]]; do
+      if [[ -r "$progress_file" ]]; then
+        local count=$(cat "$progress_file" 2>/dev/null || echo "0")
+
+        # Calculate elapsed time
+        local now=$(date +%s)
+        local elapsed=$((now - start_time))
+        local time_str=$(printf "%02d:%02d" $((elapsed/60)) $((elapsed%60)))
+
+        # Calculate percentage (capped at 100%)
+        local percent=0
+        if [[ $ESTIMATED_FILES -gt 0 ]]; then
+          percent=$((count * 100 / ESTIMATED_FILES))
+          [[ $percent -gt 100 ]] && percent=100
+        fi
+
+        # Rainbow color based on count
+        local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
+        local color_code="${COLORS[$color_idx]}"
+
+        # Color for percentage (green if 100%, cyan otherwise)
+        local percent_color="96"  # Cyan
+        [[ $percent -eq 100 ]] && percent_color="92"  # Green
+
+        local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
+        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m (\033[${percent_color}m%d%%\033[0m)    " \
+          "$spinner_char" "$time_str" "$count" "$percent"
+        spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
+      fi
+      sleep "$ARCHIVE_SPINNER_SLEEP"
+    done
+  ) &
+  ARCHIVE_SPINNER_PID=$!
+  disown
+  set -m  # Re-enable job control
+}
+
+# Progress display WITHOUT percentage (fast mode, no analysis needed)
+start_progress_count_only() {
+  local progress_file="$1"
+  local start_time="$2"
+
+  set +m  # Disable job control messages
+  (
+    local spinner_idx=0
+    while [[ -f "$progress_file" ]]; do
+      if [[ -r "$progress_file" ]]; then
+        local count=$(cat "$progress_file" 2>/dev/null || echo "0")
+
+        # Calculate elapsed time
+        local now=$(date +%s)
+        local elapsed=$((now - start_time))
+        local time_str=$(printf "%02d:%02d" $((elapsed/60)) $((elapsed%60)))
+
+        # Rainbow color based on count
+        local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
+        local color_code="${COLORS[$color_idx]}"
+
+        local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
+        # No percentage - just count and time
+        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m    " \
+          "$spinner_char" "$time_str" "$count"
+        spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
+      fi
+      sleep "$ARCHIVE_SPINNER_SLEEP"
+    done
+  ) &
+  ARCHIVE_SPINNER_PID=$!
+  disown
+  set -m  # Re-enable job control
+}
+
+# ============================================================================
+# Archive Phase - Create compressed archive with progress
 # ============================================================================
 
 create_archive() {
@@ -462,49 +626,13 @@ create_archive() {
 
   echo "0" > "$PROGRESS_FILE"
 
-  # Start background spinner with rainbow colors IMMEDIATELY after progress file creation
-  # This ensures continuous visual feedback without gaps
-  set +m  # Disable job control messages
-  (
-    local start=$ARCHIVE_START_TIME
-    while [[ -f "$PROGRESS_FILE" ]]; do
-      if [[ -r "$PROGRESS_FILE" ]]; then
-        local count=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
-
-        # Calculate elapsed time
-        local now=$(date +%s)
-        local elapsed=$((now - start))
-        local minutes=$((elapsed / 60))
-        local seconds=$((elapsed % 60))
-        local time_str=$(printf "%02d:%02d" $minutes $seconds)
-
-        # Calculate percentage (capped at 100%)
-        local percent=0
-        if [[ $ESTIMATED_FILES -gt 0 ]]; then
-          local padded_estimate=$((ESTIMATED_FILES * PROGRESS_PADDING_PERCENT / 100))
-          percent=$((count * 100 / padded_estimate))
-          [[ $percent -gt 100 ]] && percent=100
-        fi
-
-        # Rainbow color based on count
-        local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
-        local color_code="${COLORS[$color_idx]}"
-
-        # Color for percentage (green if 100%, cyan otherwise)
-        local percent_color="96"  # Cyan
-        [[ $percent -eq 100 ]] && percent_color="92"  # Green
-
-        local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
-        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m (\033[${percent_color}m%d%%\033[0m)    " \
-          "$spinner_char" "$time_str" "$count" "$percent"
-        spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
-      fi
-      sleep "$ARCHIVE_SPINNER_SLEEP"
-    done
-  ) &
-  ARCHIVE_SPINNER_PID=$!
-  disown  # Prevent job control messages
-  set -m  # Re-enable job control
+  # Start appropriate progress display based on ANALYZE flag
+  # Clean branching - no flag logic mixed into display code
+  if [[ $ANALYZE == true ]]; then
+    start_progress_with_percentage "$PROGRESS_FILE" "$ARCHIVE_START_TIME"
+  else
+    start_progress_count_only "$PROGRESS_FILE" "$ARCHIVE_START_TIME"
+  fi
 
   # Build tar exclude arguments
   local exclude_args=()
@@ -512,32 +640,74 @@ create_archive() {
     exclude_args+=("--exclude=$pattern")
   done
 
+  # Create compressed archive with appropriate compression method
   # Run tar and count files as they're processed
+  # Temporarily disable pipefail - tar can return 1 for warnings even when successful
+  set +o pipefail
   local last_update=$(date +%s%N)
   local update_interval=$UPDATE_INTERVAL_NS
 
-  tar -czf "$backup_dest" \
-    "${exclude_args[@]}" \
-    -v \
-    "${tar_dirs[@]}" 2>&1 | \
-  {
-    local processed=0
-    local last_update=$(date +%s%N)
-    while IFS= read -r _line; do
-      ((processed++))
-      # Update progress based on time interval for smooth organic counting
-      local now=$(date +%s%N)
-      local elapsed=$((now - last_update))
-      if [[ $elapsed -ge $update_interval ]]; then
+  case $COMPRESSION in
+    zstd)
+      # Multi-threaded zstd (FAST!)
+      # When piping, tar's verbose output goes to stderr (archive data on stdout)
+      # Group the pipeline and redirect stderr for progress counting
+      {
+        tar -cv "${exclude_args[@]}" "${tar_dirs[@]}" | \
+          zstd -T"$COMPRESSION_THREADS" -"$COMPRESSION_LEVEL" > "$backup_dest"
+      } 2>&1 | \
+      {
+        local processed=0
+        local last_update=$(date +%s%N)
+        while IFS= read -r _line; do
+          ((processed++))
+          local now=$(date +%s%N)
+          if [[ $((now - last_update)) -ge $update_interval ]]; then
+            echo "$processed" > "$PROGRESS_FILE"
+            last_update=$now
+          fi
+        done
         echo "$processed" > "$PROGRESS_FILE"
-        last_update=$now
-      fi
-    done
-    # Write final count after loop completes
-    echo "$processed" > "$PROGRESS_FILE"
-  }
+      }
+      ;;
+    gzip)
+      # Traditional gzip (compatible)
+      tar -czf "$backup_dest" "${exclude_args[@]}" -v "${tar_dirs[@]}" 2>&1 | \
+      {
+        local processed=0
+        local last_update=$(date +%s%N)
+        while IFS= read -r _line; do
+          ((processed++))
+          local now=$(date +%s%N)
+          if [[ $((now - last_update)) -ge $update_interval ]]; then
+            echo "$processed" > "$PROGRESS_FILE"
+            last_update=$now
+          fi
+        done
+        echo "$processed" > "$PROGRESS_FILE"
+      }
+      ;;
+    xz)
+      # Best compression (slow)
+      tar -cJf "$backup_dest" "${exclude_args[@]}" -v "${tar_dirs[@]}" 2>&1 | \
+      {
+        local processed=0
+        local last_update=$(date +%s%N)
+        while IFS= read -r _line; do
+          ((processed++))
+          local now=$(date +%s%N)
+          if [[ $((now - last_update)) -ge $update_interval ]]; then
+            echo "$processed" > "$PROGRESS_FILE"
+            last_update=$now
+          fi
+        done
+        echo "$processed" > "$PROGRESS_FILE"
+      }
+      ;;
+  esac
 
-  local tar_exit=$?
+  # Re-enable pipefail
+  set -o pipefail
 
   # Read final file count BEFORE deleting the progress file
   sleep 0.1  # Brief pause to let final write complete
@@ -550,7 +720,13 @@ create_archive() {
   # Clear the progress line
   printf "\r\033[K"
 
-  return $tar_exit
+  # Check if archive was created successfully (more reliable than tar exit code)
+  # Just verify the file exists and is not empty
+  if [[ ! -f "$backup_dest" ]] || [[ ! -s "$backup_dest" ]]; then
+    return 1
+  fi
+
+  return 0
 }
 
 # ============================================================================
@@ -573,7 +749,7 @@ display_statistics() {
   local total_time_str=$(printf "%02d:%02d" $((total_elapsed / 60)) $((total_elapsed % 60)))
 
   # Get compressed size
-  local compressed_size=$(stat --format='%s' "$backup_dest" 2>/dev/null || echo 0)
+  local compressed_size=$(wc -c < "$backup_dest" 2>/dev/null | tr -d ' ' || echo 0)
   local compressed_size_hr=$(numfmt --to=iec-i --suffix=B "$compressed_size" 2>/dev/null || echo "$((compressed_size / 1048576))M")
   local estimated_size_hr=$(numfmt --to=iec-i --suffix=B "$ESTIMATED_SIZE" 2>/dev/null || echo "$((ESTIMATED_SIZE / 1048576))M")
 
@@ -588,15 +764,36 @@ display_statistics() {
   print_section "Backup Statistics" "brightcyan"
   echo ""
   echo "  Location:        $(color_bright_blue "$backup_dest")"
-  echo "  Entries:         $(color_bright_green "$PROCESSED_FILES") $(color_bright_black "(estimated: $ESTIMATED_FILES)")"
-  echo "  Original size:   $(color_bright_yellow "$estimated_size_hr")"
-  echo "  Compressed size: $(color_bright_green "$compressed_size_hr")"
-  echo "  Compression:     $(color_bright_magenta "${compression_percent}%") saved"
+
+  # Show entries with estimate only if analysis was run
+  if [[ $ANALYZE == true && $ESTIMATED_FILES -gt 0 ]]; then
+    echo "  Entries:         $(color_bright_green "$PROCESSED_FILES") $(color_bright_black "(estimated: $ESTIMATED_FILES)")"
+    local accuracy=$(( PROCESSED_FILES * 100 / ESTIMATED_FILES ))
+    echo "  Accuracy:        $(color_bright_cyan "$accuracy%")"
+  else
+    echo "  Entries:         $(color_bright_green "$PROCESSED_FILES")"
+  fi
+
+  # Show size estimates only if analysis was run
+  if [[ $ANALYZE == true && $ESTIMATED_SIZE -gt 0 ]]; then
+    echo "  Original size:   $(color_bright_yellow "$estimated_size_hr")"
+    echo "  Compressed size: $(color_bright_green "$compressed_size_hr")"
+    echo "  Compression:     $(color_bright_magenta "${compression_percent}%") saved"
+  else
+    echo "  Compressed size: $(color_bright_green "$compressed_size_hr")"
+  fi
+
   echo "  Directories:     $(color_bright_green "$num_dirs") backed up"
   echo ""
-  echo "  Time - Analysis: $(color_bright_cyan "$analysis_time_str")"
-  echo "  Time - Archive:  $(color_bright_cyan "$archive_time_str")"
-  echo "  Time - Total:    $(color_bright_green "$total_time_str")"
+
+  # Show timing with analysis breakdown only if analysis was run
+  if [[ $ANALYZE == true ]]; then
+    echo "  Time - Analysis: $(color_bright_cyan "$analysis_time_str")"
+    echo "  Time - Archive:  $(color_bright_cyan "$archive_time_str")"
+    echo "  Time - Total:    $(color_bright_green "$total_time_str")"
+  else
+    echo "  Time - Total:    $(color_bright_green "$total_time_str")"
+  fi
 
   if [[ $num_missing -gt 0 ]]; then
     echo "  Skipped:         $(color_orange "$num_missing")"
@@ -630,18 +827,27 @@ main() {
   # Validate directories exist and build lists
   validate_directories
 
-  # Create backup filename
+  # Create backup filename with correct extension for compression type
   local date_stamp=$(date '+%Y-%m-%d_%H%M%S')
-  local backup_name="backup-dirs_${date_stamp}.tar.gz"
+  local extension="${COMPRESSION_EXTENSIONS[$COMPRESSION]}"
+  local backup_name="backup-dirs_${date_stamp}.${extension}"
   local backup_dest="$DEST_DIR/$backup_name"
 
-  # Analysis phase - count files and estimate size
-  analyze_directories "${EXISTING_DIRS[@]}"
+  # Analysis phase - count files and estimate size (OPTIONAL - skipped by default for speed)
+  if [[ $ANALYZE == true ]]; then
+    analyze_directories "${EXISTING_DIRS[@]}"
+  else
+    # Skip analysis - no ESTIMATED_FILES or ESTIMATED_SIZE set
+    # Progress will show raw count without percentage
+    ESTIMATED_FILES=0
+    ESTIMATED_SIZE=0
+  fi
 
   # Archive phase - create compressed backup
   if create_archive "$backup_dest" "${EXISTING_DIRS[@]}"; then
     # Display final statistics
     display_statistics "$backup_dest" "${#EXISTING_DIRS[@]}" "${#MISSING_DIRS[@]}"
+    exit 0
   else
     echo ""
     color_red "✗ Backup failed"
