@@ -172,7 +172,6 @@ nav:
       - Corporate Setup: reference/corporate.md
   - Development:
       - VM Testing: development/testing.md
-      - Notes System Setup: development/notes-system-setup.md
       - Go Applications:
           - Overview: development/go-apps/overview.md
           - Development Standards: development/go-apps/go-development.md

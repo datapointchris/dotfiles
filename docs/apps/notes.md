@@ -201,7 +201,7 @@ alias note='zk devnote'
 alias til='zk learn'
 ```
 
-## Setup
+## Initial Setup
 
 **Prerequisites:**
 
@@ -209,10 +209,84 @@ alias til='zk learn'
 - gum (`brew install gum`) - for interactive menus
 - bat (`brew install bat`) - for preview formatting
 
-See [Notes System Setup](../development/notes-system-setup.md) for initial configuration.
+**Create symlink for convenience:**
+
+```bash
+ln -s ~/Documents/notes ~/notes
+```
+
+**Initialize git tracking:**
+
+```bash
+cd ~/Documents/notes
+git init
+
+# Create gitignore for selective tracking
+cat > .gitignore << 'EOF'
+# Personal content - iCloud only
+journal/
+ideas/
+projects/
+dreams/
+
+# System files
+.DS_Store
+.zk/cache/
+EOF
+
+git add .
+git commit -m "feat: initialize notes repository"
+git remote add origin git@github.com:yourusername/notes.git
+git push -u origin main
+```
+
+**Create directory structure:**
+
+```bash
+cd ~/notes
+mkdir -p journal learning devnotes ideas projects dreams .zk/templates
+```
+
+Templates are created in `.zk/templates/` for each note type (journal, devnote, learning, idea, project, dream). Each template defines the frontmatter and structure for that note type.
+
+## At Work
+
+Clone your notes repository on a work machine to access `devnotes/` and `learning/`:
+
+```bash
+git clone git@github.com:yourusername/notes.git ~/notes
+
+# Result:
+# - devnotes/ and learning/ with full content
+# - Empty personal directories (gitignored)
+# - All wikilinks between devnotes and learning work
+# - Links to personal notes show as dead links (expected)
+
+# Add work notes
+zk devnote "Production deployment"
+git add devnotes/
+git commit -m "docs: add deployment notes"
+git push
+```
+
+Personal sections remain iCloud-only on your personal devices.
+
+## Future Enhancements
+
+**URL Capture:** Create a quick-capture tool to grab URLs from clipboard and create notes:
+
+```bash
+#!/usr/bin/env bash
+# ~/bin/capture-url
+url=$(pbpaste)
+title=$(gum input --placeholder "Title")
+section=$(gum choose "ideas" "devnotes" "learning")
+zk "$section" "$title" <<< "URL: $url"
+```
+
+Bind to keyboard shortcut for instant capture.
 
 ## See Also
 
-- [Notes System Setup](../development/notes-system-setup.md) - Initial configuration guide
 - [zk Documentation](https://zk-org.github.io/zk/) - Full zk reference
-- [Menu System](menu.md) - Quick access to workflow tools
+- [Menu](menu.md) - Quick access to workflow tools
