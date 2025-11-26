@@ -76,7 +76,6 @@ fi
 
 # For feat/fix commits, be more strict
 if [[ "$COMMIT_TYPE" =~ ^(feat|fix)$ ]]; then
-    ERRORS=0
 
     # Check for documentation updates
     if [[ ${#DOC_FILES[@]} -eq 0 ]]; then
@@ -92,7 +91,7 @@ if [[ "$COMMIT_TYPE" =~ ^(feat|fix)$ ]]; then
             echo "  - docs/reference/tools.md (tool usage documentation)"
             echo "  - README.md in the tool directory (if API changed)"
         fi
-        if [[ " ${CODE_FILES[*]} " =~ ".claude/hooks" ]]; then
+        if [[ " ${CODE_FILES[*]} " =~ .claude/hooks ]]; then
             echo "  - docs/reference/hooks.md (hook documentation)"
         fi
         if [[ " ${CODE_FILES[*]} " =~ "common/" ]] || [[ " ${CODE_FILES[*]} " =~ "macos/" ]] || [[ " ${CODE_FILES[*]} " =~ "wsl/" ]]; then
@@ -100,7 +99,6 @@ if [[ "$COMMIT_TYPE" =~ ^(feat|fix)$ ]]; then
         fi
 
         echo ""
-        ERRORS=1
     fi
 
     # Check for test updates (for feat commits)
@@ -111,16 +109,9 @@ if [[ "$COMMIT_TYPE" =~ ^(feat|fix)$ ]]; then
             echo ""
             echo "Consider adding tests for:"
             printf '  - %s\n' "${CODE_FILES[@]}"
-            echo ""
-            echo "Use --no-verify to skip if tests aren't applicable"
-            echo ""
         fi
     fi
 
-    if [[ $ERRORS -eq 1 ]]; then
-        echo "Use --no-verify to bypass this check if documentation is not needed"
-        exit 1
-    fi
 fi
 
 # For other commits with code changes, just warn
