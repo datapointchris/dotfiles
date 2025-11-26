@@ -107,16 +107,28 @@ apply_font() {
   echo "Applying font: $font"
 
   # Update Ghostty
-  if [[ -f "$GHOSTTY_CONFIG" ]]; then
-    cp "$GHOSTTY_CONFIG" "$GHOSTTY_CONFIG.bak"
-    sed -i "s|^font-family = .*|font-family = \"${font}\"|" "$GHOSTTY_CONFIG"
+  if [[ -f "$GHOSTTY_CONFIG" ]] || [[ -L "$GHOSTTY_CONFIG" ]]; then
+    # Resolve symlink to get the actual file
+    local ghostty_target="$GHOSTTY_CONFIG"
+    if [[ -L "$GHOSTTY_CONFIG" ]]; then
+      ghostty_target="$(readlink -f "$GHOSTTY_CONFIG")"
+    fi
+
+    cp "$ghostty_target" "$ghostty_target.bak"
+    sed -i "s|^font-family = .*|font-family = \"${font}\"|" "$ghostty_target"
     echo "✓ Updated Ghostty config"
   fi
 
   # Update Neovim if config exists
-  if [[ -f "$NVIM_FONT_CONFIG" ]]; then
-    cp "$NVIM_FONT_CONFIG" "$NVIM_FONT_CONFIG.bak"
-    sed -i "s|vim.o.guifont = .*|vim.o.guifont = \"${font}:h15\"|" "$NVIM_FONT_CONFIG"
+  if [[ -f "$NVIM_FONT_CONFIG" ]] || [[ -L "$NVIM_FONT_CONFIG" ]]; then
+    # Resolve symlink to get the actual file
+    local nvim_target="$NVIM_FONT_CONFIG"
+    if [[ -L "$NVIM_FONT_CONFIG" ]]; then
+      nvim_target="$(readlink -f "$NVIM_FONT_CONFIG")"
+    fi
+
+    cp "$nvim_target" "$nvim_target.bak"
+    sed -i "s|vim.o.guifont = .*|vim.o.guifont = \"${font}:h15\"|" "$nvim_target"
     echo "✓ Updated Neovim config"
   fi
 
