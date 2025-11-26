@@ -25,7 +25,18 @@ source "$FONT_APP_DIR/lib/storage.sh"
 
 # Config file locations
 GHOSTTY_CONFIG="$HOME/.config/ghostty/config"
-NVIM_FONT_CONFIG="$HOME/.config/nvim/lua/config/font.lua"
+
+# Rename original list_fonts and create filtered version
+eval "$(declare -f list_fonts | sed '1s/list_fonts/list_fonts_unfiltered/')"
+
+# Override list_fonts to filter out rejected fonts
+list_fonts() {
+  list_fonts_unfiltered | while IFS= read -r font; do
+    if ! is_font_rejected "$font"; then
+      echo "$font"
+    fi
+  done
+}
 
 usage() {
   # Check if formatting functions are available
@@ -46,6 +57,8 @@ usage() {
   rank                 Show fonts ranked by likes/dislikes
   log                  View complete history
   list                 List all available font families
+  reject <message>     Mark current font as rejected (avoids rediscovery)
+  rejected             List all rejected fonts
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 EOF
@@ -83,10 +96,8 @@ EOF
     # Fallback for when formatting library is not available
     cat <<'EOF'
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- Font Testing & Management
+ Font Management
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Data-driven font tracking with automatic rankings
 
 Commands
 ─────────────────────────
@@ -126,6 +137,48 @@ EOF
 }
 
 #==============================================================================
+# UTILITY FUNCTIONS
+# ==============================================================================
+
+format_duration() {
+  local seconds="$1"
+
+  if [[ "$seconds" -lt 60 ]]; then
+    echo "${seconds}s"
+  elif [[ "$seconds" -lt 3600 ]]; then
+    local mins=$((seconds / 60))
+    echo "${mins}m"
+  elif [[ "$seconds" -lt 86400 ]]; then
+    local hours=$((seconds / 3600))
+    local mins=$(((seconds % 3600) / 60))
+    if [[ "$mins" -gt 0 ]]; then
+      echo "${hours}h ${mins}m"
+    else
+      echo "${hours}h"
+    fi
+  else
+    local days=$((seconds / 86400))
+    local hours=$(((seconds % 86400) / 3600))
+    if [[ "$hours" -gt 0 ]]; then
+      echo "${days}d ${hours}h"
+    else
+      echo "${days}d"
+    fi
+  fi
+}
+
+get_font_info() {
+  local font="$1"
+  local info_file="$FONT_DATA_DIR/font-info.json"
+
+  if [[ -f "$info_file" ]] && command -v jq &>/dev/null; then
+    jq -r --arg font "$font" '.[$font] // {}' "$info_file"
+  else
+    echo "{}"
+  fi
+}
+
+#==============================================================================
 # FONT OPERATIONS
 # ==============================================================================
 
@@ -150,22 +203,8 @@ apply_font() {
       ghostty_target="$(readlink -f "$GHOSTTY_CONFIG")"
     fi
 
-    cp "$ghostty_target" "$ghostty_target.bak"
     sed -i "s|^font-family = .*|font-family = \"${font}\"|" "$ghostty_target"
     echo "✓ Updated Ghostty config"
-  fi
-
-  # Update Neovim if config exists
-  if [[ -f "$NVIM_FONT_CONFIG" ]] || [[ -L "$NVIM_FONT_CONFIG" ]]; then
-    # Resolve symlink to get the actual file
-    local nvim_target="$NVIM_FONT_CONFIG"
-    if [[ -L "$NVIM_FONT_CONFIG" ]]; then
-      nvim_target="$(readlink -f "$NVIM_FONT_CONFIG")"
-    fi
-
-    cp "$nvim_target" "$nvim_target.bak"
-    sed -i "s|vim.o.guifont = .*|vim.o.guifont = \"${font}:h15\"|" "$nvim_target"
-    echo "✓ Updated Neovim config"
   fi
 
   # Log the apply action
@@ -226,6 +265,75 @@ add_note() {
   echo "  Note: $message"
 }
 
+mark_rejected() {
+  local reason="$*"
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
+
+  if [[ -z "$reason" ]]; then
+    echo "Error: Rejection reason required"
+    echo "Usage: font reject <message>"
+    exit 1
+  fi
+
+  reject_font "$font" "$reason"
+  echo "✓ Marked as rejected: $font"
+  echo "  Reason: $reason"
+  echo ""
+  echo "This font will be tracked to avoid rediscovery."
+}
+
+show_rejected() {
+  local rejected
+  rejected=$(list_rejected_fonts)
+
+  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
+    echo "No rejected fonts yet."
+    echo ""
+    echo "When you try a font and don't like it, mark it as rejected:"
+    echo "  font reject \"Font Name\" \"reason\""
+    return
+  fi
+
+  echo ""
+  echo "Rejected Fonts"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  local count=0
+  while IFS= read -r line; do
+    count=$((count + 1))
+    local font=$(echo "$line" | jq -r '.font')
+    local rejected_date=$(echo "$line" | jq -r '.rejected_date')
+    local reason=$(echo "$line" | jq -r '.reason')
+    local platforms=$(echo "$line" | jq -r '.platforms')
+
+    # Format date
+    local date_formatted
+    if date --version &>/dev/null 2>&1; then
+      # GNU date
+      date_formatted=$(date -d "$rejected_date" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
+    else
+      # BSD date (macOS)
+      date_formatted=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${rejected_date:0:19}" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
+    fi
+
+    echo "$count. $font"
+    echo "   Rejected: $date_formatted"
+    echo "   Reason: $reason"
+    [[ -n "$platforms" ]] && echo "   Platforms: $platforms"
+    echo ""
+  done < <(echo "$rejected")
+
+  echo "Total rejected: $count"
+  echo ""
+}
+
 show_rankings() {
   local rankings
   rankings=$(get_rankings)
@@ -249,6 +357,7 @@ show_rankings() {
     local dislikes=$(echo "$line" | jq -r '.dislikes')
     local last_used=$(echo "$line" | jq -r '.last_used')
     local platforms=$(echo "$line" | jq -r '.platforms')
+    local usage_seconds=$(echo "$line" | jq -r '.usage_seconds // 0')
 
     # Format last used
     if [[ "$last_used" == "never" ]]; then
@@ -257,12 +366,87 @@ show_rankings() {
       last_used=$(date -d "$last_used" "+%b %d, %Y" 2>/dev/null || echo "$last_used")
     fi
 
+    # Format usage time
+    local usage_time="not used"
+    if [[ "$usage_seconds" -gt 0 ]]; then
+      usage_time=$(format_duration "$usage_seconds")
+    fi
+
     printf "%2d. %s\n" "$rank" "$font"
     printf "    Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "    Usage time: %s\n" "$usage_time"
     printf "    Last used: %s\n" "$last_used"
     printf "    Platforms: %s\n" "$platforms"
     echo ""
   done <<< "$rankings"
+}
+
+show_current_font() {
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "No font currently configured"
+    return
+  fi
+
+  echo ""
+  echo "Current Font: $font"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  # Get stats from history
+  local stats
+  stats=$(get_font_stats "$font" 2>/dev/null)
+
+  if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
+    local score=$(echo "$stats" | jq -r '.score // 0')
+    local likes=$(echo "$stats" | jq -r '.likes // 0')
+    local dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+    local notes=$(echo "$stats" | jq -r '.notes // 0')
+    local applies=$(echo "$stats" | jq -r '.applies // 0')
+    local platforms=$(echo "$stats" | jq -r '.platforms | join(", ") // "none"')
+
+    # Calculate usage time
+    local usage_times
+    usage_times=$(calculate_usage_time "$font")
+    local usage_seconds=$(echo "$usage_times" | jq -r --arg font "$font" '.[$font] // 0')
+    local usage_time="not used"
+    if [[ "$usage_seconds" -gt 0 ]]; then
+      usage_time=$(format_duration "$usage_seconds")
+    fi
+
+    echo "Stats:"
+    printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "  Usage time: %s\n" "$usage_time"
+    printf "  Notes: %d\n" "$notes"
+    printf "  Times applied: %d\n" "$applies"
+    printf "  Platforms: %s\n" "$platforms"
+  fi
+
+  # Get font description/info
+  local font_info
+  font_info=$(get_font_info "$font")
+
+  if [[ -n "$font_info" ]] && [[ "$font_info" != "{}" ]]; then
+    local description=$(echo "$font_info" | jq -r '.description // empty')
+    local known_for=$(echo "$font_info" | jq -r '.known_for // empty')
+    local creator=$(echo "$font_info" | jq -r '.creator // empty')
+    local year=$(echo "$font_info" | jq -r '.year // empty')
+    local url=$(echo "$font_info" | jq -r '.url // empty')
+
+    if [[ -n "$description" ]]; then
+      echo ""
+      echo "About:"
+      echo "  $description"
+      [[ -n "$known_for" ]] && echo "  Known for: $known_for"
+      [[ -n "$creator" ]] && echo "  Creator: $creator"
+      [[ -n "$year" ]] && echo "  Year: $year"
+      [[ -n "$url" ]] && echo "  URL: $url"
+    fi
+  fi
+
+  echo ""
 }
 
 show_log() {
@@ -435,7 +619,7 @@ main() {
       list_fonts
       ;;
     current)
-      echo "Current font: $(get_current_font)"
+      show_current_font
       ;;
     change)
       change_font
@@ -465,6 +649,12 @@ main() {
       ;;
     log)
       show_log
+      ;;
+    reject)
+      mark_rejected "${@:2}"
+      ;;
+    rejected)
+      show_rejected
       ;;
     generate-previews)
       generate_all_previews

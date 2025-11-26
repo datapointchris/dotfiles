@@ -33,8 +33,10 @@ font log             # View history
 - `font like [message]` - Like current font with optional reason
 - `font dislike [message]` - Dislike current font with optional reason
 - `font note <message>` - Add note to current font (message required)
+- `font reject <message>` - Reject current font with reason (hides from lists)
+- `font rejected` - Show all rejected fonts with reasons
 
-All tracking actions automatically log to per-platform history files.
+All tracking actions automatically log to per-platform history files. Rejected fonts are hidden from `font list` and the interactive picker to avoid rediscovery.
 
 ### Utilities
 
@@ -49,7 +51,8 @@ Font history is stored in per-platform JSONL files within the app directory:
 apps/common/font/data/
 ├── history-macos.jsonl
 ├── history-arch.jsonl
-└── history-wsl.jsonl
+├── history-wsl.jsonl
+└── rejected-fonts.json
 ```
 
 **Zero merge conflicts:** Each platform only writes to its own file. When you pull/push across machines, there are no conflicts.
