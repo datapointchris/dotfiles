@@ -2,28 +2,65 @@
 
 Cross-platform dotfiles for macOS, WSL Ubuntu, and Arch Linux. Shared configurations with platform-specific overrides where needed.
 
-## Quick Start
+## Getting Started
 
-Fresh install:
+### Installation
 
-```bash
-# macOS
-bash management/macos-setup.sh
-
-# WSL
-bash management/wsl-setup.sh
-
-# Arch
-bash management/arch-setup.sh
-```
-
-Already have brew and task installed:
+Clone the repository and run the platform-specific install script:
 
 ```bash
-task install
+git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+bash install.sh
 ```
 
-See [Installation Guide](getting-started/installation.md) for details.
+The script auto-detects your platform (macOS, WSL Ubuntu, or Arch Linux) and installs all packages, tools, and configurations. Installation takes 15-30 minutes depending on platform.
+
+**Platform-specific requirements:**
+
+- **macOS**: None (Homebrew installed automatically)
+- **WSL/Arch**: Set ZSHDOTDIR before running:
+
+  ```bash
+  echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv
+  ```
+
+After installation completes, restart your terminal or run `exec zsh`.
+
+### First Configuration
+
+**Set git identity:**
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+**Choose a theme:**
+
+```bash
+theme-sync favorites           # List 12 curated themes
+theme-sync apply rose-pine     # Apply theme across tmux/bat/fzf/shell
+```
+
+**Install a Nerd Font** for proper terminal icons:
+
+Download from [nerdfonts.com](https://www.nerdfonts.com/). Recommended: FiraCode, JetBrainsMono, or Hack.
+
+- macOS: Copy fonts to `~/Library/Fonts/`
+- WSL: Install in Windows (right-click → Install for all users)
+- Arch: Copy to `~/.local/share/fonts/` and run `fc-cache -fv`
+
+**Verify installation:**
+
+```bash
+task --list              # Show available tasks
+toolbox list             # List installed tools
+theme-sync current       # Show current theme
+node --version           # Check Node.js (via nvm)
+```
+
+See [Troubleshooting](reference/troubleshooting.md) if any commands fail.
 
 ## Quick Reference
 
@@ -177,24 +214,3 @@ zk journal "Daily reflections"
 zk devnote "Bug fix for auth"
 zk learn "Docker networking patterns"
 ```
-
-## Documentation
-
-**Getting Started**: [Installation](getting-started/installation.md) | [First Config](getting-started/first-config.md) | [Fonts](getting-started/fonts.md)
-
-**Architecture**: [Overview](architecture/index.md) | [Package Management](architecture/package-management.md) | [PATH Ordering](architecture/path-ordering-strategy.md)
-
-**Reference**:
-
-- **Apps**: [Menu](apps/menu.md) | [Toolbox](apps/toolbox.md) | [Sessions](apps/sess.md) | [Theme Sync](apps/theme-sync.md) | [Notes](apps/notes.md) | [Font](apps/font.md) | [Backup Dirs](apps/backup-dirs.md)
-- **System**: [Platforms](reference/platforms.md) | [Symlinks](reference/symlinks.md) | [Tasks](reference/tasks.md) | [Troubleshooting](reference/troubleshooting.md)
-
-**Development**: [Testing](development/testing.md) | [Go Apps](development/go-apps/overview.md) | [Publishing Docs](development/publishing-docs.md)
-
-## Tips
-
-- **Type full commands** - No aliases by default, commands are memorable
-- **Compose with pipes** - Tools output clean data for Unix composition
-- **Use fzf/gum** - Add interactivity when needed
-- **Reference docs** - Run `task docs:serve` to browse documentation locally
-- **Explore tools** - Run `toolbox random` daily to discover new tools

@@ -135,9 +135,6 @@ plugins:
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - Installation: getting-started/installation.md
-      - First Configuration: getting-started/first-config.md
   - Apps:
       - Font: apps/font.md
       - Theme Sync: apps/theme-sync.md

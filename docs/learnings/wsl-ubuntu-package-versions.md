@@ -115,5 +115,5 @@ Use `management/test-wsl-setup.sh -d` to test installation without committing ch
 
 ## Related
 
-- [WSL Installation](../getting-started/installation.md)
 - [Package Management Philosophy](../architecture/package-management.md)
+- [Troubleshooting](../reference/troubleshooting.md)
