@@ -2,6 +2,111 @@
 
 Comprehensive guide to understanding Nerd Fonts, their variants, and how they work.
 
+## Historical Evolution: Powerline → Nerd Fonts
+
+Understanding the transition from old "Powerline fonts" to modern "Nerd Fonts" helps explain why you should use Nerd Fonts today.
+
+### Phase 1: Powerline Fonts (2012-2014)
+
+**Project**: `powerline/fonts` (separate, older project)
+
+The original Powerline fonts project patched popular coding fonts with status line glyphs for vim-powerline and shell prompts.
+
+**Characteristics**:
+
+- **Icons**: ~50 symbols (ONLY Powerline glyphs for status lines)
+- **Purpose**: Make fonts work with vim-powerline/airline
+- **Naming**: `Font Name for Powerline.ttf` ⚠️ (spaces in filenames!)
+- **Examples**:
+  - `Meslo LG L Bold for Powerline.ttf`
+  - `Droid Sans Mono for Powerline.otf`
+  - `Source Code Pro for Powerline.ttf`
+
+**Problems**:
+
+- Limited to Powerline symbols only
+- Spaces in filenames break ImageMagick, scripts, and some tools
+- Project became unmaintained around 2016
+- No coverage for file icons, git symbols, or modern UI needs
+
+### Phase 2: Nerd Fonts (2015-present)
+
+**Project**: `ryanoasis/nerd-fonts` (actively maintained)
+
+Nerd Fonts is the successor that vastly expanded the concept, patching fonts with 3,600+ glyphs from multiple icon sets.
+
+**Characteristics**:
+
+- **Icons**: 3,600+ glyphs (Powerline + Font Awesome + Material Design + 10 more)
+- **Purpose**: Universal icon font for terminals, editors, file managers, and modern dev tools
+- **Naming**: `FontNameNerdFont-Weight.ttf` ✅ (no spaces, clean)
+- **Examples**:
+  - `MesloLGSNerdFont-Bold.ttf`
+  - `DroidSansMNerdFontMono-Regular.otf`
+  - `SourceCodeProNerdFont-Regular.ttf`
+
+**Improvements**:
+
+- Includes all original Powerline symbols PLUS thousands more
+- Clean filenames without spaces
+- Three variants (Mono/Default/Propo) for different use cases
+- Active development with regular updates (v3.x in 2024)
+- Works with modern tools: yazi, fzf, starship, nvim-tree, etc.
+
+### Comparison Table
+
+| Feature | Powerline Fonts (old) | Nerd Fonts (new) |
+|---------|----------------------|------------------|
+| **Icon Count** | ~50 symbols | 3,600+ glyphs |
+| **Icon Sets** | Powerline only | Powerline + FA + Material + 10 more |
+| **Coverage** | Status lines only | Files, git, UI, everything |
+| **Naming** | Spaces (breaks tools!) | No spaces (clean) |
+| **Variants** | Mono only | Mono/Default/Propo |
+| **Maintenance** | Abandoned (~2016) | Active (v3.2.0+ in 2024) |
+| **Ligatures** | Not preserved | Fully preserved |
+| **File Manager Icons** | ❌ | ✅ |
+| **Git Status Icons** | Limited | ✅ Full set |
+
+### Migration Guide
+
+If you have old "for Powerline" fonts installed:
+
+**Identify old fonts**:
+
+```bash
+find ~/Library/Fonts -name "*for Powerline*" | wc -l
+```
+
+**Problem signs**:
+
+- Font names with spaces (breaks ImageMagick in fzf)
+- Missing file type icons in yazi/ranger/lf
+- Incomplete git symbols in shell prompts
+- No devicon support in Neovim file trees
+
+**Solution**: Remove old Powerline fonts and install Nerd Fonts
+
+```bash
+# Backup old fonts (optional)
+mkdir -p ~/font-backups
+find ~/Library/Fonts -name "*for Powerline*" -exec cp {} ~/font-backups/ \;
+
+# Remove old Powerline fonts
+find ~/Library/Fonts -name "*for Powerline*" -delete
+
+# Install Nerd Fonts via dotfiles scripts
+font-download  # Download curated Nerd Fonts to ~/fonts
+font-install   # Install to system
+```
+
+**Compatibility**: Modern tools expect Nerd Fonts, not old Powerline fonts. Using Nerd Fonts ensures compatibility with:
+
+- **yazi**, lf, ranger (file managers)
+- **starship**, oh-my-zsh, powerlevel10k (shell prompts)
+- **nvim-tree**, neo-tree (Neovim file explorers)
+- **lazygit**, delta (git tools)
+- **fzf** with preview scripts
+
 ## What Are Nerd Fonts?
 
 Nerd Fonts takes popular programming fonts and patches them with a large collection of glyphs (icons). These icons come from various icon sets including:
