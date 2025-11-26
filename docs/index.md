@@ -179,15 +179,11 @@ dotfiles/
 
 ## Key Concepts
 
-**Version Managers**: uv for Python, nvm for Node.js. Provides cross-platform consistency without system package manager conflicts.
-
-**Symlinks**: The symlinks tool deploys configs from the repo to their expected locations. Run `task symlinks:link` after adding or removing files to update symlink mappings.
-
-**Theme Sync**: tinty manages Base16 themes across tmux, bat, fzf, and shell. theme-sync provides a simpler interface with curated favorites and one-command theme switching.
-
-**Task Coordination**: Taskfile handles coordination tasks (install, update, verify). Simple commands run directly (nvm use, npm list, etc.) - Task is for orchestration, not wrapping every command.
-
-**Tool Composition**: All custom tools output clean, parseable data designed for piping. Compose with fzf, gum, awk, grep, and other Unix tools to build interactive workflows. See [Tool Composition](architecture/tool-composition.md) for patterns.
+- **Version Managers** - uv (Python) and nvm (Node.js) provide cross-platform consistency without system package conflicts
+- **Symlinks** - Deploy configs from repo to home directory with `task symlinks:link`
+- **Theme Sync** - Apply Base16 themes across tmux/bat/fzf/shell with one command via theme-sync wrapper
+- **Task Coordination** - Orchestrate complex workflows (install, update, verify) while keeping simple commands direct
+- **Tool Composition** - All custom tools output parseable data for piping with fzf, gum, and Unix utilities
 
 ## Common Workflows
 
