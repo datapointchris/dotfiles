@@ -141,6 +141,7 @@ nav:
   - Apps:
       - Font: apps/font.md
       - Theme Sync: apps/theme-sync.md
+      - Notes: apps/notes.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
@@ -155,7 +156,6 @@ nav:
           - Menu: reference/workflow-tools/menu.md
           - Toolbox: reference/workflow-tools/toolbox.md
           - Sessions: reference/workflow-tools/session.md
-          - Notes: reference/workflow-tools/notes.md
       - Fonts:
           - Nerd Fonts Explained: reference/fonts/nerd-fonts-explained.md
           - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
@@ -172,7 +172,6 @@ nav:
       - Corporate Setup: reference/corporate.md
   - Workflows:
       - Backup: workflows/backup.md
-      - Note Taking: workflows/note-taking.md
       - Session Management: workflows/sessions.md
       - Git Operations: workflows/git.md
       - Tool Discovery: workflows/tool-discovery.md
