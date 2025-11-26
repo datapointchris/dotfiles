@@ -12,86 +12,122 @@ if [[ -L "$SCRIPT_PATH" ]]; then
 fi
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-source "$FONT_APP_DIR/lib/lib.sh"
 
-# Data directory
-FONT_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/font"
-FONT_LOG="$FONT_DATA_DIR/font-testing-log.md"
+# Source formatting library for colorized help
+if [[ -f "$HOME/shell/formatting.sh" ]]; then
+  source "$HOME/shell/formatting.sh"
+elif [[ -f "$HOME/dotfiles/platforms/common/shell/formatting.sh" ]]; then
+  source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+fi
+
+source "$FONT_APP_DIR/lib/lib.sh"
+source "$FONT_APP_DIR/lib/storage.sh"
 
 # Config file locations
 GHOSTTY_CONFIG="$HOME/.config/ghostty/config"
 NVIM_FONT_CONFIG="$HOME/.config/nvim/lua/config/font.lua"
 
-# Favorites list
-FAVORITES=(
-  "SeriousShanns Nerd Font Propo"
-  "FiraCode Nerd Font"
-  "JetBrains Mono Nerd Font"
-)
-
 usage() {
-  cat <<EOF
-Font testing and management workflow
+  # Check if formatting functions are available
+  if command -v print_header &>/dev/null; then
+    print_header "Font Testing & Management" "cyan"
+    echo "Data-driven font tracking with automatic rankings"
+    echo ""
 
-Usage: font <command> [args]
-
-Commands:
-  list                List main font families (Bold/Italic/etc filtered out)
-  favorites           Show favorite fonts
-  current             Show currently active font
-  apply <font>        Apply font to Ghostty/Neovim
-  test <font>         Start testing a font (logs start date)
-  like <font>         Mark current/specified font as liked
-  dislike <font>      Mark current/specified font as disliked
-  notes <font> <msg>  Add notes about a font
-  log                 View testing log
-  preview             Interactive font picker with fzf and image previews
-  random              Apply random font from favorites
-  adventure           Apply random font from ALL fonts
-  generate-previews   Pre-generate all preview images (for faster browsing)
-  clear-cache         Clear preview cache
-
-Examples:
-  font list                 # Show main font families
-  font preview              # Interactive selection with previews
-  font apply "Fira Code"
-  font random               # Random from favorites
-
-Note: Style variations (Bold, Italic, Light, etc.) are automatically filtered.
-      Only main font families are shown.
+    print_section "Commands" "blue"
+    cat <<'EOF'
+  current              Show currently active font
+  change               Interactive font picker with previews
+  apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  like [message]       Like current font with optional reason
+  dislike [message]    Dislike current font with optional reason
+  note <message>       Add note to current font (message required)
+  random               Apply random font from all available fonts
+  rank                 Show fonts ranked by likes/dislikes
+  log                  View complete history
+  list                 List all available font families
+  generate-previews    Pre-generate all preview images
+  clear-cache          Clear preview cache
 EOF
-}
 
-#==============================================================================
-# LOG MANAGEMENT
-# ==============================================================================
+    print_section "Examples" "yellow"
+    if command -v print_cyan &>/dev/null; then
+      echo "  $(print_cyan "font change")                         # Interactive picker"
+      echo "  $(print_cyan "font like \"Great ligatures\"")         # Like with reason"
+      echo "  $(print_cyan "font dislike \"Too wide\"")             # Dislike with reason"
+      echo "  $(print_cyan "font note \"Good for prose\"")          # Add note"
+      echo "  $(print_cyan "font rank")                            # See rankings"
+      echo "  $(print_cyan "font log")                             # View history"
+    else
+      cat <<'EOF'
+  font change                         # Interactive picker
+  font like "Great ligatures"         # Like with reason
+  font dislike "Too wide"             # Dislike with reason
+  font note "Good for prose"          # Add note
+  font rank                           # See rankings
+  font log                            # View history
+EOF
+    fi
 
-init_log() {
-  mkdir -p "$FONT_DATA_DIR"
+    print_section "Data Storage" "green"
+    cat <<'EOF'
+  Location: apps/common/font/data/history-{platform}.jsonl
 
-  if [[ ! -f "$FONT_LOG" ]]; then
-    cat > "$FONT_LOG" <<'LOGEOF'
-# Font Testing Log
+  • Per-platform files eliminate git merge conflicts
+  • Automatically tracked in dotfiles repo
+  • View locations: font log
+  • Auto-recreates if deleted
+EOF
 
-## Currently Testing
+  else
+    # Fallback for when formatting library is not available
+    cat <<'EOF'
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Font Testing & Management
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-None
+Data-driven font tracking with automatic rankings
 
-## Liked (Keepers)
+Commands
+─────────────────────────
+  current              Show currently active font
+  change               Interactive font picker with previews
+  apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  like [message]       Like current font with optional reason
+  dislike [message]    Dislike current font with optional reason
+  note <message>       Add note to current font (message required)
+  random               Apply random font from all available fonts
+  rank                 Show fonts ranked by likes/dislikes
+  log                  View complete history
+  list                 List all available font families
+  generate-previews    Pre-generate all preview images
+  clear-cache          Clear preview cache
 
-- SeriousShanns Nerd Font Propo - Comic sans style, fun and readable
+Examples
+─────────────────────────
+  font change                         # Interactive picker
+  font like "Great ligatures"         # Like with reason
+  font dislike "Too wide"             # Dislike with reason
+  font note "Good for prose"          # Add note
+  font rank                           # See rankings
+  font log                            # View history
 
-## Disliked (Can Remove)
+Data Storage
+─────────────────────────
+  Location: apps/common/font/data/history-{platform}.jsonl
 
-## Testing History
+  • Per-platform files eliminate git merge conflicts
+  • Automatically tracked in dotfiles repo
+  • View locations: font log
+  • Auto-recreates if deleted
 
-LOGEOF
+EOF
   fi
 }
 
-show_favorites() {
-  printf '%s\n' "${FAVORITES[@]}"
-}
+#==============================================================================
+# FONT OPERATIONS
+# ==============================================================================
 
 get_current_font() {
   if [[ -f "$GHOSTTY_CONFIG" ]]; then
@@ -132,72 +168,139 @@ apply_font() {
     echo "✓ Updated Neovim config"
   fi
 
+  # Log the apply action
+  log_action "apply" "$font"
+
   echo ""
   echo "Font applied! Restart Ghostty to see changes."
-  echo "Run: font test \"$font\" to start tracking this test"
-}
-
-start_test() {
-  local font="${1:-$(get_current_font)}"
-  local date=$(date +%Y-%m-%d)
-
-  init_log
-
-  sed -i "/^## Currently Testing/,/^## / s/None/${font} (started ${date})/" "$FONT_LOG"
-  echo "- **${font}** - Started ${date}" >> "$FONT_LOG"
-
-  echo "Started testing: $font"
 }
 
 mark_liked() {
-  local font="${1:-$(get_current_font)}"
-  local date=$(date +%Y-%m-%d)
+  local message="$*"
+  local font
+  font=$(get_current_font)
 
-  init_log
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
 
-  sed -i "/^## Liked (Keepers)/a\\
-- ${font} - Added ${date}
-" "$FONT_LOG"
-
-  sed -i "/^## Currently Testing/,/^## / s/${font}.*$/None/" "$FONT_LOG"
-
-  echo "✓ Added $font to liked fonts"
+  log_action "like" "$font" "$message"
+  echo "✓ Liked: $font"
+  [[ -n "$message" ]] && echo "  Reason: $message"
 }
 
 mark_disliked() {
-  local font="${1:-$(get_current_font)}"
-  local date=$(date +%Y-%m-%d)
+  local message="$*"
+  local font
+  font=$(get_current_font)
 
-  init_log
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
 
-  sed -i "/^## Disliked (Can Remove)/a\\
-- ${font} - Added ${date}
-" "$FONT_LOG"
-
-  sed -i "/^## Currently Testing/,/^## / s/${font}.*$/None/" "$FONT_LOG"
-
-  echo "✓ Added $font to disliked fonts"
+  log_action "dislike" "$font" "$message"
+  echo "✓ Disliked: $font"
+  [[ -n "$message" ]] && echo "  Reason: $message"
 }
 
-add_notes() {
-  local font="$1"
-  shift
-  local note="$*"
-  local date=$(date +%Y-%m-%d)
+add_note() {
+  local message="$*"
+  local font
+  font=$(get_current_font)
 
-  init_log
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
 
-  echo "  - [$date] $note" >> "$FONT_LOG"
-  echo "✓ Added note for $font"
+  if [[ -z "$message" ]]; then
+    echo "Error: Note message required"
+    echo "Usage: font note <message>"
+    exit 1
+  fi
+
+  log_action "note" "$font" "$message"
+  echo "✓ Added note to: $font"
+  echo "  Note: $message"
+}
+
+show_rankings() {
+  local rankings
+  rankings=$(get_rankings)
+
+  if [[ -z "$rankings" ]] || [[ "$rankings" == "null" ]]; then
+    echo "No font data yet. Start using fonts and marking likes/dislikes!"
+    return
+  fi
+
+  echo ""
+  echo "Font Rankings (by score and recent usage)"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  local rank=0
+  while IFS= read -r line; do
+    rank=$((rank + 1))
+    local font=$(echo "$line" | jq -r '.font')
+    local score=$(echo "$line" | jq -r '.score')
+    local likes=$(echo "$line" | jq -r '.likes')
+    local dislikes=$(echo "$line" | jq -r '.dislikes')
+    local last_used=$(echo "$line" | jq -r '.last_used')
+    local platforms=$(echo "$line" | jq -r '.platforms')
+
+    # Format last used
+    if [[ "$last_used" == "never" ]]; then
+      last_used="never used"
+    else
+      last_used=$(date -d "$last_used" "+%b %d, %Y" 2>/dev/null || echo "$last_used")
+    fi
+
+    printf "%2d. %s\n" "$rank" "$font"
+    printf "    Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "    Last used: %s\n" "$last_used"
+    printf "    Platforms: %s\n" "$platforms"
+    echo ""
+  done <<< "$rankings"
 }
 
 show_log() {
-  init_log
+  local history
+  history=$(get_history_raw)
 
+  if [[ -z "$history" ]]; then
+    echo "No history yet. Start using fonts!"
+    return
+  fi
+
+  echo ""
+  echo "Font History Log"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  # Show log file locations
+  echo "Log files:"
+  for file in "$FONT_DATA_DIR"/history-*.jsonl; do
+    if [[ -f "$file" ]]; then
+      local platform=$(basename "$file" .jsonl | sed 's/history-//')
+      local count=$(wc -l < "$file" | xargs)
+      printf "  %s: %s (%d entries)\n" "$platform" "$file" "$count"
+    fi
+  done
+  echo ""
+
+  # Format and display with color if bat is available
   if command -v bat &>/dev/null; then
-    bat "$FONT_LOG"
+    echo "$history" | jq -r '
+      "\(.ts) | \(.platform) | \(.action) | \(.font)" +
+      (if .message then " | \(.message)" else "" end)
+    ' | bat --plain --language=log --theme=base16
   else
-    cat "$FONT_LOG"
+    echo "$history" | jq -r '
+      "\(.ts) | \(.platform) | \(.action) | \(.font)" +
+      (if .message then " | \(.message)" else "" end)
+    '
   fi
 }
 
@@ -205,7 +308,7 @@ show_log() {
 # FZF PREVIEW INTEGRATION
 # ==============================================================================
 
-preview_fonts() {
+change_font() {
   if ! command -v fzf &>/dev/null; then
     echo "Error: fzf not found. Install with: brew install fzf"
     exit 1
@@ -272,14 +375,7 @@ PREVIEW_EOF
   fi
 }
 
-random_favorite() {
-  local random_font="${FAVORITES[$RANDOM % ${#FAVORITES[@]}]}"
-  echo "🎲 Randomly selected from favorites: $random_font"
-  echo ""
-  apply_font "$random_font"
-}
-
-adventure_mode() {
+random_font() {
   mapfile -t all_fonts < <(list_fonts)
 
   if [[ ${#all_fonts[@]} -eq 0 ]]; then
@@ -287,15 +383,11 @@ adventure_mode() {
     exit 1
   fi
 
-  local random_font="${all_fonts[$RANDOM % ${#all_fonts[@]}]}"
+  local selected_font="${all_fonts[$RANDOM % ${#all_fonts[@]}]}"
 
-  echo "🎲 ADVENTURE MODE: Randomly selected from ALL fonts"
-  echo "Font: $random_font"
+  echo "🎲 Randomly selected: $selected_font"
   echo ""
-  apply_font "$random_font"
-
-  echo ""
-  start_test "$random_font"
+  apply_font "$selected_font"
 }
 
 generate_all_previews() {
@@ -342,11 +434,11 @@ main() {
     list)
       list_fonts
       ;;
-    favorites)
-      show_favorites
-      ;;
     current)
       echo "Current font: $(get_current_font)"
+      ;;
+    change)
+      change_font
       ;;
     apply)
       if [[ -z "${2:-}" ]]; then
@@ -356,34 +448,23 @@ main() {
       fi
       apply_font "$2"
       ;;
-    test)
-      start_test "${2:-}"
-      ;;
     like)
-      mark_liked "${2:-}"
+      mark_liked "${@:2}"
       ;;
     dislike)
-      mark_disliked "${2:-}"
+      mark_disliked "${@:2}"
       ;;
-    notes)
-      if [[ -z "${2:-}" ]]; then
-        echo "Error: Font name and notes required"
-        usage
-        exit 1
-      fi
-      add_notes "$2" "${@:3}"
+    note)
+      add_note "${@:2}"
+      ;;
+    random)
+      random_font
+      ;;
+    rank)
+      show_rankings
       ;;
     log)
       show_log
-      ;;
-    preview)
-      preview_fonts
-      ;;
-    random)
-      random_favorite
-      ;;
-    adventure)
-      adventure_mode
       ;;
     generate-previews)
       generate_all_previews
@@ -398,5 +479,4 @@ main() {
   esac
 }
 
-init_log
 main "$@"
