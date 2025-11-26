@@ -143,6 +143,7 @@ nav:
       - Theme Sync: apps/theme-sync.md
       - Notes: apps/notes.md
       - Session Manager: apps/sess.md
+      - Menu: apps/menu.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Management: architecture/package-management.md
@@ -154,7 +155,6 @@ nav:
   - Reference:
       - Platform Differences: reference/platforms.md
       - Workflow Tools:
-          - Menu: reference/workflow-tools/menu.md
           - Toolbox: reference/workflow-tools/toolbox.md
       - Fonts:
           - Nerd Fonts Explained: reference/fonts/nerd-fonts-explained.md
