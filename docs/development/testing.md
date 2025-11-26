@@ -12,24 +12,17 @@ Testing dotfiles installation across platforms using containers and virtual mach
 
 ## Testing Strategy
 
-| Platform | Primary Tool | Method | Accuracy |
-|----------|-------------|--------|----------|
-| Ubuntu (WSL) | **Docker** | Official WSL rootfs | 100% exact match |
-| Ubuntu (WSL) | Multipass | Cloud images | ~75% (backup method) |
-| Arch Linux | UTM/QEMU | ISO installation | Full |
+| Platform | Method | Tool | Accuracy |
+|----------|--------|------|----------|
+| Ubuntu (WSL) | Docker | Official WSL rootfs | 100% exact match |
+| Arch Linux | Docker | Official Arch base image | 100% exact match |
 | macOS | Fresh user account | Local testing | Full |
 
 ## Prerequisites
 
 ```sh
-# Docker Desktop (required for WSL testing)
+# Docker Desktop (required)
 brew install --cask docker
-
-# Multipass (optional, backup WSL testing)
-brew install --cask multipass
-
-# UTM (optional, Arch testing)
-brew install --cask utm
 ```
 
 ## Testing with Docker (Recommended)
@@ -150,49 +143,9 @@ Each test run creates a detailed log file:
 
 Logs include all installation output, timing information, and test results.
 
-## Alternative Testing Methods
+## Alternative Testing
 
-### Multipass (WSL Ubuntu Alternative)
-
-Multipass uses Ubuntu cloud images (~426 packages) which differ from WSL (563 packages). Docker testing is more accurate, but Multipass works as a backup:
-
-```sh
-# Create VM
-multipass launch --name dotfiles-test
-
-# Access VM
-multipass shell dotfiles-test
-
-# Inside VM: test installation
-git clone https://github.com/yourusername/dotfiles.git
-cd dotfiles
-bash install.sh
-
-# Exit and destroy
-exit
-multipass delete dotfiles-test
-multipass purge
-```
-
-### VM Testing (Arch Linux Alternative)
-
-For testing without Docker, use VMs:
-
-**UTM (recommended)**:
-
-1. Download Arch ISO from <https://archlinux.org/download/>
-2. Create new VM in UTM
-3. Boot, install base system
-4. Test dotfiles installation
-
-**QEMU**:
-
-```sh
-qemu-img create -f qcow2 arch-test.qcow2 20G
-qemu-system-x86_64 -cdrom archlinux-x86_64.iso \
-  -boot order=d -drive file=arch-test.qcow2,format=qcow2 \
-  -m 2G -enable-kvm
-```
+Docker is the recommended approach. For environments without Docker, VMs or cloud instances can be used but require more setup time and resources.
 
 ## macOS Testing
 
@@ -231,14 +184,6 @@ bash management/verify-installation.sh
 # Check for duplicate installations
 bash management/detect-alternate-installations.sh
 ```
-
-## Common Issues
-
-**VM network slow**: Use wired connection, check corporate proxy settings
-
-**Multipass won't start**: Check hypervisor enabled, restart multipass service
-
-**UTM low performance**: Allocate more RAM/CPU, enable hardware acceleration
 
 ## Iteration Workflow
 

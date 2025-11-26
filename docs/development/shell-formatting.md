@@ -205,144 +205,44 @@ Shorter aliases for convenience:
 - `BOX_THIN` (─) - Thin underlines for sections
 - `BOX_DOUBLE` (═) - Double bars for banners
 
-## Examples
-
-### Basic Script
+## Example Usage
 
 ```bash
 #!/usr/bin/env bash
-source "$(dirname "$0")/lib/script-formatting.sh"
-
+source "$(dirname "$0")/lib/formatting.sh"
 set -euo pipefail
 
-print_header "Package Installer"
-
-print_section "Phase 1: Checking Dependencies"
-if require_command "git"; then
-  print_success "git found"
-else
-  print_error "git not found"
-  die "Please install git first"
-fi
-
-print_section "Phase 2: Installing Packages"
-print_info "Downloading package list..."
-print_info "Installing packages..."
-print_success "All packages installed"
-
-print_header_success "Installation Complete"
-```
-
-### Multi-Phase Installation
-
-```bash
 print_header "System Setup"
 
-print_section "[1/3] System Packages"
-print_info "Updating package lists..."
-print_success "Packages updated"
+print_section "[1/3] Dependencies"
+require_command "git" || die "git required"
+print_success "Dependencies validated"
 
-print_section "[2/3] Development Tools"
-print_info "Installing Node.js..."
-print_success "Node.js installed"
+print_section "[2/3] Installation"
+print_info "Installing packages..."
+print_success "Packages installed"
 
 print_section "[3/3] Configuration"
-print_info "Creating config files..."
+print_warning "This may take a few minutes"
 print_success "Configuration complete"
 
 print_header_success "Setup Complete"
-echo ""
-print_cyan "Next steps:"
-echo "  - Restart your terminal"
-echo "  - Run 'npm install'"
 ```
 
-### With Error Handling
+## Design
 
-```bash
-print_header "Deployment Script"
+**Structural hierarchy:**
 
-print_section "Validating Environment"
-if ! require_command "docker"; then
-  print_header_error "Deployment Failed"
-  print_error "Docker is required but not installed"
-  echo ""
-  print_cyan "Install Docker:"
-  echo "  - macOS: brew install docker"
-  echo "  - Linux: apt install docker.io"
-  exit 1
-fi
+- Titles (━) - Centered, full-width headers
+- Headers (━) - Left-aligned major sections
+- Banners (═) - Double-bar emphasis
+- Sections (─) - Thin underline subsections
 
-print_success "Environment validated"
-print_header_success "Deployment Complete"
-```
+**Semantic variants:** Each type has success/info/warning/error variants with emoji (✅ ℹ️ ⚠️ ❌)
 
-## Philosophy
+**Icons:** Emoji for headers (visual weight), unicode (✓ ● ▲ ✗) for status messages (subtle, list-friendly)
 
-The formatting library is designed around human-readable script output with clear visual hierarchy and semantic meaning.
-
-### Structural Types
-
-Four main structural types for organizing output:
-
-1. **Titles** - Centered, full terminal width with thick borders (━), for main script headers
-2. **Headers** - Left-aligned with thick borders (━), for major sections
-3. **Banners** - Double-bar borders (═), for distinctive tool or feature sections
-4. **Sections** - Simple text with thin underline (─), for subsections
-
-Each structural type accepts an **optional color parameter** for customization, with no default color (must be explicitly specified).
-
-### Color System
-
-**17 available colors** via simple name mapping:
-
-**Standard colors (8):**
-
-- `red`, `green`, `yellow`, `blue`, `cyan`, `magenta` (or `purple`), `black`, `white`
-
-**Bright colors (8):**
-
-- `brightred`, `brightgreen`, `brightyellow`, `brightblue`, `brightcyan`, `brightmagenta` (or `brightpurple`), `brightblack` (or `gray`/`grey`), `brightwhite`
-
-**Extended colors (1):**
-
-- `orange` (256-color palette)
-
-**Design rationale:** Simple lowercase names without underscores (`brightred` not `bright_red`) for ease of use. Intuitive aliases (`gray` for `brightblack`, `purple` for `magenta`).
-
-### Semantic Variants
-
-Each structural type has four semantic variants that automatically apply appropriate colors and emoji icons:
-
-- **Success** - Green with ✅ emoji (operations completed successfully)
-- **Info** - Cyan with ℹ️ emoji (informational messages)
-- **Warning** - Yellow with ⚠️ emoji (cautions and important notes)
-- **Error** - Red with ❌ emoji (failures and critical issues)
-
-Examples: `print_title_success`, `print_header_error`, `print_banner_warning`, `print_section_info`
-
-### Icon Philosophy
-
-**Two-tier icon system** based on context:
-
-**Emoji icons (structural variants):** High visual weight for headers and titles
-
-- ✅ Success, ℹ️ Info, ⚠️ Warning, ❌ Error
-- Used in: `print_title_error`, `print_header_success`, etc.
-
-**Unicode icons (status messages):** Subtle, list-friendly for inline messages
-
-- ✓ Success, ● Info, ▲ Warning, ✗ Error
-- Used in: `print_success`, `print_info`, `print_warning`, `print_error`
-
-**Rationale:** Emoji for major headings draws attention, unicode for list items avoids visual clutter.
-
-### Visual Hierarchy
-
-- **Spacing**: Extra blank lines around structural elements for breathing room
-- **Borders**: Thick (━) for major divisions, thin (─) for subsections, double (═) for special emphasis
-- **Alignment**: Titles centered, everything else left-aligned
-- **Consistency**: Same patterns across all dotfiles scripts
+**Colors:** 17 colors available (`red`, `brightred`, `orange`, etc.) - use as optional parameter
 
 ## Portability
 
