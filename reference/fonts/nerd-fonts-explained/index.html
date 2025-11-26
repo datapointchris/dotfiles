@@ -1303,7 +1303,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../workflow-tools/font-sync/" class="md-nav__link">
+      <a href="../../workflow-tools/font-sync.md" class="md-nav__link">
         
   
   
@@ -1494,6 +1494,67 @@
       On this page
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#historical-evolution-powerline-nerd-fonts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Historical Evolution: Powerline → Nerd Fonts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Historical Evolution: Powerline → Nerd Fonts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-powerline-fonts-2012-2014" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Powerline Fonts (2012-2014)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-nerd-fonts-2015-present" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Nerd Fonts (2015-present)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#what-are-nerd-fonts" class="md-nav__link">
@@ -3464,6 +3525,138 @@
 
 <h1 id="nerd-fonts-explained">Nerd Fonts Explained<a class="headerlink" href="#nerd-fonts-explained" title="Permanent link">&para;</a></h1>
 <p>Comprehensive guide to understanding Nerd Fonts, their variants, and how they work.</p>
+<h2 id="historical-evolution-powerline-nerd-fonts">Historical Evolution: Powerline → Nerd Fonts<a class="headerlink" href="#historical-evolution-powerline-nerd-fonts" title="Permanent link">&para;</a></h2>
+<p>Understanding the transition from old "Powerline fonts" to modern "Nerd Fonts" helps explain why you should use Nerd Fonts today.</p>
+<h3 id="phase-1-powerline-fonts-2012-2014">Phase 1: Powerline Fonts (2012-2014)<a class="headerlink" href="#phase-1-powerline-fonts-2012-2014" title="Permanent link">&para;</a></h3>
+<p><strong>Project</strong>: <code>powerline/fonts</code> (separate, older project)</p>
+<p>The original Powerline fonts project patched popular coding fonts with status line glyphs for vim-powerline and shell prompts.</p>
+<p><strong>Characteristics</strong>:</p>
+<ul>
+<li><strong>Icons</strong>: ~50 symbols (ONLY Powerline glyphs for status lines)</li>
+<li><strong>Purpose</strong>: Make fonts work with vim-powerline/airline</li>
+<li><strong>Naming</strong>: <code>Font Name for Powerline.ttf</code> ⚠️ (spaces in filenames!)</li>
+<li><strong>Examples</strong>:</li>
+<li><code>Meslo LG L Bold for Powerline.ttf</code></li>
+<li><code>Droid Sans Mono for Powerline.otf</code></li>
+<li><code>Source Code Pro for Powerline.ttf</code></li>
+</ul>
+<p><strong>Problems</strong>:</p>
+<ul>
+<li>Limited to Powerline symbols only</li>
+<li>Spaces in filenames break ImageMagick, scripts, and some tools</li>
+<li>Project became unmaintained around 2016</li>
+<li>No coverage for file icons, git symbols, or modern UI needs</li>
+</ul>
+<h3 id="phase-2-nerd-fonts-2015-present">Phase 2: Nerd Fonts (2015-present)<a class="headerlink" href="#phase-2-nerd-fonts-2015-present" title="Permanent link">&para;</a></h3>
+<p><strong>Project</strong>: <code>ryanoasis/nerd-fonts</code> (actively maintained)</p>
+<p>Nerd Fonts is the successor that vastly expanded the concept, patching fonts with 3,600+ glyphs from multiple icon sets.</p>
+<p><strong>Characteristics</strong>:</p>
+<ul>
+<li><strong>Icons</strong>: 3,600+ glyphs (Powerline + Font Awesome + Material Design + 10 more)</li>
+<li><strong>Purpose</strong>: Universal icon font for terminals, editors, file managers, and modern dev tools</li>
+<li><strong>Naming</strong>: <code>FontNameNerdFont-Weight.ttf</code> ✅ (no spaces, clean)</li>
+<li><strong>Examples</strong>:</li>
+<li><code>MesloLGSNerdFont-Bold.ttf</code></li>
+<li><code>DroidSansMNerdFontMono-Regular.otf</code></li>
+<li><code>SourceCodeProNerdFont-Regular.ttf</code></li>
+</ul>
+<p><strong>Improvements</strong>:</p>
+<ul>
+<li>Includes all original Powerline symbols PLUS thousands more</li>
+<li>Clean filenames without spaces</li>
+<li>Three variants (Mono/Default/Propo) for different use cases</li>
+<li>Active development with regular updates (v3.x in 2024)</li>
+<li>Works with modern tools: yazi, fzf, starship, nvim-tree, etc.</li>
+</ul>
+<h3 id="comparison-table">Comparison Table<a class="headerlink" href="#comparison-table" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Powerline Fonts (old)</th>
+<th>Nerd Fonts (new)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Icon Count</strong></td>
+<td>~50 symbols</td>
+<td>3,600+ glyphs</td>
+</tr>
+<tr>
+<td><strong>Icon Sets</strong></td>
+<td>Powerline only</td>
+<td>Powerline + FA + Material + 10 more</td>
+</tr>
+<tr>
+<td><strong>Coverage</strong></td>
+<td>Status lines only</td>
+<td>Files, git, UI, everything</td>
+</tr>
+<tr>
+<td><strong>Naming</strong></td>
+<td>Spaces (breaks tools!)</td>
+<td>No spaces (clean)</td>
+</tr>
+<tr>
+<td><strong>Variants</strong></td>
+<td>Mono only</td>
+<td>Mono/Default/Propo</td>
+</tr>
+<tr>
+<td><strong>Maintenance</strong></td>
+<td>Abandoned (~2016)</td>
+<td>Active (v3.2.0+ in 2024)</td>
+</tr>
+<tr>
+<td><strong>Ligatures</strong></td>
+<td>Not preserved</td>
+<td>Fully preserved</td>
+</tr>
+<tr>
+<td><strong>File Manager Icons</strong></td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Git Status Icons</strong></td>
+<td>Limited</td>
+<td>✅ Full set</td>
+</tr>
+</tbody>
+</table>
+<h3 id="migration-guide">Migration Guide<a class="headerlink" href="#migration-guide" title="Permanent link">&para;</a></h3>
+<p>If you have old "for Powerline" fonts installed:</p>
+<p><strong>Identify old fonts</strong>:</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>find<span class="w"> </span>~/Library/Fonts<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*for Powerline*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span></code></pre></div>
+<p><strong>Problem signs</strong>:</p>
+<ul>
+<li>Font names with spaces (breaks ImageMagick in fzf)</li>
+<li>Missing file type icons in yazi/ranger/lf</li>
+<li>Incomplete git symbols in shell prompts</li>
+<li>No devicon support in Neovim file trees</li>
+</ul>
+<p><strong>Solution</strong>: Remove old Powerline fonts and install Nerd Fonts</p>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Backup old fonts (optional)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/font-backups
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>find<span class="w"> </span>~/Library/Fonts<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*for Powerline*&quot;</span><span class="w"> </span>-exec<span class="w"> </span>cp<span class="w"> </span><span class="o">{}</span><span class="w"> </span>~/font-backups/<span class="w"> </span><span class="se">\;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Remove old Powerline fonts</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>find<span class="w"> </span>~/Library/Fonts<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*for Powerline*&quot;</span><span class="w"> </span>-delete
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Install Nerd Fonts via dotfiles scripts</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>font-download<span class="w">  </span><span class="c1"># Download curated Nerd Fonts to ~/fonts</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>font-install<span class="w">   </span><span class="c1"># Install to system</span>
+</span></code></pre></div>
+<p><strong>Compatibility</strong>: Modern tools expect Nerd Fonts, not old Powerline fonts. Using Nerd Fonts ensures compatibility with:</p>
+<ul>
+<li><strong>yazi</strong>, lf, ranger (file managers)</li>
+<li><strong>starship</strong>, oh-my-zsh, powerlevel10k (shell prompts)</li>
+<li><strong>nvim-tree</strong>, neo-tree (Neovim file explorers)</li>
+<li><strong>lazygit</strong>, delta (git tools)</li>
+<li><strong>fzf</strong> with preview scripts</li>
+</ul>
 <h2 id="what-are-nerd-fonts">What Are Nerd Fonts?<a class="headerlink" href="#what-are-nerd-fonts" title="Permanent link">&para;</a></h2>
 <p>Nerd Fonts takes popular programming fonts and patches them with a large collection of glyphs (icons). These icons come from various icon sets including:</p>
 <ul>
@@ -3552,10 +3745,10 @@
 </ul>
 <p><strong>Exception</strong>: Some users prefer Propo fonts for specific terminals or workflows where alignment isn't critical. Your current setup uses "SeriousShanns Nerd Font Propo" which works if Ghostty handles it properly.</p>
 <h2 id="quick-decision-guide">Quick Decision Guide<a class="headerlink" href="#quick-decision-guide" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Do you need perfect grid alignment? → Use Mono (NFM)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Using a modern terminal emulator?    → Use default (NF)
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Not coding, just want icons?         → Use Propo (NFP)
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Not sure?                             → Start with default (NF)
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Do you need perfect grid alignment? → Use Mono (NFM)
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Using a modern terminal emulator?    → Use default (NF)
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Not coding, just want icons?         → Use Propo (NFP)
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Not sure?                             → Start with default (NF)
 </span></code></pre></div>
 <h2 id="ligature-support-in-nerd-fonts">Ligature Support in Nerd Fonts<a class="headerlink" href="#ligature-support-in-nerd-fonts" title="Permanent link">&para;</a></h2>
 <p>Nerd Fonts <strong>preserves ligatures</strong> from the original font.</p>
@@ -3584,7 +3777,7 @@
 </ul>
 <h2 id="how-nerd-fonts-are-named">How Nerd Fonts Are Named<a class="headerlink" href="#how-nerd-fonts-are-named" title="Permanent link">&para;</a></h2>
 <p>Nerd Fonts follow a consistent naming pattern:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&lt;BaseFontName&gt; Nerd Font [Mono|Propo] [Weight] [Style]
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>&lt;BaseFontName&gt; Nerd Font [Mono|Propo] [Weight] [Style]
 </span></code></pre></div>
 <p><strong>Examples</strong>:</p>
 <ul>
@@ -3601,86 +3794,86 @@
 <p><strong>File</strong>: <code>FiraCodeNerdFontMono-Bold.otf</code>
 <strong>Installed as</strong>: <code>FiraCode Nerd Font Mono Bold</code></p>
 <p>Use <code>fc-list</code> to see actual installed names:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>fc-list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;FiraCode&quot;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="sb">```</span>text
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">## Icon Coverage</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>Nerd<span class="w"> </span>Fonts<span class="w"> </span>include<span class="w"> </span>icons<span class="w"> </span>from<span class="w"> </span>these<span class="w"> </span>sets:
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">|</span><span class="w"> </span>Icon<span class="w"> </span>Set<span class="w"> </span><span class="p">|</span><span class="w"> </span>Count<span class="w"> </span><span class="p">|</span><span class="w"> </span>Common<span class="w"> </span>Uses<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">|</span>----------<span class="p">|</span>-------<span class="p">|</span>-------------<span class="p">|</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">|</span><span class="w"> </span>Font<span class="w"> </span>Awesome<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">1000</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>General<span class="w"> </span>icons,<span class="w"> </span>brands,<span class="w"> </span>UI<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">|</span><span class="w"> </span>Material<span class="w"> </span>Design<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">1000</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>Modern<span class="w"> </span>UI<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="p">|</span><span class="w"> </span>Octicons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">200</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>GitHub<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">|</span><span class="w"> </span>Powerline<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">50</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>Status<span class="w"> </span>line<span class="w"> </span>symbols<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="p">|</span><span class="w"> </span>Devicons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">100</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>File<span class="w"> </span>type/language<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="p">|</span><span class="w"> </span>Codicons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">400</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>VS<span class="w"> </span>Code<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="p">|</span><span class="w"> </span>Weather<span class="w"> </span>Icons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">200</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>Weather<span class="w"> </span>symbols<span class="w"> </span><span class="p">|</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>Total:<span class="w"> </span>**3,600+**<span class="w"> </span>glyphs<span class="w"> </span>added<span class="w"> </span>to<span class="w"> </span>each<span class="w"> </span>font.
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="c1">## Installation Differences</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>**System<span class="w"> </span>fonts<span class="w"> </span>vs<span class="w"> </span>Nerd<span class="w"> </span>Fonts**:
-</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>
-</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>-<span class="w"> </span>System<span class="w"> </span>FiraCode:<span class="w"> </span>No<span class="w"> </span>icons
-</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>-<span class="w"> </span>FiraCode<span class="w"> </span>Nerd<span class="w"> </span>Font:<span class="w"> </span>Same<span class="w"> </span>font<span class="w"> </span>+<span class="w"> </span><span class="m">3</span>,600<span class="w"> </span>icons
-</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>
-</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>**Both<span class="w"> </span>can<span class="w"> </span>coexist**<span class="w"> </span>on<span class="w"> </span>your<span class="w"> </span>system<span class="w"> </span>with<span class="w"> </span>different<span class="w"> </span>names.
-</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>
-</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="c1">## Width Handling Strategies</span>
-</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
-</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>Different<span class="w"> </span>Nerd<span class="w"> </span>Font<span class="w"> </span>variants<span class="w"> </span>handle<span class="w"> </span>glyph<span class="w"> </span>width<span class="w"> </span>differently:
-</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>
-</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="c1">### Mono Strategy</span>
+<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>fc-list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;FiraCode&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="sb">```</span>text
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1">## Icon Coverage</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>Nerd<span class="w"> </span>Fonts<span class="w"> </span>include<span class="w"> </span>icons<span class="w"> </span>from<span class="w"> </span>these<span class="w"> </span>sets:
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">|</span><span class="w"> </span>Icon<span class="w"> </span>Set<span class="w"> </span><span class="p">|</span><span class="w"> </span>Count<span class="w"> </span><span class="p">|</span><span class="w"> </span>Common<span class="w"> </span>Uses<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">|</span>----------<span class="p">|</span>-------<span class="p">|</span>-------------<span class="p">|</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">|</span><span class="w"> </span>Font<span class="w"> </span>Awesome<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">1000</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>General<span class="w"> </span>icons,<span class="w"> </span>brands,<span class="w"> </span>UI<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">|</span><span class="w"> </span>Material<span class="w"> </span>Design<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">1000</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>Modern<span class="w"> </span>UI<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p">|</span><span class="w"> </span>Octicons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">200</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>GitHub<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="p">|</span><span class="w"> </span>Powerline<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">50</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>Status<span class="w"> </span>line<span class="w"> </span>symbols<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">|</span><span class="w"> </span>Devicons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">100</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>File<span class="w"> </span>type/language<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">|</span><span class="w"> </span>Codicons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">400</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>VS<span class="w"> </span>Code<span class="w"> </span>icons<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="p">|</span><span class="w"> </span>Weather<span class="w"> </span>Icons<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="m">200</span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>Weather<span class="w"> </span>symbols<span class="w"> </span><span class="p">|</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>Total:<span class="w"> </span>**3,600+**<span class="w"> </span>glyphs<span class="w"> </span>added<span class="w"> </span>to<span class="w"> </span>each<span class="w"> </span>font.
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="c1">## Installation Differences</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>**System<span class="w"> </span>fonts<span class="w"> </span>vs<span class="w"> </span>Nerd<span class="w"> </span>Fonts**:
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>-<span class="w"> </span>System<span class="w"> </span>FiraCode:<span class="w"> </span>No<span class="w"> </span>icons
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>-<span class="w"> </span>FiraCode<span class="w"> </span>Nerd<span class="w"> </span>Font:<span class="w"> </span>Same<span class="w"> </span>font<span class="w"> </span>+<span class="w"> </span><span class="m">3</span>,600<span class="w"> </span>icons
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>**Both<span class="w"> </span>can<span class="w"> </span>coexist**<span class="w"> </span>on<span class="w"> </span>your<span class="w"> </span>system<span class="w"> </span>with<span class="w"> </span>different<span class="w"> </span>names.
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="c1">## Width Handling Strategies</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>Different<span class="w"> </span>Nerd<span class="w"> </span>Font<span class="w"> </span>variants<span class="w"> </span>handle<span class="w"> </span>glyph<span class="w"> </span>width<span class="w"> </span>differently:
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="c1">### Mono Strategy</span>
 </span></code></pre></div>
 <p>| a | b | c |   |   |   | - Each gets 1 cell exactly
 | 1 | 2 | 3 |   |   |   | - Numbers: 1 cell
 |   |   |   |   |   |   | - Icons: scaled to 1 cell (smaller)</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>### Default Strategy
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>### Default Strategy
 </span></code></pre></div>
 <p>| a | b | c |   |   |   | - Regular chars: 1 cell
 | 1 | 2 | 3 |   |   |   | - Numbers: 1 cell
 |     |     |           | - Icons: visual width 1.5-2 cells
                           | - Advance width: still 1 cell
                           | - May overlap next cell</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>### Propo Strategy
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>### Propo Strategy
 </span></code></pre></div>
 <p>|a |bb |ccc|           | - Each char: visual width
 |1 |22 |333|           | - No fixed cells
 |     |     |          | - Icons: 1 monospace cell</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>## Font Format: TTF vs OTF
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Nerd Fonts are available in two formats:
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>**TrueType (.ttf)**:
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>- Older format, widely supported
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>- Cubic Bézier curves
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>- Works everywhere
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>**OpenType (.otf)**:
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>- Newer format, better features
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>- Quadratic Bézier curves
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>- Better for complex glyphs
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>- Supports more advanced typography
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>**For terminal use**: Both work equally well. OTF is slightly preferred for modern systems.
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>## Checking If Font Is a Nerd Font
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>```bash
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a># List all Nerd Fonts
-</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>fc-list | grep -i &quot;nerd&quot;
-</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>
-</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a># Check specific font
-</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>fc-list | grep -i &quot;firacode&quot;
-</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>
-</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a># See what icons are available
-</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>echo -e &quot;\ue0a0 \ue0a1 \ue0a2&quot;  # Powerline symbols
-</span><span id="__span-5-31"><a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>echo -e &quot;\uf015 \uf07c \uf121&quot;  # Font Awesome icons
+<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>## Font Format: TTF vs OTF
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Nerd Fonts are available in two formats:
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>**TrueType (.ttf)**:
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>- Older format, widely supported
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>- Cubic Bézier curves
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>- Works everywhere
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>**OpenType (.otf)**:
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>- Newer format, better features
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>- Quadratic Bézier curves
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>- Better for complex glyphs
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>- Supports more advanced typography
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>**For terminal use**: Both work equally well. OTF is slightly preferred for modern systems.
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>## Checking If Font Is a Nerd Font
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>```bash
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a># List all Nerd Fonts
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>fc-list | grep -i &quot;nerd&quot;
+</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>
+</span><span id="__span-7-26"><a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a># Check specific font
+</span><span id="__span-7-27"><a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>fc-list | grep -i &quot;firacode&quot;
+</span><span id="__span-7-28"><a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>
+</span><span id="__span-7-29"><a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a># See what icons are available
+</span><span id="__span-7-30"><a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>echo -e &quot;\ue0a0 \ue0a1 \ue0a2&quot;  # Powerline symbols
+</span><span id="__span-7-31"><a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>echo -e &quot;\uf015 \uf07c \uf121&quot;  # Font Awesome icons
 </span></code></pre></div>
 <h2 id="nerd-font-versions">Nerd Font Versions<a class="headerlink" href="#nerd-font-versions" title="Permanent link">&para;</a></h2>
 <p>Nerd Fonts project releases new versions periodically:</p>
