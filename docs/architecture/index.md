@@ -1,3 +1,7 @@
+---
+icon: material/city
+---
+
 # Architecture
 
 How the dotfiles repository is organized and why.
@@ -32,38 +36,26 @@ dotfiles/
 
 Two-layer approach: common base + platform overlay.
 
+**How it works**:
+
+1. Links `platforms/common/` configs to `$HOME`
+2. Overlays platform-specific files (auto-detected: macos, wsl, or arch)
+3. Links apps from `apps/{platform}/` to `~/.local/bin/`
+
+**Common commands**:
+
 ```bash
-# Step 1: Link common files
-# Links platforms/common/ to $HOME
-# Example results:
-#   platforms/common/.config/zsh/.zshrc → ~/.config/zsh/.zshrc
-#   platforms/common/.config/tmux/tmux.conf → ~/.config/tmux/tmux.conf
-task symlinks:link
-
-# Step 2: Overlay platform files
-# Overlays platform-specific files, overriding common if both exist
-# Example results:
-#   platforms/macos/.gitconfig → ~/.gitconfig  (overrides common)
-#   platforms/macos/.profile → ~/.profile
-# Platform is auto-detected (macos, wsl, or arch)
-
-# Step 3: Link apps to ~/.local/bin/
-# Apps are automatically linked during Step 1
-# Example results:
-#   apps/common/menu → ~/.local/bin/menu
-#   apps/common/notes → ~/.local/bin/notes
-#   apps/common/theme-sync → ~/.local/bin/theme-sync
-# Go apps (sess, toolbox) are built and installed to ~/go/bin/ via Task
-
-# Verify symlinks are correct
-task symlinks:check
-
-# Show all symlinks
-task symlinks:show
-
-# Complete refresh (remove all symlinks and recreate)
-task symlinks:relink
+task symlinks:link      # Deploy all symlinks
+task symlinks:check     # Verify symlinks are correct
+task symlinks:show      # Show all symlinks
+task symlinks:relink    # Complete refresh (remove and recreate)
 ```
+
+**Example results**:
+
+- `platforms/common/.config/zsh/.zshrc` → `~/.config/zsh/.zshrc`
+- `platforms/macos/.gitconfig` → `~/.gitconfig` (overrides common)
+- `apps/common/menu` → `~/.local/bin/menu`
 
 ## Package Management
 
@@ -158,4 +150,22 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Platform Knowledge**: Need to know whether to edit `platforms/common/` or platform dir. Experience makes this clear.
 
-See [Platform Differences](../reference/platforms.md) for platform-specific quirks.
+See [Platform Differences](../reference/platforms/index.md) for platform-specific quirks.
+
+## Deep Dives
+
+<div class="grid cards" markdown>
+
+- :material-package-variant: **[Package Management](package-management.md)**
+
+    System vs language version managers
+
+- :material-routes: **[PATH Ordering Strategy](path-ordering-strategy.md)**
+
+    Tool precedence and environment setup
+
+- :material-tools: **[Tool Composition](tool-composition.md)**
+
+    How tools work together
+
+</div>
