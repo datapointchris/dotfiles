@@ -2,96 +2,57 @@
 
 **Purpose**: Define clear priority order for executable resolution across all platforms
 
-## Priority Order (Highest to Lowest)
+## PATH Priority Order
 
-PATH elements are **prepended** in reverse order, so the last `add_path` call has highest priority.
+Listed from highest to lowest priority. First match wins during command execution.
 
-```bash
-# Execution priority (first match wins):
-1. /usr/local/sbin           # Homebrew system daemons (macOS)
-2. /usr/local/bin            # Homebrew/system-wide installs
-3. /usr/bin                  # System packages (lowest priority)
-4. ~/go/bin                  # Go-installed binaries (sess, toolbox)
-5. /usr/local/go/bin         # Go toolchain (Linux)
-6. /opt/nvim/bin             # Neovim extracted location (Linux)
-7. /snap/bin                 # Snap packages (Linux)
-8. ~/.local/share/npm/bin    # npm global packages (macOS)
-9. /usr/local/opt/.../bin    # Homebrew formula-specific paths (macOS)
-10. $ZSH_PLUGINS_DIR/forgit/bin  # Shell plugin binaries
-11. ~/.local/bin             # USER TOOLS - Highest priority!
-12. ~/.cargo/bin             # Rust/cargo tools - HIGHEST priority!
-```
+### `~/.cargo/bin`
 
-## Rationale
+- Rust tools installed via cargo-binstall (bat, fd, eza, delta, zoxide). Latest versions, takes precedence over everything.
 
-### Tier 1: Language Package Managers (Priority 12-11)
+### `~/.local/bin`
 
-**~/.cargo/bin** (Highest)
+- User-installed tools and scripts (neovim, lazygit, yq, fzf, yazi, custom scripts, theme-sync, toolbox).
 
-- **Why first**: Latest versions of CLI tools (bat, fd, eza, delta, zoxide)
-- **What's here**: Rust tools installed via cargo-binstall
-- **Override**: Takes precedence over everything (we want latest)
+### `$ZSH_PLUGINS_DIR/forgit/bin`
 
-**~/.local/bin** (Second highest)
+- Shell-specific Git utilities (forgit commands).
 
-- **Why here**: User-installed tools and scripts
-- **What's here**: neovim, lazygit, yq, fzf, yazi, custom scripts, theme-sync, toolbox
-- **Override**: User tools override system packages
+### `/usr/local/opt/.../bin`
 
-### Tier 2: Development Tools (Priority 10-7)
+- Homebrew formula-specific binaries (postgresql@16, version-specific tools). macOS only.
 
-**$ZSH_PLUGINS_DIR/forgit/bin**
+### `~/.local/share/npm/bin`
 
-- **Why here**: Shell-specific Git utilities
-- **What's here**: forgit Git commands
+- npm global packages (TypeScript, ESLint, Prettier, language servers). macOS only.
 
-**/usr/local/opt/.../bin** (macOS only)
+### `/snap/bin`
 
-- **Why here**: Homebrew formula-specific binaries
-- **What's here**: postgresql@16, version-specific tools
+- Snap-packaged applications. Linux only.
 
-**~/.local/share/npm/bin** (macOS only)
+### `/opt/nvim/bin`
 
-- **Why here**: npm global packages
-- **What's here**: TypeScript, ESLint, Prettier, language servers
+- Neovim extracted location (symlinked to ~/.local/bin). Linux only.
 
-**/snap/bin** (Linux only)
+### `/usr/local/go/bin`
 
-- **Why here**: Snap-packaged applications
-- **What's here**: Alternative installation method (rarely used in our setup)
+- Go toolchain for building fzf (go, gofmt, etc.). Linux only.
 
-**/opt/nvim/bin** (Linux only)
+### `~/go/bin`
 
-- **Why here**: Neovim extracted location (symlinked to ~/.local/bin)
-- **Note**: Kept for direct access if symlink breaks
+- User-compiled Go binaries (sess, toolbox - our Go CLI apps).
 
-**/usr/local/go/bin** (Linux only)
+### `/usr/bin`
 
-- **Why here**: Go toolchain for building fzf
-- **What's here**: go, gofmt, etc.
+- System packages (zsh, tmux, basic utilities). Lowest priority.
 
-**~/go/bin**
+### `/usr/local/bin`
 
-- **Why here**: User-compiled Go binaries
-- **What's here**: sess, toolbox (our Go CLI apps)
+- Homebrew/manually installed system-wide tools. macOS only.
 
-### Tier 3: System (Priority 3-1)
+### `/usr/local/sbin`
 
-**/usr/bin** (Lowest priority)
-
-- **Why last**: System packages, most conservative
-- **What's here**: apt-installed packages (zsh, tmux, basic utilities)
-- **Override**: Everything overrides this
-
-**/usr/local/bin** (Second lowest)
-
-- **Why here**: Homebrew/manually installed system-wide tools
-- **What's here**: Homebrew packages (macOS)
-
-**/usr/local/sbin** (Third lowest)
-
-- **Why here**: System daemons and admin tools
-- **What's here**: Homebrew services (macOS)
+- Homebrew system daemons and admin tools. macOS only.
 
 ## Implementation Pattern
 

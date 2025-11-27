@@ -45,10 +45,6 @@ theme:
     - search.highlight
     - search.share
 
-    # Table of contents
-    - toc.follow
-    - toc.integrate
-
     # Content
     - content.code.copy
     - content.code.annotate
@@ -115,6 +111,7 @@ markdown_extensions:
   - toc:
       permalink: true
       title: On this page
+      toc_depth: 0
 
 plugins:
   - search:
@@ -136,6 +133,7 @@ plugins:
 nav:
   - Home: index.md
   - Apps:
+      - apps/index.md
       - Font: apps/font.md
       - Theme Sync: apps/theme-sync.md
       - Notes: apps/notes.md
@@ -145,29 +143,37 @@ nav:
       - Backup Dirs: apps/backup-dirs.md
       - Ghostty Theme: apps/ghostty-theme.md
   - Architecture:
-      - Overview: architecture/index.md
+      - architecture/index.md
       - Package Management: architecture/package-management.md
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Tool Composition: architecture/tool-composition.md
   - Configuration:
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
   - Reference:
-      - Platform Differences: reference/platforms.md
+      - reference/index.md
+      - Platforms:
+          - Platform Differences: reference/platforms/differences.md
+          - Package Differences: reference/platforms/packages.md
+          - Command Reference: reference/platforms/commands.md
+          - Tool Availability: reference/platforms/tools.md
       - Fonts:
           - Nerd Fonts Explained: reference/fonts/nerd-fonts-explained.md
           - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
           - Terminal Fonts Guide: reference/fonts/terminal-fonts-guide.md
           - Font Comparison: reference/fonts/font-comparison.md
-      - Symlinks Manager: reference/symlinks.md
-      - Task Reference: reference/tasks.md
-      - Skills System: reference/skills.md
-      - Claude Code Hooks: reference/hooks.md
+      - Tools:
+          - Symlinks Manager: reference/tools/symlinks.md
+          - Task Reference: reference/tools/tasks.md
+          - Skills System: reference/tools/skills.md
+          - Hooks: reference/tools/hooks.md
       - Claude Code:
           - Usage Guide: claude-code/usage-guide.md
           - Log Monitoring Research: claude-code/log-monitoring-research.md
-      - Troubleshooting: reference/troubleshooting.md
-      - Corporate Setup: reference/corporate.md
+      - Support:
+          - Troubleshooting: reference/support/troubleshooting.md
+          - Corporate Setup: reference/support/corporate.md
   - Development:
+      - development/index.md
       - VM Testing: development/testing.md
       - Go Applications:
           - Overview: development/go-apps/overview.md

@@ -60,7 +60,7 @@ theme-sync current       # Show current theme
 node --version           # Check Node.js (via nvm)
 ```
 
-See [Troubleshooting](reference/troubleshooting.md) if any commands fail.
+See [Troubleshooting](reference/support/troubleshooting.md) if any commands fail.
 
 ## Quick Reference
 
