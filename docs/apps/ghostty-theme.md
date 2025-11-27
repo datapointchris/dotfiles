@@ -1,3 +1,7 @@
+---
+icon: material/application
+---
+
 # Ghostty Theme
 
 Manage Ghostty terminal themes with random selection and interactive browsing. Integrates with theme-sync favorites for consistent theming across terminal tools.

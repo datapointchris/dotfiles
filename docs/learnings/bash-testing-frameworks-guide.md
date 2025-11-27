@@ -1072,7 +1072,8 @@ shellcheck myscript.sh
 ```bash
 #!/bin/bash
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
-IFS=$'\n\t'        # Safer word splitting
+IFS=$'
+ '        # Safer word splitting
 
 # Optional: Enable debug mode in tests
 if [[ "${DEBUG:-0}" == "1" ]]; then
@@ -1120,7 +1121,8 @@ Make the interactive tool injectable:
 # Original script
 show_menu() {
     local options=("Option 1" "Option 2" "Option 3")
-    local choice=$(printf '%s\n' "${options[@]}" | gum choose)
+    local choice=$(printf '%s
+' "${options[@]}" | gum choose)
     echo "$choice"
 }
 
@@ -1128,7 +1130,8 @@ show_menu() {
 show_menu() {
     local menu_cmd="${MENU_CMD:-gum choose}"
     local options=("Option 1" "Option 2" "Option 3")
-    local choice=$(printf '%s\n' "${options[@]}" | $menu_cmd)
+    local choice=$(printf '%s
+' "${options[@]}" | $menu_cmd)
     echo "$choice"
 }
 
@@ -1150,7 +1153,8 @@ Separate menu display from logic:
 # Menu display (hard to test, keep simple)
 display_menu() {
     local options=("$@")
-    printf '%s\n' "${options[@]}" | gum choose
+    printf '%s
+' "${options[@]}" | gum choose
 }
 
 # Business logic (easy to test)
@@ -1210,7 +1214,8 @@ show_menu() {
         # Use first option or provided default
         echo "${DEFAULT_CHOICE:-Option 1}"
     else
-        printf '%s\n' "${options[@]}" | gum choose
+        printf '%s
+' "${options[@]}" | gum choose
     fi
 }
 
@@ -1275,7 +1280,8 @@ execute_menu_action() {
 display_menu() {
     local menu_cmd="${MENU_CMD:-gum choose}"
     local items=("$@")
-    printf '%s\n' "${items[@]}" | $menu_cmd
+    printf '%s
+' "${items[@]}" | $menu_cmd
 }
 ```
 

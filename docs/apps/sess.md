@@ -1,3 +1,7 @@
+---
+icon: material/tab
+---
+
 # Session Manager (sess)
 
 Fast tmux session management through a single command. Switch between projects, create new workspaces, or jump back to your previous session without typing complex tmux commands.

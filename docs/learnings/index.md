@@ -1,3 +1,7 @@
+---
+icon: material/lightbulb
+---
+
 # Learnings
 
 Concise lessons learned from dotfiles development. Each learning captures a specific bug, gotcha, or best practice worth remembering.

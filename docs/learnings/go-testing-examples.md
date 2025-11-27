@@ -43,7 +43,8 @@ func (sm *SessionManager) ListSessions() ([]string, error) {
         return nil, fmt.Errorf("failed to list sessions: %w", err)
     }
 
-    lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+    lines := strings.Split(strings.TrimSpace(string(output)), "
+")
     return lines, nil
 }
 
@@ -98,7 +99,9 @@ func TestListSessions(t *testing.T) {
     }{
         {
             name:      "multiple sessions",
-            output:    []byte("dotfiles\nproject1\nproject2"),
+            output:    []byte("dotfiles
+project1
+project2"),
             err:       nil,
             wantCount: 3,
             wantNames: []string{"dotfiles", "project1", "project2"},
@@ -298,17 +301,22 @@ func attachSession(manager *session.SessionManager, name string) tea.Cmd {
 }
 
 func (m Model) View() string {
-    s := "Select a tmux session:\n\n"
+    s := "Select a tmux session:
+
+"
 
     for i, session := range m.sessions {
         cursor := " "
         if m.cursor == i {
             cursor = ">"
         }
-        s += fmt.Sprintf("%s %s\n", cursor, session)
+        s += fmt.Sprintf("%s %s
+", cursor, session)
     }
 
-    s += "\nPress q to quit.\n"
+    s += "
+Press q to quit.
+"
     return s
 }
 ```
@@ -330,7 +338,9 @@ func TestModelUpdate_Navigation(t *testing.T) {
     // Setup model with mock manager
     mock := &session.MockExecutor{
         RunFunc: func(name string, args ...string) ([]byte, error) {
-            return []byte("session1\nsession2\nsession3"), nil
+            return []byte("session1
+session2
+session3"), nil
         },
     }
     manager := session.NewSessionManager(mock)
@@ -417,7 +427,8 @@ func TestLoadSessionsCmd(t *testing.T) {
     }{
         {
             name:        "successful load",
-            mockOutput:  []byte("session1\nsession2"),
+            mockOutput:  []byte("session1
+session2"),
             mockErr:     nil,
             wantSessions: 2,
             wantErr:     false,
@@ -494,7 +505,8 @@ func TestFullOutput(t *testing.T) {
 
     mock := &session.MockExecutor{
         RunFunc: func(name string, args ...string) ([]byte, error) {
-            return []byte("dotfiles\nproject"), nil
+            return []byte("dotfiles
+project"), nil
         },
     }
     manager := session.NewSessionManager(mock)
@@ -537,7 +549,9 @@ func TestInteractiveNavigation(t *testing.T) {
 
     mock := &session.MockExecutor{
         RunFunc: func(name string, args ...string) ([]byte, error) {
-            return []byte("session1\nsession2\nsession3"), nil
+            return []byte("session1
+session2
+session3"), nil
         },
     }
     manager := session.NewSessionManager(mock)
@@ -672,7 +686,8 @@ func MockSessionManager(sessions []string) *session.SessionManager {
     mock := &session.MockExecutor{
         RunFunc: func(name string, args ...string) ([]byte, error) {
             if name == "tmux" && args[0] == "list-sessions" {
-                return []byte(strings.Join(sessions, "\n")), nil
+                return []byte(strings.Join(sessions, "
+")), nil
             }
             return nil, nil
         },
@@ -777,7 +792,7 @@ jobs:
 
 ### `.gitattributes`
 
-```
+```gitattributes
 *.golden -text
 testdata/* -text
 ```

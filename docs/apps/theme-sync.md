@@ -1,3 +1,7 @@
+---
+icon: material/palette
+---
+
 # Theme Sync
 
 Base16 theme management across tmux, bat, fzf, eza, and shell via tinty. Change your theme once and watch it propagate everywhere simultaneously.

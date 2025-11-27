@@ -1,3 +1,7 @@
+---
+icon: material/timeline
+---
+
 # Changelog
 
 This file contains high-level summaries of changes to the dotfiles repository. For detailed information about each change, see the corresponding file in `docs/changelog/`.

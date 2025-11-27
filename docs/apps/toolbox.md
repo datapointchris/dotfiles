@@ -1,3 +1,7 @@
+---
+icon: material/toolbox
+---
+
 # Toolbox
 
 Tool discovery system for the 98 tools in your dotfiles. Find tools by name, category, or purpose. Get usage examples and learn when to use each tool.

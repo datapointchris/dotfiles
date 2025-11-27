@@ -13,7 +13,8 @@ tasks:
     cmds:
       - |
         padding=10
-        printf "%*s%s%*s\n" "$padding" "" "text" "$padding" ""
+        printf "%*s%s%*s
+" "$padding" "" "text" "$padding" ""
 ```
 
 **Error output:**
@@ -25,7 +26,8 @@ invalid format char: *
 The formatting.sh library's `_center_text` function used this pattern:
 
 ```bash
-printf "%*s%s%*s\n" "$padding" "" "$text" "$padding" ""
+printf "%*s%s%*s
+" "$padding" "" "$text" "$padding" ""
 ```
 
 This worked fine when called from bash scripts but failed when called from Task commands.
@@ -65,7 +67,8 @@ Task's shell interpreter supports basic POSIX features but NOT bash-specific fea
 Added quotes to variables:
 
 ```bash
-printf "%*s%s%*s\n" "$padding" "" "$text" "$padding" ""
+printf "%*s%s%*s
+" "$padding" "" "$text" "$padding" ""
 ```
 
 Added tput fallbacks:

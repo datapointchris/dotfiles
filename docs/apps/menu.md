@@ -1,3 +1,7 @@
+---
+icon: material/menu
+---
+
 # Menu
 
 Simple workflow tools launcher providing quick access to common development tools.

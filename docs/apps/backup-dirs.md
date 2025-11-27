@@ -1,3 +1,7 @@
+---
+icon: material/backup-restore
+---
+
 # Backup Dirs
 
 Create timestamped compressed backups of important directories with progress tracking and smart exclusions. Automatically excludes development bloat (.venv, node_modules) while preserving version control data.

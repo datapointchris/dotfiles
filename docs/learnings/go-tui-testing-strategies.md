@@ -138,7 +138,7 @@ func init() {
 
 **Git Configuration:** Add to `.gitattributes` to prevent line-ending issues:
 
-```
+```gitattributes
 *.golden -text
 ```
 
@@ -278,7 +278,9 @@ func ListSessions(executor CommandExecutor) ([]string, error) {
 // Test
 func TestListSessions(t *testing.T) {
     mock := &MockExecutor{
-        Output: []byte("session1: 1 windows\nsession2: 2 windows\n"),
+        Output: []byte("session1: 1 windows
+session2: 2 windows
+"),
         Err:    nil,
     }
 
@@ -395,7 +397,9 @@ type CommandRunner interface {
 func TestWithMockery(t *testing.T) {
     mockRunner := new(MockCommandRunner)
     mockRunner.On("Run", "tmux", "list-sessions").
-        Return("session1\nsession2\n", nil)
+        Return("session1
+session2
+", nil)
 
     // Test code using mockRunner
 
@@ -409,7 +413,7 @@ func TestWithMockery(t *testing.T) {
 
 ### Test File Organization
 
-```
+```text
 mypackage/
 ├── session.go
 ├── session_test.go          # Unit tests
@@ -672,7 +676,7 @@ Tests follow standard Go patterns with interface-based dependency injection.
 
 **Testing Levels:**
 
-```
+```text
 Unit Tests (Fast)
 ├── Pure functions
 ├── Update function logic

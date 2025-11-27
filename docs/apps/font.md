@@ -1,3 +1,7 @@
+---
+icon: material/format-font
+---
+
 # Font Tool
 
 Automatic font tracking with data-driven rankings. Every time you apply, like, dislike, or note a font, it's logged. Rankings emerge from your actual usage patterns.

@@ -1,3 +1,7 @@
+---
+icon: material/notebook
+---
+
 # Notes
 
 Plain-text note-taking with zk. Create journal entries, dev notes, and learning documentation without leaving the terminal. Link notes with wiki-links, organize with sections, and back up with git or iCloud.
