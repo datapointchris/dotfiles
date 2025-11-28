@@ -37,6 +37,13 @@ while [[ $# -gt 0 ]]; do
       echo "Options:"
       echo "  --force, -f    Force reinstall of all tools even if already installed"
       echo "  --help, -h     Show this help message"
+      echo ""
+      echo "Environment Variables:"
+      echo "  SKIP_FONTS=1   Skip font download and installation (Phase 2)"
+      echo ""
+      echo "Examples:"
+      echo "  ./install.sh                    # Full installation"
+      echo "  SKIP_FONTS=1 ./install.sh       # Install without fonts"
       exit 0
       ;;
     *)
@@ -122,59 +129,77 @@ install_task() {
 # ================================================================
 
 install_common_phases() {
-    print_header "Phase 2 - GitHub Release Tools" "cyan"
-    bash "$DOTFILES_DIR/management/scripts/install-go.sh"
-    cd "$DOTFILES_DIR" && PATH="/usr/local/go/bin:$PATH" task go-tools:install
-    bash "$DOTFILES_DIR/management/scripts/install-fzf.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-neovim.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-lazygit.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-yazi.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-glow.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-duf.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-awscli.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-claude-code.sh"
-    cd "$DOTFILES_DIR" && task tenv:install
-    bash "$DOTFILES_DIR/management/scripts/install-terraform-ls.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-tflint.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-terraformer.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-terrascan.sh"
+    # Phase 2 - Coding Fonts
+    if [[ "${SKIP_FONTS:-}" != "1" ]]; then
+        print_header "Phase 2 - Coding Fonts" "cyan"
+
+        # WSL pre-check warning
+        if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+            echo "⚠️  WSL detected - fonts install to Windows (may require manual steps)"
+            echo ""
+        fi
+
+        bash "$DOTFILES_DIR/management/common/install/fonts/download.sh"
+        bash "$DOTFILES_DIR/management/common/install/fonts/install.sh"
+        echo ""
+    else
+        echo "⏭️  Skipping font installation (SKIP_FONTS=1)"
+        echo ""
+    fi
+
+    print_header "Phase 3 - GitHub Release Tools" "cyan"
+    bash "$DOTFILES_DIR/management/common/install/language-managers/install-go.sh"
+    PATH="/usr/local/go/bin:$PATH" bash "$DOTFILES_DIR/management/common/install/language-tools/install-go-tools.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-fzf.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-neovim.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-lazygit.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-yazi.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-glow.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-duf.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-awscli.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-claude-code.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terraform.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terraform-ls.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-tflint.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terraformer.sh"
+    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terrascan.sh"
     echo ""
 
-    print_header "Phase 3 - Rust/Cargo Tools" "cyan"
-    bash "$DOTFILES_DIR/management/scripts/install-rust.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-cargo-binstall.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-cargo-tools.sh"
+    print_header "Phase 4 - Rust/Cargo Tools" "cyan"
+    bash "$DOTFILES_DIR/management/common/install/language-managers/install-rust.sh"
+    bash "$DOTFILES_DIR/management/common/install/language-tools/install-cargo-binstall.sh"
+    bash "$DOTFILES_DIR/management/common/install/language-tools/install-cargo-tools.sh"
     echo ""
 
-    print_header "Phase 4 - Language Package Managers" "cyan"
-    cd "$DOTFILES_DIR" && task nvm:install
-    cd "$DOTFILES_DIR" && task npm-global:install
-    bash "$DOTFILES_DIR/management/scripts/install-uv.sh"
-    cd "$DOTFILES_DIR" && task uv-tools:install
+    print_header "Phase 5 - Language Package Managers" "cyan"
+    bash "$DOTFILES_DIR/management/common/install/language-managers/install-nvm.sh"
+    bash "$DOTFILES_DIR/management/common/install/language-tools/npm-install-globals.sh"
+    bash "$DOTFILES_DIR/management/common/install/language-managers/install-uv.sh"
+    bash "$DOTFILES_DIR/management/common/install/language-tools/install-uv-tools.sh"
     echo ""
 
-    print_header "Phase 5 - Shell Configuration" "cyan"
-    cd "$DOTFILES_DIR" && task shell-plugins:install
+    print_header "Phase 6 - Shell Configuration" "cyan"
+    bash "$DOTFILES_DIR/management/common/install/plugins/install-shell-plugins.sh"
     echo ""
 
-    print_header "Phase 6 - Custom Go Applications" "cyan"
+    print_header "Phase 7 - Custom Go Applications" "cyan"
     cd "$DOTFILES_DIR/apps/common/sess" && PATH="/usr/local/go/bin:$PATH" task install
     cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="/usr/local/go/bin:$PATH" task install
     echo ""
 
-    print_header "Phase 7 - Symlinking Dotfiles" "cyan"
+    print_header "Phase 8 - Symlinking Dotfiles" "cyan"
     cd "$DOTFILES_DIR" && task symlinks:relink
     echo ""
 
-    print_header "Phase 8 - Theme System" "cyan"
+    print_header "Phase 9 - Theme System" "cyan"
     source "$HOME/.cargo/env" && tinty install
     source "$HOME/.cargo/env" && tinty sync
     echo ""
 
-    print_header "Phase 9 - Plugin Installation" "cyan"
-    bash "$DOTFILES_DIR/management/scripts/install-tpm.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-tmux-plugins.sh"
-    bash "$DOTFILES_DIR/management/scripts/install-nvim-plugins.sh"
+    print_header "Phase 10 - Plugin Installation" "cyan"
+    bash "$DOTFILES_DIR/management/common/install/plugins/install-tpm.sh"
+    bash "$DOTFILES_DIR/management/common/install/plugins/install-tmux-plugins.sh"
+    bash "$DOTFILES_DIR/management/common/install/plugins/install-nvim-plugins.sh"
 }
 
 # ================================================================
@@ -187,11 +212,10 @@ install_macos() {
     echo ""
 
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
-    cd "$DOTFILES_DIR" && task macos:install-homebrew
-    cd "$DOTFILES_DIR" && task macos:install-python-yaml
-    cd "$DOTFILES_DIR" && task macos:install-packages
-    cd "$DOTFILES_DIR" && task mas:install
-    cd "$DOTFILES_DIR" && task macos:setup-xcode
+    bash "$DOTFILES_DIR/management/macos/install-homebrew.sh"
+    bash "$DOTFILES_DIR/management/macos/install-packages.sh"
+    bash "$DOTFILES_DIR/management/macos/install-mas-apps.sh"
+    bash "$DOTFILES_DIR/management/macos/setup-xcode.sh"
     echo ""
 
     install_common_phases
@@ -215,7 +239,7 @@ install_wsl() {
     echo ""
 
     print_header "Phase 1 - System Packages (apt)" "cyan"
-    cd "$DOTFILES_DIR" && task wsl:install-packages
+    bash "$DOTFILES_DIR/management/wsl/install-packages.sh"
     echo ""
 
     install_common_phases
@@ -234,7 +258,7 @@ install_arch() {
     echo ""
 
     print_header "Phase 1 - System Packages (pacman)" "cyan"
-    cd "$DOTFILES_DIR" && task arch:install-packages
+    bash "$DOTFILES_DIR/management/arch/install-packages.sh"
     echo ""
 
     install_common_phases

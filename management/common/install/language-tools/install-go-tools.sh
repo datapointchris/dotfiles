@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ================================================================
+# Install Go Tools
+# ================================================================
+# Installs Go CLI tools from packages.yml via go install
+# Universal script for all platforms
+# ================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+
+# Source formatting library
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+
+# Check if Go is installed
+if ! command -v go &>/dev/null; then
+  print_error "Go is not installed"
+  echo "Install Go first: bash $DOTFILES_DIR/management/common/install/language-managers/install-go.sh"
+  exit 1
+fi
+
+# Check if packages.yml exists
+if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
+  print_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
+  exit 1
+fi
+
+print_section "Installing Go tools" "cyan"
+
+# Get Go tools from packages.yml via Python parser
+GOBIN="$HOME/go/bin"
+/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go | while read -r tool; do
+  echo "  Installing $tool..."
+  if go install "$tool@latest"; then
+    echo "    ✓ $tool installed"
+  else
+    print_warning "Failed to install $tool"
+  fi
+done
+
+print_success "Go tools installed to $GOBIN"

@@ -617,6 +617,18 @@ main() {
     clear-cache)
       clear_preview_cache
       ;;
+    download|install)
+      echo "⚠️  DEPRECATED: Font installation has moved to management scripts"
+      echo ""
+      echo "Use these commands instead:"
+      echo "  task fonts:download    # Download coding fonts"
+      echo "  task fonts:install     # Install fonts to system"
+      echo ""
+      echo "Or run directly:"
+      echo "  bash management/scripts/fonts/download.sh"
+      echo "  bash management/scripts/fonts/install.sh"
+      exit 1
+      ;;
     *)
       usage
       exit 1

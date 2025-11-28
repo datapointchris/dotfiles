@@ -253,8 +253,25 @@ class SymlinkManager:
         count = 0
 
         for app in apps_dir.iterdir():
-            # Skip directories (like sess/ which needs building)
+            # Handle directories with bin/ subdirectory (e.g., font/bin/font)
             if app.is_dir():
+                bin_dir = app / "bin"
+                if bin_dir.exists() and bin_dir.is_dir():
+                    # Link executables from bin/ subdirectory
+                    for executable in bin_dir.iterdir():
+                        if executable.is_file() and not should_exclude(executable):
+                            target = target_bin / executable.name
+
+                            # Remove existing symlink or file
+                            if target.exists() or target.is_symlink():
+                                target.unlink()
+
+                            # Create relative symlink
+                            relative_source = make_relative_symlink(executable, target)
+                            target.symlink_to(relative_source)
+                            print(f"  [green]✓[/] {app.name}/{executable.name} → ~/.local/bin/{executable.name}")
+                            count += 1
+                # Skip other directories (like sess/ which needs building)
                 continue
 
             if should_exclude(app):

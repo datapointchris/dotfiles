@@ -3,56 +3,6 @@ version: '3'
 vars:
   DOTFILES_DIR:
     sh: pwd
-  PLATFORM:
-    sh: |
-      if [ -f "$HOME/.env" ]; then
-        source "$HOME/.env" && echo "$PLATFORM"
-      elif [ "$(uname)" = "Darwin" ]; then
-        echo "macos"
-      else
-        echo "linux"
-      fi
-
-includes:
-  brew:
-    taskfile: ./management/taskfiles/brew.yml
-    optional: true
-  mas:
-    taskfile: ./management/taskfiles/mas.yml
-    optional: true
-  go-tools:
-    taskfile: ./management/taskfiles/go-tools.yml
-    optional: true
-  nvm:
-    taskfile: ./management/taskfiles/nvm.yml
-    optional: true
-  npm-global:
-    taskfile: ./management/taskfiles/npm-global.yml
-    optional: true
-  tenv:
-    taskfile: ./management/taskfiles/tenv.yml
-    optional: true
-  uv-tools:
-    taskfile: ./management/taskfiles/uv-tools.yml
-    optional: true
-  shell-plugins:
-    taskfile: ./management/taskfiles/shell-plugins.yml
-    optional: true
-  symlinks:
-    taskfile: ./management/taskfiles/symlinks.yml
-    optional: true
-  docs:
-    taskfile: ./management/taskfiles/docs.yml
-    optional: true
-  macos:
-    taskfile: ./management/taskfiles/macos.yml
-    optional: true
-  wsl:
-    taskfile: ./management/taskfiles/wsl.yml
-    optional: true
-  arch:
-    taskfile: ./management/taskfiles/arch.yml
-    optional: true
 
 tasks:
   default:
@@ -60,143 +10,180 @@ tasks:
     cmds:
       - task --list
 
+  # ================================================================
+  # INSTALLATION
+  # ================================================================
+
   install:
-    desc: Auto-detect platform and install dotfiles
-    silent: true
+    desc: Install dotfiles (delegates to install.sh)
     cmds:
-      - |
-        case "{{.PLATFORM}}" in
-          macos)
-            echo "Detected macOS platform"
-            task install-macos
-            ;;
-          linux)
-            if grep -q "Microsoft" /proc/version 2>/dev/null; then
-              echo "Detected WSL Ubuntu"
-              task install-wsl
-            elif [ -f /etc/arch-release ]; then
-              echo "Detected Arch Linux"
-              task install-arch
-            else
-              echo "Unknown Linux distribution"
-              exit 1
-            fi
-            ;;
-          *)
-            echo "Unknown platform: {{.PLATFORM}}"
-            exit 1
-            ;;
-        esac
+      - bash install.sh {{.CLI_ARGS}}
 
   # ================================================================
-  # COMMON INSTALLATION PHASES (2-9)
+  # FONT INSTALLATION
   # ================================================================
-  # Internal task used by all platform install tasks
-  # Handles universal installation steps that are the same across platforms
 
-  install-common-phases:
-    internal: true
-    silent: true
+  fonts:download:
+    desc: Download coding fonts from GitHub releases
+    cmds:
+      - bash management/common/install/fonts/download.sh {{.CLI_ARGS}}
+
+  fonts:install:
+    desc: Install downloaded fonts to system font directory
+    cmds:
+      - bash management/common/install/fonts/install.sh {{.CLI_ARGS}}
+
+  # ================================================================
+  # SYMLINKS MANAGEMENT
+  # ================================================================
+
+  symlinks:link:
+    desc: Create symlinks from dotfiles to home directory
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-        print_header "Phase 2 - GitHub Release Tools" "cyan"
-        bash management/scripts/install-go.sh
-        bash management/scripts/install-fzf.sh
-        bash management/scripts/install-neovim.sh
-        bash management/scripts/install-lazygit.sh
-        bash management/scripts/install-yazi.sh
-        echo ""
-        print_header "Phase 3 - Rust/Cargo Tools" "cyan"
-        bash management/scripts/install-rust.sh
-        bash management/scripts/install-cargo-binstall.sh
-        bash management/scripts/install-cargo-tools.sh
-        echo ""
-        print_header "Phase 4 - Language Package Managers" "cyan"
-      - task: nvm:install
-      - task: npm-global:install
-      - bash management/scripts/install-uv.sh
-      - task: uv-tools:install
+        source "{{.DOTFILES_DIR}}/platforms/common/shell/formatting.sh"
+        print_section "Creating symlinks" "cyan"
+
+        # Detect platform
+        if [ "$(uname)" = "Darwin" ]; then
+          PLATFORM="macos"
+        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+          PLATFORM="wsl"
+        elif [ -f /etc/arch-release ]; then
+          PLATFORM="arch"
+        else
+          echo "Unknown platform"
+          exit 1
+        fi
+
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks link "$PLATFORM"
+
+  symlinks:relink:
+    desc: Remove all symlinks and recreate them (idempotent)
+    cmds:
       - |
-        echo ""
-        print_header "Phase 5 - Shell Configuration" "cyan"
-      - task: shell-plugins:install
+        export TERM=${TERM:-xterm}
+        source "{{.DOTFILES_DIR}}/platforms/common/shell/formatting.sh"
+        print_section "Relinking symlinks" "cyan"
+
+        # Detect platform
+        if [ "$(uname)" = "Darwin" ]; then
+          PLATFORM="macos"
+        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+          PLATFORM="wsl"
+        elif [ -f /etc/arch-release ]; then
+          PLATFORM="arch"
+        else
+          echo "Unknown platform"
+          exit 1
+        fi
+
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks relink "$PLATFORM"
+
+  symlinks:check:
+    desc: Verify all symlinks are correct
+    cmds:
       - |
-        echo ""
-        print_header "Phase 6 - Custom Go Applications" "cyan"
-        cd apps/common/sess && PATH="/usr/local/go/bin:$PATH" task install
-        cd apps/common/toolbox && PATH="/usr/local/go/bin:$PATH" task install
-        echo ""
-        print_header "Phase 7 - Symlinking Dotfiles" "cyan"
-      - task: symlinks:link
+        # Detect platform
+        if [ "$(uname)" = "Darwin" ]; then
+          PLATFORM="macos"
+        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+          PLATFORM="wsl"
+        elif [ -f /etc/arch-release ]; then
+          PLATFORM="arch"
+        else
+          echo "Unknown platform"
+          exit 1
+        fi
+
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks check "$PLATFORM"
+
+  symlinks:show:
+    desc: Show all configured symlinks
+    cmds:
       - |
-        echo ""
-        print_header "Phase 8 - Theme System" "cyan"
-        source "$HOME/.cargo/env" && tinty install
-        source "$HOME/.cargo/env" && tinty sync
-        echo ""
-        print_header "Phase 9 - Plugin Installation" "cyan"
-        bash management/scripts/install-tpm.sh
-        bash management/scripts/install-tmux-plugins.sh
-        bash management/scripts/install-nvim-plugins.sh
+        # Detect platform
+        if [ "$(uname)" = "Darwin" ]; then
+          PLATFORM="macos"
+        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+          PLATFORM="wsl"
+        elif [ -f /etc/arch-release ]; then
+          PLATFORM="arch"
+        else
+          echo "Unknown platform"
+          exit 1
+        fi
+
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks show "$PLATFORM"
+
+  symlinks:unlink:
+    desc: Remove all symlinks
+    cmds:
+      - |
+        # Detect platform
+        if [ "$(uname)" = "Darwin" ]; then
+          PLATFORM="macos"
+        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+          PLATFORM="wsl"
+        elif [ -f /etc/arch-release ]; then
+          PLATFORM="arch"
+        else
+          echo "Unknown platform"
+          exit 1
+        fi
+
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks unlink "$PLATFORM"
 
   # ================================================================
-  # PLATFORM-SPECIFIC INSTALLATION
+  # DOCUMENTATION
   # ================================================================
 
-  install-macos:
-    desc: Full macOS installation
-    silent: true
+  docs:serve:
+    desc: Serve documentation site locally
     cmds:
-      - |
-        echo "Starting macOS dotfiles installation..."
-        echo ""
-        export TERM=${TERM:-xterm}
-        source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-        print_header "Phase 1 - System Tools (Homebrew)" "cyan"
-      - task: macos:install-homebrew
-      - task: macos:setup-xcode
-      - task: macos:install-packages
-      - echo ""
-      - task: install-common-phases
-      - |
-        echo ""
-        print_header_success "macOS Installation Complete!"
-        echo ""
+      - cd docs && mkdocs serve
 
-  install-wsl:
-    desc: Full WSL Ubuntu installation
-    silent: true
+  docs:build:
+    desc: Build documentation site
     cmds:
-      - |
-        echo "Starting WSL Ubuntu dotfiles installation..."
-        echo ""
-        export TERM=${TERM:-xterm}
-        source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-        print_header "Phase 1 - System Packages (apt)" "cyan"
-      - task: wsl:install-packages
-      - echo ""
-      - task: install-common-phases
-      - |
-        echo ""
-        print_header_success "WSL Ubuntu Installation Complete!"
-        echo ""
+      - cd docs && mkdocs build
 
-  install-arch:
-    desc: Full Arch Linux installation
-    silent: true
+  docs:deploy:
+    desc: Deploy documentation to GitHub Pages
+    cmds:
+      - cd docs && mkdocs gh-deploy --force
+
+  # ================================================================
+  # UPDATE COMMANDS (platform-specific)
+  # ================================================================
+
+  update:macos:
+    desc: Update all macOS packages
+    cmds:
+      - bash management/macos/update-macos.sh
+
+  update:wsl:
+    desc: Update all WSL packages
+    cmds:
+      - bash management/wsl/update-wsl.sh
+
+  update:arch:
+    desc: Update all Arch Linux packages
+    cmds:
+      - bash management/arch/update-arch.sh
+
+  update:
+    desc: Update all packages (auto-detect platform)
     cmds:
       - |
-        echo "Starting Arch Linux dotfiles installation..."
-        echo ""
-        export TERM=${TERM:-xterm}
-        source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-        print_header "Phase 1 - System Packages (pacman)" "cyan"
-      - task: arch:install-packages
-      - echo ""
-      - task: install-common-phases
-      - |
-        echo ""
-        print_header_success "Arch Linux Installation Complete!"
-        echo ""
+        if [ "$(uname)" = "Darwin" ]; then
+          task update:macos
+        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+          task update:wsl
+        elif [ -f /etc/arch-release ]; then
+          task update:arch
+        else
+          echo "Unknown platform"
+          exit 1
+        fi

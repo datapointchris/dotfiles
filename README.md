@@ -10,19 +10,19 @@ Quick stats: ~100 CLI tools, shared zsh/tmux/neovim configs, automated theme swi
 
 ## Quick Start
 
-Clone and run the setup script for your platform:
+Clone and run the setup script:
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-
-# Pick your poison
-bash install/macos-setup.sh    # macOS
-bash install/wsl-setup.sh      # WSL Ubuntu
-bash install/arch-setup.sh     # Arch Linux
+./install.sh    # Automatically detects your platform
 ```
 
-Already have Homebrew and Task installed? Just run `task install`.
+Skip font installation if needed:
+
+```bash
+SKIP_FONTS=1 ./install.sh
+```
 
 See the [quickstart guide](https://datapointchris.github.io/dotfiles/getting-started/quickstart/) for details.
 
