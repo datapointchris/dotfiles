@@ -9,13 +9,14 @@ M.external_formatters = {
   typescript = { cmd = 'prettier', args = { '--stdin-filepath' } },
   json = { cmd = 'prettier', args = { '--stdin-filepath' } },
   yaml = { cmd = 'prettier', args = { '--stdin-filepath' } },
-  markdown = { cmd = 'prettier', args = { '--stdin-filepath' } },
+  markdown = { cmd = 'markdownlint', args = { '--fix' } },
   css = { cmd = 'prettier', args = { '--stdin-filepath' } },
   html = { cmd = 'prettier', args = { '--stdin-filepath' } },
   sh = { cmd = 'shfmt', args = { '-i', '2' } },
   bash = { cmd = 'shfmt', args = { '-i', '2' } },
   go = { cmd = 'gofmt', args = {} },
   rust = { cmd = 'rustfmt', args = {} },
+  terraform = { cmd = 'terraform', args = { 'fmt', '-' } },
 }
 
 local function format_with_external(formatter, file_path)
@@ -23,10 +24,12 @@ local function format_with_external(formatter, file_path)
   local args = vim.list_extend({}, formatter.args) -- Copy args
 
   -- Check if formatter is available
-  if vim.fn.executable(cmd) ~= 1 then return false, cmd .. ' not found' end
+  if vim.fn.executable(cmd) ~= 1 then
+    return false, cmd .. ' not found'
+  end
 
-  -- For formatters that work in-place (like stylua, rustfmt, gofmt)
-  if cmd == 'stylua' or cmd == 'rustfmt' or cmd == 'gofmt' then
+  -- For formatters that work in-place (like stylua, rustfmt, gofmt, markdownlint)
+  if cmd == 'stylua' or cmd == 'rustfmt' or cmd == 'gofmt' or cmd == 'markdownlint' then
     table.insert(args, file_path)
     local result = vim.fn.system(cmd .. ' ' .. table.concat(args, ' '))
     if vim.v.shell_error == 0 then
@@ -36,10 +39,12 @@ local function format_with_external(formatter, file_path)
       return false, cmd .. ' failed: ' .. result
     end
 
-  -- For formatters that need stdin/stdout (like prettier, ruff format)
-  elseif cmd == 'prettier' or (cmd == 'ruff' and vim.tbl_contains(args, 'format')) then
-    -- Add filename to args for prettier/ruff
-    table.insert(args, file_path)
+  -- For formatters that need stdin/stdout (like prettier, ruff format, terraform fmt)
+  elseif cmd == 'prettier' or (cmd == 'ruff' and vim.tbl_contains(args, 'format')) or cmd == 'terraform' then
+    -- Add filename to args for prettier/ruff (terraform doesn't need it)
+    if cmd ~= 'terraform' then
+      table.insert(args, file_path)
+    end
 
     -- Read file content
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
@@ -53,7 +58,9 @@ local function format_with_external(formatter, file_path)
       -- Replace buffer content with formatted result
       local formatted_lines = vim.split(result, '\n')
       -- Remove trailing empty line if it exists
-      if formatted_lines[#formatted_lines] == '' then table.remove(formatted_lines) end
+      if formatted_lines[#formatted_lines] == '' then
+        table.remove(formatted_lines)
+      end
       vim.api.nvim_buf_set_lines(0, 0, -1, false, formatted_lines)
       return true, 'Formatted with ' .. cmd
     else
@@ -85,10 +92,14 @@ function M.format_buffer(opts)
   if formatter then
     local success, message = format_with_external(formatter, file_path)
     if success then
-      if show_notifications then vim.notify(message, vim.log.levels.INFO) end
+      if show_notifications then
+        vim.notify(message, vim.log.levels.INFO)
+      end
       return true
     else
-      if show_notifications then vim.notify(message .. ', falling back to LSP', vim.log.levels.WARN) end
+      if show_notifications then
+        vim.notify(message .. ', falling back to LSP', vim.log.levels.WARN)
+      end
     end
   end
 

@@ -132,6 +132,12 @@ install_common_phases() {
     bash "$DOTFILES_DIR/management/scripts/install-glow.sh"
     bash "$DOTFILES_DIR/management/scripts/install-duf.sh"
     bash "$DOTFILES_DIR/management/scripts/install-awscli.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-claude-code.sh"
+    cd "$DOTFILES_DIR" && task tenv:install
+    bash "$DOTFILES_DIR/management/scripts/install-terraform-ls.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-tflint.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-terraformer.sh"
+    bash "$DOTFILES_DIR/management/scripts/install-terrascan.sh"
     echo ""
 
     print_header "Phase 3 - Rust/Cargo Tools" "cyan"
@@ -183,7 +189,7 @@ install_macos() {
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
     cd "$DOTFILES_DIR" && task macos:install-homebrew
     cd "$DOTFILES_DIR" && task macos:install-python-yaml
-    cd "$DOTFILES_DIR" && task brew:install
+    cd "$DOTFILES_DIR" && task macos:install-packages
     cd "$DOTFILES_DIR" && task mas:install
     cd "$DOTFILES_DIR" && task macos:setup-xcode
     echo ""
@@ -329,18 +335,6 @@ main() {
             die "Unsupported platform: $PLATFORM"
             ;;
     esac
-
-    # Show next steps
-    echo ""
-    print_section "Next Steps" "cyan"
-    echo "  • Restart your shell or run: exec zsh"
-    echo "  • Update packages: task ${PLATFORM}:update-all"
-    echo "  • Customize dotfiles in ~/.config/"
-    echo ""
-    print_info "💡 Tip: Check for alternate installations from previous setups:"
-    echo "   bash management/detect-alternate-installations.sh"
-    echo "   bash management/detect-alternate-installations.sh --clean  # to remove"
-    echo ""
 }
 
 # Run main function
