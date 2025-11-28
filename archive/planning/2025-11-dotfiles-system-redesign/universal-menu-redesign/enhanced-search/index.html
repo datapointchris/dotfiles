@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3157,7 +3187,7 @@
 <li>Resources (for learning topics)</li>
 </ul>
 <p><strong>File:</strong> <code>tools/menu-go/internal/formatter/fzf.go</code> (lines 24-110)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">extractSearchableContent</span><span class="p">(</span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">extractSearchableContent</span><span class="p">(</span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">searchTerms</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="c1">// Add core fields</span>
@@ -3183,7 +3213,7 @@
 <li><strong>Searchable field</strong> (hidden): All searchable content</li>
 </ul>
 <p><strong>File:</strong> <code>tools/menu-go/internal/formatter/fzf.go</code> (lines 112-143)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">formatItemForFzf</span><span class="p">(</span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">formatItemForFzf</span><span class="p">(</span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="c1">// Build display field (what users see)</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">displayField</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="cm">/* title → description */</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
@@ -3197,7 +3227,7 @@
 <h3 id="3-fzf-configuration">3. fzf Configuration<a class="headerlink" href="#3-fzf-configuration" title="Permanent link">&para;</a></h3>
 <p>Updated fzf invocation to use field delimiter and display only first field:</p>
 <p><strong>File:</strong> <code>common/.local/bin/menu-new</code> (lines 119-121)</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">result</span><span class="o">=</span><span class="k">$(</span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2">&quot;</span><span class="w"> </span>list<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$integration</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">result</span><span class="o">=</span><span class="k">$(</span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2">&quot;</span><span class="w"> </span>list<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$integration</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>run_fzf<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span>--delimiter<span class="o">=</span><span class="s1">$&#39;\t&#39;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">        </span>--with-nth<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
@@ -3214,7 +3244,7 @@
 <h3 id="4-preview-highlighting">4. Preview Highlighting<a class="headerlink" href="#4-preview-highlighting" title="Permanent link">&para;</a></h3>
 <p>Modified <code>menu-preview-helper</code> to accept query parameter and highlight matches:</p>
 <p><strong>File:</strong> <code>common/.local/bin/menu-preview-helper</code></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Usage: menu-preview-helper &lt;integration&gt; &lt;fzf-line&gt; [query]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Usage: menu-preview-helper &lt;integration&gt; &lt;fzf-line&gt; [query]</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Call preview</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">preview_output</span><span class="o">=</span><span class="k">$(</span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2">&quot;</span><span class="w"> </span>preview<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$integration</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$item_id</span><span class="s2">&quot;</span><span class="k">)</span>
@@ -3227,13 +3257,13 @@
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">fi</span>
 </span></code></pre></div>
 <p><strong>Preview command in menu-new:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;menu-preview-helper </span><span class="nv">$integration</span><span class="s2"> {} {q}&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;menu-preview-helper </span><span class="nv">$integration</span><span class="s2"> {} {q}&quot;</span>
 </span></code></pre></div>
 <p><code>{q}</code> passes the current fzf query to the preview for highlighting.</p>
 <h3 id="5-extract-id-fix">5. Extract ID Fix<a class="headerlink" href="#5-extract-id-fix" title="Permanent link">&para;</a></h3>
 <p>Updated <code>extract_id()</code> to handle tab-delimited lines:</p>
 <p><strong>File:</strong> <code>common/.local/bin/menu-new</code> (lines 57-67)</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>extract_id<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>extract_id<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="c1"># Remove the hidden searchable field (everything after tab)</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">line</span><span class="p">%%</span><span class="s1">$&#39;\t&#39;</span><span class="p">*</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -3259,7 +3289,7 @@
 <h3 id="preview-highlighting">Preview Highlighting<a class="headerlink" href="#preview-highlighting" title="Permanent link">&para;</a></h3>
 <p><strong>Without query:</strong> Normal preview with syntax highlighting</p>
 <p><strong>With query "search":</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Examples:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Examples:
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  rg &#39;pattern&#39; -g &#39;*.md&#39;
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    → [01;31m[KSearch[m[K only markdown files    ← &quot;Search&quot; highlighted in red
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
@@ -3268,7 +3298,7 @@
 </span></code></pre></div>
 <h2 id="manual-testing">Manual Testing<a class="headerlink" href="#manual-testing" title="Permanent link">&para;</a></h2>
 <h3 id="test-1-enhanced-search">Test 1: Enhanced Search<a class="headerlink" href="#test-1-enhanced-search" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Open the menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Open the menu</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>menu-new
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Navigate to Commands (c)</span>
@@ -3278,23 +3308,23 @@
 </span></code></pre></div>
 <p><strong>Verified:</strong> ✓ Works correctly</p>
 <h3 id="test-2-preview-highlighting">Test 2: Preview Highlighting<a class="headerlink" href="#test-2-preview-highlighting" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># In Commands category, type &quot;search&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># In Commands category, type &quot;search&quot;</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Hover over rg command</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># Expected: The word &quot;search&quot; is highlighted in red in the preview</span>
 </span></code></pre></div>
 <p><strong>Verified:</strong> ✓ Works correctly (grep highlights matches)</p>
 <h3 id="test-3-display-field">Test 3: Display Field<a class="headerlink" href="#test-3-display-field" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Check that only title and description are visible</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Check that only title and description are visible</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>menu-go-new<span class="w"> </span>list<span class="w"> </span>commands<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-3
 </span></code></pre></div>
 <p><strong>Output:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>rg → Ripgrep - blazing fast recursive grep [hidden searchable content...]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>rg → Ripgrep - blazing fast recursive grep [hidden searchable content...]
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>fd → Fast and user-friendly alternative to find [hidden searchable content...]
 </span></code></pre></div>
 <p>Only first field visible in fzf, but second field is searchable.</p>
 <p><strong>Verified:</strong> ✓ Works correctly</p>
 <h3 id="test-4-searchable-content-includes-examples">Test 4: Searchable Content Includes Examples<a class="headerlink" href="#test-4-searchable-content-includes-examples" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Verify that searchable field includes example commands</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Verify that searchable field includes example commands</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>menu-go-new<span class="w"> </span>list<span class="w"> </span>commands<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;^rg&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;TODO&quot;</span>
 </span></code></pre></div>
 <p><strong>Output:</strong> Contains "TODO" from example <code>rg 'TODO' --type py</code></p>

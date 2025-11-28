@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3242,7 +3272,7 @@
    - Exact commands to run after manual download
    - Clear explanation of why it failed (firewall, rate limit, etc.)</p>
 <p><strong>Example output on failure:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>════════════════════════════════════════════════════════════════
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>════════════════════════════════════════════════════════════════
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>MANUAL<span class="w"> </span>INSTALLATION<span class="w"> </span>REQUIRED
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>════════════════════════════════════════════════════════════════
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
@@ -3267,7 +3297,7 @@
 </span></code></pre></div></p>
 <h3 id="3-consistent-script-structure">3. Consistent Script Structure<a class="headerlink" href="#3-consistent-script-structure" title="Permanent link">&para;</a></h3>
 <p>All binary install scripts now follow the same pattern:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Source libraries</span>
@@ -3306,7 +3336,7 @@
 <ol>
 <li>
 <p><strong>Test binary install scripts</strong>:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># On a fresh VM or container</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># On a fresh VM or container</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>task<span class="w"> </span>wsl:install-go
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>task<span class="w"> </span>wsl:install-neovim
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>task<span class="w"> </span>wsl:install-lazygit
@@ -3317,20 +3347,20 @@
 </li>
 <li>
 <p><strong>Test package installation</strong>:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>wsl:install-cargo-tools<span class="w">  </span><span class="c1"># Should read from packages.yml</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>wsl:install-cargo-tools<span class="w">  </span><span class="c1"># Should read from packages.yml</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>task<span class="w"> </span>uv:install<span class="w">                </span><span class="c1"># Should read from packages.yml</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>task<span class="w"> </span>nvm:install<span class="w">               </span><span class="c1"># Should use version from packages.yml</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test tmux plugins on macOS</strong>:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>task<span class="w"> </span>macos:install-tpm
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>task<span class="w"> </span>macos:install-tpm
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>task<span class="w"> </span>macos:install-tmux-plugins
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Full installation test</strong>:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># On fresh WSL VM</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># On fresh WSL VM</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>task<span class="w"> </span>install-wsl
 </span></code></pre></div></p>
 </li>

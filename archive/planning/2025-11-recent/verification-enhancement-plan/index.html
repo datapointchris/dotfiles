@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3152,7 +3182,7 @@
 <p><strong>Files to modify:</strong>
 - management/detect-alternate-installations.sh (line ~375, after tinty check)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Should detect if these are installed via brew/system packages</span>
 </span></code></pre></div></p>
 <h4 id="high-2-add-custom-apps-to-detect-alternate-installationssh">HIGH-2: Add Custom Apps to detect-alternate-installations.sh<a class="headerlink" href="#high-2-add-custom-apps-to-detect-alternate-installationssh" title="Permanent link">&para;</a></h4>
@@ -3167,7 +3197,7 @@
 <p><strong>Files to modify:</strong>
 - management/detect-alternate-installations.sh (line ~375, after language managers)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Should show these tools and their locations</span>
 </span></code></pre></div></p>
 <h4 id="high-3-add-main-npmuv-tools-to-detect-alternate-installationssh">HIGH-3: Add Main npm/uv Tools to detect-alternate-installations.sh<a class="headerlink" href="#high-3-add-main-npmuv-tools-to-detect-alternate-installationssh" title="Permanent link">&para;</a></h4>
@@ -3180,7 +3210,7 @@
 <p><strong>Files to modify:</strong>
 - management/detect-alternate-installations.sh (line ~375, after custom apps)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Should detect if npm/uv tools installed via other methods</span>
 </span></code></pre></div></p>
 <h3 id="medium-priority">MEDIUM PRIORITY<a class="headerlink" href="#medium-priority" title="Permanent link">&para;</a></h3>
@@ -3194,7 +3224,7 @@
 <p><strong>Files to modify:</strong>
 - management/verify-installation.sh (line ~143, after jq in System Utilities)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>management/verify-installation.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;(duti|glow|duf)&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>management/verify-installation.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;(duti|glow|duf)&quot;</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Should show verification results</span>
 </span></code></pre></div></p>
 <h4 id="med-5-add-platform-awareness-to-verify-installationsh">MED-5: Add Platform Awareness to verify-installation.sh<a class="headerlink" href="#med-5-add-platform-awareness-to-verify-installationsh" title="Permanent link">&para;</a></h4>
@@ -3207,14 +3237,14 @@
 <p><strong>Files to modify:</strong>
 - management/verify-installation.sh (lines 99-390)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>bash<span class="w"> </span>management/verify-installation.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>bash<span class="w"> </span>management/verify-installation.sh
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Should show clear platform sections in output</span>
 </span></code></pre></div></p>
 <h4 id="med-6-improve-install-sh-scripts-to-warn-about-alternates">MED-6: Improve install-*.sh Scripts to Warn About Alternates<a class="headerlink" href="#med-6-improve-install-sh-scripts-to-warn-about-alternates" title="Permanent link">&para;</a></h4>
 <p><strong>What:</strong> Update install scripts to detect and warn about existing installations at different locations
 <strong>Why:</strong> Provides better feedback during installation
 <strong>Pattern:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TARGET_PATH</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TARGET_PATH</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>tool<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>print_warning<span class="w"> </span><span class="s2">&quot;tool found at </span><span class="k">$(</span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>tool<span class="k">)</span><span class="s2">, installing to </span><span class="nv">$TARGET_PATH</span><span class="s2"> anyway&quot;</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="k">fi</span>
@@ -3229,7 +3259,7 @@
 - management/scripts/install-yazi.sh
 - management/scripts/install-awscli.sh</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Install a tool via brew first</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Install a tool via brew first</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>brew<span class="w"> </span>install<span class="w"> </span>lazygit
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Then run install script</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>bash<span class="w"> </span>management/scripts/install-lazygit.sh
@@ -3243,7 +3273,7 @@
 <p><strong>Files to modify:</strong>
 - management/detect-alternate-installations.sh (expand npm/uv section)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Should check all 9 npm + 10 uv tools</span>
 </span></code></pre></div></p>
 <h4 id="low-8-add-force-flag-to-installsh">LOW-8: Add --force Flag to install.sh<a class="headerlink" href="#low-8-add-force-flag-to-installsh" title="Permanent link">&para;</a></h4>
@@ -3257,26 +3287,26 @@
 - install.sh (add argument parsing)
 - All management/scripts/install-*.sh (check FORCE_INSTALL)</p>
 <p><strong>Test:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--force
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--force
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Should re-install everything</span>
 </span></code></pre></div></p>
 <h3 id="final-comprehensive-testing">FINAL: Comprehensive Testing<a class="headerlink" href="#final-comprehensive-testing" title="Permanent link">&para;</a></h3>
 <p><strong>Test 1 - Fresh Install:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># On a fresh system or Docker container</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># On a fresh system or Docker container</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>bash<span class="w"> </span>install.sh
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>bash<span class="w"> </span>management/verify-installation.sh
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Should show all installed, no alternates</span>
 </span></code></pre></div></p>
 <p><strong>Test 2 - With Alternates:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Install some tools via brew</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Install some tools via brew</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>brew<span class="w"> </span>install<span class="w"> </span>lazygit<span class="w"> </span>yazi
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1"># Run detection</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Should detect brew versions</span>
 </span></code></pre></div></p>
 <p><strong>Test 3 - Cleanup:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh<span class="w"> </span>--clean
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh<span class="w"> </span>--clean
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>bash<span class="w"> </span>management/verify-installation.sh
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># Should pass all checks</span>
 </span></code></pre></div></p>

@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3204,7 +3234,7 @@
 <h2 id="the-solution">The Solution<a class="headerlink" href="#the-solution" title="Permanent link">&para;</a></h2>
 <h3 id="fzf-build-from-source">fzf - Build from Source<a class="headerlink" href="#fzf-build-from-source" title="Permanent link">&para;</a></h3>
 <p><strong>Why</strong>: Needs latest features, apt version insufficient</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Requires Go toolchain</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Requires Go toolchain</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/usr/local/go
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>sudo<span class="w"> </span>tar<span class="w"> </span>-C<span class="w"> </span>/usr/local<span class="w"> </span>-xzf<span class="w"> </span>go1.25.2.linux-386.tar.gz
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:/usr/local/go/bin
@@ -3218,39 +3248,39 @@
 <h3 id="yazi-use-pre-built-binaries-or-snap">yazi - Use Pre-built Binaries or Snap<a class="headerlink" href="#yazi-use-pre-built-binaries-or-snap" title="Permanent link">&para;</a></h3>
 <p><strong>Why</strong>: cargo build fails with tikv-jemalloc-sys compilation errors on Ubuntu</p>
 <p><strong>Originally tried</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># This FAILS on Ubuntu with jemalloc errors</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># This FAILS on Ubuntu with jemalloc errors</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cargo<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>--locked
 </span></code></pre></div>
 <p><strong>Error</strong>:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">include/jemalloc/internal/rtree.h:106:41: warning</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">left shift count is negative</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">include/jemalloc/internal/rtree.h:106:41: warning</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">left shift count is negative</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">variably modified &#39;root&#39; at file scope</span>
 </span></code></pre></div>
 <p><strong>Working solutions</strong>:</p>
 <ol>
 <li><strong>Pre-built binaries</strong> (current approach):</li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span>-L<span class="w"> </span><span class="s2">&quot;https://github.com/sxyazi/yazi/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/yazi-x86_64-unknown-linux-gnu.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>yazi.zip
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span>-L<span class="w"> </span><span class="s2">&quot;https://github.com/sxyazi/yazi/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/yazi-x86_64-unknown-linux-gnu.zip&quot;</span><span class="w"> </span>-o<span class="w"> </span>yazi.zip
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>unzip<span class="w"> </span>yazi.zip
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mv<span class="w"> </span>yazi-x86_64-unknown-linux-gnu/yazi<span class="w"> </span>~/.local/bin/
 </span></code></pre></div>
 <ol>
 <li><strong>Snap</strong> (alternative):</li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sudo<span class="w"> </span>snap<span class="w"> </span>install<span class="w"> </span>yazi<span class="w"> </span>--classic
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sudo<span class="w"> </span>snap<span class="w"> </span>install<span class="w"> </span>yazi<span class="w"> </span>--classic
 </span></code></pre></div>
 <p><strong>System dependencies required</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ffmpeg<span class="w"> </span>7zip<span class="w"> </span>jq<span class="w"> </span>poppler-utils<span class="w"> </span>imagemagick<span class="w"> </span>chafa
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ffmpeg<span class="w"> </span>7zip<span class="w"> </span>jq<span class="w"> </span>poppler-utils<span class="w"> </span>imagemagick<span class="w"> </span>chafa
 </span></code></pre></div>
 <p>Note: imagemagick may need to be built from source for full functionality</p>
 <h3 id="eza-and-git-delta-use-cargo">eza and git-delta - Use Cargo<a class="headerlink" href="#eza-and-git-delta-use-cargo" title="Permanent link">&para;</a></h3>
 <p><strong>Why</strong>: Not available in Ubuntu apt repositories</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.cargo/env&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.cargo/env&quot;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>cargo<span class="w"> </span>install<span class="w"> </span>eza
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>cargo<span class="w"> </span>install<span class="w"> </span>git-delta
 </span></code></pre></div>
 <h3 id="lazygit-manual-install">LazyGit - Manual Install<a class="headerlink" href="#lazygit-manual-install" title="Permanent link">&para;</a></h3>
 <p><strong>Why</strong>: apt version often outdated</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">LAZYGIT_VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://api.github.com/repos/jesseduffield/lazygit/releases/latest&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\g</span>rep<span class="w"> </span>-Po<span class="w"> </span><span class="s1">&#39;&quot;tag_name&quot;: *&quot;v\K[^&quot;]*&#39;</span><span class="k">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">LAZYGIT_VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://api.github.com/repos/jesseduffield/lazygit/releases/latest&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\g</span>rep<span class="w"> </span>-Po<span class="w"> </span><span class="s1">&#39;&quot;tag_name&quot;: *&quot;v\K[^&quot;]*&#39;</span><span class="k">)</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>curl<span class="w"> </span>-Lo<span class="w"> </span>lazygit.tar.gz<span class="w"> </span><span class="s2">&quot;https://github.com/jesseduffield/lazygit/releases/download/v</span><span class="si">${</span><span class="nv">LAZYGIT_VERSION</span><span class="si">}</span><span class="s2">/lazygit_</span><span class="si">${</span><span class="nv">LAZYGIT_VERSION</span><span class="si">}</span><span class="s2">_Linux_x86_64.tar.gz&quot;</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>tar<span class="w"> </span>xf<span class="w"> </span>lazygit.tar.gz<span class="w"> </span>lazygit
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>sudo<span class="w"> </span>install<span class="w"> </span>lazygit<span class="w"> </span>-D<span class="w"> </span>-t<span class="w"> </span>/usr/local/bin/

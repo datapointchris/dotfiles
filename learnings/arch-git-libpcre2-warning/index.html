@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="arch-linux-git-libpcre2-warning-spam">Arch Linux: Git libpcre2 Warning Spam<a class="headerlink" href="#arch-linux-git-libpcre2-warning-spam" title="Permanent link">&para;</a></h1>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>When running git commands on fresh Arch Linux installations, you may see this warning repeatedly:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">git: /usr/lib/libpcre2-8.so.0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no version information available (required by git)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">git: /usr/lib/libpcre2-8.so.0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no version information available (required by git)</span>
 </span></code></pre></div>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
 <ul>
@@ -3220,7 +3250,7 @@
 <h2 id="solution">Solution<a class="headerlink" href="#solution" title="Permanent link">&para;</a></h2>
 <h3 id="proper-fix-reinstall-pcre2-and-rebuild-library-cache">Proper Fix: Reinstall pcre2 and Rebuild Library Cache<a class="headerlink" href="#proper-fix-reinstall-pcre2-and-rebuild-library-cache" title="Permanent link">&para;</a></h3>
 <p>The proper solution is to ensure pcre2 is correctly installed and rebuild the library cache:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Reinstall pcre2 to ensure version symbols</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Reinstall pcre2 to ensure version symbols</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>--noconfirm<span class="w"> </span>pcre2
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Rebuild library cache (standard Linux solution)</span>
@@ -3244,7 +3274,7 @@
 </ul>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>Verify git works correctly despite warnings:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>--version<span class="w">          </span><span class="c1"># Works</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>--version<span class="w">          </span><span class="c1"># Works</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>status<span class="w">            </span><span class="c1"># Works (with warning)</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>git<span class="w"> </span>log<span class="w">               </span><span class="c1"># Works (with warning)</span>
 </span></code></pre></div>

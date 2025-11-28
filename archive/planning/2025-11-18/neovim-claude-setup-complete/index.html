@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3204,7 +3234,7 @@
 <hr />
 <h2 id="the-key-difference-claudecode-vs-tmux-split">The Key Difference: claudecode vs Tmux Split<a class="headerlink" href="#the-key-difference-claudecode-vs-tmux-split" title="Permanent link">&para;</a></h2>
 <h3 id="without-claudecodenvim-tmux-split">Without claudecode.nvim (tmux split):<a class="headerlink" href="#without-claudecodenvim-tmux-split" title="Permanent link">&para;</a></h3>
-<p><div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────┐
+<p><div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────┐
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  Tmux                                   │
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│  ┌────────────┬────────────────────┐   │
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  │  Neovim    │  Terminal          │   │
@@ -3222,7 +3252,7 @@
 - No visual diffs
 - Claude doesn't know your context</p>
 <h3 id="with-claudecodenvim">With claudecode.nvim:<a class="headerlink" href="#with-claudecodenvim" title="Permanent link">&para;</a></h3>
-<p><div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌─────────────────────────────────────────┐
+<p><div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌─────────────────────────────────────────┐
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│  Neovim (single window)                 │
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│  ┌──────────────┬──────────────────┐   │
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│  │  Buffer      │  Claude Terminal │   │
@@ -3245,17 +3275,17 @@
 <hr />
 <h2 id="complete-keybinding-reference">Complete Keybinding Reference<a class="headerlink" href="#complete-keybinding-reference" title="Permanent link">&para;</a></h2>
 <h3 id="codecompanionnvim-quick-chat-edits">codecompanion.nvim (Quick Chat &amp; Edits)<a class="headerlink" href="#codecompanionnvim-quick-chat-edits" title="Permanent link">&para;</a></h3>
-<div class="language-html highlight"><span class="filename">HTML</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>a   - Toggle chat buffer (main usage)
+<div class="language-html highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>a   - Toggle chat buffer (main usage)
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>cc  - Inline assistant (for edits with diff)
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>gda         - Accept diff
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>gdr         - Reject diff
 </span></code></pre></div>
 <p>Inside chat buffer:
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>&lt;C-s&gt;       - Send message (normal or insert mode)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>&lt;C-s&gt;       - Send message (normal or insert mode)
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>&lt;C-c&gt;       - Close chat
 </span></code></pre></div></p>
 <h3 id="claudecodenvim-claude-code-cli-in-neovim">claudecode.nvim (Claude Code CLI in Neovim)<a class="headerlink" href="#claudecodenvim-claude-code-cli-in-neovim" title="Permanent link">&para;</a></h3>
-<div class="language-html highlight"><span class="filename">HTML</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>ct  - Open Claude Code CLI terminal (then use normally)
+<div class="language-html highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>ct  - Open Claude Code CLI terminal (then use normally)
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>aa  - Accept diff (when Claude suggests changes)
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>ad  - Deny diff
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
@@ -3276,7 +3306,7 @@
 <h3 id="what-leadercb-actually-does">What <code>&lt;leader&gt;cb</code> Actually Does<a class="headerlink" href="#what-leadercb-actually-does" title="Permanent link">&para;</a></h3>
 <p>It's just a shortcut for: "add the file I'm currently editing to the conversation"</p>
 <p><strong>You can skip it and just talk to Claude Code:</strong>
-<div class="language-html highlight"><span class="filename">HTML</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>ct (opens terminal)
+<div class="language-html highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">leader</span><span class="p">&gt;</span>ct (opens terminal)
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>&gt; &quot;Analyze the entire dotfiles repository structure&quot;
 </span></code></pre></div></p>
 <p>Claude Code handles context. Just like using it normally.</p>
@@ -3289,7 +3319,7 @@
 <hr />
 <h2 id="testing-your-setup">Testing Your Setup<a class="headerlink" href="#testing-your-setup" title="Permanent link">&para;</a></h2>
 <h3 id="step-1-run-automated-tests-30-seconds">Step 1: Run Automated Tests (30 seconds)<a class="headerlink" href="#step-1-run-automated-tests-30-seconds" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>nvim<span class="w"> </span>--headless<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;luafile .planning/test-codecompanion-ephemeral.lua&quot;</span><span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;qa&quot;</span>
 </span></code></pre></div>
 <p>This checks:
@@ -3331,7 +3361,7 @@
 <li>If Claude suggests changes, diff appears in buffer? ✅/❌</li>
 </ol>
 <h3 id="step-3-delete-test-script">Step 3: Delete Test Script<a class="headerlink" href="#step-3-delete-test-script" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>rm<span class="w"> </span>.planning/test-codecompanion-ephemeral.lua
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>rm<span class="w"> </span>.planning/test-codecompanion-ephemeral.lua
 </span></code></pre></div>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
@@ -3365,7 +3395,7 @@
 <hr />
 <h2 id="real-world-usage-examples">Real-World Usage Examples<a class="headerlink" href="#real-world-usage-examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-quick-question-codecompanion">Example 1: Quick Question (codecompanion)<a class="headerlink" href="#example-1-quick-question-codecompanion" title="Permanent link">&para;</a></h3>
-<p><div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>You<span class="err">&#39;</span>re<span class="w"> </span>reading<span class="w"> </span>unfamiliar<span class="w"> </span>code.
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>You<span class="err">&#39;</span>re<span class="w"> </span>reading<span class="w"> </span>unfamiliar<span class="w"> </span>code.
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="m">1</span>.<span class="w"> </span>Cursor<span class="w"> </span>on<span class="w"> </span><span class="k">function</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="m">2</span>.<span class="w"> </span>&lt;leader&gt;a<span class="w"> </span><span class="o">(</span>opens<span class="w"> </span>chat<span class="o">)</span>
@@ -3379,7 +3409,7 @@
 <strong>Plugin:</strong> codecompanion</p>
 <hr />
 <h3 id="example-2-small-refactor-codecompanion">Example 2: Small Refactor (codecompanion)<a class="headerlink" href="#example-2-small-refactor-codecompanion" title="Permanent link">&para;</a></h3>
-<p><div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>You<span class="w"> </span>want<span class="w"> </span>to<span class="w"> </span>improve<span class="w"> </span>error<span class="w"> </span>handling<span class="w"> </span><span class="k">in</span><span class="w"> </span>one<span class="w"> </span><span class="k">function</span>.
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>You<span class="w"> </span>want<span class="w"> </span>to<span class="w"> </span>improve<span class="w"> </span>error<span class="w"> </span>handling<span class="w"> </span><span class="k">in</span><span class="w"> </span>one<span class="w"> </span><span class="k">function</span>.
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="m">1</span>.<span class="w"> </span>Select<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="o">(</span>visual<span class="w"> </span>mode<span class="o">)</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="m">2</span>.<span class="w"> </span>&lt;leader&gt;cc<span class="w"> </span><span class="o">(</span>inline<span class="w"> </span>assistant<span class="o">)</span>
@@ -3393,7 +3423,7 @@
 <strong>Plugin:</strong> codecompanion</p>
 <hr />
 <h3 id="example-3-large-feature-claudecode">Example 3: Large Feature (claudecode)<a class="headerlink" href="#example-3-large-feature-claudecode" title="Permanent link">&para;</a></h3>
-<p><div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>You<span class="w"> </span>need<span class="w"> </span>to<span class="w"> </span>add<span class="w"> </span>authentication<span class="w"> </span>across<span class="w"> </span>controllers,<span class="w"> </span>routes,<span class="w"> </span>and<span class="w"> </span>tests.
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>You<span class="w"> </span>need<span class="w"> </span>to<span class="w"> </span>add<span class="w"> </span>authentication<span class="w"> </span>across<span class="w"> </span>controllers,<span class="w"> </span>routes,<span class="w"> </span>and<span class="w"> </span>tests.
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="m">1</span>.<span class="w"> </span>&lt;leader&gt;ct<span class="w"> </span><span class="o">(</span>opens<span class="w"> </span>Claude<span class="w"> </span>Code<span class="w"> </span>CLI<span class="w"> </span>terminal<span class="w"> </span><span class="k">in</span><span class="w"> </span>Neovim<span class="o">)</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="m">2</span>.<span class="w"> </span><span class="s2">&quot;Analyze the entire platforms/ directory and implement JWT</span>
@@ -3434,7 +3464,7 @@
 <p><strong>Result:</strong> Simpler, more reliable, uses Claude's actual capabilities instead of broken wrappers.</p>
 <hr />
 <h2 id="files-changed">Files Changed<a class="headerlink" href="#files-changed" title="Permanent link">&para;</a></h2>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">Modified</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">Modified</span><span class="p">:</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platforms/common/.config/nvim/lua/plugins/codecompanion.lua (75 lines, was 331)</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platforms/common/.config/nvim/lua/plugins/claudecode.lua (simplified keybindings)</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platforms/common/.config/nvim/lua/core/keymaps.lua (removed 45+ broken lines)</span>
@@ -3453,26 +3483,26 @@
 <li><strong>Try it out</strong> with real work</li>
 <li><strong>Delete test script</strong> when satisfied</li>
 <li><strong>Archive planning docs</strong> when done:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mv<span class="w"> </span>.planning/neovim-claude-*<span class="w"> </span>.planning/archive/
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mv<span class="w"> </span>.planning/neovim-claude-*<span class="w"> </span>.planning/archive/
 </span></code></pre></div></li>
 </ol>
 <hr />
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
 <h3 id="codecompanionlua-simplified">codecompanion.lua (simplified)<a class="headerlink" href="#codecompanionlua-simplified" title="Permanent link">&para;</a></h3>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">-- 75 lines total</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">-- 75 lines total</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="c1">-- Strategies: chat (with keymaps), inline (with diff keymaps)</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1">-- Display: vertical right panel, 35% width, 80% height</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1">-- Diff: enabled with mini.diff provider</span>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1">-- Log level: ERROR (quiet)</span>
 </span></code></pre></div>
 <h3 id="claudecodelua-simplified">claudecode.lua (simplified)<a class="headerlink" href="#claudecodelua-simplified" title="Permanent link">&para;</a></h3>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">-- 6 keybindings (most common only)</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">-- 6 keybindings (most common only)</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1">-- Terminal: right split, 30% width</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1">-- Diff: vertical split, auto-close on accept</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1">-- Auto-start: true (WebSocket server for Claude Code CLI)</span>
 </span></code></pre></div>
 <h3 id="keymapslua-simplified">keymaps.lua (simplified)<a class="headerlink" href="#keymapslua-simplified" title="Permanent link">&para;</a></h3>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">-- 2 keybindings for codecompanion</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">-- 2 keybindings for codecompanion</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1">-- 6 keybindings for claudecode (defined in plugin file)</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="c1">-- Gated by NVIM_AI_ENABLED == &#39;true&#39;</span>
 </span></code></pre></div>

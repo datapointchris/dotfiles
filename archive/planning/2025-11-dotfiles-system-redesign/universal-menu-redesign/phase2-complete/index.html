@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3158,7 +3188,7 @@
 <li>Fixed example field names: "command"/"description" not "cmd"/"desc" (line 135-145)</li>
 </ul>
 <p><strong>Test Results:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>menu-go-new<span class="w"> </span>preview<span class="w"> </span>commands<span class="w"> </span>fcd
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>menu-go-new<span class="w"> </span>preview<span class="w"> </span>commands<span class="w"> </span>fcd
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Examples:
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>fcd<span class="w"> </span>~/code<span class="w">    </span><span class="c1"># &lt;- Syntax highlighted with bat (green fcd, colored path)</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span>→<span class="w"> </span>Search<span class="w"> </span><span class="k">for</span><span class="w"> </span>directories<span class="w"> </span><span class="k">in</span><span class="w"> </span>~/code
@@ -3175,7 +3205,7 @@
 <p><strong>Behavior:</strong> Place alias/command name in terminal buffer
 <strong>Implementation:</strong> Already working, no changes needed
 <strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Select &quot;glo&quot; from menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Select &quot;glo&quot; from menu</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Result: &quot;glo&quot; appears in terminal (not &quot;git log --oneline...&quot;)</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>✓<span class="w"> </span>PASS
 </span></code></pre></div>
@@ -3183,7 +3213,7 @@
 <p><strong>Behavior:</strong> Switch to selected session
 <strong>Implementation:</strong> Already working from Round 4 fixes
 <strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Select &quot;dotfiles&quot; session</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Select &quot;dotfiles&quot; session</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Result: Switches to dotfiles session</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>✓<span class="w"> </span>PASS
 </span></code></pre></div>
@@ -3192,13 +3222,13 @@
 <strong>Implementation:</strong> Changed from <code>echo "Selected: ..."</code> to <code>exit 0</code>
 <strong>File:</strong> <code>common/.local/bin/menu-new</code> (line 171-174)</p>
 <p><strong>Code:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>workflows<span class="o">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>workflows<span class="o">)</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="c1"># Workflows: just exit (user viewed the info in preview)</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">0</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p">;;</span>
 </span></code></pre></div>
 <p><strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Select workflow from menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Select workflow from menu</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Result: Menu closes, no output, clean exit</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>✓<span class="w"> </span>PASS
 </span></code></pre></div>
@@ -3207,13 +3237,13 @@
 <strong>Implementation:</strong> Pipe preview through <code>less -R</code> to show in pager
 <strong>File:</strong> <code>common/.local/bin/menu-new</code> (line 176-179)</p>
 <p><strong>Code:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>learning<span class="o">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>learning<span class="o">)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="c1"># Learning: open full info in pager for easy copying</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2">&quot;</span><span class="w"> </span>preview<span class="w"> </span>learning<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$item_id</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>less<span class="w"> </span>-R
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p">;;</span>
 </span></code></pre></div>
 <p><strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Select learning topic</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Select learning topic</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Result: Opens full preview in less with colors</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># User can scroll, copy URLs, navigate easily</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>✓<span class="w"> </span>PASS
@@ -3223,7 +3253,7 @@
 <strong>Implementation:</strong> Get tool name and place in terminal (like commands)
 <strong>File:</strong> <code>common/.local/bin/menu-new</code> (line 181-186)</p>
 <p><strong>Code:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>tools<span class="o">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>tools<span class="o">)</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="c1"># Tools: place tool name in terminal (user probably wants to run it)</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span>tool
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nv">tool</span><span class="o">=</span><span class="k">$(</span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2">&quot;</span><span class="w"> </span>get<span class="w"> </span>tools<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$item_id</span><span class="s2">&quot;</span><span class="k">)</span>
@@ -3231,7 +3261,7 @@
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p">;;</span>
 </span></code></pre></div>
 <p><strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Select &quot;eza&quot; tool</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Select &quot;eza&quot; tool</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Result: &quot;eza&quot; appears in terminal, ready to add arguments</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>✓<span class="w"> </span>PASS
 </span></code></pre></div>

@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="toolbox">Toolbox<a class="headerlink" href="#toolbox" title="Permanent link">&para;</a></h1>
 <p>Tool discovery system for the 98 tools in your dotfiles. Find tools by name, category, or purpose. Get usage examples and learn when to use each tool.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>toolbox<span class="w">              </span><span class="c1"># Show help</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>toolbox<span class="w">              </span><span class="c1"># Show help</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>toolbox<span class="w"> </span>git<span class="w">          </span><span class="c1"># Search for git tools (shortcut)</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>toolbox<span class="w"> </span>list<span class="w">         </span><span class="c1"># List all tools by category</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>toolbox<span class="w"> </span>categories<span class="w">   </span><span class="c1"># Interactive category browser</span>
@@ -3205,7 +3235,7 @@
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
 <h3 id="list-all-tools">List All Tools<a class="headerlink" href="#list-all-tools" title="Permanent link">&para;</a></h3>
 <p>See every tool organized by category:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>toolbox<span class="w"> </span>list
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>toolbox<span class="w"> </span>list
 </span></code></pre></div>
 <p>Output groups tools by category with one-line descriptions, sorted alphabetically. This provides a complete inventory of your toolchain.</p>
 <p>Categories reflect how you think about tools:</p>
@@ -3219,7 +3249,7 @@
 </ul>
 <h3 id="show-tool-details">Show Tool Details<a class="headerlink" href="#show-tool-details" title="Permanent link">&para;</a></h3>
 <p>Get comprehensive information about a specific tool:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>toolbox<span class="w"> </span>show<span class="w"> </span>bat
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>toolbox<span class="w"> </span>show<span class="w"> </span>bat
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>toolbox<span class="w"> </span>show<span class="w"> </span>ripgrep
 </span></code></pre></div>
 <p>Detail view shows:</p>
@@ -3234,7 +3264,7 @@
 </ul>
 <h3 id="search-tools">Search Tools<a class="headerlink" href="#search-tools" title="Permanent link">&para;</a></h3>
 <p>Find tools by description, tags, name, or purpose. Case-insensitive search across all metadata:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>toolbox<span class="w"> </span>search<span class="w"> </span>git<span class="w">       </span><span class="c1"># Find git-related tools</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>toolbox<span class="w"> </span>search<span class="w"> </span>git<span class="w">       </span><span class="c1"># Find git-related tools</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>toolbox<span class="w"> </span>search<span class="w"> </span>syntax<span class="w">    </span><span class="c1"># Find syntax highlighting tools</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>toolbox<span class="w"> </span>search<span class="w"> </span>docker<span class="w">    </span><span class="c1"># Find Docker tools</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
@@ -3244,7 +3274,7 @@
 </span></code></pre></div>
 <h3 id="browse-categories">Browse Categories<a class="headerlink" href="#browse-categories" title="Permanent link">&para;</a></h3>
 <p>Interactive two-level picker with gum:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>toolbox<span class="w"> </span>categories
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>toolbox<span class="w"> </span>categories
 </span></code></pre></div>
 <ol>
 <li>Select a category (shows tool count and preview)</li>
@@ -3253,7 +3283,7 @@
 <p>Requires gum (<code>brew install gum</code>).</p>
 <h2 id="registry-structure">Registry Structure<a class="headerlink" href="#registry-structure" title="Permanent link">&para;</a></h2>
 <p>Tools are defined in <code>~/dotfiles/docs/tools/registry.yml</code>:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">tool-name</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">tool-name</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file-viewer</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Brief</span><span class="nv"> </span><span class="s">description&quot;</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">installed_via</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">brew</span><span class="w">              </span><span class="c1"># brew, npm, uv, cargo, manual</span>
@@ -3281,34 +3311,34 @@
 <p>Search indexes all fields, making it easy to find tools by any aspect - name, purpose, category, or tags.</p>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Discover what's available:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>toolbox<span class="w"> </span>list<span class="w">              </span><span class="c1"># See complete inventory</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>toolbox<span class="w"> </span>list<span class="w">              </span><span class="c1"># See complete inventory</span>
 </span></code></pre></div>
 <p>Find a tool for a specific task:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>toolbox<span class="w"> </span>search<span class="w"> </span>format<span class="w">     </span><span class="c1"># Find formatting tools</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>toolbox<span class="w"> </span>search<span class="w"> </span>format<span class="w">     </span><span class="c1"># Find formatting tools</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>toolbox<span class="w"> </span>search<span class="w"> </span>diff<span class="w">       </span><span class="c1"># Find diff tools</span>
 </span></code></pre></div>
 <p>Learn about a forgotten tool:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>toolbox<span class="w"> </span>show<span class="w"> </span>bat<span class="w">          </span><span class="c1"># Refresh memory on bat</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>toolbox<span class="w"> </span>show<span class="w"> </span>bat<span class="w">          </span><span class="c1"># Refresh memory on bat</span>
 </span></code></pre></div>
 <p>Browse a category:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>toolbox<span class="w"> </span>categories<span class="w">        </span><span class="c1"># Interactive browser</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>toolbox<span class="w"> </span>categories<span class="w">        </span><span class="c1"># Interactive browser</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Select &quot;version-control&quot;</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># Explore git, gh, lazygit, delta</span>
 </span></code></pre></div>
 <p>Explore randomly:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>toolbox<span class="w"> </span>show<span class="w"> </span><span class="k">$(</span>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;^#&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>shuf<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>toolbox<span class="w"> </span>show<span class="w"> </span><span class="k">$(</span>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;^#&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>shuf<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Discover a random tool</span>
 </span></code></pre></div>
 <h2 id="building-from-source">Building from Source<a class="headerlink" href="#building-from-source" title="Permanent link">&para;</a></h2>
 <p>Toolbox is a Go application:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/toolbox
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/toolbox
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>task<span class="w"> </span>build<span class="w">    </span><span class="c1"># Creates local binary</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>task<span class="w"> </span>install<span class="w">  </span><span class="c1"># Installs to ~/go/bin/toolbox</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">     </span><span class="c1"># Run tests</span>
 </span></code></pre></div>
 <h2 id="adding-tools">Adding Tools<a class="headerlink" href="#adding-tools" title="Permanent link">&para;</a></h2>
 <p>Edit <code>~/dotfiles/docs/tools/registry.yml</code> to add tools:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">new-tool</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">new-tool</span><span class="p">:</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">utility</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;What</span><span class="nv"> </span><span class="s">it</span><span class="nv"> </span><span class="s">does&quot;</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">installed_via</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">brew</span>

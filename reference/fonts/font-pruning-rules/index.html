@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3231,11 +3261,11 @@
 </ul>
 <h2 id="new-workflow-separated-phases">New Workflow (Separated Phases)<a class="headerlink" href="#new-workflow-separated-phases" title="Permanent link">&para;</a></h2>
 <h3 id="option-1-all-in-one-default-behavior">Option 1: All-in-One (default behavior)<a class="headerlink" href="#option-1-all-in-one-default-behavior" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>font-download
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>font-download
 </span></code></pre></div>
 <p>Downloads, prunes, and standardizes all fonts automatically.</p>
 <h3 id="option-2-manual-control-recommended-for-testing">Option 2: Manual Control (recommended for testing)<a class="headerlink" href="#option-2-manual-control-recommended-for-testing" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Step 1: Download only (no pruning)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Step 1: Download only (no pruning)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>font-download<span class="w"> </span>--download-only
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Step 2: Test pruning with dry-run</span>
@@ -3249,7 +3279,7 @@
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>font-download<span class="w"> </span>--standardize-only
 </span></code></pre></div>
 <h3 id="single-font-family-testing">Single Font Family Testing<a class="headerlink" href="#single-font-family-testing" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Download FiraCode only</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Download FiraCode only</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>font-download<span class="w"> </span>-f<span class="w"> </span>firacode<span class="w"> </span>--download-only
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Test pruning FiraCode</span>
@@ -3403,13 +3433,13 @@
 <p><strong>Total</strong>: ~260 files → ~75-80 files</p>
 <h2 id="debugging-pruning-issues">Debugging Pruning Issues<a class="headerlink" href="#debugging-pruning-issues" title="Permanent link">&para;</a></h2>
 <h3 id="check-what-would-be-pruned">Check what would be pruned<a class="headerlink" href="#check-what-would-be-pruned" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>font-download<span class="w"> </span>--prune-only<span class="w"> </span>--dry-run<span class="w"> </span>-v
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>font-download<span class="w"> </span>--prune-only<span class="w"> </span>--dry-run<span class="w"> </span>-v
 </span></code></pre></div>
 <h3 id="check-specific-font-family">Check specific font family<a class="headerlink" href="#check-specific-font-family" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>font-download<span class="w"> </span>-f<span class="w"> </span>firacode<span class="w"> </span>--prune-only<span class="w"> </span>--dry-run<span class="w"> </span>-v
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>font-download<span class="w"> </span>-f<span class="w"> </span>firacode<span class="w"> </span>--prune-only<span class="w"> </span>--dry-run<span class="w"> </span>-v
 </span></code></pre></div>
 <h3 id="manually-inspect-beforeafter-counts">Manually inspect before/after counts<a class="headerlink" href="#manually-inspect-beforeafter-counts" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Before pruning</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Before pruning</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>find<span class="w"> </span>~/fonts/FiraCode<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># See what files exist</span>
@@ -3429,7 +3459,7 @@
 <h3 id="directory-ends-up-empty-after-pruning">"Directory ends up empty after pruning"<a class="headerlink" href="#directory-ends-up-empty-after-pruning" title="Permanent link">&para;</a></h3>
 <p><strong>Cause</strong>: Both weight filter AND spacing filter deleted all files.</p>
 <p><strong>Debug</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Check what&#39;s downloaded</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Check what&#39;s downloaded</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ls<span class="w"> </span>-1<span class="w"> </span>~/fonts/FiraCode/
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Run dry-run to see what would be deleted</span>

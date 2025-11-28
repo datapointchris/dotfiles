@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3325,7 +3355,7 @@
 <li><strong>Headers</strong> in markdown/documentation</li>
 </ul>
 <p><strong>Examples in code</strong>:</p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">function_name</span><span class="p">():</span>  <span class="c1"># &#39;def&#39; often rendered in bold</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">function_name</span><span class="p">():</span>  <span class="c1"># &#39;def&#39; often rendered in bold</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="k">if</span> <span class="n">condition</span><span class="p">:</span>     <span class="c1"># &#39;if&#39; often rendered in bold</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="k">return</span> <span class="kc">True</span>   <span class="c1"># &#39;return&#39; often rendered in bold</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="err">```</span><span class="n">text</span>
@@ -3340,7 +3370,7 @@
 </span></code></pre></div>
 <p>ERROR: File not found   # ERROR in bold
 Warning: Deprecated     # Warning in bold</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>### Italic (Normal weight, slanted)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>### Italic (Normal weight, slanted)
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>**What it is**:
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
@@ -3496,7 +3526,7 @@ Warning: Deprecated     # Warning in bold</p>
 </ul>
 <h3 id="terminal-emulator-rendering">Terminal Emulator Rendering<a class="headerlink" href="#terminal-emulator-rendering" title="Permanent link">&para;</a></h3>
 <p><strong>ANSI escape codes</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;\e[1mBold text\e[0m&quot;</span><span class="w">      </span><span class="c1"># Requests bold</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;\e[1mBold text\e[0m&quot;</span><span class="w">      </span><span class="c1"># Requests bold</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;\e[3mItalic text\e[0m&quot;</span><span class="w">    </span><span class="c1"># Requests italic</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;\e[1;3mBoth\e[0m&quot;</span><span class="w">         </span><span class="c1"># Requests both</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="sb">```</span>text
@@ -3536,18 +3566,18 @@ Warning: Deprecated     # Warning in bold</p>
 </span></code></pre></div>
 <h2 id="font-family-completeness">Font Family Completeness<a class="headerlink" href="#font-family-completeness" title="Permanent link">&para;</a></h2>
 <h3 id="minimal-font-family">Minimal Font Family<a class="headerlink" href="#minimal-font-family" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>FontName-Regular.otf
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>FontName-Regular.otf
 </span></code></pre></div>
 <p><strong>Just one weight.</strong> Terminal will synthesize bold/italic.</p>
 <h3 id="standard-font-family">Standard Font Family<a class="headerlink" href="#standard-font-family" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>FontName-Regular.otf
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>FontName-Regular.otf
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>FontName-Bold.otf
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>FontName-Italic.otf
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>FontName-BoldItalic.otf
 </span></code></pre></div>
 <p><strong>Four variants.</strong> Covers all common use cases.</p>
 <h3 id="complete-font-family">Complete Font Family<a class="headerlink" href="#complete-font-family" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>FontName-Thin.otf
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>FontName-Thin.otf
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>FontName-Light.otf
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>FontName-Regular.otf
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>FontName-Medium.otf
@@ -3580,7 +3610,7 @@ Warning: Deprecated     # Warning in bold</p>
 <h2 id="enabling-bold-and-italic-in-terminals">Enabling Bold and Italic in Terminals<a class="headerlink" href="#enabling-bold-and-italic-in-terminals" title="Permanent link">&para;</a></h2>
 <h3 id="neovimvim">Neovim/Vim<a class="headerlink" href="#neovimvim" title="Permanent link">&para;</a></h3>
 <p><strong>Set terminal to support styles</strong>:</p>
-<div class="language-vim highlight"><span class="filename">VimL</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">set</span> termguicolors  <span class="c">&quot; Use GUI colors in terminal</span>
+<div class="language-vim highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">set</span> termguicolors  <span class="c">&quot; Use GUI colors in terminal</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>```text
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>**Theme uses**:
@@ -3597,7 +3627,7 @@ Warning: Deprecated     # Warning in bold</p>
 <h3 id="ghostty">Ghostty<a class="headerlink" href="#ghostty" title="Permanent link">&para;</a></h3>
 <p>Ghostty automatically uses Bold/Italic variants if font has them.</p>
 <p><strong>Your config</strong> (<code>~/.config/ghostty/config</code>):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>font-family = &quot;FiraCode Nerd Font&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>font-family = &quot;FiraCode Nerd Font&quot;
 </span></code></pre></div>
 <p>Ghostty will use:</p>
 <ul>
@@ -3615,7 +3645,7 @@ Warning: Deprecated     # Warning in bold</p>
 </ul>
 <h3 id="alacritty">Alacritty<a class="headerlink" href="#alacritty" title="Permanent link">&para;</a></h3>
 <p><strong>Config</strong> (<code>~/.config/alacritty/alacritty.yml</code>):</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">font</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">font</span><span class="p">:</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">normal</span><span class="p">:</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">family</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;FiraCode</span><span class="nv"> </span><span class="s">Nerd</span><span class="nv"> </span><span class="s">Font&quot;</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">style</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Regular</span>
@@ -3705,7 +3735,7 @@ Warning: Deprecated     # Warning in bold</p>
 <h2 id="configuring-font-weight-preferences">Configuring Font Weight Preferences<a class="headerlink" href="#configuring-font-weight-preferences" title="Permanent link">&para;</a></h2>
 <h3 id="vs-code">VS Code<a class="headerlink" href="#vs-code" title="Permanent link">&para;</a></h3>
 <p><strong>settings.json</strong>:</p>
-<div class="language-json highlight"><span class="filename">JSON</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;editor.fontFamily&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;FiraCode Nerd Font&quot;</span><span class="p">,</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;editor.fontLigatures&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">&quot;editor.fontSize&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span>

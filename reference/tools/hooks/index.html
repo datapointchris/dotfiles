@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3248,7 +3278,7 @@
 </ul>
 <p><strong>Why it exists</strong>: After conversation compaction or starting fresh, Claude loses awareness of uncommitted changes and recent work. This hook proactively loads relevant context so Claude knows the current state immediately.</p>
 <p><strong>Example output</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>## 📁 Project Context (Auto-loaded)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>## 📁 Project Context (Auto-loaded)
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>**Git Status:**
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>M .claude/settings.json
@@ -3285,7 +3315,7 @@
 <p><strong>What it does</strong>: Checks if <code>tools/symlinks</code> was modified, and if so, runs pytest. Errors are shown immediately for fixing, or if there are many errors (≥5), suggests launching an error-resolver agent.</p>
 <p><strong>Why it exists</strong>: Prevents test failures from slipping through during development, ensuring broken code doesn't persist.</p>
 <p><strong>Example scenario</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Claude modifies tools/symlinks/core.py during response
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Claude modifies tools/symlinks/core.py during response
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>[Response completes]
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
@@ -3301,7 +3331,7 @@
 <p><strong>When it runs</strong>: After Claude completes a response.</p>
 <p><strong>What it does</strong>: Checks if commits were made in the last minute and reminds about them.</p>
 <p><strong>Example output</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>📝 **Reminder**: 2 commit(s) made during this response
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>📝 **Reminder**: 2 commit(s) made during this response
 </span></code></pre></div>
 <h3 id="posttooluse-hook-markdown-formatter">PostToolUse Hook - Markdown Formatter<a class="headerlink" href="#posttooluse-hook-markdown-formatter" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose</strong>: Automatically adds missing language tags to code blocks in markdown files.</p>
@@ -3333,7 +3363,7 @@
 <p>These hooks run for ALL commits (whether made by Claude, you manually, or any other tool) and are installed via the pre-commit framework.</p>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
 <p>The hooks are automatically installed when you run:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
 </span></code></pre></div>
 <p>This creates Git hooks in <code>.git/hooks/</code> that delegate to the pre-commit framework.</p>
 <h3 id="pre-commit-hook-feature-documentation-check">Pre-Commit Hook - Feature Documentation Check<a class="headerlink" href="#pre-commit-hook-feature-documentation-check" title="Permanent link">&para;</a></h3>
@@ -3353,7 +3383,7 @@
 <li><strong>Skipped</strong>: <code>chore</code>, <code>deps</code>, <code>typo</code>, <code>style</code>, <code>ci</code>, <code>build</code> commits</li>
 </ul>
 <p><strong>Example - Blocked commit</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new symlink option&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new symlink option&quot;</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>❌<span class="w"> </span>DOCUMENTATION<span class="w"> </span>REQUIRED
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
@@ -3374,7 +3404,7 @@
 </span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>Use<span class="w"> </span>--no-verify<span class="w"> </span>to<span class="w"> </span>bypass<span class="w"> </span>this<span class="w"> </span>check<span class="w"> </span><span class="k">if</span><span class="w"> </span>documentation<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>needed
 </span></code></pre></div>
 <p><strong>Example - Allowed commit</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: update dependencies&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: update dependencies&quot;</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>ℹ️<span class="w">  </span>chore<span class="w"> </span>commit<span class="w"> </span>-<span class="w"> </span>documentation<span class="w"> </span>check<span class="w"> </span>skipped
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
@@ -3384,18 +3414,18 @@
 <p><strong>Required format</strong>: <code>type(optional-scope): description</code></p>
 <p><strong>Valid types</strong>: <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>chore</code>, <code>refactor</code>, <code>test</code>, <code>style</code>, <code>perf</code>, <code>build</code>, <code>ci</code>, <code>revert</code></p>
 <p><strong>Example - Valid</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(hooks): add changelog tracking system&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(hooks): add changelog tracking system&quot;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>✓<span class="w"> </span>Commit<span class="w"> </span>successful
 </span></code></pre></div>
 <p><strong>Example - Invalid</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;added new hooks&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;added new hooks&quot;</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>❌<span class="w"> </span>Commit<span class="w"> </span>message<span class="w"> </span>does<span class="w"> </span>not<span class="w"> </span>follow<span class="w"> </span>Conventional<span class="w"> </span>Commits<span class="w"> </span>format
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>Expected:<span class="w"> </span>type<span class="o">(</span>scope<span class="o">)</span>:<span class="w"> </span>description
 </span></code></pre></div>
 <h2 id="complete-workflow-examples">Complete Workflow Examples<a class="headerlink" href="#complete-workflow-examples" title="Permanent link">&para;</a></h2>
 <h3 id="scenario-1-adding-a-new-feature-manual">Scenario 1: Adding a New Feature (Manual)<a class="headerlink" href="#scenario-1-adding-a-new-feature-manual" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 1. Make code changes</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 1. Make code changes</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>vim<span class="w"> </span>tools/symlinks/core.py
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># 2. Try to commit</span>
@@ -3417,7 +3447,7 @@
 </span></code></pre></div>
 <h3 id="scenario-2-bypassing-hooks">Scenario 2: Bypassing Hooks<a class="headerlink" href="#scenario-2-bypassing-hooks" title="Permanent link">&para;</a></h3>
 <p>All pre-commit hooks can be bypassed with <code>--no-verify</code>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Bypass all checks (use sparingly!)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Bypass all checks (use sparingly!)</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: quick fix&quot;</span><span class="w"> </span>--no-verify
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Or set environment variable</span>
@@ -3426,7 +3456,7 @@
 <h2 id="hook-configuration-files">Hook Configuration Files<a class="headerlink" href="#hook-configuration-files" title="Permanent link">&para;</a></h2>
 <h3 id="claudesettingsjson"><code>.claude/settings.json</code><a class="headerlink" href="#claudesettingsjson" title="Permanent link">&para;</a></h3>
 <p>Configures Claude Code hooks:</p>
-<div class="language-json highlight"><span class="filename">JSON</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">&quot;SessionStart&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">      </span><span class="p">{</span>
@@ -3507,19 +3537,19 @@
 </ul>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="hook-not-running">Hook Not Running<a class="headerlink" href="#hook-not-running" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Reinstall hooks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Reinstall hooks</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Test specific hook</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>check-feature-docs<span class="w"> </span>--all-files
 </span></code></pre></div>
 <h3 id="permission-errors">Permission Errors<a class="headerlink" href="#permission-errors" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Make hooks executable</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Make hooks executable</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/*
 </span></code></pre></div>
 <h3 id="false-positives">False Positives<a class="headerlink" href="#false-positives" title="Permanent link">&para;</a></h3>
 <p>Use <code>--no-verify</code> to bypass checks when legitimately not needed:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: fix typo&quot;</span><span class="w"> </span>--no-verify
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: fix typo&quot;</span><span class="w"> </span>--no-verify
 </span></code></pre></div>
 <h2 id="philosophy">Philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
 <p>The hook system enforces these principles:</p>

@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3230,7 +3260,7 @@
 <strong>Stars:</strong> ~2.5k
 <strong>Go Version:</strong> 1.24+</p>
 <h3 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sesh/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sesh/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── main.go                     # Minimal entry point, logging setup
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── seshcli/                    # CLI commands (cobra)
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── model/                      # Data structures (Config, Session, etc)
@@ -3252,7 +3282,7 @@
 <h3 id="key-design-patterns">Key Design Patterns<a class="headerlink" href="#key-design-patterns" title="Permanent link">&para;</a></h3>
 <h4 id="1-interface-based-architecture">1. Interface-Based Architecture<a class="headerlink" href="#1-interface-based-architecture" title="Permanent link">&para;</a></h4>
 <p>Every package defines an interface and a "Real" implementation:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// tmux/tmux.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// tmux/tmux.go</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Tmux</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">ListSessions</span><span class="p">()</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">model</span><span class="p">.</span><span class="nx">TmuxSession</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">NewSession</span><span class="p">(</span><span class="nx">sessionName</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">startDir</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
@@ -3271,7 +3301,7 @@
 </span></code></pre></div>
 <p><strong>Why:</strong> Enables easy mocking for tests without mockery complexity</p>
 <h4 id="2-wrapper-packages-for-testability">2. Wrapper Packages for Testability<a class="headerlink" href="#2-wrapper-packages-for-testability" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// execwrap/execwrap.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// execwrap/execwrap.go</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Exec</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">LookPath</span><span class="p">(</span><span class="nx">executable</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">Command</span><span class="p">(</span><span class="nx">name</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="w"> </span><span class="o">...</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="nx">ExecCmd</span>
@@ -3285,7 +3315,7 @@
 </span></code></pre></div>
 <p><strong>Why:</strong> Wraps stdlib packages to make them mockable</p>
 <h4 id="3-manual-dependency-injection">3. Manual Dependency Injection<a class="headerlink" href="#3-manual-dependency-injection" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// seshcli/root_command.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// seshcli/root_command.go</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">NewRootCommand</span><span class="p">(</span><span class="nx">version</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="c1">// wrapper dependencies</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">exec</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">execwrap</span><span class="p">.</span><span class="nx">NewExec</span><span class="p">()</span>
@@ -3324,7 +3354,7 @@
 <li>Easy to create circular dependencies</li>
 </ul>
 <h4 id="4-configuration-management">4. Configuration Management<a class="headerlink" href="#4-configuration-management" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// model/config.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// model/config.go</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Config</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">StrictMode</span><span class="w">           </span><span class="kt">bool</span><span class="w">                 </span><span class="s">`toml:&quot;strict_mode&quot;`</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">ImportPaths</span><span class="w">          </span><span class="p">[]</span><span class="kt">string</span><span class="w">             </span><span class="s">`toml:&quot;import&quot;`</span>
@@ -3348,7 +3378,7 @@
 <li>Custom error type for user-facing messages</li>
 </ul>
 <h4 id="5-strategy-pattern-for-connections">5. Strategy Pattern for Connections<a class="headerlink" href="#5-strategy-pattern-for-connections" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// connector/connect.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// connector/connect.go</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">RealConnector</span><span class="p">)</span><span class="w"> </span><span class="nx">Connect</span><span class="p">(</span><span class="nx">name</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">opts</span><span class="w"> </span><span class="nx">model</span><span class="p">.</span><span class="nx">ConnectOpts</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">strategies</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kd">func</span><span class="p">(</span><span class="o">*</span><span class="nx">RealConnector</span><span class="p">,</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">model</span><span class="p">.</span><span class="nx">Connection</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">){</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="nx">tmuxStrategy</span><span class="p">,</span>
@@ -3372,7 +3402,7 @@
 <p><strong>Why:</strong> Clean separation of connection sources</p>
 <h3 id="testing-patterns">Testing Patterns<a class="headerlink" href="#testing-patterns" title="Permanent link">&para;</a></h3>
 <h4 id="table-driven-tests">Table-Driven Tests<a class="headerlink" href="#table-driven-tests" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// lister/list_test.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// lister/list_test.go</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestHideDuplicates</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">tests</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="nx">name</span><span class="w">              </span><span class="kt">string</span>
@@ -3409,7 +3439,7 @@
 </span></code></pre></div>
 <h4 id="mock-generation">Mock Generation<a class="headerlink" href="#mock-generation" title="Permanent link">&para;</a></h4>
 <p>Uses <strong>mockery</strong> v3 to auto-generate mocks:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># .mockery.yaml</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># .mockery.yaml</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">with-expecter</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">all</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nt">dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{.InterfaceDir}}&quot;</span>
@@ -3420,7 +3450,7 @@
 <p>Run with: <code>mockery</code> (generates <code>mock_*.go</code> files)</p>
 <h3 id="build-release">Build &amp; Release<a class="headerlink" href="#build-release" title="Permanent link">&para;</a></h3>
 <h4 id="goreleaser-configuration">GoReleaser Configuration<a class="headerlink" href="#goreleaser-configuration" title="Permanent link">&para;</a></h4>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># .goreleaser.yaml</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># .goreleaser.yaml</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">builds</span><span class="p">:</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">env</span><span class="p">:</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CGO_ENABLED=0</span>
@@ -3439,7 +3469,7 @@
 </span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zoxide</span>
 </span></code></pre></div>
 <h4 id="github-actions-workflow">GitHub Actions Workflow<a class="headerlink" href="#github-actions-workflow" title="Permanent link">&para;</a></h4>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">jobs</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">jobs</span><span class="p">:</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">tests</span><span class="p">:</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">strategy</span><span class="p">:</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">matrix</span><span class="p">:</span>
@@ -3456,7 +3486,7 @@
 </span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">goreleaser/goreleaser-action@v5</span>
 </span></code></pre></div>
 <h3 id="logging-strategy">Logging Strategy<a class="headerlink" href="#logging-strategy" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// main.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// main.go</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">init</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="c1">// Create log file in $TMPDIR/.seshtmp/YYYY-MM-DD.log</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="c1">// Use JSON handler with configurable level</span>
@@ -3486,7 +3516,7 @@
 <strong>Stars:</strong> ~50k
 <strong>Go Version:</strong> 1.22+</p>
 <h3 id="architecture-overview_1">Architecture Overview<a class="headerlink" href="#architecture-overview_1" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pkg/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pkg/
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>├── app/                    # Application bootstrap
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>├── gui/                    # TUI layer (gocui)
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>│   ├── controllers/        # Input handlers
@@ -3505,7 +3535,7 @@
 </span></code></pre></div>
 <h3 id="key-patterns">Key Patterns<a class="headerlink" href="#key-patterns" title="Permanent link">&para;</a></h3>
 <h4 id="1-layered-architecture">1. Layered Architecture<a class="headerlink" href="#1-layered-architecture" title="Permanent link">&para;</a></h4>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>GUI Layer (views, controllers)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>GUI Layer (views, controllers)
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    ↓
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Services Layer (business logic)
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    ↓
@@ -3515,7 +3545,7 @@
 </span></code></pre></div>
 <p><strong>Why:</strong> Clear separation of concerns for large codebase</p>
 <h4 id="2-context-pattern">2. Context Pattern<a class="headerlink" href="#2-context-pattern" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// gui/context/list_context.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// gui/context/list_context.go</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ListContext</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="o">*</span><span class="nx">BasicContext</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nx">GetItemsLength</span><span class="w">      </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span>
@@ -3526,7 +3556,7 @@
 </span></code></pre></div>
 <p><strong>Why:</strong> Each view has its own state/behavior bundle</p>
 <h4 id="3-controller-pattern">3. Controller Pattern<a class="headerlink" href="#3-controller-pattern" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// gui/controllers/files_controller.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// gui/controllers/files_controller.go</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">FilesController</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="o">*</span><span class="nx">baseController</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">ControllerCommon</span>
@@ -3542,7 +3572,7 @@
 </span></code></pre></div>
 <p><strong>Why:</strong> Separation of keybinding logic from view rendering</p>
 <h4 id="4-common-dependencies-struct">4. Common Dependencies Struct<a class="headerlink" href="#4-common-dependencies-struct" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">// pkg/common/common.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">// pkg/common/common.go</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Common</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nx">Log</span><span class="w">      </span><span class="o">*</span><span class="nx">logrus</span><span class="p">.</span><span class="nx">Entry</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nx">Tr</span><span class="w">       </span><span class="o">*</span><span class="nx">i18n</span><span class="p">.</span><span class="nx">TranslationSet</span>
@@ -3564,7 +3594,7 @@
 <strong>Stars:</strong> ~18k
 <strong>Go Version:</strong> 1.24+</p>
 <h3 id="architecture-overview_2">Architecture Overview<a class="headerlink" href="#architecture-overview_2" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>gum/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>gum/
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>├── main.go              # Kong CLI parser
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>├── choose/              # Choose command
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>│   ├── command.go       # Kong command struct
@@ -3580,7 +3610,7 @@
 </span></code></pre></div>
 <h3 id="key-patterns_1">Key Patterns<a class="headerlink" href="#key-patterns_1" title="Permanent link">&para;</a></h3>
 <h4 id="1-kong-for-cli-parsing">1. Kong for CLI Parsing<a class="headerlink" href="#1-kong-for-cli-parsing" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// gum.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// gum.go</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Gum</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nx">Choose</span><span class="w">  </span><span class="nx">choose</span><span class="p">.</span><span class="nx">Command</span><span class="w">  </span><span class="s">`cmd:&quot;&quot; help:&quot;Choose an item from a list&quot;`</span>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nx">Filter</span><span class="w">  </span><span class="nx">filter</span><span class="p">.</span><span class="nx">Command</span><span class="w">  </span><span class="s">`cmd:&quot;&quot; help:&quot;Filter items&quot;`</span>
@@ -3608,7 +3638,7 @@
 <li>Struct tags can get messy</li>
 </ul>
 <h4 id="2-command-pattern">2. Command Pattern<a class="headerlink" href="#2-command-pattern" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// choose/command.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// choose/command.go</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Command</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nx">Options</span>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="p">}</span>
@@ -3633,7 +3663,7 @@
 </span></code></pre></div>
 <p><strong>Why:</strong> Each command is self-contained</p>
 <h4 id="3-bubbletea-pattern">3. Bubbletea Pattern<a class="headerlink" href="#3-bubbletea-pattern" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1">// choose/choose.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1">// choose/choose.go</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">model</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nx">index</span><span class="w">  </span><span class="kt">int</span>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nx">items</span><span class="w">  </span><span class="p">[]</span><span class="nx">item</span>
@@ -3668,7 +3698,7 @@
 <li>View: Render current state</li>
 </ul>
 <h4 id="4-internal-utilities">4. Internal Utilities<a class="headerlink" href="#4-internal-utilities" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1">// internal/stdin/stdin.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1">// internal/stdin/stdin.go</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">Read</span><span class="p">(</span><span class="nx">stripANSI</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="c1">// Read from stdin if available</span>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="c1">// Return empty string if TTY</span>
@@ -3747,7 +3777,7 @@
 <h2 id="recommendations-for-our-session-manager">Recommendations for Our Session Manager<a class="headerlink" href="#recommendations-for-our-session-manager" title="Permanent link">&para;</a></h2>
 <h3 id="1-architecture">1. Architecture<a class="headerlink" href="#1-architecture" title="Permanent link">&para;</a></h3>
 <p><strong>Adopt sesh's flat domain structure:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>menu/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>menu/
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>├── cmd/                    # Cobra commands
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>├── model/                  # Data structures
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>├── config/                 # TOML config
@@ -3765,7 +3795,7 @@
 </ul>
 <h3 id="2-dependency-injection">2. Dependency Injection<a class="headerlink" href="#2-dependency-injection" title="Permanent link">&para;</a></h3>
 <p><strong>Use sesh's interface + wrapper pattern:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1">// tmux/tmux.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1">// tmux/tmux.go</span>
 </span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Tmux</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="nx">ListSessions</span><span class="p">()</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">model</span><span class="p">.</span><span class="nx">Session</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
 </span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nx">NewSession</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
@@ -3803,14 +3833,14 @@
 <ol>
 <li><strong>Use mockery for generating mocks</strong></li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># .mockery.yaml</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># .mockery.yaml</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>with-expecter:<span class="w"> </span><span class="nb">true</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>all:<span class="w"> </span><span class="nb">true</span>
 </span></code></pre></div>
 <ol>
 <li><strong>Table-driven tests</strong></li>
 </ol>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestMenuFilter</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestMenuFilter</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="nx">tests</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">        </span><span class="nx">name</span><span class="w">     </span><span class="kt">string</span>
 </span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">        </span><span class="nx">input</span><span class="w">    </span><span class="kt">string</span>
@@ -3829,7 +3859,7 @@
 <ol>
 <li><strong>Integration tests separate</strong></li>
 </ol>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>menu_test/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>menu_test/
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>├── integration/
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>│   ├── tmux_test.go
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>│   └── menu_test.go
@@ -3837,7 +3867,7 @@
 </span></code></pre></div>
 <h3 id="4-configuration">4. Configuration<a class="headerlink" href="#4-configuration" title="Permanent link">&para;</a></h3>
 <p><strong>Use TOML with sesh's pattern:</strong></p>
-<div class="language-toml highlight"><span class="filename">TOML</span><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># ~/.config/menu/menu.toml</span>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># ~/.config/menu/menu.toml</span>
 </span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="k">[general]</span>
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="n">theme</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;rose-pine&quot;</span>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="n">default_shell</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;zsh&quot;</span>
@@ -3856,7 +3886,7 @@
 </span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a><span class="n">command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;nvim ~/.config/menu/menu.toml&quot;</span>
 </span></code></pre></div>
 <p><strong>Implementation:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// config/config.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// config/config.go</span>
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Config</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">    </span><span class="nx">General</span><span class="w">      </span><span class="nx">GeneralConfig</span><span class="w">    </span><span class="s">`toml:&quot;general&quot;`</span>
 </span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">    </span><span class="nx">Categories</span><span class="w">   </span><span class="p">[]</span><span class="nx">CategoryConfig</span><span class="w"> </span><span class="s">`toml:&quot;categories&quot;`</span>
@@ -3867,7 +3897,7 @@
 </span></code></pre></div>
 <h3 id="5-build-release">5. Build &amp; Release<a class="headerlink" href="#5-build-release" title="Permanent link">&para;</a></h3>
 <p><strong>Adopt sesh's GoReleaser setup:</strong></p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># .goreleaser.yaml</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># .goreleaser.yaml</span>
 </span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="nt">builds</span><span class="p">:</span>
 </span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">CGO_ENABLED=0</span><span class="p p-Indicator">]</span>
 </span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="w">    </span><span class="nt">goos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">linux</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">darwin</span><span class="p p-Indicator">]</span>
@@ -3898,7 +3928,7 @@
 <li>Harder to test</li>
 </ul>
 <p><strong>Example:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1">// menu/menu.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1">// menu/menu.go</span>
 </span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Model</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="w">    </span><span class="nx">items</span><span class="w">    </span><span class="p">[]</span><span class="nx">Item</span>
 </span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">    </span><span class="nx">selected</span><span class="w"> </span><span class="kt">int</span>
@@ -3919,7 +3949,7 @@
 </span><span id="__span-29-19"><a id="__codelineno-29-19" name="__codelineno-29-19" href="#__codelineno-29-19"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="7-package-organization">7. Package Organization<a class="headerlink" href="#7-package-organization" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>menu/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>menu/
 </span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>├── main.go                      # Entry point, version injection
 </span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>├── cmd/
 </span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>│   ├── root.go                  # Root command + DI
@@ -3951,7 +3981,7 @@
 <h2 id="anti-patterns-to-avoid">Anti-Patterns to Avoid<a class="headerlink" href="#anti-patterns-to-avoid" title="Permanent link">&para;</a></h2>
 <h3 id="1-god-objects">1. God Objects<a class="headerlink" href="#1-god-objects" title="Permanent link">&para;</a></h3>
 <p><strong>Bad:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1">// Everything in one App struct</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1">// Everything in one App struct</span>
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">App</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="w">    </span><span class="nx">Config</span><span class="w">      </span><span class="nx">Config</span>
 </span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="w">    </span><span class="nx">Tmux</span><span class="w">        </span><span class="o">*</span><span class="nx">Tmux</span>
@@ -3961,7 +3991,7 @@
 </span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Good:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1">// Focused structs with clear responsibilities</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1">// Focused structs with clear responsibilities</span>
 </span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MenuUI</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="w">    </span><span class="nx">items</span><span class="w">   </span><span class="p">[]</span><span class="nx">Item</span>
 </span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="w">    </span><span class="nx">theme</span><span class="w">   </span><span class="nx">Theme</span>
@@ -3974,11 +4004,11 @@
 </span></code></pre></div>
 <h3 id="2-circular-dependencies">2. Circular Dependencies<a class="headerlink" href="#2-circular-dependencies" title="Permanent link">&para;</a></h3>
 <p><strong>Bad:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>tmux/ imports menu/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>tmux/ imports menu/
 </span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>menu/ imports tmux/  ← circular!
 </span></code></pre></div>
 <p><strong>Good:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>model/           # Shared types
+<div class="language-text highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>model/           # Shared types
 </span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>  ├── item.go
 </span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>  └── session.go
 </span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>
@@ -3990,19 +4020,19 @@
 </span></code></pre></div>
 <h3 id="3-over-mocking">3. Over-mocking<a class="headerlink" href="#3-over-mocking" title="Permanent link">&para;</a></h3>
 <p><strong>Bad:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1">// Mocking everything, even simple functions</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1">// Mocking everything, even simple functions</span>
 </span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="nx">mockStringTrimmer</span><span class="p">.</span><span class="nx">On</span><span class="p">(</span><span class="s">&quot;Trim&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot; foo &quot;</span><span class="p">).</span><span class="nx">Return</span><span class="p">(</span><span class="s">&quot;foo&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Good:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="c1">// Mock external dependencies (tmux, exec)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="c1">// Mock external dependencies (tmux, exec)</span>
 </span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="c1">// Test pure functions directly</span>
 </span></code></pre></div>
 <h3 id="4-magic-config-loading">4. Magic Config Loading<a class="headerlink" href="#4-magic-config-loading" title="Permanent link">&para;</a></h3>
 <p><strong>Bad:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="c1">// Config loaded from 10 different locations with complex merging</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="c1">// Config loaded from 10 different locations with complex merging</span>
 </span></code></pre></div>
 <p><strong>Good:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1">// Single config file: ~/.config/menu/menu.toml</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1">// Single config file: ~/.config/menu/menu.toml</span>
 </span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="c1">// Optional imports for splitting configs</span>
 </span></code></pre></div>
 <h2 id="key-learnings">Key Learnings<a class="headerlink" href="#key-learnings" title="Permanent link">&para;</a></h2>

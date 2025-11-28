@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="session-manager-sess">Session Manager (sess)<a class="headerlink" href="#session-manager-sess" title="Permanent link">&para;</a></h1>
 <p>Fast tmux session management through a single command. Switch between projects, create new workspaces, or jump back to your previous session without typing complex tmux commands.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive selection</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive selection</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>sess<span class="w"> </span>&lt;name&gt;<span class="w">              </span><span class="c1"># Create or switch to session</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>sess<span class="w"> </span>last<span class="w">                </span><span class="c1"># Switch to last session</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>sess<span class="w"> </span>list<span class="w">                </span><span class="c1"># List all sessions</span>
@@ -3203,7 +3233,7 @@
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
 <h3 id="interactive-selection">Interactive Selection<a class="headerlink" href="#interactive-selection" title="Permanent link">&para;</a></h3>
 <p>Launch gum-based picker showing all available sessions:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sess
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sess
 </span></code></pre></div>
 <p>The picker shows three types with visual indicators:</p>
 <ul>
@@ -3214,18 +3244,18 @@
 <p>Use arrow keys to navigate, Enter to select. Sess handles creation, switching, or attaching automatically based on context.</p>
 <h3 id="direct-session-access">Direct Session Access<a class="headerlink" href="#direct-session-access" title="Permanent link">&para;</a></h3>
 <p>Switch to or create a session by name:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sess<span class="w"> </span>dotfiles<span class="w">           </span><span class="c1"># Jump to dotfiles session</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sess<span class="w"> </span>dotfiles<span class="w">           </span><span class="c1"># Jump to dotfiles session</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sess<span class="w"> </span>my-project<span class="w">         </span><span class="c1"># Create or switch to my-project</span>
 </span></code></pre></div>
 <p>If the session exists, sess switches to it. If it doesn't exist, sess checks if it's a default session and creates it in the configured directory. If it's not a default session, sess creates a simple session in the current directory.</p>
 <h3 id="list-sessions">List Sessions<a class="headerlink" href="#list-sessions" title="Permanent link">&para;</a></h3>
 <p>See all available sessions with status:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sess<span class="w"> </span>list
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sess<span class="w"> </span>list
 </span></code></pre></div>
 <p>Shows active sessions (<code>●</code>), tmuxinator projects (<code>⚙</code>), and default sessions (<code>○</code>).</p>
 <h3 id="switch-to-last-session">Switch to Last Session<a class="headerlink" href="#switch-to-last-session" title="Permanent link">&para;</a></h3>
 <p>Jump back to previously active session:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sess<span class="w"> </span>last
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sess<span class="w"> </span>last
 </span></code></pre></div>
 <p>Perfect for alternating between two projects.</p>
 <h2 id="default-sessions">Default Sessions<a class="headerlink" href="#default-sessions" title="Permanent link">&para;</a></h2>
@@ -3237,7 +3267,7 @@
 </ul>
 <p>Sess automatically detects your platform and loads the appropriate file.</p>
 <h3 id="configuration-format">Configuration Format<a class="headerlink" href="#configuration-format" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">defaults</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">defaults</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dotfiles</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/dotfiles</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Dotfiles development</span>
@@ -3253,7 +3283,7 @@
 <p>When <code>tmuxinator_project</code> is null, sess creates a single-window session in the specified directory. Great for straightforward projects needing just an editor and terminal.</p>
 <h3 id="tmuxinator-projects">Tmuxinator Projects<a class="headerlink" href="#tmuxinator-projects" title="Permanent link">&para;</a></h3>
 <p>When <code>tmuxinator_project</code> is set, sess starts that tmuxinator project for complex layouts. Create tmuxinator projects at <code>~/.config/tmuxinator/project-name.yml</code>:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ichrisbirch-development</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ichrisbirch-development</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/code/ichrisbirch</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">windows</span><span class="p">:</span>
@@ -3288,33 +3318,33 @@
 <p>Binary installs to <code>~/go/bin/sess</code>.</p>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Start your day:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive picker</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive picker</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Select main project session</span>
 </span></code></pre></div>
 <p>Or jump directly:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>sess<span class="w"> </span>dotfiles
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>sess<span class="w"> </span>dotfiles
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>sess<span class="w"> </span>ichrisbirch-dev
 </span></code></pre></div>
 <p>Switch between projects:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sess<span class="w"> </span>other-project<span class="w">      </span><span class="c1"># Switch to another</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sess<span class="w"> </span>other-project<span class="w">      </span><span class="c1"># Switch to another</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>sess<span class="w"> </span>last<span class="w">               </span><span class="c1"># Jump back</span>
 </span></code></pre></div>
 <p>Create quick sessions for one-off tasks:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/code/new-project
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/code/new-project
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>sess<span class="w"> </span>temp-work<span class="w">          </span><span class="c1"># Creates session in current directory</span>
 </span></code></pre></div>
 <p>Check what's running:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sess<span class="w"> </span>list<span class="w">               </span><span class="c1"># Overview of all sessions</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sess<span class="w"> </span>list<span class="w">               </span><span class="c1"># Overview of all sessions</span>
 </span></code></pre></div>
 <h2 id="integration-with-tmux">Integration with Tmux<a class="headerlink" href="#integration-with-tmux" title="Permanent link">&para;</a></h2>
 <p>Bind sess to a tmux key for instant access. Many setups override the default session picker (prefix + s) with sess:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># In ~/.config/tmux/tmux.conf</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># In ~/.config/tmux/tmux.conf</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>bind-key<span class="w"> </span>s<span class="w"> </span>run-shell<span class="w"> </span><span class="s2">&quot;tmux neww sess&quot;</span>
 </span></code></pre></div>
 <p>Press prefix + s to launch the picker and switch immediately.</p>
 <h2 id="composition-with-other-tools">Composition with Other Tools<a class="headerlink" href="#composition-with-other-tools" title="Permanent link">&para;</a></h2>
 <p>Sess outputs clean data for piping:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Custom selection with fzf</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Custom selection with fzf</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Extract session names</span>
@@ -3328,7 +3358,7 @@
 </span></code></pre></div>
 <h2 id="building-from-source">Building from Source<a class="headerlink" href="#building-from-source" title="Permanent link">&para;</a></h2>
 <p>Build and install from source:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/sess
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/sess
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>task<span class="w"> </span>build<span class="w">    </span><span class="c1"># Creates local binary</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>task<span class="w"> </span>install<span class="w">  </span><span class="c1"># Installs to ~/go/bin/sess</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">     </span><span class="c1"># Run tests</span>

@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3147,7 +3177,7 @@
 <h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h2>
 <h3 id="core-function">Core Function<a class="headerlink" href="#core-function" title="Permanent link">&para;</a></h3>
 <p>The <code>renderCodeBlock</code> function handles all syntax highlighting:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// renderCodeBlock renders a code block with syntax highlighting</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// renderCodeBlock renders a code block with syntax highlighting</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">renderCodeBlock</span><span class="p">(</span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="nx">language</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="c1">// Create markdown code block</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">markdown</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;```%s\n%s\n```&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">language</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">)</span>
@@ -3183,7 +3213,7 @@
 <h3 id="integration-points">Integration Points<a class="headerlink" href="#integration-points" title="Permanent link">&para;</a></h3>
 <h4 id="1-command-highlighting">1. Command Highlighting<a class="headerlink" href="#1-command-highlighting" title="Permanent link">&para;</a></h4>
 <p>In detail view, commands are highlighted with bash syntax:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// Command if executable</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// Command if executable</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">item</span><span class="p">.</span><span class="nx">Executable</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">item</span><span class="p">.</span><span class="nx">Command</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">cmdStyle</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">lipgloss</span><span class="p">.</span><span class="nx">NewStyle</span><span class="p">().</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="nx">Foreground</span><span class="p">(</span><span class="nx">lipgloss</span><span class="p">.</span><span class="nx">Color</span><span class="p">(</span><span class="s">&quot;46&quot;</span><span class="p">)).</span>
@@ -3198,7 +3228,7 @@
 </span></code></pre></div>
 <h4 id="2-example-highlighting">2. Example Highlighting<a class="headerlink" href="#2-example-highlighting" title="Permanent link">&para;</a></h4>
 <p>Command examples are also highlighted:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Examples</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Examples</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">examples</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">details</span><span class="p">[</span><span class="s">&quot;examples&quot;</span><span class="p">].([]</span><span class="kd">interface</span><span class="p">{});</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">examples</span><span class="p">)</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">content</span><span class="p">.</span><span class="nx">WriteString</span><span class="p">(</span><span class="s">&quot;Examples:\n&quot;</span><span class="p">)</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">ex</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">examples</span><span class="w"> </span><span class="p">{</span>
@@ -3218,7 +3248,7 @@
 <h2 id="go-language-features">Go Language Features<a class="headerlink" href="#go-language-features" title="Permanent link">&para;</a></h2>
 <h3 id="1-markdown-based-rendering">1. Markdown-Based Rendering<a class="headerlink" href="#1-markdown-based-rendering" title="Permanent link">&para;</a></h3>
 <p>Glamour renders markdown, so we create markdown code blocks:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Convert code to markdown code block</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Convert code to markdown code block</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nx">markdown</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;```%s\n%s\n```&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">language</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Supported languages:</strong></p>
@@ -3234,7 +3264,7 @@
 </ul>
 <h3 id="2-error-handling-with-fallback">2. Error Handling with Fallback<a class="headerlink" href="#2-error-handling-with-fallback" title="Permanent link">&para;</a></h3>
 <p>The implementation uses a fallback pattern for resilience:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Try to create renderer</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Try to create renderer</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">glamour</span><span class="p">.</span><span class="nx">NewTermRenderer</span><span class="p">(</span><span class="nx">options</span><span class="o">...</span><span class="p">)</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">fallbackRender</span><span class="p">(</span><span class="nx">code</span><span class="p">)</span><span class="w">  </span><span class="c1">// Fallback on error</span>
@@ -3256,13 +3286,13 @@
 </ul>
 <h3 id="3-functional-options-pattern">3. Functional Options Pattern<a class="headerlink" href="#3-functional-options-pattern" title="Permanent link">&para;</a></h3>
 <p>Glamour uses functional options for configuration:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">glamour</span><span class="p">.</span><span class="nx">NewTermRenderer</span><span class="p">(</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">glamour</span><span class="p">.</span><span class="nx">NewTermRenderer</span><span class="p">(</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">glamour</span><span class="p">.</span><span class="nx">WithStylePath</span><span class="p">(</span><span class="s">&quot;dark&quot;</span><span class="p">),</span><span class="w">     </span><span class="c1">// Option 1</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">glamour</span><span class="p">.</span><span class="nx">WithWordWrap</span><span class="p">(</span><span class="mi">120</span><span class="p">),</span><span class="w">         </span><span class="c1">// Option 2</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Pattern explanation:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Option function type</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Option function type</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Option</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="o">*</span><span class="nx">Renderer</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1">// Option constructors</span>
@@ -3300,7 +3330,7 @@
 </ul>
 <h3 id="4-type-assertions-for-interface-handling">4. Type Assertions for Interface Handling<a class="headerlink" href="#4-type-assertions-for-interface-handling" title="Permanent link">&para;</a></h3>
 <p>When extracting examples from the Details map:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">examples</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">details</span><span class="p">[</span><span class="s">&quot;examples&quot;</span><span class="p">].([]</span><span class="kd">interface</span><span class="p">{});</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">examples</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">details</span><span class="p">[</span><span class="s">&quot;examples&quot;</span><span class="p">].([]</span><span class="kd">interface</span><span class="p">{});</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="c1">// Type assertion successful - examples is []interface{}</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">ex</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">examples</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">exMap</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">ex</span><span class="p">.(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{});</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
@@ -3314,7 +3344,7 @@
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Pattern: "comma ok" idiom</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">value</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">interfaceValue</span><span class="p">.(</span><span class="nx">ConcreteType</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">value</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">interfaceValue</span><span class="p">.(</span><span class="nx">ConcreteType</span><span class="p">)</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="c1">// Type assertion succeeded, use value</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
@@ -3329,10 +3359,10 @@
 </ul>
 <h2 id="visual-examples">Visual Examples<a class="headerlink" href="#visual-examples" title="Permanent link">&para;</a></h2>
 <h3 id="before-no-syntax-highlighting">Before (No Syntax Highlighting)<a class="headerlink" href="#before-no-syntax-highlighting" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Command: ls -la
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Command: ls -la
 </span></code></pre></div>
 <h3 id="after-with-syntax-highlighting">After (With Syntax Highlighting)<a class="headerlink" href="#after-with-syntax-highlighting" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Command:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Command:
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>┌─────────────────────────────────────┐
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>│ ls -la                              │
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>│     ^                               │
@@ -3348,7 +3378,7 @@
 </ul>
 <h3 id="complex-example">Complex Example<a class="headerlink" href="#complex-example" title="Permanent link">&para;</a></h3>
 <p><strong>Git command with syntax highlighting:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>--graph<span class="w"> </span>--decorate<span class="w"> </span>--all
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>--graph<span class="w"> </span>--decorate<span class="w"> </span>--all
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>│<span class="w">   </span>│<span class="w">   </span>│<span class="w">         </span>│<span class="w">       </span>│<span class="w">          </span>└─<span class="w"> </span>option<span class="w"> </span><span class="o">(</span>yellow<span class="o">)</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>│<span class="w">   </span>│<span class="w">   </span>│<span class="w">         </span>│<span class="w">       </span>└─<span class="w"> </span>option<span class="w"> </span><span class="o">(</span>yellow<span class="o">)</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>│<span class="w">   </span>│<span class="w">   </span>│<span class="w">         </span>└─<span class="w"> </span>option<span class="w"> </span><span class="o">(</span>yellow<span class="o">)</span>
@@ -3359,7 +3389,7 @@
 <h2 id="styling">Styling<a class="headerlink" href="#styling" title="Permanent link">&para;</a></h2>
 <h3 id="dark-theme">Dark Theme<a class="headerlink" href="#dark-theme" title="Permanent link">&para;</a></h3>
 <p>The implementation uses the "dark" theme optimized for terminal displays:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">glamour</span><span class="p">.</span><span class="nx">WithStylePath</span><span class="p">(</span><span class="s">&quot;dark&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">glamour</span><span class="p">.</span><span class="nx">WithStylePath</span><span class="p">(</span><span class="s">&quot;dark&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="available-styles">Available Styles<a class="headerlink" href="#available-styles" title="Permanent link">&para;</a></h3>
 <p>Glamour includes several built-in styles:</p>
@@ -3372,13 +3402,13 @@
 </ul>
 <h3 id="word-wrapping">Word Wrapping<a class="headerlink" href="#word-wrapping" title="Permanent link">&para;</a></h3>
 <p>Commands are wrapped at 120 characters:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nx">glamour</span><span class="p">.</span><span class="nx">WithWordWrap</span><span class="p">(</span><span class="mi">120</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nx">glamour</span><span class="p">.</span><span class="nx">WithWordWrap</span><span class="p">(</span><span class="mi">120</span><span class="p">)</span>
 </span></code></pre></div>
 <p>This ensures long commands don't overflow the terminal width.</p>
 <h2 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h2>
 <h3 id="renderer-caching">Renderer Caching<a class="headerlink" href="#renderer-caching" title="Permanent link">&para;</a></h3>
 <p>Currently, a new renderer is created for each code block. This could be optimized:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// Create renderer once at startup</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// Create renderer once at startup</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="kd">var</span><span class="w"> </span><span class="nx">renderer</span><span class="w"> </span><span class="o">*</span><span class="nx">glamour</span><span class="p">.</span><span class="nx">TermRenderer</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="kd">func</span><span class="w"> </span><span class="nx">init</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
@@ -3412,10 +3442,10 @@
 <p>For an interactive TUI, this is imperceptible to users.</p>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <h3 id="libraries">Libraries<a class="headerlink" href="#libraries" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/charmbracelet/glamour&quot;</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/charmbracelet/glamour&quot;</span>
 </span></code></pre></div>
 <p><strong>go.mod entry:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>github.com/charmbracelet/glamour v0.10.0
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>github.com/charmbracelet/glamour v0.10.0
 </span></code></pre></div>
 <h3 id="transitive-dependencies">Transitive Dependencies<a class="headerlink" href="#transitive-dependencies" title="Permanent link">&para;</a></h3>
 <p>Glamour brings in:</p>
@@ -3436,12 +3466,12 @@
 <p>Fallback: Plain text rendering without colors</p>
 <h3 id="2-language-detection">2. Language Detection<a class="headerlink" href="#2-language-detection" title="Permanent link">&para;</a></h3>
 <p>Currently hardcoded to "bash" for all commands:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nx">highlighted</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">renderCodeBlock</span><span class="p">(</span><span class="nx">item</span><span class="p">.</span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bash&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nx">highlighted</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">renderCodeBlock</span><span class="p">(</span><span class="nx">item</span><span class="p">.</span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bash&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Could be enhanced to detect language from context or file extension.</p>
 <h3 id="3-style-customization">3. Style Customization<a class="headerlink" href="#3-style-customization" title="Permanent link">&para;</a></h3>
 <p>Style is hardcoded to "dark". Could be made configurable:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nx">style</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;MENU_HIGHLIGHT_STYLE&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nx">style</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;MENU_HIGHLIGHT_STYLE&quot;</span><span class="p">)</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">style</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nx">style</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;dark&quot;</span>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="p">}</span>
@@ -3449,7 +3479,7 @@
 </span></code></pre></div>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <h3 id="manual-testing">Manual Testing<a class="headerlink" href="#manual-testing" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Run menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Run menu</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>go<span class="w"> </span>run<span class="w"> </span>cmd/menu/main.go
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Navigate to a command (e.g., &quot;ls&quot;)</span>
@@ -3458,13 +3488,13 @@
 </span></code></pre></div>
 <h3 id="fallback-testing">Fallback Testing<a class="headerlink" href="#fallback-testing" title="Permanent link">&para;</a></h3>
 <p>Test fallback rendering by temporarily breaking glamour:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1">// Force fallback by returning error</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1">// Force fallback by returning error</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">renderCodeBlock</span><span class="p">(</span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="nx">language</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">fallbackRender</span><span class="p">(</span><span class="nx">code</span><span class="p">)</span><span class="w">  </span><span class="c1">// Skip glamour entirely</span>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="unit-testing">Unit Testing<a class="headerlink" href="#unit-testing" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestRenderCodeBlock</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestRenderCodeBlock</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span><span class="nx">code</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">`ls -la`</span>
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="nx">result</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">renderCodeBlock</span><span class="p">(</span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bash&quot;</span><span class="p">)</span>
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
@@ -3482,7 +3512,7 @@
 <h2 id="future-enhancements">Future Enhancements<a class="headerlink" href="#future-enhancements" title="Permanent link">&para;</a></h2>
 <h3 id="1-language-detection">1. Language Detection<a class="headerlink" href="#1-language-detection" title="Permanent link">&para;</a></h3>
 <p>Automatically detect language from context:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">detectLanguage</span><span class="p">(</span><span class="nx">code</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="w"> </span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">detectLanguage</span><span class="p">(</span><span class="nx">code</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">context</span><span class="w"> </span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">    </span><span class="c1">// Check for shebang</span>
 </span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">HasPrefix</span><span class="p">(</span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;#!/bin/bash&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;bash&quot;</span>
@@ -3502,20 +3532,20 @@
 </span></code></pre></div>
 <h3 id="2-custom-themes">2. Custom Themes<a class="headerlink" href="#2-custom-themes" title="Permanent link">&para;</a></h3>
 <p>Allow users to specify custom Chroma styles:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1">// ~/.config/menu/config.yml</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1">// ~/.config/menu/config.yml</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nx">syntax_highlighting</span><span class="p">:</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nx">style</span><span class="p">:</span><span class="w"> </span><span class="nx">dracula</span>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nx">word_wrap</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span>
 </span></code></pre></div>
 <h3 id="3-diff-highlighting">3. Diff Highlighting<a class="headerlink" href="#3-diff-highlighting" title="Permanent link">&para;</a></h3>
 <p>For git workflows, highlight diffs:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">Contains</span><span class="p">(</span><span class="nx">command</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;git diff&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">Contains</span><span class="p">(</span><span class="nx">command</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;git diff&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="nx">highlighted</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">renderCodeBlock</span><span class="p">(</span><span class="nx">output</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;diff&quot;</span><span class="p">)</span>
 </span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="4-interactive-examples">4. Interactive Examples<a class="headerlink" href="#4-interactive-examples" title="Permanent link">&para;</a></h3>
 <p>Make examples executable directly:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>Examples:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>Examples:
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>┌─────────────────────────────────┐
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>│ git log --oneline              │  Press Enter to execute
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>└─────────────────────────────────┘

@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3163,7 +3193,7 @@
 - Functions - Shell/fzf workflows
 - Aliases - Git shortcuts</p>
 <p><strong>Organizing by Type (Bad):</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Bookmarks/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Bookmarks/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── neovim-tutorial.md
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── docker-cheatsheet.md
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└── aws-lambda-guide.md
@@ -3174,7 +3204,7 @@
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>└── aws-study-guide.md
 </span></code></pre></div></p>
 <p><strong>Organizing by Function (Good):</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Learning: Neovim/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Learning: Neovim/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── tutorials (bookmarks)
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── study notes
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── workflows &amp; keybindings
@@ -3224,7 +3254,7 @@
 - Could add GitHub workflow to menu</p>
 <h3 id="cli-knowledge-management-tools">CLI Knowledge Management Tools<a class="headerlink" href="#cli-knowledge-management-tools" title="Permanent link">&para;</a></h3>
 <p><strong>nb</strong> (Highly Recommended - Fits Your Style):
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Plain text, markdown-based</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Plain text, markdown-based</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>nb<span class="w">                          </span><span class="c1"># List notes</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>nb<span class="w"> </span>add<span class="w">                      </span><span class="c1"># Create note</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>nb<span class="w"> </span>bookmark<span class="w"> </span>&lt;url&gt;<span class="w">           </span><span class="c1"># Save bookmark (downloads &amp; cleans HTML → markdown)</span>
@@ -3247,21 +3277,21 @@
 - Can integrate with Obsidian vault
 - Single portable script</p>
 <p><strong>buku</strong> (For Bookmarks):
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>buku<span class="w"> </span>-a<span class="w"> </span>&lt;url&gt;<span class="w"> </span>&lt;tags&gt;<span class="w">        </span><span class="c1"># Add bookmark</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>buku<span class="w"> </span>-a<span class="w"> </span>&lt;url&gt;<span class="w"> </span>&lt;tags&gt;<span class="w">        </span><span class="c1"># Add bookmark</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>buku<span class="w"> </span>-s<span class="w"> </span>&lt;tag&gt;<span class="w">               </span><span class="c1"># Search by tag</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>buku<span class="w"> </span>-p<span class="w"> </span>-f<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w">         </span><span class="c1"># Fuzzy search</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>buku<span class="w"> </span>--suggest<span class="w">              </span><span class="c1"># Get tag suggestions</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>buku<span class="w"> </span>-p<span class="w"> </span>--np<span class="w">                </span><span class="c1"># Print all, no prompts</span>
 </span></code></pre></div></p>
 <p><strong>fzf integration:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Fuzzy search and open</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Fuzzy search and open</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>firefox<span class="w"> </span><span class="k">$(</span>buku<span class="w"> </span>-p<span class="w"> </span>-f<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>buku<span class="w"> </span>-p<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>http<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
 </span></code></pre></div></p>
 <hr />
 <h2 id="proposed-architecture">Proposed Architecture<a class="headerlink" href="#proposed-architecture" title="Permanent link">&para;</a></h2>
 <h3 id="function-based-categories">Function-Based Categories<a class="headerlink" href="#function-based-categories" title="Permanent link">&para;</a></h3>
 <p>Instead of "Aliases", "Bookmarks", "Notes", organize by purpose:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">categories</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">categories</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="c1"># Quick Reference (things I forget)</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Shell Commands</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">purpose</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reference</span>
@@ -3307,7 +3337,7 @@
 </span><span id="__span-5-44"><a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a><span class="w">    </span><span class="nt">includes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">deployment</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">setup</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">troubleshooting</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <h3 id="registry-schema-enhanced">Registry Schema (Enhanced)<a class="headerlink" href="#registry-schema-enhanced" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Shell command with examples</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Shell command with examples</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">commands</span><span class="p">:</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fcd</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">function</span>
@@ -3389,7 +3419,7 @@
 </span><span id="__span-6-80"><a id="__codelineno-6-80" name="__codelineno-6-80" href="#__codelineno-6-80"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/Documents/notes/dev/dotfiles-architecture.md&quot;</span>
 </span></code></pre></div>
 <h3 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>~/.config/menu/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>~/.config/menu/
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>├── config.yml                    # Main config
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>├── categories.yml                # Category definitions
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>├── registry/
@@ -3422,7 +3452,7 @@
 <h2 id="component-design">Component Design<a class="headerlink" href="#component-design" title="Permanent link">&para;</a></h2>
 <h3 id="1-main-menu-menu">1. Main Menu (<code>menu</code>)<a class="headerlink" href="#1-main-menu-menu" title="Permanent link">&para;</a></h3>
 <p><strong>Navigation:</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Universal Menu
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Universal Menu
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>─────────────────────────────────
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>Quick Access
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  s → Sessions
@@ -3456,7 +3486,7 @@
 - etc.</p>
 <h3 id="2-session-manager-sess">2. Session Manager (<code>sess</code>)<a class="headerlink" href="#2-session-manager-sess" title="Permanent link">&para;</a></h3>
 <p><strong>Usage:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sess<span class="w">                    </span><span class="c1"># List all sessions (gum chooser)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sess<span class="w">                    </span><span class="c1"># List all sessions (gum chooser)</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>sess<span class="w"> </span>dotfiles<span class="w">          </span><span class="c1"># Create or switch to &quot;dotfiles&quot; session</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>sess<span class="w"> </span>last<span class="w">              </span><span class="c1"># Switch to last session</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>sess<span class="w"> </span>list<span class="w">              </span><span class="c1"># List with details</span>
@@ -3469,7 +3499,7 @@
 - Can launch tmuxinator projects
 - Platform-specific defaults</p>
 <p><strong>Config:</strong>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># ~/.config/menu/sessions/sessions-macos.yml</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># ~/.config/menu/sessions/sessions-macos.yml</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">defaults</span><span class="p">:</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dotfiles</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/dotfiles</span>
@@ -3487,7 +3517,7 @@
 </span></code></pre></div></p>
 <h3 id="3-learning-manager-learn">3. Learning Manager (<code>learn</code>)<a class="headerlink" href="#3-learning-manager-learn" title="Permanent link">&para;</a></h3>
 <p><strong>Usage:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>learn<span class="w">                           </span><span class="c1"># Browse learning topics (gum)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>learn<span class="w">                           </span><span class="c1"># Browse learning topics (gum)</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>learn<span class="w"> </span>neovim<span class="w">                    </span><span class="c1"># Show all neovim resources</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>learn<span class="w"> </span>add<span class="w"> </span>docker<span class="w"> </span><span class="s2">&quot;Docker basics&quot;</span><span class="w">  </span><span class="c1"># Add new learning topic</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>learn<span class="w"> </span>bookmark<span class="w"> </span>&lt;url&gt;<span class="w"> </span>neovim<span class="w">    </span><span class="c1"># Add bookmark to topic</span>
@@ -3499,7 +3529,7 @@
 - Uses Obsidian for notes
 - Links them together in registry</p>
 <p><strong>Example topic view:</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Learning: Neovim Quickfix
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Learning: Neovim Quickfix
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>─────────────────────────────────
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Status: Active
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
@@ -3524,7 +3554,7 @@
 </span></code></pre></div></p>
 <h3 id="4-enhanced-notes-script">4. Enhanced Notes Script<a class="headerlink" href="#4-enhanced-notes-script" title="Permanent link">&para;</a></h3>
 <p><strong>Integration with Obsidian:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>notes<span class="w">                  </span><span class="c1"># Open notes menu (gum)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>notes<span class="w">                  </span><span class="c1"># Open notes menu (gum)</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>notes<span class="w"> </span>new<span class="w">              </span><span class="c1"># New note from template</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>notes<span class="w"> </span>workflow<span class="w">         </span><span class="c1"># New workflow note</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>notes<span class="w"> </span>reference<span class="w">        </span><span class="c1"># New reference note</span>
@@ -3533,7 +3563,7 @@
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>notes<span class="w"> </span>vim<span class="w">              </span><span class="c1"># Quick access to vim notes</span>
 </span></code></pre></div></p>
 <p><strong>Obsidian Templates:</strong>
-<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="gh"># templates/workflow.md</span>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="gh"># templates/workflow.md</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>---
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>tags: [workflow, dev]
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="gu">created: {{date}}</span>
@@ -3559,7 +3589,7 @@
 <h3 id="5-neovim-workflows-integration">5. Neovim Workflows Integration<a class="headerlink" href="#5-neovim-workflows-integration" title="Permanent link">&para;</a></h3>
 <p><strong>Extend existing workflows.lua:</strong></p>
 <p>Add to menu registry:
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">neovim_workflows</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">neovim_workflows</span><span class="p">:</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Quickfix List Operations</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">workflows.lua</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Neovim Workflows</span>
@@ -3569,7 +3599,7 @@
 </span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;:cfdo</span><span class="nv"> </span><span class="s">&lt;cmd&gt;</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">Run</span><span class="nv"> </span><span class="s">on</span><span class="nv"> </span><span class="s">all&quot;</span>
 </span></code></pre></div></p>
 <p><strong>New telescope picker in menu:</strong>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">-- Accessible from menu</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">-- Accessible from menu</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="p">:</span><span class="nv">Telescope</span><span class="w"> </span><span class="nv">workflows</span><span class="w">       </span><span class="c1">-- Browse by category</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="p">:</span><span class="py">Telescope</span><span class="w"> </span><span class="nv">all_keymaps</span><span class="w">     </span><span class="c1">-- Search all keybindings</span>
 </span></code></pre></div></p>
@@ -3647,7 +3677,7 @@
 <h3 id="scenario-1-i-forget-how-to-use-quickfix-lists">Scenario 1: "I forget how to use quickfix lists"<a class="headerlink" href="#scenario-1-i-forget-how-to-use-quickfix-lists" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong> Google it, find tutorial, maybe take notes, forget again</p>
 <p><strong>After:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># In terminal</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># In terminal</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>prefix<span class="w"> </span>+<span class="w"> </span>m<span class="w">              </span><span class="c1"># Open menu</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>v<span class="w">                       </span><span class="c1"># Vim workflows</span>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="o">[</span><span class="k">select</span><span class="w"> </span><span class="s2">&quot;Quickfix&quot;</span><span class="o">]</span><span class="w">     </span><span class="c1"># See everything:</span>
@@ -3659,7 +3689,7 @@
 <h3 id="scenario-2-i-want-to-learn-docker-compose">Scenario 2: "I want to learn Docker Compose"<a class="headerlink" href="#scenario-2-i-want-to-learn-docker-compose" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong> Bookmarks scattered, notes somewhere, no clear plan</p>
 <p><strong>After:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>learn<span class="w"> </span>docker<span class="w">            </span><span class="c1"># See learning topic with:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>learn<span class="w"> </span>docker<span class="w">            </span><span class="c1"># See learning topic with:</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">                        </span><span class="c1"># - Bookmarked tutorials</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">                        </span><span class="c1"># - Your study notes</span>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">                        </span><span class="c1"># - Practice exercises</span>
@@ -3672,7 +3702,7 @@
 <h3 id="scenario-3-switch-to-my-dev-session">Scenario 3: "Switch to my dev session"<a class="headerlink" href="#scenario-3-switch-to-my-dev-session" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong> <code>tmux attach -t ichrisbirch</code> or complex sesh command</p>
 <p><strong>After:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>sess<span class="w">                    </span><span class="c1"># Gum list of all sessions</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>sess<span class="w">                    </span><span class="c1"># Gum list of all sessions</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="c1"># OR</span>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>sess<span class="w"> </span>ichrisbirch<span class="w">       </span><span class="c1"># Direct switch</span>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># OR</span>
@@ -3681,7 +3711,7 @@
 <h3 id="scenario-4-whats-that-git-command-for-interactive-staging">Scenario 4: "What's that git command for interactive staging?"<a class="headerlink" href="#scenario-4-whats-that-git-command-for-interactive-staging" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong> Google or try to remember forgit</p>
 <p><strong>After:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>prefix<span class="w"> </span>+<span class="w"> </span>m<span class="w">             </span><span class="c1"># Open menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>prefix<span class="w"> </span>+<span class="w"> </span>m<span class="w">             </span><span class="c1"># Open menu</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>g<span class="w">                      </span><span class="c1"># Git workflows</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="o">[</span><span class="nb">type</span><span class="w"> </span><span class="s2">&quot;stag&quot;</span><span class="o">]</span><span class="w">         </span><span class="c1"># Fuzzy search</span>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Shows: ga - forgit interactive git add</span>

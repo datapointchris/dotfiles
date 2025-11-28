@@ -1,0 +1,3923 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/archive/brew-bundle-cleanup-analysis/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Homebrew Bundle Cleanup Analysis - Dotfiles</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1%207.775V2.75C1%201.784%201.784%201%202.75%201h5.025c.464%200%20.91.184%201.238.513l6.25%206.25a1.75%201.75%200%200%201%200%202.474l-5.026%205.026a1.75%201.75%200%200%201-2.474%200l-6.25-6.25A1.75%201.75%200%200%201%201%207.775m1.5%200c0%20.066.026.13.073.177l6.25%206.25a.25.25%200%200%200%20.354%200l5.025-5.025a.25.25%200%200%200%200-.354l-6.25-6.25a.25.25%200%200%200-.177-.073H2.75a.25.25%200%200%200-.25.25ZM6%205a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E');--md-admonition-icon--abstract:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.5%201.75v11.5c0%20.138.112.25.25.25h3.17a.75.75%200%200%201%200%201.5H2.75A1.75%201.75%200%200%201%201%2013.25V1.75C1%20.784%201.784%200%202.75%200h8.5C12.216%200%2013%20.784%2013%201.75v7.736a.75.75%200%200%201-1.5%200V1.75a.25.25%200%200%200-.25-.25h-8.5a.25.25%200%200%200-.25.25m13.274%209.537zl-4.557%204.45a.75.75%200%200%201-1.055-.008l-1.943-1.95a.75.75%200%200%201%201.062-1.058l1.419%201.425%204.026-3.932a.75.75%200%201%201%201.048%201.074M4.75%204h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M4%207.75A.75.75%200%200%201%204.75%207h2a.75.75%200%200%201%200%201.5h-2A.75.75%200%200%201%204%207.75%22/%3E%3C/svg%3E');--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.5%207.75A.75.75%200%200%201%207.25%207h1a.75.75%200%200%201%20.75.75v2.75h.25a.75.75%200%200%201%200%201.5h-2a.75.75%200%200%201%200-1.5h.25v-2h-.25a.75.75%200%200%201-.75-.75M8%206a1%201%200%201%201%200-2%201%201%200%200%201%200%202%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M8%201.5c-2.363%200-4%201.69-4%203.75%200%20.984.424%201.625.984%202.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621%201.49a.75.75%200%200%201-1.484.211c-.04-.282-.163-.547-.37-.847a9%209%200%200%200-.542-.68q-.126-.149-.268-.32C3.201%207.75%202.5%206.766%202.5%205.25%202.5%202.31%204.863%200%208%200s5.5%202.31%205.5%205.25c0%201.516-.701%202.5-1.328%203.259q-.142.172-.268.319c-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751%200%200%201-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848q.113-.133.213-.253c.561-.679.985-1.32.985-2.304%200-2.06-1.637-3.75-4-3.75M5.75%2012h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M6%2015.25a.75.75%200%200%201%20.75-.75h2.5a.75.75%200%200%201%200%201.5h-2.5a.75.75%200%200%201-.75-.75%22/%3E%3C/svg%3E');--md-admonition-icon--success:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M13.78%204.22a.75.75%200%200%201%200%201.06l-7.25%207.25a.75.75%200%200%201-1.06%200L2.22%209.28a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018L6%2010.94l6.72-6.72a.75.75%200%200%201%201.06%200%22/%3E%3C/svg%3E');--md-admonition-icon--question:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.92%206.085h.001a.749.749%200%201%201-1.342-.67c.169-.339.436-.701.849-.977C6.845%204.16%207.369%204%208%204a2.76%202.76%200%200%201%201.637.525c.503.377.863.965.863%201.725%200%20.448-.115.83-.329%201.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6%206%200%200%200-.26.16%201%201%200%200%200-.276.245.75.75%200%200%201-1.248-.832c.184-.264.42-.489.692-.661q.154-.1.313-.195l.007-.004c.1-.061.182-.11.258-.161a1%201%200%200%200%20.277-.245C8.96%206.514%209%206.427%209%206.25a.61.61%200%200%200-.262-.525A1.27%201.27%200%200%200%208%205.5c-.369%200-.595.09-.74.187a1%201%200%200%200-.34.398M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M6.457%201.047c.659-1.234%202.427-1.234%203.086%200l6.082%2011.378A1.75%201.75%200%200%201%2014.082%2015H1.918a1.75%201.75%200%200%201-1.543-2.575Zm1.763.707a.25.25%200%200%200-.44%200L1.698%2013.132a.25.25%200%200%200%20.22.368h12.164a.25.25%200%200%200%20.22-.368Zm.53%203.996v2.5a.75.75%200%200%201-1.5%200v-2.5a.75.75%200%200%201%201.5%200M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--failure:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.344%202.343za8%208%200%200%201%2011.314%2011.314A8.002%208.002%200%200%201%20.234%2010.089a8%208%200%200%201%202.11-7.746m1.06%2010.253a6.5%206.5%200%201%200%209.108-9.275%206.5%206.5%200%200%200-9.108%209.275M6.03%204.97%208%206.94l1.97-1.97a.749.749%200%200%201%201.275.326.75.75%200%200%201-.215.734L9.06%208l1.97%201.97a.749.749%200%200%201-.326%201.275.75.75%200%200%201-.734-.215L8%209.06l-1.97%201.97a.749.749%200%200%201-1.275-.326.75.75%200%200%201%20.215-.734L6.94%208%204.97%206.03a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018%22/%3E%3C/svg%3E');--md-admonition-icon--danger:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M9.504.43a1.516%201.516%200%200%201%202.437%201.713L10.415%205.5h2.123c1.57%200%202.346%201.909%201.22%203.004l-7.34%207.142a1.25%201.25%200%200%201-.871.354h-.302a1.25%201.25%200%200%201-1.157-1.723L5.633%2010.5H3.462c-1.57%200-2.346-1.909-1.22-3.004zm1.047%201.074L3.286%208.571A.25.25%200%200%200%203.462%209H6.75a.75.75%200%200%201%20.694%201.034l-1.713%204.188%206.982-6.793A.25.25%200%200%200%2012.538%207H9.25a.75.75%200%200%201-.683-1.06l2.008-4.418.003-.006-.004-.009-.006-.006-.008-.001q-.005%200-.009.004%22/%3E%3C/svg%3E');--md-admonition-icon--bug:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M4.72.22a.75.75%200%200%201%201.06%200l1%20.999a3.5%203.5%200%200%201%202.441%200l.999-1a.748.748%200%200%201%201.265.332.75.75%200%200%201-.205.729l-.775.776c.616.63.995%201.493.995%202.444v.327q0%20.15-.025.292c.408.14.764.392%201.029.722l1.968-.787a.75.75%200%200%201%20.556%201.392L13%207.258V9h2.25a.75.75%200%200%201%200%201.5H13v.5q-.002.615-.141%201.186l2.17.868a.75.75%200%200%201-.557%201.392l-2.184-.873A5%205%200%200%201%208%2016a5%205%200%200%201-4.288-2.427l-2.183.873a.75.75%200%200%201-.558-1.392l2.17-.868A5%205%200%200%201%203%2011v-.5H.75a.75.75%200%200%201%200-1.5H3V7.258L.971%206.446a.75.75%200%200%201%20.558-1.392l1.967.787c.265-.33.62-.583%201.03-.722a1.7%201.7%200%200%201-.026-.292V4.5c0-.951.38-1.814.995-2.444L4.72%201.28a.75.75%200%200%201%200-1.06m.53%206.28a.75.75%200%200%200-.75.75V11a3.5%203.5%200%201%200%207%200V7.25a.75.75%200%200%200-.75-.75ZM6.173%205h3.654A.17.17%200%200%200%2010%204.827V4.5a2%202%200%201%200-4%200v.327c0%20.096.077.173.173.173%22/%3E%3C/svg%3E');--md-admonition-icon--example:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M5%205.782V2.5h-.25a.75.75%200%200%201%200-1.5h6.5a.75.75%200%200%201%200%201.5H11v3.282l3.666%205.76C15.619%2013.04%2014.543%2015%2012.767%2015H3.233c-1.776%200-2.852-1.96-1.899-3.458Zm-2.4%206.565a.75.75%200%200%200%20.633%201.153h9.534a.75.75%200%200%200%20.633-1.153L12.225%2010.5h-8.45ZM9.5%202.5h-3V6c0%20.143-.04.283-.117.403L4.73%209h6.54L9.617%206.403A.75.75%200%200%201%209.5%206Z%22/%3E%3C/svg%3E');--md-admonition-icon--quote:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1.75%202.5h10.5a.75.75%200%200%201%200%201.5H1.75a.75.75%200%200%201%200-1.5m4%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5m0%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5M2.5%207.75v6a.75.75%200%200%201-1.5%200v-6a.75.75%200%200%201%201.5%200%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dotfiles
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Homebrew Bundle Cleanup Analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../apps/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+    
+  
+  Apps
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../configuration/neovim-ai-assistants/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 12h7v1.5h-7m0-4h7V11h-7m0 3.5h7V16h-7m8-12H3a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15h-9V6h9"/></svg>
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../learnings/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+    
+  
+  Learnings
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../changelog/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Changelog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dotfiles
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../apps/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Apps
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Apps
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/font/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 8h3v12h1v1h-4v-1h1v-3h-4l-1.5 3H14v1h-4v-1h1zm1 1-3.5 7H18zM5 3h5c1.11 0 2 .89 2 2v11H9v-5H6v5H3V5c0-1.11.89-2 2-2m1 2v4h3V5z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Font
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/theme-sync/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.5 12a1.5 1.5 0 0 1-1.5-1.5A1.5 1.5 0 0 1 17.5 9a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1-1.5 1.5m-3-4A1.5 1.5 0 0 1 13 6.5 1.5 1.5 0 0 1 14.5 5 1.5 1.5 0 0 1 16 6.5 1.5 1.5 0 0 1 14.5 8m-5 0A1.5 1.5 0 0 1 8 6.5 1.5 1.5 0 0 1 9.5 5 1.5 1.5 0 0 1 11 6.5 1.5 1.5 0 0 1 9.5 8m-3 4A1.5 1.5 0 0 1 5 10.5 1.5 1.5 0 0 1 6.5 9 1.5 1.5 0 0 1 8 10.5 1.5 1.5 0 0 1 6.5 12M12 3a9 9 0 0 0-9 9 9 9 0 0 0 9 9 1.5 1.5 0 0 0 1.5-1.5c0-.39-.15-.74-.39-1-.23-.27-.38-.62-.38-1a1.5 1.5 0 0 1 1.5-1.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Theme Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/notes/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 7V5h2V4a2 2 0 0 1 2-2h6v7l2.5-1.5L18 9V2h1c1.05 0 2 .95 2 2v16c0 1.05-.95 2-2 2H7c-1.05 0-2-.95-2-2v-1H3v-2h2v-4H3v-2h2V7zm4 4H5v2h2zm0-4V5H5v2zm0 12v-2H5v2z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/sess/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/menu/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Menu
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/toolbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16h-2v-1H8v1H6v-1H2v5h20v-5h-4zm2-8h-3V6c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v4h4v-2h2v2h8v-2h2v2h4v-4c0-1.1-.9-2-2-2m-5 0H9V6h6z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Toolbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/backup-dirs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9H0l4 4 4-4H5a7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7c-1.5 0-2.91-.5-4.06-1.3L6.5 19.14A9.1 9.1 0 0 0 12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9m2 9a2 2 0 0 0-2-2 2 2 0 0 0-2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Backup Dirs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/ghostty-theme/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 5H3V4h18z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Ghostty Theme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/package-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/path-ordering-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PATH Ordering Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/tool-composition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool Composition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/neovim-ai-assistants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 12h7v1.5h-7m0-4h7V11h-7m0 3.5h7V16h-7m8-12H3a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15h-9V6h9"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platforms
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Platforms
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/differences/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Differences
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Differences
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/platforms/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool Availability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fonts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Fonts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fonts/nerd-fonts-explained/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nerd Fonts Explained
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fonts/font-weights-and-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Font Weights and Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fonts/terminal-fonts-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Terminal Fonts Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fonts/font-comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Font Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/symlinks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Symlinks Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Claude Code
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/usage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/log-monitoring-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Log Monitoring Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/support/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/support/corporate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Corporate Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../development/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VM Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Applications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Go Applications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-apps/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-apps/go-development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-apps/go-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bubbletea Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/shell-formatting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Formatting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/publishing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing Docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../learnings/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Learnings
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Learnings
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    App Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arch Git libpcre2 Warning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Idempotent Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Bootstrap Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSL Ubuntu Package Versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/package-version-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Version Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash Testing Frameworks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-script-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash Script Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Shell Printf Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git History Rewriting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relative Path Calculation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Directory Pattern Matching
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Platform Symlinks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation Consolidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go TUI Testing Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-testing-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Testing Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go TUI Ecosystem Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go CLI Architecture Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Changelog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 2v6H2V2zM2 22v-6h2v6zm3-10c0 1.11-.89 2-2 2a2 2 0 1 1 2-2m19-6v12c0 1.11-.89 2-2 2H10a2 2 0 0 1-2-2v-4l-2-2 2-2V6a2 2 0 0 1 2-2h12c1.11 0 2 .89 2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Summary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="homebrew-bundle-cleanup-analysis">Homebrew Bundle Cleanup Analysis<a class="headerlink" href="#homebrew-bundle-cleanup-analysis" title="Permanent link">&para;</a></h1>
+<p>Generated: 2025-11-27
+Purpose: Categorize every package from <code>brew bundle cleanup</code> output and determine disposition</p>
+<h2 id="summary-statistics">Summary Statistics<a class="headerlink" href="#summary-statistics" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Total Casks to Review</strong>: 3</li>
+<li><strong>Total Formulae to Review</strong>: 82</li>
+<li><strong>Total Taps to Review</strong>: 4</li>
+</ul>
+<h2 id="categorization-guide">Categorization Guide<a class="headerlink" href="#categorization-guide" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>UNINSTALL</strong>: Not needed, safe to remove</li>
+<li><strong>ADD_TO_PACKAGES_YML</strong>: Needed cross-platform, should be in install scripts</li>
+<li><strong>KEEP_IN_BREWFILE</strong>: macOS-specific, should stay in Brewfile</li>
+<li><strong>DEPENDENCIES</strong>: Automatically installed dependency (don't need to explicitly manage)</li>
+<li><strong>NEEDS_DECISION</strong>: Unclear, requires user decision</li>
+</ul>
+<hr />
+<h2 id="casks-analysis">Casks Analysis<a class="headerlink" href="#casks-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="docker-desktop">docker-desktop<a class="headerlink" href="#docker-desktop" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Docker Desktop for Mac - GUI application for Docker containers
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: Found references in tmuxinator configs, various docs
+<strong>Category</strong>: <strong>NEEDS_DECISION</strong>
+<strong>Reasoning</strong>: The Brewfile notes say "docker-desktop managed separately (large cask)". User has <code>docker</code> CLI formula installed and uses lazydocker/oxker TUIs. Question: Is Docker Desktop still needed or can user rely on just Docker CLI?</p>
+<h3 id="iterm2">iterm2<a class="headerlink" href="#iterm2" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terminal emulator for macOS
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: Found in archive directory (archive/macos/com.googlecode.iterm2.plist, .iterm2_shell_integration.zsh)
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: User explicitly uses Ghostty terminal (per CLAUDE.md). iTerm2 config files are archived. No current usage.</p>
+<h3 id="qutebrowser">qutebrowser<a class="headerlink" href="#qutebrowser" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Keyboard-driven, vim-like browser
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: Only found in Brewfile for searching
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Not mentioned anywhere in active configs. No evidence of usage. Likely experimental install.</p>
+<hr />
+<h2 id="formulae-analysis-alphabetical">Formulae Analysis - Alphabetical<a class="headerlink" href="#formulae-analysis-alphabetical" title="Permanent link">&para;</a></h2>
+<h3 id="apr">apr<a class="headerlink" href="#apr" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Apache Portable Runtime - library for cross-platform development
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by apr-util
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for apr-util. Will be removed when apr-util is removed.</p>
+<h3 id="apr-util">apr-util<a class="headerlink" href="#apr-util" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Apache Portable Runtime Utility library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by nothing (orphaned)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Orphaned dependency. Safe to remove - no packages depend on it.</p>
+<h3 id="bat">bat<a class="headerlink" href="#bat" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: cat clone with syntax highlighting
+<strong>Status</strong>: IN packages.yml (cargo_packages), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Used extensively (zk config, theme-sync, fzf functions)
+<strong>Dependency check</strong>: Uses libgit2
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via cargo-binstall (packages.yml). Homebrew version is duplicate/dependency conflict. Should uninstall brew version, keep cargo version.</p>
+<h3 id="bdw-gc">bdw-gc<a class="headerlink" href="#bdw-gc" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Boehm-Demers-Weiser garbage collector
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by guile
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for guile. Disposition depends on guile decision.</p>
+<h3 id="buku">buku<a class="headerlink" href="#buku" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Browser-independent bookmark manager
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses pycparser, cffi, cryptography
+<strong>Category</strong>: <strong>NEEDS_DECISION</strong>
+<strong>Reasoning</strong>: Bookmark manager with CLI interface. No evidence of current usage. Question: Is this something you use or was it experimental?</p>
+<h3 id="cffi">cffi<a class="headerlink" href="#cffi" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: C Foreign Function Interface for Python
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by buku, cryptography
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Python library dependency. Will be removed with buku.</p>
+<h3 id="cmatrix">cmatrix<a class="headerlink" href="#cmatrix" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: "The Matrix" terminal screensaver
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Fun/demo tool. Not documented or integrated. Safe to remove.</p>
+<h3 id="codespell">codespell<a class="headerlink" href="#codespell" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Spell checker for code
+<strong>Status</strong>: IN packages.yml (uv_tools), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: None found, but in packages.yml for quality control
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via uv tools. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="cryptography">cryptography<a class="headerlink" href="#cryptography" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Python cryptography library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses pycparser, cffi; used by buku
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Python library dependency. Will be removed with buku.</p>
+<h3 id="docker">docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Docker CLI (command-line interface)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: Used in tmuxinator configs, referenced in docs
+<strong>Dependency check</strong>: Requires docker-completion
+<strong>Category</strong>: <strong>KEEP_IN_BREWFILE</strong>
+<strong>Reasoning</strong>: Docker CLI is actively used (tmuxinator configs show docker monitoring). Should be added to Brewfile. macOS-specific since Linux typically uses native package managers for Docker.</p>
+<h3 id="docker-completion">docker-completion<a class="headerlink" href="#docker-completion" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Shell completions for Docker
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Dependency check</strong>: Required by docker formula
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Auto-installed with docker. Will be managed when docker is added to Brewfile.</p>
+<h3 id="docutils">docutils<a class="headerlink" href="#docutils" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Python documentation utilities (reStructuredText tools)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Python documentation tool. Not used in this project (uses MkDocs for docs). Safe to remove.</p>
+<h3 id="duf">duf<a class="headerlink" href="#duf" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Better df alternative - disk usage viewer
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: None found directly
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="eza">eza<a class="headerlink" href="#eza" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Modern ls replacement
+<strong>Status</strong>: IN packages.yml (cargo_packages), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Used extensively (aliases, functions)
+<strong>Dependency check</strong>: Uses libgit2
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via cargo-binstall. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="fd">fd<a class="headerlink" href="#fd" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Modern find replacement
+<strong>Status</strong>: IN packages.yml (cargo_packages as fd-find), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Used in fzf functions, neovim configs
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via cargo-binstall. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="freetds">freetds<a class="headerlink" href="#freetds" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Libraries for MS SQL and Sybase databases
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses unixodbc; used by pgloader
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for pgloader. Disposition depends on pgloader decision.</p>
+<h3 id="fzf">fzf<a class="headerlink" href="#fzf" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Fuzzy finder
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Used EXTENSIVELY (shell functions, theme-sync, menu, notes, git integrations)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries with go build. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="geckodriver">geckodriver<a class="headerlink" href="#geckodriver" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: WebDriver for Firefox (Selenium/automation)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Browser automation tool. No evidence of usage in configs or scripts. Likely leftover from testing/experimentation.</p>
+<h3 id="git-delta">git-delta<a class="headerlink" href="#git-delta" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Syntax-highlighting git diff viewer
+<strong>Status</strong>: IN packages.yml (cargo_packages), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Configured in git config
+<strong>Dependency check</strong>: Uses libgit2
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via cargo-binstall. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="glow">glow<a class="headerlink" href="#glow" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Markdown renderer for terminal
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: None found directly, but common tool for viewing markdown
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="gpgmepp">gpgmepp<a class="headerlink" href="#gpgmepp" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: C++ bindings for GPGME (GPG Made Easy)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Likely auto-installed dependency for GPG tools. Safe to remove if orphaned.</p>
+<h3 id="guile">guile<a class="headerlink" href="#guile" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: GNU Ubiquitous Intelligent Language for Extensions (Scheme interpreter)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses bdw-gc, pkgconf
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: GNU Scheme interpreter. No evidence of usage. Not a common dependency for typical dev tools. Safe to remove.</p>
+<h3 id="gum">gum<a class="headerlink" href="#gum" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Charmbracelet tool for glamorous shell scripts (TUI components)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>NEEDS_DECISION</strong>
+<strong>Reasoning</strong>: High-quality tool for shell script UIs. Not currently used but could be useful for future script enhancements. Question: Keep for potential use or remove?</p>
+<h3 id="hashicorptapterraform">hashicorp/tap/terraform<a class="headerlink" href="#hashicorptapterraform" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terraform infrastructure-as-code tool
+<strong>Status</strong>: Not in packages.yml, NOT in Brewfile (uses tenv version manager instead)
+<strong>Usage in dotfiles</strong>: packages.yml includes tenv for version management
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Using tenv (Terraform version manager) instead per packages.yml. Homebrew version is duplicate. Should uninstall.</p>
+<h3 id="hashicorptapterraform-ls">hashicorp/tap/terraform-ls<a class="headerlink" href="#hashicorptapterraform-ls" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terraform Language Server
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Configured in Neovim LSP
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="lazygit">lazygit<a class="headerlink" href="#lazygit" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Simple terminal UI for git
+<strong>Status</strong>: IN packages.yml (github_binaries), IN Brewfile
+<strong>Usage in dotfiles</strong>: Used extensively (aliases, keybindings)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version, remove from Brewfile.</p>
+<h3 id="libcbor">libcbor<a class="headerlink" href="#libcbor" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: CBOR protocol implementation library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by libfido2
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for libfido2. Will be cleaned up automatically.</p>
+<h3 id="libfido2">libfido2<a class="headerlink" href="#libfido2" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Library for FIDO 2.0 authentication
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses libcbor; no packages use libfido2
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Orphaned dependency. Safe to remove.</p>
+<h3 id="libgit2">libgit2<a class="headerlink" href="#libgit2" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Portable C library for Git operations
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Dependency check</strong>: Used by bat, eza, git-delta (all cargo packages)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for cargo-installed Rust tools. These tools likely use statically linked Rust crates, not the Homebrew libgit2. Safe to remove - cargo versions are self-contained.</p>
+<h3 id="libpq">libpq<a class="headerlink" href="#libpq" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: PostgreSQL C API library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by pgloader
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for pgloader. Disposition depends on pgloader decision.</p>
+<h3 id="libtommath">libtommath<a class="headerlink" href="#libtommath" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Portable number theoretic multiple-precision integer library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by python-tk@3.12, tcl-tk
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for Python/Tcl Tk GUI libraries. Will be removed when Python 3.12 is cleaned up.</p>
+<h3 id="libuv">libuv<a class="headerlink" href="#libuv" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Multi-platform support library (async I/O)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by luv, neovim
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Critical dependency for Neovim. Must keep. (Note: Neovim managed via GitHub releases, but may use system libuv)</p>
+<h3 id="lpeg">lpeg<a class="headerlink" href="#lpeg" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Pattern-matching library for Lua
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Dependency check</strong>: Used by neovim
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Lua library used by Neovim. Must keep.</p>
+<h3 id="luv">luv<a class="headerlink" href="#luv" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Lua bindings for libuv
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Dependency check</strong>: Uses libuv; used by neovim
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Critical dependency for Neovim's Lua support. Must keep.</p>
+<h3 id="mad">mad<a class="headerlink" href="#mad" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: MPEG audio decoder library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Audio codec library. No media processing scripts found. Safe to remove (you have sox for audio, ffmpeg for video).</p>
+<h3 id="neovim">neovim<a class="headerlink" href="#neovim" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Hyperextensible Vim-based text editor
+<strong>Status</strong>: IN packages.yml (github_binaries), IN Brewfile
+<strong>Usage in dotfiles</strong>: Core editor - used EXTENSIVELY throughout entire dotfiles
+<strong>Dependency check</strong>: Uses tree-sitter, unibilium, luv, lpeg, libuv
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries (packages.yml specifies min version 0.11). Homebrew version is duplicate. Should uninstall brew version, remove from Brewfile. Keep the dependencies (tree-sitter, unibilium, luv, lpeg, libuv).</p>
+<h3 id="nginx">nginx<a class="headerlink" href="#nginx" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: HTTP/reverse proxy server
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: Found in tmuxinator configs for monitoring
+<strong>Category</strong>: <strong>NEEDS_DECISION</strong>
+<strong>Reasoning</strong>: Web server/reverse proxy. Found in ichrisbirch monitoring configs. Question: Still actively used for local development?</p>
+<h3 id="nspr">nspr<a class="headerlink" href="#nspr" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Netscape Portable Runtime (platform abstraction library)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Likely dependency for nss or other Mozilla-related libraries. Safe to remove if orphaned.</p>
+<h3 id="nss">nss<a class="headerlink" href="#nss" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Network Security Services (Mozilla crypto library)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Mozilla's crypto library. Likely dependency for geckodriver or similar. Safe to remove after geckodriver removal.</p>
+<h3 id="openjdk">openjdk<a class="headerlink" href="#openjdk" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Open Java Development Kit
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None in active configs
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: No Java projects in dotfiles. Likely installed for a one-off need. Safe to remove (can reinstall if needed).</p>
+<h3 id="opusfile">opusfile<a class="headerlink" href="#opusfile" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Library for decoding .opus audio files
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by sox
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for sox. Disposition depends on sox decision.</p>
+<h3 id="pandoc">pandoc<a class="headerlink" href="#pandoc" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Universal document converter (markdown, PDF, etc.)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Document conversion tool. No conversion scripts found. Project uses MkDocs directly for documentation. Safe to remove.</p>
+<h3 id="pgloader">pgloader<a class="headerlink" href="#pgloader" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: PostgreSQL data migration tool (MySQL/MSSQL to Postgres)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses unixodbc, freetds, libpq
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Database migration tool. No database migration scripts or configs. Specialized tool for one-off migrations. Safe to remove.</p>
+<h3 id="pipx">pipx<a class="headerlink" href="#pipx" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Python application installer in isolated environments
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None (using uv tools instead)
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Python tool isolation - but dotfiles use <code>uv tool</code> for this purpose (see packages.yml uv_tools). pipx is redundant. Safe to remove.</p>
+<h3 id="pipes-sh">pipes-sh<a class="headerlink" href="#pipes-sh" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Animated pipes terminal screensaver
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Fun/demo tool similar to cmatrix. Not documented or integrated. Safe to remove.</p>
+<h3 id="pkgconf">pkgconf<a class="headerlink" href="#pkgconf" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Package compiler and linker metadata toolkit
+<strong>Status</strong>: Not in packages.yml, IN Brewfile as pkg-config (different package!)
+<strong>Usage in dotfiles</strong>: Build system essential
+<strong>Dependency check</strong>: Used by guile
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: The Brewfile has <code>pkg-config</code>, and packages.yml has <code>pkg-config</code>. This <code>pkgconf</code> is a dependency for guile. Safe to remove when guile is removed. (Note: pkg-config and pkgconf are related but different implementations)</p>
+<h3 id="poppler">poppler<a class="headerlink" href="#poppler" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: PDF rendering library
+<strong>Status</strong>: IN packages.yml (poppler-utils for Linux), NOT in Brewfile
+<strong>Usage in dotfiles</strong>: packages.yml shows poppler-utils for Linux only
+<strong>Dependency check</strong>: No packages use poppler
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: packages.yml explicitly lists poppler-utils for Linux only (apt/pacman), not macOS. Homebrew poppler is not needed. Safe to remove.</p>
+<h3 id="pre-commit">pre-commit<a class="headerlink" href="#pre-commit" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Framework for managing git pre-commit hooks
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: .pre-commit-config.yaml exists and is actively used
+<strong>Category</strong>: <strong>KEEP_IN_BREWFILE</strong>
+<strong>Reasoning</strong>: Critical for git workflow quality control. Should be added to Brewfile. macOS-specific management makes sense.</p>
+<h3 id="python312">python@3.12<a class="headerlink" href="#python312" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Python 3.12 interpreter
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: packages.yml says "Python managed by uv"
+<strong>Dependency check</strong>: Used only by python-tk@3.12
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Project uses uv for Python management. Homebrew Python is dependency baggage. However, pre-commit requires python@3.14 per its info. Safe to remove python@3.12 after verifying pre-commit has python@3.14.</p>
+<h3 id="python-tk312">python-tk@3.12<a class="headerlink" href="#python-tk312" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Python 3.12 Tk GUI library bindings
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses libtommath, python@3.12
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Tk GUI library for Python. No Tk GUI scripts in dotfiles. Safe to remove.</p>
+<h3 id="pycparser">pycparser<a class="headerlink" href="#pycparser" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: C parser in Python
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by buku, cffi, cryptography
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Python library dependency. Will be removed with buku.</p>
+<h3 id="sbt">sbt<a class="headerlink" href="#sbt" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Scala Build Tool
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Scala development tool. No Scala projects in dotfiles. Safe to remove.</p>
+<h3 id="sl">sl<a class="headerlink" href="#sl" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Steam locomotive animation (joke command for typos of 'ls')
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Fun easter egg. Not integrated into workflow. Safe to remove.</p>
+<h3 id="sox">sox<a class="headerlink" href="#sox" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Sound eXchange - audio processing tool
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses opusfile
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Audio processing CLI. No audio scripts found. You have ffmpeg for media processing. Safe to remove.</p>
+<h3 id="tcl-tk">tcl-tk<a class="headerlink" href="#tcl-tk" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Tool Command Language GUI toolkit
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Uses libtommath
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Dependency for python-tk@3.12. Will be removed with python-tk.</p>
+<h3 id="terraform-docs">terraform-docs<a class="headerlink" href="#terraform-docs" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Generate documentation from Terraform modules
+<strong>Status</strong>: IN packages.yml (go_tools), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: None currently, but in packages for future Terraform work
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via go install. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="terraformer">terraformer<a class="headerlink" href="#terraformer" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Import existing infrastructure to Terraform
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: None currently
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="terrascan">terrascan<a class="headerlink" href="#terrascan" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terraform security scanner
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: None currently
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="tflint">tflint<a class="headerlink" href="#tflint" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terraform linter
+<strong>Status</strong>: IN packages.yml (github_binaries), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Configured in Neovim LSP, pre-commit config (commented)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="tinted-themingtintedtinty">tinted-theming/tinted/tinty<a class="headerlink" href="#tinted-themingtintedtinty" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Base16 theme manager
+<strong>Status</strong>: IN packages.yml (cargo_packages), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Core theme system - used by theme-sync app
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via cargo-binstall. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="tlrc">tlrc<a class="headerlink" href="#tlrc" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Rust-based tldr client (command cheat sheets)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: TLDR pages client. You have <code>cheat</code> command installed (packages.yml go_tools). Duplicate functionality. Safe to remove.</p>
+<h3 id="tokei">tokei<a class="headerlink" href="#tokei" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Lines of code counter (Rust)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Code statistics tool. Not integrated into workflow or scripts. Nice-to-have but not essential. Safe to remove.</p>
+<h3 id="tree-sitter">tree-sitter<a class="headerlink" href="#tree-sitter" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Parser generator for syntax highlighting
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Dependency check</strong>: Used by neovim
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Critical dependency for Neovim's Tree-sitter integration. Must keep.</p>
+<h3 id="tree-sitter-cli">tree-sitter-cli<a class="headerlink" href="#tree-sitter-cli" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Tree-sitter command-line tool
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: No packages use tree-sitter-cli
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Tree-sitter development tool (for creating parsers). Neovim uses tree-sitter library, not CLI. Safe to remove.</p>
+<h3 id="unibilium">unibilium<a class="headerlink" href="#unibilium" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terminfo parsing library
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None directly
+<strong>Dependency check</strong>: Used by neovim
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Critical dependency for Neovim terminal handling. Must keep.</p>
+<h3 id="unixodbc">unixodbc<a class="headerlink" href="#unixodbc" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: ODBC driver manager for Unix
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None
+<strong>Dependency check</strong>: Used by freetds, pgloader
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Database connectivity library. Dependency for pgloader. Will be removed with pgloader.</p>
+<h3 id="virtualenv">virtualenv<a class="headerlink" href="#virtualenv" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Python virtual environment tool
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None (using uv for Python environments)
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: Python environment isolation - but dotfiles use <code>uv</code> for this purpose. virtualenv is legacy approach. Safe to remove.</p>
+<h3 id="yazi">yazi<a class="headerlink" href="#yazi" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Terminal file manager
+<strong>Status</strong>: IN packages.yml (github_binaries), IN Brewfile
+<strong>Usage in dotfiles</strong>: Used extensively (configured, keybindings, preview scripts)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via GitHub binaries. Homebrew version is duplicate. Should uninstall brew version, remove from Brewfile.</p>
+<h3 id="yq">yq<a class="headerlink" href="#yq" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: YAML processor (jq for YAML)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: None found
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: YAML query tool. You have jq for JSON. No YAML processing scripts found. Safe to remove.</p>
+<h3 id="zk">zk<a class="headerlink" href="#zk" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Plain text note-taking assistant (Zettelkasten)
+<strong>Status</strong>: Not in packages.yml, not in Brewfile
+<strong>Usage in dotfiles</strong>: YES - full config at platforms/common/.config/zk/config.toml, Neovim LSP integration
+<strong>Category</strong>: <strong>KEEP_IN_BREWFILE</strong>
+<strong>Reasoning</strong>: Actively configured note-taking system. Should be added to Brewfile. Could also be added to packages.yml as cross-platform if available via other package managers.</p>
+<h3 id="zoxide">zoxide<a class="headerlink" href="#zoxide" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Smarter cd command (directory jumper)
+<strong>Status</strong>: IN packages.yml (cargo_packages), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Initialized in .zshrc, used via 'z' command
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via cargo-binstall. Homebrew version is duplicate. Should uninstall brew version.</p>
+<h3 id="zsh-syntax-highlighting">zsh-syntax-highlighting<a class="headerlink" href="#zsh-syntax-highlighting" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Fish-like syntax highlighting for ZSH
+<strong>Status</strong>: IN packages.yml (shell_plugins), NOT in Brewfile (correctly)
+<strong>Usage in dotfiles</strong>: Loaded in .zshrc, plugin directory exists
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Already managed via git clone (packages.yml shell_plugins). Homebrew version is duplicate/conflict. Should uninstall brew version.</p>
+<hr />
+<h2 id="taps-analysis">Taps Analysis<a class="headerlink" href="#taps-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="hashicorptap">hashicorp/tap<a class="headerlink" href="#hashicorptap" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: HashiCorp's Homebrew tap (terraform, terraform-ls)
+<strong>Status</strong>: Not needed
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: Both packages from this tap are managed elsewhere (tenv, GitHub binaries). Safe to untap after removing formulae.</p>
+<h3 id="xwmxtaps">xwmx/taps<a class="headerlink" href="#xwmxtaps" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Unknown tap - needs investigation
+<strong>Status</strong>: Not in Brewfile
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: No packages from this tap are mentioned. Safe to untap.</p>
+<h3 id="nikitabobkotap">nikitabobko/tap<a class="headerlink" href="#nikitabobkotap" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: AeroSpace window manager tap
+<strong>Status</strong>: Not in taps list (aerospace is in main Homebrew now)
+<strong>Category</strong>: <strong>UNINSTALL</strong>
+<strong>Reasoning</strong>: AeroSpace is now in homebrew-cask core. This tap is obsolete. Safe to untap.</p>
+<h3 id="tinted-themingtinted">tinted-theming/tinted<a class="headerlink" href="#tinted-themingtinted" title="Permanent link">&para;</a></h3>
+<p><strong>What it is</strong>: Base16/tinty theming tap
+<strong>Status</strong>: Not needed (tinty via cargo)
+<strong>Category</strong>: <strong>DEPENDENCIES</strong>
+<strong>Reasoning</strong>: tinty is managed via cargo-binstall. Safe to untap after removing tinty formula.</p>
+<hr />
+<h2 id="summary-by-category">Summary by Category<a class="headerlink" href="#summary-by-category" title="Permanent link">&para;</a></h2>
+<h3 id="uninstall-31-packages-3-casks">UNINSTALL (31 packages + 3 casks)<a class="headerlink" href="#uninstall-31-packages-3-casks" title="Permanent link">&para;</a></h3>
+<p><strong>Casks</strong>: iterm2, qutebrowser
+<strong>Formulae</strong>: cmatrix, docutils, geckodriver, guile (and bdw-gc dependency), mad, openjdk, pandoc, pgloader (and unixodbc, freetds, libpq), pipx, pipes-sh, python-tk@3.12 (and tcl-tk, libtommath), pycparser (if no other deps), sl, sbt, sox (and opusfile), tlrc, tokei, tree-sitter-cli, virtualenv, yq</p>
+<h3 id="dependencies-uninstall-homebrew-duplicates-23-packages">DEPENDENCIES - Uninstall Homebrew duplicates (23 packages)<a class="headerlink" href="#dependencies-uninstall-homebrew-duplicates-23-packages" title="Permanent link">&para;</a></h3>
+<p>These are managed via other methods in packages.yml:
+- <strong>Cargo</strong>: bat, eza, fd, git-delta, tinty, zoxide (and libgit2 which they may use)
+- <strong>GitHub binaries</strong>: duf, fzf, glow, lazygit, neovim, terraform-ls, terraformer, terrascan, tflint, yazi
+- <strong>Go tools</strong>: terraform-docs
+- <strong>UV tools</strong>: codespell
+- <strong>Shell plugins</strong>: zsh-syntax-highlighting
+- <strong>Version managers</strong>: hashicorp/tap/terraform (using tenv instead)</p>
+<h3 id="remove-neovim-dependencies-5-packages">✅ REMOVE - Neovim dependencies (5 packages)<a class="headerlink" href="#remove-neovim-dependencies-5-packages" title="Permanent link">&para;</a></h3>
+<p><strong>UPDATED:</strong> Can safely remove - Neovim GitHub binaries are statically linked:
+- libuv, lpeg, luv, tree-sitter, unibilium</p>
+<p>Verified with <code>otool -L ~/.local/bin/nvim</code> - only links to macOS system libraries, not Homebrew packages.</p>
+<h3 id="add_to_packages_yml-move-to-packagesyml-3-packages">✅ ADD_TO_PACKAGES_YML - Move to packages.yml (3 packages)<a class="headerlink" href="#add_to_packages_yml-move-to-packagesyml-3-packages" title="Permanent link">&para;</a></h3>
+<p><strong>UPDATED:</strong> Adding to packages.yml (eliminating Brewfile):
+- <strong>docker</strong> → packages.yml (using Docker official repos on all platforms)
+- <strong>docker-completion</strong> → auto-installed with docker
+- <strong>pre-commit</strong> → packages.yml system_packages
+- <strong>zk</strong> → packages.yml system_packages (if available cross-platform) or github_binaries</p>
+<h3 id="decisions-made">✅ DECISIONS MADE<a class="headerlink" href="#decisions-made" title="Permanent link">&para;</a></h3>
+<p>User decisions finalized:
+1. <strong>docker-desktop</strong> (cask) → <strong>REMOVE</strong> (switching to Colima + Docker official repos)
+2. <strong>buku</strong> → <strong>REMOVE</strong> (not used)
+3. <strong>gum</strong> → <strong>KEEP</strong> (added to packages.yml go_tools, used by menu/notes apps)
+4. <strong>nginx</strong> → <strong>REMOVE</strong> (will use Docker containers if needed)</p>
+<hr />
+<h2 id="recommended-action-plan">Recommended Action Plan<a class="headerlink" href="#recommended-action-plan" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-quick-wins-safe-uninstalls">Phase 1: Quick Wins (Safe Uninstalls)<a class="headerlink" href="#phase-1-quick-wins-safe-uninstalls" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Uninstall fun/experimental tools</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>cmatrix<span class="w"> </span>sl<span class="w"> </span>pipes-sh
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Uninstall obsolete terminals and browsers</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>--cask<span class="w"> </span>iterm2<span class="w"> </span>qutebrowser
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Uninstall unused development tools</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>sbt<span class="w"> </span>openjdk<span class="w"> </span>geckodriver<span class="w"> </span>tokei<span class="w"> </span>tlrc
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Uninstall document tools (using MkDocs instead)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>pandoc<span class="w"> </span>docutils
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Uninstall database tools (not used)</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>pgloader<span class="w">  </span><span class="c1"># Will also remove unixodbc, freetds, libpq</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># Uninstall Python tools (using uv instead)</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>pipx<span class="w"> </span>virtualenv<span class="w"> </span>python-tk@3.12<span class="w">  </span><span class="c1"># Will also remove tcl-tk, libtommath</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="c1"># Uninstall media tools (have ffmpeg)</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>sox<span class="w"> </span>mad<span class="w">  </span><span class="c1"># Will also remove opusfile</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="c1"># Uninstall misc unused</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>yq<span class="w"> </span>tree-sitter-cli<span class="w"> </span>guile<span class="w">  </span><span class="c1"># guile will also remove bdw-gc, pkgconf</span>
+</span></code></pre></div>
+<h3 id="phase-2-remove-duplicates-managed-elsewhere">Phase 2: Remove Duplicates (Managed Elsewhere)<a class="headerlink" href="#phase-2-remove-duplicates-managed-elsewhere" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Rust/Cargo tools (already in cargo via binstall)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>bat<span class="w"> </span>eza<span class="w"> </span>fd<span class="w"> </span>git-delta<span class="w"> </span>zoxide<span class="w"> </span>tinty
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># GitHub binary releases</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>neovim<span class="w"> </span>lazygit<span class="w"> </span>yazi<span class="w"> </span>fzf<span class="w"> </span>glow<span class="w"> </span>duf
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>terraform-ls<span class="w"> </span>tflint<span class="w"> </span>terraformer<span class="w"> </span>terrascan
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Go tools</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>terraform-docs<span class="w"> </span>hashicorp/tap/terraform
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># UV tools</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>codespell
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Shell plugins</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>zsh-syntax-highlighting
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c1"># Clean up libgit2 (cargo tools use statically linked versions)</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>libgit2
+</span></code></pre></div>
+<h3 id="phase-3-clean-up-taps">Phase 3: Clean Up Taps<a class="headerlink" href="#phase-3-clean-up-taps" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>brew<span class="w"> </span>untap<span class="w"> </span>hashicorp/tap
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>brew<span class="w"> </span>untap<span class="w"> </span>tinted-theming/tinted
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>brew<span class="w"> </span>untap<span class="w"> </span>xwmx/taps
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>brew<span class="w"> </span>untap<span class="w"> </span>nikitabobko/tap
+</span></code></pre></div>
+<h3 id="phase-4-add-missing-to-brewfile">Phase 4: Add Missing to Brewfile<a class="headerlink" href="#phase-4-add-missing-to-brewfile" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Edit Brewfile to add:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># brew &quot;docker&quot;              # Container runtime CLI</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># brew &quot;pre-commit&quot;          # Git hooks framework</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># brew &quot;zk&quot;                  # Note-taking assistant</span>
+</span></code></pre></div>
+<h3 id="phase-5-user-decisions-required">Phase 5: User Decisions Required<a class="headerlink" href="#phase-5-user-decisions-required" title="Permanent link">&para;</a></h3>
+<p>Answer these questions:
+1. <strong>docker-desktop</strong>: Do you still need Docker Desktop GUI, or is Docker CLI + lazydocker sufficient?
+2. <strong>buku</strong>: Do you use this bookmark manager?
+3. <strong>gum</strong>: Want to keep for potential future shell script UIs?
+4. <strong>nginx</strong>: Still using for local development/testing?</p>
+<hr />
+<h2 id="files-to-update-after-cleanup">Files to Update After Cleanup<a class="headerlink" href="#files-to-update-after-cleanup" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Brewfile</strong> - Add: docker, pre-commit, zk</li>
+<li><strong>packages.yml</strong> - Consider adding zk to github_binaries or system_packages if available cross-platform</li>
+<li>Run <code>task symlinks:link</code> after any config changes</li>
+<li>Run <code>task macos:update</code> to verify installation health</li>
+</ol>
+<hr />
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Total potential removals: ~60 packages (if all NEEDS_DECISION items are removed)</li>
+<li>All Neovim dependencies (libuv, lpeg, luv, tree-sitter, unibilium) will be kept</li>
+<li>No breaking changes to current workflow</li>
+<li>Pre-commit and Docker will be properly managed in Brewfile</li>
+<li>All duplicates removed in favor of packages.yml methods (cargo, github, go, uv)</li>
+</ul>
+<hr />
+<h2 id="final-summary-updated-with-user-decisions">✅ FINAL SUMMARY (Updated with User Decisions)<a class="headerlink" href="#final-summary-updated-with-user-decisions" title="Permanent link">&para;</a></h2>
+<h3 id="total-packages-to-remove-70-packages-3-casks">Total Packages to Remove: ~70 packages + 3 casks<a class="headerlink" href="#total-packages-to-remove-70-packages-3-casks" title="Permanent link">&para;</a></h3>
+<p><strong>Breakdown:</strong>
+- 31 unneeded packages (fun tools, unused dev tools, etc.)
+- 28 duplicates (managed via packages.yml: cargo, github_binaries, go_tools, uv_tools)
+- 5 Neovim dependencies (statically linked, not needed)
+- 4 user decisions (buku, nginx, docker-desktop, gum → moved to packages.yml)
+- 2 casks (iterm2, qutebrowser)
+- 1 cask decision (docker-desktop → using Colima)</p>
+<h3 id="packages-to-add-to-packagesyml">Packages to Add to packages.yml:<a class="headerlink" href="#packages-to-add-to-packagesyml" title="Permanent link">&para;</a></h3>
+<ul>
+<li>docker (via official repos on all platforms)</li>
+<li>pre-commit</li>
+<li>zk (note-taking tool)</li>
+<li>gum (already added to go_tools)</li>
+<li>lazydocker (already added to go_tools)</li>
+</ul>
+<h3 id="next-steps">Next Steps:<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h3>
+<ol>
+<li>✅ Update packages.yml with docker (official repos), pre-commit, zk</li>
+<li>✅ Create Docker official repo install scripts</li>
+<li>⏸️ User review and approve final cleanup list</li>
+<li>⏸️ Execute <code>brew bundle cleanup --force</code></li>
+<li>⏸️ Migrate remaining Brewfile entries to packages.yml</li>
+<li>⏸️ Eliminate Brewfile completely</li>
+</ol>
+<hr />
+<h2 id="sources">Sources<a class="headerlink" href="#sources" title="Permanent link">&para;</a></h2>
+<p>Research sources:
+- <a href="https://www.thingy-ma-jig.co.uk/blog/22-09-2014/homebrew-list-packages-and-what-uses-them">Homebrew dependency checking</a>
+- <a href="https://docs.brew.sh/Homebrew-and-Python">Homebrew and Python documentation</a>
+- <a href="https://github.com/charmbracelet/gum">Gum CLI tool</a>
+- <a href="https://github.com/tldr-pages/tlrc">tlrc Rust TLDR client</a>
+- <a href="https://github.com/zk-org/zk">zk note-taking tool</a>
+- <a href="https://pgloader.io/">pgloader PostgreSQL migration</a>
+- <a href="https://www.scala-sbt.org/">sbt Scala Build Tool</a>
+- <a href="https://github.com/XAMPPRocky/tokei">Tokei code statistics</a>
+- <a href="https://www.python.org/downloads/release/python-3140/">Python 3.14 release information</a>
+- <a href="https://github.com/neovim/neovim/wiki/Building-Neovim">Neovim build documentation</a>
+- <a href="https://docs.docker.com/engine/install/">Docker official repositories</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/datapointchris/dotfiles" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

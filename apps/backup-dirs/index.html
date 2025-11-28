@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,17 +3225,17 @@
 <h1 id="backup-dirs">Backup Dirs<a class="headerlink" href="#backup-dirs" title="Permanent link">&para;</a></h1>
 <p>Create timestamped compressed backups of important directories with progress tracking and smart exclusions. Automatically excludes development bloat (.venv, node_modules) while preserving version control data.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>backup-dirs<span class="w"> </span>.claude<span class="w"> </span>notes<span class="w"> </span>learning<span class="w">       </span><span class="c1"># Backup to ~/Documents</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>backup-dirs<span class="w"> </span>.claude<span class="w"> </span>notes<span class="w"> </span>learning<span class="w">       </span><span class="c1"># Backup to ~/Documents</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>backup-dirs<span class="w"> </span>--dest<span class="w"> </span>~/Backups<span class="w"> </span>dotfiles<span class="w">    </span><span class="c1"># Custom destination</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>backup-important<span class="w">                         </span><span class="c1"># macOS alias (common dirs)</span>
 </span></code></pre></div>
 <p>Use before potentially destructive operations:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>backup-important<span class="w">              </span><span class="c1"># Quick safety backup</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>backup-important<span class="w">              </span><span class="c1"># Quick safety backup</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>rebase<span class="w"> </span>-i<span class="w"> </span>HEAD~10<span class="w">        </span><span class="c1"># Safe to proceed</span>
 </span></code></pre></div>
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
 <p><strong>Basic Usage</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>backup-dirs<span class="w"> </span>&lt;dir1&gt;<span class="w"> </span><span class="o">[</span>dir2<span class="o">]</span><span class="w"> </span><span class="o">[</span>dir3...<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>backup-dirs<span class="w"> </span>&lt;dir1&gt;<span class="w"> </span><span class="o">[</span>dir2<span class="o">]</span><span class="w"> </span><span class="o">[</span>dir3...<span class="o">]</span>
 </span></code></pre></div>
 <p><strong>Common Options</strong>:</p>
 <ul>
@@ -3227,7 +3257,7 @@
 </ul>
 <h2 id="archive-format">Archive Format<a class="headerlink" href="#archive-format" title="Permanent link">&para;</a></h2>
 <p>Archives use timestamped naming:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>backup-dirs_2025-11-25_143022.tar.zst
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>backup-dirs_2025-11-25_143022.tar.zst
 </span></code></pre></div>
 <p>Format: <code>backup-dirs_YYYY-MM-DD_HHMMSS.tar.{zst|gz|xz}</code></p>
 <p>Default location: <code>~/Documents/</code> (iCloud synced on macOS)</p>
@@ -3262,18 +3292,18 @@
 </ul>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Check backup size before running:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>du<span class="w"> </span>-sh<span class="w"> </span>.claude<span class="w"> </span>notes<span class="w"> </span>learning<span class="w"> </span>obsession<span class="w"> </span>code
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>du<span class="w"> </span>-sh<span class="w"> </span>.claude<span class="w"> </span>notes<span class="w"> </span>learning<span class="w"> </span>obsession<span class="w"> </span>code
 </span></code></pre></div>
 <p>Create backup before risky operations:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>backup-important
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>backup-important
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Proceed with git rebase, major refactoring, etc.</span>
 </span></code></pre></div>
 <p>On macOS, use the convenience alias:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Defined in shell config</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Defined in shell config</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>backup-important<span class="w">  </span><span class="c1"># Backs up: .claude, learning, notes, obsession, code</span>
 </span></code></pre></div>
 <p>Customize destination for external drives:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>backup-dirs<span class="w"> </span>--dest<span class="w"> </span>/Volumes/External<span class="w"> </span>dotfiles<span class="w"> </span>code
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>backup-dirs<span class="w"> </span>--dest<span class="w"> </span>/Volumes/External<span class="w"> </span>dotfiles<span class="w"> </span>code
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

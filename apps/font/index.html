@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="font-tool">Font Tool<a class="headerlink" href="#font-tool" title="Permanent link">&para;</a></h1>
 <p>Automatic font tracking with data-driven rankings. Every time you apply, like, dislike, or note a font, it's logged. Rankings emerge from your actual usage patterns.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>font<span class="w"> </span>change<span class="w">          </span><span class="c1"># Interactive picker with previews</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>font<span class="w"> </span>change<span class="w">          </span><span class="c1"># Interactive picker with previews</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>font<span class="w"> </span>like<span class="w"> </span><span class="s2">&quot;reason&quot;</span><span class="w">   </span><span class="c1"># Like current font</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>font<span class="w"> </span>dislike<span class="w">         </span><span class="c1"># Dislike without message</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>font<span class="w"> </span>note<span class="w"> </span><span class="s2">&quot;text&quot;</span><span class="w">     </span><span class="c1"># Add note to current font</span>
@@ -3232,7 +3262,7 @@
 </ul>
 <h2 id="data-history">Data &amp; History<a class="headerlink" href="#data-history" title="Permanent link">&para;</a></h2>
 <p>Font history is stored in per-platform JSONL files within the app directory:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>apps/common/font/data/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>apps/common/font/data/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── history-macos.jsonl
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── history-arch.jsonl
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── history-wsl.jsonl
@@ -3244,24 +3274,24 @@
 <p>View file locations with <code>font log</code>.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>Each action appends a timestamped JSON record (in UTC):</p>
-<div class="language-json highlight"><span class="filename">JSON</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="s2">&quot;2025-11-26T17:24:03+00:00&quot;</span><span class="p">,</span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="s2">&quot;macos&quot;</span><span class="p">,</span><span class="nt">&quot;font&quot;</span><span class="p">:</span><span class="s2">&quot;Fira Code&quot;</span><span class="p">,</span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="s2">&quot;like&quot;</span><span class="p">,</span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="s2">&quot;Great ligatures&quot;</span><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="s2">&quot;2025-11-26T17:24:03+00:00&quot;</span><span class="p">,</span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="s2">&quot;macos&quot;</span><span class="p">,</span><span class="nt">&quot;font&quot;</span><span class="p">:</span><span class="s2">&quot;Fira Code&quot;</span><span class="p">,</span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="s2">&quot;like&quot;</span><span class="p">,</span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="s2">&quot;Great ligatures&quot;</span><span class="p">}</span>
 </span></code></pre></div>
 <p>Rankings aggregate likes/dislikes to calculate scores:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Score = (total likes) - (total dislikes)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Score = (total likes) - (total dislikes)
 </span></code></pre></div>
 <p>Fonts are then sorted by score descending, then by last usage date.</p>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Start testing a new font:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>font<span class="w"> </span>change<span class="w">                           </span><span class="c1"># Pick a font interactively</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>font<span class="w"> </span>change<span class="w">                           </span><span class="c1"># Pick a font interactively</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Use it for actual work</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>font<span class="w"> </span>like<span class="w"> </span><span class="s2">&quot;Good weight&quot;</span><span class="w">               </span><span class="c1"># Like it</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>font<span class="w"> </span>note<span class="w"> </span><span class="s2">&quot;Works well for prose&quot;</span><span class="w">     </span><span class="c1"># Add observations</span>
 </span></code></pre></div>
 <p>After testing several fonts:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>font<span class="w"> </span>rank<span class="w">                             </span><span class="c1"># See your favorites</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>font<span class="w"> </span>rank<span class="w">                             </span><span class="c1"># See your favorites</span>
 </span></code></pre></div>
 <p>Switch to a random font:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>font<span class="w"> </span>random<span class="w">                           </span><span class="c1"># Try something new</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>font<span class="w"> </span>random<span class="w">                           </span><span class="c1"># Try something new</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

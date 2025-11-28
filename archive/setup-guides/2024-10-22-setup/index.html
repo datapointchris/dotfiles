@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3148,14 +3178,14 @@
 </ul>
 <h3 id="platform-specific-dependencies">Platform-Specific Dependencies<a class="headerlink" href="#platform-specific-dependencies" title="Permanent link">&para;</a></h3>
 <h4 id="macos-homebrew">macOS (Homebrew)<a class="headerlink" href="#macos-homebrew" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Core dependencies</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Core dependencies</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>brew<span class="w"> </span>install<span class="w"> </span>neovim<span class="w"> </span>git<span class="w"> </span>node<span class="w"> </span>python<span class="w"> </span>rust
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Additional tools</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>brew<span class="w"> </span>install<span class="w"> </span>fd<span class="w"> </span>ripgrep<span class="w"> </span>fzf<span class="w"> </span>eza<span class="w"> </span>bat<span class="w"> </span>zoxide
 </span></code></pre></div>
 <h4 id="ubuntulinux">Ubuntu/Linux<a class="headerlink" href="#ubuntulinux" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Core dependencies</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Core dependencies</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>neovim<span class="w"> </span>git<span class="w"> </span>nodejs<span class="w"> </span>npm<span class="w"> </span>python3<span class="w"> </span>python3-pip
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
@@ -3165,7 +3195,7 @@
 </span></code></pre></div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <h3 id="1-dotfiles-setup">1. Dotfiles Setup<a class="headerlink" href="#1-dotfiles-setup" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Clone dotfiles repository</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Clone dotfiles repository</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
@@ -3174,7 +3204,7 @@
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>./symlinks<span class="w"> </span>macos<span class="w">        </span><span class="c1"># or ./symlinks wsl</span>
 </span></code></pre></div>
 <h3 id="2-neovim-plugin-installation">2. Neovim Plugin Installation<a class="headerlink" href="#2-neovim-plugin-installation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Start Neovim (plugins will auto-install via Lazy.nvim)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Start Neovim (plugins will auto-install via Lazy.nvim)</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>nvim
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Wait for plugins to install, then restart</span>
@@ -3224,7 +3254,7 @@
 </table>
 <h2 id="post-installation-steps">Post-Installation Steps<a class="headerlink" href="#post-installation-steps" title="Permanent link">&para;</a></h2>
 <h3 id="1-verify-installation">1. Verify Installation<a class="headerlink" href="#1-verify-installation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Check Neovim health</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Check Neovim health</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>nvim<span class="w"> </span>--headless<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;checkhealth&quot;</span><span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;qa&quot;</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Check LSP status</span>
@@ -3232,14 +3262,14 @@
 </span></code></pre></div>
 <h3 id="2-configure-ai-integration-optional">2. Configure AI Integration (Optional)<a class="headerlink" href="#2-configure-ai-integration-optional" title="Permanent link">&para;</a></h3>
 <p>If using CodeCompanion with Claude:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Set API key</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Set API key</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-api-key-here&quot;</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Add to shell profile</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ANTHROPIC_API_KEY=&quot;your-api-key-here&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.zshrc
 </span></code></pre></div>
 <h3 id="3-configure-git-integration">3. Configure Git Integration<a class="headerlink" href="#3-configure-git-integration" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Set up git delta for diffs (recommended)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Set up git delta for diffs (recommended)</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>brew<span class="w"> </span>install<span class="w"> </span>git-delta<span class="w">  </span><span class="c1"># macOS</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># or sudo apt install git-delta  # Ubuntu</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
@@ -3268,11 +3298,11 @@
 </ol>
 <h3 id="changing-themes">Changing Themes<a class="headerlink" href="#changing-themes" title="Permanent link">&para;</a></h3>
 <p>Edit <code>lua/plugins/colorschemes.lua</code> and set your preferred theme:</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">vim</span><span class="p">.</span><span class="py">cmd</span><span class="p">.</span><span class="nf">colorscheme</span><span class="p">(</span><span class="s1">&#39;your-theme-name&#39;</span><span class="p">)</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">vim</span><span class="p">.</span><span class="py">cmd</span><span class="p">.</span><span class="nf">colorscheme</span><span class="p">(</span><span class="s1">&#39;your-theme-name&#39;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="custom-keymaps">Custom Keymaps<a class="headerlink" href="#custom-keymaps" title="Permanent link">&para;</a></h3>
 <p>Add to <code>lua/core/keymaps.lua</code>:</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">vim</span><span class="p">.</span><span class="py">keymap</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;leader&gt;your-key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;cmd&gt;YourCommand&lt;cr&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">desc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Description&#39;</span><span class="w"> </span><span class="p">})</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">vim</span><span class="p">.</span><span class="py">keymap</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;leader&gt;your-key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;cmd&gt;YourCommand&lt;cr&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">desc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Description&#39;</span><span class="w"> </span><span class="p">})</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>See the <a href="../../reference/troubleshooting.md">Troubleshooting Guide</a> for common issues and solutions.</p>

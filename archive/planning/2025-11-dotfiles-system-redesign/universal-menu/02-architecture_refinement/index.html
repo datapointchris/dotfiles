@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3356,7 +3386,7 @@
 <h2 id="proposed-solutions">Proposed Solutions<a class="headerlink" href="#proposed-solutions" title="Permanent link">&para;</a></h2>
 <h3 id="option-1-os-level-launcher-ueli-recommended-for-most-use-cases">Option 1: OS-Level Launcher (Ueli) - RECOMMENDED FOR MOST USE CASES<a class="headerlink" href="#option-1-os-level-launcher-ueli-recommended-for-most-use-cases" title="Permanent link">&para;</a></h3>
 <p><strong>Architecture:</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Ueli (macOS/Linux/WSL)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Ueli (macOS/Linux/WSL)
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── Custom plugins/config
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  ├── Auto-generated lists from dotfiles
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  │   ├── Parse aliases.sh → menu items
@@ -3400,7 +3430,7 @@
 <hr />
 <h3 id="option-2-fzf-menu-system-recommended-for-terminal-users">Option 2: fzf-menu System - RECOMMENDED FOR TERMINAL USERS<a class="headerlink" href="#option-2-fzf-menu-system-recommended-for-terminal-users" title="Permanent link">&para;</a></h3>
 <p><strong>Architecture:</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/.local/bin/menu (main launcher)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/.local/bin/menu (main launcher)
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  ├── Presents categories via fzf
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  ├── Each selection opens sub-menu
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  │   ├── tools → fzf list of tools → show details
@@ -3413,7 +3443,7 @@
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  └── Auto-discovery from dotfiles
 </span></code></pre></div></p>
 <p><strong>Dynamic Discovery:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># aliases: grep &#39;^alias&#39; ~/.shell/aliases.sh</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># aliases: grep &#39;^alias&#39; ~/.shell/aliases.sh</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># functions: grep &#39;^[a-z_-]*()&#39; ~/.shell/fzf-functions.sh</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># tasks: yq &#39;.tasks | keys&#39; Taskfile.yml</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># scripts: ls ~/.local/bin</span>
@@ -3448,7 +3478,7 @@
 - Portability: Perfect (works everywhere)
 - Consistency: Perfect (identical on all platforms)</p>
 <p><strong>Implementation Script Skeleton:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># ~/.local/bin/menu - Universal menu system</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>show_main_menu<span class="o">()</span><span class="w"> </span><span class="o">{</span>
@@ -3479,7 +3509,7 @@
 <hr />
 <h3 id="option-3-custom-tui-application-only-if-you-want-a-project">Option 3: Custom TUI Application - ONLY IF YOU WANT A PROJECT<a class="headerlink" href="#option-3-custom-tui-application-only-if-you-want-a-project" title="Permanent link">&para;</a></h3>
 <p><strong>Architecture:</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>menu-tui (written in Rust/Ratatui or Python/Textual)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>menu-tui (written in Rust/Ratatui or Python/Textual)
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  ├── Main dashboard view
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  ├── Category navigation (vim keys)
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  ├── SQLite backend for bookmarks/history
@@ -3516,7 +3546,7 @@
 <hr />
 <h3 id="option-4-hybrid-approach-most-flexible">Option 4: Hybrid Approach - MOST FLEXIBLE<a class="headerlink" href="#option-4-hybrid-approach-most-flexible" title="Permanent link">&para;</a></h3>
 <p><strong>Architecture:</strong>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Primary: fzf-menu for terminal use
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Primary: fzf-menu for terminal use
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Secondary: Ueli for OS-level (macOS/Arch)
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Fallback: Pure fzf on servers/WSL
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
@@ -3565,7 +3595,7 @@
 3. Add to menu system
 4. Optionally sync across machines (git + encrypted DB)</p>
 <p><strong>Integration with Menu:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>show_bookmarks<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>show_bookmarks<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>buku<span class="w"> </span>--print<span class="w"> </span>--format<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;buku --print {1}&#39;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span>--bind<span class="w"> </span><span class="s1">&#39;enter:execute(buku --open {1})&#39;</span><span class="w"> </span><span class="se">\</span>
@@ -3584,7 +3614,7 @@
 <li><strong>Fallback:</strong> Even if you add Ueli later, fzf-menu stays useful for servers</li>
 </ol>
 <p><strong>Phase 1: fzf-menu MVP (1-2 days)</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Day 1:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Day 1:
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>- Create ~/.local/bin/menu script
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>- Implement main menu with categories
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>- Add tools integration (reuse existing tools script)
@@ -3611,7 +3641,7 @@
 <hr />
 <h2 id="auto-discovery-strategy">Auto-Discovery Strategy<a class="headerlink" href="#auto-discovery-strategy" title="Permanent link">&para;</a></h2>
 <h3 id="aliases">Aliases<a class="headerlink" href="#aliases" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Extract aliases from aliases.sh</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Extract aliases from aliases.sh</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>parse_aliases<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>grep<span class="w"> </span><span class="s2">&quot;^alias &quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES</span><span class="s2">/common/.shell/aliases.sh&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span>sed<span class="w"> </span><span class="s1">&#39;s/alias //&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
@@ -3619,7 +3649,7 @@
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="o">}</span>
 </span></code></pre></div>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Extract functions from fzf-functions.sh</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Extract functions from fzf-functions.sh</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>parse_functions<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;^[a-z_-]+\(\)&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES</span><span class="s2">/common/.shell/fzf-functions.sh&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span>sed<span class="w"> </span><span class="s1">&#39;s/().*$//&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
@@ -3632,14 +3662,14 @@
 </span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="o">}</span>
 </span></code></pre></div>
 <h3 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Extract tasks from Taskfile</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Extract tasks from Taskfile</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>parse_tasks<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>task<span class="w"> </span>--list-all<span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-n<span class="w"> </span>+3<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span>awk<span class="w"> </span><span class="s1">&#39;{printf &quot;%s~%s\n&quot;, $1, substr($0, index($0,$2))}&#39;</span>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="o">}</span>
 </span></code></pre></div>
 <h3 id="scripts">Scripts<a class="headerlink" href="#scripts" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Extract scripts from .local/bin</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Extract scripts from .local/bin</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>parse_scripts<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin&quot;</span><span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-executable<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>script<span class="p">;</span><span class="w"> </span><span class="k">do</span>
@@ -3659,14 +3689,14 @@
   2. Send keys: <code>menu\n</code></p>
 <p><strong>Option B: Tmux Binding (Prefix + m)</strong>
 - Add to tmux.conf:
-  <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>bind-key m run-shell &quot;menu&quot;
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>bind-key m run-shell &quot;menu&quot;
 </span></code></pre></div></p>
 <h3 id="linux-i3sway-rofi">Linux (i3/sway + rofi)<a class="headerlink" href="#linux-i3sway-rofi" title="Permanent link">&para;</a></h3>
 <p><strong>Hybrid Approach:</strong>
 - Bind Super+Space to rofi (normal app launcher)
 - Bind Super+M to terminal + menu script
 - In i3 config:
-  <div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>bindsym $mod+m exec alacritty -e menu
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>bindsym $mod+m exec alacritty -e menu
 </span></code></pre></div></p>
 <h3 id="wsl">WSL<a class="headerlink" href="#wsl" title="Permanent link">&para;</a></h3>
 <p><strong>Limited Options:</strong>
@@ -3742,7 +3772,7 @@
 <hr />
 <h2 id="migration-path">Migration Path<a class="headerlink" href="#migration-path" title="Permanent link">&para;</a></h2>
 <h3 id="from-safari-to-buku">From Safari to Buku<a class="headerlink" href="#from-safari-to-buku" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># 1. Install buku</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># 1. Install buku</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>brew<span class="w"> </span>install<span class="w"> </span>buku
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># 2. Export Safari bookmarks (File → Export Bookmarks)</span>
@@ -3758,7 +3788,7 @@
 </span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="c1"># Add bookmarks category to menu script</span>
 </span></code></pre></div>
 <h3 id="from-alfred-to-ueli-optional-future">From Alfred to Ueli (Optional Future)<a class="headerlink" href="#from-alfred-to-ueli-optional-future" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># 1. Install Ueli</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># 1. Install Ueli</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>ueli
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># 2. Export Alfred workflows (if needed)</span>
@@ -3876,13 +3906,13 @@
 - Code-related tasks</p>
 <p><strong>Bridge Between Them:</strong></p>
 <p>Create Alfred workflows that launch your terminal menu with specific contexts:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Keyword: menu → Launch Ghostty with `menu`
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Keyword: menu → Launch Ghostty with `menu`
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>Keyword: bk → Launch Ghostty with `menu` → bookmarks
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>Keyword: tools → Launch Ghostty with `menu` → tools
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>Keyword: tasks → Launch Ghostty with `menu` → tasks
 </span></code></pre></div>
 <p><strong>Implementation:</strong>
-<div class="language-applescript highlight"><span class="filename">AppleScript</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c">-- Alfred workflow to launch terminal menu</span>
+<div class="language-applescript highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c">-- Alfred workflow to launch terminal menu</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="k">on</span> <span class="nv">alfred_script</span><span class="p">(</span><span class="nv">q</span><span class="p">)</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>  <span class="k">tell</span> <span class="nb">application</span> <span class="s2">&quot;Ghostty&quot;</span>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="nb">activate</span>
@@ -3903,7 +3933,7 @@
 <h3 id="solutions">Solutions<a class="headerlink" href="#solutions" title="Permanent link">&para;</a></h3>
 <p><strong>Option 1: Minimal zsh for Menu</strong></p>
 <p>Create <code>~/.zshrc-minimal</code>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Minimal zsh config for quick menu launch</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Minimal zsh config for quick menu launch</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="c1"># No oh-my-zsh, no heavy plugins</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Essential PATH only</span>
@@ -3918,7 +3948,7 @@
 <p>Launch with: <code>ZDOTDIR=~/.config/zsh-minimal ghostty</code></p>
 <p><strong>Option 2: Direct Execution (Fastest)</strong></p>
 <p>Launch Ghostty directly running the menu script:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Alfred or hotkey launches:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Alfred or hotkey launches:</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>ghostty<span class="w"> </span>-e<span class="w"> </span>menu
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Or with bash (no zsh overhead):</span>
@@ -3939,7 +3969,7 @@
 - Single binary, no framework needed
 - Perfect for quick menu scripts</p>
 <p><strong>Basic Example:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="c1"># Quick menu with gum</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="nv">CATEGORY</span><span class="o">=</span><span class="k">$(</span>gum<span class="w"> </span>choose<span class="w"> </span><span class="se">\</span>
@@ -4012,7 +4042,7 @@
 - View learning resource files (PDFs, videos)
 - File-based bookmark organization</p>
 <p><strong>Add to Your Menu:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># In main menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># In main menu</span>
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="s2">&quot;bookmarks-dirs&quot;</span><span class="w"> </span>→<span class="w"> </span>Launch<span class="w"> </span>yazi<span class="w"> </span>with<span class="w"> </span>whoosh<span class="w"> </span>plugin
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="s2">&quot;bookmarks-urls&quot;</span><span class="w"> </span>→<span class="w"> </span>Launch<span class="w"> </span>buku<span class="w"> </span>fzf<span class="w"> </span>interface
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="s2">&quot;learning&quot;</span><span class="w"> </span>→<span class="w"> </span>yazi<span class="w"> </span><span class="k">in</span><span class="w"> </span>~/learning-resources<span class="w"> </span>directory
@@ -4025,7 +4055,7 @@
 <h3 id="solutions-for-learning-resources">Solutions for Learning Resources<a class="headerlink" href="#solutions-for-learning-resources" title="Permanent link">&para;</a></h3>
 <p><strong>Option 1: Filesystem + Yazi</strong></p>
 <p>Organize learning resources in directories:
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~/learning/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~/learning/
 </span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  ├── courses/
 </span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  │   ├── rust-book/
 </span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  │   └── kubernetes-course/
@@ -4039,7 +4069,7 @@
 Add metadata files (markdown) for descriptions.</p>
 <p><strong>Option 2: Custom SQLite Database</strong></p>
 <p>Similar to buku but for local resources:
-<div class="language-sql highlight"><span class="filename">SQL</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">resources</span><span class="w"> </span><span class="p">(</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">resources</span><span class="w"> </span><span class="p">(</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="n">path</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
@@ -4053,7 +4083,7 @@ Add metadata files (markdown) for descriptions.</p>
 <p>Build simple CLI tool (Python script) to add/search/open.</p>
 <p><strong>Option 3: Hybrid Buku Approach</strong></p>
 <p>Use buku's tagging/search but store file paths as "URLs":
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Add with file path as &quot;URL&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Add with file path as &quot;URL&quot;</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>buku<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;/Users/chris/learning/rust-book.pdf&quot;</span><span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Rust Book&quot;</span><span class="w"> </span>--tags<span class="w"> </span>rust,programming
 </span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
 </span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># Search and open</span>
@@ -4100,7 +4130,7 @@ Add metadata files (markdown) for descriptions.</p>
 - <strong>Text editor:</strong> Edit markdown lists in nvim (you're already proficient)</p>
 <h3 id="middle-ground-scripted-interfaces">Middle Ground: Scripted Interfaces<a class="headerlink" href="#middle-ground-scripted-interfaces" title="Permanent link">&para;</a></h3>
 <p><strong>Instead of building a TUI, compose existing tools:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Bookmark editor using gum</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Bookmark editor using gum</span>
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>edit-bookmark<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span><span class="nv">id</span><span class="o">=</span><span class="k">$(</span>buku<span class="w"> </span>-p<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="o">[[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$id</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="k">return</span>
@@ -4151,7 +4181,7 @@ Add metadata files (markdown) for descriptions.</p>
 <h3 id="implementation-strategy">Implementation Strategy<a class="headerlink" href="#implementation-strategy" title="Permanent link">&para;</a></h3>
 <p><strong>Phase 1: Terminal Interface (Priority 1)</strong></p>
 <p>Build the universal Layer 1 menu:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>~/.local/bin/menu
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>~/.local/bin/menu
 </span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span>├──<span class="w"> </span>Main<span class="w"> </span>menu<span class="w"> </span><span class="o">(</span>gum<span class="w"> </span>choose<span class="o">)</span>
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">  </span>├──<span class="w"> </span>Tools<span class="w"> </span>category<span class="w"> </span><span class="o">(</span>reuse<span class="w"> </span>tools<span class="w"> </span>script<span class="o">)</span>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span>├──<span class="w"> </span>Aliases<span class="w"> </span>category<span class="w"> </span><span class="o">(</span>parse<span class="w"> </span>+<span class="w"> </span>fzf<span class="o">)</span>
@@ -4171,7 +4201,7 @@ Add metadata files (markdown) for descriptions.</p>
 <li><strong>Install buku:</strong> <code>brew install buku</code></li>
 <li><strong>Import Safari bookmarks:</strong> <code>buku --ai ~/Downloads/Bookmarks.html</code></li>
 <li><strong>Create learning directory structure:</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/learning/<span class="o">{</span>courses,books,videos,articles<span class="o">}</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/learning/<span class="o">{</span>courses,books,videos,articles<span class="o">}</span>
 </span></code></pre></div></li>
 <li><strong>Create index:</strong> <code>~/learning/INDEX.md</code> with descriptions</li>
 <li><strong>Install yazi bookmarks plugin:</strong> <code>ya pkg add WhoSowSee/whoosh</code></li>
@@ -4338,7 +4368,7 @@ Add metadata files (markdown) for descriptions.</p>
 <ol>
 <li>
 <p><strong>Install dependencies:</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>brew<span class="w"> </span>install<span class="w"> </span>gum<span class="w"> </span>buku
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>brew<span class="w"> </span>install<span class="w"> </span>gum<span class="w"> </span>buku
 </span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>ya<span class="w"> </span>pkg<span class="w"> </span>add<span class="w"> </span>WhoSowSee/whoosh<span class="w">  </span><span class="c1"># yazi bookmarks</span>
 </span></code></pre></div></p>
 </li>
@@ -4453,7 +4483,7 @@ Add metadata files (markdown) for descriptions.</p>
 <h2 id="final-recommendations-summary">Final Recommendations Summary<a class="headerlink" href="#final-recommendations-summary" title="Permanent link">&para;</a></h2>
 <h3 id="the-layered-architecture-refined">The Layered Architecture (Refined)<a class="headerlink" href="#the-layered-architecture-refined" title="Permanent link">&para;</a></h3>
 <p>Your mental model is excellent. Here's the refined architecture:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>Layer 3 (Frontend - Platform Specific)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>Layer 3 (Frontend - Platform Specific)
 </span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  macOS: Alfred keyword → Ghostty -e menu
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>  Arch:  Super+M → terminal -e menu
 </span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>  WSL:   tmux prefix+m → menu
@@ -4699,7 +4729,7 @@ Add metadata files (markdown) for descriptions.</p>
 <hr />
 <h2 id="next-action-items">Next Action Items<a class="headerlink" href="#next-action-items" title="Permanent link">&para;</a></h2>
 <p>Ready to start? Here's your first steps:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># 1. Install dependencies</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># 1. Install dependencies</span>
 </span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>brew<span class="w"> </span>install<span class="w"> </span>gum<span class="w"> </span>buku
 </span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>
 </span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="c1"># 2. Export Safari bookmarks</span>

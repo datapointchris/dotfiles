@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3166,7 +3196,7 @@
 - <strong>Todo</strong> → Shows todo.md (if exists in project)
 - <strong>Tmux</strong> → Shows sessions (if in tmux)</p>
 <p><strong>Context Detection:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>get_project_name<span class="o">()</span><span class="w">  </span><span class="c1"># Gets basename of git root</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>get_project_name<span class="o">()</span><span class="w">  </span><span class="c1"># Gets basename of git root</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>is_in_git_repo<span class="o">()</span><span class="w">    </span><span class="c1"># Checks if in git repository</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>has_taskfile<span class="o">()</span><span class="w">      </span><span class="c1"># Checks for Taskfile.yml in git root</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>has_todo<span class="o">()</span><span class="w">          </span><span class="c1"># Checks for todo.md in git root</span>
@@ -3174,12 +3204,12 @@
 </span></code></pre></div></p>
 <h3 id="3-aerospace-hotkey-added">3. Aerospace Hotkey Added ✓<a class="headerlink" href="#3-aerospace-hotkey-added" title="Permanent link">&para;</a></h3>
 <p>Added to <code>macos/.config/aerospace/aerospace.toml</code> (line 66):
-<div class="language-toml highlight"><span class="filename">TOML</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">alt-shift-m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;exec-and-forget ghostty -e menu&#39;</span>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">alt-shift-m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;exec-and-forget ghostty -e menu&#39;</span>
 </span></code></pre></div></p>
 <p><strong>Usage:</strong> Press <strong>Alt+Shift+M</strong> from anywhere in macOS to launch a new Ghostty window with the menu.</p>
 <h3 id="4-tmux-keybinding-added">4. Tmux Keybinding Added ✓<a class="headerlink" href="#4-tmux-keybinding-added" title="Permanent link">&para;</a></h3>
 <p>Added to <code>common/.config/tmux/tmux.conf</code> (line 95):
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bind m run-shell -b &#39;menu&#39;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bind m run-shell -b &#39;menu&#39;
 </span></code></pre></div></p>
 <p><strong>Usage:</strong> Press <strong>Prefix+m</strong> (Ctrl-Space then m) when in tmux to run menu in current pane.</p>
 <h3 id="5-symlinks-relinked">5. Symlinks Relinked ✓<a class="headerlink" href="#5-symlinks-relinked" title="Permanent link">&para;</a></h3>
@@ -3196,7 +3226,7 @@
 <ol>
 <li>
 <p><strong>Reload Aerospace config:</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>aerospace<span class="w"> </span>reload-config
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>aerospace<span class="w"> </span>reload-config
 </span></code></pre></div></p>
 </li>
 <li>
@@ -3218,7 +3248,7 @@
 <ol>
 <li>
 <p><strong>Reload tmux config:</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>tmux<span class="w"> </span>source-file<span class="w"> </span>~/.config/tmux/tmux.conf
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>tmux<span class="w"> </span>source-file<span class="w"> </span>~/.config/tmux/tmux.conf
 </span></code></pre></div></p>
 </li>
 <li>
@@ -3232,7 +3262,7 @@
 <ol>
 <li>
 <p><strong>Navigate to a different git project:</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">cd</span><span class="w"> </span>~/other-project
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">cd</span><span class="w"> </span>~/other-project
 </span></code></pre></div></p>
 </li>
 <li>
@@ -3245,7 +3275,7 @@
 </li>
 <li>
 <p><strong>Navigate outside git:</strong>
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~
 </span></code></pre></div></p>
 </li>
 <li>
@@ -3256,7 +3286,7 @@
 </ol>
 <hr />
 <h2 id="current-menu-structure">Current Menu Structure<a class="headerlink" href="#current-menu-structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Universal Categories (Always):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Universal Categories (Always):
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  ├── Tools → CLI tools discovery
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  ├── Aliases → Shell aliases (parsed from aliases.sh)
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  └── Functions → Shell functions (parsed from fzf-functions.sh)
@@ -3338,7 +3368,7 @@
 <ol>
 <li>
 <p>Reload configs:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>aerospace<span class="w"> </span>reload-config
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>aerospace<span class="w"> </span>reload-config
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>tmux<span class="w"> </span>source-file<span class="w"> </span>~/.config/tmux/tmux.conf
 </span></code></pre></div></p>
 </li>

@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3147,7 +3177,7 @@
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <h3 id="state-storage">State Storage<a class="headerlink" href="#state-storage" title="Permanent link">&para;</a></h3>
 <p>State is persisted to <code>~/.config/menu/state.json</code> in the following format:</p>
-<div class="language-json highlight"><span class="filename">JSON</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;favorites&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ls&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;gitlog&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;fcd&quot;</span><span class="p">],</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">&quot;workflows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Git Commit Workflow&quot;</span><span class="p">],</span>
@@ -3171,12 +3201,12 @@
 <h2 id="favorites-system">Favorites System<a class="headerlink" href="#favorites-system" title="Permanent link">&para;</a></h2>
 <h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
 <p>Favorites are stored as a map of integration names to item ID slices:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">Favorites</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">string</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">Favorites</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">string</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1">// Example: {&quot;commands&quot;: [&quot;ls&quot;, &quot;grep&quot;], &quot;workflows&quot;: [&quot;Git Commit&quot;]}</span>
 </span></code></pre></div>
 <h3 id="operations">Operations<a class="headerlink" href="#operations" title="Permanent link">&para;</a></h3>
 <h4 id="adding-a-favorite">Adding a Favorite<a class="headerlink" href="#adding-a-favorite" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">ToggleFavorite</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">ToggleFavorite</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The operation is idempotent - calling it multiple times with the same item is safe and won't create duplicates.</p>
 <p><strong>Flow:</strong></p>
@@ -3188,11 +3218,11 @@
 <li>Return any errors encountered</li>
 </ol>
 <h4 id="checking-favorite-status">Checking Favorite Status<a class="headerlink" href="#checking-favorite-status" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">isFavorite</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">IsFavorite</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">isFavorite</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">IsFavorite</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>This is a fast read-only operation that checks if an item ID exists in the favorites list.</p>
 <h4 id="enriching-items-with-favorite-status">Enriching Items with Favorite Status<a class="headerlink" href="#enriching-items-with-favorite-status" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">enrichedItems</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">EnrichItems</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">items</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">enrichedItems</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">EnrichItems</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">items</span><span class="p">)</span>
 </span></code></pre></div>
 <p>This method:</p>
 <ol>
@@ -3204,7 +3234,7 @@
 <p>The UI uses enriched items to display the ★ indicator.</p>
 <h3 id="ui-integration">UI Integration<a class="headerlink" href="#ui-integration" title="Permanent link">&para;</a></h3>
 <p>In detail view, press <code>f</code> to toggle favorite status:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">case</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">:</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">case</span><span class="w"> </span><span class="s">&quot;f&quot;</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">manager</span><span class="p">.</span><span class="nx">ToggleFavorite</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">Source</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">Favorite</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">!</span><span class="nx">m</span><span class="p">.</span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">Favorite</span>
@@ -3219,7 +3249,7 @@
 <h2 id="recents-system">Recents System<a class="headerlink" href="#recents-system" title="Permanent link">&para;</a></h2>
 <h3 id="how-it-works_1">How It Works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <p>Recents are stored as a map of integration names to recent item slices with timestamps:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">Recents</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="nx">RecentItem</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">Recents</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="nx">RecentItem</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">RecentItem</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">ItemID</span><span class="w">       </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;item_id&quot;`</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">LastAccessed</span><span class="w"> </span><span class="kt">int64</span><span class="w">  </span><span class="s">`json:&quot;last_accessed&quot;`</span><span class="w"> </span><span class="c1">// Unix timestamp</span>
@@ -3235,7 +3265,7 @@
 </ol>
 <h3 id="operations_1">Operations<a class="headerlink" href="#operations_1" title="Permanent link">&para;</a></h3>
 <h4 id="tracking-recent-access">Tracking Recent Access<a class="headerlink" href="#tracking-recent-access" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">MarkRecent</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">manager</span><span class="p">.</span><span class="nx">MarkRecent</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>This is called automatically when a command is successfully executed.</p>
 <p><strong>Flow:</strong></p>
@@ -3247,25 +3277,25 @@
 <li>Persist state to disk immediately</li>
 </ol>
 <p><strong>Example sequence:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// Initial: []</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// Initial: []</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nx">AddRecent</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span><span class="w">    </span><span class="c1">// [&quot;ls&quot;]</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nx">AddRecent</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;cd&quot;</span><span class="p">)</span><span class="w">    </span><span class="c1">// [&quot;cd&quot;, &quot;ls&quot;]</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">AddRecent</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;pwd&quot;</span><span class="p">)</span><span class="w">   </span><span class="c1">// [&quot;pwd&quot;, &quot;cd&quot;, &quot;ls&quot;]</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nx">AddRecent</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span><span class="w">    </span><span class="c1">// [&quot;ls&quot;, &quot;pwd&quot;, &quot;cd&quot;] - ls moved to front</span>
 </span></code></pre></div>
 <h4 id="getting-recent-items">Getting Recent Items<a class="headerlink" href="#getting-recent-items" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">recentIDs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">GetRecents</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">recentIDs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">GetRecents</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">)</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1">// Returns: [&quot;ls&quot;, &quot;pwd&quot;, &quot;cd&quot;] - MRU order</span>
 </span></code></pre></div>
 <h4 id="getting-access-timestamp">Getting Access Timestamp<a class="headerlink" href="#getting-access-timestamp" title="Permanent link">&para;</a></h4>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">timestamp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">GetRecentTimestamp</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">timestamp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">GetRecentTimestamp</span><span class="p">(</span><span class="s">&quot;commands&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ls&quot;</span><span class="p">)</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">timestamp</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">lastUsed</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Unix</span><span class="p">(</span><span class="o">*</span><span class="nx">timestamp</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="automatic-tracking">Automatic Tracking<a class="headerlink" href="#automatic-tracking" title="Permanent link">&para;</a></h3>
 <p>Recent items are tracked automatically on successful command execution:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">Model</span><span class="p">)</span><span class="w"> </span><span class="nx">executeItem</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">tea</span><span class="p">.</span><span class="nx">Model</span><span class="p">,</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">Model</span><span class="p">)</span><span class="w"> </span><span class="nx">executeItem</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">tea</span><span class="p">.</span><span class="nx">Model</span><span class="p">,</span><span class="w"> </span><span class="nx">tea</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="c1">// ... execute command ...</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="c1">// Mark as recent if execution was successful</span>
@@ -3279,7 +3309,7 @@
 <h2 id="go-language-features">Go Language Features<a class="headerlink" href="#go-language-features" title="Permanent link">&para;</a></h2>
 <p>This implementation demonstrates several important Go concepts:</p>
 <h3 id="1-mutex-based-synchronization">1. Mutex-Based Synchronization<a class="headerlink" href="#1-mutex-based-synchronization" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">State</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">State</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nx">mu</span><span class="w"> </span><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span><span class="w">  </span><span class="c1">// Read-write mutex</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="c1">// ...</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="p">}</span>
@@ -3305,7 +3335,7 @@
 <li>Only writers block (and block all readers/writers)</li>
 </ul>
 <h3 id="2-idempotent-operations">2. Idempotent Operations<a class="headerlink" href="#2-idempotent-operations" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="nx">AddFavorite</span><span class="p">(</span><span class="nx">integration</span><span class="p">,</span><span class="w"> </span><span class="nx">itemID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="nx">AddFavorite</span><span class="p">(</span><span class="nx">integration</span><span class="p">,</span><span class="w"> </span><span class="nx">itemID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="c1">// Check if already favorited</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">Favorites</span><span class="p">[</span><span class="nx">integration</span><span class="p">]</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">itemID</span><span class="w"> </span><span class="p">{</span>
@@ -3322,7 +3352,7 @@
 <li>Simplifies UI code (don't need to check before calling)</li>
 </ul>
 <h3 id="3-defensive-copying">3. Defensive Copying<a class="headerlink" href="#3-defensive-copying" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="nx">GetFavorites</span><span class="p">(</span><span class="nx">integration</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="nx">GetFavorites</span><span class="p">(</span><span class="nx">integration</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="nx">favorites</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">Favorites</span><span class="p">[</span><span class="nx">integration</span><span class="p">]</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="c1">// Return a copy, not the original slice</span>
@@ -3338,7 +3368,7 @@
 <li>Maintains encapsulation</li>
 </ul>
 <h3 id="4-pointer-returns-for-optional-values">4. Pointer Returns for Optional Values<a class="headerlink" href="#4-pointer-returns-for-optional-values" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="nx">GetRecentTimestamp</span><span class="p">(</span><span class="nx">integration</span><span class="p">,</span><span class="w"> </span><span class="nx">itemID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="kt">int64</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">State</span><span class="p">)</span><span class="w"> </span><span class="nx">GetRecentTimestamp</span><span class="p">(</span><span class="nx">integration</span><span class="p">,</span><span class="w"> </span><span class="nx">itemID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="kt">int64</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">recent</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">Recents</span><span class="p">[</span><span class="nx">integration</span><span class="p">]</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">recent</span><span class="p">.</span><span class="nx">ItemID</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">itemID</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">            </span><span class="nx">timestamp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">recent</span><span class="p">.</span><span class="nx">LastAccessed</span>
@@ -3356,15 +3386,15 @@
 </ul>
 <h3 id="5-slice-manipulation-techniques">5. Slice Manipulation Techniques<a class="headerlink" href="#5-slice-manipulation-techniques" title="Permanent link">&para;</a></h3>
 <p><strong>Removing an element (without reallocation):</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Remove element at index i: [a,b,c,d] -&gt; [a,b,d]</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Remove element at index i: [a,b,c,d] -&gt; [a,b,d]</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nx">slice</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">slice</span><span class="p">[:</span><span class="nx">i</span><span class="p">],</span><span class="w"> </span><span class="nx">slice</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span><span class="o">...</span><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Prepending an element:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// Add to front: [a,b,c] -&gt; [x,a,b,c]</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// Add to front: [a,b,c] -&gt; [x,a,b,c]</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nx">slice</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">([]</span><span class="nx">T</span><span class="p">{</span><span class="nx">newItem</span><span class="p">},</span><span class="w"> </span><span class="nx">slice</span><span class="o">...</span><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Moving element to front:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// Move element at i to front</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// Move element at i to front</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nx">item</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">slice</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="nx">slice</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">([]</span><span class="nx">T</span><span class="p">{</span><span class="nx">item</span><span class="p">},</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">slice</span><span class="p">[:</span><span class="nx">i</span><span class="p">],</span><span class="w"> </span><span class="nx">slice</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span><span class="o">...</span><span class="p">)</span><span class="o">...</span><span class="p">)</span>
 </span></code></pre></div>
@@ -3422,7 +3452,7 @@
 </ul>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
 <p>The system handles errors gracefully:</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1">// State initialization fails - continue without state</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1">// State initialization fails - continue without state</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nx">state</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NewState</span><span class="p">(</span><span class="nx">configDir</span><span class="p">)</span>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nx">state</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">nil</span><span class="w">  </span><span class="c1">// Manager continues to work, just without persistence</span>
@@ -3446,7 +3476,7 @@
 <li>Persistence (save/load cycle)</li>
 </ul>
 <h3 id="testing-with-temporary-directories">Testing with Temporary Directories<a class="headerlink" href="#testing-with-temporary-directories" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestFavorites</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">TestFavorites</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span><span class="nx">tmpDir</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">t</span><span class="p">.</span><span class="nx">TempDir</span><span class="p">()</span><span class="w">  </span><span class="c1">// Automatic cleanup</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="nx">state</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NewState</span><span class="p">(</span><span class="nx">tmpDir</span><span class="p">)</span>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="c1">// ... test operations ...</span>

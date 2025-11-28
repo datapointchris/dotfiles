@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3171,7 +3201,7 @@
 <hr />
 <h2 id="simplified-architecture">Simplified Architecture<a class="headerlink" href="#simplified-architecture" title="Permanent link">&para;</a></h2>
 <h3 id="two-plugins-clear-separation">Two Plugins, Clear Separation<a class="headerlink" href="#two-plugins-clear-separation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────┐
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────┐
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│<span class="w">                    </span>YOUR<span class="w"> </span>WORKFLOW<span class="w">                            </span>│
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├─────────────────────────────────────────────────────────────┤
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│<span class="w">                                                             </span>│
@@ -3209,7 +3239,7 @@
 <hr />
 <h3 id="phase-2-refactor-to-modular-config">Phase 2: Refactor to Modular Config<a class="headerlink" href="#phase-2-refactor-to-modular-config" title="Permanent link">&para;</a></h3>
 <p><strong>Current Problem:</strong>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kr">return</span><span class="w"> </span><span class="p">{</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kr">return</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="s1">&#39;plugin&#39;</span><span class="p">,</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nv">opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nv">strategies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
@@ -3227,7 +3257,7 @@
 </span></code></pre></div>
 This is unreadable nested hell.</p>
 <p><strong>New Approach:</strong>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">-- Define config sections at top level</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">-- Define config sections at top level</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">local</span><span class="w"> </span><span class="nv">chat_keymaps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nv">send</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">modes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&lt;C-s&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="nv">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&lt;C-s&gt;&#39;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nv">opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">desc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Send&#39;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nv">close</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">modes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&lt;C-c&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="nv">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&lt;C-c&gt;&#39;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nv">opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">desc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Close&#39;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
@@ -3295,7 +3325,7 @@ This is unreadable nested hell.</p>
 <p><strong>Problem:</strong> Hand-testing 331 lines of config is painful and error-prone.</p>
 <p><strong>Solution:</strong> Create a test script that exercises core functionality.</p>
 <h4 id="test-script-test-codecompanionlua">Test Script: <code>test-codecompanion.lua</code><a class="headerlink" href="#test-script-test-codecompanionlua" title="Permanent link">&para;</a></h4>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">-- Test script for codecompanion.nvim functionality</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">-- Test script for codecompanion.nvim functionality</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">-- Run with: nvim --headless -u test-codecompanion.lua</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">local</span><span class="w"> </span><span class="kr">function</span><span class="w"> </span><span class="nf">test</span><span class="p">(</span><span class="nv">name</span><span class="p">,</span><span class="w"> </span><span class="nv">fn</span><span class="p">)</span>
@@ -3378,7 +3408,7 @@ This is unreadable nested hell.</p>
 </span><span id="__span-3-81"><a id="__codelineno-3-81" name="__codelineno-3-81" href="#__codelineno-3-81"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;To test interactively, use the manual test plan below.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Quick automated test (catches obvious breaks)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Quick automated test (catches obvious breaks)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>nvim<span class="w"> </span>--headless<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;luafile ~/.config/nvim/test-codecompanion.lua&quot;</span><span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;qa&quot;</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Or add as a Task command</span>
@@ -3386,7 +3416,7 @@ This is unreadable nested hell.</p>
 </span></code></pre></div>
 <h4 id="manual-test-checklist-quick-2-minutes">Manual Test Checklist (Quick, 2 minutes)<a class="headerlink" href="#manual-test-checklist-quick-2-minutes" title="Permanent link">&para;</a></h4>
 <p>After automated tests pass, verify interactivity:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>1. Open Neovim → Open any Lua file
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>1. Open Neovim → Open any Lua file
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>2. Press &lt;leader&gt;a → Chat buffer opens? ✅/❌
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>3. Type &quot;what is this file?&quot; → Claude responds? ✅/❌
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>4. Select a function (visual) → Press &lt;leader&gt;cc → Type &quot;add comments&quot; → Diff appears? ✅/❌
@@ -3396,7 +3426,7 @@ This is unreadable nested hell.</p>
 <hr />
 <h3 id="phase-4-simplified-config-modules">Phase 4: Simplified Config Modules<a class="headerlink" href="#phase-4-simplified-config-modules" title="Permanent link">&para;</a></h3>
 <h4 id="file-structure-proposed">File Structure (Proposed)<a class="headerlink" href="#file-structure-proposed" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>platforms/common/.config/nvim/lua/plugins/codecompanion/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>platforms/common/.config/nvim/lua/plugins/codecompanion/
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├──<span class="w"> </span>init.lua<span class="w">              </span><span class="c1"># Main plugin definition (imports others)</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├──<span class="w"> </span>keymaps.lua<span class="w">           </span><span class="c1"># All keymaps in one place</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├──<span class="w"> </span>strategies.lua<span class="w">        </span><span class="c1"># Chat &amp; inline strategy configs</span>
@@ -3404,14 +3434,14 @@ This is unreadable nested hell.</p>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>└──<span class="w"> </span>test.lua<span class="w">              </span><span class="c1"># Test helpers</span>
 </span></code></pre></div>
 <p><strong>OR</strong> (simpler - one file approach):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>platforms/common/.config/nvim/lua/plugins/codecompanion.lua
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>platforms/common/.config/nvim/lua/plugins/codecompanion.lua
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a># Single file, ~80 lines, modular variables at top
 </span></code></pre></div>
 <p><strong>Recommendation:</strong> Start with single-file approach. Only split if it grows past 150 lines.</p>
 <hr />
 <h2 id="minimal-working-config-draft">Minimal Working Config (Draft)<a class="headerlink" href="#minimal-working-config-draft" title="Permanent link">&para;</a></h2>
 <p>Here's what the simplified config should look like:</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">-- codecompanion.nvim - Minimal, working configuration</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">-- codecompanion.nvim - Minimal, working configuration</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1">-- Keep it simple: chat, inline edits, diffs. That&#39;s it.</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1">-- ============================================================================</span>
@@ -3533,7 +3563,7 @@ This is unreadable nested hell.</p>
 <h2 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
 <h3 id="level-1-automated-catches-breakage">Level 1: Automated (Catches Breakage)<a class="headerlink" href="#level-1-automated-catches-breakage" title="Permanent link">&para;</a></h3>
 <p>Run the test script after any config change:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Add to Taskfile</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Add to Taskfile</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>task<span class="w"> </span>test:codecompanion
 </span></code></pre></div>
 <p>This verifies:
@@ -3547,7 +3577,7 @@ This is unreadable nested hell.</p>
 <strong>Catches:</strong> 80% of issues (typos, missing deps, config errors)</p>
 <h3 id="level-2-manual-interactive-verifies-ux">Level 2: Manual Interactive (Verifies UX)<a class="headerlink" href="#level-2-manual-interactive-verifies-ux" title="Permanent link">&para;</a></h3>
 <p>Quick 2-minute test after automated tests pass:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>1. Chat opens? (&lt;leader&gt;a)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>1. Chat opens? (&lt;leader&gt;a)
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>2. Claude responds? (ask a question)
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>3. Inline edit works? (select code, &lt;leader&gt;cc, request change)
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>4. Diff appears? (after edit request)
@@ -3565,7 +3595,7 @@ This is unreadable nested hell.</p>
 <hr />
 <h2 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
 <h3 id="step-1-backup-test-current-setup">Step 1: Backup &amp; Test Current Setup<a class="headerlink" href="#step-1-backup-test-current-setup" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Backup existing config</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Backup existing config</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>cp<span class="w"> </span>platforms/common/.config/nvim/lua/plugins/codecompanion.lua<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">   </span>platforms/common/.config/nvim/lua/plugins/codecompanion.lua.backup
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
@@ -3574,19 +3604,19 @@ This is unreadable nested hell.</p>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># List each feature that fails with current config</span>
 </span></code></pre></div>
 <h3 id="step-2-create-test-script">Step 2: Create Test Script<a class="headerlink" href="#step-2-create-test-script" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Create test file</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Create test file</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>nvim<span class="w"> </span>platforms/common/.config/nvim/test-codecompanion.lua
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># Paste the test script from above</span>
 </span></code></pre></div>
 <h3 id="step-3-replace-config-with-minimal-version">Step 3: Replace Config with Minimal Version<a class="headerlink" href="#step-3-replace-config-with-minimal-version" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Replace codecompanion.lua with minimal config</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Replace codecompanion.lua with minimal config</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="c1"># (We&#39;ll do this together)</span>
 </span></code></pre></div>
 <h3 id="step-4-run-automated-tests">Step 4: Run Automated Tests<a class="headerlink" href="#step-4-run-automated-tests" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>nvim<span class="w"> </span>--headless<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;luafile ~/.config/nvim/test-codecompanion.lua&quot;</span><span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;qa&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>nvim<span class="w"> </span>--headless<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;luafile ~/.config/nvim/test-codecompanion.lua&quot;</span><span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;qa&quot;</span>
 </span></code></pre></div>
 <h3 id="step-5-run-manual-tests">Step 5: Run Manual Tests<a class="headerlink" href="#step-5-run-manual-tests" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>1. Open Neovim
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>1. Open Neovim
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>2. Run through 5-test checklist
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>3. Document results
 </span></code></pre></div>
@@ -3603,7 +3633,7 @@ This is unreadable nested hell.</p>
 - codecompanion: Inline assistant
 - claudecode: Toggle terminal</p>
 <p><strong>Solution:</strong> Separate by prefix clearly</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">-- codecompanion.nvim (chat/inline work)</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">-- codecompanion.nvim (chat/inline work)</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="o">&lt;</span><span class="nv">leader</span><span class="o">&gt;</span><span class="nv">a</span><span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="nv">Toggle</span><span class="w"> </span><span class="nf">chat</span><span class="w"> </span><span class="p">(</span><span class="nv">main</span><span class="w"> </span><span class="nv">interface</span><span class="p">)</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="o">&lt;</span><span class="nv">leader</span><span class="o">&gt;</span><span class="nv">cc</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Inline</span><span class="w"> </span><span class="nv">assistant</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="o">&lt;</span><span class="nv">leader</span><span class="o">&gt;</span><span class="nv">ca</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Action</span><span class="w"> </span><span class="nv">palette</span>
@@ -3619,7 +3649,7 @@ This is unreadable nested hell.</p>
 </span></code></pre></div>
 <p><strong>Change Required:</strong>
 In <code>claudecode.lua</code>, change:
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">-- FROM:</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">-- FROM:</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="p">{</span><span class="w"> </span><span class="s1">&#39;&lt;leader&gt;cc&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;cmd&gt;ClaudeCode&lt;cr&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="nv">desc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Toggle Claude&#39;</span><span class="w"> </span><span class="p">},</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1">-- TO:</span>

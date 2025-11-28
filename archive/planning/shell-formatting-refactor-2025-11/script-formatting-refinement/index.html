@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3145,7 +3175,7 @@
 <p><strong>Why</strong>: These functions added cognitive load and unnecessary abstraction. Direct <code>echo</code> statements are clearer and more maintainable.</p>
 <h3 id="2-added-centered-title-functions">✅ 2. Added Centered Title Functions<a class="headerlink" href="#2-added-centered-title-functions" title="Permanent link">&para;</a></h3>
 <p><strong>New functions:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>print_title<span class="o">()</span><span class="w">          </span><span class="c1"># Centered text with blue borders (full terminal width)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>print_title<span class="o">()</span><span class="w">          </span><span class="c1"># Centered text with blue borders (full terminal width)</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>print_title_success<span class="o">()</span><span class="w">  </span><span class="c1"># Centered text with green borders and ✅</span>
 </span></code></pre></div></p>
 <p><strong>Features:</strong>
@@ -3159,7 +3189,7 @@
 - Removed old <code>print_conclusion()</code> from legacy <code>formatting.sh</code>
 - Added notes pointing to new functions in script-formatting.sh</p>
 <p><strong>Helper functions added:</strong>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>_separator<span class="o">()</span><span class="w">    </span><span class="c1"># Now accepts width parameter: _separator &quot;$BOX_THICK&quot; 80</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>_separator<span class="o">()</span><span class="w">    </span><span class="c1"># Now accepts width parameter: _separator &quot;$BOX_THICK&quot; 80</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>_center_text<span class="o">()</span><span class="w">  </span><span class="c1"># Centers text within given width</span>
 </span></code></pre></div></p>
 <h3 id="3-directory-reorganization-clean-home-directory">✅ 3. Directory Reorganization (Clean Home Directory!)<a class="headerlink" href="#3-directory-reorganization-clean-home-directory" title="Permanent link">&para;</a></h3>
@@ -3187,7 +3217,7 @@
 <h2 id="what-works-now">What Works Now<a class="headerlink" href="#what-works-now" title="Permanent link">&para;</a></h2>
 <h3 id="test-output">Test Output<a class="headerlink" href="#test-output" title="Permanent link">&para;</a></h3>
 <p>The <code>test_formatting</code> function demonstrates all capabilities:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">source</span><span class="w"> </span>~/shell/script-formatting.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">source</span><span class="w"> </span>~/shell/script-formatting.sh
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>test_formatting
 </span></code></pre></div>
 <p>Output shows:
@@ -3278,17 +3308,17 @@
 <ol>
 <li>
 <p><strong>Run symlinks manager</strong> to deploy the new structure:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>symlinks:link
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>symlinks:link
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Reload shell</strong> to pick up changes:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">source</span><span class="w"> </span>~/.zshrc
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">source</span><span class="w"> </span>~/.zshrc
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test the formatting</strong>:
-   <div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>test_formatting
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>test_formatting
 </span></code></pre></div></p>
 </li>
 </ol>

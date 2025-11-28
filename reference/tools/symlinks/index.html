@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3231,34 +3261,34 @@
 <p>All symlinks commands are run via Task from the dotfiles root directory. The tool uses <code>uv run</code> internally for project-local execution.</p>
 <h3 id="task-symlinkslink">task symlinks:link<a class="headerlink" href="#task-symlinkslink" title="Permanent link">&para;</a></h3>
 <p>Deploy symlinks for current platform (common + platform layers). Additive only - creates new symlinks without removing existing ones.</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>symlinks:link<span class="w">         </span><span class="c1"># Create symlinks (safe, no removal)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>symlinks:link<span class="w">         </span><span class="c1"># Create symlinks (safe, no removal)</span>
 </span></code></pre></div>
 <p>Use when adding new dotfiles to create their symlinks without disturbing existing ones.</p>
 <h3 id="task-symlinksrelink">task symlinks:relink<a class="headerlink" href="#task-symlinksrelink" title="Permanent link">&para;</a></h3>
 <p>Complete refresh - removes all symlinks and recreates them.</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>symlinks:relink<span class="w">       </span><span class="c1"># Full refresh (removes + links)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>symlinks:relink<span class="w">       </span><span class="c1"># Full refresh (removes + links)</span>
 </span></code></pre></div>
 <p>Use after removing files from dotfiles repo or when you need a clean slate.</p>
 <h3 id="task-symlinkscheck">task symlinks:check<a class="headerlink" href="#task-symlinkscheck" title="Permanent link">&para;</a></h3>
 <p>Verify symlink integrity.</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>task<span class="w"> </span>symlinks:check<span class="w">        </span><span class="c1"># Find broken symlinks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>task<span class="w"> </span>symlinks:check<span class="w">        </span><span class="c1"># Find broken symlinks</span>
 </span></code></pre></div>
 <p>Shows broken symlinks in home directory.</p>
 <h3 id="task-symlinksshow">task symlinks:show<a class="headerlink" href="#task-symlinksshow" title="Permanent link">&para;</a></h3>
 <p>Display current symlinks.</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>symlinks:show<span class="w">         </span><span class="c1"># Show all symlinks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>symlinks:show<span class="w">         </span><span class="c1"># Show all symlinks</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>task<span class="w"> </span>symlinks:show-common<span class="w">  </span><span class="c1"># Show common layer only</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>task<span class="w"> </span>symlinks:show-platform<span class="w"> </span><span class="c1"># Show platform layer only</span>
 </span></code></pre></div>
 <h3 id="additional-commands">Additional Commands<a class="headerlink" href="#additional-commands" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>task<span class="w"> </span>symlinks:link-common<span class="w">    </span><span class="c1"># Link common base layer only (additive)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>task<span class="w"> </span>symlinks:link-common<span class="w">    </span><span class="c1"># Link common base layer only (additive)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>task<span class="w"> </span>symlinks:link-platform<span class="w">  </span><span class="c1"># Link platform overlay only (additive)</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>task<span class="w"> </span>symlinks:unlink<span class="w">         </span><span class="c1"># Remove all symlinks</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>task<span class="w"> </span>symlinks:check-clean<span class="w">    </span><span class="c1"># Check and remove broken symlinks</span>
 </span></code></pre></div>
 <h3 id="direct-usage-advanced">Direct Usage (Advanced)<a class="headerlink" href="#direct-usage-advanced" title="Permanent link">&para;</a></h3>
 <p>If needed, run the tool directly from dotfiles root:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>link<span class="w"> </span>common
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>link<span class="w"> </span>common
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>link<span class="w"> </span>macos
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>relink<span class="w"> </span>macos
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>check
@@ -3306,19 +3336,19 @@
 <li>No symlinks for compiled binaries (they need building first)</li>
 </ul>
 <p><strong>Go project structure</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>apps/common/sess/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>apps/common/sess/
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── *.go              # Source code (tracked)
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── Taskfile.yml      # Build automation
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├── .gitignore        # Ignores: sess, *.test, coverage.*
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>└── sess              # Build artifact (gitignored, NOT symlinked)
 </span></code></pre></div>
 <p><strong>To install Go binaries</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/sess<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>task<span class="w"> </span>install<span class="w">      </span><span class="c1"># Builds and copies to ~/go/bin/sess</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/sess<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>task<span class="w"> </span>install<span class="w">      </span><span class="c1"># Builds and copies to ~/go/bin/sess</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">cd</span><span class="w"> </span>apps/common/toolbox<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>task<span class="w"> </span>install<span class="w">   </span><span class="c1"># Builds and copies to ~/go/bin/toolbox</span>
 </span></code></pre></div>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <p>The symlinks tool runs via <code>uv run</code> from the dotfiles root directory. Use Task commands for the best experience:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>task<span class="w"> </span>symlinks:link<span class="w">     </span><span class="c1"># Create symlinks (additive, safe)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>task<span class="w"> </span>symlinks:link<span class="w">     </span><span class="c1"># Create symlinks (additive, safe)</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>task<span class="w"> </span>symlinks:relink<span class="w">   </span><span class="c1"># Full refresh (removes + recreates)</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>task<span class="w"> </span>symlinks:check<span class="w">    </span><span class="c1"># Verify symlinks</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>task<span class="w"> </span>symlinks:show<span class="w">     </span><span class="c1"># Display current symlinks</span>
@@ -3343,7 +3373,7 @@
 <p><strong>Symptom of outdated symlinks</strong>: "module not found" errors in Neovim after creating new files in <code>common/.config/nvim/lua/</code> directories.</p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>The symlinks tool has comprehensive pytest test suite.</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/tools/symlinks
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/tools/symlinks
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>pytest<span class="w"> </span>-v<span class="w">                              </span><span class="c1"># Run all tests</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>pytest<span class="w"> </span>tests/test_manager.py<span class="w">           </span><span class="c1"># Manager tests</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>pytest<span class="w"> </span>tests/test_integration.py<span class="w">       </span><span class="c1"># Integration tests</span>
@@ -3409,7 +3439,7 @@
 </ul>
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
 <p><strong>Project structure</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>tools/symlinks/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>tools/symlinks/
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>├── symlinks/               # Main package
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>│   ├── cli.py             # Click CLI
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>│   ├── config.py          # Configuration

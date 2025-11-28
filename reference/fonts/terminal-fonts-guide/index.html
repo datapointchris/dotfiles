@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3245,7 +3275,7 @@
 </ul>
 <h3 id="technical-requirements">Technical Requirements<a class="headerlink" href="#technical-requirements" title="Permanent link">&para;</a></h3>
 <p><strong>Grid-based positioning</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Column:  1    2    3    4    5
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Column:  1    2    3    4    5
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>         ┌────┬────┬────┬────┬────┐
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>         │ t  │ e  │ s  │ t  │    │
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>         └────┴────┴────┴────┴────┘
@@ -3253,7 +3283,7 @@
 <p>Every character must align to this grid. Applications position text by column number, not pixel position.</p>
 <h3 id="what-breaks-with-proportional-fonts">What Breaks with Proportional Fonts<a class="headerlink" href="#what-breaks-with-proportional-fonts" title="Permanent link">&para;</a></h3>
 <p><strong>Column alignment fails</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Monospace (works):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Monospace (works):
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Column:  1    2    3    4    5    6    7    8
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>         i    s    o    l    a    t    e    d
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
@@ -3387,7 +3417,7 @@
 <h2 id="monospace-font-characteristics">Monospace Font Characteristics<a class="headerlink" href="#monospace-font-characteristics" title="Permanent link">&para;</a></h2>
 <h3 id="fixed-width">Fixed Width<a class="headerlink" href="#fixed-width" title="Permanent link">&para;</a></h3>
 <p>Every character has identical advance width:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Width in cells:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Width in cells:
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>&#39;i&#39; = 1 cell
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>&#39;m&#39; = 1 cell
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>&#39;W&#39; = 1 cell
@@ -3416,7 +3446,7 @@
 </ul>
 <h2 id="identifying-monospace-fonts">Identifying Monospace Fonts<a class="headerlink" href="#identifying-monospace-fonts" title="Permanent link">&para;</a></h2>
 <h3 id="check-with-fc-list">Check with fc-list<a class="headerlink" href="#check-with-fc-list" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># List monospace fonts</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># List monospace fonts</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>fc-list<span class="w"> </span>:spacing<span class="o">=</span>mono<span class="w"> </span>family
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Check if specific font is monospace</span>
@@ -3429,7 +3459,7 @@
 </span></code></pre></div>
 <p>iiiiiiiiii
 mmmmmmmmmm</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>**Monospace**: Both lines same length
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>**Monospace**: Both lines same length
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>**Proportional**: &#39;mmm&#39; line much longer
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>### Font Naming Hints
@@ -3623,7 +3653,7 @@ mmmmmmmmmm</p>
 <li>Readability at small sizes</li>
 </ul>
 <p><strong>Your Ghostty config</strong> shows:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>font-thicken = false
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>font-thicken = false
 </span></code></pre></div>
 <p>This keeps fonts thin and crisp.</p>
 <h3 id="ligatures">Ligatures<a class="headerlink" href="#ligatures" title="Permanent link">&para;</a></h3>
@@ -3635,10 +3665,10 @@ mmmmmmmmmm</p>
 <li><code>===</code> becomes ≡</li>
 </ul>
 <p><strong>Your config</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>font-feature = -liga  # Disable ligatures
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>font-feature = -liga  # Disable ligatures
 </span></code></pre></div>
 <p>You have ligatures disabled. To enable:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a># Remove or comment out the -liga line
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a># Remove or comment out the -liga line
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a># font-feature = -liga
 </span></code></pre></div>
 <h3 id="hinting">Hinting<a class="headerlink" href="#hinting" title="Permanent link">&para;</a></h3>

@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h1>
 <p>Plain-text note-taking with zk. Create journal entries, dev notes, and learning documentation without leaving the terminal. Link notes with wiki-links, organize with sections, and back up with git or iCloud.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>notes<span class="w">                      </span><span class="c1"># Interactive menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>notes<span class="w">                      </span><span class="c1"># Interactive menu</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>notes<span class="w"> </span>search<span class="w">              </span><span class="c1"># Full-text search</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>notes<span class="w"> </span>new<span class="w">                 </span><span class="c1"># Create note (pick section)</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>notes<span class="w"> </span>recent<span class="w">              </span><span class="c1"># Browse recent notes</span>
@@ -3243,7 +3273,7 @@
 </ul>
 <h2 id="notebook-structure">Notebook Structure<a class="headerlink" href="#notebook-structure" title="Permanent link">&para;</a></h2>
 <p>Single notebook at <code>~/notes</code> (synced to <code>~/Documents/notes</code> via iCloud):</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/notes/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/notes/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── journal/      # Daily entries (iCloud only)
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── learning/     # Study notes (git tracked, public)
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── devnotes/     # Work notes (git tracked, private)
@@ -3282,12 +3312,12 @@
 <li><code>project.md</code> - Project planning structure</li>
 </ul>
 <p>Edit templates to customize note structure:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes/.zk/templates
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes/.zk/templates
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>nvim<span class="w"> </span>daily.md
 </span></code></pre></div>
 <h3 id="wiki-links">Wiki-Links<a class="headerlink" href="#wiki-links" title="Permanent link">&para;</a></h3>
 <p>Link notes with wiki-link syntax:</p>
-<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>See [[jwt-tokens]] for details.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>See [[jwt-tokens]] for details.
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Related: [[api-security]], [[session-management]]
 </span></code></pre></div>
 <p>The zk LSP provides:</p>
@@ -3298,27 +3328,27 @@
 </ul>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Daily journal entry:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>notes<span class="w"> </span>journal
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>notes<span class="w"> </span>journal
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Or: zk journal &quot;Friday reflections&quot;</span>
 </span></code></pre></div>
 <p>Quick dev note:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>notes<span class="w"> </span>new<span class="w"> </span>dev
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>notes<span class="w"> </span>new<span class="w"> </span>dev
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Or: zk devnote &quot;API endpoint refactoring&quot;</span>
 </span></code></pre></div>
 <p>Search across all notes:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>notes<span class="w"> </span>search
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>notes<span class="w"> </span>search
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Type to filter, preview shows context</span>
 </span></code></pre></div>
 <p>Browse recent work:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>notes<span class="w"> </span>recent
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>notes<span class="w"> </span>recent
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Or: zk edit --interactive</span>
 </span></code></pre></div>
 <p>Find related notes via links:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>zk<span class="w"> </span>list<span class="w"> </span>--link-to<span class="w"> </span><span class="s2">&quot;database.md&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>zk<span class="w"> </span>list<span class="w"> </span>--link-to<span class="w"> </span><span class="s2">&quot;database.md&quot;</span>
 </span></code></pre></div>
 <h2 id="git-workflow">Git Workflow<a class="headerlink" href="#git-workflow" title="Permanent link">&para;</a></h2>
 <p>Only <code>devnotes/</code> and <code>learning/</code> are tracked:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>status
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>git<span class="w"> </span>add<span class="w"> </span>devnotes/<span class="w"> </span>learning/
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;notes: add API authentication learnings&quot;</span>
@@ -3327,15 +3357,15 @@
 <p>Personal sections are in <code>.gitignore</code> and stay iCloud-only.</p>
 <h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
 <p>Custom searches:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>zk<span class="w"> </span>list<span class="w"> </span>--modified-after<span class="w"> </span><span class="s2">&quot;7 days ago&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>zk<span class="w"> </span>list<span class="w"> </span>--modified-after<span class="w"> </span><span class="s2">&quot;7 days ago&quot;</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>zk<span class="w"> </span>list<span class="w"> </span>--group<span class="w"> </span>devnotes<span class="w"> </span>--created-after<span class="w"> </span><span class="s2">&quot;2025-11-01&quot;</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>zk<span class="w"> </span>edit<span class="w"> </span>--interactive<span class="w"> </span>--group<span class="w"> </span>learning<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;database&quot;</span>
 </span></code></pre></div>
 <p>Batch operations:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>zk<span class="w"> </span>list<span class="w"> </span>--format<span class="w"> </span>path<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;TODO&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>zk<span class="w"> </span>list<span class="w"> </span>--format<span class="w"> </span>path<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;TODO&quot;</span>
 </span></code></pre></div>
 <p>Shell aliases for quick access:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">jot</span><span class="o">=</span><span class="s1">&#39;zk journal&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">jot</span><span class="o">=</span><span class="s1">&#39;zk journal&#39;</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">note</span><span class="o">=</span><span class="s1">&#39;zk devnote&#39;</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">til</span><span class="o">=</span><span class="s1">&#39;zk learn&#39;</span>
 </span></code></pre></div>
@@ -3347,10 +3377,10 @@
 <li>bat (<code>brew install bat</code>) - for preview formatting</li>
 </ul>
 <p><strong>Create symlink for convenience:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ln<span class="w"> </span>-s<span class="w"> </span>~/Documents/notes<span class="w"> </span>~/notes
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ln<span class="w"> </span>-s<span class="w"> </span>~/Documents/notes<span class="w"> </span>~/notes
 </span></code></pre></div>
 <p><strong>Initialize git tracking:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">cd</span><span class="w"> </span>~/Documents/notes
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">cd</span><span class="w"> </span>~/Documents/notes
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>git<span class="w"> </span>init
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Create gitignore for selective tracking</span>
@@ -3372,13 +3402,13 @@
 </span><span id="__span-14-20"><a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>main
 </span></code></pre></div>
 <p><strong>Create directory structure:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">cd</span><span class="w"> </span>~/notes
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>journal<span class="w"> </span>learning<span class="w"> </span>devnotes<span class="w"> </span>ideas<span class="w"> </span>projects<span class="w"> </span>dreams<span class="w"> </span>.zk/templates
 </span></code></pre></div>
 <p>Templates are created in <code>.zk/templates/</code> for each note type (journal, devnote, learning, idea, project, dream). Each template defines the frontmatter and structure for that note type.</p>
 <h2 id="at-work">At Work<a class="headerlink" href="#at-work" title="Permanent link">&para;</a></h2>
 <p>Clone your notes repository on a work machine to access <code>devnotes/</code> and <code>learning/</code>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:yourusername/notes.git<span class="w"> </span>~/notes
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:yourusername/notes.git<span class="w"> </span>~/notes
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Result:</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># - devnotes/ and learning/ with full content</span>
@@ -3395,7 +3425,7 @@
 <p>Personal sections remain iCloud-only on your personal devices.</p>
 <h2 id="future-enhancements">Future Enhancements<a class="headerlink" href="#future-enhancements" title="Permanent link">&para;</a></h2>
 <p><strong>URL Capture:</strong> Create a quick-capture tool to grab URLs from clipboard and create notes:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># ~/bin/capture-url</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nv">url</span><span class="o">=</span><span class="k">$(</span>pbpaste<span class="k">)</span>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="nv">title</span><span class="o">=</span><span class="k">$(</span>gum<span class="w"> </span>input<span class="w"> </span>--placeholder<span class="w"> </span><span class="s2">&quot;Title&quot;</span><span class="k">)</span>

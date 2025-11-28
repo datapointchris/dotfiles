@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3173,7 +3203,7 @@
 <li>Fun tools (cmatrix, figlet, pipes-sh, sl)</li>
 </ul>
 <p><strong>Usage</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>brew:install-all<span class="w">    </span><span class="c1"># Install all packages</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>brew:install-all<span class="w">    </span><span class="c1"># Install all packages</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>task<span class="w"> </span>brew:verify<span class="w">         </span><span class="c1"># Verify installation</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>task<span class="w"> </span>brew:update<span class="w">         </span><span class="c1"># Update all packages</span>
 </span></code></pre></div>
@@ -3396,26 +3426,26 @@
 <h3 id="auto-commit-functionality">Auto-Commit Functionality<a class="headerlink" href="#auto-commit-functionality" title="Permanent link">&para;</a></h3>
 <p>Three taskfiles automatically commit configuration changes to git:</p>
 <p><strong>brew.yml</strong>: Commits Brewfile and Brewfile.lock.json changes</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Detects changes</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Detects changes</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Stages files</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Creates commit with message</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># &quot;chore(brew) - update Brewfile&quot;</span>
 </span></code></pre></div>
 <p><strong>npm.yml</strong>: Commits config/packages.yml changes</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Detects npm package changes</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Detects npm package changes</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Stages config file</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Creates commit</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># &quot;chore(npm) - update global packages&quot;</span>
 </span></code></pre></div>
 <p><strong>uv.yml</strong>: Commits config/packages.yml changes</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Detects uv tool changes</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Detects uv tool changes</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Stages config file</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Creates commit</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># &quot;chore(uv) - update Python tools&quot;</span>
 </span></code></pre></div>
 <h3 id="platform-detection">Platform Detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h3>
 <p>Taskfile.yml includes smart platform detection:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">PLATFORM</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">PLATFORM</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">sh</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="no">if [ -f &quot;$HOME/.env&quot; ]; then</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="no">source &quot;$HOME/.env&quot; &amp;&amp; echo &quot;$PLATFORM&quot;</span>
@@ -3466,11 +3496,11 @@
 <h2 id="verification-steps">Verification Steps<a class="headerlink" href="#verification-steps" title="Permanent link">&para;</a></h2>
 <h3 id="test-task-system">Test Task System<a class="headerlink" href="#test-task-system" title="Permanent link">&para;</a></h3>
 <p><strong>Verify Taskfile works</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>task<span class="w"> </span>--list<span class="w">    </span><span class="c1"># Should show 130+ available tasks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>task<span class="w"> </span>--list<span class="w">    </span><span class="c1"># Should show 130+ available tasks</span>
 </span></code></pre></div>
 <p><strong>Result</strong>: ✅ SUCCESS - 130+ tasks available across all modules</p>
 <p><strong>Test key commands</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>task<span class="w"> </span>check<span class="w">         </span><span class="c1"># Check installation status</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>task<span class="w"> </span>check<span class="w">         </span><span class="c1"># Check installation status</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>task<span class="w"> </span>brew:info<span class="w">     </span><span class="c1"># Show Homebrew info</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>task<span class="w"> </span>symlinks:verify<span class="w">  </span><span class="c1"># Verify symlinks</span>
 </span></code></pre></div>
@@ -3481,11 +3511,11 @@
 <li>✅ <code>task symlinks:verify</code> - Detects missing symlinks, suggests relink command</li>
 </ul>
 <h3 id="verify-file-structure">Verify File Structure<a class="headerlink" href="#verify-file-structure" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>ls<span class="w"> </span>Brewfile<span class="w"> </span>config/packages.yml<span class="w"> </span>Taskfile.yml<span class="w"> </span>taskfiles/*.yml<span class="w"> </span>docs/VM_TESTING_PLAN.md
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>ls<span class="w"> </span>Brewfile<span class="w"> </span>config/packages.yml<span class="w"> </span>Taskfile.yml<span class="w"> </span>taskfiles/*.yml<span class="w"> </span>docs/VM_TESTING_PLAN.md
 </span></code></pre></div>
 <p><strong>Result</strong>: ✅ All files exist and are properly structured</p>
 <h3 id="test-platform-detection">Test Platform Detection<a class="headerlink" href="#test-platform-detection" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>task<span class="w"> </span>check<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>Platform
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>task<span class="w"> </span>check<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>Platform
 </span></code></pre></div>
 <p><strong>Result</strong>: ✅ "Platform macos" detected correctly</p>
 <hr />
@@ -3524,7 +3554,7 @@
 <hr />
 <h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
 <h3 id="fresh-macos-installation">Fresh macOS Installation<a class="headerlink" href="#fresh-macos-installation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Clone dotfiles</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Clone dotfiles</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
@@ -3548,7 +3578,7 @@
 </ol>
 <p><strong>Duration</strong>: ~20-30 minutes (depending on internet speed)</p>
 <h3 id="update-everything">Update Everything<a class="headerlink" href="#update-everything" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>task<span class="w"> </span>update
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>task<span class="w"> </span>update
 </span></code></pre></div>
 <p><strong>What happens</strong>:</p>
 <ol>
@@ -3558,17 +3588,17 @@
 <li>Auto-commits any configuration changes</li>
 </ol>
 <h3 id="check-installation-status">Check Installation Status<a class="headerlink" href="#check-installation-status" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>task<span class="w"> </span>check
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>task<span class="w"> </span>check
 </span></code></pre></div>
 <p><strong>Output</strong>:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Checking dotfiles installation...
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Checking dotfiles installation...
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Platform macos
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Homebrew installed
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>Node.js v24.11.0
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>uv uv 0.8.11
 </span></code></pre></div>
 <h3 id="verify-components">Verify Components<a class="headerlink" href="#verify-components" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>task<span class="w"> </span>verify
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>task<span class="w"> </span>verify
 </span></code></pre></div>
 <p><strong>What happens</strong>:</p>
 <ol>
@@ -3657,21 +3687,21 @@
 <ol>
 <li><strong>Run symlinks</strong>:</li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>./symlinks.sh<span class="w"> </span>link<span class="w"> </span>macos
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>./symlinks.sh<span class="w"> </span>link<span class="w"> </span>macos
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1"># or</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>task<span class="w"> </span>symlinks:link
 </span></code></pre></div>
 <ol>
 <li><strong>Test update workflow</strong>:</li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>task<span class="w"> </span>brew:update
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>task<span class="w"> </span>brew:update
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>task<span class="w"> </span>npm:update
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>task<span class="w"> </span>uv:update
 </span></code></pre></div>
 <ol>
 <li><strong>Verify all components</strong>:</li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>task<span class="w"> </span>verify
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>task<span class="w"> </span>verify
 </span></code></pre></div>
 <h3 id="short-term-phase-3-polish">Short-term (Phase 3 Polish)<a class="headerlink" href="#short-term-phase-3-polish" title="Permanent link">&para;</a></h3>
 <ol>

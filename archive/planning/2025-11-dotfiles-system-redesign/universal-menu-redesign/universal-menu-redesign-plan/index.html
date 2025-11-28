@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3226,7 +3256,7 @@
 </ul>
 <h3 id="what-we-have-in-lsfunc-pattern-keep-concept">What We Have in lsfunc Pattern (Keep Concept)<a class="headerlink" href="#what-we-have-in-lsfunc-pattern-keep-concept" title="Permanent link">&para;</a></h3>
 <p>✅ <strong>Simplicity:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>lsfunc<span class="w"> </span>git<span class="w">          </span><span class="c1"># Grep-style filtering</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>lsfunc<span class="w"> </span>git<span class="w">          </span><span class="c1"># Grep-style filtering</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Outputs colored list immediately</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Can pipe to other commands</span>
 </span></code></pre></div>
@@ -3244,7 +3274,7 @@
 </ul>
 <h2 id="proposed-architecture">Proposed Architecture<a class="headerlink" href="#proposed-architecture" title="Permanent link">&para;</a></h2>
 <h3 id="high-level-design">High-Level Design<a class="headerlink" href="#high-level-design" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>User → menu → Go CLI → Parse YAML → Generate fzf list → fzf with preview → Output command
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>User → menu → Go CLI → Parse YAML → Generate fzf list → fzf with preview → Output command
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Components:
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>1. Go CLI (menu-go) - Data parsing, formatting, preview generation
@@ -3252,7 +3282,7 @@
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>3. Shell integration - Command output to terminal
 </span></code></pre></div>
 <h3 id="menu-flow">Menu Flow<a class="headerlink" href="#menu-flow" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────────────────────────────────────────┐
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────────────────────────────────────────┐
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│  menu                                           │
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│  (opens in tmux popup if in tmux)               │
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└─────────────────────────────────────────────────┘
@@ -3290,7 +3320,7 @@
 <h4 id="1-go-cli-menu">1. Go CLI (menu)<a class="headerlink" href="#1-go-cli-menu" title="Permanent link">&para;</a></h4>
 <p><strong>Purpose:</strong> Data parsing, formatting, and preview generation</p>
 <p><strong>Commands:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>menu<span class="w">                           </span><span class="c1"># Main menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>menu<span class="w">                           </span><span class="c1"># Main menu</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>menu<span class="w"> </span>sessions<span class="w">                  </span><span class="c1"># List sessions with preview data</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>menu<span class="w"> </span>commands<span class="w"> </span><span class="o">[</span>--filter<span class="o">=</span>git<span class="o">]</span><span class="w">   </span><span class="c1"># List commands, optional filter</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>menu<span class="w"> </span>workflows<span class="w">                 </span><span class="c1"># List workflows with preview data</span>
@@ -3298,7 +3328,7 @@
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>menu<span class="w"> </span>preview<span class="w"> </span>&lt;type&gt;<span class="w"> </span>&lt;id&gt;<span class="w">       </span><span class="c1"># Generate preview for fzf</span>
 </span></code></pre></div>
 <p><strong>Output Format:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a># List format (JSON Lines for structured data)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a># List format (JSON Lines for structured data)
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>{&quot;id&quot;: &quot;fcd&quot;, &quot;title&quot;: &quot;fcd&quot;, &quot;desc&quot;: &quot;Fuzzy find directory&quot;, &quot;category&quot;: &quot;File Operations&quot;}
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>{&quot;id&quot;: &quot;fad&quot;, &quot;title&quot;: &quot;fad&quot;, &quot;desc&quot;: &quot;Git add modified files&quot;, &quot;category&quot;: &quot;Git&quot;}
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
@@ -3307,7 +3337,7 @@
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>fad → Git add modified files matching pattern
 </span></code></pre></div>
 <p><strong>Preview Generation:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>menu<span class="w"> </span>preview<span class="w"> </span><span class="nb">command</span><span class="w"> </span>fcd
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>menu<span class="w"> </span>preview<span class="w"> </span><span class="nb">command</span><span class="w"> </span>fcd
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Outputs formatted preview:</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Title: fcd</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Category: File Operations</span>
@@ -3334,7 +3364,7 @@
 <li>Keybindings for actions</li>
 </ul>
 <p><strong>Example:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># menu - Universal Menu System (fzf wrapper)</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nv">MENU_BIN</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">MENU_BIN</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.local/bin/menu-go</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -3408,16 +3438,16 @@
 <p><strong>Purpose:</strong> Place commands in terminal for user execution</p>
 <p><strong>Methods:</strong></p>
 <p><strong>ZSH:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>print<span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;command here&quot;</span><span class="w">  </span><span class="c1"># Places in buffer, user can edit</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>print<span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;command here&quot;</span><span class="w">  </span><span class="c1"># Places in buffer, user can edit</span>
 </span></code></pre></div>
 <p><strong>Bash:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># More complex, need to use readline</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># More complex, need to use readline</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Option 1: Use history</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">history</span><span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;command here&quot;</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Option 2: Create a temp file and source it</span>
 </span></code></pre></div>
 <p><strong>Tmux Popup:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># When in tmux popup, need to send to parent pane</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># When in tmux popup, need to send to parent pane</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>tmux<span class="w"> </span>send-keys<span class="w"> </span>-t<span class="w"> </span><span class="o">{</span>last<span class="o">}</span><span class="w"> </span><span class="s2">&quot;command here&quot;</span><span class="w"> </span>C-m<span class="w">  </span><span class="c1"># Auto-execute</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># OR</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>tmux<span class="w"> </span>send-keys<span class="w"> </span>-t<span class="w"> </span><span class="o">{</span>last<span class="o">}</span><span class="w"> </span><span class="s2">&quot;command here&quot;</span><span class="w">      </span><span class="c1"># Place without executing</span>
@@ -3453,7 +3483,7 @@
 <li>Multi-level navigation state machine</li>
 </ul>
 <h3 id="new-go-cli-structure">New Go CLI Structure<a class="headerlink" href="#new-go-cli-structure" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cmd/menu/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cmd/menu/
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  main.go                    # Cobra CLI setup
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>internal/
@@ -3486,7 +3516,7 @@
 </span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>    executor.go
 </span></code></pre></div>
 <h3 id="example-cli-commands">Example CLI Commands<a class="headerlink" href="#example-cli-commands" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># List categories</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># List categories</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>$<span class="w"> </span>menu-go<span class="w"> </span>list-categories
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>s<span class="w"> </span>→<span class="w"> </span>Sessions
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>c<span class="w"> </span>→<span class="w"> </span>Commands
@@ -3962,7 +3992,7 @@
 </ol>
 <h2 id="appendix-code-examples">Appendix: Code Examples<a class="headerlink" href="#appendix-code-examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-formatter-output">Example: Formatter Output<a class="headerlink" href="#example-formatter-output" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">// internal/formatter/fzf.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">// internal/formatter/fzf.go</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kd">func</span><span class="w"> </span><span class="nx">FormatForFzf</span><span class="p">(</span><span class="nx">items</span><span class="w"> </span><span class="p">[]</span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">lines</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span>
@@ -3975,7 +4005,7 @@
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="example-preview-generator">Example: Preview Generator<a class="headerlink" href="#example-preview-generator" title="Permanent link">&para;</a></h3>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// internal/formatter/preview.go</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// internal/formatter/preview.go</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kd">func</span><span class="w"> </span><span class="nx">FormatPreview</span><span class="p">(</span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">buf</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">Builder</span>
@@ -4014,7 +4044,7 @@
 </span><span id="__span-13-37"><a id="__codelineno-13-37" name="__codelineno-13-37" href="#__codelineno-13-37"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="example-bash-wrapper">Example: Bash Wrapper<a class="headerlink" href="#example-bash-wrapper" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1"># menu - Universal Menu fzf wrapper</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nv">MENU_BIN</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin/menu-go&quot;</span>

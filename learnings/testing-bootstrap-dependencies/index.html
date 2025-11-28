@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3197,7 +3227,7 @@
 <p>Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, <code>python3-pyyaml</code> is required before <code>parse-packages.py</code> can parse the package list.</p>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
 <p>Installation failed on fresh WSL during Phase 1 (system packages) with:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># wsl.yml:43 - Wrong package name</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># wsl.yml:43 - Wrong package name</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-yaml<span class="w">  </span><span class="c1"># Package doesn&#39;t exist</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># wsl.yml:46 - Script tries to run immediately after</span>
@@ -3215,22 +3245,22 @@
 <p><strong>Root Fix: Use System Python Explicitly</strong></p>
 <p>To ensure parse-packages.py works across all platforms regardless of which Python is in PATH:</p>
 <p><strong>1. Use system Python via shebang</strong> (<code>management/parse-packages.py:1</code>):</p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/python3  # System Python, not #!/usr/bin/env python3</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/python3  # System Python, not #!/usr/bin/env python3</span>
 </span></code></pre></div>
 <p>This ensures the script always uses <code>/usr/bin/python3</code> even if uv-managed Python is in PATH.</p>
 <p><strong>2. Install PyYAML for system Python on each platform</strong>:</p>
 <p>WSL/Debian (<code>management/taskfiles/wsl.yml:43</code>):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pyyaml<span class="w">  </span><span class="c1"># Correct package name</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pyyaml<span class="w">  </span><span class="c1"># Correct package name</span>
 </span></code></pre></div>
 <p>Arch Linux (<code>management/packages.yml</code>):</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python3-yaml</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python3-yaml</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">pacman</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python-yaml</span>
 </span></code></pre></div>
 <p>macOS (<code>management/taskfiles/macos.yml</code>):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/usr/bin/python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>PyYAML
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/usr/bin/python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>PyYAML
 </span></code></pre></div>
 <p><strong>3. Use Docker with WSL rootfs for testing</strong> (<code>management/test-wsl-docker.sh</code>):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Download official WSL Ubuntu rootfs (one-time, cached)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Download official WSL Ubuntu rootfs (one-time, cached)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>curl<span class="w"> </span>-L<span class="w"> </span>https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Import into Docker (100% exact WSL environment, 563 packages)</span>
@@ -3241,7 +3271,7 @@
 </span></code></pre></div>
 <p>This provides <strong>100% accurate testing</strong> - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.</p>
 <p><strong>4. Verify the script works</strong> (<code>management/verify-installation.sh:322</code>):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span><span class="w"> </span>python3<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/dotfiles/management/parse-packages.py&quot;</span><span class="w"> </span>--type<span class="o">=</span>system<span class="w"> </span>--manager<span class="o">=</span>apt<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span><span class="w"> </span>python3<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/dotfiles/management/parse-packages.py&quot;</span><span class="w"> </span>--type<span class="o">=</span>system<span class="w"> </span>--manager<span class="o">=</span>apt<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>print_success<span class="w"> </span><span class="s2">&quot;parse-packages.py: working (yaml module available)&quot;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">else</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>print_error<span class="w"> </span><span class="s2">&quot;parse-packages.py: FAILED (yaml module missing)&quot;</span>

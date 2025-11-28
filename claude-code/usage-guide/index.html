@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3228,7 +3258,7 @@
 <h1 id="log-monitoring-usage-guide">Log Monitoring Usage Guide<a class="headerlink" href="#log-monitoring-usage-guide" title="Permanent link">&para;</a></h1>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <h3 id="scenario-1-youre-watching-manual-monitoring">Scenario 1: You're Watching (Manual Monitoring)<a class="headerlink" href="#scenario-1-youre-watching-manual-monitoring" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start process in background</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start process in background</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>-p<span class="w"> </span>wsl<span class="w"> </span>--keep<span class="w"> </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">&amp;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Monitor in your terminal</span>
@@ -3238,10 +3268,10 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># &quot;Summarize the WSL test results&quot;</span>
 </span></code></pre></div>
 <p>Claude will run:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bash<span class="w"> </span>management/scripts/summarize-log.sh<span class="w"> </span>test-wsl-docker.log
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bash<span class="w"> </span>management/scripts/summarize-log.sh<span class="w"> </span>test-wsl-docker.log
 </span></code></pre></div>
 <h3 id="scenario-2-youre-away-auto-monitoring">Scenario 2: You're Away (Auto-Monitoring)<a class="headerlink" href="#scenario-2-youre-away-auto-monitoring" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Start with auto-monitoring wrapper</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Start with auto-monitoring wrapper</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>bash<span class="w"> </span>management/scripts/run-and-summarize.sh<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="s2">&quot;bash management/test-install.sh -p wsl --keep&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>test-wsl-docker.log
@@ -3255,7 +3285,7 @@
 </ol>
 <p>When you return, Claude reads: <code>cat test-wsl-docker.log.summary</code></p>
 <h3 id="scenario-3-check-progress-mid-run">Scenario 3: Check Progress Mid-Run<a class="headerlink" href="#scenario-3-check-progress-mid-run" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Get quick status while process is running</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Get quick status while process is running</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>bash<span class="w"> </span>management/scripts/summarize-log.sh<span class="w"> </span>test-wsl-docker.log
 </span></code></pre></div>
 <p>Shows current errors, warnings, last phase, and status.</p>
@@ -3288,13 +3318,13 @@
 <h2 id="integration-with-workflow">Integration with Workflow<a class="headerlink" href="#integration-with-workflow" title="Permanent link">&para;</a></h2>
 <h3 id="for-claude-code-sessions">For Claude Code Sessions<a class="headerlink" href="#for-claude-code-sessions" title="Permanent link">&para;</a></h3>
 <p><strong>When you start a long process:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>User:<span class="w"> </span><span class="s2">&quot;Start the WSL test with auto-monitoring&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>User:<span class="w"> </span><span class="s2">&quot;Start the WSL test with auto-monitoring&quot;</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Claude:<span class="w"> </span><span class="o">[</span>Runs<span class="w"> </span>run-and-summarize.sh<span class="o">]</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="s2">&quot;Test running in background. I&#39;ll check status every 60s.</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s2">         Summary will be at test-wsl-docker.log.summary when complete.&quot;</span>
 </span></code></pre></div>
 <p><strong>When Claude checks status:</strong></p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">Claude</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Reads test-wsl-docker.log.summary</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">Claude</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Reads test-wsl-docker.log.summary</span><span class="p p-Indicator">]</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">        </span><span class="s">&quot;Test</span><span class="nv"> </span><span class="s">completed</span><span class="nv"> </span><span class="s">successfully!</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">         </span><span class="s">✓</span><span class="nv"> </span><span class="s">83</span><span class="nv"> </span><span class="s">checks</span><span class="nv"> </span><span class="s">passed</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">         </span><span class="s">✗</span><span class="nv"> </span><span class="s">3</span><span class="nv"> </span><span class="s">failures:</span><span class="nv"> </span><span class="s">glow,</span><span class="nv"> </span><span class="s">duf,</span><span class="nv"> </span><span class="s">7zz</span>
@@ -3303,20 +3333,20 @@
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">         </span><span class="s">Should</span><span class="nv"> </span><span class="s">I</span><span class="nv"> </span><span class="s">investigate</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">3</span><span class="nv"> </span><span class="s">failures?&quot;</span>
 </span></code></pre></div>
 <p><strong>User away, returns later:</strong></p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">User</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;What</span><span class="nv"> </span><span class="s">happened</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">WSL</span><span class="nv"> </span><span class="s">test?&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">User</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;What</span><span class="nv"> </span><span class="s">happened</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">WSL</span><span class="nv"> </span><span class="s">test?&quot;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">Claude</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Reads test-wsl-docker.log.summary</span><span class="p p-Indicator">]</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="p p-Indicator">[</span><span class="nv">Provides concise summary from the file</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
 <h3 id="custom-check-intervals">Custom Check Intervals<a class="headerlink" href="#custom-check-intervals" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Check every 30 seconds instead of 60</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Check every 30 seconds instead of 60</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>bash<span class="w"> </span>management/scripts/run-and-summarize.sh<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="s2">&quot;bash build.sh&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>build.log<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="m">30</span>
 </span></code></pre></div>
 <h3 id="multiple-parallel-processes">Multiple Parallel Processes<a class="headerlink" href="#multiple-parallel-processes" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Start multiple tests</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Start multiple tests</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">for</span><span class="w"> </span>platform<span class="w"> </span><span class="k">in</span><span class="w"> </span>wsl<span class="w"> </span>arch<span class="w"> </span>macos<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>bash<span class="w"> </span>management/scripts/run-and-summarize.sh<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="s2">&quot;bash management/test-install.sh -p </span><span class="nv">$platform</span><span class="s2"> --keep&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -3331,7 +3361,7 @@
 </span></code></pre></div>
 <h3 id="shell-into-kept-container">Shell Into Kept Container<a class="headerlink" href="#shell-into-kept-container" title="Permanent link">&para;</a></h3>
 <p>After WSL test with <code>--keep</code>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Find container name</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Find container name</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>docker<span class="w"> </span>ps<span class="w"> </span>-a<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>dotfiles-wsl-test
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Shell in</span>

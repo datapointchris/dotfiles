@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3170,7 +3200,7 @@
 <li>System Monitoring (htop)</li>
 </ul>
 <p><strong>Example entry</strong> (bat):</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">bat</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">bat</span><span class="p">:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file-viewer</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Syntax-highlighting</span><span class="nv"> </span><span class="s">cat</span><span class="nv"> </span><span class="s">replacement</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">git</span><span class="nv"> </span><span class="s">integration&quot;</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">installed_via</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">brew</span>
@@ -3217,7 +3247,7 @@
 <h3 id="3-tool-discovery-command-built">3. Tool Discovery Command Built ✅<a class="headerlink" href="#3-tool-discovery-command-built" title="Permanent link">&para;</a></h3>
 <p><strong>File</strong>: <code>scripts/utils/tools</code> (Python script)</p>
 <p><strong>Commands available</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>tools<span class="w"> </span>list<span class="w">              </span><span class="c1"># List all tools by category</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>tools<span class="w"> </span>list<span class="w">              </span><span class="c1"># List all tools by category</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>tools<span class="w"> </span>categories<span class="w">        </span><span class="c1"># Show all categories</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>tools<span class="w"> </span>show<span class="w"> </span>&lt;name&gt;<span class="w">       </span><span class="c1"># Detailed info with examples</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>tools<span class="w"> </span>search<span class="w"> </span>&lt;query&gt;<span class="w">    </span><span class="c1"># Search by name/description/tags</span>
@@ -3266,7 +3296,7 @@
 <h3 id="5-shell-configuration-updated">5. Shell Configuration Updated ✅<a class="headerlink" href="#5-shell-configuration-updated" title="Permanent link">&para;</a></h3>
 <p><strong>File</strong>: <code>common/.config/zsh/.zshrc</code> (line 254-255)</p>
 <p>Added scripts directory to PATH:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Dotfiles utility scripts</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Dotfiles utility scripts</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>add_path<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/dotfiles/scripts/utils&quot;</span>
 </span></code></pre></div>
 <p>Now <code>tools</code> command is available system-wide.</p>
@@ -3318,7 +3348,7 @@
 <h2 id="verification-steps">Verification Steps<a class="headerlink" href="#verification-steps" title="Permanent link">&para;</a></h2>
 <p>To verify Phase 2 changes are working:</p>
 <h3 id="1-test-tool-discovery">1. Test Tool Discovery<a class="headerlink" href="#1-test-tool-discovery" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Basic commands</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Basic commands</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>tools<span class="w">                    </span><span class="c1"># Should show help</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>tools<span class="w"> </span>list<span class="w">              </span><span class="c1"># Should list ~30 tools by category</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>tools<span class="w"> </span>show<span class="w"> </span>bat<span class="w">          </span><span class="c1"># Should show detailed bat info</span>
@@ -3327,11 +3357,11 @@
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>tools<span class="w"> </span>categories<span class="w">        </span><span class="c1"># Should list all categories</span>
 </span></code></pre></div>
 <h3 id="2-check-path">2. Check PATH<a class="headerlink" href="#2-check-path" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>which<span class="w"> </span>tools<span class="w">             </span><span class="c1"># Should be ~/dotfiles/scripts/utils/tools</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>which<span class="w"> </span>tools<span class="w">             </span><span class="c1"># Should be ~/dotfiles/scripts/utils/tools</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$PATH</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>scripts<span class="w">   </span><span class="c1"># Should include dotfiles/scripts/utils</span>
 </span></code></pre></div>
 <h3 id="3-verify-documentation">3. Verify Documentation<a class="headerlink" href="#3-verify-documentation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ls<span class="w"> </span>~/dotfiles/docs/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ls<span class="w"> </span>~/dotfiles/docs/
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Should see:</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># - MASTER_PLAN.md</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># - PHASE_1_COMPLETE.md</span>
@@ -3342,7 +3372,7 @@
 </span></code></pre></div>
 <h3 id="4-test-tool-examples">4. Test Tool Examples<a class="headerlink" href="#4-test-tool-examples" title="Permanent link">&para;</a></h3>
 <p>Try some examples from the registry:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># bat examples</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># bat examples</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>bat<span class="w"> </span>~/dotfiles/README.md
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>bat<span class="w"> </span>-n<span class="w"> </span>~/dotfiles/CLAUDE.md
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
@@ -3362,19 +3392,19 @@
 <h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
 <h3 id="discovering-tools">Discovering Tools<a class="headerlink" href="#discovering-tools" title="Permanent link">&para;</a></h3>
 <p><strong>New to a tool?</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>tools<span class="w"> </span>show<span class="w"> </span>yazi
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>tools<span class="w"> </span>show<span class="w"> </span>yazi
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Shows: description, why use it, usage, 2 examples, see also, tags, docs</span>
 </span></code></pre></div>
 <p><strong>Forgot which tools you have?</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>tools<span class="w"> </span>list
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>tools<span class="w"> </span>list
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Shows all 30+ documented tools grouped by category</span>
 </span></code></pre></div>
 <p><strong>Looking for something specific?</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>tools<span class="w"> </span>search<span class="w"> </span>python
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>tools<span class="w"> </span>search<span class="w"> </span>python
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Finds: uv, ruff, mypy, basedpyright, and related tools</span>
 </span></code></pre></div>
 <p><strong>Want to learn something new?</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>tools<span class="w"> </span>random
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>tools<span class="w"> </span>random
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Shows a random tool - great for daily learning!</span>
 </span></code></pre></div>
 <h3 id="learning-workflow">Learning Workflow<a class="headerlink" href="#learning-workflow" title="Permanent link">&para;</a></h3>

@@ -1058,6 +1058,8 @@
       
         
       
+        
+      
     
     
     
@@ -1120,6 +1122,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3207,13 +3237,13 @@
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="in-interactive-shell">In Interactive Shell<a class="headerlink" href="#in-interactive-shell" title="Permanent link">&para;</a></h3>
 <p>All functions are already available in your shell:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Just use them directly</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Just use them directly</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>print_success<span class="w"> </span><span class="s2">&quot;Command completed successfully&quot;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>print_error<span class="w"> </span><span class="s2">&quot;Something went wrong&quot;</span>
 </span></code></pre></div>
 <h3 id="in-scripts-within-dotfiles">In Scripts (Within Dotfiles)<a class="headerlink" href="#in-scripts-within-dotfiles" title="Permanent link">&para;</a></h3>
 <p>Already available via $PATH, but can source explicitly:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/shell/formatting.sh&quot;</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>print_header<span class="w"> </span><span class="s2">&quot;My Script&quot;</span>
@@ -3222,18 +3252,18 @@
 </span></code></pre></div>
 <h3 id="copy-to-other-projects">Copy to Other Projects<a class="headerlink" href="#copy-to-other-projects" title="Permanent link">&para;</a></h3>
 <p>The libraries are self-contained and portable. Copy both files to your project:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cp<span class="w"> </span>platforms/common/shell/colors.sh<span class="w"> </span>~/my-project/lib/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cp<span class="w"> </span>platforms/common/shell/colors.sh<span class="w"> </span>~/my-project/lib/
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>cp<span class="w"> </span>platforms/common/shell/formatting.sh<span class="w"> </span>~/my-project/lib/
 </span></code></pre></div>
 <p>Then source formatting.sh in your scripts (it will source colors.sh):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/formatting.sh&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/formatting.sh&quot;</span>
 </span></code></pre></div>
 <p>Or if you only need colors:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/colors.sh&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/colors.sh&quot;</span>
 </span></code></pre></div>
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
 <h3 id="titles-centered-full-width">Titles (Centered, Full-Width)<a class="headerlink" href="#titles-centered-full-width" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>print_title<span class="w"> </span><span class="s2">&quot;My Application&quot;</span><span class="w">                  </span><span class="c1"># Plain (no color)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>print_title<span class="w"> </span><span class="s2">&quot;My Application&quot;</span><span class="w">                  </span><span class="c1"># Plain (no color)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>print_title<span class="w"> </span><span class="s2">&quot;My Application&quot;</span><span class="w"> </span><span class="s2">&quot;blue&quot;</span><span class="w">           </span><span class="c1"># Blue title</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>print_title<span class="w"> </span><span class="s2">&quot;My Application&quot;</span><span class="w"> </span><span class="s2">&quot;orange&quot;</span><span class="w">         </span><span class="c1"># Orange title</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>print_title_success<span class="w"> </span><span class="s2">&quot;Setup Complete&quot;</span><span class="w">          </span><span class="c1"># Green with ✅</span>
@@ -3243,7 +3273,7 @@
 </span></code></pre></div>
 <p>Titles automatically use the full terminal width (via <code>tput cols</code>) with 5 spaces of padding on each side for visual breathing room.</p>
 <h3 id="headers-left-aligned-thick-borders">Headers (Left-Aligned, Thick Borders)<a class="headerlink" href="#headers-left-aligned-thick-borders" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>print_header<span class="w"> </span><span class="s2">&quot;Installation&quot;</span><span class="w">                   </span><span class="c1"># Plain (no color)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>print_header<span class="w"> </span><span class="s2">&quot;Installation&quot;</span><span class="w">                   </span><span class="c1"># Plain (no color)</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>print_header<span class="w"> </span><span class="s2">&quot;Installation&quot;</span><span class="w"> </span><span class="s2">&quot;blue&quot;</span><span class="w">            </span><span class="c1"># Blue thick borders</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>print_header_success<span class="w"> </span><span class="s2">&quot;Installation Complete&quot;</span><span class="w">  </span><span class="c1"># Green with ✅</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>print_header_info<span class="w"> </span><span class="s2">&quot;Information&quot;</span><span class="w">               </span><span class="c1"># Cyan with ℹ️</span>
@@ -3251,7 +3281,7 @@
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>print_header_error<span class="w"> </span><span class="s2">&quot;Installation Failed&quot;</span><span class="w">      </span><span class="c1"># Red with ❌</span>
 </span></code></pre></div>
 <h3 id="banners-double-bars">Banners (Double Bars)<a class="headerlink" href="#banners-double-bars" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>print_banner<span class="w"> </span><span class="s2">&quot;ripgrep&quot;</span><span class="w">                        </span><span class="c1"># Plain (no color)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>print_banner<span class="w"> </span><span class="s2">&quot;ripgrep&quot;</span><span class="w">                        </span><span class="c1"># Plain (no color)</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>print_banner<span class="w"> </span><span class="s2">&quot;ripgrep&quot;</span><span class="w"> </span><span class="s2">&quot;orange&quot;</span><span class="w">               </span><span class="c1"># Orange double bars</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>print_banner_success<span class="w"> </span><span class="s2">&quot;Success&quot;</span><span class="w">                </span><span class="c1"># Green with ✅</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>print_banner_info<span class="w"> </span><span class="s2">&quot;Information&quot;</span><span class="w">               </span><span class="c1"># Cyan with ℹ️</span>
@@ -3259,7 +3289,7 @@
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>print_banner_error<span class="w"> </span><span class="s2">&quot;Error&quot;</span><span class="w">                    </span><span class="c1"># Red with ❌</span>
 </span></code></pre></div>
 <h3 id="sections-thin-underline">Sections (Thin Underline)<a class="headerlink" href="#sections-thin-underline" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>print_section<span class="w"> </span><span class="s2">&quot;Phase 1: Packages&quot;</span><span class="w">             </span><span class="c1"># Plain (no color)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>print_section<span class="w"> </span><span class="s2">&quot;Phase 1: Packages&quot;</span><span class="w">             </span><span class="c1"># Plain (no color)</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>print_section<span class="w"> </span><span class="s2">&quot;Phase 1: Packages&quot;</span><span class="w"> </span><span class="s2">&quot;cyan&quot;</span><span class="w">      </span><span class="c1"># Cyan underline</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>print_section_success<span class="w"> </span><span class="s2">&quot;Success&quot;</span><span class="w">               </span><span class="c1"># Green with ✅</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>print_section_info<span class="w"> </span><span class="s2">&quot;Information&quot;</span><span class="w">              </span><span class="c1"># Cyan with ℹ️</span>
@@ -3267,13 +3297,13 @@
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>print_section_error<span class="w"> </span><span class="s2">&quot;Error&quot;</span><span class="w">                   </span><span class="c1"># Red with ❌</span>
 </span></code></pre></div>
 <h3 id="status-messages-unicode-icons">Status Messages (Unicode Icons)<a class="headerlink" href="#status-messages-unicode-icons" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>print_success<span class="w"> </span><span class="s2">&quot;Package installed&quot;</span><span class="w">             </span><span class="c1"># Green with ✓</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>print_success<span class="w"> </span><span class="s2">&quot;Package installed&quot;</span><span class="w">             </span><span class="c1"># Green with ✓</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>print_error<span class="w"> </span><span class="s2">&quot;Installation failed&quot;</span><span class="w">             </span><span class="c1"># Red with ✗</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>print_warning<span class="w"> </span><span class="s2">&quot;This might take a while&quot;</span><span class="w">       </span><span class="c1"># Yellow with ▲</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>print_info<span class="w"> </span><span class="s2">&quot;Downloading packages...&quot;</span><span class="w">          </span><span class="c1"># Cyan with ●</span>
 </span></code></pre></div>
 <h3 id="colors">Colors<a class="headerlink" href="#colors" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>print_red<span class="w"> </span><span class="s2">&quot;Error text&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>print_red<span class="w"> </span><span class="s2">&quot;Error text&quot;</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>print_green<span class="w"> </span><span class="s2">&quot;Success text&quot;</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>print_yellow<span class="w"> </span><span class="s2">&quot;Warning text&quot;</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>print_blue<span class="w"> </span><span class="s2">&quot;Info text&quot;</span>
@@ -3283,17 +3313,17 @@
 </span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">COLOR_GREEN</span><span class="si">}</span><span class="s2">Success!</span><span class="si">${</span><span class="nv">COLOR_RESET</span><span class="si">}</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <h3 id="utilities">Utilities<a class="headerlink" href="#utilities" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>die<span class="w"> </span><span class="s2">&quot;Fatal error occurred&quot;</span><span class="w">                    </span><span class="c1"># Print error and exit</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>die<span class="w"> </span><span class="s2">&quot;Fatal error occurred&quot;</span><span class="w">                    </span><span class="c1"># Print error and exit</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>fatal<span class="w"> </span><span class="s2">&quot;Cannot continue&quot;</span><span class="w">                       </span><span class="c1"># Print error header and exit</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>require_command<span class="w"> </span><span class="s2">&quot;git&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span>die<span class="w"> </span><span class="s2">&quot;git required&quot;</span><span class="w">   </span><span class="c1"># Check if command exists</span>
 </span></code></pre></div>
 <h3 id="additional-utilities">Additional Utilities<a class="headerlink" href="#additional-utilities" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>center_text<span class="w"> </span><span class="s2">&quot;Some Text&quot;</span><span class="w">                       </span><span class="c1"># Center text in terminal</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>center_text<span class="w"> </span><span class="s2">&quot;Some Text&quot;</span><span class="w">                       </span><span class="c1"># Center text in terminal</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>section_separator<span class="w">                             </span><span class="c1"># Underlined full-width separator</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>terminal_width_separator<span class="w"> </span><span class="s2">&quot;=&quot;</span><span class="w">                  </span><span class="c1"># Full-width character separator</span>
 </span></code></pre></div>
 <h3 id="demotesting">Demo/Testing<a class="headerlink" href="#demotesting" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>formatting_demo<span class="w">                               </span><span class="c1"># Show usage menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>formatting_demo<span class="w">                               </span><span class="c1"># Show usage menu</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>formatting_demo<span class="w"> </span>all<span class="w">                           </span><span class="c1"># Show all formatting examples</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>formatting_demo<span class="w"> </span>titles<span class="w">                        </span><span class="c1"># Show only title variants and colors</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>formatting_demo<span class="w"> </span>headers<span class="w">                       </span><span class="c1"># Show only header variants and colors</span>
@@ -3347,7 +3377,7 @@
 <li><code>BOX_DOUBLE</code> (═) - Double bars for banners</li>
 </ul>
 <h2 id="example-usage">Example Usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/formatting.sh&quot;</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
@@ -3387,14 +3417,14 @@
 </ul>
 <h2 id="when-to-use-conservative-formatting">When to Use Conservative Formatting<a class="headerlink" href="#when-to-use-conservative-formatting" title="Permanent link">&para;</a></h2>
 <p>If your script's output will be ingested by log aggregation systems (Splunk, ELK, etc.), consider using plain text instead:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Instead of:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Instead of:</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>print_success<span class="w"> </span><span class="s2">&quot;Done&quot;</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Use:</span>
 </span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Done&quot;</span>
 </span></code></pre></div>
 <p>Or set a variable to toggle formatting:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">PLAIN_OUTPUT</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PLAIN_OUTPUT</span><span class="k">:-</span><span class="nv">false</span><span class="si">}</span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">PLAIN_OUTPUT</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PLAIN_OUTPUT</span><span class="k">:-</span><span class="nv">false</span><span class="si">}</span><span class="s2">&quot;</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PLAIN_OUTPUT</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Success&quot;</span>

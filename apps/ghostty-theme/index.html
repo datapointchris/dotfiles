@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="ghostty-theme">Ghostty Theme<a class="headerlink" href="#ghostty-theme" title="Permanent link">&para;</a></h1>
 <p>Manage Ghostty terminal themes with random selection and interactive browsing. Integrates with theme-sync favorites for consistent theming across terminal tools.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ghostty-theme<span class="w"> </span>--random<span class="w">       </span><span class="c1"># Apply random favorite theme</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ghostty-theme<span class="w"> </span>--random<span class="w">       </span><span class="c1"># Apply random favorite theme</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ghostty-theme<span class="w"> </span>--select<span class="w">       </span><span class="c1"># Interactive fzf picker</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>ghostty-theme<span class="w"> </span>--list<span class="w">         </span><span class="c1"># Show all favorites</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>ghostty-theme<span class="w"> </span>--current<span class="w">      </span><span class="c1"># Show active theme</span>
@@ -3211,12 +3241,12 @@
 <li><code>-h, --help</code> - Show help message</li>
 </ul>
 <p><strong>Examples</strong>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ghostty-theme<span class="w"> </span>--random<span class="w">       </span><span class="c1"># Quick random theme</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ghostty-theme<span class="w"> </span>--random<span class="w">       </span><span class="c1"># Quick random theme</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>ghostty-theme<span class="w"> </span>--select<span class="w">       </span><span class="c1"># Browse and preview</span>
 </span></code></pre></div>
 <h2 id="favorite-themes">Favorite Themes<a class="headerlink" href="#favorite-themes" title="Permanent link">&para;</a></h2>
 <p>Ghostty theme uses the same favorites list as theme-sync, defined in <code>~/.config/theme-sync/config.yml</code>:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">favorites</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">favorites</span><span class="p">:</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rose-pine</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gruvbox-dark-hard</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kanagawa</span>
@@ -3229,7 +3259,7 @@
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p><strong>Theme location</strong>: <code>~/.config/ghostty/theme</code></p>
 <p>The selected theme name is written to this file, which Ghostty's config imports:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a># In ~/.config/ghostty/config
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a># In ~/.config/ghostty/config
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>theme = dark:~/.config/ghostty/theme
 </span></code></pre></div>
 <p><strong>Available themes</strong>: All Base16 themes installed via tinty are available for selection.</p>
@@ -3244,11 +3274,11 @@
 <p>Unlike theme-sync (which applies to tmux, bat, fzf, shell), ghostty-theme only affects Ghostty terminal. Use <code>theme-sync</code> for system-wide theme changes.</p>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Switch Ghostty theme independently:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ghostty-theme<span class="w"> </span>--random<span class="w">       </span><span class="c1"># Change Ghostty only</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ghostty-theme<span class="w"> </span>--random<span class="w">       </span><span class="c1"># Change Ghostty only</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Press Cmd+Shift+, to reload</span>
 </span></code></pre></div>
 <p>Synchronize all tools at once:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random<span class="w">            </span><span class="c1"># Changes tmux, bat, fzf, shell, Ghostty</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random<span class="w">            </span><span class="c1"># Changes tmux, bat, fzf, shell, Ghostty</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Ghostty still needs manual reload: Cmd+Shift+,</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>

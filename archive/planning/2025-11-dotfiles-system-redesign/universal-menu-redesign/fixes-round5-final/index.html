@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3159,7 +3189,7 @@
 <h3 id="issue-3-workflows-causing-errors">Issue 3: Workflows Causing Errors<a class="headerlink" href="#issue-3-workflows-causing-errors" title="Permanent link">&para;</a></h3>
 <p><strong>User Report:</strong> "for any of the vim workflows, if I select it then it tries to input that text on the command line"</p>
 <p><strong>Root Cause:</strong> The <code>extract_id()</code> function was only extracting the first word before the arrow:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># OLD (WRONG):</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># OLD (WRONG):</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$line</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># &quot;Quickfix List - Search and Replace → desc&quot; → &quot;Quickfix&quot; (wrong!)</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
@@ -3172,14 +3202,14 @@
 <h3 id="fix-1-getgo-return-id-not-command">Fix 1: get.go - Return ID Not Command ✅<a class="headerlink" href="#fix-1-getgo-return-id-not-command" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>tools/menu-go/internal/cli/get.go</code> (line 63-73)</p>
 <p><strong>Old Code:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">Command</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">Command</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">Command</span><span class="p">)</span><span class="w">  </span><span class="c1">// WRONG - returns full expansion</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">selectedItem</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>New Code:</strong></p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// For commands/sessions, return the ID (the name to place in terminal)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// For commands/sessions, return the ID (the name to place in terminal)</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1">// NOT the Command field which contains the full expansion</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">//</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// Examples:</span>
@@ -3197,14 +3227,14 @@
 <h3 id="fix-2-extract_id-extract-full-text-before-arrow">Fix 2: extract_id() - Extract Full Text Before Arrow ✅<a class="headerlink" href="#fix-2-extract_id-extract-full-text-before-arrow" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>common/.local/bin/menu-new</code> (line 57-65)</p>
 <p><strong>Old Code:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>extract_id<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>extract_id<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">line</span><span class="p">#★ </span><span class="si">}</span><span class="s2">&quot;</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$line</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w">  </span><span class="c1"># WRONG - only first word</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="o">}</span>
 </span></code></pre></div>
 <p><strong>New Code:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>extract_id<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>extract_id<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">line</span><span class="p">#★ </span><span class="si">}</span><span class="s2">&quot;</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="c1"># Extract everything before → (the arrow)</span>
@@ -3219,11 +3249,11 @@
 </ul>
 <h3 id="fix-3-rebuilt-binary">Fix 3: Rebuilt Binary ✅<a class="headerlink" href="#fix-3-rebuilt-binary" title="Permanent link">&para;</a></h3>
 <p>Rebuilt <code>menu-go-new</code> binary with the fixed <code>get.go</code>:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>go<span class="w"> </span>build<span class="w"> </span>-o<span class="w"> </span>~/.local/bin/menu-go-new<span class="w"> </span>./cmd/menu-cli
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>go<span class="w"> </span>build<span class="w"> </span>-o<span class="w"> </span>~/.local/bin/menu-go-new<span class="w"> </span>./cmd/menu-cli
 </span></code></pre></div>
 <h2 id="testing-results">Testing Results<a class="headerlink" href="#testing-results" title="Permanent link">&para;</a></h2>
 <h3 id="automated-tests">Automated Tests ✅<a class="headerlink" href="#automated-tests" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Test 1: Command with single word ID</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Test 1: Command with single word ID</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>menu-go-new<span class="w"> </span>get<span class="w"> </span>commands<span class="w"> </span>glo
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Expected: glo</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Got: glo ✓</span>

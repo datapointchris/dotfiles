@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3152,7 +3182,7 @@
 </ul>
 <h2 id="current-vs-new-structure">Current vs New Structure<a class="headerlink" href="#current-vs-new-structure" title="Permanent link">&para;</a></h2>
 <h3 id="current-problematic">Current (Problematic)<a class="headerlink" href="#current-problematic" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── common/           # Mix of configs and app source
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── macos/            # Platform configs
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── wsl/              # Platform configs
@@ -3163,7 +3193,7 @@
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>└── docs/tools/registry.yml  # Wrong location!
 </span></code></pre></div>
 <h3 id="new-clean">New (Clean)<a class="headerlink" href="#new-clean" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>dotfiles/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>dotfiles/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── platforms/        # System configurations
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   ├── common/
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   ├── macos/
@@ -3189,7 +3219,7 @@
 </ul>
 <h2 id="migration-steps">Migration Steps<a class="headerlink" href="#migration-steps" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-create-new-structure">Phase 1: Create New Structure<a class="headerlink" href="#phase-1-create-new-structure" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Create top-level directories</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Create top-level directories</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>platforms<span class="w"> </span>apps<span class="w"> </span>management
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Create platform subdirectories</span>
@@ -3204,7 +3234,7 @@
 <hr />
 <h3 id="phase-2-move-platforms">Phase 2: Move Platforms<a class="headerlink" href="#phase-2-move-platforms" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Move platform configurations</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Move common platform files</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Move common platform files</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Note: Using rsync to preserve structure, then verify before removing source</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>rsync<span class="w"> </span>-av<span class="w"> </span>common/<span class="w"> </span>platforms/common/
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Verify, then: rm -rf common</span>
@@ -3218,17 +3248,17 @@
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Verify, then: rm -rf wsl</span>
 </span></code></pre></div>
 <p><strong>Critical</strong>: Verify <code>.config/</code> structure is preserved:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ls<span class="w"> </span>platforms/common/.config/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ls<span class="w"> </span>platforms/common/.config/
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Should show: nvim, tmux, zsh, etc.</span>
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>add<span class="w"> </span>platforms/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>add<span class="w"> </span>platforms/
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: move platform configs to platforms/ directory&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-3-extract-and-move-apps">Phase 3: Extract and Move Apps<a class="headerlink" href="#phase-3-extract-and-move-apps" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Separate apps from platform configs</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Apps currently in platforms/common/.local/bin/</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Apps currently in platforms/common/.local/bin/</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">cd</span><span class="w"> </span>platforms/common/.local/bin/
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Move to apps/common/</span>
@@ -3244,23 +3274,23 @@
 </span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="nb">cd</span><span class="w"> </span>../../../../
 </span></code></pre></div>
 <p><strong>Check for platform-specific apps</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Check if macos has any .local/bin/ apps</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Check if macos has any .local/bin/ apps</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ls<span class="w"> </span>platforms/macos/.local/bin/<span class="w"> </span><span class="m">2</span>&gt;/dev/null
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># If exists, move to apps/macos/</span>
 </span></code></pre></div></p>
 <p><strong>Move sess</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># sess is currently in tools/sess/</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># sess is currently in tools/sess/</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># We&#39;ll move it after Phase 4</span>
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>add<span class="w"> </span>apps/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>add<span class="w"> </span>apps/
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>add<span class="w"> </span>platforms/<span class="w">  </span><span class="c1"># Changed files</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: extract apps from platforms to apps/ directory&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-4-move-management-tools">Phase 4: Move Management Tools<a class="headerlink" href="#phase-4-move-management-tools" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Consolidate repository management tools</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Move symlinks manager</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Move symlinks manager</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>mv<span class="w"> </span>tools/symlinks<span class="w"> </span>management/
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Move taskfiles</span>
@@ -3281,21 +3311,21 @@
 </span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>rmdir<span class="w"> </span>tools
 </span></code></pre></div>
 <p><strong>Verification</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ls<span class="w"> </span>management/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ls<span class="w"> </span>management/
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Should show: symlinks/ taskfiles/ packages.yml macos-setup.sh wsl-setup.sh arch-setup.sh</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>ls<span class="w"> </span>apps/
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># Should show: common/ macos/ sess/</span>
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>git<span class="w"> </span>add<span class="w"> </span>management/<span class="w"> </span>apps/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>git<span class="w"> </span>add<span class="w"> </span>management/<span class="w"> </span>apps/
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>git<span class="w"> </span>rm<span class="w"> </span>-r<span class="w"> </span>tools/<span class="w"> </span>install/<span class="w"> </span>config/
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: consolidate repo tools in management/ directory&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-5-rename-tools-toolbox">Phase 5: Rename tools → toolbox<a class="headerlink" href="#phase-5-rename-tools-toolbox" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Rename the tool and update all references</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Already moved in Phase 3 as &#39;toolbox&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Already moved in Phase 3 as &#39;toolbox&#39;</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="c1"># Now update internal references</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Update the script itself</span>
@@ -3310,13 +3340,13 @@
 </span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>rmdir<span class="w"> </span>docs/tools
 </span></code></pre></div>
 <p><strong>Update documentation</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Update references in docs</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Update references in docs</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;tools list&quot;</span><span class="w"> </span>docs/<span class="w"> </span>--files-with-matches<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="s1">&#39;s/tools list/toolbox list/g&#39;</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;tools show&quot;</span><span class="w"> </span>docs/<span class="w"> </span>--files-with-matches<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="s1">&#39;s/tools show/toolbox show/g&#39;</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># etc. (comprehensive grep/replace)</span>
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>git<span class="w"> </span>add<span class="w"> </span>apps/common/toolbox<span class="w"> </span>platforms/common/.config/toolbox/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>git<span class="w"> </span>add<span class="w"> </span>apps/common/toolbox<span class="w"> </span>platforms/common/.config/toolbox/
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>git<span class="w"> </span>rm<span class="w"> </span>docs/tools/registry.yml
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: rename tools to toolbox and move registry to XDG location&quot;</span>
 </span></code></pre></div></p>
@@ -3325,7 +3355,7 @@
 <p><strong>Action</strong>: Update symlinks manager to handle new structure</p>
 <p><strong>File</strong>: <code>management/symlinks/symlinks/config.py</code></p>
 <p>Update paths to reflect new structure:
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Line ~22</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Line ~22</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">dotfiles_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DOTFILES&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;dotfiles&quot;</span><span class="p">)),</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Root directory of dotfiles repository&quot;</span><span class="p">,</span>
@@ -3334,7 +3364,7 @@
 No change needed here - dotfiles_dir is still the repo root.</p>
 <p><strong>File</strong>: <code>management/symlinks/symlinks/manager.py</code></p>
 <p>Add special handling for apps/ directory (add new method):</p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">link_apps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">platform</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">link_apps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">platform</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Link apps from apps/{platform}/ to ~/.local/bin/</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="sd">    Args:</span>
@@ -3377,7 +3407,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-17-41"><a id="__codelineno-17-41" name="__codelineno-17-41" href="#__codelineno-17-41"></a>    <span class="k">return</span> <span class="n">count</span>
 </span></code></pre></div>
 <p>Update <code>create_symlinks</code> method to use new platform paths:</p>
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_symlinks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">platform</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_symlinks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">platform</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create symlinks for a platform.</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="sd">    Args:</span>
@@ -3405,22 +3435,22 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span></code></pre></div>
 <p><strong>File</strong>: <code>management/symlinks/symlinks/cli.py</code></p>
 <p>Update help text to reference new structure:
-<div class="language-python highlight"><span class="filename">Python</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Update any path references from common/ to platforms/common/</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Update any path references from common/ to platforms/common/</span>
 </span></code></pre></div></p>
 <p><strong>Test the changes</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nb">cd</span><span class="w"> </span>management/symlinks
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nb">cd</span><span class="w"> </span>management/symlinks
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>uv<span class="w"> </span>run<span class="w"> </span>symlinks<span class="w"> </span>--help
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>uv<span class="w"> </span>run<span class="w"> </span>symlinks<span class="w"> </span>check<span class="w"> </span>common
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>git<span class="w"> </span>add<span class="w"> </span>management/symlinks/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>git<span class="w"> </span>add<span class="w"> </span>management/symlinks/
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: update symlinks manager for new directory structure&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-7-update-taskfiles">Phase 7: Update Taskfiles<a class="headerlink" href="#phase-7-update-taskfiles" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Update all taskfile path references</p>
 <p><strong>Main Taskfile.yml</strong> (root):
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Update includes to reference management/taskfiles/</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Update includes to reference management/taskfiles/</span>
 </span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">includes</span><span class="p">:</span>
 </span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">macos</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./management/taskfiles/macos.yml</span>
 </span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span><span class="nt">wsl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./management/taskfiles/wsl.yml</span>
@@ -3434,7 +3464,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="w">  </span><span class="nt">docs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./management/taskfiles/docs.yml</span>
 </span></code></pre></div></p>
 <p><strong>Update symlinks.yml</strong>:
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Change from tools/symlinks to management/symlinks</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Change from tools/symlinks to management/symlinks</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nt">tasks</span><span class="p">:</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">link</span><span class="p">:</span>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Link</span><span class="nv"> </span><span class="s">dotfiles</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">current</span><span class="nv"> </span><span class="s">platform&quot;</span>
@@ -3445,7 +3475,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">  </span><span class="c1"># ... update all other tasks similarly</span>
 </span></code></pre></div></p>
 <p><strong>Update npm.yml</strong>:
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Change packages.yml path from config/ to management/</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Change packages.yml path from config/ to management/</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nt">tasks</span><span class="p">:</span>
 </span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span>
 </span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="nt">cmds</span><span class="p">:</span>
@@ -3458,19 +3488,19 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 - <code>tools/symlinks</code> → <code>management/symlinks</code>
 - <code>common/</code> → <code>platforms/common/</code></p>
 <p><strong>Search for references</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;config/packages.yml&quot;</span><span class="w"> </span>management/taskfiles/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;config/packages.yml&quot;</span><span class="w"> </span>management/taskfiles/
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;tools/symlinks&quot;</span><span class="w"> </span>management/taskfiles/
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;\./common&quot;</span><span class="w"> </span>management/taskfiles/
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>add<span class="w"> </span>Taskfile.yml<span class="w"> </span>management/taskfiles/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>git<span class="w"> </span>add<span class="w"> </span>Taskfile.yml<span class="w"> </span>management/taskfiles/
 </span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: update taskfile paths for new structure&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-8-update-setup-scripts">Phase 8: Update Setup Scripts<a class="headerlink" href="#phase-8-update-setup-scripts" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Update install scripts for new structure</p>
 <p><strong>management/macos-setup.sh</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Update any references to:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Update any references to:</span>
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="c1"># - common/ → platforms/common/</span>
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="c1"># - tools/symlinks → management/symlinks</span>
 </span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="c1"># - taskfiles/ → management/taskfiles/</span>
@@ -3480,7 +3510,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;tools/&quot;</span><span class="w"> </span>management/macos-setup.sh
 </span></code></pre></div></p>
 <p>Likely changes needed:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Example updates (verify actual script content):</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Example updates (verify actual script content):</span>
 </span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="c1"># OLD: cd common &amp;&amp; ...</span>
 </span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="c1"># NEW: cd platforms/common &amp;&amp; ...</span>
 </span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>
@@ -3491,7 +3521,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 - <code>management/wsl-setup.sh</code>
 - <code>management/arch-setup.sh</code></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>git<span class="w"> </span>add<span class="w"> </span>management/*.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>git<span class="w"> </span>add<span class="w"> </span>management/*.sh
 </span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: update setup scripts for new directory structure&quot;</span>
 </span></code></pre></div></p>
 <hr />
@@ -3503,7 +3533,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 3. <code>docs/architecture/index.md</code> - Update structure diagram
 4. All other docs referencing old paths</p>
 <p><strong>Search for references</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># Find files referencing old structure</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># Find files referencing old structure</span>
 </span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;common/.local/bin&quot;</span><span class="w"> </span>docs/
 </span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;tools/symlinks&quot;</span><span class="w"> </span>docs/
 </span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;config/packages.yml&quot;</span><span class="w"> </span>docs/
@@ -3518,11 +3548,11 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a><span class="c1"># - toolbox (command)</span>
 </span></code></pre></div></p>
 <p><strong>Update documentation-audit plan</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Update .planning/documentation-audit-2025-11.md with new paths</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Update .planning/documentation-audit-2025-11.md with new paths</span>
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="c1"># May need to adjust some tasks based on new structure</span>
 </span></code></pre></div></p>
 <p><strong>Git</strong> (multiple commits as you update sections):
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>git<span class="w"> </span>add<span class="w"> </span>README.md
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>git<span class="w"> </span>add<span class="w"> </span>README.md
 </span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: update README for new repository structure&quot;</span>
 </span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
 </span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>git<span class="w"> </span>add<span class="w"> </span>CLAUDE.md
@@ -3537,37 +3567,37 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 <h3 id="phase-10-update-apps-for-new-paths">Phase 10: Update Apps for New Paths<a class="headerlink" href="#phase-10-update-apps-for-new-paths" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Update apps that reference repo structure</p>
 <p><strong>apps/common/toolbox</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># Already updated in Phase 5</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># Already updated in Phase 5</span>
 </span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="c1"># Verify registry path:</span>
 </span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>grep<span class="w"> </span><span class="s2">&quot;REGISTRY&quot;</span><span class="w"> </span>apps/common/toolbox
 </span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="c1"># Should show: REGISTRY=&quot;${XDG_CONFIG_HOME:-$HOME/.config}/toolbox/registry.yml&quot;</span>
 </span></code></pre></div></p>
 <p><strong>apps/common/menu</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># Check if menu references any repo paths</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># Check if menu references any repo paths</span>
 </span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>grep<span class="w"> </span><span class="s2">&quot;dotfiles&quot;</span><span class="w"> </span>apps/common/menu
 </span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="c1"># Update any hardcoded paths to new structure</span>
 </span></code></pre></div></p>
 <p><strong>Check other apps</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="k">for</span><span class="w"> </span>app<span class="w"> </span><span class="k">in</span><span class="w"> </span>apps/common/*<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="k">for</span><span class="w"> </span>app<span class="w"> </span><span class="k">in</span><span class="w"> </span>apps/common/*<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 </span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;=== </span><span class="nv">$app</span><span class="s2"> ===&quot;</span>
 </span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="w">  </span>grep<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;dotfiles\|common/\|tools/&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$app</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;No references&quot;</span>
 </span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="k">done</span>
 </span></code></pre></div></p>
 <p><strong>Git</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>git<span class="w"> </span>add<span class="w"> </span>apps/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>git<span class="w"> </span>add<span class="w"> </span>apps/
 </span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: update app internal paths for new structure&quot;</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-11-test-migration">Phase 11: Test Migration<a class="headerlink" href="#phase-11-test-migration" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Verify everything still works</p>
 <p><strong>Test symlinks manager</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="nb">cd</span><span class="w"> </span>management/symlinks
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="nb">cd</span><span class="w"> </span>management/symlinks
 </span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>uv<span class="w"> </span>run<span class="w"> </span>symlinks<span class="w"> </span>check<span class="w"> </span>common
 </span><span id="__span-37-3"><a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a>uv<span class="w"> </span>run<span class="w"> </span>symlinks<span class="w"> </span>check<span class="w"> </span>macos<span class="w">  </span><span class="c1"># or wsl</span>
 </span><span id="__span-37-4"><a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>uv<span class="w"> </span>run<span class="w"> </span>symlinks<span class="w"> </span>show
 </span></code></pre></div></p>
 <p><strong>Test symlinks deployment</strong> (in a safe way):
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># Create a test directory</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># Create a test directory</span>
 </span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>/tmp/dotfiles-test-home
 </span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>
 </span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="c1"># Test linking</span>
@@ -3582,14 +3612,14 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-38-13"><a id="__codelineno-38-13" name="__codelineno-38-13" href="#__codelineno-38-13"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/tmp/dotfiles-test-home
 </span></code></pre></div></p>
 <p><strong>Test taskfiles</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>task<span class="w"> </span>--list-all
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>task<span class="w"> </span>--list-all
 </span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="c1"># Should work without errors</span>
 </span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>
 </span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a>task<span class="w"> </span>symlinks:check
 </span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="c1"># Should show correct paths</span>
 </span></code></pre></div></p>
 <p><strong>Test apps</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="c1"># Verify toolbox works (after symlinking or direct run)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="c1"># Verify toolbox works (after symlinking or direct run)</span>
 </span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>apps/common/toolbox<span class="w"> </span>list
 </span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>
 </span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="c1"># Check registry location</span>
@@ -3597,7 +3627,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-40-6"><a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="c1"># Should exist after platforms/common symlinked</span>
 </span></code></pre></div></p>
 <p><strong>Test documentation build</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>task<span class="w"> </span>docs:serve
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>task<span class="w"> </span>docs:serve
 </span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a><span class="c1"># Check http://localhost:8000</span>
 </span><span id="__span-41-3"><a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="c1"># Verify all links work</span>
 </span></code></pre></div></p>
@@ -3605,7 +3635,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 <h3 id="phase-12-cleanup-and-final-verification">Phase 12: Cleanup and Final Verification<a class="headerlink" href="#phase-12-cleanup-and-final-verification" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Remove old directories, clean up artifacts</p>
 <p><strong>Verify old directories removed</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="c1"># These should NOT exist:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="c1"># These should NOT exist:</span>
 </span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>ls<span class="w"> </span>common<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;No such file&quot;</span>
 </span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a>ls<span class="w"> </span>macos<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;No such file&quot;</span>
 </span><span id="__span-42-4"><a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a>ls<span class="w"> </span>wsl<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;No such file&quot;</span>
@@ -3617,14 +3647,14 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-42-10"><a id="__codelineno-42-10" name="__codelineno-42-10" href="#__codelineno-42-10"></a>ls<span class="w"> </span>-d<span class="w"> </span>platforms<span class="w"> </span>apps<span class="w"> </span>management
 </span></code></pre></div></p>
 <p><strong>Verify new structure</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>tree<span class="w"> </span>-L<span class="w"> </span><span class="m">2</span><span class="w"> </span>-d<span class="w"> </span>platforms<span class="w"> </span>apps<span class="w"> </span>management
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>tree<span class="w"> </span>-L<span class="w"> </span><span class="m">2</span><span class="w"> </span>-d<span class="w"> </span>platforms<span class="w"> </span>apps<span class="w"> </span>management
 </span></code></pre></div></p>
 <p><strong>Check git status</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>git<span class="w"> </span>status
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>git<span class="w"> </span>status
 </span><span id="__span-44-2"><a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a><span class="c1"># Should show clean working directory or only expected changes</span>
 </span></code></pre></div></p>
 <p><strong>Final commit</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>git<span class="w"> </span>add<span class="w"> </span>-A
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>git<span class="w"> </span>add<span class="w"> </span>-A
 </span><span id="__span-45-2"><a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: complete repository restructure</span>
 </span><span id="__span-45-3"><a id="__codelineno-45-3" name="__codelineno-45-3" href="#__codelineno-45-3"></a>
 </span><span id="__span-45-4"><a id="__codelineno-45-4" name="__codelineno-45-4" href="#__codelineno-45-4"></a><span class="s2">- platforms/ for system configs</span>
@@ -3638,15 +3668,15 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 <h3 id="phase-13-deploy-and-verify-on-actual-system">Phase 13: Deploy and Verify on Actual System<a class="headerlink" href="#phase-13-deploy-and-verify-on-actual-system" title="Permanent link">&para;</a></h3>
 <p><strong>Action</strong>: Test on your actual system</p>
 <p><strong>Backup current state</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-46-1"><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a><span class="c1"># Backup current symlinks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-46-1"><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a><span class="c1"># Backup current symlinks</span>
 </span><span id="__span-46-2"><a id="__codelineno-46-2" name="__codelineno-46-2" href="#__codelineno-46-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config<span class="w"> </span>&gt;<span class="w"> </span>/tmp/config-before.txt
 </span><span id="__span-46-3"><a id="__codelineno-46-3" name="__codelineno-46-3" href="#__codelineno-46-3"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.local/bin<span class="w"> </span>&gt;<span class="w"> </span>/tmp/bin-before.txt
 </span></code></pre></div></p>
 <p><strong>Deploy from new structure</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>task<span class="w"> </span>symlinks:link
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>task<span class="w"> </span>symlinks:link
 </span></code></pre></div></p>
 <p><strong>Verify</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-48-1"><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a><span class="c1"># Check configs symlinked correctly</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-48-1"><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a><span class="c1"># Check configs symlinked correctly</span>
 </span><span id="__span-48-2"><a id="__codelineno-48-2" name="__codelineno-48-2" href="#__codelineno-48-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config/nvim
 </span><span id="__span-48-3"><a id="__codelineno-48-3" name="__codelineno-48-3" href="#__codelineno-48-3"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config/tmux
 </span><span id="__span-48-4"><a id="__codelineno-48-4" name="__codelineno-48-4" href="#__codelineno-48-4"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config/toolbox
@@ -3662,7 +3692,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 </span><span id="__span-48-14"><a id="__codelineno-48-14" name="__codelineno-48-14" href="#__codelineno-48-14"></a>theme-sync<span class="w"> </span>current
 </span></code></pre></div></p>
 <p><strong>Test workflow</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-49-1"><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a><span class="c1"># Try your normal workflow</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-49-1"><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a><span class="c1"># Try your normal workflow</span>
 </span><span id="__span-49-2"><a id="__codelineno-49-2" name="__codelineno-49-2" href="#__codelineno-49-2"></a><span class="c1"># - Open tmux</span>
 </span><span id="__span-49-3"><a id="__codelineno-49-3" name="__codelineno-49-3" href="#__codelineno-49-3"></a><span class="c1"># - Use menu</span>
 </span><span id="__span-49-4"><a id="__codelineno-49-4" name="__codelineno-49-4" href="#__codelineno-49-4"></a><span class="c1"># - Check toolbox</span>
@@ -3672,7 +3702,7 @@ No change needed here - dotfiles_dir is still the repo root.</p>
 <hr />
 <h2 id="rollback-plan">Rollback Plan<a class="headerlink" href="#rollback-plan" title="Permanent link">&para;</a></h2>
 <p>If anything breaks:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1"># Return to previous commit</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1"># Return to previous commit</span>
 </span><span id="__span-50-2"><a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a>git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>-10<span class="w">  </span><span class="c1"># Find commit before restructure</span>
 </span><span id="__span-50-3"><a id="__codelineno-50-3" name="__codelineno-50-3" href="#__codelineno-50-3"></a>git<span class="w"> </span>checkout<span class="w"> </span>&lt;commit-hash&gt;
 </span><span id="__span-50-4"><a id="__codelineno-50-4" name="__codelineno-50-4" href="#__codelineno-50-4"></a>

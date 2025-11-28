@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3151,7 +3181,7 @@
 <li><code>common/.local/bin/menu-new</code> - Updated FZF_OPTS and menu functions</li>
 </ul>
 <p><strong>Navigation Keys:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Ctrl-j/k - Move up/down
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Ctrl-j/k - Move up/down
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Ctrl-h   - Go back one level
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Ctrl-l   - Select item (forward)
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Esc      - Exit completely
@@ -3171,7 +3201,7 @@
 <li>Updated main_menu() and category_menu() to handle Ctrl-h separately</li>
 </ul>
 <p><strong>Behavior:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Main Menu (Ctrl-h → exit, Esc → exit)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Main Menu (Ctrl-h → exit, Esc → exit)
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  └─ Category Menu (Ctrl-h → back to Main, Esc → exit)
 </span></code></pre></div>
 <h3 id="3-session-preview-syntax-highlighting">3. Session Preview: Syntax Highlighting ✅<a class="headerlink" href="#3-session-preview-syntax-highlighting" title="Permanent link">&para;</a></h3>
@@ -3188,7 +3218,7 @@
 <li><code>common/.local/bin/session-preview-content</code> - Added bat integration</li>
 </ul>
 <p><strong>Example:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># With bat (syntax highlighted):</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># With bat (syntax highlighted):</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>tmux<span class="w"> </span>capture-pane<span class="w"> </span>...<span class="w"> </span><span class="p">|</span><span class="w"> </span>bat<span class="w"> </span>--color<span class="o">=</span>always<span class="w"> </span>--style<span class="o">=</span>plain<span class="w"> </span>--language<span class="o">=</span>bash
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Without bat (plain):</span>
@@ -3203,7 +3233,7 @@
 <li>Theory: Popup needs to close before switch-client takes effect</li>
 </ul>
 <p><strong>Changes Made:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Run switch-client in background after small delay</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Run switch-client in background after small delay</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="o">(</span>sleep<span class="w"> </span><span class="m">0</span>.1<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>tmux<span class="w"> </span>switch-client<span class="w"> </span>-t<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$session_cmd</span><span class="s2">&quot;</span><span class="o">)</span><span class="w"> </span><span class="p">&amp;</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>sleep<span class="w"> </span><span class="m">0</span>.2<span class="w">  </span><span class="c1"># Wait for it to queue</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">exit</span><span class="w"> </span><span class="m">0</span><span class="w">     </span><span class="c1"># Close popup</span>
@@ -3276,7 +3306,7 @@
 <li>Check if session preview has syntax highlighting</li>
 </ol>
 <h3 id="navigation-quick-reference">Navigation Quick Reference<a class="headerlink" href="#navigation-quick-reference" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Ctrl-j    - Down
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Ctrl-j    - Down
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Ctrl-k    - Up
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Ctrl-h    - Back
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>Ctrl-l    - Select

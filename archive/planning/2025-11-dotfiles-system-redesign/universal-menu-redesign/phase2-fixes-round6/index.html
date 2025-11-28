@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3156,7 +3186,7 @@ When selecting a non-existent session (like "notes"), got error: <code>can't fin
 Check if session exists with <code>tmux has-session</code>, create if not, then switch</p>
 <p><strong>Code Changes:</strong>
 File: <code>common/.local/bin/menu-new</code> (line 150-157)</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Before:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Before:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>tmux<span class="w"> </span>switch-client<span class="w"> </span>-t<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$session_name</span><span class="s2">&quot;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># After:</span>
@@ -3168,7 +3198,7 @@ File: <code>common/.local/bin/menu-new</code> (line 150-157)</p>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>tmux<span class="w"> </span>switch-client<span class="w"> </span>-t<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$session_name</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <p><strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Session<span class="w"> </span>creation<span class="w"> </span>code<span class="w"> </span>present
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Session<span class="w"> </span>creation<span class="w"> </span>code<span class="w"> </span>present
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Manual<span class="w"> </span>test:<span class="w"> </span>Select<span class="w"> </span>non-existent<span class="w"> </span>session<span class="w"> </span>→<span class="w"> </span>creates<span class="w"> </span>and<span class="w"> </span>switches
 </span></code></pre></div>
 <h3 id="2-workflowslearning-not-found-errors">2. Workflows/Learning "Not Found" Errors ✅<a class="headerlink" href="#2-workflowslearning-not-found-errors" title="Permanent link">&para;</a></h3>
@@ -3182,7 +3212,7 @@ Tested thoroughly - no actual errors found:</p>
 <li><code>menu-go-new preview</code> works with multi-word titles</li>
 </ul>
 <p><strong>Test Results:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Get<span class="w"> </span>workflows<span class="w"> </span>with<span class="w"> </span>multi-word<span class="w"> </span>title<span class="w"> </span>works
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Get<span class="w"> </span>workflows<span class="w"> </span>with<span class="w"> </span>multi-word<span class="w"> </span>title<span class="w"> </span>works
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Preview<span class="w"> </span>workflows<span class="w"> </span>with<span class="w"> </span>multi-word<span class="w"> </span>title<span class="w"> </span>works
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Get<span class="w"> </span>learning<span class="w"> </span>with<span class="w"> </span>multi-word<span class="w"> </span>title<span class="w"> </span>works
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>All<span class="w"> </span>extract_id<span class="w"> </span><span class="nb">test</span><span class="w"> </span>cases<span class="w"> </span>pass
@@ -3195,7 +3225,7 @@ Tools with <code>tldr: true</code> (or <code>use_tldr: true</code>) should displ
 <p><strong>Implementation:</strong></p>
 <p><strong>Step 1:</strong> Add <code>UseTldr</code> field to Command struct
 File: <code>tools/menu-go/internal/registry/types.go</code> (line 16)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Command</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Command</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="c1">// ... existing fields</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">UseTldr</span><span class="w">     </span><span class="kt">bool</span><span class="w">     </span><span class="s">`yaml:&quot;use_tldr,omitempty&quot;`</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">Platform</span><span class="w">    </span><span class="kt">string</span><span class="w">   </span><span class="s">`yaml:&quot;platform&quot;`</span>
@@ -3203,13 +3233,13 @@ File: <code>tools/menu-go/internal/registry/types.go</code> (line 16)</p>
 </span></code></pre></div>
 <p><strong>Step 2:</strong> Copy <code>UseTldr</code> to Details in commandToItem
 File: <code>tools/menu-go/internal/integration/registries/commands.go</code> (line 119-121)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">cmd</span><span class="p">.</span><span class="nx">UseTldr</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">cmd</span><span class="p">.</span><span class="nx">UseTldr</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">details</span><span class="p">[</span><span class="s">&quot;use_tldr&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">cmd</span><span class="p">.</span><span class="nx">UseTldr</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Step 3:</strong> Add <code>writeTldr()</code> function to preview formatter
 File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 272-297)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">writeTldr</span><span class="p">(</span><span class="nx">buf</span><span class="w"> </span><span class="o">*</span><span class="nx">strings</span><span class="p">.</span><span class="nx">Builder</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">writeTldr</span><span class="p">(</span><span class="nx">buf</span><span class="w"> </span><span class="o">*</span><span class="nx">strings</span><span class="p">.</span><span class="nx">Builder</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="c1">// Check if use_tldr is enabled</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">useTldr</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">item</span><span class="p">.</span><span class="nx">Details</span><span class="p">[</span><span class="s">&quot;use_tldr&quot;</span><span class="p">].(</span><span class="kt">bool</span><span class="p">)</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">!</span><span class="nx">useTldr</span><span class="w"> </span><span class="p">{</span>
@@ -3238,11 +3268,11 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 272-297)</p
 </span></code></pre></div>
 <p><strong>Step 4:</strong> Call writeTldr in FormatPreview
 File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 70)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// tldr output (for tools/commands with use_tldr: true)</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// tldr output (for tools/commands with use_tldr: true)</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">writeTldr</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span>menu-go-new<span class="w"> </span>preview<span class="w"> </span>commands<span class="w"> </span>rg
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span>menu-go-new<span class="w"> </span>preview<span class="w"> </span>commands<span class="w"> </span>rg
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="o">[</span>shows<span class="w"> </span>examples,<span class="w"> </span>notes,<span class="w"> </span>related<span class="o">]</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>tldr:
@@ -3256,14 +3286,14 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 70)</p>
 </span></code></pre></div>
 <p><strong>Usage:</strong>
 To enable tldr for any command or tool, add to registry:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rg</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rg</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rg [pattern]</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">use_tldr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># &lt;- Add this</span>
 </span></code></pre></div>
 <h3 id="4-related-commands-with-descriptions">4. Related Commands with Descriptions ✅<a class="headerlink" href="#4-related-commands-with-descriptions" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong>
 Related commands showed only names, no descriptions:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Related:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Related:
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  • fd
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  • fzf
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>  • z
@@ -3272,7 +3302,7 @@ Related commands showed only names, no descriptions:</p>
 Enrich related commands with descriptions when creating Items</p>
 <p><strong>Step 1:</strong> Modify commandToItem to look up descriptions
 File: <code>tools/menu-go/internal/integration/registries/commands.go</code> (line 94-113)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Related</span><span class="p">)</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Related</span><span class="p">)</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="c1">// Enrich related commands with descriptions</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">relatedWithDesc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Related</span><span class="p">))</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">relName</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Related</span><span class="w"> </span><span class="p">{</span>
@@ -3295,7 +3325,7 @@ File: <code>tools/menu-go/internal/integration/registries/commands.go</code> (li
 </span></code></pre></div>
 <p><strong>Step 2:</strong> Update writeRelated to display descriptions
 File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p>
-<div class="language-go highlight"><span class="filename">Go</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">writeRelated</span><span class="p">(</span><span class="nx">buf</span><span class="w"> </span><span class="o">*</span><span class="nx">strings</span><span class="p">.</span><span class="nx">Builder</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">writeRelated</span><span class="p">(</span><span class="nx">buf</span><span class="w"> </span><span class="o">*</span><span class="nx">strings</span><span class="p">.</span><span class="nx">Builder</span><span class="p">,</span><span class="w"> </span><span class="nx">item</span><span class="w"> </span><span class="nx">integration</span><span class="p">.</span><span class="nx">Item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nx">related</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">item</span><span class="p">.</span><span class="nx">Details</span><span class="p">[</span><span class="s">&quot;related&quot;</span><span class="p">].([]</span><span class="kd">interface</span><span class="p">{})</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">related</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">        </span><span class="k">return</span>
@@ -3328,7 +3358,7 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p
 </span><span id="__span-11-31"><a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Test Result:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>$<span class="w"> </span>menu-go-new<span class="w"> </span>preview<span class="w"> </span>commands<span class="w"> </span>fcd
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>$<span class="w"> </span>menu-go-new<span class="w"> </span>preview<span class="w"> </span>commands<span class="w"> </span>fcd
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Related:
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>•<span class="w"> </span>fd<span class="w"> </span>-<span class="w"> </span>Fast<span class="w"> </span>and<span class="w"> </span>user-friendly<span class="w"> </span>alternative<span class="w"> </span>to<span class="w"> </span>find
@@ -3367,7 +3397,7 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p
 </ul>
 <h2 id="test-results-summary">Test Results Summary<a class="headerlink" href="#test-results-summary" title="Permanent link">&para;</a></h2>
 <p>All automated tests passing:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Related<span class="w"> </span>commands<span class="w"> </span>have<span class="w"> </span>descriptions
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Related<span class="w"> </span>commands<span class="w"> </span>have<span class="w"> </span>descriptions
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>tldr<span class="w"> </span>section<span class="w"> </span>found<span class="w"> </span><span class="o">(</span>rg,<span class="w"> </span>fd<span class="o">)</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Session<span class="w"> </span>creation<span class="w"> </span>code<span class="w"> </span>present
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>✓<span class="w"> </span>PASS:<span class="w"> </span>Get<span class="w"> </span>workflows<span class="w"> </span>with<span class="w"> </span>multi-word<span class="w"> </span>title<span class="w"> </span>works
@@ -3382,25 +3412,25 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="before-vs-after-related-commands">Before vs After: Related Commands<a class="headerlink" href="#before-vs-after-related-commands" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>Related:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>Related:
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>  • fd
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>  • fzf
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  • z
 </span></code></pre></div>
 <p><strong>After:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>Related:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>Related:
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  • fd - Fast and user-friendly alternative to find
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  • fzf
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>  • z - Jump to frequently used directories
 </span></code></pre></div>
 <h3 id="before-vs-after-commands-with-use_tldr">Before vs After: Commands with use_tldr<a class="headerlink" href="#before-vs-after-commands-with-use_tldr" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>[Examples section]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>[Examples section]
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>[Notes section]
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>[Related section]
 </span></code></pre></div>
 <p><strong>After:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>[Examples section]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>[Examples section]
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>[Notes section]
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>[Related section]
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
@@ -3412,11 +3442,11 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p
 </span></code></pre></div>
 <h3 id="session-creation">Session Creation<a class="headerlink" href="#session-creation" title="Permanent link">&para;</a></h3>
 <p><strong>Before:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>$<span class="w"> </span><span class="c1"># Select &quot;notes&quot; session from menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>$<span class="w"> </span><span class="c1"># Select &quot;notes&quot; session from menu</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>can<span class="err">&#39;</span>t<span class="w"> </span>find<span class="w"> </span>session:<span class="w"> </span>notes
 </span></code></pre></div>
 <p><strong>After:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>$<span class="w"> </span><span class="c1"># Select &quot;notes&quot; session from menu</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>$<span class="w"> </span><span class="c1"># Select &quot;notes&quot; session from menu</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="c1"># Creates new session &quot;notes&quot; and switches to it</span>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="c1"># Now in &quot;notes&quot; session</span>
 </span></code></pre></div>
@@ -3430,7 +3460,7 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p
 <h2 id="usage-guide">Usage Guide<a class="headerlink" href="#usage-guide" title="Permanent link">&para;</a></h2>
 <h3 id="enable-tldr-for-a-command">Enable tldr for a Command<a class="headerlink" href="#enable-tldr-for-a-command" title="Permanent link">&para;</a></h3>
 <p>In <code>commands.yml</code>:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ripgrep</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ripgrep</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">system_tool</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rg [pattern]</span>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="nt">use_tldr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># Add this line</span>
@@ -3440,7 +3470,7 @@ File: <code>tools/menu-go/internal/formatter/preview.go</code> (line 238-267)</p
 </span></code></pre></div>
 <h3 id="add-related-commands">Add Related Commands<a class="headerlink" href="#add-related-commands" title="Permanent link">&para;</a></h3>
 <p>Related commands are automatically enriched with descriptions:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fcd</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fcd</span>
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fcd [directory]</span>
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">related</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">fd</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">fzf</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">z</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Will show with descriptions</span>
 </span></code></pre></div>

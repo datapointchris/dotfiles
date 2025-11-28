@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3141,7 +3171,7 @@
 <strong>Status:</strong> ✅ Fixed and tested</p>
 <h2 id="problem-description">Problem Description<a class="headerlink" href="#problem-description" title="Permanent link">&para;</a></h2>
 <p>When hovering over workflows or learning topics with multi-word titles in fzf, the preview pane showed errors:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Error: item not found: Neovim
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Error: item not found: Neovim
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Error: item not found: Git
 </span></code></pre></div>
 <p><strong>Example:</strong></p>
@@ -3152,7 +3182,7 @@
 </ul>
 <h2 id="root-cause">Root Cause<a class="headerlink" href="#root-cause" title="Permanent link">&para;</a></h2>
 <p>The fzf preview command was using <code>{1}</code> which only passes the first field (word) to the preview command:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># OLD (BROKEN):</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># OLD (BROKEN):</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2"> preview </span><span class="nv">$integration</span><span class="s2"> {1}&quot;</span>
 </span></code></pre></div>
 <p><strong>What was happening:</strong></p>
@@ -3173,7 +3203,7 @@
 <p>Created a helper script that extracts the full ID from the fzf line before calling preview.</p>
 <h3 id="step-1-created-menu-preview-helper-script">Step 1: Created menu-preview-helper Script<a class="headerlink" href="#step-1-created-menu-preview-helper-script" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>common/.local/bin/menu-preview-helper</code></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Helper script to extract ID from fzf line and call preview</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Usage: menu-preview-helper &lt;integration&gt; &lt;fzf-line&gt;</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
@@ -3203,7 +3233,7 @@
 </ol>
 <h3 id="step-2-updated-menu-script">Step 2: Updated menu Script<a class="headerlink" href="#step-2-updated-menu-script" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>common/.local/bin/menu-new</code> (line 112-114)</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># OLD:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># OLD:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$MENU_GO_PATH</span><span class="s2"> preview </span><span class="nv">$integration</span><span class="s2"> {1}&quot;</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># NEW:</span>
@@ -3215,11 +3245,11 @@
 <li><code>{}</code> = entire line ("Neovim Quickfix Lists → Description")</li>
 </ul>
 <h3 id="step-3-made-helper-executable">Step 3: Made Helper Executable<a class="headerlink" href="#step-3-made-helper-executable" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>chmod<span class="w"> </span>+x<span class="w"> </span>common/.local/bin/menu-preview-helper
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>chmod<span class="w"> </span>+x<span class="w"> </span>common/.local/bin/menu-preview-helper
 </span></code></pre></div>
 <h2 id="test-results">Test Results<a class="headerlink" href="#test-results" title="Permanent link">&para;</a></h2>
 <p>All tests passing:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>✓<span class="w"> </span>Multi-word<span class="w"> </span>learning<span class="w"> </span>topics<span class="w"> </span>work
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>✓<span class="w"> </span>Multi-word<span class="w"> </span>learning<span class="w"> </span>topics<span class="w"> </span>work
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>✓<span class="w"> </span>Multi-word<span class="w"> </span>workflows<span class="w"> </span>work
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>✓<span class="w"> </span>Commands<span class="w"> </span>with<span class="w"> </span>favorites<span class="w"> </span>work
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>✓<span class="w"> </span>Single<span class="w"> </span>word<span class="w"> </span>IDs<span class="w"> </span>still<span class="w"> </span>work<span class="w"> </span><span class="o">(</span>regression<span class="w"> </span><span class="nb">test</span><span class="o">)</span>
@@ -3227,7 +3257,7 @@
 </span></code></pre></div>
 <h3 id="test-examples">Test Examples<a class="headerlink" href="#test-examples" title="Permanent link">&para;</a></h3>
 <p><strong>Test 1: Learning with multi-word ID</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span>menu-preview-helper<span class="w"> </span>learning<span class="w"> </span><span class="s2">&quot;Neovim Quickfix Lists → Master quickfix&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span>menu-preview-helper<span class="w"> </span>learning<span class="w"> </span><span class="s2">&quot;Neovim Quickfix Lists → Master quickfix&quot;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>Neovim<span class="w"> </span>Quickfix<span class="w"> </span>Lists
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3235,7 +3265,7 @@
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>✓<span class="w"> </span>PASS
 </span></code></pre></div>
 <p><strong>Test 2: Workflow with multi-word ID</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span>menu-preview-helper<span class="w"> </span>workflows<span class="w"> </span><span class="s2">&quot;Git Integration in Neovim → Git operations&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span>menu-preview-helper<span class="w"> </span>workflows<span class="w"> </span><span class="s2">&quot;Git Integration in Neovim → Git operations&quot;</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Git<span class="w"> </span>Integration<span class="w"> </span><span class="k">in</span><span class="w"> </span>Neovim
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3243,7 +3273,7 @@
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>✓<span class="w"> </span>PASS
 </span></code></pre></div>
 <p><strong>Test 3: Command with favorite (regression test)</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span>menu-preview-helper<span class="w"> </span>commands<span class="w"> </span><span class="s2">&quot;★ glo → Pretty git log&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span>menu-preview-helper<span class="w"> </span>commands<span class="w"> </span><span class="s2">&quot;★ glo → Pretty git log&quot;</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>glo
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3273,19 +3303,19 @@
 <ol>
 <li><strong>Inline bash -c with complex escaping</strong></li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;bash -c &#39;line=\&quot;{}\&quot;; ...[complex escaping]...&#39;&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;bash -c &#39;line=\&quot;{}\&quot;; ...[complex escaping]...&#39;&quot;</span>
 </span></code></pre></div>
 <p>❌ Too complex, hard to maintain, escaping nightmare</p>
 <ol>
 <li><strong>Modify menu-go to accept full line</strong></li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>menu-go-new<span class="w"> </span>preview-with-extraction<span class="w"> </span><span class="nv">$integration</span><span class="w"> </span><span class="s2">&quot;{}&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>menu-go-new<span class="w"> </span>preview-with-extraction<span class="w"> </span><span class="nv">$integration</span><span class="w"> </span><span class="s2">&quot;{}&quot;</span>
 </span></code></pre></div>
 <p>❌ Adds complexity to Go code for bash-specific issue</p>
 <ol>
 <li><strong>Helper script (chosen)</strong></li>
 </ol>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;menu-preview-helper </span><span class="nv">$integration</span><span class="s2"> {}&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">preview_cmd</span><span class="o">=</span><span class="s2">&quot;menu-preview-helper </span><span class="nv">$integration</span><span class="s2"> {}&quot;</span>
 </span></code></pre></div>
 <p>✅ Clean separation of concerns
    ✅ Easy to test independently
@@ -3309,12 +3339,12 @@
 </ul>
 <h2 id="user-experience">User Experience<a class="headerlink" href="#user-experience" title="Permanent link">&para;</a></h2>
 <p><strong>Before fix:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>[User navigates to Workflows]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>[User navigates to Workflows]
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>[Hovers over &quot;Git Integration in Neovim&quot;]
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Preview: Error: item not found: Git
 </span></code></pre></div>
 <p><strong>After fix:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>[User navigates to Workflows]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>[User navigates to Workflows]
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>[Hovers over &quot;Git Integration in Neovim&quot;]
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>Preview: [Shows full workflow with steps, resources, etc.]
 </span></code></pre></div>
@@ -3329,7 +3359,7 @@
 </ol>
 <h2 id="deployment">Deployment<a class="headerlink" href="#deployment" title="Permanent link">&para;</a></h2>
 <p>The helper script needs to be in PATH:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Already deployed to:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Already deployed to:</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>~/.local/bin/menu-preview-helper<span class="w">  </span><span class="o">(</span>symlinked<span class="w"> </span>via<span class="w"> </span>task<span class="w"> </span>symlinks:link<span class="o">)</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Source files:</span>

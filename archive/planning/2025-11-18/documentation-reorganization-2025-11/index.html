@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3159,7 +3189,7 @@
 <hr />
 <h3 id="2-reference-directory-chaos-13-files-5-are-redundant">2. Reference Directory Chaos (13 files, 5 are redundant)<a class="headerlink" href="#2-reference-directory-chaos-13-files-5-are-redundant" title="Permanent link">&para;</a></h3>
 <p><strong>Current state</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>reference/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>reference/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├──<span class="w"> </span>menu-system.md<span class="w"> </span><span class="o">(</span><span class="m">455</span><span class="w"> </span>lines<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>Comprehensive<span class="w"> </span>menu<span class="w"> </span>guide
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├──<span class="w"> </span>tool-discovery.md<span class="w"> </span><span class="o">(</span><span class="m">291</span><span class="w"> </span>lines<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>Comprehensive<span class="w"> </span>toolbox<span class="w"> </span>guide
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├──<span class="w"> </span>tools.md<span class="w"> </span><span class="o">(</span><span class="m">68</span><span class="w"> </span>lines<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>Stub<span class="w"> </span>that<span class="w"> </span>says<span class="w"> </span><span class="s2">&quot;use toolbox show&quot;</span>
@@ -3205,7 +3235,7 @@
 - Users must scroll to find their platform</p>
 <p><strong>Opportunity</strong>: Use MkDocs tabbed content (already configured in mkdocs.yml).</p>
 <p><strong>Example</strong>:
-<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>=== &quot;macOS&quot;
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>=== &quot;macOS&quot;
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="sb">    ```bash</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span>git<span class="w"> </span>clone<span class="w"> </span>...<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>bash<span class="w"> </span>management/macos-setup.sh
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="sb">    ```</span>
@@ -3223,7 +3253,7 @@
 <hr />
 <h2 id="proposed-solution">Proposed Solution<a class="headerlink" href="#proposed-solution" title="Permanent link">&para;</a></h2>
 <h3 id="new-documentation-structure">New Documentation Structure<a class="headerlink" href="#new-documentation-structure" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docs/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docs/
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── getting-started/
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   ├── installation.md ← MERGED (quickstart + installation with tabs)
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│   ├── first-config.md ← KEEP
@@ -3286,7 +3316,7 @@
 <h4 id="11-merge-quickstartmd-into-installationmd">1.1 Merge quickstart.md into installation.md<a class="headerlink" href="#11-merge-quickstartmd-into-installationmd" title="Permanent link">&para;</a></h4>
 <p><strong>File</strong>: <code>docs/getting-started/installation.md</code></p>
 <p><strong>New structure</strong>:
-<div class="language-markdown highlight"><span class="filename">Markdown</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gh"># Installation</span>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gh"># Installation</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="gu">## TL;DR</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
@@ -3464,7 +3494,7 @@
 <hr />
 <h3 id="phase-6-update-mkdocsyml-navigation">Phase 6: Update mkdocs.yml Navigation<a class="headerlink" href="#phase-6-update-mkdocsyml-navigation" title="Permanent link">&para;</a></h3>
 <p><strong>Update nav structure in mkdocs.yml</strong>:</p>
-<div class="language-yaml highlight"><span class="filename">YAML</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">nav</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">nav</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">Home</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">index.md</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">Getting Started</span><span class="p">:</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">Installation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">getting-started/installation.md</span><span class="w">  </span><span class="c1"># MERGED</span>

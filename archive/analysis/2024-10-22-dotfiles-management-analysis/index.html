@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3147,7 +3177,7 @@
 <li><strong>Duplication Problem</strong>: Significant config duplication, especially for Neovim</li>
 </ol>
 <h3 id="current-structure-assessment">Current Structure Assessment<a class="headerlink" href="#current-structure-assessment" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>├── shared/              # Common configurations
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>├── shared/              # Common configurations
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│   └── .config/         # zsh, tmux, yazi, zellij, neofetch, eza
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── macos/              # macOS-specific + duplicated shared configs
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── .config/        # nvim, borders, vectorcode, tmuxinator, readline
@@ -3167,14 +3197,14 @@
 <h2 id="alternative-approaches-analysis">Alternative Approaches Analysis<a class="headerlink" href="#alternative-approaches-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="1-direct-shared-linking-with-platform-overlays-recommended">1. Direct Shared Linking with Platform Overlays (RECOMMENDED)<a class="headerlink" href="#1-direct-shared-linking-with-platform-overlays-recommended" title="Permanent link">&para;</a></h3>
 <p><strong>How it works:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Stage 1: Link shared directly to $HOME</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Stage 1: Link shared directly to $HOME</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>./symlinks<span class="w"> </span>shared<span class="w"> </span>link-to-home
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Stage 2: Overlay platform-specific files</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>./symlinks<span class="w"> </span>macos<span class="w"> </span>overlay
 </span></code></pre></div>
 <p><strong>Implementation Changes:</strong></p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># New symlink operations</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># New symlink operations</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>link-to-home<span class="w">     </span><span class="c1"># shared/ → $HOME directly</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>overlay<span class="w">          </span><span class="c1"># platform/ → $HOME (only files that exist in platform/)</span>
 </span></code></pre></div>
@@ -3192,7 +3222,7 @@
 <li>⚠️ <strong>Overlay order matters</strong>: Must ensure platform overrides work correctly</li>
 </ul>
 <p><strong>Directory Structure After:</strong></p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>├── shared/              # Base layer - linked directly to $HOME
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>├── shared/              # Base layer - linked directly to $HOME
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>│   └── .config/         # zsh, tmux, yazi, zellij, neofetch, eza, nvim-base
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── macos/              # Overlay layer - only differences
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   ├── .config/nvim/    # macOS-specific nvim additions/overrides
@@ -3209,7 +3239,7 @@
 <li>Platform detection in individual config files</li>
 </ul>
 <p><strong>Example Implementation:</strong></p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- nvim init.lua</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- nvim init.lua</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kr">if</span><span class="w"> </span><span class="nb">os.getenv</span><span class="p">(</span><span class="s2">&quot;MACOS&quot;</span><span class="p">)</span><span class="w"> </span><span class="kr">then</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.codecompanion&#39;</span><span class="p">)</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.copilot&#39;</span><span class="p">)</span>
@@ -3256,7 +3286,7 @@
 <li>Build system generates platform configurations</li>
 </ul>
 <p><strong>Example:</strong></p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">-- nvim.template.lua</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">-- nvim.template.lua</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="p">{</span><span class="o">%</span><span class="w"> </span><span class="kr">if</span><span class="w"> </span><span class="nv">platform</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;macos&quot;</span><span class="w"> </span><span class="o">%</span><span class="p">}</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">require</span><span class="p">(</span><span class="s1">&#39;plugins.codecompanion&#39;</span><span class="p">)</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">{</span><span class="o">%</span><span class="w"> </span><span class="nv">elif</span><span class="w"> </span><span class="nv">platform</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;wsl&quot;</span><span class="w"> </span><span class="o">%</span><span class="p">}</span><span class="w">  </span>
@@ -3302,7 +3332,7 @@
 </ul>
 <h3 id="git-configuration-patterns">Git Configuration Patterns<a class="headerlink" href="#git-configuration-patterns" title="Permanent link">&para;</a></h3>
 <p>The git configs show good platform differentiation:</p>
-<div class="language-properties highlight"><span class="filename">Properties</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># macos/.gitconfig</span>
+<div class="language-properties highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># macos/.gitconfig</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="na">[core]</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="na">editor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">code --wait</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="na">[credential]</span><span class="w">  </span>
@@ -3319,7 +3349,7 @@
 <p>This is exactly the type of platform-specific configuration that should remain separate.</p>
 <h3 id="shell-configuration-success-story">Shell Configuration Success Story<a class="headerlink" href="#shell-configuration-success-story" title="Permanent link">&para;</a></h3>
 <p>The ZSH configuration demonstrates excellent platform-aware design:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Platform detection with graceful fallbacks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Platform detection with graceful fallbacks</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="c1"># macOS specific paths and settings</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">else</span>
@@ -3342,13 +3372,13 @@
 </ol>
 <h3 id="phase-2-update-symlink-script">Phase 2: Update Symlink Script<a class="headerlink" href="#phase-2-update-symlink-script" title="Permanent link">&para;</a></h3>
 <p>Add new operations to <code>symlinks</code> script:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>link-to-home<span class="w">     </span><span class="c1"># shared/ → $HOME directly</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>link-to-home<span class="w">     </span><span class="c1"># shared/ → $HOME directly</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>overlay<span class="w">          </span><span class="c1"># platform/ → $HOME (overwrites shared)</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>migrate<span class="w">          </span><span class="c1"># One-time migration helper</span>
 </span></code></pre></div>
 <h3 id="phase-3-neovim-restructure">Phase 3: Neovim Restructure<a class="headerlink" href="#phase-3-neovim-restructure" title="Permanent link">&para;</a></h3>
 <p>Create base Neovim config in <code>shared/</code> with platform-specific additions:</p>
-<div class="language-text highlight"><span class="filename">Text Only</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>shared/.config/nvim/          # Base configuration
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>shared/.config/nvim/          # Base configuration
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── init.lua                  # Loads core + platform-specific
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>├── lua/core/                 # Shared core functionality  
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>├── lua/plugins/shared/       # Cross-platform plugins
@@ -3369,7 +3399,7 @@
 </ol>
 <h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
 <h3 id="modified-symlink-script-functions">Modified Symlink Script Functions<a class="headerlink" href="#modified-symlink-script-functions" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>handle_shared_to_home<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>handle_shared_to_home<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="c1"># Link shared/ directly to $HOME</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span>create_symlinks<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/shared&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;Shared → \$HOME&quot;</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="o">}</span>
@@ -3390,13 +3420,13 @@
 </span></code></pre></div>
 <h3 id="environment-variable-integration">Environment Variable Integration<a class="headerlink" href="#environment-variable-integration" title="Permanent link">&para;</a></h3>
 <p>Leverage existing <code>.env</code> pattern but enhance it:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># ~/.env (created by platform setup)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># ~/.env (created by platform setup)</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MACOS</span><span class="o">=</span><span class="nb">true</span><span class="w">        </span><span class="c1"># or WSL=true</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PLATFORM</span><span class="o">=</span>macos<span class="w">    </span><span class="c1"># or wsl  </span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DOTFILES_PLATFORM</span><span class="o">=</span>macos<span class="w">  </span><span class="c1"># Used by configs</span>
 </span></code></pre></div>
 <h3 id="neovim-platform-loader">Neovim Platform Loader<a class="headerlink" href="#neovim-platform-loader" title="Permanent link">&para;</a></h3>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">-- shared/.config/nvim/lua/platform/init.lua</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">-- shared/.config/nvim/lua/platform/init.lua</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kd">local</span><span class="w"> </span><span class="nv">platform</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">os.getenv</span><span class="p">(</span><span class="s2">&quot;DOTFILES_PLATFORM&quot;</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s2">&quot;shared&quot;</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kd">local</span><span class="w"> </span><span class="nv">platform_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;platform.&quot;</span><span class="w"> </span><span class="o">..</span><span class="w"> </span><span class="nv">platform</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>

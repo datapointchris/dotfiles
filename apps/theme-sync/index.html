@@ -1069,6 +1069,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3195,7 +3225,7 @@
 <h1 id="theme-sync">Theme Sync<a class="headerlink" href="#theme-sync" title="Permanent link">&para;</a></h1>
 <p>Base16 theme management across tmux, bat, fzf, eza, and shell via tinty. Change your theme once and watch it propagate everywhere simultaneously.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme-sync<span class="w"> </span>current<span class="w">           </span><span class="c1"># Show current theme</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme-sync<span class="w"> </span>current<span class="w">           </span><span class="c1"># Show current theme</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme-sync<span class="w"> </span>favorites<span class="w">         </span><span class="c1"># List 12 favorite themes</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme-sync<span class="w"> </span>random<span class="w">            </span><span class="c1"># Apply random favorite</span>
@@ -3258,36 +3288,36 @@
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <p>Tinty reads <code>~/.config/tinty/config.toml</code> which defines Base16 scheme repositories. Theme-sync doesn't modify tinty config - it uses tinty as-is.</p>
 <p>Favorite themes are hardcoded in <code>apps/common/theme-sync</code>. Edit the FAVORITES array directly:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>nvim<span class="w"> </span>~/dotfiles/apps/common/theme-sync
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>nvim<span class="w"> </span>~/dotfiles/apps/common/theme-sync
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Edit FAVORITES array</span>
 </span></code></pre></div>
 <p>Changes apply immediately since shell scripts run directly.</p>
 <h2 id="integration-with-ghostty">Integration with Ghostty<a class="headerlink" href="#integration-with-ghostty" title="Permanent link">&para;</a></h2>
 <p>Theme-sync works alongside the separate ghostty-theme system. Ghostty uses its own theme format and manages 60+ built-in themes independently from Base16. This separation provides flexibility - you can keep them synchronized or intentionally separate for visual distinction.</p>
 <p>Check both systems:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ghostty-theme<span class="w"> </span>current<span class="w">          </span><span class="c1"># Check Ghostty theme</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ghostty-theme<span class="w"> </span>current<span class="w">          </span><span class="c1"># Check Ghostty theme</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>theme-sync<span class="w"> </span>current<span class="w">             </span><span class="c1"># Check Base16 theme</span>
 </span></code></pre></div>
 <p>Keep them synchronized:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ghostty-theme<span class="w"> </span>apply<span class="w"> </span>rose-pine
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ghostty-theme<span class="w"> </span>apply<span class="w"> </span>rose-pine
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
 </span></code></pre></div>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Switch themes based on mood or time of day:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine-moon<span class="w">    </span><span class="c1"># Evening</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine-moon<span class="w">    </span><span class="c1"># Evening</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark<span class="w">       </span><span class="c1"># Daytime</span>
 </span></code></pre></div>
 <p>Break out of visual monotony with random selection:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Work for a bit, see how it feels</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>theme-sync<span class="w"> </span>random
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Try another</span>
 </span></code></pre></div>
 <p>Combine with fzf for interactive selection:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;theme-sync info {}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;theme-sync info {}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
 </span></code></pre></div>
 <p>Automate theme changes based on time:</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">else</span>

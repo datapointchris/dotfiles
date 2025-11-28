@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3148,20 +3178,20 @@
 <h3 id="2-conditional-ai-plugin-loading">2. Conditional AI Plugin Loading<a class="headerlink" href="#2-conditional-ai-plugin-loading" title="Permanent link">&para;</a></h3>
 <p>Updated plugins with environment-based conditions:</p>
 <p><strong>CodeCompanion</strong> (<code>common/.config/nvim/lua/plugins/codecompanion.lua</code>):</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">cond</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">MACOS</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">AI_ENABLED</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="p">,</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">cond</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">MACOS</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">AI_ENABLED</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="p">,</span>
 </span></code></pre></div>
 <p><strong>Copilot</strong> (<code>common/.config/nvim/lua/plugins/copilot.lua</code>):</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">cond</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">MACOS</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">AI_ENABLED</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="p">)</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">g</span><span class="p">.</span><span class="py">vscode</span><span class="p">,</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">cond</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">MACOS</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">AI_ENABLED</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="p">)</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">g</span><span class="p">.</span><span class="py">vscode</span><span class="p">,</span>
 </span></code></pre></div>
 <h3 id="3-environment-files-created">3. Environment Files Created<a class="headerlink" href="#3-environment-files-created" title="Permanent link">&para;</a></h3>
 <p><strong>macOS</strong> (<code>macos/.env</code>):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MACOS</span><span class="o">=</span><span class="nb">true</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MACOS</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AI_ENABLED</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PLATFORM</span><span class="o">=</span>macos
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DOTFILES_PLATFORM</span><span class="o">=</span>macos
 </span></code></pre></div>
 <p><strong>WSL</strong> (<code>wsl/.env</code>):</p>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">WSL</span><span class="o">=</span><span class="nb">true</span><span class="w">  </span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">WSL</span><span class="o">=</span><span class="nb">true</span><span class="w">  </span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AI_ENABLED</span><span class="o">=</span><span class="nb">false</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PLATFORM</span><span class="o">=</span>wsl
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DOTFILES_PLATFORM</span><span class="o">=</span>wsl
@@ -3188,7 +3218,7 @@
 </ol>
 <h2 id="environment-variable-usage">Environment Variable Usage<a class="headerlink" href="#environment-variable-usage" title="Permanent link">&para;</a></h2>
 <p>Plugins can now use these patterns:</p>
-<div class="language-lua highlight"><span class="filename">Lua</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- macOS only</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- macOS only</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">cond</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">vim</span><span class="p">.</span><span class="py">env</span><span class="p">.</span><span class="py">MACOS</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;true&quot;</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1">-- WSL only  </span>

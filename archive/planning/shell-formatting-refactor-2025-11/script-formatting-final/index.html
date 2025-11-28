@@ -1052,6 +1052,8 @@
       
         
       
+        
+      
     
     
     
@@ -1114,6 +1116,34 @@
     
   
     Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
   
 
     
@@ -3147,7 +3177,7 @@
 - More logical location than <code>management/lib/</code></p>
 <h3 id="2-sourced-in-zshrc">✅ 2. Sourced in .zshrc<a class="headerlink" href="#2-sourced-in-zshrc" title="Permanent link">&para;</a></h3>
 <p><strong>Added to</strong> <code>.zshrc</code> line 16:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SHELLS</span><span class="s2">/script-formatting.sh&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SHELLS</span><span class="s2">/script-formatting.sh&quot;</span>
 </span></code></pre></div></p>
 <p>Now all formatting functions are available:
 - In your interactive shell
@@ -3155,10 +3185,10 @@
 - For other programs that inherit the shell environment</p>
 <h3 id="3-made-headers-readable">✅ 3. Made Headers Readable<a class="headerlink" href="#3-made-headers-readable" title="Permanent link">&para;</a></h3>
 <p><strong>Before</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BOX_THICK</span><span class="si">}${</span><span class="nv">BOX_THICK</span><span class="si">}${</span><span class="nv">BOX_THICK</span><span class="si">}</span><span class="s2">...&quot;</span><span class="w"> </span><span class="c1"># 49 times!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BOX_THICK</span><span class="si">}${</span><span class="nv">BOX_THICK</span><span class="si">}${</span><span class="nv">BOX_THICK</span><span class="si">}</span><span class="s2">...&quot;</span><span class="w"> </span><span class="c1"># 49 times!</span>
 </span></code></pre></div></p>
 <p><strong>After</strong>:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>_separator<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="nb">printf</span><span class="w"> </span><span class="s1">&#39;%*s\n&#39;</span><span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">&#39; &#39;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>_separator<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="nb">printf</span><span class="w"> </span><span class="s1">&#39;%*s\n&#39;</span><span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">&#39; &#39;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>print_header<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">COLOR_BLUE</span><span class="si">}</span><span class="k">$(</span>_separator<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BOX_THICK</span><span class="s2">&quot;</span><span class="k">)</span><span class="si">${</span><span class="nv">COLOR_RESET</span><span class="si">}</span><span class="s2">&quot;</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>...
@@ -3166,7 +3196,7 @@
 </span></code></pre></div></p>
 <p>Much cleaner and maintainable!</p>
 <h3 id="4-green-borders-for-success-headers">✅ 4. Green Borders for Success Headers<a class="headerlink" href="#4-green-borders-for-success-headers" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>print_header_success<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>print_header_success<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">COLOR_GREEN</span><span class="si">}</span><span class="k">$(</span>_separator<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BOX_THICK</span><span class="s2">&quot;</span><span class="k">)</span><span class="si">${</span><span class="nv">COLOR_RESET</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># GREEN</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">COLOR_GREEN</span><span class="si">}</span><span class="s2"> </span><span class="si">${</span><span class="nv">UNICODE_CHECKBOX_CHECKED</span><span class="si">}</span><span class="s2"> </span><span class="si">${</span><span class="nv">text</span><span class="si">}${</span><span class="nv">COLOR_RESET</span><span class="si">}</span><span class="s2">&quot;</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">COLOR_GREEN</span><span class="si">}</span><span class="k">$(</span>_separator<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BOX_THICK</span><span class="s2">&quot;</span><span class="k">)</span><span class="si">${</span><span class="nv">COLOR_RESET</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># GREEN</span>
@@ -3174,7 +3204,7 @@
 </span></code></pre></div>
 <p>All borders are now green for success headers!</p>
 <h3 id="5-hyphens-for-lists-markdown-standard">✅ 5. Hyphens for Lists (Markdown Standard)<a class="headerlink" href="#5-hyphens-for-lists-markdown-standard" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>print_item<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>print_item<span class="o">()</span><span class="w"> </span><span class="o">{</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;  - </span><span class="si">${</span><span class="nv">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># Hyphen, not bullet</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="o">}</span>
 </span></code></pre></div>
@@ -3186,7 +3216,7 @@
 - Removed <code>die()</code> function from formatting.sh (moved to script-formatting.sh)</p>
 <p>These are kept ONLY for existing shell functions that might depend on tput-based functions.</p>
 <h3 id="7-clean-exports-for-unicode-box-characters">✅ 7. Clean Exports for Unicode &amp; Box Characters<a class="headerlink" href="#7-clean-exports-for-unicode-box-characters" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Easy to use</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Easy to use</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">UNICODE_CHECK</span><span class="o">=</span><span class="s1">&#39;✓&#39;</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">UNICODE_CROSS</span><span class="o">=</span><span class="s1">&#39;✗&#39;</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">UNICODE_WARNING</span><span class="o">=</span><span class="s1">&#39;⚠️&#39;</span>
@@ -3196,13 +3226,13 @@
 <p>Available in your shell and scripts - but functions use them internally so you don't have to write unreadable code.</p>
 <h2 id="what-works-now">What Works Now<a class="headerlink" href="#what-works-now" title="Permanent link">&para;</a></h2>
 <h3 id="in-your-shell-interactive">In Your Shell (Interactive)<a class="headerlink" href="#in-your-shell-interactive" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># These just work - already sourced!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># These just work - already sourced!</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>print_success<span class="w"> </span><span class="s2">&quot;Task completed&quot;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>print_error<span class="w"> </span><span class="s2">&quot;Something failed&quot;</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>print_header<span class="w"> </span><span class="s2">&quot;New Section&quot;</span>
 </span></code></pre></div>
 <h3 id="in-your-scripts">In Your Scripts<a class="headerlink" href="#in-your-scripts" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="ch">#!/usr/bin/env bash</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Functions are already available via sourced .zshrc</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># But you can explicitly source for clarity:</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.shell/script-formatting.sh&quot;</span>
@@ -3211,7 +3241,7 @@
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>print_success<span class="w"> </span><span class="s2">&quot;Done!&quot;</span>
 </span></code></pre></div>
 <h3 id="in-other-projects">In Other Projects<a class="headerlink" href="#in-other-projects" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Just copy one file</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Just copy one file</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>cp<span class="w"> </span>platforms/common/.shell/script-formatting.sh<span class="w"> </span>~/other-project/lib/
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/script-formatting.sh&quot;</span>
 </span></code></pre></div>
@@ -3248,7 +3278,7 @@
 <p>But I think the current approach is the sweet spot: maximum utility, minimal risk.</p>
 <h2 id="test-it-out">Test It Out<a class="headerlink" href="#test-it-out" title="Permanent link">&para;</a></h2>
 <p>Try in your next shell session:
-<div class="language-bash highlight"><span class="filename">Bash</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">source</span><span class="w"> </span>~/.zshrc<span class="w">  </span><span class="c1"># Or open new terminal</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">source</span><span class="w"> </span>~/.zshrc<span class="w">  </span><span class="c1"># Or open new terminal</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>print_header<span class="w"> </span><span class="s2">&quot;Testing&quot;</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>print_success<span class="w"> </span><span class="s2">&quot;It works!&quot;</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>print_item<span class="w"> </span><span class="s2">&quot;First thing&quot;</span>
