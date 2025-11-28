@@ -60,6 +60,24 @@ repos:
       - id: stylua # or stylua-system / stylua-github
         stages: [pre-commit]
 
+  # ================================================================
+  # Terraform Hooks (Reference Configuration)
+  # ================================================================
+  # Disabled: No Terraform code in this repository
+  # Uncomment when working with Terraform projects
+  # Tools required: terraform, tflint (already installed via Homebrew)
+  # Reference: https://github.com/antonbabenko/pre-commit-terraform
+  #
+  # - repo: https://github.com/antonbabenko/pre-commit-terraform
+  #   rev: v1.96.1  # Check for latest: https://github.com/antonbabenko/pre-commit-terraform/releases
+  #   hooks:
+  #     - id: terraform_fmt
+  #       stages: [pre-commit]
+  #     - id: terraform_validate
+  #       stages: [pre-commit]
+  #     - id: terraform_tflint
+  #       stages: [pre-commit]
+
   # Custom local hooks for documentation enforcement
   - repo: local
     hooks:
