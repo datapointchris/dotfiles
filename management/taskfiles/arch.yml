@@ -17,6 +17,8 @@ includes:
     taskfile: ./pacman.yml
   yay:
     taskfile: ./yay.yml
+  tenv:
+    taskfile: ./tenv.yml
 
 tasks:
 

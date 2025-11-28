@@ -18,6 +18,8 @@ includes:
     taskfile: ./mas.yml
   tmux:
     taskfile: ./tmux-plugins.yml
+  tenv:
+    taskfile: ./tenv.yml
 
 tasks:
 
@@ -75,6 +77,26 @@ tasks:
           /usr/bin/python3 -m pip install --user PyYAML
           echo "✅ PyYAML installed"
         fi
+
+  install-packages:
+    desc: Install system packages from packages.yml via Homebrew
+    silent: true
+    cmds:
+      - echo "✅ Installing macOS packages from packages.yml..."
+      - task: install-python-yaml
+      - task: install-system-packages
+      - task: setup-docker-compose
+      - echo "✅ macOS packages installed!"
+
+  install-system-packages:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        echo "  Installing system packages from packages.yml..."
+        PACKAGES=$(/usr/bin/python3 {{.ROOT_DIR}}/management/parse-packages.py --type=system --manager=brew | tr '\n' ' ')
+        echo "  Packages: $PACKAGES"
+        brew install $PACKAGES
 
   update-all:
     desc: Update all macOS packages and tools
@@ -166,6 +188,33 @@ tasks:
         defaults write NSGlobalDomain KeyRepeat -int 2
         defaults write NSGlobalDomain InitialKeyRepeat -int 15
         echo " Keyboard configured"
+
+  setup-docker-compose:
+    desc: Setup docker-compose as Docker CLI plugin (enables 'docker compose' command)
+    silent: true
+    # NOTE: This setup is macOS-specific because:
+    # - macOS uses Colima (VM-based container runtime) instead of native Docker
+    # - Requires manual plugin symlink to DOCKER_CONFIG/cli-plugins/
+    # - Linux uses docker-compose-plugin from package repos (automatic setup)
+    # See docs/configuration/docker.md for full details on platform differences
+    cmds:
+      - |
+        if ! command -v docker-compose >/dev/null 2>&1; then
+          echo "⚠️  docker-compose not installed (run: brew install docker-compose)"
+          exit 1
+        fi
+
+        echo "Setting up docker-compose as Docker CLI plugin..."
+
+        # Create plugin directory (DOCKER_CONFIG is set in zshrc to $XDG_CONFIG_HOME/docker)
+        mkdir -p "${DOCKER_CONFIG:-$HOME/.config/docker}/cli-plugins"
+
+        # Create symlink to enable 'docker compose' command
+        ln -sfn $(brew --prefix)/opt/docker-compose/bin/docker-compose \
+          "${DOCKER_CONFIG:-$HOME/.config/docker}/cli-plugins/docker-compose"
+
+        echo "✅ docker-compose plugin configured"
+        echo "You can now use 'docker compose' (modern) instead of 'docker-compose' (legacy)"
 
   # ================================================================
   # UTILITIES

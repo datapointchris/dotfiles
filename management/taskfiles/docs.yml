@@ -6,3 +6,21 @@ tasks:
     cmds:
       - uv add  mkdocs-material mkdocstrings[python] pymdown-extensions
     silent: true
+
+  serve:
+    desc: Serve documentation locally with live reload
+    cmds:
+      - uv run mkdocs serve --livereload
+    silent: false
+
+  build:
+    desc: Build documentation site
+    cmds:
+      - uv run mkdocs build
+    silent: false
+
+  deploy:
+    desc: Deploy documentation to GitHub Pages
+    cmds:
+      - uv run mkdocs gh-deploy --force
+    silent: false

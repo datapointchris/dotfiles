@@ -20,6 +20,8 @@ includes:
     taskfile: ./tmux-plugins.yml
   apt:
     taskfile: ./apt.yml
+  tenv:
+    taskfile: ./tenv.yml
 
 tasks:
 

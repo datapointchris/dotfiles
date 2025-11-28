@@ -29,6 +29,9 @@ includes:
   npm-global:
     taskfile: ./management/taskfiles/npm-global.yml
     optional: true
+  tenv:
+    taskfile: ./management/taskfiles/tenv.yml
+    optional: true
   uv-tools:
     taskfile: ./management/taskfiles/uv-tools.yml
     optional: true
@@ -153,8 +156,8 @@ tasks:
         source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
         print_header "Phase 1 - System Tools (Homebrew)" "cyan"
       - task: macos:install-homebrew
-      - task: macos:install-xcode-tools
-      - task: brew:install
+      - task: macos:setup-xcode
+      - task: macos:install-packages
       - echo ""
       - task: install-common-phases
       - |

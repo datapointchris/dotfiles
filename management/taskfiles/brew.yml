@@ -2,27 +2,14 @@
 # Homebrew Package Management Tasks
 # ================================================================
 # Platform: macOS
-# Manages Homebrew packages using Brewfile
+#
+# NOTE: This taskfile exists primarily for the 'update' task which is
+# called by update-macos.sh. Package installation is now handled via
+# packages.yml and managed by macos:install-packages.
 
 version: "3"
 
-vars:
-  BREWFILE: "{{.ROOT_DIR}}/Brewfile"
-  BREWFILE_LOCK: "{{.ROOT_DIR}}/Brewfile.lock.json"
-
 tasks:
-  install:
-    desc: Install all packages from Brewfile
-    silent: true
-    cmds:
-      - echo "✅ Installing Homebrew packages from Brewfile..."
-      - brew bundle install --file={{.BREWFILE}}
-      - echo "✅ Homebrew packages installed!"
-    sources:
-      - "{{.BREWFILE}}"
-    generates:
-      - "{{.BREWFILE_LOCK}}"
-
   # ================================================================
   # UPDATE
   # ================================================================
