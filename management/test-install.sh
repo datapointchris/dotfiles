@@ -22,18 +22,22 @@ show_usage() {
   echo "Options:"
   echo "  -p, --platform PLATFORM  Platform to test (wsl|arch|macos)"
   echo "                           If not specified, auto-detects current platform"
-  echo "  -k, --keep              Keep container/user after test (for debugging)"
-  echo "  -h, --help              Show this help message"
+  echo "      --current-user       Run on current user (skip user/container creation)"
+  echo "                           WARNING: Modifies your current environment!"
+  echo "  -k, --keep               Keep container/user after test (for debugging)"
+  echo "  -h, --help               Show this help message"
   echo ""
   echo "Platform-Specific Scripts:"
   echo "  WSL   → testing/test-wsl-install-docker.sh   (Docker with official WSL rootfs)"
   echo "  Arch  → testing/test-arch-install-docker.sh  (Docker with official Arch image)"
   echo "  macOS → testing/test-macos-install-user.sh   (Temporary user account)"
+  echo "  Current → testing/test-current-user.sh       (Current user, no isolation)"
   echo ""
   echo "Examples:"
-  echo "  $(basename "$0")                    # Auto-detect platform and test"
-  echo "  $(basename "$0") -p wsl             # Test WSL"
-  echo "  $(basename "$0") -p arch -k         # Test Arch, keep container"
+  echo "  $(basename "$0")                      # Auto-detect platform and test"
+  echo "  $(basename "$0") -p wsl               # Test WSL"
+  echo "  $(basename "$0") -p arch -k           # Test Arch, keep container"
+  echo "  $(basename "$0") --current-user       # Test on current user (for debugging)"
   echo ""
   echo "Note: You can also run platform scripts directly for more options:"
   echo "  testing/test-wsl-install-docker.sh --version 24.04"
@@ -60,6 +64,7 @@ detect_platform() {
 # Parse arguments
 PLATFORM=""
 KEEP_FLAG=""
+CURRENT_USER=false
 EXTRA_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -67,6 +72,10 @@ while [[ $# -gt 0 ]]; do
     -p|--platform)
       PLATFORM="${2:-}"
       shift 2
+      ;;
+    --current-user)
+      CURRENT_USER=true
+      shift
       ;;
     -k|--keep)
       KEEP_FLAG="--keep"
@@ -102,17 +111,22 @@ esac
 # Route to platform-specific script
 TESTING_DIR="$SCRIPT_DIR/testing"
 
-case "$PLATFORM" in
-  wsl)
-    SCRIPT="$TESTING_DIR/test-wsl-install-docker.sh"
-    ;;
-  arch)
-    SCRIPT="$TESTING_DIR/test-arch-install-docker.sh"
-    ;;
-  macos)
-    SCRIPT="$TESTING_DIR/test-macos-install-user.sh"
-    ;;
-esac
+# If --current flag is set, use the current user test script
+if [[ "$CURRENT_USER" == true ]]; then
+  SCRIPT="$TESTING_DIR/test-current-user.sh"
+else
+  case "$PLATFORM" in
+    wsl)
+      SCRIPT="$TESTING_DIR/test-wsl-install-docker.sh"
+      ;;
+    arch)
+      SCRIPT="$TESTING_DIR/test-arch-install-docker.sh"
+      ;;
+    macos)
+      SCRIPT="$TESTING_DIR/test-macos-install-user.sh"
+      ;;
+  esac
+fi
 
 # Check if script exists
 if [[ ! -f "$SCRIPT" ]]; then

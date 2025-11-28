@@ -10,7 +10,17 @@ Usage:
     python parse-packages.py --type=go
     python parse-packages.py --type=mas
     python parse-packages.py --type=github
+    python parse-packages.py --type=linux-gui
+    python parse-packages.py --type=macos-casks
+    python parse-packages.py --taps
     python parse-packages.py --get=runtimes.node.version
+
+Note: This script requires PyYAML to be installed.
+    - Install scripts use /usr/bin/python3 which has PyYAML installed
+    - If running manually and getting "No module named 'yaml'", use:
+        /usr/bin/python3 management/parse-packages.py [args]
+      OR
+        uv run --python python3 management/parse-packages.py [args]
 """
 
 import argparse
@@ -140,13 +150,34 @@ def get_github_binary_field(data, name, field):
     return None
 
 
+def get_macos_taps(data):
+    """Extract macOS Homebrew taps."""
+    return data.get('macos_taps', [])
+
+
+def get_linux_gui_apps(data):
+    """Extract Linux GUI app Flatpak IDs."""
+    if 'linux_gui_apps' not in data:
+        return []
+    return [app['flatpak_id'] for app in data['linux_gui_apps']]
+
+
+def get_macos_casks(data):
+    """Extract macOS cask names."""
+    if 'macos_casks' not in data:
+        return []
+    return [cask['name'] for cask in data['macos_casks']]
+
+
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'go', 'mas', 'github', 'shell-plugins'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew'],
                         help='Package manager for system packages')
     parser.add_argument('--get', help='Get a specific value using dot notation (e.g., runtimes.node.version)')
+    parser.add_argument('--taps', action='store_true',
+                        help='Get macOS Homebrew taps')
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
     parser.add_argument('--format', choices=['names', 'name_repo'], default='names',
@@ -155,6 +186,13 @@ def main():
     args = parser.parse_args()
 
     data = load_packages()
+
+    # Handle --taps for extracting macOS Homebrew taps
+    if args.taps:
+        taps = get_macos_taps(data)
+        for tap in taps:
+            print(tap)
+        return
 
     # Handle --github-binary for extracting GitHub binary metadata
     if args.github_binary:
@@ -201,6 +239,10 @@ def main():
         packages = get_github_packages(data)
     elif args.type == 'shell-plugins':
         packages = get_shell_plugins(data, args.format)
+    elif args.type == 'linux-gui':
+        packages = get_linux_gui_apps(data)
+    elif args.type == 'macos-casks':
+        packages = get_macos_casks(data)
 
     # Output one per line
     for pkg in packages:

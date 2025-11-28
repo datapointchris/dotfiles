@@ -76,7 +76,8 @@ echo ""
 
 # Final Status
 echo "RESULT:"
-if tail -50 "$LOGFILE" | grep -q "✅.*complete\|All verified successfully\|Test Complete"; then
+# Use tail | grep to handle ANSI escape sequences properly
+if tail -50 "$LOGFILE" | grep -qi "✅.*complete\|All verified successfully\|Test Complete\|Installation Complete"; then
   echo "  COMPLETED SUCCESSFULLY"
 elif tail -50 "$LOGFILE" | grep -q "FAILED\|❌\|task: Failed"; then
   echo "  FAILED"

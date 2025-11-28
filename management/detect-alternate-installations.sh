@@ -437,6 +437,13 @@ check_tool "yazi" "$HOME/.local/bin/yazi" "yazi"
 check_tool "ya" "$HOME/.local/bin/ya" "ya"
 check_tool "fzf" "$HOME/.local/bin/fzf" "fzf"
 
+# Terraform Tools
+check_tool "tenv" "$HOME/.local/bin/tenv" "tenv"
+check_tool "terraform-ls" "$HOME/.local/bin/terraform-ls" "terraform-ls"
+check_tool "tflint" "$HOME/.local/bin/tflint" "tflint"
+check_tool "terraformer" "$HOME/.local/bin/terraformer" "terraformer"
+check_tool "terrascan" "$HOME/.local/bin/terrascan" "terrascan"
+
 # AWS CLI: Skip on macOS (managed by Homebrew)
 if [[ "$DETECTED_PLATFORM" != "macos" ]]; then
   check_tool "aws" "$HOME/.local/bin/aws" "aws" "awscli" "aws-cli"
@@ -444,6 +451,7 @@ fi
 
 # Go Tools
 check_tool "cheat" "$HOME/go/bin/cheat" "cheat"
+check_tool "terraform-docs" "$HOME/go/bin/terraform-docs" "terraform-docs"
 
 # Cargo Tools
 check_tool "bat" "$HOME/.cargo/bin/bat" "bat"
@@ -485,7 +493,6 @@ check_tool "mypy" "$HOME/.local/bin/mypy" "mypy"
 check_tool "basedpyright" "$HOME/.local/bin/basedpyright" "basedpyright"
 check_tool "codespell" "$HOME/.local/bin/codespell" "codespell"
 check_tool "sqlfluff" "$HOME/.local/bin/sqlfluff" "sqlfluff"
-check_tool "mdformat" "$HOME/.local/bin/mdformat" "mdformat"
 check_tool "djlint" "$HOME/.local/bin/djlint" "djlint"
 check_tool "keymap" "$HOME/.local/bin/keymap" "keymap" "keymap-drawer"
 check_tool "nbpreview" "$HOME/.local/bin/nbpreview" "nbpreview"

@@ -229,6 +229,49 @@ else
 fi
 
 check_command_at_path "cheat" "$HOME/go/bin/cheat"
+check_command_at_path "terraform-docs" "$HOME/go/bin/terraform-docs"
+check_command_at_path "gum" "$HOME/go/bin/gum"
+check_command_at_path "lazydocker" "$HOME/go/bin/lazydocker"
+
+# ================================================================
+# Terraform Tools (Universal)
+# ================================================================
+print_section "Terraform Tools (Universal)"
+check_command_at_path "tenv" "$HOME/.local/bin/tenv"
+check_command_at_path "terraform-ls" "$HOME/.local/bin/terraform-ls"
+check_command_at_path "tflint" "$HOME/.local/bin/tflint"
+check_command_at_path "terraformer" "$HOME/.local/bin/terraformer"
+check_command_at_path "terrascan" "$HOME/.local/bin/terrascan"
+
+# ================================================================
+# Docker (Platform-Specific)
+# ================================================================
+if [[ "$DETECTED_PLATFORM" != "wsl" ]]; then
+  print_section "Docker (Skip on WSL - uses Windows Docker Desktop)"
+
+  # Colima (macOS only)
+  if [[ "$DETECTED_PLATFORM" == "macos" ]]; then
+    check_command "colima"
+  fi
+
+  # Docker CLI and compose (all non-WSL platforms)
+  check_command "docker"
+
+  # Check docker compose V2
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  if docker compose version >/dev/null 2>&1; then
+    COMPOSE_VERSION=$(docker compose version 2>&1 | head -n1)
+    print_success "docker compose: $COMPOSE_VERSION"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    print_error "docker compose: NOT WORKING"
+    FAILED_CHECKS=$((FAILED_CHECKS + 1))
+    FAILED_TOOLS+=("docker-compose")
+  fi
+else
+  print_section "Docker (Skipped on WSL)"
+  print_info "WSL uses Windows Docker Desktop (not checked)"
+fi
 
 # ================================================================
 # Git Tools
@@ -260,6 +303,14 @@ check_command "sess"
 check_command "menu" "SKIP_VERSION"
 check_command "notes" "SKIP_VERSION"
 check_command "toolbox" "SKIP_VERSION"
+
+# ================================================================
+# Claude Code (Universal - except WSL)
+# ================================================================
+if [[ "$DETECTED_PLATFORM" != "wsl" ]]; then
+  print_section "Claude Code (Universal - except WSL)"
+  check_command "claude"
+fi
 
 # ================================================================
 # npm Global Packages
@@ -300,7 +351,6 @@ check_command "mypy"
 check_command "basedpyright" "--version"
 check_command "codespell"
 check_command "sqlfluff"
-check_command "mdformat"
 check_command "djlint"
 check_command "keymap" "--version"
 check_command "nbpreview" "--version"
