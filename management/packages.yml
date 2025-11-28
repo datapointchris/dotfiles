@@ -3,7 +3,16 @@
 # ================================================================
 # Single source of truth for ALL packages across ALL platforms
 # Parsed by management/parse-packages.py
-# Last updated: 2025-11-18
+# Last updated: 2025-11-27
+
+# ================================================================
+# MACOS HOMEBREW TAPS
+# ================================================================
+# Third-party Homebrew taps to add before installing packages
+# These provide packages not in the main Homebrew repository
+
+macos_taps:
+  - docker/docker  # Docker official tap for latest versions
 
 # ================================================================
 # SYSTEM PACKAGES
@@ -54,6 +63,10 @@ system_packages:
     pacman: github-cli
     brew: gh
     description: GitHub CLI
+
+  - name: awscli
+    brew: awscli
+    description: AWS CLI (macOS only - Linux uses official installer)
 
   - name: curl
     apt: curl
@@ -109,6 +122,48 @@ system_packages:
     pacman: zsh
     description: Z shell (macOS has it pre-installed)
 
+  # Docker (cross-platform via official repos - WSL uses Windows Docker Desktop)
+  # Ubuntu: requires running setup-docker-official-repo-ubuntu.sh first
+  # Arch: official repos already up-to-date
+  # macOS: uses docker/docker tap (see macos_taps section)
+  - name: docker
+    apt: docker-ce
+    pacman: docker
+    brew: docker
+    description: Docker CLI (official repositories)
+
+  - name: docker-cli
+    apt: docker-ce-cli
+    description: Docker CLI (Ubuntu official repo - separate package)
+
+  - name: colima
+    brew: colima
+    description: Container runtime for macOS (Docker Desktop alternative)
+
+  - name: containerd
+    apt: containerd.io
+    pacman: containerd
+    description: Container runtime
+
+  - name: docker-buildx-plugin
+    apt: docker-buildx-plugin
+    pacman: docker-buildx
+    description: Docker Buildx plugin
+
+  - name: docker-compose-plugin
+    apt: docker-compose-plugin
+    pacman: docker-compose
+    brew: docker-compose
+    description: Docker Compose V2 plugin
+    # Post-install setup (macOS with colima):
+    #   mkdir -p "$DOCKER_CONFIG/cli-plugins"
+    #   ln -sfn $(brew --prefix)/opt/docker-compose/bin/docker-compose "$DOCKER_CONFIG/cli-plugins/docker-compose"
+    # This enables the modern 'docker compose' command (without hyphen)
+    # DOCKER_CONFIG is already set to $XDG_CONFIG_HOME/docker in zshrc
+
+  # Note: docker-completion is automatically installed as a dependency of docker on macOS
+  # On Linux (apt/pacman), completions are included with docker packages
+
   # Programming Languages
   - name: lua
     apt: lua5.4
@@ -156,6 +211,12 @@ system_packages:
     brew: gnupg
     description: GPG encryption
 
+  - name: gpgme
+    apt: libgpgme-dev
+    pacman: gpgme
+    brew: gpgme
+    description: GPG Made Easy library (required by gpg-tui)
+
   # Media Processing
   - name: ffmpeg
     apt: ffmpeg
@@ -172,7 +233,8 @@ system_packages:
   - name: poppler-utils
     apt: poppler-utils
     pacman: poppler
-    description: PDF utilities (Linux only)
+    brew: poppler
+    description: PDF rendering library (provides pdftoppm, pdftotext, etc.)
 
   - name: chafa
     apt: chafa
@@ -229,6 +291,62 @@ system_packages:
     brew: git-secrets
     description: Prevent committing secrets (macOS Brewfile)
 
+  # Shell and utilities
+  - name: bash
+    apt: bash
+    pacman: bash
+    brew: bash
+    description: Bash shell (macOS default is outdated)
+
+  - name: watch
+    apt: procps
+    pacman: procps-ng
+    brew: watch
+    description: Execute program periodically (used in watchports alias)
+
+  # Network Tools
+  - name: nmap
+    apt: nmap
+    pacman: nmap
+    brew: nmap
+    description: Network scanner
+
+  # Media & Utilities
+  - name: mpv
+    apt: mpv
+    pacman: mpv
+    brew: mpv
+    description: Media player (used by Yazi for video playback)
+
+  - name: graphviz
+    apt: graphviz
+    pacman: graphviz
+    brew: graphviz
+    description: Graph visualization
+
+  - name: figlet
+    apt: figlet
+    pacman: figlet
+    brew: figlet
+    description: ASCII art text
+
+  # Security & Development Tools
+  - name: mkcert
+    apt: mkcert
+    pacman: mkcert
+    brew: mkcert
+    description: Local HTTPS certificates for development
+
+  # Notifications
+  - name: libnotify
+    apt: libnotify-bin
+    pacman: libnotify
+    description: Desktop notifications (provides notify-send)
+
+  - name: terminal-notifier
+    brew: terminal-notifier
+    description: macOS notifications from terminal (macOS only)
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================
@@ -244,6 +362,10 @@ runtimes:
     version: "24.11.0"
     install_method: nvm
 
+  terraform:
+    version: "1.10.5"
+    install_method: tenv
+
   rust:
     install_method: rustup
     url: https://sh.rustup.rs
@@ -253,47 +375,103 @@ runtimes:
 # ================================================================
 # Tools installed via direct GitHub release downloads
 # Each has a dedicated install script that reads from this config
+#
+# NOTE: Most install scripts detect platform (macOS/Linux) and architecture automatically.
+# The binary_pattern field shows the pattern for reference, but scripts override with
+# platform-specific values (e.g., Darwin vs Linux, x86_64 vs arm64).
 
 github_binaries:
   - name: neovim
     repo: neovim/neovim
     min_version: "0.11"
     install_script: install-neovim.sh
-    binary_pattern: "nvim-linux-x86_64.tar.gz"
-    install_dir: "~/.local/nvim-linux-x86_64"
+    binary_pattern: "nvim-{platform}-{arch}.tar.gz"  # Platform-specific: macos/linux
+    install_dir: "~/.local/nvim-{platform}-{arch}"   # Platform-specific
     binary_link: "~/.local/bin/nvim"
 
   - name: lazygit
     repo: jesseduffield/lazygit
     version: "0.56.0"
     install_script: install-lazygit.sh
-    binary_pattern: "lazygit_{version}_linux_x86_64.tar.gz"
+    binary_pattern: "lazygit_{version}_{Platform}_{arch}.tar.gz"  # Platform-specific: Darwin/Linux
     install_dir: "~/.local/bin"
 
   - name: yazi
     repo: sxyazi/yazi
     install_script: install-yazi.sh
-    binary_pattern: "yazi-x86_64-unknown-linux-gnu.zip"
+    binary_pattern: "yazi-{arch}-{platform}.zip"  # Platform-specific: apple-darwin/unknown-linux-gnu
     install_dir: "~/.local/bin"
 
   - name: fzf
     repo: junegunn/fzf
     min_version: "0.50"
     install_script: install-fzf.sh
-    build_method: go
+    build_method: go  # Universal: built from source
     install_dir: "~/.local/bin"
 
   - name: glow
     repo: charmbracelet/glow
     install_script: install-glow.sh
-    binary_pattern: "glow_{version}_linux_x86_64.tar.gz"
+    binary_pattern: "glow_{version}_{platform}_{arch}.tar.gz"  # Platform-specific: Darwin/linux
     install_dir: "~/.local/bin"
 
   - name: duf
     repo: muesli/duf
     install_script: install-duf.sh
-    binary_pattern: "duf_{version}_linux_x86_64.tar.gz"
+    binary_pattern: "duf_{version}_{platform}_{arch}.tar.gz"  # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
+
+  # Terraform ecosystem tools
+  - name: tenv
+    repo: tofuutils/tenv
+    install_script: install-tenv.sh
+    binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz"  # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Version manager for Terraform/OpenTofu/Terragrunt
+
+  - name: terraform-ls
+    repo: hashicorp/terraform-ls
+    install_script: install-terraform-ls.sh
+    binary_pattern: "terraform-ls_{version}_{platform}_{arch}.zip"  # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Terraform Language Server
+
+  - name: tflint
+    repo: terraform-linters/tflint
+    install_script: install-tflint.sh
+    binary_pattern: "tflint_{platform}_{arch}.zip"  # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Terraform linter
+
+  - name: terraformer
+    repo: GoogleCloudPlatform/terraformer
+    version: "0.8.30"
+    install_script: install-terraformer.sh
+    binary_pattern: "terraformer-all-{platform}-{arch}"  # Platform-specific: darwin/linux (direct binary)
+    install_dir: "~/.local/bin"
+    description: Generate Terraform from existing infrastructure
+
+  - name: terrascan
+    repo: tenable/terrascan
+    install_script: install-terrascan.sh
+    binary_pattern: "terrascan_{version}_{Platform}_{arch}.tar.gz"  # Platform-specific: Darwin/Linux
+    install_dir: "~/.local/bin"
+    description: Terraform security scanner
+
+  # Development Tools
+  - name: zk
+    repo: zk-org/zk
+    install_script: install-zk.sh
+    binary_pattern: "zk-{version}-{platform}-{arch}.tar.gz"  # Platform-specific: macos/linux
+    install_dir: "~/.local/bin"
+    description: Plain text note-taking assistant
+
+  - name: trivy
+    repo: aquasecurity/trivy
+    install_script: install-trivy.sh
+    binary_pattern: "trivy_{version}_{OS}_{arch}.tar.gz"  # Platform-specific: macOS-64bit/macOS-ARM64/Linux-64bit/Linux-ARM64
+    install_dir: "~/.local/bin"
+    description: Container/IaC vulnerability scanner
 
 # ================================================================
 # CARGO PACKAGES (Rust)
@@ -330,16 +508,35 @@ cargo_packages:
     command: cargo-install-update
     description: update installed cargo packages
 
+  - name: taplo-cli
+    command: taplo
+    description: TOML formatter and toolkit
+
+  - name: gpg-tui
+    command: gpg-tui
+    description: Terminal UI for managing GPG keys
+
 # ================================================================
 # TMUX PLUGINS
 # ================================================================
 # Installed via TPM (Tmux Plugin Manager)
 # Universal across all platforms
+# Plugins are declared in platforms/common/.config/tmux/tmux.conf
+# TPM auto-installs plugins on tmux start (see tmux.conf lines 325-327)
+#
+# Current plugins:
+#   - tmux-plugins/tpm (plugin manager)
+#   - tmux-plugins/tmux-cpu (CPU/RAM status)
+#   - tmux-plugins/tmux-sidebar (file tree sidebar)
+#   - tmux-plugins/tmux-yank (clipboard integration)
+#   - tmux-plugins/tmux-resurrect (session persistence - manual save/restore)
+#   - tmux-plugins/tmux-continuum (auto-save/restore for resurrect)
 
 tmux_plugins:
   tpm:
     repo: https://github.com/tmux-plugins/tpm
     install_dir: ~/.config/tmux/plugins/tpm
+    description: Tmux Plugin Manager - auto-installs plugins declared in tmux.conf
 
 # ================================================================
 # NPM GLOBAL PACKAGES
@@ -409,11 +606,6 @@ uv_tools:
     - name: sqlfluff
       description: SQL linter and formatter
 
-  # Markdown
-  markdown:
-    - name: mdformat
-      description: Markdown formatter
-
   # Template Linting
   template:
     - name: djlint
@@ -431,6 +623,11 @@ uv_tools:
     - name: numpy
       description: Numerical computing (for various tools)
 
+  # Development Tools
+  development:
+    - name: pre-commit
+      description: Git pre-commit hook framework
+
 # ================================================================
 # GO TOOLS
 # ================================================================
@@ -442,6 +639,22 @@ go_tools:
   - name: cheat
     package: github.com/cheat/cheat/cmd/cheat
     description: Interactive cheatsheet CLI
+
+  - name: terraform-docs
+    package: github.com/terraform-docs/terraform-docs
+    description: Generate terraform documentation
+
+  - name: gum
+    package: github.com/charmbracelet/gum
+    description: Tool for glamorous shell scripts (used by menu/notes apps)
+
+  - name: lazydocker
+    package: github.com/jesseduffield/lazydocker
+    description: Terminal UI for Docker with compose support
+
+  - name: actionlint
+    package: github.com/rhysd/actionlint/cmd/actionlint
+    description: GitHub Actions workflow linter
 
 # ================================================================
 # SHELL PLUGINS
@@ -495,10 +708,6 @@ mas_apps:
     id: 1237562727
     description: Screen annotation and drawing tool
 
-  - name: KnowledgeBase Builder
-    id: 1398145161
-    description: Knowledge base and documentation tool
-
   - name: Microsoft Excel
     id: 462058435
     description: Spreadsheet application
@@ -523,10 +732,6 @@ mas_apps:
     id: 1244649277
     description: Photo editing application
 
-  - name: Slack
-    id: 803453959
-    description: Team communication platform
-
   - name: Todoist
     id: 585829637
     description: Task management and to-do list
@@ -534,6 +739,67 @@ mas_apps:
   - name: Xcode
     id: 497799835
     description: Apple's IDE for macOS and iOS development
+
+# ================================================================
+# LINUX GUI APPLICATIONS
+# ================================================================
+# Installed via Flatpak (universal across all Linux distributions)
+# Platform: Linux only (NOT WSL - GUI runs in Windows)
+# Install: flatpak install flathub <flatpak_id>
+# See: https://flathub.org for application catalog
+
+linux_gui_apps:
+  - name: dbeaver-community
+    flatpak_id: io.dbeaver.DBeaverCommunity
+    description: Universal database GUI
+
+  - name: discord
+    flatpak_id: com.discordapp.Discord
+    description: Chat platform
+
+  - name: slack
+    flatpak_id: com.slack.Slack
+    description: Team communication
+
+# ================================================================
+# MACOS CASKS
+# ================================================================
+# GUI applications for macOS
+# Installed via: brew install --cask <name>
+
+macos_casks:
+  - name: aerospace
+    description: Tiling window manager
+
+  - name: alfred
+    description: Launcher & productivity
+
+  - name: bettertouchtool
+    description: Input customization
+
+  - name: dbeaver-community
+    description: Universal database GUI
+
+  - name: macs-fan-control
+    description: Fan control utility
+
+  - name: michaelvillar-timer
+    description: Timer app
+
+  - name: multipass
+    description: Ubuntu VM manager
+
+  - name: discord
+    description: Chat platform
+
+  - name: slack
+    description: Team communication (using cask for automation, removed from MAS)
+
+  - name: zoom
+    description: Video conferencing
+
+  - name: obsidian
+    description: Note taking
 
 # ================================================================
 # NOTES
@@ -553,6 +819,10 @@ mas_apps:
 #   - nvm, npm packages: nvm + npm (not system Node.js)
 #   - Python tools: uv (not system pip)
 #   - Go tools: go install (see go_tools)
+#   - AWS CLI: Official installer (see management/scripts/install-awscli.sh)
+#       macOS: Notes AWS CLI managed by Homebrew
+#       Linux: Downloads official installer, installs to ~/.local/aws-cli
+#       Not in system_packages - AWS recommends official installer only
 #
 # Runtime Versions:
 #   - Node.js: Managed by nvm (see runtimes.node.version)
@@ -566,6 +836,8 @@ mas_apps:
 #   python parse-packages.py --type=npm
 #   python parse-packages.py --type=go
 #   python parse-packages.py --type=mas
+#   python parse-packages.py --type=linux-gui
+#   python parse-packages.py --type=macos-casks
 #   python parse-packages.py --get=runtimes.node.version
 #
 # To update all packages:
