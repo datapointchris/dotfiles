@@ -65,6 +65,25 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 - This XDG-compliant setup is intentional and correct
 - Shell scripts in `apps/` must source formatting library because they run in their own bash process
 
+**run-and-summarize.sh Usage** (⚠️ CRITICAL - DO NOT RUN IN BACKGROUND):
+
+- NEVER use `run_in_background: true` when calling run-and-summarize.sh
+- NEVER add `&` to the end of the command
+- This script handles backgrounding internally and shows periodic updates
+- Running it in background defeats the purpose of the monitoring wrapper
+- Correct usage:
+
+```bash
+# ✅ CORRECT - Run in foreground
+bash management/run-and-summarize.sh "task install" /tmp/log.txt 30
+
+# ❌ WRONG - Do not background
+bash management/run-and-summarize.sh "task install" /tmp/log.txt 30 &
+
+# ❌ WRONG - Do not use run_in_background flag in Bash tool
+<parameter name="run_in_background">true
+```
+
 ## Package Management Philosophy
 
 This dotfiles setup maintains a clear separation between system package managers and language-specific version managers for cross-platform consistency.

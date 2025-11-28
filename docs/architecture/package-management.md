@@ -373,6 +373,26 @@ install-cargo-tools:     # Reads package list from packages.yml
 8. Theme system
 9. Plugin installation
 
+### Task Separation Pattern
+
+Each platform's package installation uses a two-task pattern:
+
+```yaml
+install-packages (public):
+  - Pre-setup (apt update, pacman -Sy, etc.)
+  - task: install-system-packages
+  - Post-setup (docker-compose, fix-library-links, etc.)
+
+install-system-packages (internal):
+  - Bootstrap PyYAML
+  - Parse packages.yml
+  - Install packages
+```
+
+Platform-specific setup (pre/post) is isolated in `install-packages`, while core installation logic remains identical across platforms in `install-system-packages`.
+
+See: `management/taskfiles/{macos,wsl,arch}.yml`
+
 ## Maintenance
 
 **Updating tools**:

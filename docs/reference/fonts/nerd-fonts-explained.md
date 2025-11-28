@@ -55,17 +55,17 @@ Nerd Fonts is the successor that vastly expanded the concept, patching fonts wit
 
 ### Comparison Table
 
-| Feature | Powerline Fonts (old) | Nerd Fonts (new) |
-|---------|----------------------|------------------|
-| **Icon Count** | ~50 symbols | 3,600+ glyphs |
-| **Icon Sets** | Powerline only | Powerline + FA + Material + 10 more |
-| **Coverage** | Status lines only | Files, git, UI, everything |
-| **Naming** | Spaces (breaks tools!) | No spaces (clean) |
-| **Variants** | Mono only | Mono/Default/Propo |
-| **Maintenance** | Abandoned (~2016) | Active (v3.2.0+ in 2024) |
-| **Ligatures** | Not preserved | Fully preserved |
-| **File Manager Icons** | ❌ | ✅ |
-| **Git Status Icons** | Limited | ✅ Full set |
+| Feature                | Powerline Fonts (old)  | Nerd Fonts (new)                    |
+| ---------------------- | ---------------------- | ----------------------------------- |
+| **Icon Count**         | ~50 symbols            | 3,600+ glyphs                       |
+| **Icon Sets**          | Powerline only         | Powerline + FA + Material + 10 more |
+| **Coverage**           | Status lines only      | Files, git, UI, everything          |
+| **Naming**             | Spaces (breaks tools!) | No spaces (clean)                   |
+| **Variants**           | Mono only              | Mono/Default/Propo                  |
+| **Maintenance**        | Abandoned (~2016)      | Active (v3.2.0+ in 2024)            |
+| **Ligatures**          | Not preserved          | Fully preserved                     |
+| **File Manager Icons** | ❌                     | ✅                                  |
+| **Git Status Icons**   | Limited                | ✅ Full set                         |
 
 ### Migration Guide
 
@@ -272,7 +272,7 @@ Font files may have different naming than the installed font name:
 
 Use `fc-list` to see actual installed names:
 
-```bash
+````bash
 fc-list | grep "FiraCode"
 ```text
 
@@ -307,11 +307,11 @@ Different Nerd Font variants handle glyph width differently:
 
 ### Mono Strategy
 
-```
+````
 
-| a | b | c |   |   |   | - Each gets 1 cell exactly
-| 1 | 2 | 3 |   |   |   | - Numbers: 1 cell
-|   |   |   |   |   |   | - Icons: scaled to 1 cell (smaller)
+| a | b | c | | | | - Each gets 1 cell exactly
+| 1 | 2 | 3 | | | | - Numbers: 1 cell
+| | | | | | | - Icons: scaled to 1 cell (smaller)
 
 ```text
 
@@ -319,11 +319,11 @@ Different Nerd Font variants handle glyph width differently:
 
 ```
 
-| a | b | c |   |   |   | - Regular chars: 1 cell
-| 1 | 2 | 3 |   |   |   | - Numbers: 1 cell
-|     |     |           | - Icons: visual width 1.5-2 cells
-                          | - Advance width: still 1 cell
-                          | - May overlap next cell
+| a | b | c | | | | - Regular chars: 1 cell
+| 1 | 2 | 3 | | | | - Numbers: 1 cell
+| | | | - Icons: visual width 1.5-2 cells
+| - Advance width: still 1 cell
+| - May overlap next cell
 
 ```text
 
@@ -331,11 +331,11 @@ Different Nerd Font variants handle glyph width differently:
 
 ```
 
-|a |bb |ccc|           | - Each char: visual width
-|1 |22 |333|           | - No fixed cells
-|     |     |          | - Icons: 1 monospace cell
+|a |bb |ccc| | - Each char: visual width
+|1 |22 |333| | - No fixed cells
+| | | | - Icons: 1 monospace cell
 
-```text
+````text
 
 ## Font Format: TTF vs OTF
 
@@ -368,7 +368,7 @@ fc-list | grep -i "firacode"
 # See what icons are available
 echo -e "\ue0a0 \ue0a1 \ue0a2"  # Powerline symbols
 echo -e "\uf015 \uf07c \uf121"  # Font Awesome icons
-```
+````
 
 ## Nerd Font Versions
 
@@ -379,7 +379,7 @@ Nerd Fonts project releases new versions periodically:
 
 Check version:
 
-```bash
+````bash
 # Font files often include version in metadata
 fc-list -v | grep -A5 "FiraCode Nerd Font" | grep version
 ```text
@@ -448,7 +448,9 @@ fc-list -v | grep -A5 "FiraCode Nerd Font" | grep version
 - [Font Weights and Variants](font-weights-and-variants.md) - Understanding Bold, Italic, etc.
 - [Terminal Fonts Guide](terminal-fonts-guide.md) - Why terminals need monospace
 - [Font Comparison](font-comparison.md) - Compare fonts in your collection
+- Poo
 
 ---
 
 **TL;DR**: For terminal and coding, use the **default Nerd Font variant** (no Mono, no Propo suffix). It gives you the best icon visibility while maintaining proper code alignment. Only use Mono if your terminal absolutely requires it.
+````

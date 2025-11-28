@@ -83,7 +83,7 @@ markdown_extensions:
       use_pygments: true
       pygments_lang_class: true
       line_spans: __span
-      auto_title: true
+      auto_title: false
   - pymdownx.inlinehilite
   - pymdownx.superfences:
       custom_fences:
@@ -149,6 +149,7 @@ nav:
       - Tool Composition: architecture/tool-composition.md
   - Configuration:
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
+      - Docker Setup: configuration/docker.md
   - Reference:
       - reference/index.md
       - Platforms:
@@ -204,3 +205,10 @@ nav:
       - Go CLI Architecture Analysis: learnings/go-cli-architecture-analysis.md
   - Changelog:
       - Summary: changelog.md
+
+validation:
+  links:
+    not_found: warn
+    absolute_links: warn
+    unrecognized_links: warn
+    anchors: warn
