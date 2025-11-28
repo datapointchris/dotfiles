@@ -24,7 +24,7 @@ REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-bi
 if [[ "$OSTYPE" == "darwin"* ]]; then
   ARCH=$(uname -m)
   if [[ "$ARCH" == "x86_64" ]]; then
-    PLATFORM_ARCH="darwin_amd64"
+    PLATFORM_ARCH="darwin_x86_64"
   else
     PLATFORM_ARCH="darwin_arm64"
   fi

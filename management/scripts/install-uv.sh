@@ -16,7 +16,9 @@ if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v uv >/dev/null 2>&1; t
   print_success "uv already installed: $(uv --version)"
 else
   print_info "Installing uv Python package manager..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  # Set XDG_BIN_HOME to ensure clean install path and prevent shell modification
+  XDG_BIN_HOME="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh/uv/install.sh | sh
 
   # Add to PATH for current session
   export PATH="$HOME/.local/bin:$PATH"

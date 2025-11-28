@@ -23,7 +23,7 @@ print_banner "Installing AWS CLI v2"
 PLATFORM=$(uname -s)
 ARCH=$(uname -m)
 
-# macOS: AWS CLI installed via Homebrew (see Brewfile)
+# macOS: AWS CLI installed via Homebrew (see packages.yml)
 if [[ "$PLATFORM" == "Darwin" ]]; then
   if command -v aws >/dev/null 2>&1; then
     CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
@@ -31,7 +31,7 @@ if [[ "$PLATFORM" == "Darwin" ]]; then
     print_success "Current version: $CURRENT_VERSION"
   else
     print_info "macOS: AWS CLI will be installed via Homebrew"
-    print_info "Run: brew install awscli"
+    print_info "Add 'awscli' to packages.yml and run: task macos:install-packages"
   fi
   exit 0
 fi
@@ -46,7 +46,7 @@ fi
 # Check for alternate installations
 if [ ! -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v aws)
-  print_warning " aws found at $ALTERNATE_LOCATION"
+  print_warning "aws found at $ALTERNATE_LOCATION"
   print_info "AWS CLI official installer will be used"
 fi
 
