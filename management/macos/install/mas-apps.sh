@@ -8,29 +8,26 @@
 
 set -euo pipefail
 
-# Use DOTFILES_DIR if set (by install.sh), otherwise default to ~/dotfiles
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
-# Source formatting library
-export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
-
-print_section "Installing Mac App Store apps" "cyan"
+print_banner "Installing Mac App Store Apps"
 
 # Check if mas is installed
 if ! command -v mas >/dev/null 2>&1; then
-  print_warning "mas not found - install with: brew install mas"
-  echo "  ℹ️  Apps can be manually installed via the App Store GUI"
+  log_warning "mas CLI not installed (install with: brew install mas)"
+  log_info "Skipping Mac App Store installations"
   exit 0
 fi
 
-# Check if signed in
+# Check if signed in (mas CLI has known issues on macOS 14.7+/15+)
 if ! mas account >/dev/null 2>&1; then
-  print_warning "Not signed into Mac App Store"
-  echo "  ℹ️  Sign in via System Settings > Apple ID"
-  echo "  ℹ️  Apps can be manually installed via the App Store GUI"
+  log_warning "Cannot detect Mac App Store account (known mas CLI bug on macOS 14.7+/15+)"
+  log_info "Skipping Mac App Store installations"
   exit 0
 fi
+
+log_info "Mac App Store account detected"
 
 INSTALLED=0
 FAILED=0
@@ -40,27 +37,30 @@ SKIPPED=0
 /usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=mas | while read -r app_id; do
   # Check if already installed
   if mas list | grep -q "^$app_id "; then
+    log_info "App $app_id already installed"
     SKIPPED=$((SKIPPED + 1))
     continue
   fi
 
-  echo "  Installing app ID: $app_id..."
+  log_info "Installing app $app_id..."
   if mas install "$app_id" 2>&1; then
     INSTALLED=$((INSTALLED + 1))
-    echo "    ✓ Installed"
+    log_success "Installed app $app_id"
   else
     FAILED=$((FAILED + 1))
-    echo "    ✗ Failed (possibly requires manual purchase or macOS compatibility issue)"
+    log_error "Failed to install app $app_id"
   fi
 done
 
 echo ""
-echo "  Summary:"
-[ $INSTALLED -gt 0 ] && echo "    Installed: $INSTALLED"
-[ $SKIPPED -gt 0 ] && echo "    Already installed: $SKIPPED"
-[ $FAILED -gt 0 ] && echo "    Failed: $FAILED (can install manually via App Store)"
-echo ""
-echo "  ℹ️  Note: mas may fail on certain macOS versions (15.7.2, 26.1+)"
-echo "  ℹ️  Failed apps can be manually installed via the App Store GUI"
+if [ $INSTALLED -gt 0 ]; then
+  log_success "Installed $INSTALLED app(s)"
+fi
+if [ $SKIPPED -gt 0 ]; then
+  log_info "$SKIPPED app(s) already installed"
+fi
+if [ $FAILED -gt 0 ]; then
+  log_warning "$FAILED app(s) failed to install"
+fi
 
-print_success "Mac App Store installation complete"
+print_banner_success "Mac App Store Installation Complete"

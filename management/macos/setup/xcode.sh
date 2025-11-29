@@ -8,31 +8,41 @@
 
 set -euo pipefail
 
-# Use DOTFILES_DIR if set (by install.sh), otherwise default to ~/dotfiles
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
-# Source formatting library
-export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+print_banner "Setting up Xcode"
 
+# Check if xcodebuild exists
 if ! command -v xcodebuild &>/dev/null; then
-  print_warning "Xcode not installed (install via: mas install 497799835)"
+  log_info "Xcode Command Line Tools not installed, skipping"
   exit 0
 fi
 
-print_section "Setting up Xcode" "cyan"
-
-# Check if license is already accepted
-if sudo -n xcodebuild -license status &>/dev/null; then
-  echo "  ✓ Xcode license already accepted"
-else
-  print_warning "Xcode license not accepted"
-  echo "  ℹ️  Run manually: sudo xcodebuild -license accept"
+# Check if full Xcode is installed (not just Command Line Tools)
+xcode_path=$(xcode-select -p 2>/dev/null || echo "")
+if [[ "$xcode_path" == "/Library/Developer/CommandLineTools" ]]; then
+  log_info "Command Line Tools installed (full Xcode not required)"
   exit 0
+fi
+
+log_info "Full Xcode detected at $xcode_path"
+
+# Accept license if needed
+if sudo xcodebuild -license status &>/dev/null; then
+  log_info "Xcode license already accepted"
+else
+  log_info "Accepting Xcode license..."
+  sudo xcodebuild -license accept
+  log_success "Xcode license accepted"
 fi
 
 # Run first launch setup
-echo "  Running first launch setup..."
-xcodebuild -runFirstLaunch 2>/dev/null || true
+log_info "Running Xcode first launch setup..."
+if xcodebuild -runFirstLaunch 2>/dev/null; then
+  log_success "Xcode first launch complete"
+else
+  log_warning "First launch setup failed (may already be complete)"
+fi
 
-print_success "Xcode setup complete"
+print_banner_success "Xcode Setup Complete"
