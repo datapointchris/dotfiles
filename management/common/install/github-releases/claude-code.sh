@@ -14,7 +14,8 @@
 # ================================================================
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 
 print_banner "Installing Claude Code"
@@ -25,8 +26,8 @@ PLATFORM=$(uname -s)
 # Skip on WSL - Claude Code should be installed on Windows host
 if [[ "$PLATFORM" == "Linux" ]]; then
   if grep -q "Microsoft\|WSL" /proc/version 2>/dev/null; then
-    print_info "WSL detected - skipping Claude Code installation"
-    print_info "Install Claude Code on your Windows host instead"
+    log_info "WSL detected - skipping Claude Code installation"
+    log_info "Install Claude Code on your Windows host instead"
     exit 0
   fi
 fi
@@ -34,25 +35,25 @@ fi
 # Check if Claude is already installed (skip check if FORCE_INSTALL=true)
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v claude >/dev/null 2>&1; then
   CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
-  print_success "Current version: $CURRENT_VERSION, skipping"
+  log_success "Current version: $CURRENT_VERSION, skipping"
   exit 0
 fi
 
 # Check if Claude is currently running (which blocks installation)
 if pgrep -i "claude" >/dev/null 2>&1; then
-  print_warning "Claude appears to be running"
-  print_info "The installer may fail if Claude is running"
-  print_info "If installation fails, close Claude and try again"
+  log_warning "Claude appears to be running"
+  log_info "The installer may fail if Claude is running"
+  log_info "If installation fails, close Claude and try again"
 fi
 
 # Check for alternate installations
 if command -v claude >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v claude)
-  print_info "claude found at $ALTERNATE_LOCATION"
+  log_info "claude found at $ALTERNATE_LOCATION"
 fi
 
-print_info "Platform: $PLATFORM"
-print_info "Installing via official installer..."
+log_info "Platform: $PLATFORM"
+log_info "Installing via official installer..."
 
 # Download and run official installer
 # The installer script handles platform detection and installs to ~/.local/bin
@@ -61,25 +62,25 @@ INSTALLER_OUTPUT=$(curl -fsSL https://claude.ai/install.sh | bash 2>&1)
 INSTALLER_EXIT=$?
 
 if [[ $INSTALLER_EXIT -eq 0 ]]; then
-  print_success "Claude Code installed successfully"
+  log_success "Claude Code installed successfully"
 elif echo "$INSTALLER_OUTPUT" | grep -qi "another process is currently installing\|claude.*running"; then
-  print_warning "Installation skipped - Claude is currently running"
-  print_info "Claude Code will be available after closing Claude"
-  print_success "Skipping (non-blocking)"
+  log_warning "Installation skipped - Claude is currently running"
+  log_info "Claude Code will be available after closing Claude"
+  log_success "Skipping (non-blocking)"
   exit 0
 else
-  print_error "Installation failed with exit code: $INSTALLER_EXIT"
+  log_error "Installation failed with exit code: $INSTALLER_EXIT"
   exit 1
 fi
 
 # Verify installation
 if command -v claude >/dev/null 2>&1; then
   INSTALLED_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
-  print_success "Verified: $INSTALLED_VERSION"
+  log_success "Verified: $INSTALLED_VERSION"
 else
-  print_error "Installation verification failed"
-  print_info "claude not found in PATH"
-  print_info "Try closing and reopening your terminal"
+  log_error "Installation verification failed"
+  log_info "claude not found in PATH"
+  log_info "Try closing and reopening your terminal"
   exit 1
 fi
 

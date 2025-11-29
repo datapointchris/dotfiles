@@ -18,14 +18,14 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Check if Go is installed
 if ! command -v go &>/dev/null; then
-  print_error "Go is not installed"
+  log_error "Go is not installed"
   echo "Install Go first: bash $DOTFILES_DIR/management/common/install/language-managers/install-go.sh"
   exit 1
 fi
 
 # Check if packages.yml exists
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
-  print_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
+  log_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
   exit 1
 fi
 
@@ -38,8 +38,8 @@ GOBIN="$HOME/go/bin"
   if go install "$tool@latest"; then
     echo "    ✓ $tool installed"
   else
-    print_warning "Failed to install $tool"
+    log_warning "Failed to install $tool"
   fi
 done
 
-print_success "Go tools installed to $GOBIN"
+log_success "Go tools installed to $GOBIN"

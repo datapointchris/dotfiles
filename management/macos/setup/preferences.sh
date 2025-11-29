@@ -31,7 +31,8 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 
 # Check system is compatible
@@ -57,7 +58,7 @@ osascript -e 'tell application "System Preferences" to quit' 2>/dev/null || true
 # FINDER - File Management and Display
 # ================================================================
 
-log_info "Configuring Finder..."
+print_section "Configuring Finder" "orange"
 
 # File Extensions and Hidden Files
 log_info "  Show all file extensions"
@@ -109,7 +110,7 @@ sudo chflags nohidden /Volumes 2>/dev/null || true
 # DOCK - Layout and Behavior
 # ================================================================
 
-log_info "Configuring Dock..."
+print_section "Configuring Dock" "orange"
 
 # Position and Size (current preferences)
 log_info "  Set dock position to bottom"
@@ -142,7 +143,7 @@ defaults write com.apple.dock mru-spaces -bool false
 # SAFARI - Privacy and Developer Features
 # ================================================================
 
-log_info "Configuring Safari..."
+print_section "Configuring Safari" "orange"
 
 # Privacy
 log_info "  Show full URL in address bar"
@@ -176,7 +177,7 @@ defaults write com.apple.Safari InstallExtensionUpdatesAutomatically -bool true
 # MAIL - Threading and Formatting
 # ================================================================
 
-log_info "Configuring Mail..."
+print_section "Configuring Mail" "orange"
 
 log_info "  Display messages in threaded mode"
 defaults write com.apple.mail DraftsViewerAttributes -dict-add "DisplayInThreadedMode" -string "yes"
@@ -189,7 +190,7 @@ defaults write com.apple.mail DraftsViewerAttributes -dict-add "SortedDescending
 # SYSTEM - Global Preferences
 # ================================================================
 
-log_info "Configuring System Preferences..."
+print_section "Configuring System Preferences" "orange"
 
 # Keyboard
 log_info "  Disable automatic capitalization"
@@ -223,7 +224,7 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 15
 # SCREENSHOTS - Location and Format
 # ================================================================
 
-log_info "Configuring Screenshots..."
+print_section "Configuring Screenshots" "orange"
 
 log_info "  Save screenshots to ~/Desktop/screenshots"
 mkdir -p "$HOME/Desktop/screenshots"
@@ -239,7 +240,7 @@ defaults write com.apple.screencapture disable-shadow -bool true
 # MAC APP STORE - Updates and Development
 # ================================================================
 
-log_info "Configuring Mac App Store..."
+print_section "Configuring Mac App Store" "orange"
 
 log_info "  Enable automatic update checks"
 defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
@@ -260,7 +261,7 @@ defaults write com.apple.appstore WebKitDeveloperExtras -bool true
 # PHOTOS - Auto-Import Behavior
 # ================================================================
 
-log_info "Configuring Photos..."
+print_section "Configuring Photos" "orange"
 
 log_info "  Prevent Photos from opening when devices are connected"
 defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
@@ -269,7 +270,7 @@ defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
 # MESSAGES - Text Substitution
 # ================================================================
 
-log_info "Configuring Messages..."
+print_section "Configuring Messages" "orange"
 
 log_info "  Disable automatic emoji substitution"
 defaults write com.apple.messageshelper.MessageController SOInputLineSettings -dict-add "automaticEmojiSubstitutionEnablediMessage" -bool false
@@ -281,7 +282,7 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 # SECURITY AND PRIVACY
 # ================================================================
 
-log_info "Configuring Security and Privacy..."
+print_section "Configuring Security and Privacy" "orange"
 
 log_info "  Disable Siri suggestions in Spotlight"
 defaults write com.apple.lookup.shared LookupSuggestionsDisabled -bool true
@@ -290,7 +291,7 @@ defaults write com.apple.lookup.shared LookupSuggestionsDisabled -bool true
 # TEXT EDIT
 # ================================================================
 
-log_info "Configuring TextEdit..."
+print_section "Configuring TextEdit" "orange"
 
 log_info "  Use plain text mode by default"
 defaults write com.apple.TextEdit RichText -int 0
@@ -311,17 +312,5 @@ print_banner_success "macOS Preferences Applied Successfully"
 echo ""
 log_success "All preferences have been configured"
 log_info "Changes will take effect on next login or reboot"
-
-echo ""
-log_info "Key changes applied:"
-echo "  • Finder: Extensions, path bar, search in current folder"
-echo "  • Dock: Bottom position, size 90, auto-hide enabled"
-echo "  • Keyboard: Full access (Tab to buttons), fast key repeat"
-echo "  • Safari: Privacy features, developer tools"
-echo "  • Mail: Threaded view, quick send with ⌘+Enter"
-echo "  • System: Disabled auto-correct, expanded dialogs"
-echo "  • Screenshots: Saved to ~/Desktop/screenshots as PNG"
-
-echo ""
 
 exit_success

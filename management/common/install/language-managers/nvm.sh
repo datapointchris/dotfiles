@@ -21,7 +21,7 @@ NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install
 
 # Check if packages.yml exists
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
-  print_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
+  log_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
   exit 1
 fi
 
@@ -34,7 +34,7 @@ if [[ ! -d "$NVM_DIR" ]]; then
   if curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
     echo "  ✓ nvm installed"
   else
-    print_error "Failed to install nvm"
+    log_error "Failed to install nvm"
     exit 1
   fi
 else
@@ -48,8 +48,8 @@ print_section "Installing Node.js ${NODE_VERSION}" "cyan"
 
 # Install Node.js using the existing nvm-install-node.sh script
 if NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/management/common/install/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
-  print_success "Node.js ${NODE_VERSION} installed and set as default"
+  log_success "Node.js ${NODE_VERSION} installed and set as default"
 else
-  print_error "Failed to install Node.js"
+  log_error "Failed to install Node.js"
   exit 1
 fi

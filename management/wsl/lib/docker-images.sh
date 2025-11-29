@@ -81,21 +81,21 @@ build_image() {
 
   # Download rootfs if not cached
   if [[ -f "$rootfs_file" ]]; then
-    print_success "Using cached rootfs: $rootfs_file"
+    log_success "Using cached rootfs: $rootfs_file"
   else
-    echo "Downloading WSL rootfs (~340MB, one-time download)..."
-    echo "URL: $rootfs_url"
+    log_info "Downloading WSL rootfs (~340MB, one-time download)..."
+    log_info "URL: $rootfs_url"
     echo ""
     curl -L --progress-bar "$rootfs_url" -o "$rootfs_file"
-    print_success "Downloaded and cached rootfs"
+    log_success "Downloaded and cached rootfs"
   fi
 
   echo ""
-  echo "Importing rootfs into Docker..."
+  log_info "Importing rootfs into Docker..."
 
   # Remove existing image if present
   if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    echo "Removing existing image: $docker_image"
+    log_info "Removing existing image: $docker_image"
     docker rmi "$docker_image" >/dev/null
   fi
 
@@ -103,7 +103,7 @@ build_image() {
   gunzip -c "$rootfs_file" | docker import - "$docker_image"
 
   echo ""
-  print_success "Built Docker image: $docker_image"
+  log_success "Built Docker image: $docker_image"
 
   # Show image info
   echo ""
@@ -127,9 +127,9 @@ remove_image() {
 
   if docker image inspect "$docker_image" >/dev/null 2>&1; then
     docker rmi "$docker_image"
-    print_success "Removed image: $docker_image"
+    log_success "Removed image: $docker_image"
   else
-    print_warning "Image not found: $docker_image"
+    log_warning "Image not found: $docker_image"
   fi
 }
 
@@ -149,12 +149,12 @@ clean_cache() {
       ls -lh "$WSL_CACHE_DIR"
       echo ""
       rm -rf "${WSL_CACHE_DIR:?}"/*
-      print_success "Cleaned cache directory"
+      log_success "Cleaned cache directory"
     else
-      print_info "Cache directory is already empty"
+      log_info "Cache directory is already empty"
     fi
   else
-    print_info "Cache directory does not exist"
+    log_info "Cache directory does not exist"
   fi
 }
 
@@ -164,15 +164,15 @@ clean_all() {
   echo ""
 
   # Remove images
-  echo "Checking for WSL Docker images..."
+  log_info "Checking for WSL Docker images..."
   if docker image ls --format "{{.Repository}}:{{.Tag}}" | grep -q "wsl-ubuntu"; then
     docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "wsl-ubuntu" | while read -r image; do
-      echo "Removing image: $image"
+      log_info "Removing image: $image"
       docker rmi "$image" >/dev/null
     done
-    print_success "Removed all WSL Docker images"
+    log_success "Removed all WSL Docker images"
   else
-    print_info "No WSL Docker images found"
+    log_info "No WSL Docker images found"
   fi
 
   echo ""

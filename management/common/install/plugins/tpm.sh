@@ -8,14 +8,17 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 TPM_DIR="$HOME/.config/tmux/plugins/tpm"
 
 if [[ -d "$TPM_DIR" ]]; then
-  print_success "TPM already installed"
+  log_success "TPM already installed"
 else
-  print_info "Installing TPM..."
+  log_info "Installing TPM..."
   git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
-  print_success "TPM installed"
+  log_success "TPM installed"
 fi

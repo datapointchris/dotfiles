@@ -6,7 +6,10 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Source nvm to get npm in PATH
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
@@ -35,7 +38,7 @@ for package in $NPM_PACKAGES; do
   if npm list -g "$package" --depth=0 &>/dev/null; then
     echo "  $package already installed (skipping)"
   else
-    print_info "Installing $package..."
+    log_info "Installing $package..."
     npm install -g "$package"
   fi
 done

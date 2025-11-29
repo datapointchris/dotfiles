@@ -76,10 +76,10 @@ echo ""
 
 log_section "Backward Compatibility (print_* functions)" "cyan"
 
-print_info "Using print_info (backward compatible)"
-print_success "Using print_success (backward compatible)"
-print_warning "Using print_warning (backward compatible)"
-print_error "Using print_error (backward compatible)"
+log_info "Using print_info (backward compatible)"
+log_success "Using print_success (backward compatible)"
+log_warning "Using print_warning (backward compatible)"
+log_error "Using print_error (backward compatible)"
 echo ""
 
 # ================================================================

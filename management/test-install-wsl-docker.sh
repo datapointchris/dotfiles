@@ -90,7 +90,7 @@ if [[ "$REUSE_LATEST" == "true" ]]; then
     exit 1
   fi
 
-  print_info "Reusing most recent container: $CONTAINER_NAME"
+  log_info "Reusing most recent container: $CONTAINER_NAME"
 
 elif [[ -n "$REUSE_CONTAINER" ]]; then
   CONTAINER_NAME="$REUSE_CONTAINER"
@@ -101,7 +101,7 @@ elif [[ -n "$REUSE_CONTAINER" ]]; then
     docker ps -a --format '  {{.Names}}' | grep dotfiles-wsl-test || echo "  (none)"
     exit 1
   fi
-  print_info "Reusing existing container: $CONTAINER_NAME"
+  log_info "Reusing existing container: $CONTAINER_NAME"
 else
   CONTAINER_NAME="dotfiles-wsl-test-$(date '+%Y%m%d-%H%M%S')"
 fi
@@ -135,12 +135,12 @@ cleanup() {
   if [[ "$KEEP_CONTAINER" == false ]]; then
     if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
       echo ""
-      print_info "Cleaning up container: $CONTAINER_NAME"
+      log_info "Cleaning up container: $CONTAINER_NAME"
       docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
     fi
   else
     echo ""
-    print_info "Container kept for debugging: $CONTAINER_NAME"
+    log_info "Container kept for debugging: $CONTAINER_NAME"
     echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
     echo "  • View logs: docker logs $CONTAINER_NAME"
     echo "  • Remove container: docker rm -f $CONTAINER_NAME"
@@ -153,11 +153,11 @@ trap cleanup EXIT
 # Overwrite log file (not append)
 : > "$LOG_FILE"
 
-print_info "Testing WSL installation with Docker"
-print_info "Ubuntu version: ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
-print_info "Docker image: ${DOCKER_IMAGE}"
-print_info "Container: ${CONTAINER_NAME}"
-print_info "Log file: ${LOG_FILE}"
+log_info "Testing WSL installation with Docker"
+log_info "Ubuntu version: ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
+log_info "Docker image: ${DOCKER_IMAGE}"
+log_info "Container: ${CONTAINER_NAME}"
+log_info "Log file: ${LOG_FILE}"
 echo ""
 
 # Track overall start time
@@ -182,7 +182,7 @@ STEP_START=$(date +%s)
 
   # Check if Docker image already exists
   if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
-    print_success "Docker image already exists: $DOCKER_IMAGE"
+    log_success "Docker image already exists: $DOCKER_IMAGE"
   else
     echo "Docker image not found, will create from WSL rootfs..."
     echo ""
@@ -192,14 +192,14 @@ STEP_START=$(date +%s)
 
     # Download rootfs if not cached
     if [[ -f "$ROOTFS_FILE" ]]; then
-      print_success "Using cached WSL rootfs: $ROOTFS_FILE"
+      log_success "Using cached WSL rootfs: $ROOTFS_FILE"
     else
       echo "Downloading WSL Ubuntu ${UBUNTU_VERSION} rootfs..."
       echo "URL: $ROOTFS_URL"
       echo "This is a one-time download (~340MB)..."
       echo ""
       curl -L --progress-bar "$ROOTFS_URL" -o "$ROOTFS_FILE"
-      print_success "Downloaded WSL rootfs to cache"
+      log_success "Downloaded WSL rootfs to cache"
     fi
 
     # Import rootfs into Docker
@@ -212,7 +212,7 @@ STEP_START=$(date +%s)
       # .tar.gz files need gunzip
       gunzip -c "$ROOTFS_FILE" | docker import - "$DOCKER_IMAGE"
     fi
-    print_success "Created Docker image: $DOCKER_IMAGE"
+    log_success "Created Docker image: $DOCKER_IMAGE"
 
     # Create non-root user for realistic WSL testing
     echo ""
@@ -261,7 +261,7 @@ STEP_START=$(date +%s)
     "$DOCKER_IMAGE" \
     /usr/bin/sleep infinity
 
-  print_success "Container started: $CONTAINER_NAME"
+  log_success "Container started: $CONTAINER_NAME"
   echo "Dotfiles mounted at: /dotfiles (read-only)"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -293,7 +293,7 @@ EOF'
   echo "Copying dotfiles to writable location..."
   docker exec "$CONTAINER_NAME" bash -c "cp -r /dotfiles ${CONTAINER_HOME}/dotfiles"
 
-  print_success "Container environment ready"
+  log_success "Container environment ready"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -337,7 +337,7 @@ else
     echo "  Setting permissions..."
     docker exec "$CONTAINER_NAME" bash -c "chown -R \$(whoami):\$(whoami) ${CONTAINER_HOME}/dotfiles"
 
-    print_success "Dotfiles updated in container"
+    log_success "Dotfiles updated in container"
   } 2>&1 | tee -a "$LOG_FILE"
   STEP_END=$(date +%s)
   STEP_ELAPSED=$((STEP_END - STEP_START))

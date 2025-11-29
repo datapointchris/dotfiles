@@ -65,10 +65,10 @@ trap cleanup EXIT
 # Overwrite log file (not append)
 : > "$LOG_FILE"
 
-print_info "Testing Arch Linux installation with Docker"
-print_info "Docker image: ${DOCKER_IMAGE}"
-print_info "Container: ${CONTAINER_NAME}"
-print_info "Log file: ${LOG_FILE}"
+log_info "Testing Arch Linux installation with Docker"
+log_info "Docker image: ${DOCKER_IMAGE}"
+log_info "Container: ${CONTAINER_NAME}"
+log_info "Log file: ${LOG_FILE}"
 echo ""
 
 # Track overall start time
@@ -85,14 +85,14 @@ STEP_START=$(date +%s)
 
   # Pull latest official Arch image
   if docker_image_exists "$DOCKER_IMAGE"; then
-    print_success "Docker image exists: $DOCKER_IMAGE"
+    log_success "Docker image exists: $DOCKER_IMAGE"
     echo "Pulling latest updates..."
     docker pull "$DOCKER_IMAGE" >/dev/null 2>&1
-    print_success "Updated to latest image"
+    log_success "Updated to latest image"
   else
     echo "Pulling official Arch Linux image..."
     docker pull "$DOCKER_IMAGE"
-    print_success "Pulled Docker image: $DOCKER_IMAGE"
+    log_success "Pulled Docker image: $DOCKER_IMAGE"
   fi
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -122,7 +122,7 @@ STEP_START=$(date +%s)
     "$DOCKER_IMAGE" \
     /usr/bin/sleep infinity
 
-  print_success "Container started: $CONTAINER_NAME"
+  log_success "Container started: $CONTAINER_NAME"
   echo "Dotfiles mounted at: /dotfiles (read-only)"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -173,7 +173,7 @@ EOF"
     chmod +x ${CONTAINER_HOME}/dotfiles/install.sh
   "
 
-  print_success "Container environment ready"
+  log_success "Container environment ready"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

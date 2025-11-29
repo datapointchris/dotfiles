@@ -21,29 +21,29 @@ print_section "Installing macOS packages" "cyan"
 
 # Step 1: Install PyYAML for system Python (bootstrap dependency)
 if /usr/bin/python3 -c "import yaml" &>/dev/null; then
-  echo "  PyYAML already installed for system Python"
+  log_info "PyYAML already installed for system Python"
 else
-  echo "  Installing PyYAML for system Python..."
+  log_info "Installing PyYAML for system Python..."
   /usr/bin/python3 -m pip install --user PyYAML
-  echo "  ✓ PyYAML installed"
+  log_success "PyYAML installed"
 fi
 
 # Step 2: Install system packages from packages.yml
-echo "  Installing system packages from packages.yml..."
+log_info "Installing system packages from packages.yml..."
 PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=brew | tr '\n' ' ')
-echo "  Packages: $PACKAGES"
+log_info "Packages: $PACKAGES"
 # shellcheck disable=SC2086
 if brew install $PACKAGES; then
-  echo "  ✓ System packages installed"
+  log_success "System packages installed"
 else
-  print_warning "Some packages may have failed to install"
+  log_warning "Some packages may have failed to install"
 fi
 
 # Step 3: Setup docker-compose as Docker CLI plugin
 if ! command -v docker-compose >/dev/null 2>&1; then
-  echo "  ⚠️  docker-compose not installed (run: brew install docker-compose)"
+  log_warning "docker-compose not installed (run: brew install docker-compose)"
 else
-  echo "  Setting up docker-compose as Docker CLI plugin..."
+  log_info "Setting up docker-compose as Docker CLI plugin..."
 
   # Create plugin directory (DOCKER_CONFIG is set in zshrc to $XDG_CONFIG_HOME/docker)
   mkdir -p "${DOCKER_CONFIG:-$HOME/.config/docker}/cli-plugins"
@@ -52,8 +52,8 @@ else
   ln -sfn "$(brew --prefix)/opt/docker-compose/bin/docker-compose" \
     "${DOCKER_CONFIG:-$HOME/.config/docker}/cli-plugins/docker-compose"
 
-  echo "  ✓ docker-compose plugin configured"
-  echo "  You can now use 'docker compose' (modern) instead of 'docker-compose' (legacy)"
+  log_success "docker-compose plugin configured"
+  log_info "You can now use 'docker compose' (modern) instead of 'docker-compose' (legacy)"
 fi
 
-print_success "macOS packages installed"
+log_success "macOS packages installed"

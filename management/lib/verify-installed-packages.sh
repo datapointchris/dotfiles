@@ -9,8 +9,11 @@
 
 set -euo pipefail
 
-# Source formatting library (runs after installation, can use $HOME/dotfiles)
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+# Source logging library (runs after installation, can use $HOME/dotfiles)
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Counters
 TOTAL_CHECKS=0
@@ -34,13 +37,13 @@ check_command() {
       local version
       # Add timeout to prevent hanging on commands like yazi --version
       version=$(timeout 3 "$name" "$version_cmd" 2>&1 | head -n1 || echo "unknown")
-      print_success "$name: $version"
+      log_success "$name: $version"
     else
-      print_success "$name: installed"
+      log_success "$name: installed"
     fi
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    print_error "$name: NOT FOUND"
+    log_error "$name: NOT FOUND"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     FAILED_TOOLS+=("$name")
   fi
@@ -59,18 +62,18 @@ check_command_at_path() {
     if [ "$version_cmd" != "SKIP_VERSION" ]; then
       local version
       version=$(timeout 3 "$expected_path" "$version_cmd" 2>&1 | head -n1 || echo "unknown")
-      print_success "$name: $version (at $expected_path)"
+      log_success "$name: $version (at $expected_path)"
     else
-      print_success "$name: installed at $expected_path"
+      log_success "$name: installed at $expected_path"
     fi
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
     local actual_location
     actual_location=$(command -v "$name" 2>/dev/null || echo "not found")
     if [ "$actual_location" != "not found" ]; then
-      print_error "$name: WRONG LOCATION - expected $expected_path, found at $actual_location"
+      log_error "$name: WRONG LOCATION - expected $expected_path, found at $actual_location"
     else
-      print_error "$name: NOT FOUND (expected at $expected_path)"
+      log_error "$name: NOT FOUND (expected at $expected_path)"
     fi
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     FAILED_TOOLS+=("$name")
@@ -83,10 +86,10 @@ check_file_exists() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
   if [ -f "$path" ] || [ -d "$path" ]; then
-    print_success "$name: $path"
+    log_success "$name: $path"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    print_error "$name: NOT FOUND at $path"
+    log_error "$name: NOT FOUND at $path"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     FAILED_TOOLS+=("$name")
   fi
@@ -117,7 +120,7 @@ else
 fi
 
 echo ""
-print_info "Detected platform: $DETECTED_PLATFORM"
+log_info "Detected platform: $DETECTED_PLATFORM"
 echo ""
 
 # ================================================================
@@ -261,16 +264,16 @@ if [[ "$DETECTED_PLATFORM" != "wsl" ]]; then
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   if docker compose version >/dev/null 2>&1; then
     COMPOSE_VERSION=$(docker compose version 2>&1 | head -n1)
-    print_success "docker compose: $COMPOSE_VERSION"
+    log_success "docker compose: $COMPOSE_VERSION"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    print_error "docker compose: NOT WORKING"
+    log_error "docker compose: NOT WORKING"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
     FAILED_TOOLS+=("docker-compose")
   fi
 else
   print_section "Docker (Skipped on WSL)"
-  print_info "WSL uses Windows Docker Desktop (not checked)"
+  log_info "WSL uses Windows Docker Desktop (not checked)"
 fi
 
 # ================================================================
@@ -454,10 +457,10 @@ print_section "Package Management Scripts (Universal)"
 # Test parse-packages.py can run and import yaml
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 if /usr/bin/python3 "$HOME/dotfiles/management/parse-packages.py" --type=system --manager=apt >/dev/null 2>&1; then
-  print_success "parse-packages.py: working (yaml module available)"
+  log_success "parse-packages.py: working (yaml module available)"
   PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
-  print_error "parse-packages.py: FAILED (yaml module missing or script error)"
+  log_error "parse-packages.py: FAILED (yaml module missing or script error)"
   FAILED_CHECKS=$((FAILED_CHECKS + 1))
   FAILED_TOOLS+=("parse-packages.py")
 fi

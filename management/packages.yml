@@ -12,7 +12,7 @@
 # These provide packages not in the main Homebrew repository
 
 macos_taps:
-  - docker/docker  # Docker official tap for latest versions
+  - docker/docker # Docker official tap for latest versions
 
 # ================================================================
 # SYSTEM PACKAGES
@@ -385,61 +385,61 @@ github_binaries:
     repo: neovim/neovim
     min_version: "0.11"
     install_script: install-neovim.sh
-    binary_pattern: "nvim-{platform}-{arch}.tar.gz"  # Platform-specific: macos/linux
-    install_dir: "~/.local/nvim-{platform}-{arch}"   # Platform-specific
+    binary_pattern: "nvim-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
+    install_dir: "~/.local/nvim-{platform}-{arch}" # Platform-specific
     binary_link: "~/.local/bin/nvim"
 
   - name: lazygit
     repo: jesseduffield/lazygit
     version: "0.56.0"
     install_script: install-lazygit.sh
-    binary_pattern: "lazygit_{version}_{Platform}_{arch}.tar.gz"  # Platform-specific: Darwin/Linux
+    binary_pattern: "lazygit_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
     install_dir: "~/.local/bin"
 
   - name: yazi
     repo: sxyazi/yazi
     install_script: install-yazi.sh
-    binary_pattern: "yazi-{arch}-{platform}.zip"  # Platform-specific: apple-darwin/unknown-linux-gnu
+    binary_pattern: "yazi-{arch}-{platform}.zip" # Platform-specific: apple-darwin/unknown-linux-gnu
     install_dir: "~/.local/bin"
 
   - name: fzf
     repo: junegunn/fzf
     min_version: "0.50"
     install_script: install-fzf.sh
-    build_method: go  # Universal: built from source
+    build_method: go # Universal: built from source
     install_dir: "~/.local/bin"
 
   - name: glow
     repo: charmbracelet/glow
     install_script: install-glow.sh
-    binary_pattern: "glow_{version}_{platform}_{arch}.tar.gz"  # Platform-specific: Darwin/linux
+    binary_pattern: "glow_{version}_{platform}_{arch}.tar.gz" # Platform-specific: Darwin/linux
     install_dir: "~/.local/bin"
 
   - name: duf
     repo: muesli/duf
     install_script: install-duf.sh
-    binary_pattern: "duf_{version}_{platform}_{arch}.tar.gz"  # Platform-specific: darwin/linux
+    binary_pattern: "duf_{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
 
   # Terraform ecosystem tools
   - name: tenv
     repo: tofuutils/tenv
     install_script: install-tenv.sh
-    binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz"  # Platform-specific: darwin/linux
+    binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
     description: Version manager for Terraform/OpenTofu/Terragrunt
 
   - name: terraform-ls
     repo: hashicorp/terraform-ls
     install_script: install-terraform-ls.sh
-    binary_pattern: "terraform-ls_{version}_{platform}_{arch}.zip"  # Platform-specific: darwin/linux
+    binary_pattern: "terraform-ls_{version}_{platform}_{arch}.zip" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
     description: Terraform Language Server
 
   - name: tflint
     repo: terraform-linters/tflint
     install_script: install-tflint.sh
-    binary_pattern: "tflint_{platform}_{arch}.zip"  # Platform-specific: darwin/linux
+    binary_pattern: "tflint_{platform}_{arch}.zip" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
     description: Terraform linter
 
@@ -447,14 +447,14 @@ github_binaries:
     repo: GoogleCloudPlatform/terraformer
     version: "0.8.30"
     install_script: install-terraformer.sh
-    binary_pattern: "terraformer-all-{platform}-{arch}"  # Platform-specific: darwin/linux (direct binary)
+    binary_pattern: "terraformer-all-{platform}-{arch}" # Platform-specific: darwin/linux (direct binary)
     install_dir: "~/.local/bin"
     description: Generate Terraform from existing infrastructure
 
   - name: terrascan
     repo: tenable/terrascan
     install_script: install-terrascan.sh
-    binary_pattern: "terrascan_{version}_{Platform}_{arch}.tar.gz"  # Platform-specific: Darwin/Linux
+    binary_pattern: "terrascan_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
     install_dir: "~/.local/bin"
     description: Terraform security scanner
 
@@ -462,14 +462,14 @@ github_binaries:
   - name: zk
     repo: zk-org/zk
     install_script: install-zk.sh
-    binary_pattern: "zk-{version}-{platform}-{arch}.tar.gz"  # Platform-specific: macos/linux
+    binary_pattern: "zk-{version}-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
     install_dir: "~/.local/bin"
     description: Plain text note-taking assistant
 
   - name: trivy
     repo: aquasecurity/trivy
     install_script: install-trivy.sh
-    binary_pattern: "trivy_{version}_{OS}_{arch}.tar.gz"  # Platform-specific: macOS-64bit/macOS-ARM64/Linux-64bit/Linux-ARM64
+    binary_pattern: "trivy_{version}_{OS}_{arch}.tar.gz" # Platform-specific: macOS-64bit/macOS-ARM64/Linux-64bit/Linux-ARM64
     install_dir: "~/.local/bin"
     description: Container/IaC vulnerability scanner
 
@@ -627,6 +627,9 @@ uv_tools:
   development:
     - name: pre-commit
       description: Git pre-commit hook framework
+
+    - name: tldr
+      description: Collaborative cheatsheets for console commands
 
 # ================================================================
 # GO TOOLS
@@ -804,7 +807,6 @@ macos_casks:
 
   - name: obsidian
     description: Note taking
-
 # ================================================================
 # NOTES
 # ================================================================

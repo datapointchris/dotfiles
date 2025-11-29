@@ -343,7 +343,7 @@ check_tool() {
     # First show expected location if it exists
     for loc in "${found_locations[@]}"; do
       if [[ "$loc" == "$expected_location" ]]; then
-        print_success "$loc (will keep)"
+        log_success "$loc (will keep)"
       fi
     done
 
@@ -352,9 +352,9 @@ check_tool() {
       if [[ "$loc" != "$expected_location" ]]; then
         local method_hint=$(guess_install_method "$loc")
         if [[ -n "$method_hint" ]]; then
-          print_error "$loc ($method_hint)"
+          log_error "$loc ($method_hint)"
         else
-          print_error "$loc (duplicate)"
+          log_error "$loc (duplicate)"
         fi
       fi
     done
@@ -418,13 +418,13 @@ print_header "Alternate Installation Detection" "cyan"
 echo ""
 
 if [[ "$CLEAN_MODE" == true ]]; then
-  print_warning "🧹 CLEAN MODE: Will remove alternate installations automatically"
+  log_warning "🧹 CLEAN MODE: Will remove alternate installations automatically"
 else
-  print_info "📊 REPORT MODE: Will only report alternate installations (use --clean to remove)"
+  log_info "📊 REPORT MODE: Will only report alternate installations (use --clean to remove)"
 fi
 
 echo ""
-print_info "Initializing package manager caches..."
+log_info "Initializing package manager caches..."
 populate_package_manager_caches
 
 echo ""
@@ -506,36 +506,36 @@ echo ""
 print_header "Summary" "cyan"
 
 if [[ "$DUPLICATES_FOUND" == false ]]; then
-  print_success "✓ No duplicates found! All installations are clean."
+  log_success "✓ No duplicates found! All installations are clean."
   exit 0
 fi
 
 echo ""
-print_warning "Found ${#CLEANUP_COMMANDS[@]} alternate installations"
+log_warning "Found ${#CLEANUP_COMMANDS[@]} alternate installations"
 # Output generic warning message that will be caught by log summarizers
 echo "WARNING: Detected ${#CLEANUP_COMMANDS[@]} tools installed in multiple locations"
 echo "WARNING: Multiple installations may cause PATH conflicts or version mismatches"
 
 if [[ "$CLEAN_MODE" == false ]]; then
   echo ""
-  print_info "To remove all alternate installations automatically, run:"
+  log_info "To remove all alternate installations automatically, run:"
   echo "  bash $(basename "$0") --clean"
 else
   echo ""
-  print_warning "Removing alternate installations..."
+  log_warning "Removing alternate installations..."
   echo ""
 
   for cmd in "${CLEANUP_COMMANDS[@]}"; do
     echo "  Running: $cmd"
     if eval "$cmd" 2>/dev/null; then
-      print_success "  ✓ Removed"
+      log_success "  ✓ Removed"
     else
-      print_warning "  ⚠ Failed or already removed"
+      log_warning "  ⚠ Failed or already removed"
     fi
   done
 
   echo ""
-  print_success "✓ Cleanup complete! Run again to verify all alternate installations removed."
+  log_success "✓ Cleanup complete! Run again to verify all alternate installations removed."
 fi
 
 echo ""

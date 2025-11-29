@@ -90,7 +90,7 @@ parse_args() {
         shift 2
         ;;
       *)
-        print_error "Unknown option: $1"
+        log_error "Unknown option: $1"
         usage
         exit 1
         ;;
@@ -113,7 +113,7 @@ detect_platform() {
     PLATFORM="linux"
     FONTS_TARGET="$HOME/.local/share/fonts"
   else
-    print_error "Unsupported platform: $OSTYPE"
+    log_error "Unsupported platform: $OSTYPE"
     exit 1
   fi
 }
@@ -136,21 +136,21 @@ install_family() {
   local source_dir="$FONTS_SOURCE/$family"
 
   if [[ ! -d "$source_dir" ]]; then
-    print_error "Font family not found: $family"
+    log_error "Font family not found: $family"
     return 1
   fi
 
   local font_count=$(count_fonts "$source_dir")
 
   if [[ $font_count -eq 0 ]]; then
-    print_warning "No fonts found in $family"
+    log_warning "No fonts found in $family"
     return 0
   fi
 
-  print_info "Installing $family ($font_count files)..."
+  log_info "Installing $family ($font_count files)..."
 
   if [[ "$DRY_RUN" == "true" ]]; then
-    print_info "[DRY RUN] Would install $font_count fonts from $family"
+    log_info "[DRY RUN] Would install $font_count fonts from $family"
     return 0
   fi
 
@@ -188,15 +188,15 @@ install_family() {
       done < <(find "$source_dir" -type f \( -name "*.ttf" -o -name "*.otf" -o -name "*.ttc" \) -print0)
 
       if [[ $installed -gt 0 ]] && [[ $skipped -gt 0 ]]; then
-        print_success "Installed $installed new fonts from $family ($skipped already present)"
+        log_success "Installed $installed new fonts from $family ($skipped already present)"
       elif [[ $installed -gt 0 ]]; then
-        print_success "Installed $installed fonts from $family"
+        log_success "Installed $installed fonts from $family"
       else
-        print_success "All $skipped fonts from $family already installed"
+        log_success "All $skipped fonts from $family already installed"
       fi
       ;;
     wsl)
-      print_info "WSL detected - attempting to install to Windows..."
+      log_info "WSL detected - attempting to install to Windows..."
 
       # Try to copy to Windows Fonts directory
       if [[ -d "$FONTS_TARGET" ]]; then
@@ -221,22 +221,22 @@ install_family() {
         done < <(find "$source_dir" -type f \( -name "*.ttf" -o -name "*.otf" -o -name "*.ttc" \) -print0)
 
         if [[ $installed -gt 0 ]] && [[ $skipped -gt 0 ]]; then
-          print_success "Installed $installed new fonts to Windows ($skipped already present)"
+          log_success "Installed $installed new fonts to Windows ($skipped already present)"
         elif [[ $installed -gt 0 ]]; then
-          print_success "Installed $installed fonts to Windows"
+          log_success "Installed $installed fonts to Windows"
         elif [[ $skipped -gt 0 ]]; then
-          print_success "All $skipped fonts already installed to Windows"
+          log_success "All $skipped fonts already installed to Windows"
         fi
 
         if [[ $failed -gt 0 ]]; then
-          print_warning "Failed to install $failed fonts (permission denied)"
-          print_info "Manually install from: $source_dir"
-          print_info "To: C:\\Windows\\Fonts (right-click → Install)"
+          log_warning "Failed to install $failed fonts (permission denied)"
+          log_info "Manually install from: $source_dir"
+          log_info "To: C:\\Windows\\Fonts (right-click → Install)"
         fi
       else
-        print_warning "Windows Fonts directory not accessible: $FONTS_TARGET"
-        print_info "Manually install fonts from: $source_dir"
-        print_info "To: C:\\Windows\\Fonts (right-click → Install)"
+        log_warning "Windows Fonts directory not accessible: $FONTS_TARGET"
+        log_info "Manually install fonts from: $source_dir"
+        log_info "To: C:\\Windows\\Fonts (right-click → Install)"
       fi
       ;;
   esac
@@ -250,7 +250,7 @@ install_all_families() {
   done < <(find "$FONTS_SOURCE" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
   if [[ ${#families[@]} -eq 0 ]]; then
-    print_error "No font families found in $FONTS_SOURCE"
+    log_error "No font families found in $FONTS_SOURCE"
     return 1
   fi
 
@@ -267,16 +267,16 @@ refresh_font_cache() {
   case "$PLATFORM" in
     linux)
       if command -v fc-cache &> /dev/null; then
-        print_info "Refreshing font cache..."
+        log_info "Refreshing font cache..."
         fc-cache -f "$FONTS_TARGET" 2>/dev/null || true
-        print_success "Font cache refreshed"
+        log_success "Font cache refreshed"
       fi
       ;;
     macos)
-      print_info "macOS will automatically refresh font cache"
+      log_info "macOS will automatically refresh font cache"
       ;;
     wsl)
-      print_info "Font cache refresh not applicable for WSL"
+      log_info "Font cache refresh not applicable for WSL"
       ;;
   esac
 }
@@ -297,22 +297,22 @@ main() {
 
   # Verify source directory
   if [[ ! -d "$FONTS_SOURCE" ]]; then
-    print_error "Source directory not found: $FONTS_SOURCE"
+    log_error "Source directory not found: $FONTS_SOURCE"
     echo "Run 'font-download' to download fonts first"
     exit 1
   fi
 
   # Platform info
-  print_info "Platform: $PLATFORM"
-  print_info "Source: $FONTS_SOURCE"
-  print_info "Target: $FONTS_TARGET"
+  log_info "Platform: $PLATFORM"
+  log_info "Source: $FONTS_SOURCE"
+  log_info "Target: $FONTS_TARGET"
 
   if [[ "$DRY_RUN" == "true" ]]; then
-    print_warning "DRY RUN MODE - No files will be installed"
+    log_warning "DRY RUN MODE - No files will be installed"
   fi
 
   if [[ "$FORCE" == "true" ]]; then
-    print_warning "Force mode enabled - Will overwrite existing fonts"
+    log_warning "Force mode enabled - Will overwrite existing fonts"
   fi
 
   echo ""

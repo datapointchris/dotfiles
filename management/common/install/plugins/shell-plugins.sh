@@ -20,7 +20,7 @@ PLUGINS_DIR="$HOME/.config/zsh/plugins"
 
 # Check if packages.yml exists
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
-  print_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
+  log_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
   exit 1
 fi
 
@@ -36,15 +36,15 @@ while IFS='|' read -r name repo; do
   PLUGIN_DIR="$PLUGINS_DIR/$name"
 
   if [[ -d "$PLUGIN_DIR" ]]; then
-    echo "  $name already installed"
+    log_info "$name already installed"
   else
-    echo "  Installing $name..."
+    log_info "Installing $name..."
     if git clone "$repo" "$PLUGIN_DIR" --quiet; then
-      echo "    ✓ $name installed"
+      log_success "$name installed"
     else
-      print_warning "Failed to install $name"
+      log_warning "Failed to install $name"
     fi
   fi
 done <<< "$PLUGINS"
 
-print_success "Shell plugins installed to $PLUGINS_DIR"
+log_success "Shell plugins installed to $PLUGINS_DIR"

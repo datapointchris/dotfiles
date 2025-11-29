@@ -10,7 +10,8 @@
 # ================================================================
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 
 # Source helper functions
@@ -27,11 +28,11 @@ ARCH=$(uname -m)
 if [[ "$PLATFORM" == "Darwin" ]]; then
   if command -v aws >/dev/null 2>&1; then
     CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
-    print_success "macOS: AWS CLI managed by Homebrew"
-    print_success "Current version: $CURRENT_VERSION"
+    log_success "macOS: AWS CLI managed by Homebrew"
+    log_success "Current version: $CURRENT_VERSION"
   else
-    print_info "macOS: AWS CLI will be installed via Homebrew"
-    print_info "Add 'awscli' to packages.yml and run: task macos:install-packages"
+    log_info "macOS: AWS CLI will be installed via Homebrew"
+    log_info "Add 'awscli' to packages.yml and run: task macos:install-packages"
   fi
   exit 0
 fi
@@ -39,21 +40,21 @@ fi
 # Linux: Check if AWS CLI is already installed at expected location (skip check if FORCE_INSTALL=true)
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
   CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
-  print_success "Current version: $CURRENT_VERSION, skipping"
+  log_success "Current version: $CURRENT_VERSION, skipping"
   exit 0
 fi
 
 # Check for alternate installations
 if [ ! -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v aws)
-  print_warning "aws found at $ALTERNATE_LOCATION"
-  print_info "AWS CLI official installer will be used"
+  log_warning "aws found at $ALTERNATE_LOCATION"
+  log_info "AWS CLI official installer will be used"
 fi
 
 case $PLATFORM in
   Linux)
     # Linux installation (WSL/Arch)
-    print_info "Platform: Linux ($ARCH)"
+    log_info "Platform: Linux ($ARCH)"
 
     # Detect architecture
     case $ARCH in
@@ -64,7 +65,7 @@ case $PLATFORM in
         ZIP_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
         ;;
       *)
-        print_error "Unsupported architecture: $ARCH"
+        log_error "Unsupported architecture: $ARCH"
         exit 1
         ;;
     esac
@@ -80,13 +81,13 @@ case $PLATFORM in
     fi
 
     # Extract
-    print_info "Extracting installer..."
+    log_info "Extracting installer..."
     rm -rf "$EXTRACT_DIR"
     mkdir -p "$EXTRACT_DIR"
     unzip -q "$ZIP_FILE" -d "$EXTRACT_DIR"
 
     # Install to user directory (no sudo needed)
-    print_info "Installing AWS CLI v2 to ~/.local/..."
+    log_info "Installing AWS CLI v2 to ~/.local/..."
     "$EXTRACT_DIR/aws/install" --install-dir "$HOME/.local/aws-cli" --bin-dir "$HOME/.local/bin" --update
 
     # Cleanup
@@ -94,7 +95,7 @@ case $PLATFORM in
     ;;
 
   *)
-    print_error "Unsupported platform: $PLATFORM"
+    log_error "Unsupported platform: $PLATFORM"
     exit 1
     ;;
 esac
@@ -102,9 +103,9 @@ esac
 # Verify installation
 if command -v aws >/dev/null 2>&1; then
   INSTALLED_VERSION=$(aws --version 2>&1)
-  print_success "$INSTALLED_VERSION"
+  log_success "$INSTALLED_VERSION"
 else
-  print_error "Installation verification failed"
+  log_error "Installation verification failed"
   exit 1
 fi
 

@@ -11,7 +11,10 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,7 +37,7 @@ fi
 
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
   CURRENT_VERSION=$($GO_BIN version | awk '{print $3}' | sed 's/go//')
-  print_info "Current version: $CURRENT_VERSION"
+  log_info "Current version: $CURRENT_VERSION"
 
   # Compare versions (simple major.minor comparison)
   CURRENT_MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
@@ -44,18 +47,18 @@ if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
 
   if [[ $CURRENT_MAJOR -gt $REQUIRED_MAJOR ]] || \
      [[ $CURRENT_MAJOR -eq $REQUIRED_MAJOR && $CURRENT_MINOR -ge $REQUIRED_MINOR ]]; then
-    print_success "Acceptable version (>= $MIN_VERSION), skipping"
+    log_success "Acceptable version (>= $MIN_VERSION), skipping"
     exit 0
   fi
 
-  print_info "Upgrading from $CURRENT_VERSION..."
+  log_info "Upgrading from $CURRENT_VERSION..."
 fi
 
 # Check for alternate installations
 if [[ ! -x "/usr/local/go/bin/go" ]] && command -v go >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v go)
-  print_warning " go found at $ALTERNATE_LOCATION"
-  print_info "Installing to /usr/local/go/bin/go anyway (PATH priority will use this one)"
+  log_warning " go found at $ALTERNATE_LOCATION"
+  log_info "Installing to /usr/local/go/bin/go anyway (PATH priority will use this one)"
 fi
 
 # Detect platform and architecture
@@ -69,7 +72,7 @@ case $ARCH in
     GO_ARCH="arm64"
     ;;
   *)
-    print_error " Unsupported architecture: $ARCH"
+    log_error " Unsupported architecture: $ARCH"
     exit 1
     ;;
 esac
@@ -83,21 +86,21 @@ case $PLATFORM in
     GO_OS="linux"
     ;;
   *)
-    print_error " Unsupported platform: $PLATFORM"
+    log_error " Unsupported platform: $PLATFORM"
     exit 1
     ;;
 esac
 
 # Get latest version
-print_info "Fetching latest version..."
+log_info "Fetching latest version..."
 if ! GO_VERSION=$(curl -sf https://go.dev/VERSION?m=text | head -n1); then
-  print_error " Failed to fetch Go version from go.dev"
+  log_error " Failed to fetch Go version from go.dev"
   print_manual_install "go" "https://go.dev/dl/" "latest" "go*.${GO_OS}-${GO_ARCH}.tar.gz" \
     "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/go*.${GO_OS}-${GO_ARCH}.tar.gz"
   exit 1
 fi
 
-print_info "Latest: $GO_VERSION ($PLATFORM/$ARCH → $GO_OS/$GO_ARCH)"
+log_info "Latest: $GO_VERSION ($PLATFORM/$ARCH → $GO_OS/$GO_ARCH)"
 
 # Download URL
 GO_URL="https://go.dev/dl/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
@@ -111,7 +114,7 @@ if ! download_file "$GO_URL" "$GO_TARBALL" "go"; then
 fi
 
 # Install
-print_info "Installing to /usr/local/go..."
+log_info "Installing to /usr/local/go..."
 sudo rm -rf /usr/local/go
 sudo tar -C /usr/local -xzf "$GO_TARBALL"
 rm "$GO_TARBALL"
@@ -119,9 +122,9 @@ rm "$GO_TARBALL"
 # Verify
 if /usr/local/go/bin/go version >/dev/null 2>&1; then
   INSTALLED_VERSION=$(/usr/local/go/bin/go version)
-  print_success " $INSTALLED_VERSION"
+  log_success " $INSTALLED_VERSION"
 else
-  print_error " Installation verification failed"
+  log_error " Installation verification failed"
   exit 1
 fi
 

@@ -220,7 +220,7 @@ download_nerd_font() {
   find . -maxdepth 1 -name "*NerdFont*.$extension" -exec mv {} "$FONTS_DIR/$dir_name/" \; 2>/dev/null || true
 
   local downloaded=$(count_files "$FONTS_DIR/$dir_name")
-  print_success "Downloaded $downloaded files"
+  log_success "Downloaded $downloaded files"
 }
 
 download_jetbrains() {
@@ -280,7 +280,7 @@ download_sgr_iosevka() {
   unzip -qo SGr-IosevkaTermSlab.zip
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$FONTS_DIR/SGr-IosevkaTermSlab/" \; 2>/dev/null || true
 
-  print_success "Downloaded 4 variants (TTC collections contain all weights)"
+  log_success "Downloaded 4 variants (TTC collections contain all weights)"
 }
 
 download_victor() {
@@ -303,9 +303,9 @@ download_victor() {
     find . -type f -name "*.ttf" -path "*/TTF/*" -exec mv {} "$FONTS_DIR/VictorMono/" \; 2>/dev/null || true
 
     local downloaded=$(count_files "$FONTS_DIR/VictorMono")
-    print_success "Downloaded $downloaded files"
+    log_success "Downloaded $downloaded files"
   else
-    print_warning "VictorMonoAll.zip not found in source, skipping"
+    log_warning "VictorMonoAll.zip not found in source, skipping"
   fi
 }
 
@@ -324,7 +324,7 @@ download_firacodescript() {
   curl -fsSL https://github.com/kencrocken/FiraCodeiScript/raw/master/FiraCodeiScript-Italic.ttf -o "$FONTS_DIR/FiraCodeiScript/FiraCodeiScript-Italic.ttf" 2>/dev/null || true
 
   local downloaded=$(count_files "$FONTS_DIR/FiraCodeiScript")
-  print_success "Downloaded $downloaded files"
+  log_success "Downloaded $downloaded files"
 }
 
 download_nimbus() {
@@ -338,7 +338,7 @@ download_nimbus() {
   find nimbus -name "*.otf" -exec mv {} "$FONTS_DIR/NimbusMono/" \; 2>/dev/null || true
 
   local downloaded=$(count_files "$FONTS_DIR/NimbusMono")
-  print_success "Downloaded $downloaded files"
+  log_success "Downloaded $downloaded files"
 }
 
 download_droid() {
@@ -361,9 +361,9 @@ download_commitmono() {
     find . -type f -name "*.otf" -exec mv {} "$FONTS_DIR/CommitMono/" \; 2>/dev/null || true
 
     local downloaded=$(count_files "$FONTS_DIR/CommitMono")
-    print_success "Downloaded $downloaded files"
+    log_success "Downloaded $downloaded files"
   else
-    print_warning "CommitMono download URL not found, skipping"
+    log_warning "CommitMono download URL not found, skipping"
   fi
 }
 
@@ -378,7 +378,7 @@ download_firacode() {
   mv ttf/*.ttf "$FONTS_DIR/FiraCode/" 2>/dev/null || true
 
   local downloaded=$(count_files "$FONTS_DIR/FiraCode")
-  print_success "Downloaded $downloaded files"
+  log_success "Downloaded $downloaded files"
 }
 
 download_iosevka_base() {
@@ -397,9 +397,9 @@ download_iosevka_base() {
     find . -maxdepth 1 -name "*.ttc" -exec mv {} "$FONTS_DIR/Iosevka/" \; 2>/dev/null || true
 
     local downloaded=$(count_files "$FONTS_DIR/Iosevka")
-    print_success "Downloaded $downloaded TTC files"
+    log_success "Downloaded $downloaded TTC files"
   else
-    print_warning "Iosevka base download URL not found, skipping"
+    log_warning "Iosevka base download URL not found, skipping"
   fi
 }
 
@@ -427,7 +427,7 @@ download_comicmono() {
   curl -fsSL https://dtinth.github.io/comic-mono-font/ComicMono-Bold.ttf -o "$FONTS_DIR/ComicMono/ComicMono-Bold.ttf"
 
   local downloaded=$(count_files "$FONTS_DIR/ComicMono")
-  print_success "Downloaded $downloaded files"
+  log_success "Downloaded $downloaded files"
 }
 
 download_hack() {
@@ -462,9 +462,9 @@ download_intelone() {
     find ./ttf -type f -name "*.ttf" -exec mv {} "$FONTS_DIR/IntelOneMono/" \; 2>/dev/null || true
 
     local downloaded=$(count_files "$FONTS_DIR/IntelOneMono")
-    print_success "Downloaded $downloaded files"
+    log_success "Downloaded $downloaded files"
   else
-    print_warning "Intel One Mono download URL not found, skipping"
+    log_warning "Intel One Mono download URL not found, skipping"
   fi
 }
 
@@ -484,7 +484,7 @@ prune_font_family() {
   fi
 
   if [[ ! -d "$font_dir" ]]; then
-    print_warning "Font directory not found: $font_dir"
+    log_warning "Font directory not found: $font_dir"
     return 1
   fi
 
@@ -570,16 +570,16 @@ prune_font_family() {
   fi
 
   if [[ "$DRY_RUN" == "true" ]]; then
-    print_info "[DRY RUN] Would prune $pruned files (keeping $after_count)"
+    log_info "[DRY RUN] Would prune $pruned files (keeping $after_count)"
   else
-    print_success "Pruned $pruned files (kept $after_count essential variants)"
+    log_success "Pruned $pruned files (kept $after_count essential variants)"
   fi
 }
 
 # Prune all font families in FONTS_DIR
 prune_all_fonts() {
   if [[ ! -d "$FONTS_DIR" ]]; then
-    print_error "Fonts directory not found: $FONTS_DIR"
+    log_error "Fonts directory not found: $FONTS_DIR"
     return 1
   fi
 
@@ -592,7 +592,7 @@ prune_all_fonts() {
   done < <(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
   if [[ ${#families[@]} -eq 0 ]]; then
-    print_warning "No font families found in $FONTS_DIR"
+    log_warning "No font families found in $FONTS_DIR"
     return 0
   fi
 
@@ -615,7 +615,7 @@ standardize_font_family() {
   local family_name=$(basename "$font_dir")
 
   if [[ ! -d "$font_dir" ]]; then
-    print_warning "Font directory not found: $font_dir"
+    log_warning "Font directory not found: $font_dir"
     return 1
   fi
 
@@ -642,14 +642,14 @@ standardize_font_family() {
       local new_name="${base// /-}"
       mv "$file" "$dir/$new_name" 2>/dev/null || true
     done
-    print_success "Standardized $files_with_spaces filenames"
+    log_success "Standardized $files_with_spaces filenames"
   fi
 }
 
 # Standardize all font families in FONTS_DIR
 standardize_all_fonts() {
   if [[ ! -d "$FONTS_DIR" ]]; then
-    print_error "Fonts directory not found: $FONTS_DIR"
+    log_error "Fonts directory not found: $FONTS_DIR"
     return 1
   fi
 
@@ -662,7 +662,7 @@ standardize_all_fonts() {
   done < <(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
   if [[ ${#families[@]} -eq 0 ]]; then
-    print_warning "No font families found in $FONTS_DIR"
+    log_warning "No font families found in $FONTS_DIR"
     return 0
   fi
 
@@ -735,7 +735,7 @@ download_single_family() {
     spacemono)      download_spacemono ;;
     intelone)       download_intelone ;;
     *)
-      print_error "Unknown font family: $family"
+      log_error "Unknown font family: $family"
       echo "Run 'font-download --list' to see available families"
       exit 1
       ;;
@@ -782,12 +782,12 @@ main() {
   [[ "$STANDARDIZE_ONLY" == "true" ]] && phase_count=$((phase_count + 1))
 
   if [[ $phase_count -gt 1 ]]; then
-    print_error "Cannot combine --download-only, --prune-only, and --standardize-only"
+    log_error "Cannot combine --download-only, --prune-only, and --standardize-only"
     exit 1
   fi
 
   if [[ "$DRY_RUN" == "true" ]] && [[ "$PRUNE_ONLY" != "true" ]] && [[ "$STANDARDIZE_ONLY" != "true" ]]; then
-    print_error "--dry-run can only be used with --prune-only or --standardize-only"
+    log_error "--dry-run can only be used with --prune-only or --standardize-only"
     exit 1
   fi
 

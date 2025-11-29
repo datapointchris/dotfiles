@@ -61,14 +61,14 @@ cleanup() {
   if [[ "$KEEP_USER" == false ]]; then
     if dscl . -list /Users | grep -q "^${TEST_USER}$"; then
       echo ""
-      print_info "Cleaning up test user: $TEST_USER"
+      log_info "Cleaning up test user: $TEST_USER"
       sudo dscl . -delete "/Users/${TEST_USER}" 2>/dev/null || true
       sudo rm -rf "/Users/${TEST_USER}" 2>/dev/null || true
-      print_success "Test user removed"
+      log_success "Test user removed"
     fi
   else
     echo ""
-    print_info "Test user kept for debugging: $TEST_USER"
+    log_info "Test user kept for debugging: $TEST_USER"
     echo "  • Switch user: Command+Shift+Q, then select $TEST_USER"
     echo "  • Delete user: sudo dscl . -delete /Users/$TEST_USER && sudo rm -rf /Users/$TEST_USER"
   fi
@@ -80,9 +80,9 @@ trap cleanup EXIT
 # Overwrite log file (not append)
 : > "$LOG_FILE"
 
-print_info "Testing macOS installation with temporary user account"
-print_info "Test user: ${TEST_USER}"
-print_info "Log file: ${LOG_FILE}"
+log_info "Testing macOS installation with temporary user account"
+log_info "Test user: ${TEST_USER}"
+log_info "Log file: ${LOG_FILE}"
 echo ""
 
 # Check for sudo access early
@@ -122,7 +122,7 @@ STEP_START=$(date +%s)
   # Add to admin group (for sudo access during testing)
   sudo dscl . -append /Groups/admin GroupMembership "$TEST_USER"
 
-  print_success "Created test user: $TEST_USER"
+  log_success "Created test user: $TEST_USER"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -148,7 +148,7 @@ PLATFORM=macos
 NVIM_AI_ENABLED=false
 EOF"
 
-  print_success "Test environment ready"
+  log_success "Test environment ready"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

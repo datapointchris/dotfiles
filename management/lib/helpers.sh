@@ -60,7 +60,7 @@ log_timing() {
   local formatted_time
   formatted_time=$(format_time "$elapsed")
   echo ""
-  print_info "⏱  $step_name completed in $formatted_time"
+  log_info "⏱  $step_name completed in $formatted_time"
   echo ""
 }
 
@@ -172,12 +172,12 @@ cleanup_container() {
   if [[ "$keep_flag" == false ]]; then
     if docker_container_exists "$container"; then
       echo ""
-      print_info "Cleaning up container: $container"
+      log_info "Cleaning up container: $container"
       docker rm -f "$container" >/dev/null 2>&1 || true
     fi
   else
     echo ""
-    print_info "Container kept for debugging: $container"
+    log_info "Container kept for debugging: $container"
     echo "  • Shell into container: docker exec -it $container bash"
     echo "  • View logs: docker logs $container"
     echo "  • Remove container: docker rm -f $container"

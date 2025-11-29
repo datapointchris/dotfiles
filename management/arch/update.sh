@@ -16,17 +16,17 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_banner "Step 1 - System Packages" "cyan"
-echo "  Updating system packages..."
+log_info "Updating system packages..."
 sudo pacman -Syu --noconfirm
-echo "  ✓ System packages updated"
+log_success "System packages updated"
 echo ""
 
 print_banner "Step 2 - AUR Packages" "blue"
 if command -v yay >/dev/null 2>&1; then
-  echo "  Updating AUR packages..."
+  log_info "Updating AUR packages..."
   yay -Syu --noconfirm
-  echo "  ✓ AUR packages updated"
+  log_success "AUR packages updated"
 else
-  echo "  ⚠️  yay not installed - skipping AUR updates"
+  log_warning "yay not installed - skipping AUR updates"
 fi
 echo ""

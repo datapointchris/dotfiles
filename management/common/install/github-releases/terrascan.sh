@@ -2,7 +2,8 @@
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 

@@ -8,14 +8,17 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_banner "Installing uv"
 
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v uv >/dev/null 2>&1; then
-  print_success "uv already installed: $(uv --version)"
+  log_success "uv already installed: $(uv --version)"
 else
-  print_info "Installing uv Python package manager..."
+  log_info "Installing uv Python package manager..."
 
   # Set XDG_BIN_HOME to ensure clean install path and prevent shell modification
   XDG_BIN_HOME="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -23,5 +26,5 @@ else
   # Add to PATH for current session
   export PATH="$HOME/.local/bin:$PATH"
 
-  print_success "uv installed: $(uv --version)"
+  log_success "uv installed: $(uv --version)"
 fi

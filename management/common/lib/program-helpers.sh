@@ -58,17 +58,17 @@ download_file() {
   local output="$2"
   local tool_name="$3"
 
-  print_info "Downloading from:" >&2
+  log_info "Downloading from:" >&2
   echo "  $url" >&2
 
   if ! curl -# -L "$url" -o "$output"; then
-    print_error " Download failed" >&2
+    log_error " Download failed" >&2
     return 1
   fi
 
   # Verify download succeeded
   if [[ ! -f "$output" ]] || [[ ! -s "$output" ]]; then
-    print_error " Downloaded file is missing or empty" >&2
+    log_error " Downloaded file is missing or empty" >&2
     return 1
   fi
 
@@ -80,11 +80,11 @@ get_latest_github_release() {
   local repo="$1"
   local version
 
-  print_info "Fetching latest version..." >&2
+  log_info "Fetching latest version..." >&2
 
   if ! version=$(curl -sf "https://api.github.com/repos/${repo}/releases/latest" | jq -r .tag_name); then
-    print_error " Failed to fetch release information from GitHub" >&2
-    print_info "GitHub API may be blocked or rate limited" >&2
+    log_error " Failed to fetch release information from GitHub" >&2
+    log_info "GitHub API may be blocked or rate limited" >&2
     return 1
   fi
 

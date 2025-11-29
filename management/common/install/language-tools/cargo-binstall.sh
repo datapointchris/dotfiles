@@ -9,7 +9,10 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_banner "Installing cargo-binstall"
 
@@ -17,9 +20,9 @@ print_banner "Installing cargo-binstall"
 source "$HOME/.cargo/env"
 
 if command -v cargo-binstall >/dev/null 2>&1; then
-  print_success "cargo-binstall already installed"
+  log_success "cargo-binstall already installed"
 else
-  print_info "Installing cargo-binstall..."
+  log_info "Installing cargo-binstall..."
   cargo install cargo-binstall
-  print_success "cargo-binstall installed"
+  log_success "cargo-binstall installed"
 fi

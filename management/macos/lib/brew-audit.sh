@@ -4,24 +4,25 @@
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 
-echo "=== BREW AUDIT ==="
+log_info "=== BREW AUDIT ==="
 echo ""
-echo "Getting installed formulae..."
+log_info "Getting installed formulae..."
 INSTALLED=$(brew list --formula | sort)
 
-echo "Getting packages from packages.yml..."
+log_info "Getting packages from packages.yml..."
 EXPECTED=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=brew | sort)
 
 echo ""
-echo "=== INSTALLED BUT NOT IN packages.yml ==="
+log_info "=== INSTALLED BUT NOT IN packages.yml ==="
 comm -23 <(echo "$INSTALLED") <(echo "$EXPECTED")
 
 echo ""
-echo "=== IN packages.yml BUT NOT INSTALLED ==="
+log_info "=== IN packages.yml BUT NOT INSTALLED ==="
 comm -13 <(echo "$INSTALLED") <(echo "$EXPECTED")
 
 echo ""
-echo "=== SUMMARY ==="
-echo "Total installed: $(echo "$INSTALLED" | wc -l | tr -d ' ')"
-echo "Total expected: $(echo "$EXPECTED" | wc -l | tr -d ' ')"
+log_info "=== SUMMARY ==="
+log_info "Total installed: $(echo "$INSTALLED" | wc -l | tr -d ' ')"
+log_info "Total expected: $(echo "$EXPECTED" | wc -l | tr -d ' ')"

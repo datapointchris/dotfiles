@@ -16,7 +16,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_banner "Step 1 - System Packages" "cyan"
-echo "  Updating system packages..."
+log_info "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
-echo "  ✓ System packages updated"
+log_success "System packages updated"
 echo ""

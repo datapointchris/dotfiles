@@ -11,7 +11,8 @@ set -euo pipefail
 
 # Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 
 # Source GitHub release installer library

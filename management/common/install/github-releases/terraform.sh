@@ -9,14 +9,15 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 
 export TERM=${TERM:-xterm}
 
 # Check if packages.yml exists
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
-  print_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
+  log_error "packages.yml not found at $DOTFILES_DIR/management/packages.yml"
   exit 1
 fi
 
@@ -26,7 +27,7 @@ if ! command -v tenv >/dev/null 2>&1; then
   if bash "$DOTFILES_DIR/management/common/install/github-releases/install-tenv.sh"; then
     echo "  ✓ tenv installed"
   else
-    print_error "Failed to install tenv"
+    log_error "Failed to install tenv"
     exit 1
   fi
 else
@@ -40,7 +41,7 @@ print_section "Installing Terraform ${TERRAFORM_VERSION}" "cyan"
 
 # Check if tenv is available
 if ! command -v tenv >/dev/null 2>&1; then
-  print_error "tenv not found in PATH"
+  log_error "tenv not found in PATH"
   exit 1
 fi
 
@@ -49,7 +50,7 @@ echo "  Installing Terraform ${TERRAFORM_VERSION}..."
 if tenv tf install "${TERRAFORM_VERSION}"; then
   echo "    ✓ Terraform installed"
 else
-  print_error "Failed to install Terraform"
+  log_error "Failed to install Terraform"
   exit 1
 fi
 
@@ -57,4 +58,4 @@ fi
 echo "  Setting Terraform ${TERRAFORM_VERSION} as default..."
 tenv tf use "${TERRAFORM_VERSION}"
 
-print_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
+log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"

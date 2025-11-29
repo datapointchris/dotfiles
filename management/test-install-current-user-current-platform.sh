@@ -18,12 +18,12 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_header "Testing Dotfiles Installation on Current User" "blue"
-print_warning "⚠️  This will modify your current environment!"
-print_warning "⚠️  Not isolated - changes affect your real setup"
+log_warning "⚠️  This will modify your current environment!"
+log_warning "⚠️  Not isolated - changes affect your real setup"
 echo ""
-print_info "User: $(whoami)"
-print_info "Home: $HOME"
-print_info "Dotfiles: $DOTFILES_DIR"
+log_info "User: $(whoami)"
+log_info "Home: $HOME"
+log_info "Dotfiles: $DOTFILES_DIR"
 echo ""
 
 # ================================================================
@@ -34,11 +34,11 @@ echo "Running: bash install.sh"
 echo ""
 
 if bash "$DOTFILES_DIR/install.sh"; then
-  print_success "Installation completed"
+  log_success "Installation completed"
 else
   EXIT_CODE=$?
-  print_error "Installation failed with exit code: $EXIT_CODE"
-  print_info "Check output above for errors"
+  log_error "Installation failed with exit code: $EXIT_CODE"
+  log_info "Check output above for errors"
 fi
 echo ""
 
@@ -50,11 +50,11 @@ echo "Running: bash management/lib/verify-installed-packages.sh"
 echo ""
 
 if bash "$DOTFILES_DIR/management/lib/verify-installed-packages.sh"; then
-  print_success "Verification passed"
+  log_success "Verification passed"
 else
   EXIT_CODE=$?
-  print_warning "Verification failed with exit code: $EXIT_CODE"
-  print_info "Some tools may not be installed or configured correctly"
+  log_warning "Verification failed with exit code: $EXIT_CODE"
+  log_info "Some tools may not be installed or configured correctly"
 fi
 echo ""
 
@@ -72,7 +72,7 @@ echo ""
 # Summary
 # ================================================================
 print_header "Test Complete" "green"
-print_info "All steps executed on current user: $(whoami)"
+log_info "All steps executed on current user: $(whoami)"
 echo ""
 print_section "Next Steps" "cyan"
 echo "  • Review output above for any errors or warnings"

@@ -9,11 +9,14 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_banner "Installing Neovim Plugins"
 
-print_info "Installing Neovim plugins via Lazy.nvim..."
+log_info "Installing Neovim plugins via Lazy.nvim..."
 
 # Run nvim headless to install all plugins
 # --headless: run without UI
@@ -21,4 +24,4 @@ print_info "Installing Neovim plugins via Lazy.nvim..."
 # +qa: quit all windows
 nvim --headless "+Lazy! sync" +qa 2>&1 | grep -v "^$" || true
 
-print_success "Neovim plugins installed"
+log_success "Neovim plugins installed"
