@@ -57,6 +57,15 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 - DRY principles - avoid duplication and unnecessary abstractions
 - When debugging, check symlinks first after structural changes
 
+**Structured Logging** (⚠️ Use this for all management/ scripts):
+
+- Source `management/common/lib/structured-logging.sh` instead of `formatting.sh`
+- Dual-mode: Auto-detects terminal (visual) vs pipe (structured with `[LEVEL]` prefixes)
+- All `print_*` functions still work (backward compatible)
+- Use `log_error "message" "${BASH_SOURCE[0]}" "$LINENO"` for file:line references
+- Structured output is parseable by logsift for debugging
+- See `docs/architecture/structured-logging.md` for details
+
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 
 - `ZDOTDIR` is defined in `/etc/zshenv` (system-wide) pointing to `~/.config/zsh`

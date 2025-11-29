@@ -18,7 +18,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
 # Source platform detection to determine step numbering
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"

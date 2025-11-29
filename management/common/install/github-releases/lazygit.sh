@@ -10,8 +10,9 @@
 
 set -euo pipefail
 
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+# Source structured logging library
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
