@@ -90,9 +90,9 @@ install_common_phases() {
     local lang_tools="$common_install/language-tools"
     local plugins="$common_install/plugins"
 
-    # Phase 2 - Coding Fonts
+    # Phase 3 - Coding Fonts
     if [[ "${SKIP_FONTS:-}" != "1" ]]; then
-        print_header "Phase 2 - Coding Fonts" "cyan"
+        print_header "Phase 3 - Coding Fonts" "cyan"
 
         # WSL pre-check warning
         if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
@@ -108,9 +108,12 @@ install_common_phases() {
         echo ""
     fi
 
-    print_header "Phase 3 - GitHub Release Tools" "cyan"
+    print_header "Phase 4 - Go Toolchain" "cyan"
     bash "$lang_managers/go.sh"
     PATH="/usr/local/go/bin:$PATH" bash "$lang_tools/go-tools.sh"
+    echo ""
+
+    print_header "Phase 5 - GitHub Release Tools" "cyan"
     bash "$github_releases/fzf.sh"
     bash "$github_releases/neovim.sh"
     bash "$github_releases/lazygit.sh"
@@ -126,38 +129,38 @@ install_common_phases() {
     bash "$github_releases/terrascan.sh"
     echo ""
 
-    print_header "Phase 4 - Rust/Cargo Tools" "cyan"
+    print_header "Phase 6 - Rust/Cargo Tools" "cyan"
     bash "$lang_managers/rust.sh"
     bash "$lang_tools/cargo-binstall.sh"
     bash "$lang_tools/cargo-tools.sh"
     echo ""
 
-    print_header "Phase 5 - Language Package Managers" "cyan"
+    print_header "Phase 7 - Language Package Managers" "cyan"
     bash "$lang_managers/nvm.sh"
     bash "$lang_tools/npm-install-globals.sh"
     bash "$lang_managers/uv.sh"
     bash "$lang_tools/uv-tools.sh"
     echo ""
 
-    print_header "Phase 6 - Shell Configuration" "cyan"
+    print_header "Phase 8 - Shell Configuration" "cyan"
     bash "$plugins/shell-plugins.sh"
     echo ""
 
-    print_header "Phase 7 - Custom Go Applications" "cyan"
+    print_header "Phase 9 - Custom Go Applications" "cyan"
     cd "$DOTFILES_DIR/apps/common/sess" && PATH="/usr/local/go/bin:$PATH" task install
     cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="/usr/local/go/bin:$PATH" task install
     echo ""
 
-    print_header "Phase 8 - Symlinking Dotfiles" "cyan"
+    print_header "Phase 10 - Symlinking Dotfiles" "cyan"
     cd "$DOTFILES_DIR" && task symlinks:relink
     echo ""
 
-    print_header "Phase 9 - Theme System" "cyan"
+    print_header "Phase 11 - Theme System" "cyan"
     source "$HOME/.cargo/env" && tinty install
     source "$HOME/.cargo/env" && tinty sync
     echo ""
 
-    print_header "Phase 10 - Plugin Installation" "cyan"
+    print_header "Phase 12 - Plugin Installation" "cyan"
     bash "$plugins/tpm.sh"
     bash "$plugins/tmux-plugins.sh"
     bash "$plugins/nvim-plugins.sh"
@@ -175,11 +178,22 @@ install_macos() {
     echo "Starting macOS dotfiles installation..."
     echo ""
 
+    # Request sudo upfront and keep alive
+    print_section "Requesting sudo access for system configuration"
+    sudo -v
+    # Keep sudo alive in background (refreshes every 50s, sudo timeout is 5min)
+    while true; do sudo -v; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
+    echo ""
+
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
     bash "$macos_install/homebrew.sh"
     bash "$macos_install/system-packages.sh"
     bash "$macos_install/mas-apps.sh"
     bash "$macos_setup/xcode.sh"
+    echo ""
+
+    print_header "Phase 2 - System Preferences" "cyan"
+    sudo bash "$macos_setup/preferences.sh"
     echo ""
 
     install_common_phases
