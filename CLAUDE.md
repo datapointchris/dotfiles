@@ -2,30 +2,7 @@
 
 ## Critical Rules
 
-**Git Safety Protocol**:
-
-- NEVER rewrite git history in any way: no `git commit --amend`, `git rebase`, `git push --force`, `git reset --hard`, or any other history-rewriting commands unless explicitly requested
-- NEVER use `--no-verify` to bypass pre-commit hooks - fix issues instead
-- NEVER push to remote repositories unless explicitly requested
-- If a commit has a mistake, create a new fix commit - do NOT amend or rewrite
-- Always check `git status` before destructive operations
-- Pre-commit hooks exist for quality control - respect them
-
-**Git Commit Messages**:
-
-- NEVER add "Generated with Claude Code" or AI tool attribution
-- NEVER add "Co-Authored-By: Claude" lines
-- Keep commits clean and professional (prepare-commit-msg hook handles this)
-
-**Git Hygiene** (⚠️ CRITICAL - Perfect git hygiene is non-negotiable):
-
-- ALWAYS review what will be committed: `git status`, `git diff --staged` before every commit
-- NEVER use `git add -A` or `git add .` without carefully reviewing what's being staged
-- ONLY stage files relevant to the specific change - use explicit `git add <file>` for each file
-- Each commit must be atomic and focused on ONE logical change
-- If something goes wrong, STOP and figure out the correct solution - do not rush
-- Do not create commits that mix unrelated changes or that will need to be fixed later
-- Take time to ensure commits are correct the first time
+**Note**: Git Safety Protocol, Git Commit Messages, and Git Hygiene rules are defined in `~/.claude/CLAUDE.md` and apply universally to all projects.
 
 **File Naming and Organization**:
 
