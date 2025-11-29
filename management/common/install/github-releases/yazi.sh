@@ -8,17 +8,16 @@
 # No sudo required (user space)
 # ================================================================
 
-set -euo pipefail
-
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+# Source error handling (includes structured logging)
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/program-helpers.sh"
 
 # Read configuration from packages.yml
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=yazi --field=repo)
 
 print_banner "Installing Yazi"
@@ -44,18 +43,23 @@ case $PLATFORM in
     ;;
 esac
 
+# Setup cleanup for temp files
+YAZI_ZIP="/tmp/yazi.zip"
+YAZI_EXTRACT_DIR="/tmp/yazi-${YAZI_TARGET}"
+register_cleanup "rm -rf $YAZI_ZIP $YAZI_EXTRACT_DIR 2>/dev/null || true"
+
 # Install yazi binary if needed
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/yazi" ]; then
-  print_success "yazi already installed, skipping"
-  exit 0
+  log_success "yazi already installed, skipping"
+  exit_success
 fi
 
 if [ ! -f "$HOME/.local/bin/yazi" ]; then
   # Check for alternate installations
   if command -v yazi >/dev/null 2>&1; then
     ALTERNATE_LOCATION=$(command -v yazi)
-    print_warning " yazi found at $ALTERNATE_LOCATION"
-    print_info "Installing to ~/.local/bin/yazi anyway (PATH priority will use this one)"
+    log_warning "yazi found at $ALTERNATE_LOCATION"
+    log_info "Installing to ~/.local/bin/yazi anyway (PATH priority will use this one)"
   fi
 
   # Fetch latest version

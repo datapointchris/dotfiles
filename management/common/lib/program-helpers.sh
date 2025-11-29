@@ -4,6 +4,8 @@
 # ================================================================
 # Common functions used across all install-*.sh scripts
 
+set -euo pipefail
+
 # Get configuration from packages.yml
 get_package_config() {
   local tool_name="$1"

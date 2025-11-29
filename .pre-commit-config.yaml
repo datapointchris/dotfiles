@@ -90,6 +90,15 @@ repos:
         always_run: true
         stages: [pre-commit]
 
+      # Enforce bash error safety in management/ scripts
+      - id: check-bash-error-safety
+        name: Check bash scripts have error safety
+        entry: .claude/hooks/check-bash-error-safety
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]
+
       # Strip Claude Code branding from commit messages
       - id: prepare-commit-msg
         name: Strip AI branding from commits

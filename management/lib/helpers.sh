@@ -6,6 +6,8 @@
 # Source this file at the beginning of platform-specific scripts
 # ================================================================
 
+set -euo pipefail
+
 # Ensure this file is sourced, not executed
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "Error: This file should be sourced, not executed directly"

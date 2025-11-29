@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ================================================================
+# Pre-commit Hook: Check Bash Error Safety
+# ================================================================
+# Ensures all bash scripts in management/ have 'set -euo pipefail'
+# ================================================================
+
+set -euo pipefail
+
+# Only check shell scripts in management/ directory
+SCRIPTS=$(git diff --cached --name-only --diff-filter=ACM | grep '^management/.*\.sh$' || true)
+
+if [[ -z "$SCRIPTS" ]]; then
+  exit 0
+fi
+
+ERRORS=0
+
+for script in $SCRIPTS; do
+  if [[ ! -f "$script" ]]; then
+    continue
+  fi
+
+  # Check if script has explicit set -euo pipefail OR uses error-handling.sh
+  if ! grep -q "set -euo pipefail" "$script" && \
+     ! grep -q "enable_error_traps" "$script"; then
+    echo "ERROR: $script is missing 'set -euo pipefail' or enable_error_traps" >&2
+    ERRORS=1
+  fi
+done
+
+if [[ $ERRORS -eq 1 ]]; then
+  echo "" >&2
+  echo "All shell scripts in management/ must have 'set -euo pipefail' for error safety" >&2
+  echo "Add it near the top of the script after the shebang" >&2
+  exit 1
+fi
+
+exit 0

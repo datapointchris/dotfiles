@@ -1,5 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Audit installed brew packages vs packages.yml
+
+set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 

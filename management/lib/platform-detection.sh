@@ -6,6 +6,8 @@
 # Sources this file and call detect_platform to get: macos, wsl, arch, linux, unknown
 # ================================================================
 
+set -euo pipefail
+
 detect_platform() {
     local platform=""
 
