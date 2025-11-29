@@ -28,10 +28,10 @@ show_usage() {
   echo "  -h, --help               Show this help message"
   echo ""
   echo "Platform-Specific Scripts:"
-  echo "  WSL   → testing/test-wsl-install-docker.sh   (Docker with official WSL rootfs)"
-  echo "  Arch  → testing/test-arch-install-docker.sh  (Docker with official Arch image)"
-  echo "  macOS → testing/test-macos-install-user.sh   (Temporary user account)"
-  echo "  Current → testing/test-current-user.sh       (Current user, no isolation)"
+  echo "  WSL   → runners/wsl-docker.sh                      (Docker with official WSL rootfs)"
+  echo "  Arch  → runners/arch-docker.sh                     (Docker with official Arch image)"
+  echo "  macOS → runners/macos-temp-user.sh                 (Temporary user account)"
+  echo "  Current → runners/current-user-current-platform.sh (Current user, no isolation)"
   echo ""
   echo "Examples:"
   echo "  $(basename "$0")                      # Auto-detect platform and test"
@@ -40,7 +40,7 @@ show_usage() {
   echo "  $(basename "$0") --current-user       # Test on current user (for debugging)"
   echo ""
   echo "Note: You can also run platform scripts directly for more options:"
-  echo "  testing/test-wsl-install-docker.sh --version 24.04"
+  echo "  management/testing/runners/wsl-docker.sh --version 24.04"
   exit 0
 }
 
@@ -109,21 +109,21 @@ case "$PLATFORM" in
 esac
 
 # Route to platform-specific script
-TESTING_DIR="$SCRIPT_DIR/testing"
+TESTING_DIR="$SCRIPT_DIR"
 
 # If --current flag is set, use the current user test script
 if [[ "$CURRENT_USER" == true ]]; then
-  SCRIPT="$TESTING_DIR/test-current-user.sh"
+  SCRIPT="$TESTING_DIR/runners/current-user-current-platform.sh"
 else
   case "$PLATFORM" in
     wsl)
-      SCRIPT="$TESTING_DIR/test-wsl-install-docker.sh"
+      SCRIPT="$TESTING_DIR/runners/wsl-docker.sh"
       ;;
     arch)
-      SCRIPT="$TESTING_DIR/test-arch-install-docker.sh"
+      SCRIPT="$TESTING_DIR/runners/arch-docker.sh"
       ;;
     macos)
-      SCRIPT="$TESTING_DIR/test-macos-install-user.sh"
+      SCRIPT="$TESTING_DIR/runners/macos-temp-user.sh"
       ;;
   esac
 fi

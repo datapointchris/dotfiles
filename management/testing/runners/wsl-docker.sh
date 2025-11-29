@@ -11,7 +11,7 @@ set -euo pipefail
 # Source shared test helpers (includes formatting library)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-source "$SCRIPT_DIR/test-install-helpers.sh"
+source "$SCRIPT_DIR/../lib/helpers.sh"
 
 # Show usage
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -381,7 +381,7 @@ STEP_START=$(date +%s)
   docker exec "$CONTAINER_NAME" bash -c "
     ZSHDOTDIR=${CONTAINER_HOME}/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/management/verify-installation.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/management/testing/verify-installed-packages.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -398,11 +398,11 @@ STEP_TIMES+=("$STEP_ELAPSED")
 STEP_START=$(date +%s)
 {
   log_section "STEP 6/7: Detecting Alternate Installations"
-  echo "Running detect-alternate-installations.sh to check for duplicates..."
+  echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/management/detect-alternate-installations.sh"
+  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/management/testing/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
