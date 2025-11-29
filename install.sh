@@ -68,7 +68,7 @@ fi
 
 # Show force install status if enabled
 if [[ "$FORCE_INSTALL" == "true" ]]; then
-    print_warning "Force install mode enabled - will reinstall all tools"
+    log_warning "Force install mode enabled - will reinstall all tools"
     echo ""
 fi
 
@@ -97,7 +97,7 @@ install_common_phases() {
 
         # WSL pre-check warning
         if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-            echo "⚠️  WSL detected - fonts install to Windows (may require manual steps)"
+            log_warning "WSL detected - fonts install to Windows (may require manual steps)"
             echo ""
         fi
 
@@ -105,7 +105,7 @@ install_common_phases() {
         bash "$common_install/fonts/install.sh"
         echo ""
     else
-        echo "⏭️  Skipping font installation (SKIP_FONTS=1)"
+        log_info "Skipping font installation (SKIP_FONTS=1)"
         echo ""
     fi
 
@@ -176,7 +176,7 @@ install_macos() {
     local macos_setup="$DOTFILES_DIR/management/macos/setup"
 
     print_header "macOS Dotfiles Installation" "blue"
-    echo "Starting macOS dotfiles installation..."
+    log_info "Starting macOS dotfiles installation..."
     echo ""
 
     # Request sudo upfront and keep alive
@@ -211,12 +211,12 @@ install_wsl() {
 
     # Platform warning (consistent with detect_platform logic)
     if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
-        print_warning "Warning: This script is designed for WSL Ubuntu"
-        print_warning "Continuing anyway..."
+        log_warning "Warning: This script is designed for WSL Ubuntu"
+        log_warning "Continuing anyway..."
         echo ""
     fi
 
-    echo "Starting WSL Ubuntu dotfiles installation..."
+    log_info "Starting WSL Ubuntu dotfiles installation..."
     echo ""
 
     print_header "Phase 1 - System Packages (apt)" "cyan"
@@ -237,7 +237,7 @@ install_arch() {
     local arch_install="$DOTFILES_DIR/management/arch/install"
 
     print_header "Arch Linux Dotfiles Installation" "blue"
-    echo "Starting Arch Linux dotfiles installation..."
+    log_info "Starting Arch Linux dotfiles installation..."
     echo ""
 
     print_header "Phase 1 - System Packages (pacman)" "cyan"
@@ -265,19 +265,19 @@ configure_wsl_shell() {
     if ! grep -q "ZSHDOTDIR" /etc/zsh/zshenv 2>/dev/null; then
         # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
         echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv >/dev/null
-        print_success "ZSHDOTDIR configured in /etc/zsh/zshenv"
+        log_success "ZSHDOTDIR configured in /etc/zsh/zshenv"
     else
-        print_success "ZSHDOTDIR already configured"
+        log_success "ZSHDOTDIR already configured"
     fi
 
     # Change default shell to zsh
     if [[ "$SHELL" != *"zsh"* ]]; then
-        echo "  Changing default shell to zsh..."
+        log_info "Changing default shell to zsh..."
         sudo chsh -s "$(which zsh)" "$(whoami)"
-        print_success "Default shell changed to zsh"
-        print_warning "(will take effect after logout/login)"
+        log_success "Default shell changed to zsh"
+        log_warning "(will take effect after logout/login)"
     else
-        print_success "Default shell is already zsh"
+        log_success "Default shell is already zsh"
     fi
 }
 
@@ -288,19 +288,19 @@ configure_arch_shell() {
     if ! grep -q "ZSHDOTDIR" /etc/zsh/zshenv 2>/dev/null; then
         # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
         echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv >/dev/null
-        print_success "ZSHDOTDIR configured in /etc/zsh/zshenv"
+        log_success "ZSHDOTDIR configured in /etc/zsh/zshenv"
     else
-        print_success "ZSHDOTDIR already configured"
+        log_success "ZSHDOTDIR already configured"
     fi
 
     # Change default shell to zsh
     if [[ "$SHELL" != *"zsh"* ]]; then
-        echo "  Changing default shell to zsh..."
+        log_info "Changing default shell to zsh..."
         sudo chsh -s "$(which zsh)" "$(whoami)"
-        print_success "Default shell changed to zsh"
-        print_warning "(will take effect after logout/login)"
+        log_success "Default shell changed to zsh"
+        log_warning "(will take effect after logout/login)"
     else
-        print_success "Default shell is already zsh"
+        log_success "Default shell is already zsh"
     fi
 }
 
@@ -317,7 +317,7 @@ main() {
     fi
 
     print_header "Dotfiles Installation - $PLATFORM" "blue"
-    echo "Detected platform: $PLATFORM"
+    log_info "Detected platform: $PLATFORM"
     echo ""
 
     # Change to dotfiles directory

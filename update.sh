@@ -11,8 +11,9 @@ set -euo pipefail
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export DOTFILES_DIR
 
-# Source formatting library
+# Source formatting and logging libraries
 export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Source platform detection utility
@@ -37,8 +38,8 @@ case "$PLATFORM" in
         bash "$DOTFILES_DIR/management/arch/update.sh"
         ;;
     *)
-        print_error "Unknown platform: $PLATFORM"
-        echo "Supported platforms: macOS, WSL Ubuntu, Arch Linux"
+        log_error "Unknown platform: $PLATFORM"
+        log_info "Supported platforms: macOS, WSL Ubuntu, Arch Linux"
         exit 1
         ;;
 esac
@@ -50,5 +51,5 @@ END_TIME=$(date +%s)
 TOTAL_DURATION=$((END_TIME - START_TIME))
 
 print_title_success "Update Complete"
-echo "Total time: ${TOTAL_DURATION}s"
+log_info "Total time: ${TOTAL_DURATION}s"
 echo ""
