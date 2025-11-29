@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
 
 print_info "Installing tmux plugins..."
 

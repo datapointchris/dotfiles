@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Source formatting library (runs after installation, can use $HOME/dotfiles)
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
 
 # Counters
 TOTAL_CHECKS=0

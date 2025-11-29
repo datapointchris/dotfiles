@@ -12,7 +12,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
 print_banner "Step 1 - Homebrew" "cyan"
 echo "  Updating Homebrew..."

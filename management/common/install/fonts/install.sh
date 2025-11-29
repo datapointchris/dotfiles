@@ -4,12 +4,9 @@
 
 set -euo pipefail
 
-# Source formatting libraries
-if [[ -f "$HOME/shell/formatting.sh" ]]; then
-  source "$HOME/shell/formatting.sh"
-else
-  source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-fi
+# Source structured logging library
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
 # ================================================================
 # Configuration & Global Variables

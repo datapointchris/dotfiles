@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

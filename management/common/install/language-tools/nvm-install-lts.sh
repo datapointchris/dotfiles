@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
 
 # Source nvm
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"

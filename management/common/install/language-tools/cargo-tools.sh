@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+source "$HOME/dotfiles/management/common/lib/structured-logging.sh"
 
 # Ensure cargo is available
 source "$HOME/.cargo/env"

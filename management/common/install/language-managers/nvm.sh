@@ -13,7 +13,7 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
 # Source formatting library
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
 
 NVM_DIR="$HOME/.config/nvm"
 NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
