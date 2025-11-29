@@ -7,15 +7,16 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Dotfiles directory (script is in root of dotfiles repo)
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export DOTFILES_DIR
 
 # Source formatting library
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 
 # Source platform detection utility
-source "$SCRIPT_DIR/utils/platform-detection.sh"
+source "$DOTFILES_DIR/management/utils/platform-detection.sh"
 
 # Detect platform and run appropriate update script
 PLATFORM=$(detect_platform)
@@ -25,15 +26,15 @@ START_TIME=$(date +%s)
 case "$PLATFORM" in
     macos)
         print_title "macOS Update All" "cyan"
-        bash "$SCRIPT_DIR/macos/update.sh"
+        bash "$DOTFILES_DIR/management/macos/update.sh"
         ;;
     wsl)
         print_title "WSL Ubuntu Update All" "cyan"
-        bash "$SCRIPT_DIR/wsl/update.sh"
+        bash "$DOTFILES_DIR/management/wsl/update.sh"
         ;;
     arch)
         print_title "Arch Linux Update All" "cyan"
-        bash "$SCRIPT_DIR/arch/update.sh"
+        bash "$DOTFILES_DIR/management/arch/update.sh"
         ;;
     *)
         print_error "Unknown platform: $PLATFORM"
@@ -43,7 +44,7 @@ case "$PLATFORM" in
 esac
 
 # Run common updates after platform-specific updates
-bash "$SCRIPT_DIR/common/update.sh"
+bash "$DOTFILES_DIR/management/common/update.sh"
 
 END_TIME=$(date +%s)
 TOTAL_DURATION=$((END_TIME - START_TIME))

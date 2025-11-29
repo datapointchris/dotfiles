@@ -9,8 +9,8 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Use DOTFILES_DIR if set (by install.sh), otherwise default to ~/dotfiles
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 # Source formatting library
 export TERM=${TERM:-xterm}
@@ -31,7 +31,8 @@ fi
 echo "  Installing system packages from packages.yml..."
 PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=brew | tr '\n' ' ')
 echo "  Packages: $PACKAGES"
-if brew install "$PACKAGES"; then
+# shellcheck disable=SC2086
+if brew install $PACKAGES; then
   echo "  ✓ System packages installed"
 else
   print_warning "Some packages may have failed to install"

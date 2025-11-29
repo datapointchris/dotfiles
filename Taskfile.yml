@@ -161,4 +161,4 @@ tasks:
   update:
     desc: Update all packages (auto-detect platform)
     cmds:
-      - bash management/update.sh {{.CLI_ARGS}}
+      - bash update.sh {{.CLI_ARGS}}
