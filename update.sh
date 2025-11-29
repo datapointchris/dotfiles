@@ -13,7 +13,7 @@ export DOTFILES_DIR
 
 # Source formatting library
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Source platform detection utility
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"

@@ -222,7 +222,7 @@ Update the source statement:
 
 ```bash
 # Before
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # After
 source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
@@ -269,7 +269,7 @@ detect_log_mode() {
 
 In visual mode, the library:
 
-1. Sources `platforms/common/shell/formatting.sh`
+1. Sources `platforms/common/.local/shell/formatting.sh`
 2. Uses all existing formatting functions (colors, emojis, borders)
 3. Provides backward compatibility with `print_*` functions
 

@@ -91,7 +91,7 @@ tasks:
     cmds:
       - |
         bash <<'EOF'
-        source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+        source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
         print_title "Update All" "cyan"
         task apt:update
         # ... more commands
@@ -105,7 +105,7 @@ tasks:
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_title "WSL Ubuntu Update All" "cyan"
 print_banner "Step 1/6 - System Packages" "cyan"

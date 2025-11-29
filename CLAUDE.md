@@ -52,51 +52,11 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 **GitHub Release Installers** (⚠️ Use library for new installers):
 
 - Use `management/common/lib/github-release-installer.sh` for installing binaries from GitHub releases
-- **Medium abstraction** - 5 focused functions, inline complexity, no YAML parsing
-- Configuration stays inline in each script (explicit and traceable)
-- Library functions:
-  - `get_platform_arch()` - Platform detection with customizable capitalization
-  - `get_latest_version()` - Fetch latest from GitHub API
-  - `should_skip_install()` - Idempotency check (FORCE_INSTALL support)
-  - `install_from_tarball()` - Complete pattern: download → extract → install → verify
-  - `install_from_zip()` - Same for zip archives
-- Standard pattern:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
-enable_error_traps
-source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-
-BINARY_NAME="lazygit"
-REPO="jesseduffield/lazygit"
-TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
-
-print_banner "Installing LazyGit"
-
-if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
-fi
-
-VERSION=$(get_latest_version "$REPO")
-log_info "Latest version: $VERSION"
-
-PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
-
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit"
-
-print_banner_success "LazyGit installation complete"
-exit_success
-```
-
-- **Lines:** ~40-50 (was 90-120) - **6x faster to add new tools**
-- **Code savings:** 492 lines across 11 converted scripts (47% reduction)
-- See `docs/architecture/github-release-installer.md` for full documentation
-- Examples: `management/common/install/github-releases/lazygit.sh`, `duf.sh`, `glow.sh`
+- Medium abstraction: 5 focused functions (platform detection, version fetching, idempotency, install from tarball/zip)
+- Configuration stays inline in each script (explicit and traceable, no YAML parsing)
+- Pattern reduces installer scripts from ~90-120 lines to ~40-50 lines
+- Examples: `management/common/install/github-releases/{lazygit,duf,glow}.sh`
+- Full documentation: `docs/architecture/github-release-installer.md`
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 

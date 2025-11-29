@@ -33,7 +33,7 @@ tasks:
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "{{.DOTFILES_DIR}}/platforms/common/shell/formatting.sh"
+        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
         print_section "Creating symlinks" "cyan"
 
         # Detect platform
@@ -55,7 +55,7 @@ tasks:
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "{{.DOTFILES_DIR}}/platforms/common/shell/formatting.sh"
+        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
         print_section "Relinking symlinks" "cyan"
 
         # Detect platform

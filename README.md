@@ -96,7 +96,7 @@ Scripts in this repo use colors, unicode characters, and emojis to make output s
 
 If a specific project's logs will be ingested by a log aggregation system (Splunk, ELK, etc.), dial back the colors and special characters. But that's rare for personal projects.
 
-See `platforms/common/shell/formatting.sh` and `platforms/common/shell/colors.sh` for reusable libraries that are sourced system-wide and can be copied to other projects.
+See `platforms/common/.local/shell/formatting.sh` and `platforms/common/.local/shell/colors.sh` for reusable libraries that are sourced system-wide and can be copied to other projects.
 
 ## Package Management
 

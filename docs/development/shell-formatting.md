@@ -6,8 +6,8 @@ Portable shell script formatting and color utilities for consistent, readable sc
 
 **Two files for clean separation:**
 
-- `platforms/common/shell/colors.sh` - Color definitions and color functions
-- `platforms/common/shell/formatting.sh` - Formatting functions (sources colors.sh)
+- `platforms/common/.local/shell/colors.sh` - Color definitions and color functions
+- `platforms/common/.local/shell/formatting.sh` - Formatting functions (sources colors.sh)
 
 **Sourced system-wide**: `formatting.sh` is automatically loaded in your shell session via `.zshrc`, making all functions available in your terminal and any scripts.
 
@@ -41,8 +41,8 @@ print_success "Setup complete"
 The libraries are self-contained and portable. Copy both files to your project:
 
 ```bash
-cp platforms/common/shell/colors.sh ~/my-project/lib/
-cp platforms/common/shell/formatting.sh ~/my-project/lib/
+cp platforms/common/.local/shell/colors.sh ~/my-project/lib/
+cp platforms/common/.local/shell/formatting.sh ~/my-project/lib/
 ```
 
 Then source formatting.sh in your scripts (it will source colors.sh):
