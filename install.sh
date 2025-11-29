@@ -79,27 +79,8 @@ fi
 # PLATFORM DETECTION
 # ================================================================
 
-detect_platform() {
-    local platform=""
-
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        platform="macos"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-            platform="wsl"
-        elif [[ -f /etc/arch-release ]]; then
-            platform="arch"
-        elif [[ -f /etc/debian_version ]]; then
-            platform="wsl"  # Assume Ubuntu/Debian is WSL for our use case
-        else
-            platform="linux"
-        fi
-    else
-        platform="unknown"
-    fi
-
-    echo "$platform"
-}
+# Source platform detection utility
+source "$DOTFILES_DIR/management/utils/platform-detection.sh"
 
 # ================================================================
 # TASK INSTALLATION
