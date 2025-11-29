@@ -3,7 +3,6 @@
 # Install Yazi from GitHub Releases
 # ================================================================
 # Downloads and installs Yazi file manager with flavors and plugins
-# Configuration: Inline (see variables below)
 # Installation location: ~/.local/bin/yazi, ~/.local/bin/ya
 # No sudo required (user space)
 # ================================================================
@@ -24,66 +23,65 @@ source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
 BINARY_NAME="yazi"
 REPO="sxyazi/yazi"
-
-# Get latest version
-LATEST_VERSION=$(get_latest_version "$REPO")
-
-# Detect platform and arch for download URL
-# Yazi uses format: yazi-{arch}-{platform}.zip
-# Examples: yazi-x86_64-apple-darwin.zip, yazi-aarch64-apple-darwin.zip, yazi-x86_64-unknown-linux-gnu.zip
-ARCH=$(uname -m)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  YAZI_TARGET="${ARCH}-apple-darwin"
-else
-  YAZI_TARGET="${ARCH}-unknown-linux-gnu"
-fi
-
-# Build download URL
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/yazi-${YAZI_TARGET}.zip"
-
-# Installation paths
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
-TEMP_ZIP="/tmp/${BINARY_NAME}.zip"
-EXTRACT_DIR="/tmp/yazi-${YAZI_TARGET}"
-
-# ================================================================
-# Installation
-# ================================================================
 
 print_banner "Installing Yazi"
 
-# Check existing installation (simple check, no version comparison)
-if check_existing_installation "$TARGET_BIN" "$BINARY_NAME"; then
-  log_info "Yazi already installed, proceeding to themes/plugins..."
+# Check if already installed
+if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
+  log_info "Proceeding to themes/plugins update..."
 else
-  log_info "Target version: $LATEST_VERSION"
+  # Get latest version
+  VERSION=$(get_latest_version "$REPO")
+  log_info "Latest version: $VERSION"
 
-  # Check for alternate installations
-  check_alternate_installation "$TARGET_BIN" "$BINARY_NAME"
+  # Detect platform target
+  # Yazi uses format: yazi-{arch}-{platform}.zip
+  ARCH=$(uname -m)
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    YAZI_TARGET="${ARCH}-apple-darwin"
+  else
+    YAZI_TARGET="${ARCH}-unknown-linux-gnu"
+  fi
 
-  # Download
-  download_release "$DOWNLOAD_URL" "$TEMP_ZIP" "$BINARY_NAME"
+  # Build download URL
+  DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/yazi-${YAZI_TARGET}.zip"
 
-  # Extract (zip file)
-  extract_zip "$TEMP_ZIP" "/tmp"
+  # Download and extract
+  TEMP_ZIP="/tmp/${BINARY_NAME}.zip"
+  EXTRACT_DIR="/tmp/yazi-extract"
 
-  # Install binaries (yazi and ya)
-  log_info "Installing binaries to ~/.local/bin..."
+  log_info "Downloading yazi..."
+  if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_ZIP"; then
+    log_fatal "Failed to download from $DOWNLOAD_URL" "${BASH_SOURCE[0]}" "$LINENO"
+  fi
+  register_cleanup "rm -f '$TEMP_ZIP' 2>/dev/null || true"
+  register_cleanup "rm -rf '$EXTRACT_DIR' 2>/dev/null || true"
+
+  log_info "Extracting..."
+  mkdir -p "$EXTRACT_DIR"
+  unzip -q "$TEMP_ZIP" -d "$EXTRACT_DIR"
+
+  # Install both yazi and ya binaries
+  log_info "Installing to ~/.local/bin..."
   mkdir -p "$HOME/.local/bin"
-  mv "${EXTRACT_DIR}/yazi" "$TARGET_BIN"
-  mv "${EXTRACT_DIR}/ya" "$HOME/.local/bin/ya"
+  mv "$EXTRACT_DIR/yazi-${YAZI_TARGET}/yazi" "$TARGET_BIN"
+  mv "$EXTRACT_DIR/yazi-${YAZI_TARGET}/ya" "$HOME/.local/bin/ya"
   chmod +x "$TARGET_BIN" "$HOME/.local/bin/ya"
 
   # Verify
-  verify_installation "$BINARY_NAME" "yazi --version"
-  log_success "ya installed successfully"
+  if command -v yazi >/dev/null 2>&1; then
+    log_success "yazi and ya installed successfully"
+  else
+    log_fatal "yazi not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
+  fi
 fi
 
 # ================================================================
 # Install Themes and Plugins
 # ================================================================
 
-# Configure git to not prompt for credentials (prevents hanging in non-interactive environments)
+# Configure git to not prompt for credentials (prevents hanging)
 export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
 export GIT_CONFIG_GLOBAL=/dev/null

@@ -3,81 +3,58 @@
 # Install tenv from GitHub Releases
 # ================================================================
 # Downloads and installs tenv (Terraform/OpenTofu version manager)
-# Configuration read from: management/packages.yml
-# Installation location: ~/.local/bin/tenv
+# Installation location: ~/.local/bin/tenv + proxy binaries
 # No sudo required (user space)
 # ================================================================
 
 set -euo pipefail
 
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-
-# Source helper functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/program-helpers.sh"
-
-# Read configuration from packages.yml
+# Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=tenv --field=repo)
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
 
-# Detect platform and architecture
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  PLATFORM="Darwin"
-  ARCH=$(uname -m)
-  # tenv uses x86_64 and arm64 directly (not amd64)
-else
-  PLATFORM="Linux"
-  ARCH=$(uname -m)
-  if [[ "$ARCH" == "x86_64" ]]; then
-    ARCH="x86_64"
-  elif [[ "$ARCH" == "aarch64" ]]; then
-    ARCH="arm64"
-  fi
-fi
+# Source GitHub release installer library
+source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
-TENV_BIN="$HOME/.local/bin/tenv"
+BINARY_NAME="tenv"
+REPO="tofuutils/tenv"
+TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 print_banner "Installing tenv"
 
-# Check if tenv is already installed (skip check if FORCE_INSTALL=true)
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -f "$TENV_BIN" ]] && command -v tenv >/dev/null 2>&1; then
-  CURRENT_VERSION=$(tenv --version 2>&1 | head -n1 || echo "unknown")
-  print_success "Current version: $CURRENT_VERSION, skipping"
-  exit 0
+if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
+  exit_success
 fi
 
-# Get latest version from GitHub API
-LATEST_VERSION=$(get_latest_github_release "$REPO")
-print_info "Target version: $LATEST_VERSION"
+VERSION=$(get_latest_version "$REPO")
+log_info "Latest version: $VERSION"
 
-# Check for alternate installations
-if [[ ! -f "$TENV_BIN" ]] && command -v tenv >/dev/null 2>&1; then
-  ALTERNATE_LOCATION=$(command -v tenv)
-  print_warning " tenv found at $ALTERNATE_LOCATION"
-  print_info "Installing to $TENV_BIN anyway (PATH priority will use this one)"
+# Detect platform (tenv uses x86_64 and arm64 directly)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  PLATFORM="Darwin"
+else
+  PLATFORM="Linux"
 fi
+ARCH=$(uname -m)
 
-# Download URL
-TENV_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/tenv_${LATEST_VERSION}_${PLATFORM}_${ARCH}.tar.gz"
-TENV_TARBALL="/tmp/tenv.tar.gz"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
 
-# Download
-if ! download_file "$TENV_URL" "$TENV_TARBALL" "tenv"; then
-  print_manual_install "tenv" "$TENV_URL" "$LATEST_VERSION" "tenv_${LATEST_VERSION}_${PLATFORM}_${ARCH}.tar.gz" \
-    "tar -xzf ~/Downloads/tenv_${LATEST_VERSION}_${PLATFORM}_${ARCH}.tar.gz -C /tmp && mv /tmp/tenv ~/.local/bin/ && chmod +x ~/.local/bin/tenv"
-  exit 1
+# Download and extract
+TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
+log_info "Downloading tenv..."
+if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
+  log_fatal "Failed to download from $DOWNLOAD_URL" "${BASH_SOURCE[0]}" "$LINENO"
 fi
+register_cleanup "rm -f '$TEMP_TARBALL' 2>/dev/null || true"
 
-# Extract
-print_info "Extracting..."
-tar -xzf "$TENV_TARBALL" -C /tmp
+log_info "Extracting..."
+tar -xzf "$TEMP_TARBALL" -C /tmp
 
-# Install
-print_info "Installing to ~/.local/bin..."
+# Install all binaries (tenv + proxy binaries)
+log_info "Installing to ~/.local/bin..."
 mkdir -p "$HOME/.local/bin"
 
-# Move all binaries from tarball (tenv + proxy binaries)
 for binary in tenv terraform tofu terragrunt terramate atmos tf; do
   if [ -f "/tmp/$binary" ]; then
     mv "/tmp/$binary" "$HOME/.local/bin/"
@@ -85,14 +62,12 @@ for binary in tenv terraform tofu terragrunt terramate atmos tf; do
   fi
 done
 
-# Cleanup
-rm -f "$TENV_TARBALL"
-
-# Verify installation
+# Verify
 if command -v tenv >/dev/null 2>&1; then
-  INSTALLED_VERSION=$(tenv --version 2>&1 | head -n1 || echo "unknown")
-  print_success "Installed: $INSTALLED_VERSION"
+  log_success "tenv and proxy binaries installed successfully"
 else
-  print_error "Installation failed - tenv command not found in PATH"
-  exit 1
+  log_fatal "tenv not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
 fi
+
+print_banner_success "tenv installation complete"
+exit_success
