@@ -21,7 +21,9 @@ CREDENTIALS_FILE="$HOME/.aws/credentials"
 function list_aws_profiles() {
     COUNT=0
     AWS_PROFILES=$(grep '\[*\]' "$CREDENTIALS_FILE" | cut -d "[" -f2 | cut -d "]" -f1)
-    echo -e "$(print_blue "Choose your AWS profile:")\n"
+
+    print_section "AWS Profile Selection" "cyan"
+    echo ""
     echo -e "0) $(print_yellow "Clear") current profile"
     echo "$AWS_PROFILES" | while read -r line; do
         ((COUNT++))

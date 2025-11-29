@@ -12,9 +12,10 @@
 
 set -euo pipefail
 
-# Source formatting library
-SHELLS="${SHELLS:-$HOME/shell}"
-source "$SHELLS/formatting.sh"
+# Source shell libraries
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/logging.sh"
+source "$SHELL_DIR/formatting.sh"
 
 # Your favorite Base16 themes (matching neovim and ghostty favorites)
 FAVORITES=(
@@ -74,16 +75,16 @@ apply_theme() {
   local theme="$1"
 
   if [[ -z "$theme" ]]; then
-    echo "$(print_red "Error:") Theme name required"
+    log_error "Theme name required"
     echo "Usage: theme-sync apply <theme-name>"
     exit 1
   fi
 
-  echo "$(print_blue "Applying theme:") $theme"
+  log_info "Applying theme: $theme"
 
   # Apply theme via tinty
   if ! tinty apply "$theme" 2>&1; then
-    echo "$(print_red "Error:") Failed to apply theme"
+    log_error "Failed to apply theme"
     echo "Check if theme exists with: theme-sync list"
     exit 1
   fi
@@ -91,16 +92,16 @@ apply_theme() {
   # Reload tmux if running
   if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
     tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null || true
-    echo "$(print_green "✓") Tmux reloaded"
+    log_success "Tmux reloaded"
   fi
 
   # Rebuild bat cache
   if command -v bat &> /dev/null; then
     bat cache --build &>/dev/null || true
-    echo "$(print_green "✓") Bat cache rebuilt"
+    log_success "Bat cache rebuilt"
   fi
 
-  echo "$(print_green "✓") Theme applied: $theme"
+  log_success "Theme applied: $theme"
 }
 
 show_current() {

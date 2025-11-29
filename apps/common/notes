@@ -50,14 +50,14 @@ show_help() {
 
 # Check if zk is installed
 if ! command -v zk &>/dev/null; then
-  echo "$(print_yellow "Error:") zk is not installed"
+  print_error "zk is not installed"
   echo "Install with: brew install zk"
   exit 1
 fi
 
 # Check if notes directory exists
 if [[ ! -d "$NOTES_DIR" ]]; then
-  echo "$(print_yellow "Error:") Notes directory not found: $NOTES_DIR"
+  print_error "Notes directory not found: $NOTES_DIR"
   echo "Run: zk init $NOTES_DIR"
   exit 1
 fi
@@ -70,7 +70,7 @@ discover_sections() {
 # Search across all notes (full-text)
 cmd_search() {
   if ! command -v rg &>/dev/null; then
-    echo "$(print_yellow "Error:") ripgrep is required for full-text search"
+    print_error "ripgrep is required for full-text search"
     echo "Install with: brew install ripgrep"
     exit 1
   fi
@@ -104,13 +104,13 @@ cmd_new() {
   mapfile -t sections < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
-    echo "$(print_yellow "No sections found in:") $NOTES_DIR"
+    print_warning "No sections found in: $NOTES_DIR"
     echo "Create a directory like: mkdir $NOTES_DIR/journal"
     exit 1
   fi
 
   if ! command -v gum &>/dev/null; then
-    echo "$(print_yellow "Error:") gum is required for interactive selection"
+    print_error "gum is required for interactive selection"
     echo "Install with: brew install gum"
     exit 1
   fi
@@ -180,12 +180,12 @@ cmd_browse() {
   mapfile -t sections < <(discover_sections)
 
   if [[ ${#sections[@]} -eq 0 ]]; then
-    echo "$(print_yellow "No sections found in:") $NOTES_DIR"
+    print_warning "No sections found in: $NOTES_DIR"
     exit 1
   fi
 
   if ! command -v gum &>/dev/null; then
-    echo "$(print_yellow "Error:") gum is required for interactive selection"
+    print_error "gum is required for interactive selection"
     echo "Install with: brew install gum"
     exit 1
   fi

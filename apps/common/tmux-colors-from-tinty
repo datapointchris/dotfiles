@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+# Source logging library
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/logging.sh"
+
 # Get current scheme name
 scheme_name=$(tinty current)
 
@@ -17,8 +21,7 @@ scheme_name=$(tinty current)
 scheme_file="$HOME/.local/share/tinted-theming/tinty/repos/schemes/base16/${scheme_name#base16-}.yaml"
 
 if [[ ! -f "$scheme_file" ]]; then
-  echo "# Warning: Scheme file not found: $scheme_file" >&2
-  exit 1
+  log_fatal "Scheme file not found: $scheme_file" "${BASH_SOURCE[0]}" "$LINENO"
 fi
 
 # Parse colors from YAML using grep and sed
