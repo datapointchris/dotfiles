@@ -11,15 +11,6 @@ tasks:
       - task --list
 
   # ================================================================
-  # INSTALLATION
-  # ================================================================
-
-  install:
-    desc: Install dotfiles (delegates to install.sh)
-    cmds:
-      - bash install.sh {{.CLI_ARGS}}
-
-  # ================================================================
   # FONT INSTALLATION
   # ================================================================
 
@@ -153,12 +144,3 @@ tasks:
     desc: Deploy documentation to GitHub Pages
     cmds:
       - cd docs && mkdocs gh-deploy --force
-
-  # ================================================================
-  # UPDATE COMMANDS
-  # ================================================================
-
-  update:
-    desc: Update all packages (auto-detect platform)
-    cmds:
-      - bash update.sh {{.CLI_ARGS}}

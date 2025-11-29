@@ -636,6 +636,10 @@ uv_tools:
 # These are Go CLI tools installed globally
 
 go_tools:
+  - name: task
+    package: github.com/go-task/task/v3/cmd/task
+    description: Task runner / build tool (Taskfile.yml)
+
   - name: cheat
     package: github.com/cheat/cheat/cmd/cheat
     description: Interactive cheatsheet CLI

@@ -2,17 +2,13 @@
 # ================================================================
 # Dotfiles Installation Script
 # ================================================================
-# Unified installation script that replaces:
-# - Taskfile.yml install tasks
-# - management/wsl-setup.sh
-# - management/macos-setup.sh
-# - management/arch-setup.sh
+# Unified installation script for all platforms
 #
 # This script handles:
-# - Platform detection
-# - Task installation
-# - Platform-specific and common installation phases
-# - Post-install configuration
+# - Platform detection (macOS, WSL Ubuntu, Arch Linux)
+# - Platform-specific package installation
+# - Common tool installation (fonts, language runtimes, CLI tools)
+# - Post-install configuration (shell setup, symlinks)
 # ================================================================
 
 set -euo pipefail
@@ -81,29 +77,6 @@ fi
 
 # Source platform detection utility
 source "$DOTFILES_DIR/management/utils/platform-detection.sh"
-
-# ================================================================
-# TASK INSTALLATION
-# ================================================================
-
-install_task() {
-    print_section "Installing Task" "cyan"
-
-    if command -v task &> /dev/null; then
-        print_success "Task already installed: $(task --version)"
-        return 0
-    fi
-
-    echo "  Installing Taskfile..."
-
-    # Install via official install script
-    sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b "$HOME/.local/bin"
-
-    # Add to PATH for this session
-    export PATH="$HOME/.local/bin:$PATH"
-
-    print_success "Task installed to ~/.local/bin"
-}
 
 # ================================================================
 # COMMON INSTALLATION PHASES
@@ -330,10 +303,6 @@ main() {
 
     print_header "Dotfiles Installation - $PLATFORM" "blue"
     echo "Detected platform: $PLATFORM"
-    echo ""
-
-    # Install Task (needed for some operations)
-    install_task
     echo ""
 
     # Change to dotfiles directory

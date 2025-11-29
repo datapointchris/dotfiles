@@ -8,8 +8,8 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+# Use DOTFILES_DIR if set (by install.sh), otherwise default to ~/dotfiles
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 # Source formatting library
 export TERM=${TERM:-xterm}
