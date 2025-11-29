@@ -263,7 +263,7 @@ Flow:
 ```bash
 # After task symlinks:link
 ls ~/.local/bin/
-# theme-sync notes menu bashbox (and platform-specific: ghostty-theme, aws-profiles)
+# theme-sync notes menu printcolors (and platform-specific: ghostty-theme, aws-profiles)
 ```
 
 **Go binaries** are in `~/go/bin/` (built and installed via Task):

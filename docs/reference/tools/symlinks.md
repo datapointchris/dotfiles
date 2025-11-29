@@ -96,7 +96,7 @@ The symlinks manager has **special handling for the `apps/` directory**:
 
 - Symlinked to `~/.local/bin/` automatically
 - Used for bash/python/shell scripts
-- Examples: `menu`, `notes`, `bashbox`
+- Examples: `menu`, `notes`, `theme-sync`
 
 **Go binaries** (`apps/common/sess/`, `apps/common/toolbox/`):
 

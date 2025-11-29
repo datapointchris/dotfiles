@@ -40,7 +40,7 @@ Confusion between Go apps (directories with source) vs shell script apps (execut
 - Handled by `link_apps()` in symlinks manager
 - `link_apps()` skips directories, only symlinks files
 
-**Examples**: `menu`, `notes`, `theme-sync`, `bashbox`, `printcolors`
+**Examples**: `menu`, `notes`, `theme-sync`, `printcolors`
 
 **Installation** (in symlinks manager `cli.py`):
 
