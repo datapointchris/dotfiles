@@ -28,8 +28,10 @@ detect_log_mode() {
     return
   fi
 
-  # Auto-detect: stdout to terminal = visual, else structured
-  if [[ -t 1 ]]; then
+  # Auto-detect: stderr to terminal = visual, else structured
+  # Note: Check stderr (fd 2) not stdout (fd 1) because this function
+  # is called via command substitution which redirects stdout
+  if [[ -t 2 ]]; then
     echo "visual"
   else
     echo "structured"
