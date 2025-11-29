@@ -66,6 +66,46 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 - Structured output is parseable by logsift for debugging
 - See `docs/architecture/structured-logging.md` for details
 
+**GitHub Release Installers** (⚠️ Use library for new installers):
+
+- Use `management/common/lib/github-release-installer.sh` for installing binaries from GitHub releases
+- Function-based helpers, NOT complex YAML parsing - configuration stays inline in each script
+- Standard pattern: Source libraries → Configure → Install → Verify
+- Handles platform detection, version checking, archive extraction, cleanup automatically
+- Example structure:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Source libraries
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
+source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+
+# Configuration (inline, explicit)
+BINARY_NAME="app"
+REPO="owner/repo"
+VERSION="1.2.3"  # OR: $(get_latest_version "$REPO")
+PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v${VERSION}/app_${VERSION}_${PLATFORM_ARCH}.tar.gz"
+
+# Installation
+print_banner "Installing App"
+VERSION_CMD="app --version | grep -oE '[0-9.]+'"
+check_existing_installation "$TARGET_BIN" "$BINARY_NAME" "$VERSION_CMD" "$VERSION" && exit_success
+download_release "$DOWNLOAD_URL" "/tmp/app.tar.gz" "$BINARY_NAME"
+extract_tarball "/tmp/app.tar.gz" "/tmp" "$BINARY_NAME"
+install_binary "/tmp/$BINARY_NAME" "$HOME/.local/bin/$BINARY_NAME"
+verify_installation "$BINARY_NAME" "$VERSION_CMD"
+print_banner_success "App installation complete"
+exit_success
+```
+
+- See `docs/architecture/github-release-installer.md` for full documentation
+- Examples: `management/common/install/github-releases/lazygit.sh`, `yazi.sh`
+
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 
 - `ZDOTDIR` is defined in `/etc/zshenv` (system-wide) pointing to `~/.config/zsh`

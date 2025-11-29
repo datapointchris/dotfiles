@@ -21,6 +21,11 @@ for script in $SCRIPTS; do
     continue
   fi
 
+  # Skip library files (in lib/ directories) - they're sourced, not executed
+  if [[ "$script" == *"/lib/"* ]]; then
+    continue
+  fi
+
   # Check if script has explicit set -euo pipefail OR uses error-handling.sh
   if ! grep -q "set -euo pipefail" "$script" && \
      ! grep -q "enable_error_traps" "$script"; then

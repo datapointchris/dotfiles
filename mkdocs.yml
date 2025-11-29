@@ -148,6 +148,7 @@ nav:
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Tool Composition: architecture/tool-composition.md
       - Structured Logging: architecture/structured-logging.md
+      - GitHub Release Installer: architecture/github-release-installer.md
   - Configuration:
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
       - Docker Setup: configuration/docker.md

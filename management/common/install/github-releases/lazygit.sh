@@ -3,93 +3,70 @@
 # Install LazyGit from GitHub Releases
 # ================================================================
 # Downloads and installs stable LazyGit release
-# Configuration read from: management/packages.yml
+# Configuration: Inline (see variables below)
 # Installation location: ~/.local/bin/lazygit
 # No sudo required (user space)
 # ================================================================
 
 set -euo pipefail
 
-# Source structured logging library
+# Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
 
-# Source helper functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/program-helpers.sh"
+# Source GitHub release installer library
+source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
-# Read configuration from packages.yml
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-LAZYGIT_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=lazygit --field=version)
-REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=lazygit --field=repo)
+# ================================================================
+# Configuration
+# ================================================================
 
-# Detect platform and architecture
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  ARCH=$(uname -m)
-  if [[ "$ARCH" == "x86_64" ]]; then
-    PLATFORM_ARCH="Darwin_x86_64"
-  else
-    PLATFORM_ARCH="Darwin_arm64"
-  fi
-else
-  PLATFORM_ARCH="Linux_x86_64"
-fi
+BINARY_NAME="lazygit"
+REPO="jesseduffield/lazygit"
+VERSION="0.40.2"  # Pinned version
 
-LAZYGIT_BIN="$HOME/.local/bin/lazygit"
+# Detect platform_arch for download URL
+# LazyGit uses format: lazygit_{version}_{platform}_{arch}.tar.gz
+# Examples: lazygit_0.40.2_Darwin_x86_64.tar.gz, lazygit_0.40.2_Linux_x86_64.tar.gz
+PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
+
+# Build download URL
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v${VERSION}/lazygit_${VERSION}_${PLATFORM_ARCH}.tar.gz"
+
+# Installation paths
+TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
+TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
+
+# ================================================================
+# Installation
+# ================================================================
 
 print_banner "Installing LazyGit"
 
-# Check if LazyGit is already installed (skip check if FORCE_INSTALL=true)
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -f "$LAZYGIT_BIN" ]] && command -v lazygit >/dev/null 2>&1; then
-  CURRENT_VERSION=$(lazygit --version 2>&1 | head -n1 || echo "unknown")
-  print_info "Current version: $CURRENT_VERSION"
-
-  # Check if current version matches desired version
-  if echo "$CURRENT_VERSION" | grep -q "$LAZYGIT_VERSION"; then
-    print_success " Version $LAZYGIT_VERSION already installed, skipping"
-    exit 0
-  fi
+# Check existing installation
+# Extract just the version number (e.g., "0.56.0" from "version=0.56.0")
+VERSION_CMD="lazygit --version 2>&1 | grep -oE 'version=[0-9.]+' | cut -d= -f2 | head -n1"
+if check_existing_installation "$TARGET_BIN" "$BINARY_NAME" "$VERSION_CMD" "$VERSION"; then
+  exit_success
 fi
 
-print_info "Target version: v$LAZYGIT_VERSION"
+log_info "Target version: v$VERSION"
 
 # Check for alternate installations
-if [[ ! -f "$LAZYGIT_BIN" ]] && command -v lazygit >/dev/null 2>&1; then
-  ALTERNATE_LOCATION=$(command -v lazygit)
-  print_warning " lazygit found at $ALTERNATE_LOCATION"
-  print_info "Installing to $LAZYGIT_BIN anyway (PATH priority will use this one)"
-fi
-
-# Download URL
-LAZYGIT_URL="https://github.com/${REPO}/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_${PLATFORM_ARCH}.tar.gz"
-LAZYGIT_TARBALL="/tmp/lazygit.tar.gz"
+check_alternate_installation "$TARGET_BIN" "$BINARY_NAME"
 
 # Download
-if ! download_file "$LAZYGIT_URL" "$LAZYGIT_TARBALL" "lazygit"; then
-  print_manual_install "lazygit" "$LAZYGIT_URL" "v$LAZYGIT_VERSION" "lazygit_${LAZYGIT_VERSION}_${PLATFORM_ARCH}.tar.gz" \
-    "tar -xzf ~/Downloads/lazygit_${LAZYGIT_VERSION}_${PLATFORM_ARCH}.tar.gz -C /tmp && mv /tmp/lazygit ~/.local/bin/ && chmod +x ~/.local/bin/lazygit"
-  exit 1
-fi
+download_release "$DOWNLOAD_URL" "$TEMP_TARBALL" "$BINARY_NAME"
 
-# Extract
-print_info "Extracting..."
-tar -xzf "$LAZYGIT_TARBALL" -C /tmp lazygit
+# Extract (binary is at root of tarball)
+extract_tarball "$TEMP_TARBALL" "/tmp" "$BINARY_NAME"
 
 # Install
-print_info "Installing to ~/.local/bin..."
-mkdir -p "$HOME/.local/bin"
-mv /tmp/lazygit "$LAZYGIT_BIN"
-chmod +x "$LAZYGIT_BIN"
-rm "$LAZYGIT_TARBALL"
+install_binary "/tmp/$BINARY_NAME" "$TARGET_BIN"
 
 # Verify
-if command -v lazygit >/dev/null 2>&1; then
-  INSTALLED_VERSION=$(lazygit --version | head -n1)
-  print_success " $INSTALLED_VERSION"
-else
-  print_error " Installation verification failed"
-  print_info "Make sure ~/.local/bin is in your PATH"
-  exit 1
-fi
+verify_installation "$BINARY_NAME" "$VERSION_CMD"
 
 print_banner_success "LazyGit installation complete"
+exit_success

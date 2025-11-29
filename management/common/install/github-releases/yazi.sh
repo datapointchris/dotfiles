@@ -2,100 +2,86 @@
 # ================================================================
 # Install Yazi from GitHub Releases
 # ================================================================
-# Downloads and installs latest Yazi release with flavors/plugins
-# Configuration read from: management/packages.yml
-# Installation location: ~/.local/bin/yazi
+# Downloads and installs Yazi file manager with flavors and plugins
+# Configuration: Inline (see variables below)
+# Installation location: ~/.local/bin/yazi, ~/.local/bin/ya
 # No sudo required (user space)
 # ================================================================
+
+set -euo pipefail
 
 # Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
 enable_error_traps
 
-# Source helper functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/program-helpers.sh"
+# Source GitHub release installer library
+source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
-# Read configuration from packages.yml
-REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=yazi --field=repo)
+# ================================================================
+# Configuration
+# ================================================================
+
+BINARY_NAME="yazi"
+REPO="sxyazi/yazi"
+
+# Get latest version
+LATEST_VERSION=$(get_latest_version "$REPO")
+
+# Detect platform and arch for download URL
+# Yazi uses format: yazi-{arch}-{platform}.zip
+# Examples: yazi-x86_64-apple-darwin.zip, yazi-aarch64-apple-darwin.zip, yazi-x86_64-unknown-linux-gnu.zip
+ARCH=$(uname -m)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  YAZI_TARGET="${ARCH}-apple-darwin"
+else
+  YAZI_TARGET="${ARCH}-unknown-linux-gnu"
+fi
+
+# Build download URL
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/yazi-${YAZI_TARGET}.zip"
+
+# Installation paths
+TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
+TEMP_ZIP="/tmp/${BINARY_NAME}.zip"
+EXTRACT_DIR="/tmp/yazi-${YAZI_TARGET}"
+
+# ================================================================
+# Installation
+# ================================================================
 
 print_banner "Installing Yazi"
 
-# Detect platform and architecture
-PLATFORM=$(uname -s)
-ARCH=$(uname -m)
+# Check existing installation (simple check, no version comparison)
+if check_existing_installation "$TARGET_BIN" "$BINARY_NAME"; then
+  log_info "Yazi already installed, proceeding to themes/plugins..."
+else
+  log_info "Target version: $LATEST_VERSION"
 
-case $PLATFORM in
-  Darwin)
-    if [[ "$ARCH" == "x86_64" ]]; then
-      YAZI_TARGET="x86_64-apple-darwin"
-    else
-      YAZI_TARGET="aarch64-apple-darwin"
-    fi
-    ;;
-  Linux)
-    YAZI_TARGET="x86_64-unknown-linux-gnu"
-    ;;
-  *)
-    print_error "Unsupported platform: $PLATFORM"
-    exit 1
-    ;;
-esac
-
-# Setup cleanup for temp files
-YAZI_ZIP="/tmp/yazi.zip"
-YAZI_EXTRACT_DIR="/tmp/yazi-${YAZI_TARGET}"
-register_cleanup "rm -rf $YAZI_ZIP $YAZI_EXTRACT_DIR 2>/dev/null || true"
-
-# Install yazi binary if needed
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/yazi" ]; then
-  log_success "yazi already installed, skipping"
-  exit_success
-fi
-
-if [ ! -f "$HOME/.local/bin/yazi" ]; then
   # Check for alternate installations
-  if command -v yazi >/dev/null 2>&1; then
-    ALTERNATE_LOCATION=$(command -v yazi)
-    log_warning "yazi found at $ALTERNATE_LOCATION"
-    log_info "Installing to ~/.local/bin/yazi anyway (PATH priority will use this one)"
-  fi
-
-  # Fetch latest version
-  print_info "Fetching latest version..."
-  YAZI_VERSION=$(get_latest_github_release "$REPO")
-  if [[ -z "$YAZI_VERSION" ]]; then
-    print_manual_install "yazi" "https://github.com/${REPO}/releases/latest" "latest" "yazi-${YAZI_TARGET}.zip" \
-      "unzip ~/Downloads/yazi-${YAZI_TARGET}.zip -d /tmp && mv /tmp/yazi-${YAZI_TARGET}/yazi ~/.local/bin/ && mv /tmp/yazi-${YAZI_TARGET}/ya ~/.local/bin/"
-    exit 1
-  fi
-
-  print_info "Target: $YAZI_VERSION ($PLATFORM/$ARCH → $YAZI_TARGET)"
-  YAZI_URL="https://github.com/${REPO}/releases/download/${YAZI_VERSION}/yazi-${YAZI_TARGET}.zip"
+  check_alternate_installation "$TARGET_BIN" "$BINARY_NAME"
 
   # Download
-  print_info "Downloading..."
-  YAZI_ZIP="/tmp/yazi.zip"
-  if ! download_file "$YAZI_URL" "$YAZI_ZIP" "yazi"; then
-    print_manual_install "yazi" "$YAZI_URL" "$YAZI_VERSION" "yazi-${YAZI_TARGET}.zip" \
-      "unzip ~/Downloads/yazi-${YAZI_TARGET}.zip -d /tmp && mv /tmp/yazi-${YAZI_TARGET}/yazi ~/.local/bin/ && mv /tmp/yazi-${YAZI_TARGET}/ya ~/.local/bin/"
-    exit 1
-  fi
+  download_release "$DOWNLOAD_URL" "$TEMP_ZIP" "$BINARY_NAME"
 
-  # Extract and install
-  print_info "Installing to ~/.local/bin..."
-  cd /tmp
-  unzip -q yazi.zip
-  mkdir -p ~/.local/bin
-  mv "yazi-${YAZI_TARGET}/yazi" ~/.local/bin/
-  mv "yazi-${YAZI_TARGET}/ya" ~/.local/bin/
-  rm -rf yazi.zip "yazi-${YAZI_TARGET}"
+  # Extract (zip file)
+  extract_zip "$TEMP_ZIP" "/tmp"
 
-  print_success " Yazi and ya installed"
-else
-  print_success " Yazi already installed"
+  # Install binaries (yazi and ya)
+  log_info "Installing binaries to ~/.local/bin..."
+  mkdir -p "$HOME/.local/bin"
+  mv "${EXTRACT_DIR}/yazi" "$TARGET_BIN"
+  mv "${EXTRACT_DIR}/ya" "$HOME/.local/bin/ya"
+  chmod +x "$TARGET_BIN" "$HOME/.local/bin/ya"
+
+  # Verify
+  verify_installation "$BINARY_NAME" "yazi --version"
+  log_success "ya installed successfully"
 fi
+
+# ================================================================
+# Install Themes and Plugins
+# ================================================================
 
 # Configure git to not prompt for credentials (prevents hanging in non-interactive environments)
 export GIT_TERMINAL_PROMPT=0
@@ -103,7 +89,7 @@ export GIT_ASKPASS=/bin/true
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_SYSTEM=/dev/null
 
-print_info "Installing flavors..."
+log_info "Installing flavors..."
 ya pkg add BennyOe/tokyo-night || true
 ya pkg add dangooddd/kanagawa || true
 ya pkg add bennyyip/gruvbox-dark || true
@@ -111,9 +97,10 @@ ya pkg add kmlupreti/ayu-dark || true
 ya pkg add Chromium-3-Oxide/everforest-medium || true
 ya pkg add gosxrgxx/flexoki-dark || true
 
-print_info "Installing plugins..."
+log_info "Installing plugins..."
 ya pkg add AnirudhG07/nbpreview || true
 ya pkg add pirafrank/what-size || true
 ya pkg add yazi-rs/plugins:git || true
 
-print_banner "Yazi installation complete"
+print_banner_success "Yazi installation complete"
+exit_success
