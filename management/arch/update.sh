@@ -18,6 +18,7 @@ sudo pacman -Syu --noconfirm
 echo "  ✓ System packages updated"
 echo ""
 
+lang_tools="$DOTFILES_DIR/management/common/install/language-tools"
 print_banner "Step 2/7 - AUR Packages" "blue"
 if command -v yay >/dev/null 2>&1; then
   echo "  Updating AUR packages..."
@@ -30,7 +31,7 @@ echo ""
 
 print_banner "Step 3/7 - npm Global Packages" "green"
 echo "  Updating npm global packages..."
-NVM_DIR="$HOME/.config/nvm" bash "$DOTFILES_DIR/management/common/install/language-tools/npm-install-globals.sh"
+NVM_DIR="$HOME/.config/nvm" bash "$lang_tools/npm-install-globals.sh"
 echo "  ✓ npm global packages updated"
 echo ""
 

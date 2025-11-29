@@ -16,7 +16,7 @@ source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../../utils/install-program-helpers.sh"
+source "$SCRIPT_DIR/../../lib/program-helpers.sh"
 
 print_banner "Installing AWS CLI v2"
 

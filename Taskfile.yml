@@ -155,35 +155,10 @@ tasks:
       - cd docs && mkdocs gh-deploy --force
 
   # ================================================================
-  # UPDATE COMMANDS (platform-specific)
+  # UPDATE COMMANDS
   # ================================================================
-
-  update:macos:
-    desc: Update all macOS packages
-    cmds:
-      - bash management/macos/update-macos.sh
-
-  update:wsl:
-    desc: Update all WSL packages
-    cmds:
-      - bash management/wsl/update-wsl.sh
-
-  update:arch:
-    desc: Update all Arch Linux packages
-    cmds:
-      - bash management/arch/update-arch.sh
 
   update:
     desc: Update all packages (auto-detect platform)
     cmds:
-      - |
-        if [ "$(uname)" = "Darwin" ]; then
-          task update:macos
-        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-          task update:wsl
-        elif [ -f /etc/arch-release ]; then
-          task update:arch
-        else
-          echo "Unknown platform"
-          exit 1
-        fi
+      - bash management/update.sh {{.CLI_ARGS}}

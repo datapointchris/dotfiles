@@ -129,6 +129,13 @@ install_task() {
 # ================================================================
 
 install_common_phases() {
+    # Local variables for frequently used paths
+    local common_install="$DOTFILES_DIR/management/common/install"
+    local github_releases="$common_install/github-releases"
+    local lang_managers="$common_install/language-managers"
+    local lang_tools="$common_install/language-tools"
+    local plugins="$common_install/plugins"
+
     # Phase 2 - Coding Fonts
     if [[ "${SKIP_FONTS:-}" != "1" ]]; then
         print_header "Phase 2 - Coding Fonts" "cyan"
@@ -139,8 +146,8 @@ install_common_phases() {
             echo ""
         fi
 
-        bash "$DOTFILES_DIR/management/common/install/fonts/download.sh"
-        bash "$DOTFILES_DIR/management/common/install/fonts/install.sh"
+        bash "$common_install/fonts/download.sh"
+        bash "$common_install/fonts/install.sh"
         echo ""
     else
         echo "⏭️  Skipping font installation (SKIP_FONTS=1)"
@@ -148,38 +155,38 @@ install_common_phases() {
     fi
 
     print_header "Phase 3 - GitHub Release Tools" "cyan"
-    bash "$DOTFILES_DIR/management/common/install/language-managers/install-go.sh"
-    PATH="/usr/local/go/bin:$PATH" bash "$DOTFILES_DIR/management/common/install/language-tools/install-go-tools.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-fzf.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-neovim.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-lazygit.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-yazi.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-glow.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-duf.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-awscli.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-claude-code.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terraform.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terraform-ls.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-tflint.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terraformer.sh"
-    bash "$DOTFILES_DIR/management/common/install/github-releases/install-terrascan.sh"
+    bash "$lang_managers/go.sh"
+    PATH="/usr/local/go/bin:$PATH" bash "$lang_tools/go-tools.sh"
+    bash "$github_releases/fzf.sh"
+    bash "$github_releases/neovim.sh"
+    bash "$github_releases/lazygit.sh"
+    bash "$github_releases/yazi.sh"
+    bash "$github_releases/glow.sh"
+    bash "$github_releases/duf.sh"
+    bash "$github_releases/awscli.sh"
+    bash "$github_releases/claude-code.sh"
+    bash "$github_releases/terraform.sh"
+    bash "$github_releases/terraform-ls.sh"
+    bash "$github_releases/tflint.sh"
+    bash "$github_releases/terraformer.sh"
+    bash "$github_releases/terrascan.sh"
     echo ""
 
     print_header "Phase 4 - Rust/Cargo Tools" "cyan"
-    bash "$DOTFILES_DIR/management/common/install/language-managers/install-rust.sh"
-    bash "$DOTFILES_DIR/management/common/install/language-tools/install-cargo-binstall.sh"
-    bash "$DOTFILES_DIR/management/common/install/language-tools/install-cargo-tools.sh"
+    bash "$lang_managers/rust.sh"
+    bash "$lang_tools/cargo-binstall.sh"
+    bash "$lang_tools/cargo-tools.sh"
     echo ""
 
     print_header "Phase 5 - Language Package Managers" "cyan"
-    bash "$DOTFILES_DIR/management/common/install/language-managers/install-nvm.sh"
-    bash "$DOTFILES_DIR/management/common/install/language-tools/npm-install-globals.sh"
-    bash "$DOTFILES_DIR/management/common/install/language-managers/install-uv.sh"
-    bash "$DOTFILES_DIR/management/common/install/language-tools/install-uv-tools.sh"
+    bash "$lang_managers/nvm.sh"
+    bash "$lang_tools/npm-install-globals.sh"
+    bash "$lang_managers/uv.sh"
+    bash "$lang_tools/uv-tools.sh"
     echo ""
 
     print_header "Phase 6 - Shell Configuration" "cyan"
-    bash "$DOTFILES_DIR/management/common/install/plugins/install-shell-plugins.sh"
+    bash "$plugins/shell-plugins.sh"
     echo ""
 
     print_header "Phase 7 - Custom Go Applications" "cyan"
@@ -197,9 +204,9 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 10 - Plugin Installation" "cyan"
-    bash "$DOTFILES_DIR/management/common/install/plugins/install-tpm.sh"
-    bash "$DOTFILES_DIR/management/common/install/plugins/install-tmux-plugins.sh"
-    bash "$DOTFILES_DIR/management/common/install/plugins/install-nvim-plugins.sh"
+    bash "$plugins/tpm.sh"
+    bash "$plugins/tmux-plugins.sh"
+    bash "$plugins/nvim-plugins.sh"
 }
 
 # ================================================================
@@ -207,15 +214,18 @@ install_common_phases() {
 # ================================================================
 
 install_macos() {
+    local macos_install="$DOTFILES_DIR/management/macos/install"
+    local macos_setup="$DOTFILES_DIR/management/macos/setup"
+
     print_header "macOS Dotfiles Installation" "blue"
     echo "Starting macOS dotfiles installation..."
     echo ""
 
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
-    bash "$DOTFILES_DIR/management/macos/install-homebrew.sh"
-    bash "$DOTFILES_DIR/management/macos/install-packages.sh"
-    bash "$DOTFILES_DIR/management/macos/install-mas-apps.sh"
-    bash "$DOTFILES_DIR/management/macos/setup-xcode.sh"
+    bash "$macos_install/homebrew.sh"
+    bash "$macos_install/system-packages.sh"
+    bash "$macos_install/mas-apps.sh"
+    bash "$macos_setup/xcode.sh"
     echo ""
 
     install_common_phases
@@ -226,6 +236,8 @@ install_macos() {
 }
 
 install_wsl() {
+    local wsl_install="$DOTFILES_DIR/management/wsl/install"
+
     print_header "WSL Ubuntu Dotfiles Installation" "blue"
 
     # Platform warning (consistent with detect_platform logic)
@@ -239,7 +251,7 @@ install_wsl() {
     echo ""
 
     print_header "Phase 1 - System Packages (apt)" "cyan"
-    bash "$DOTFILES_DIR/management/wsl/install-packages.sh"
+    bash "$wsl_install/system-packages.sh"
     echo ""
 
     install_common_phases
@@ -253,12 +265,14 @@ install_wsl() {
 }
 
 install_arch() {
+    local arch_install="$DOTFILES_DIR/management/arch/install"
+
     print_header "Arch Linux Dotfiles Installation" "blue"
     echo "Starting Arch Linux dotfiles installation..."
     echo ""
 
     print_header "Phase 1 - System Packages (pacman)" "cyan"
-    bash "$DOTFILES_DIR/management/arch/install-packages.sh"
+    bash "$arch_install/system-packages.sh"
     echo ""
 
     install_common_phases
