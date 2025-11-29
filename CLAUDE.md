@@ -56,6 +56,12 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 - Test minimal changes instead of complex workarounds
 - DRY principles - avoid duplication and unnecessary abstractions
 - When debugging, check symlinks first after structural changes
+- **NEVER repeat the same test/approach more than 2-3 times** - If stuck, STOP and:
+  1. Research the issue online (web search for error messages/behavior)
+  2. Get the bigger picture of how the system works
+  3. Think through the problem systematically with new information
+  4. Test a different hypothesis based on research
+  - Running the same command 10 times with minor variations wastes time and misses root cause
 
 **Structured Logging** (⚠️ Use this for all management/ scripts):
 
@@ -141,6 +147,17 @@ bash management/run-and-summarize.sh "task install" /tmp/log.txt 30 &
 # ❌ WRONG - Do not use run_in_background flag in Bash tool
 <parameter name="run_in_background">true
 ```
+
+**Installation Script Testing Constraints**:
+
+- `install.sh` requires sudo at the beginning and CANNOT be run in autonomous testing loops
+- The script requests `sudo -v` upfront and maintains a background keep-alive loop
+- Claude Code cannot provide interactive password input, so the script will hang
+- For testing install phases:
+  - Run individual phase scripts directly (they handle their own sudo if needed)
+  - Test in Docker containers with passwordless sudo configured
+  - Use `management/test-install.sh` which handles sudo appropriately
+- Do NOT attempt to run `./install.sh` in background or in automated test loops
 
 ## Package Management Philosophy
 

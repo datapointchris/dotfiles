@@ -196,6 +196,7 @@ nav:
       - Package Version Analysis: learnings/package-version-analysis.md
       - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md
       - Bash Script Testing: learnings/bash-script-testing.md
+      - Bash TTY Detection in Command Substitution: learnings/bash-tty-detection-command-substitution.md
       - Task Shell Printf Compatibility: learnings/task-shell-printf-compatibility.md
       - Git History Rewriting: learnings/git-history-rewriting.md
       - Relative Path Calculation: learnings/relative-path-calculation.md
