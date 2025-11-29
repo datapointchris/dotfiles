@@ -144,6 +144,7 @@ nav:
       - Ghostty Theme: apps/ghostty-theme.md
   - Architecture:
       - architecture/index.md
+      - Shell Libraries: architecture/shell-libraries.md
       - Package Management: architecture/package-management.md
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Tool Composition: architecture/tool-composition.md

@@ -40,14 +40,33 @@ See `docs/learnings/app-installation-patterns.md` for full details.
   4. Test a different hypothesis based on research
   - Running the same command 10 times with minor variations wastes time and misses root cause
 
-**Structured Logging** (⚠️ Use this for all management/ scripts):
+**Shell Libraries** (⚠️ Three system-wide libraries for all scripts):
 
-- Source `management/common/lib/structured-logging.sh` instead of `formatting.sh`
-- Dual-mode: Auto-detects terminal (visual) vs pipe (structured with `[LEVEL]` prefixes)
-- All `print_*` functions still work (backward compatible)
-- Use `log_error "message" "${BASH_SOURCE[0]}" "$LINENO"` for file:line references
-- Structured output is parseable by logsift for debugging
-- See `docs/architecture/structured-logging.md` for details
+The dotfiles provide three shell libraries in `~/.local/shell/`:
+
+1. **logging.sh** - Status messages with [LEVEL] prefixes for parseability
+   - Use `log_info/success/warning/error/fatal()` for scripts that need logging
+   - Always includes [LEVEL] prefix for log parsers (logsift, Grafana)
+   - Use for: installation scripts, update scripts, CI/CD, any logged output
+
+2. **formatting.sh** - Visual structure and purely visual status
+   - Use `print_header/section/banner/title()` for visual structure
+   - Use `print_success/error/warning/info()` ONLY for purely visual scripts
+   - Use for: interactive menus, visual-only tools (never logged)
+
+3. **error-handling.sh** - Error traps, cleanup, verification helpers
+   - Source when scripts need: cleanup on exit, error trapping, retry logic
+   - Functions: `enable_error_traps()`, `register_cleanup()`, `require_commands()`, etc.
+   - Use for: complex installers, download scripts, anything creating temp files
+
+**Decision Guide**:
+
+- Script will be logged/monitored? → Use `log_*` functions
+- Script is purely visual/interactive? → Use `print_*` status functions
+- Script has visual structure? → Use `print_header/section/banner/title`
+- Script needs cleanup/traps? → Source `error-handling.sh`
+
+See `docs/architecture/shell-libraries.md` for complete guide
 
 **GitHub Release Installers** (⚠️ Use library for new installers):
 
