@@ -13,10 +13,9 @@
 #   - WSL: NOT supported (skipped - would conflict with Windows installation)
 # ================================================================
 
-set -euo pipefail
-
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
 
 print_banner "Installing Claude Code"
 

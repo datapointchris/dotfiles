@@ -6,14 +6,13 @@
 # Universal script for all platforms
 # ================================================================
 
-set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-# Source formatting library
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
+
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 
 # Check if packages.yml exists
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then

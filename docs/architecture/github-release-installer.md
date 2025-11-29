@@ -1,366 +1,120 @@
 # GitHub Release Installer Library
 
-Function-based library for installing binaries from GitHub releases with minimal duplication and maximum flexibility.
+## Overview
 
-## Philosophy
+The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across 16+ similar installer scripts while maintaining clarity and simplicity.
 
-The GitHub release installer library follows the dotfiles philosophy:
+## Design Philosophy
 
-- **Function-based helpers, not complex YAML parsing** - Configuration stays in installer scripts, explicit and inline
-- **Handles common patterns through parameters** - Platform detection, version checking, archive extraction
-- **No over-abstraction** - Each installer remains readable and customizable
-- **Built on production-grade infrastructure** - Uses structured logging and error handling
-- **Automatic cleanup** - Trap-based cleanup ensures no orphaned files
+The library follows the "medium abstraction" principle:
+
+- **Focused helpers** - Only abstract truly repetitive patterns
+- **Inline complexity** - Single-use operations stay inline in functions
+- **Explicit configuration** - Each script contains its own configuration inline
+- **No YAML complexity** - Avoid complex packages.yml parsing for variations
+- **Straightforward** - Easy to trace and understand what's happening
 
 ## Architecture
 
-```text
-management/common/lib/github-release-installer.sh  # Library functions
-└── Sources: error-handling.sh, structured-logging.sh
+### Library Chain
 
-management/common/install/github-releases/*.sh     # Individual installers
-└── Configuration: Inline in each script
-└── Pattern: Source library → Configure → Install
+```
+installer-script.sh
+  └─> error-handling.sh (set -euo pipefail, traps, cleanup)
+       └─> structured-logging.sh (dual-mode: visual/structured)
+            └─> formatting.sh (visual mode only)
 ```
 
-## Library Functions
+Each installer script sources `error-handling.sh`, which automatically provides:
 
-### Platform Detection
+- Error safety with `set -euo pipefail`
+- Trap handlers for cleanup
+- Structured logging (auto-detects terminal vs pipe)
+- Consistent error messages with file:line references
 
-```bash
-# Get platform string with custom formatting
-get_platform "Darwin" "Linux"          # → "Darwin" on macOS, "Linux" on Linux
-get_platform "darwin" "linux"          # → "darwin" on macOS, "linux" on Linux
+### Library Functions
 
-# Get architecture string with custom formatting
-get_arch "x86_64" "arm64" "x86_64"     # → platform-specific arch
+Located in `management/common/lib/github-release-installer.sh`:
 
-# Get combined platform_arch (most common pattern)
-get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64"
-# → "Darwin_x86_64" on Intel Mac
-# → "Darwin_arm64" on Apple Silicon
-# → "Linux_x86_64" on Linux
-```
+#### 1. `get_platform_arch()`
 
-### Version Handling
+Handles platform/architecture detection with customizable capitalization.
+
+**Usage:**
 
 ```bash
-# Get latest GitHub release version
-get_latest_version "jesseduffield/lazygit"  # → "v0.40.2"
-
-# Strip 'v' prefix from version string
-strip_v_prefix "v1.2.3"  # → "1.2.3"
-
-# Check if current version meets minimum requirement
-version_meets_minimum "1.2.3" "1.0.0"  # → returns 0 (success)
-version_meets_minimum "0.9.0" "1.0.0"  # → returns 1 (failure)
-```
-
-### Installation Check
-
-```bash
-# Check if binary is already installed with acceptable version
-# Returns 0 (skip install) or 1 (should install)
-
-# Simple existence check (any version acceptable)
-check_existing_installation "$HOME/.local/bin/duf" "duf"
-
-# Version check with minimum requirement
-check_existing_installation \
-  "$HOME/.local/bin/lazygit" \
-  "lazygit" \
-  "lazygit --version 2>&1 | grep -oE 'version=[0-9.]+' | cut -d= -f2" \
-  "0.40.2"
-```
-
-The version check extracts just the version number for comparison. The command should output a clean version like "1.2.3", not the full version output.
-
-### Download and Extract
-
-```bash
-# Download with automatic retry and cleanup registration
-download_release "$DOWNLOAD_URL" "/tmp/app.tar.gz" "app-name"
-
-# Extract tarball (specific file or all)
-extract_tarball "/tmp/app.tar.gz" "/tmp" "app"      # Extract specific file
-extract_tarball "/tmp/app.tar.gz" "/tmp"            # Extract all
-
-# Extract zip file
-extract_zip "/tmp/app.zip" "/tmp/app-extract"
-```
-
-### Installation
-
-```bash
-# Install single binary
-install_binary "/tmp/lazygit" "$HOME/.local/bin/lazygit"
-
-# Install multiple binaries
-install_binaries "/tmp" "$HOME/.local/bin" "tenv" "terraform" "tofu"
-
-# Create symlink
-create_binary_symlink \
-  "$HOME/.local/nvim-macos-arm64/bin/nvim" \
-  "$HOME/.local/bin/nvim"
-```
-
-### Verification
-
-```bash
-# Verify installation
-verify_installation "lazygit" "lazygit --version | head -n1"
-verify_installation "yazi"  # No version check
-```
-
-## Installer Script Pattern
-
-Every installer script follows this structure:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Source libraries (error handling includes structured logging)
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
-enable_error_traps
-source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-
-# ================================================================
-# Configuration Section
-# ================================================================
-
-BINARY_NAME="app-name"
-REPO="owner/repo"
-VERSION="1.2.3"  # OR: VERSION=$(get_latest_version "$REPO")
-
-# Platform detection
 PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
+```
 
-# Build URL
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v${VERSION}/app_${VERSION}_${PLATFORM_ARCH}.tar.gz"
+**Why it exists:** Different GitHub projects use different naming conventions:
 
-# Paths
-TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
-TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
+- `lazygit`: `Darwin_x86_64`
+- `duf`: `darwin_x86_64` (lowercase)
+- `zk`: `macos-x86_64` (different platform name)
 
-# ================================================================
-# Installation Section
-# ================================================================
+#### 2. `get_latest_version()`
 
-print_banner "Installing App Name"
+Fetches the latest release version from GitHub API.
 
-# Check existing installation
-VERSION_CMD="app --version | grep -oE '[0-9.]+' | head -n1"
-if check_existing_installation "$TARGET_BIN" "$BINARY_NAME" "$VERSION_CMD" "$VERSION"; then
+**Usage:**
+
+```bash
+VERSION=$(get_latest_version "owner/repo")
+# Returns: v1.2.3
+```
+
+**Why it exists:** Every installer needs to fetch versions, same pattern every time.
+
+#### 3. `should_skip_install()`
+
+Checks if installation should be skipped (already installed, unless FORCE_INSTALL=true).
+
+**Usage:**
+
+```bash
+if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   exit_success
 fi
-
-log_info "Target version: v$VERSION"
-
-# Check alternate installations
-check_alternate_installation "$TARGET_BIN" "$BINARY_NAME"
-
-# Download → Extract → Install → Verify
-download_release "$DOWNLOAD_URL" "$TEMP_TARBALL" "$BINARY_NAME"
-extract_tarball "$TEMP_TARBALL" "/tmp" "$BINARY_NAME"
-install_binary "/tmp/$BINARY_NAME" "$TARGET_BIN"
-verify_installation "$BINARY_NAME" "$VERSION_CMD"
-
-print_banner_success "App Name installation complete"
-exit_success
 ```
 
-## Real-World Examples
+**Why it exists:** Idempotency check used by every installer.
 
-### Example 1: LazyGit (Pinned Version, Tarball)
+#### 4. `install_from_tarball()`
+
+Complete installation pattern for tar.gz archives.
+
+**What it does:**
+
+1. Downloads tarball to /tmp
+2. Registers cleanup trap
+3. Extracts archive
+4. Moves binary to ~/.local/bin
+5. Sets executable permissions
+6. Verifies installation
+
+**Usage:**
 
 ```bash
-BINARY_NAME="lazygit"
-REPO="jesseduffield/lazygit"
-VERSION="0.40.2"  # Pinned version
-
-# LazyGit format: lazygit_0.40.2_Darwin_x86_64.tar.gz
-PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v${VERSION}/lazygit_${VERSION}_${PLATFORM_ARCH}.tar.gz"
-
-# Binary is at root of tarball
-extract_tarball "$TEMP_TARBALL" "/tmp" "$BINARY_NAME"
-install_binary "/tmp/$BINARY_NAME" "$TARGET_BIN"
+install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "path/in/tarball"
 ```
 
-### Example 2: Yazi (Latest Version, Zip, Nested Directory, Multiple Binaries)
+**Why it's one function:** Download, extract, install, verify are always done together. Splitting them into separate functions creates unnecessary indirection.
+
+#### 5. `install_from_zip()`
+
+Same as `install_from_tarball()` but for zip files.
+
+**Usage:**
 
 ```bash
-BINARY_NAME="yazi"
-REPO="sxyazi/yazi"
-LATEST_VERSION=$(get_latest_version "$REPO")
-
-# Yazi format: yazi-x86_64-apple-darwin.zip
-ARCH=$(uname -m)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  YAZI_TARGET="${ARCH}-apple-darwin"
-else
-  YAZI_TARGET="${ARCH}-unknown-linux-gnu"
-fi
-
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/yazi-${YAZI_TARGET}.zip"
-
-# Extract zip, binaries in nested dir
-EXTRACT_DIR="/tmp/yazi-${YAZI_TARGET}"
-extract_zip "$TEMP_ZIP" "/tmp"
-install_binary "$EXTRACT_DIR/yazi-${YAZI_TARGET}/yazi" "$TARGET_BIN"
-mv "$EXTRACT_DIR/yazi-${YAZI_TARGET}/ya" "$HOME/.local/bin/ya"
+install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "path/in/zip"
 ```
 
-### Example 3: Custom Platform Detection
+## Script Patterns
 
-For tools with non-standard naming conventions:
+### Simple Tarball Installer
 
-```bash
-# Duf uses lowercase: duf_0.8.1_darwin_x86_64.tar.gz
-PLATFORM=$(get_platform "darwin" "linux")
-ARCH=$(get_arch "x86_64" "arm64" "x86_64")
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/duf_${VERSION#v}_${PLATFORM}_${ARCH}.tar.gz"
-```
-
-## Version Checking Best Practices
-
-### Extract Clean Version Numbers
-
-Version check commands should output just the version number for comparison:
-
-```bash
-# ❌ BAD - Returns full output line
-VERSION_CMD="lazygit --version | head -n1"
-# Output: "commit=..., version=0.40.2, os=darwin, ..."
-
-# ✅ GOOD - Extracts just version number
-VERSION_CMD="lazygit --version 2>&1 | grep -oE 'version=[0-9.]+' | cut -d= -f2"
-# Output: "0.40.2"
-
-# ✅ GOOD - For different format
-VERSION_CMD="yazi --version | grep -oE 'Yazi [0-9.]+' | cut -d' ' -f2"
-# Output: "25.5.31"
-```
-
-### When to Use Minimum Version vs Exact Match
-
-```bash
-# Use minimum version for pinned releases
-# (allows newer versions to satisfy requirement)
-check_existing_installation "$BIN" "app" "$VERSION_CMD" "1.0.0"
-# Current 1.5.0 >= 1.0.0 → Skip install ✓
-# Current 0.9.0 < 1.0.0  → Install ✓
-
-# Skip version check for "latest" installers
-# (reinstalls every time unless file exists)
-check_existing_installation "$BIN" "app"
-# File exists → Skip install ✓
-# File missing → Install ✓
-```
-
-## Configuration Patterns
-
-### Inline Configuration (Recommended)
-
-Configuration lives in the installer script itself:
-
-```bash
-# ================================================================
-# Configuration
-# ================================================================
-
-BINARY_NAME="lazygit"
-REPO="jesseduffield/lazygit"
-VERSION="0.40.2"
-```
-
-**Advantages**:
-
-- Explicit and self-documenting
-- Easy to customize per-tool
-- No YAML parsing overhead
-- Clear what the script does at a glance
-
-### When to Use packages.yml
-
-Use `packages.yml` only when:
-
-- Configuration is shared across multiple contexts (Task, Brewfile, apt lists)
-- Version pinning needs central management
-- You need to query configuration from multiple tools
-
-For GitHub-specific settings (platform detection, URL patterns), inline configuration is better.
-
-## Error Handling and Cleanup
-
-The library automatically handles cleanup through error-handling.sh:
-
-```bash
-# Cleanup is automatic via trap handlers
-download_release "$URL" "/tmp/app.tar.gz" "app"  # Registers cleanup
-extract_tarball "/tmp/app.tar.gz" "/tmp"         # Registers cleanup
-# If script fails, cleanup runs automatically
-# If script succeeds, cleanup runs on exit
-```
-
-No need to manually register cleanup for library functions - they handle it internally.
-
-## Migration from Old Pattern
-
-### Before (95 lines)
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
-source "$SCRIPT_DIR/../../lib/program-helpers.sh"
-
-REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=duf --field=repo)
-
-# 15 lines of platform detection
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  ARCH=$(uname -m)
-  if [[ "$ARCH" == "x86_64" ]]; then
-    PLATFORM_ARCH="darwin_x86_64"
-  else
-    PLATFORM_ARCH="darwin_arm64"
-  fi
-else
-  PLATFORM_ARCH="linux_x86_64"
-fi
-
-# 20 lines of version checking
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -f "$DUF_BIN" ]]; then
-  CURRENT_VERSION=$(duf --version 2>&1 | head -n1)
-  print_success "Current version: $CURRENT_VERSION, skipping"
-  exit 0
-fi
-
-# 30 lines of download/extract/install
-LATEST_VERSION=$(get_latest_github_release "$REPO")
-DUF_URL="https://..."
-if ! download_file "$DUF_URL" "$DUF_TARBALL" "duf"; then
-  print_manual_install ...
-  exit 1
-fi
-tar -xzf "$DUF_TARBALL" -C /tmp duf
-mv /tmp/duf "$DUF_BIN"
-chmod +x "$DUF_BIN"
-rm -f "$DUF_TARBALL"
-
-# 10 lines of verification
-if command -v duf >/dev/null 2>&1; then
-  print_success "Installed: $version"
-else
-  print_error "Installation failed"
-  exit 1
-fi
-```
-
-### After (60 lines with comments)
+Most common pattern (11 out of 16 tools):
 
 ```bash
 #!/usr/bin/env bash
@@ -371,72 +125,259 @@ source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
-# ================================================================
-# Configuration
-# ================================================================
-
-BINARY_NAME="duf"
-REPO="muesli/duf"
-LATEST_VERSION=$(get_latest_version "$REPO")
-
-PLATFORM_ARCH=$(get_platform_arch "darwin_x86_64" "darwin_arm64" "linux_x86_64")
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/duf_${LATEST_VERSION#v}_${PLATFORM_ARCH}.tar.gz"
-
+BINARY_NAME="lazygit"
+REPO="jesseduffield/lazygit"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
-TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
 
-# ================================================================
-# Installation
-# ================================================================
+print_banner "Installing LazyGit"
 
-print_banner "Installing Duf"
-
-VERSION_CMD="duf --version | head -n1"
-if check_existing_installation "$TARGET_BIN" "$BINARY_NAME" "$VERSION_CMD"; then
+if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   exit_success
 fi
 
-log_info "Target version: $LATEST_VERSION"
-check_alternate_installation "$TARGET_BIN" "$BINARY_NAME"
+VERSION=$(get_latest_version "$REPO")
+log_info "Latest version: $VERSION"
 
-download_release "$DOWNLOAD_URL" "$TEMP_TARBALL" "$BINARY_NAME"
-extract_tarball "$TEMP_TARBALL" "/tmp" "$BINARY_NAME"
-install_binary "/tmp/$BINARY_NAME" "$TARGET_BIN"
-verify_installation "$BINARY_NAME" "$VERSION_CMD"
+PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
 
-print_banner_success "Duf installation complete"
+install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit"
+
+print_banner_success "LazyGit installation complete"
 exit_success
 ```
 
-**Improvements**:
+**Lines:** ~40-50 (was 90-120)
 
-- 37% smaller (95 → 60 lines including comments and whitespace)
-- Automatic cleanup (trap-based)
-- Structured logging
-- Better error handling
-- More consistent pattern
-- Easier to maintain
+### Custom Installer (Special Cases)
+
+Some tools need custom handling:
+
+- **yazi**: Installs multiple binaries (yazi + ya), adds plugins
+- **tenv**: Installs 7 binaries (tenv + proxy binaries)
+- **terraformer**: Downloads raw binary (no archive)
+- **zk**: Complex platform detection (macos vs linux, different arch naming)
+
+These scripts use library helpers where applicable but handle their unique requirements inline.
+
+## Code Savings
+
+### Converted Scripts (11 tools)
+
+| Tool | Before | After | Savings |
+|------|--------|-------|---------|
+| lazygit | 95 | 50 | -45 |
+| yazi | 119 | 104 | -15 |
+| duf | 89 | 40 | -49 |
+| glow | 89 | 41 | -48 |
+| tenv | 98 | 73 | -25 |
+| terraform-ls | 91 | 37 | -54 |
+| terrascan | 91 | 37 | -54 |
+| tflint | 91 | 37 | -54 |
+| trivy | 94 | 37 | -57 |
+| zk | 97 | 40 | -57 |
+| terraformer | 85 | 51 | -34 |
+| **Total** | **1,039** | **547** | **-492 (47%)** |
+
+### Library
+
+- **Size:** 181 lines
+- **Functions:** 5
+- **Previous iteration:** 401 lines, 16 functions (over-abstracted)
+
+### Grand Total
+
+- **Before:** ~1,525 lines (estimated)
+- **After:** 1,211 lines (181 library + 547 converted + 483 special cases)
+- **Net savings:** 314 lines (20.6%)
+
+## Special Case Scripts (Not Converted)
+
+These 5 scripts have unique requirements that don't fit the standard pattern:
+
+1. **awscli** - Uses official AWS installer, macOS via Homebrew
+2. **claude-code** - Uses official installer, WSL skipped
+3. **fzf** - Built from source with Go
+4. **neovim** - AppImage extraction, multiple files
+5. **terraform** - Wrapper around tenv, delegates installation
+
+All still use error-handling.sh for structured logging consistency.
+
+## Design Decisions
+
+### Why Not More Abstraction?
+
+**Rejected:** Complex packages.yml with all download patterns
+
+```yaml
+# TOO COMPLEX - requires YAML parser, hard to trace
+github_binaries:
+  - name: lazygit
+    archive_format: tar.gz
+    url_pattern: "{repo}/releases/download/{version}/lazygit_{version}_{platform}_{arch}.tar.gz"
+    binary_pattern: "lazygit"
+```
+
+**Chosen:** Inline configuration in each script
+
+```bash
+# SIMPLE - easy to trace, self-contained
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
+```
+
+**Rationale:** URL patterns vary enough that YAML templates become complex. Inline keeps it explicit and traceable.
+
+### Why Not Version Checking?
+
+**Rejected:** Minimum version requirements, complex version comparison
+
+**Chosen:** Always install latest from GitHub API
+
+**Rationale:**
+
+- Simpler code
+- Latest is usually what you want
+- Can pin specific version by editing script if needed
+- Reduces maintenance burden
+
+### Why Inline Download/Extract/Install?
+
+**Rejected:** Separate `download_release()`, `extract_tarball()`, `install_binary()` functions
+
+**Chosen:** Single `install_from_tarball()` function with inline operations
+
+**Rationale:**
+
+- These operations are ALWAYS done together
+- Separate functions create unnecessary indirection
+- Harder to trace: installer → install_from_tarball → download_release → download_with_retry
+- Inline is more straightforward
+
+## Integration with Error Handling
+
+The library assumes `error-handling.sh` has been sourced by the calling script. This provides:
+
+### Automatic Cleanup
+
+```bash
+# In install_from_tarball()
+register_cleanup "rm -f '$temp_tarball' 2>/dev/null || true"
+```
+
+Cleanup happens automatically on exit (success or failure).
+
+### Error Context
+
+```bash
+log_fatal "Failed to download from $download_url" "${BASH_SOURCE[0]}" "$LINENO"
+```
+
+Errors include file:line references for debugging.
+
+### Structured Logging
+
+Auto-detects terminal vs pipe:
+
+**Terminal mode:**
+
+```
+  ● Downloading lazygit...
+  ✓ lazygit installed successfully
+```
+
+**Structured mode (pipe/log):**
+
+```
+[INFO] Downloading lazygit...
+[INFO] ✓ lazygit installed successfully
+```
+
+## Adding a New Tool
+
+### Steps
+
+1. Create new script in `management/common/install/github-releases/`
+2. Use template pattern (see Simple Tarball Installer above)
+3. Configure: BINARY_NAME, REPO, download URL pattern
+4. Handle special cases inline if needed
+5. Test on all platforms
+
+### Time Required
+
+- **Before library:** 30-60 minutes (80-120 lines of boilerplate)
+- **After library:** 5-10 minutes (40-50 lines, mostly copy-paste)
+
+**6x faster**
 
 ## Testing
 
-Test an installer script:
+Run individual installer:
 
 ```bash
-# Test with existing installation (should skip)
+bash management/common/install/github-releases/lazygit.sh
+```
+
+Force reinstall:
+
+```bash
+FORCE_INSTALL=true bash management/common/install/github-releases/lazygit.sh
+```
+
+Test structured logging:
+
+```bash
+# Visual mode (terminal)
 bash management/common/install/github-releases/lazygit.sh
 
-# Test force reinstall
-FORCE_INSTALL=true bash management/common/install/github-releases/lazygit.sh
-
-# Test with structured logging to file
-bash management/common/install/github-releases/lazygit.sh 2>&1 | tee install.log
-
-# Verify cleanup works (check /tmp before and after)
-ls /tmp/*lazygit* 2>/dev/null || echo "Cleanup successful"
+# Structured mode (pipe)
+bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 ```
+
+## Future Improvements
+
+### Possible (Low Priority)
+
+- Optional checksum verification (verify if present, but not required)
+- Lightweight install log for audit trail (append-only)
+- Helper for multi-binary installation pattern
+
+### Not Recommended
+
+- ❌ Complex packages.yml parsing - contradicts straightforward principle
+- ❌ Automatic version checking/upgrades - adds complexity
+- ❌ Rollback capability - idempotency is sufficient
+- ❌ More abstraction layers - keep it simple
 
 ## Related Documentation
 
-- `docs/architecture/error-handling.md` - Error handling library details
-- `docs/architecture/structured-logging.md` - Logging system documentation
-- `management/common/lib/program-helpers.sh` - Legacy helpers (being phased out)
+- [Error Handling](error-handling.md)
+- [Structured Logging](structured-logging.md)
+- Production-Grade Management Enhancements (planning doc)
+
+## Files
+
+**Library:**
+
+- `management/common/lib/github-release-installer.sh` (181 lines)
+
+**Converted Scripts:**
+
+- `management/common/install/github-releases/lazygit.sh`
+- `management/common/install/github-releases/yazi.sh`
+- `management/common/install/github-releases/duf.sh`
+- `management/common/install/github-releases/glow.sh`
+- `management/common/install/github-releases/tenv.sh`
+- `management/common/install/github-releases/terraform-ls.sh`
+- `management/common/install/github-releases/terrascan.sh`
+- `management/common/install/github-releases/tflint.sh`
+- `management/common/install/github-releases/trivy.sh`
+- `management/common/install/github-releases/zk.sh`
+- `management/common/install/github-releases/terraformer.sh`
+
+**Special Cases:**
+
+- `management/common/install/github-releases/awscli.sh`
+- `management/common/install/github-releases/claude-code.sh`
+- `management/common/install/github-releases/fzf.sh`
+- `management/common/install/github-releases/neovim.sh`
+- `management/common/install/github-releases/terraform.sh`

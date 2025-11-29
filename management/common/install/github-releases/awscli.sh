@@ -9,10 +9,9 @@
 # No sudo required
 # ================================================================
 
-set -euo pipefail
-
-# Source formatting library
-source "$HOME/dotfiles/platforms/common/shell/formatting.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+enable_error_traps
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
