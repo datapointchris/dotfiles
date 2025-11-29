@@ -4,10 +4,10 @@
 
 **Git Safety Protocol**:
 
-- NEVER run `git rebase`, `git push --force`, or `git reset --hard` unless explicitly requested
+- NEVER rewrite git history in any way: no `git commit --amend`, `git rebase`, `git push --force`, `git reset --hard`, or any other history-rewriting commands unless explicitly requested
 - NEVER use `--no-verify` to bypass pre-commit hooks - fix issues instead
 - NEVER push to remote repositories unless explicitly requested
-- NEVER amend commits that have been pushed - use new commits instead
+- If a commit has a mistake, create a new fix commit - do NOT amend or rewrite
 - Always check `git status` before destructive operations
 - Pre-commit hooks exist for quality control - respect them
 
