@@ -45,10 +45,10 @@ echo ""
 # STEP 2: Run Verification
 # ================================================================
 print_header "STEP 2/3: Running Verification" "cyan"
-echo "Running: bash management/testlib/verify-installed-packages.sh"
+echo "Running: bash management/lib/verify-installed-packages.sh"
 echo ""
 
-if bash "$DOTFILES_DIR/management/testlib/verify-installed-packages.sh"; then
+if bash "$DOTFILES_DIR/management/lib/verify-installed-packages.sh"; then
   print_success "Verification passed"
 else
   EXIT_CODE=$?
@@ -61,10 +61,10 @@ echo ""
 # STEP 3: Check for Alternate Installations
 # ================================================================
 print_header "STEP 3/3: Checking for Alternate Installations" "cyan"
-echo "Running: bash management/testlib/detect-installed-duplicates.sh"
+echo "Running: bash management/lib/detect-installed-duplicates.sh"
 echo ""
 
-bash "$DOTFILES_DIR/management/testlib/detect-installed-duplicates.sh"
+bash "$DOTFILES_DIR/management/lib/detect-installed-duplicates.sh"
 echo ""
 
 # ================================================================

@@ -76,7 +76,7 @@ fi
 # ================================================================
 
 # Source platform detection utility
-source "$DOTFILES_DIR/management/utils/platform-detection.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
 # ================================================================
 # COMMON INSTALLATION PHASES

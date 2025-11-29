@@ -16,7 +16,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 
 # Source platform detection utility
-source "$DOTFILES_DIR/management/utils/platform-detection.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
 # Detect platform and run appropriate update script
 PLATFORM=$(detect_platform)

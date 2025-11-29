@@ -21,7 +21,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/shell/formatting.sh"
 
 # Source platform detection to determine step numbering
-source "$DOTFILES_DIR/management/utils/platform-detection.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 PLATFORM=$(detect_platform)
 
 # Determine starting step based on platform
