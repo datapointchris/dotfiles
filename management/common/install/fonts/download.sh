@@ -852,6 +852,21 @@ main() {
   # ================================================================
   # DOWNLOAD MODE (with optional auto-prune/standardize)
   # ================================================================
+
+  # Skip if fonts already exist (unless forcing)
+  if [[ -d "$FONTS_DIR" ]] && [[ $(count_files "$FONTS_DIR") -gt 0 ]] && [[ "${FORCE_INSTALL:-false}" != "true" ]]; then
+    local existing_count=$(count_files "$FONTS_DIR")
+    local family_count=$(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+    print_header "Fonts Already Downloaded" "cyan"
+    echo "  Families: $family_count"
+    echo "  Files: $existing_count"
+    echo "  Location: $FONTS_DIR"
+    echo ""
+    echo "  Skipping download (set FORCE_INSTALL=true to re-download)"
+    echo ""
+    return 0
+  fi
+
   mkdir -p "$TEMP_DIR"
   cd "$TEMP_DIR"
 
@@ -913,31 +928,13 @@ main() {
   # Summary
   echo ""
   print_header_success "Font Download Complete"
-  echo "Downloaded fonts in: $FONTS_DIR"
-  echo ""
-  echo "Font families:"
-  find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
-  echo ""
 
   local font_count=$(count_files "$FONTS_DIR")
-  if [[ "$DOWNLOAD_ONLY" == "true" ]] || [[ "$SKIP_FILTER" == "true" ]]; then
-    echo "Total font files: $font_count (all variants)"
-  else
-    echo "Total font files: $font_count (pruned to essentials)"
-  fi
-  echo ""
+  local family_count=$(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 
-  print_section "Next Steps" "cyan"
-  if [[ "$DOWNLOAD_ONLY" == "true" ]]; then
-    echo "  1. Test pruning: font-download --prune-only --dry-run"
-    echo "  2. Actually prune: font-download --prune-only"
-    echo "  3. Standardize names: font-download --standardize-only"
-    echo "  4. Install fonts: font-install"
-  else
-    echo "  1. Install fonts: font-install"
-    echo "  2. Refresh cache: fc-cache -f"
-    echo "  3. Test fonts in your terminal"
-  fi
+  echo "  Families: $family_count"
+  echo "  Files: $font_count"
+  echo "  Location: $FONTS_DIR"
   echo ""
 }
 

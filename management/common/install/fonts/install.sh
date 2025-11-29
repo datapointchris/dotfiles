@@ -256,13 +256,7 @@ install_all_families() {
     return 1
   fi
 
-  local total=${#families[@]}
-  local current=0
-
   for family in "${families[@]}"; do
-    current=$((current + 1))
-    echo ""
-    print_header "[$current/$total] $family" "blue"
     install_family "$family"
   done
 }
@@ -341,15 +335,14 @@ main() {
 
   # Summary
   echo ""
-  print_header "Installation Complete" "green"
-  echo ""
+  print_header_success "Font Installation Complete"
 
-  if [[ "$PLATFORM" != "wsl" ]] && [[ "$DRY_RUN" != "true" ]]; then
-    local total_installed=$(count_fonts "$FONTS_TARGET")
-    print_success "Total fonts in system: $total_installed"
-    echo ""
-    echo "Fonts are now available in your applications."
-    echo "You may need to restart applications to see new fonts."
+  if [[ "$DRY_RUN" != "true" ]]; then
+    local total_fonts=$(count_fonts "$FONTS_TARGET")
+    local total_families=$(find "$FONTS_SOURCE" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+    echo "  Families: $total_families"
+    echo "  Files: $total_fonts"
+    echo "  Location: $FONTS_TARGET"
   fi
 
   echo ""
