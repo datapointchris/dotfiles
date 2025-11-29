@@ -4,8 +4,8 @@
 # SC2154 = Variables referenced but not assigned (from sourced files)
 
 # DOTFILES="$HOME/dotfiles"
-SHELLS="$HOME/shell"
-source "$SHELLS/colors.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/colors.sh"
 
 #@ubuntu-docker
 #--> Make a new Ubuntu Docker container and ssh into it
@@ -277,15 +277,15 @@ function lsalias() {
 
   # Process common aliases
   local common_message=""
-  if [[ -f "$SHELLS/aliases.sh" ]]; then
+  if [[ -f "$SHELL_DIR/aliases.sh" ]]; then
     # grep for aliases, remove alias, replace = with special Ø char. Shift+Option+O
-    common_message="$(grep '^alias ' "$SHELLS/aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
+    common_message="$(grep '^alias ' "$SHELL_DIR/aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
   fi
 
   # Process platform-specific aliases
   local platform_message=""
-  if [[ -f "$SHELLS/$platform-aliases.sh" ]]; then
-    platform_message="$(grep '^alias ' "$SHELLS/$platform-aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
+  if [[ -f "$SHELL_DIR/$platform-aliases.sh" ]]; then
+    platform_message="$(grep '^alias ' "$SHELL_DIR/$platform-aliases.sh" | sed 's/alias//g' | sed 's/=/Ø/')"
   fi
 
   # Function to format and display aliases
@@ -337,14 +337,14 @@ function lsfunc() {
 
   # Process common functions
   local common_message=""
-  if [[ -f "$SHELLS/functions.sh" ]]; then
-    common_message="$("shelldocsparser" "$SHELLS/functions.sh")"
+  if [[ -f "$SHELL_DIR/functions.sh" ]]; then
+    common_message="$("shelldocsparser" "$SHELL_DIR/functions.sh")"
   fi
 
   # Process platform-specific functions
   local platform_message=""
-  if [[ -f "$SHELLS/$platform-functions.sh" ]]; then
-    platform_message="$("shelldocsparser" "$SHELLS/$platform-functions.sh")"
+  if [[ -f "$SHELL_DIR/$platform-functions.sh" ]]; then
+    platform_message="$("shelldocsparser" "$SHELL_DIR/$platform-functions.sh")"
   fi
 
   # Function to format and display functions

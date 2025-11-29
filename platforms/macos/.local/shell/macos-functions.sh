@@ -3,8 +3,8 @@
 # SC2154 = Variable is referenced but not assigned
 # *For the word formatting that comes from .color-and-formatting
 # DOTFILES="$HOME/dotfiles"
-SHELLS="$HOME/shell"
-source "$SHELLS/colors.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/colors.sh"
 
 #@openhands
 #--> Run the openhands docker container

@@ -19,8 +19,8 @@ log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
 # Log environment
 env_file="$HOME/.env"
-colors_file="$HOME/shell/colors.sh"
-formatting_file="$HOME/shell/formatting.sh"
+colors_file="$HOME/.local/shell/colors.sh"
+formatting_file="$HOME/.local/shell/formatting.sh"
 [[ -f $env_file ]] && source $env_file && log "Load" "$env_file" || log_error "Load" "$env_file"
 [[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
 [[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
@@ -89,6 +89,9 @@ export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 export XDG_BIN_HOME="$HOME/.local/bin"
+
+# Shell library location
+export SHELL_DIR="$HOME/.local/shell"
 
 # Config locations
 export BASH_COMPLETION_USER_FILE="$XDG_CONFIG_HOME/bash-completion/bash_completion"
@@ -195,13 +198,13 @@ export GROFF_NO_SGR=1                  # for groff compatibility
 # ------------------------------------------------------------------ #
 
 # File paths
-SHELLS="$HOME/shell/"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 iterm2_integration="$HOME/.iterm2_shell_integration.zsh"
-aliases_file="$SHELLS/aliases.sh"
-platform_aliases_file="$SHELLS/$PLATFORM-aliases.sh"
-functions_file="$SHELLS/functions.sh"
-fzf_functions_file="$SHELLS/fzf-functions.sh"
-platform_functions_file="$SHELLS/$PLATFORM-functions.sh"
+aliases_file="$SHELL_DIR/aliases.sh"
+platform_aliases_file="$SHELL_DIR/$PLATFORM-aliases.sh"
+functions_file="$SHELL_DIR/functions.sh"
+fzf_functions_file="$SHELL_DIR/fzf-functions.sh"
+platform_functions_file="$SHELL_DIR/$PLATFORM-functions.sh"
 
 # Platform-specific integrations
 if [[ "$OSTYPE" == "darwin"* ]]; then
