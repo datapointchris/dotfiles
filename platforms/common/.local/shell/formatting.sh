@@ -469,23 +469,10 @@ print_info() {
 # Utility Functions
 # ================================================================
 
-# Die with error message and exit
-die() {
-  print_error "$*"
-  exit 1
-}
-
-# Print error header and exit (for critical failures)
-fatal() {
-  echo ""
-  print_header_error "Fatal Error"
-  echo -e "${COLOR_RED}$*${COLOR_RESET}"
-  echo ""
-  exit 1
-}
-
-# Check if command exists
-require_command() {
+# Check if command exists (returns 0 if exists, 1 if not)
+# Usage: if has_command git; then ... fi
+# Note: For multiple commands with fatal error, use error-handling.sh's require_commands()
+has_command() {
   if ! command -v "$1" &> /dev/null; then
     return 1
   fi

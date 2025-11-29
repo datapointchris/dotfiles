@@ -2,7 +2,7 @@
 # ================================================================
 # Error Handling Library
 # ================================================================
-# Provides robust error handling with:
+# System-wide library providing robust error handling with:
 #   - Automatic cleanup on exit (success or failure)
 #   - Line number tracking in error messages
 #   - Stack traces for debugging
@@ -10,7 +10,7 @@
 #   - Trap handlers for ERR and EXIT signals
 #
 # Usage:
-#   source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+#   source "$SHELL_DIR/error-handling.sh"
 #   enable_error_traps
 #
 #   # Register cleanup functions
@@ -23,10 +23,16 @@
 #   verify_file /tmp/package.tar.gz "Downloaded package"
 # ================================================================
 
-# Source structured logging
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
-source "$SCRIPT_DIR/structured-logging.sh"
+# Source logging library
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+export TERM=${TERM:-xterm}
+
+if [[ -f "$SHELL_DIR/logging.sh" ]]; then
+  source "$SHELL_DIR/logging.sh"
+else
+  # Fallback to repo location
+  source "$HOME/dotfiles/platforms/common/.local/shell/logging.sh"
+fi
 
 # ================================================================
 # Error Handling State
@@ -288,9 +294,9 @@ disable_debug() {
 # ================================================================
 # #!/usr/bin/env bash
 #
-# # Source error handling (includes structured logging)
-# DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-# source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+# # Source error handling (includes logging)
+# SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# source "$SHELL_DIR/error-handling.sh"
 # enable_error_traps
 #
 # # Setup cleanup
