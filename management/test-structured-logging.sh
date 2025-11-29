@@ -20,7 +20,8 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 export DOTFILES_DIR
 
 # Source structured logging library
-source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Show current mode
 echo "Testing structured logging library"

@@ -12,7 +12,8 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_banner "Step 1 - System Packages" "cyan"
 echo "  Updating system packages..."

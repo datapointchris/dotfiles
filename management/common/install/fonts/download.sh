@@ -6,7 +6,8 @@ set -euo pipefail
 
 # Source structured logging library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # ================================================================
 # Configuration & Global Variables

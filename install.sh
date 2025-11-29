@@ -58,7 +58,8 @@ export FORCE_INSTALL
 
 # Source structured logging library (includes formatting.sh in visual mode)
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Check if running as root (allow for Docker testing)
 if [[ $EUID -eq 0 ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then

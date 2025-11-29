@@ -13,7 +13,8 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 # Source formatting library
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/management/common/lib/structured-logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 # Check if Homebrew is already installed
 if command -v brew >/dev/null 2>&1; then
