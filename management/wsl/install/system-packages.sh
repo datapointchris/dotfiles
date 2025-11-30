@@ -28,9 +28,8 @@ sudo apt install -y python3-yaml
 # Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
 PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=apt | tr '\n' ' ')
-log_info "Packages: $PACKAGES"
-
-if sudo apt install -y "$PACKAGES"; then
+# shellcheck disable=SC2086
+if sudo apt install -y $PACKAGES; then
   log_success "WSL packages installed"
 else
   log_warning "Some packages may have failed to install"

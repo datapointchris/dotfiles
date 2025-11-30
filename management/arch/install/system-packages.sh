@@ -29,8 +29,8 @@ sudo pacman -S --needed --noconfirm python-yaml
 # Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
 PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=pacman | tr '\n' ' ')
-log_info "Packages: $PACKAGES"
-sudo pacman -S --needed --noconfirm "$PACKAGES"
+# shellcheck disable=SC2086
+sudo pacman -S --needed --noconfirm $PACKAGES
 
 # Fix library linking issues
 log_info "Fixing library links..."
