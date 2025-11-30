@@ -17,9 +17,7 @@
 #   - Security (privacy settings)
 #
 # Usage:
-#   sudo bash management/macos/setup/current.sh
-#
-# Note: Must be run with sudo for system-level settings
+#   bash management/macos/setup/preferences.sh
 ##############################################################################
 
 set -euo pipefail
@@ -41,12 +39,7 @@ if [ "$(uname -s)" != "Darwin" ]; then
   exit 1
 fi
 
-# Require sudo (fail fast if not root)
-if [ "$EUID" -ne 0 ]; then
-  log_error "This script must be run with sudo"
-  log_error "Usage: sudo bash management/macos/setup/current.sh"
-  exit 1
-fi
+# No sudo required - all preferences are user-level
 
 print_banner "Configuring macOS Preferences"
 
@@ -102,9 +95,6 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 log_info "  Show ~/Library folder"
 chflags nohidden ~/Library 2>/dev/null || true
 xattr -d com.apple.FinderInfo ~/Library 2>/dev/null || true
-
-log_info "  Show /Volumes folder"
-sudo chflags nohidden /Volumes 2>/dev/null || true
 
 # ================================================================
 # DOCK - Layout and Behavior

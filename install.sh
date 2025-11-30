@@ -179,12 +179,6 @@ install_macos() {
     log_info "Starting macOS dotfiles installation..."
     echo ""
 
-    # Request sudo upfront and keep alive
-    print_section "Requesting sudo access for system configuration"
-    sudo -v
-    # Keep sudo alive in background (refreshes every 50s, sudo timeout is 5min)
-    while true; do sudo -v; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
-    echo ""
 
     print_header "Phase 1 - System Tools (Homebrew)" "cyan"
     bash "$macos_install/homebrew.sh"
@@ -194,7 +188,7 @@ install_macos() {
     echo ""
 
     print_header "Phase 2 - System Preferences" "cyan"
-    sudo bash "$macos_setup/preferences.sh"
+    bash "$macos_setup/preferences.sh"
     echo ""
 
     install_common_phases
