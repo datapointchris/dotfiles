@@ -15,6 +15,8 @@
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/logging.sh"
+source "$SHELL_DIR/formatting.sh"
 source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 

@@ -10,6 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/logging.sh"
+source "$SHELL_DIR/formatting.sh"
 source "$SHELL_DIR/error-handling.sh"
 enable_error_traps
 
