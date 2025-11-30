@@ -101,8 +101,7 @@ install_common_phases() {
             echo ""
         fi
 
-        bash "$common_install/fonts/download.sh"
-        bash "$common_install/fonts/install.sh"
+        bash "$common_install/fonts/fonts.sh" --full
         echo ""
     else
         log_info "Skipping font installation (SKIP_FONTS=1)"
