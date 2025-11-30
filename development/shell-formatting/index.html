@@ -898,6 +898,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -954,6 +962,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/shell-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Libraries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -1027,6 +1063,90 @@
     
   
     Tool Composition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/structured-logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structured Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/github-release-installer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Release Installer
   
 
     
@@ -2475,6 +2595,8 @@
       
         
       
+        
+      
     
     
     
@@ -2744,6 +2866,34 @@
     
   
     Bash Script Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash TTY Detection in Command Substitution
   
 
     
@@ -3230,8 +3380,8 @@
 <h2 id="location">Location<a class="headerlink" href="#location" title="Permanent link">&para;</a></h2>
 <p><strong>Two files for clean separation:</strong></p>
 <ul>
-<li><code>platforms/common/shell/colors.sh</code> - Color definitions and color functions</li>
-<li><code>platforms/common/shell/formatting.sh</code> - Formatting functions (sources colors.sh)</li>
+<li><code>platforms/common/.local/shell/colors.sh</code> - Color definitions and color functions</li>
+<li><code>platforms/common/.local/shell/formatting.sh</code> - Formatting functions (sources colors.sh)</li>
 </ul>
 <p><strong>Sourced system-wide</strong>: <code>formatting.sh</code> is automatically loaded in your shell session via <code>.zshrc</code>, making all functions available in your terminal and any scripts.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
@@ -3252,8 +3402,8 @@
 </span></code></pre></div>
 <h3 id="copy-to-other-projects">Copy to Other Projects<a class="headerlink" href="#copy-to-other-projects" title="Permanent link">&para;</a></h3>
 <p>The libraries are self-contained and portable. Copy both files to your project:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cp<span class="w"> </span>platforms/common/shell/colors.sh<span class="w"> </span>~/my-project/lib/
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>cp<span class="w"> </span>platforms/common/shell/formatting.sh<span class="w"> </span>~/my-project/lib/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cp<span class="w"> </span>platforms/common/.local/shell/colors.sh<span class="w"> </span>~/my-project/lib/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>cp<span class="w"> </span>platforms/common/.local/shell/formatting.sh<span class="w"> </span>~/my-project/lib/
 </span></code></pre></div>
 <p>Then source formatting.sh in your scripts (it will source colors.sh):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">/lib/formatting.sh&quot;</span>
