@@ -27,7 +27,17 @@ sudo apt install -y python3-yaml
 
 # Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=apt | tr '\n' ' ')
+
+# Skip Docker packages if running in Docker test environment
+if [[ "${DOTFILES_DOCKER_TEST:-}" == "true" ]]; then
+  log_info "Docker test mode - excluding Docker packages"
+  PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=apt | \
+    grep -v -E '^(docker-ce|docker-ce-cli|containerd\.io|docker-buildx-plugin|docker-compose-plugin)$' | \
+    tr '\n' ' ')
+else
+  PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=apt | tr '\n' ' ')
+fi
+
 # shellcheck disable=SC2086
 if sudo apt install -y $PACKAGES; then
   log_success "WSL packages installed"
