@@ -28,3 +28,8 @@ else
 
   log_success "uv installed: $(uv --version)"
 fi
+
+# Install Python 3.13 as default (uv skips if already installed)
+log_info "Installing Python 3.13 as default..."
+uv python install --preview-features python-install-default --default 3.13
+log_success "Python 3.13 configured as default"
