@@ -492,7 +492,7 @@ download_nimbus() {
   mkdir -p "$FONTS_DIR/NimbusMono"
 
   log_verbose "Downloading Nimbus Mono from Font Squirrel..."
-  curl -fsSL https://www.fontsquirrel.com/fonts/download/nimbus-mono -o NimbusMono.zip
+  curl -fsSL -A "Mozilla/5.0" https://www.fontsquirrel.com/fonts/download/nimbus-mono -o NimbusMono.zip
   unzip -qo NimbusMono.zip -d nimbus
   find nimbus -name "*.otf" -exec mv {} "$FONTS_DIR/NimbusMono/" \; 2>/dev/null || true
 
