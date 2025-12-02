@@ -40,6 +40,30 @@ See `docs/learnings/app-installation-patterns.md` for full details.
   4. Test a different hypothesis based on research
   - Running the same command 10 times with minor variations wastes time and misses root cause
 
+**Critical Bash Gotcha - Arithmetic with set -e** (⚠️ This has caught us 4+ times):
+
+- `((COUNTER++))` returns 0 (false) when COUNTER is 0, causing `set -e` to exit the script
+- **Always use:** `COUNTER=$((COUNTER + 1))` instead of `((COUNTER++))`
+- **Or use:** `((COUNTER++)) || true` to prevent exit
+- This affects any arithmetic expression that evaluates to 0: `((VAR--))`, `((VAR *= 0))`, etc.
+- Example that fails:
+
+  ```bash
+  set -e
+  COUNT=0
+  ((COUNT++))  # Exits here! Returns 0 before incrementing
+  echo "This never runs"
+  ```
+
+- Example that works:
+
+  ```bash
+  set -e
+  COUNT=0
+  COUNT=$((COUNT + 1))  # Safe
+  echo "This runs: COUNT=$COUNT"
+  ```
+
 **Shell Libraries** (⚠️ Three system-wide libraries for all scripts):
 
 The dotfiles provide three shell libraries in `~/.local/shell/`:
