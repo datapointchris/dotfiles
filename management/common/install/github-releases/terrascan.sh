@@ -2,10 +2,9 @@
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/logging.sh"
-source "$SHELL_DIR/formatting.sh"
-source "$SHELL_DIR/error-handling.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
@@ -22,14 +21,13 @@ fi
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
-# Platform detection (lowercase, amd64 for x86_64)
+# terrascan uses capital case for platform and x86_64 for arch
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  PLATFORM="darwin"
-  ARCH=$(uname -m)
-  [[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
+  PLATFORM="Darwin"
+  ARCH="x86_64"
 else
-  PLATFORM="linux"
-  ARCH="amd64"
+  PLATFORM="Linux"
+  ARCH="x86_64"
 fi
 
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terrascan_${VERSION#v}_${PLATFORM}_${ARCH}.tar.gz"

@@ -2,10 +2,9 @@
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/logging.sh"
-source "$SHELL_DIR/formatting.sh"
-source "$SHELL_DIR/error-handling.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
@@ -32,9 +31,10 @@ else
   ARCH="amd64"
 fi
 
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tflint_${VERSION#v}_${PLATFORM}_${ARCH}.tar.gz"
+# tflint uses simplified naming without version number
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tflint_${PLATFORM}_${ARCH}.zip"
 
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "tflint"
+install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "tflint"
 
 print_banner_success "TFLint installation complete"
 exit_success

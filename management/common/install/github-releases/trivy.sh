@@ -2,10 +2,9 @@
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/logging.sh"
-source "$SHELL_DIR/formatting.sh"
-source "$SHELL_DIR/error-handling.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
@@ -22,17 +21,16 @@ fi
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
-# Platform detection (lowercase, amd64 for x86_64)
+# trivy uses capital case with 64bit format
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  PLATFORM="darwin"
-  ARCH=$(uname -m)
-  [[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
+  PLATFORM="macOS"
+  ARCH="64bit"
 else
-  PLATFORM="linux"
-  ARCH="amd64"
+  PLATFORM="Linux"
+  ARCH="64bit"
 fi
 
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/trivy_${VERSION#v}_${PLATFORM}_${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/trivy_${VERSION#v}_${PLATFORM}-${ARCH}.tar.gz"
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "trivy"
 
