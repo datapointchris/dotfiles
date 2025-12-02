@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ================================================================
-# Install tenv from GitHub Releases
+# Install tenv and Terraform
 # ================================================================
-# Downloads and installs tenv (Terraform/OpenTofu version manager)
+# Installs tenv (Terraform/OpenTofu version manager) and Terraform runtime
+# Configuration read from: management/packages.yml
 # Installation location: ~/.local/bin/tenv + proxy binaries
 # No sudo required (user space)
 # ================================================================
@@ -10,11 +11,13 @@
 set -euo pipefail
 
 # Source error handling (includes structured logging)
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/logging.sh"
-source "$SHELL_DIR/formatting.sh"
-source "$SHELL_DIR/error-handling.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+
+export TERM=${TERM:-xterm}
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
 # Source GitHub release installer library
@@ -72,5 +75,31 @@ else
   log_fatal "tenv not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
 fi
 
-print_banner_success "tenv installation complete"
+# Check if packages.yml exists for Terraform installation
+if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
+  log_warning "packages.yml not found, skipping Terraform installation"
+  print_banner_success "tenv installation complete"
+  exit_success
+fi
+
+# Read Terraform version from packages.yml
+TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.terraform.version)
+
+print_section "Installing Terraform ${TERRAFORM_VERSION}" "cyan"
+
+# Install specific Terraform version
+echo "  Installing Terraform ${TERRAFORM_VERSION}..."
+if tenv tf install "${TERRAFORM_VERSION}"; then
+  echo "    ✓ Terraform installed"
+else
+  log_error "Failed to install Terraform"
+  exit 1
+fi
+
+# Set as default version
+echo "  Setting Terraform ${TERRAFORM_VERSION} as default..."
+tenv tf use "${TERRAFORM_VERSION}"
+
+log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
+print_banner_success "tenv and Terraform installation complete"
 exit_success

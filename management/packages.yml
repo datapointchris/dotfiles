@@ -424,17 +424,17 @@ github_binaries:
   # Terraform ecosystem tools
   - name: tenv
     repo: tofuutils/tenv
-    install_script: install-tenv.sh
+    install_script: language-managers/tenv.sh
     binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
-    description: Version manager for Terraform/OpenTofu/Terragrunt
+    description: Version manager for Terraform/OpenTofu/Terragrunt and Terraform runtime
 
   - name: terraform-ls
     repo: hashicorp/terraform-ls
-    install_script: install-terraform-ls.sh
+    install_script: custom-installers/terraform-ls.sh
     binary_pattern: "terraform-ls_{version}_{platform}_{arch}.zip" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
-    description: Terraform Language Server
+    description: Terraform Language Server (uses releases.hashicorp.com)
 
   - name: tflint
     repo: terraform-linters/tflint

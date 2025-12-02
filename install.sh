@@ -87,6 +87,7 @@ install_common_phases() {
     # Local variables for frequently used paths
     local common_install="$DOTFILES_DIR/management/common/install"
     local github_releases="$common_install/github-releases"
+    local custom_installers="$common_install/custom-installers"
     local lang_managers="$common_install/language-managers"
     local lang_tools="$common_install/language-tools"
     local plugins="$common_install/plugins"
@@ -120,13 +121,17 @@ install_common_phases() {
     bash "$github_releases/yazi.sh"
     bash "$github_releases/glow.sh"
     bash "$github_releases/duf.sh"
-    bash "$github_releases/awscli.sh"
-    bash "$github_releases/claude-code.sh"
-    bash "$github_releases/terraform.sh"
-    bash "$github_releases/terraform-ls.sh"
     bash "$github_releases/tflint.sh"
     bash "$github_releases/terraformer.sh"
     bash "$github_releases/terrascan.sh"
+    bash "$github_releases/trivy.sh"
+    bash "$github_releases/zk.sh"
+    echo ""
+
+    print_header "Phase 5b - Custom Distribution Tools" "cyan"
+    bash "$custom_installers/awscli.sh"
+    bash "$custom_installers/claude-code.sh"
+    bash "$custom_installers/terraform-ls.sh"
     echo ""
 
     print_header "Phase 6 - Rust/Cargo Tools" "cyan"
@@ -140,6 +145,7 @@ install_common_phases() {
     bash "$lang_tools/npm-install-globals.sh"
     bash "$lang_managers/uv.sh"
     bash "$lang_tools/uv-tools.sh"
+    bash "$lang_managers/tenv.sh"
     echo ""
 
     print_header "Phase 8 - Shell Configuration" "cyan"

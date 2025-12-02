@@ -18,7 +18,7 @@ The library follows the "medium abstraction" principle:
 
 ### Library Chain
 
-```
+```text
 installer-script.sh
   └─> error-handling.sh (set -euo pipefail, traps, cleanup)
        └─> structured-logging.sh (dual-mode: visual/structured)
@@ -280,14 +280,14 @@ Auto-detects terminal vs pipe:
 
 **Terminal mode:**
 
-```
+```text
   ● Downloading lazygit...
   ✓ lazygit installed successfully
 ```
 
 **Structured mode (pipe/log):**
 
-```
+```text
 [INFO] Downloading lazygit...
 [INFO] ✓ lazygit installed successfully
 ```
@@ -366,18 +366,20 @@ bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 - `management/common/install/github-releases/yazi.sh`
 - `management/common/install/github-releases/duf.sh`
 - `management/common/install/github-releases/glow.sh`
-- `management/common/install/github-releases/tenv.sh`
-- `management/common/install/github-releases/terraform-ls.sh`
+- `management/common/install/github-releases/fzf.sh` (converted from build-from-source)
+- `management/common/install/github-releases/neovim.sh` (extracts directory + symlinks binary)
 - `management/common/install/github-releases/terrascan.sh`
 - `management/common/install/github-releases/tflint.sh`
 - `management/common/install/github-releases/trivy.sh`
 - `management/common/install/github-releases/zk.sh`
 - `management/common/install/github-releases/terraformer.sh`
 
-**Special Cases:**
+**Moved to Custom Installers:**
 
-- `management/common/install/github-releases/awscli.sh`
-- `management/common/install/github-releases/claude-code.sh`
-- `management/common/install/github-releases/fzf.sh`
-- `management/common/install/github-releases/neovim.sh`
-- `management/common/install/github-releases/terraform.sh`
+- `management/common/install/custom-installers/awscli.sh` - Uses AWS custom installer
+- `management/common/install/custom-installers/claude-code.sh` - Uses official installer script
+- `management/common/install/custom-installers/terraform-ls.sh` - Uses releases.hashicorp.com (not GitHub)
+
+**Moved to Language Managers:**
+
+- `management/common/install/language-managers/tenv.sh` - Merged with terraform.sh to match nvm/uv pattern
