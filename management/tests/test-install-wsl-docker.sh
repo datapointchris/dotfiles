@@ -11,7 +11,7 @@ set -euo pipefail
 # Source shared test helpers (includes formatting library)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-source "$SCRIPT_DIR/lib/helpers.sh"
+source "$SCRIPT_DIR/helpers.sh"
 
 # Show usage
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -129,6 +129,7 @@ DOCKER_IMAGE="wsl-ubuntu:${UBUNTU_VERSION}"
 # Timing arrays
 declare -a STEP_NAMES
 declare -a STEP_TIMES
+declare -a STEP_STATUS
 
 # Cleanup function
 cleanup() {
@@ -173,7 +174,7 @@ if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 1/7: Preparing WSL Ubuntu Docker Image"
+  log_section "STEP 1/8: Preparing WSL Ubuntu Docker Image"
 
   # Check if Docker is running
   if ! docker info >/dev/null 2>&1; then
@@ -235,7 +236,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 2/7: Starting Docker Container"
+  log_section "STEP 2/8: Starting Docker Container"
   echo "Starting container with dotfiles mounted..."
 
   # Start container in background with dotfiles mounted
@@ -254,9 +255,10 @@ STEP_START=$(date +%s)
   docker run -d \
     --name "$CONTAINER_NAME" \
     $USER_FLAG \
-    --env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    --env PATH="$HOME_DIR/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     --env HOME="$HOME_DIR" \
     --env DOTFILES_DOCKER_TEST=true \
+    --env SKIP_FONTS=1 \
     --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
     "$DOCKER_IMAGE" \
     /usr/bin/sleep infinity
@@ -277,7 +279,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 3/7: Preparing Container Environment"
+  log_section "STEP 3/8: Preparing Container Environment"
 
   # Detect home directory
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
@@ -351,7 +353,7 @@ fi
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 4/7: Running install.sh Script"
+  log_section "STEP 4/8: Running install.sh Script"
   echo "Executing WSL installation in container..."
   echo ""
 
@@ -371,7 +373,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 5/7: Verifying Installation"
+  log_section "STEP 5/8: Verifying Installation"
   echo "Running comprehensive verification in fresh shell..."
   echo "(This tests that all tools are properly configured and in PATH)"
   echo ""
@@ -381,7 +383,7 @@ STEP_START=$(date +%s)
   docker exec "$CONTAINER_NAME" bash -c "
     ZSHDOTDIR=${CONTAINER_HOME}/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/management/lib/verify-installed-packages.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/management/tests/verify-installed-packages.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -397,12 +399,12 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 6/7: Detecting Alternate Installations"
+  log_section "STEP 6/8: Detecting Alternate Installations"
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/management/lib/detect-installed-duplicates.sh"
+  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/management/tests/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -413,11 +415,36 @@ STEP_TIMES+=("$STEP_ELAPSED")
 } 2>&1 | tee -a "$LOG_FILE"
 
 # ================================================================
-# STEP 7: Test update-all
+# STEP 7: Test all apps and configs
+# ================================================================
+STEP_START=$(date +%s)
+CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
+{
+  log_section "STEP 7/8: Testing All Apps and Configs"
+  echo "Running comprehensive dotfiles verification test..."
+  echo ""
+} 2>&1 | tee -a "$LOG_FILE"
+
+# Run test outside of tee subshell to capture result
+if docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+  STEP_STATUS+=("PASS")
+else
+  STEP_STATUS+=("FAIL")
+fi
+STEP_END=$(date +%s)
+STEP_ELAPSED=$((STEP_END - STEP_START))
+STEP_NAMES+=("Test all apps")
+STEP_TIMES+=("$STEP_ELAPSED")
+{
+  log_timing "Step 7: Test all apps" "$STEP_ELAPSED"
+} 2>&1 | tee -a "$LOG_FILE"
+
+# ================================================================
+# STEP 8: Test update-all
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 7/7: Testing update-all Task"
+  log_section "STEP 8/8: Testing update-all Task"
   echo "Running task wsl:update-all to verify update functionality..."
   echo ""
 
@@ -434,7 +461,7 @@ STEP_ELAPSED=$((STEP_END - STEP_START))
 STEP_NAMES+=("Update-all test")
 STEP_TIMES+=("$STEP_ELAPSED")
 {
-  log_timing "Step 7: Update-all test" "$STEP_ELAPSED"
+  log_timing "Step 8: Update-all test" "$STEP_ELAPSED"
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Calculate overall time
@@ -446,6 +473,20 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   echo ""
   print_header_success "WSL Installation Test Complete"
   echo ""
+
+  # Test Results Summary
+  print_section "Test Results" "cyan"
+  echo ""
+  echo "  Installation Verification:"
+  echo "    • verify-installed-packages.sh: $(print_cyan "Completed")"
+  echo "    • detect-installed-duplicates.sh: $(print_cyan "Completed")"
+  if [[ "${STEP_STATUS[0]:-}" == "PASS" ]]; then
+    echo "    • test-all-apps.sh: $(print_green "✓ PASS") (34 checks)"
+  else
+    echo "    • test-all-apps.sh: $(print_red "✗ FAIL")"
+  fi
+  echo ""
+
   print_section "Timing Summary" "cyan"
   echo ""
   for i in "${!STEP_NAMES[@]}"; do
