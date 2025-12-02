@@ -29,8 +29,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/error-handling.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
 # Check system is compatible
