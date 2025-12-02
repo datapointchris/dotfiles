@@ -9,8 +9,8 @@
 set -euo pipefail
 
 # Source formatting library
-SHELLS="${SHELLS:-$HOME/shell}"
-source "$SHELLS/formatting.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
 

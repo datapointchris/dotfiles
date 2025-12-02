@@ -3,12 +3,12 @@
 
 if [[ -o login ]]; then echo "Login shell"; else echo "Not Login shell"; fi
 
-SHELLS="$HOME/shell"
+SHELL_DIR="$HOME/.local/shell"
 
-source "$SHELLS/colors.sh"
-source "$SHELLS/formatting.sh"
-source "$SHELLS/functions.sh"
-source "$SHELLS/aliases.sh"
+source "$SHELL_DIR/colors.sh"
+source "$SHELL_DIR/formatting.sh"
+source "$SHELL_DIR/functions.sh"
+source "$SHELL_DIR/aliases.sh"
 
 # Load pyenv if installed
 if command -v pyenv &>/dev/null; then

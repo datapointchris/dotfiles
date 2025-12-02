@@ -1953,7 +1953,7 @@ tools:
     usage: "shelldocsparser <script-file>"
     why_use: "Extract function documentation from shell scripts with special comment syntax"
     examples:
-      - cmd: "shelldocsparser ~/.shell/functions.sh"
+      - cmd: "shelldocsparser ~/.local/shell/functions.sh"
         desc: "Parse functions.sh for documentation"
     see_also: [tools]
     tags: [dotfiles, documentation, shell]

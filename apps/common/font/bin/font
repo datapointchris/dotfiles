@@ -14,10 +14,10 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source formatting library for colorized help
-if [[ -f "$HOME/shell/formatting.sh" ]]; then
-  source "$HOME/shell/formatting.sh"
-elif [[ -f "$HOME/dotfiles/platforms/common/.local/lib/bash/formatting.sh" ]]; then
-  source "$HOME/dotfiles/platforms/common/.local/lib/bash/formatting.sh"
+if [[ -f "$HOME/.local/shell/formatting.sh" ]]; then
+  source "$HOME/.local/shell/formatting.sh"
+elif [[ -f "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh" ]]; then
+  source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
 fi
 
 source "$FONT_APP_DIR/lib/lib.sh"

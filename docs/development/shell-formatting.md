@@ -29,7 +29,7 @@ Already available via $PATH, but can source explicitly:
 
 ```bash
 #!/usr/bin/env bash
-source "$HOME/shell/formatting.sh"
+source "$HOME/.local/shell/formatting.sh"
 
 print_header "My Script"
 print_section "Phase 1: Setup"

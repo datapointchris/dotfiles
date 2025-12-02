@@ -6,7 +6,7 @@
 # Available system-wide when sourced in .zshrc
 #
 # Usage in scripts:
-#   source "$HOME/shell/formatting.sh"
+#   source "$HOME/.local/shell/formatting.sh"
 #   print_header "Installation Starting"
 #   print_section "Phase 1: Setup"
 #   print_success "Setup complete"

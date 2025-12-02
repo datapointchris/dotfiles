@@ -13,8 +13,8 @@
 # DO NOT run as: ./aws-profiles (environment variables won't persist)
 
 # Source formatting library
-SHELLS="${SHELLS:-$HOME/shell}"
-source "$SHELLS/formatting.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
 
 CREDENTIALS_FILE="$HOME/.aws/credentials"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-SHELLS="$HOME/.shell"
-source "$SHELLS/colors.sh"
+SHELL_DIR="$HOME/.local/shell"
+source "$SHELL_DIR/colors.sh"
 
 # help.sh -- self-contained on-line help for bash scripts
 #
