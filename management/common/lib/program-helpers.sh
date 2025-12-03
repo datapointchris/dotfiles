@@ -3,6 +3,13 @@
 # Shared Helper Functions for GitHub Binary Installation
 # ================================================================
 # Common functions used across all install-*.sh scripts
+#
+# Features:
+# - Package configuration parsing
+# - Manual installation instructions
+# - Download handling with failure reporting
+# - GitHub release version fetching
+# - Failure registry for resilient installations
 
 set -euo pipefail
 
@@ -89,4 +96,145 @@ get_latest_github_release() {
   fi
 
   echo "$version"
+}
+
+# ================================================================
+# Failure Registry Functions (Resilient Installation)
+# ================================================================
+
+# Initialize failure registry for collecting installation failures
+# This creates a temporary directory to store failure information
+# that will be displayed in a summary at the end of installation
+init_failure_registry() {
+  # Create registry directory with process ID for uniqueness
+  export DOTFILES_FAILURE_REGISTRY="/tmp/dotfiles-failures-$$"
+  mkdir -p "$DOTFILES_FAILURE_REGISTRY"
+
+  # Set up cleanup trap to remove registry on exit
+  # Note: This trap will be inherited by child shells
+  trap 'rm -rf "$DOTFILES_FAILURE_REGISTRY" 2>/dev/null || true' EXIT INT TERM
+}
+
+# Report failure to registry
+# This function writes failure information to a file in the registry
+# for later display in the installation summary
+#
+# Usage: report_failure <tool_name> <download_url> <version> <manual_steps> <error_reason>
+#
+# Arguments:
+#   tool_name     - Name of the tool that failed (e.g., "yazi", "glow")
+#   download_url  - URL where the tool can be downloaded
+#   version       - Version that was attempted (or "latest")
+#   manual_steps  - Multi-line string with manual installation instructions
+#   error_reason  - Brief description of why it failed (e.g., "Download failed")
+#
+# Note: If DOTFILES_FAILURE_REGISTRY is not set, this function does nothing.
+#       This allows installer scripts to work standalone without the registry.
+report_failure() {
+  local tool_name="$1"
+  local download_url="$2"
+  local version="${3:-latest}"
+  local manual_steps="$4"
+  local error_reason="${5:-Installation failed}"
+
+  # Skip if no registry (running script standalone)
+  if [[ -z "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    return 0
+  fi
+
+  # Ensure registry directory exists
+  mkdir -p "$DOTFILES_FAILURE_REGISTRY"
+
+  # Create failure file with timestamp prefix for uniqueness and ordering
+  local failure_file="$DOTFILES_FAILURE_REGISTRY/$(date +%s)-${tool_name}.txt"
+
+  # Write failure information in source-able format
+  cat > "$failure_file" <<EOF
+TOOL=$tool_name
+URL=$download_url
+VERSION=$version
+REASON=$error_reason
+MANUAL_STEPS<<STEPS_END
+$manual_steps
+STEPS_END
+EOF
+}
+
+# Display failure summary at end of installation
+# Reads all failure files from the registry and displays them
+# in a formatted, user-friendly way with manual installation instructions
+display_failure_summary() {
+  # Check if registry exists and has failures
+  if [[ -z "${DOTFILES_FAILURE_REGISTRY:-}" ]] || [[ ! -d "$DOTFILES_FAILURE_REGISTRY" ]]; then
+    return 0
+  fi
+
+  # Count failure files
+  local failure_files=()
+  while IFS= read -r -d '' file; do
+    failure_files+=("$file")
+  done < <(find "$DOTFILES_FAILURE_REGISTRY" -name "*.txt" -type f -print0 2>/dev/null)
+
+  # No failures - nothing to display
+  if [[ ${#failure_files[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  # Display header
+  echo ""
+  echo "════════════════════════════════════════════════════════════════"
+  echo "Installation Summary"
+  echo "════════════════════════════════════════════════════════════════"
+  echo ""
+  log_warning "Some installations failed"
+  log_info "This is common in restricted network environments"
+  echo ""
+
+  # Display each failure
+  for file in "${failure_files[@]}"; do
+    # Source the failure file to get variables
+    # Use a subshell to avoid polluting current environment
+    (
+      # Read failure details
+      # shellcheck disable=SC1090
+      source "$file"
+
+      # Display failure information
+      # shellcheck disable=SC2153  # Variables are set by sourcing the failure file
+      echo "────────────────────────────────────────────────────────────────"
+      echo "$TOOL - Manual Installation Required"
+      echo "────────────────────────────────────────────────────────────────"
+      echo "  Reason: $REASON"
+      echo "  Download: $URL"
+      # shellcheck disable=SC2153  # VERSION is set by sourcing the failure file
+      if [[ "$VERSION" != "latest" ]] && [[ "$VERSION" != "unknown" ]]; then
+        echo "  Version: $VERSION"
+      fi
+      echo ""
+      echo "  Manual Steps:"
+      # shellcheck disable=SC2153,SC2001  # MANUAL_STEPS from sourced file, sed clearer than parameter expansion
+      echo "$MANUAL_STEPS" | sed 's/^/    /'
+      echo ""
+    )
+  done
+
+  # Save full report to home directory for reference
+  local report_file="$HOME/.dotfiles-installation-failures-$(date +%Y%m%d-%H%M%S).txt"
+  {
+    echo "Dotfiles Installation Failures Report"
+    echo "Generated: $(date)"
+    echo "=========================================="
+    echo ""
+    for file in "${failure_files[@]}"; do
+      cat "$file"
+      echo ""
+      echo "----------------------------------------"
+      echo ""
+    done
+  } > "$report_file"
+
+  echo "════════════════════════════════════════════════════════════════"
+  echo "Full report saved to: $report_file"
+  echo "════════════════════════════════════════════════════════════════"
+  echo ""
 }
