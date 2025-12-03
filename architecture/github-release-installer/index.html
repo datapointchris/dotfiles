@@ -3712,21 +3712,23 @@
 <li><code>management/common/install/github-releases/yazi.sh</code></li>
 <li><code>management/common/install/github-releases/duf.sh</code></li>
 <li><code>management/common/install/github-releases/glow.sh</code></li>
-<li><code>management/common/install/github-releases/tenv.sh</code></li>
-<li><code>management/common/install/github-releases/terraform-ls.sh</code></li>
+<li><code>management/common/install/github-releases/fzf.sh</code> (converted from build-from-source)</li>
+<li><code>management/common/install/github-releases/neovim.sh</code> (extracts directory + symlinks binary)</li>
 <li><code>management/common/install/github-releases/terrascan.sh</code></li>
 <li><code>management/common/install/github-releases/tflint.sh</code></li>
 <li><code>management/common/install/github-releases/trivy.sh</code></li>
 <li><code>management/common/install/github-releases/zk.sh</code></li>
 <li><code>management/common/install/github-releases/terraformer.sh</code></li>
 </ul>
-<p><strong>Special Cases:</strong></p>
+<p><strong>Moved to Custom Installers:</strong></p>
 <ul>
-<li><code>management/common/install/github-releases/awscli.sh</code></li>
-<li><code>management/common/install/github-releases/claude-code.sh</code></li>
-<li><code>management/common/install/github-releases/fzf.sh</code></li>
-<li><code>management/common/install/github-releases/neovim.sh</code></li>
-<li><code>management/common/install/github-releases/terraform.sh</code></li>
+<li><code>management/common/install/custom-installers/awscli.sh</code> - Uses AWS custom installer</li>
+<li><code>management/common/install/custom-installers/claude-code.sh</code> - Uses official installer script</li>
+<li><code>management/common/install/custom-installers/terraform-ls.sh</code> - Uses releases.hashicorp.com (not GitHub)</li>
+</ul>
+<p><strong>Moved to Language Managers:</strong></p>
+<ul>
+<li><code>management/common/install/language-managers/tenv.sh</code> - Merged with terraform.sh to match nvm/uv pattern</li>
 </ul>
 
 
