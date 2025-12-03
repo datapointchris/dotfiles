@@ -15,6 +15,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 BINARY_NAME="fzf"
 REPO="junegunn/fzf"
@@ -46,7 +47,7 @@ fi
 # fzf strips the 'v' from version in asset filename
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/fzf-${VERSION#v}-${PLATFORM}_${ARCH}.tar.gz"
 
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "fzf"
+install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "fzf" "$VERSION"
 
 print_banner_success "fzf installation complete"
 exit_success

@@ -10,7 +10,8 @@
 # ================================================================
 
 # This library requires error-handling.sh (for structured logging)
-# It should already be sourced by the calling script
+# and program-helpers.sh (for failure reporting)
+# They should already be sourced by the calling script
 
 # ================================================================
 # Platform Detection
@@ -90,17 +91,18 @@ should_skip_install() {
 
 # Install from tarball (most common pattern)
 # Downloads, extracts, installs binary to ~/.local/bin
-# Usage: install_from_tarball <binary_name> <download_url> <binary_path_in_tarball>
+# Usage: install_from_tarball <binary_name> <download_url> <binary_path_in_tarball> <version>
 #
 # Example (binary at root):
-#   install_from_tarball "lazygit" "$URL" "lazygit"
+#   install_from_tarball "lazygit" "$URL" "lazygit" "v0.40.0"
 #
 # Example (binary in nested dir):
-#   install_from_tarball "glow" "$URL" "glow_*_Darwin_arm64/glow"
+#   install_from_tarball "glow" "$URL" "glow_*_Darwin_arm64/glow" "v1.5.0"
 install_from_tarball() {
   local binary_name="$1"
   local download_url="$2"
   local binary_path_in_tarball="$3"
+  local version="${4:-latest}"
 
   local temp_tarball="/tmp/${binary_name}.tar.gz"
   local target_bin="$HOME/.local/bin/$binary_name"
@@ -108,6 +110,20 @@ install_from_tarball() {
   # Download
   log_info "Downloading $binary_name..."
   if ! curl -fsSL "$download_url" -o "$temp_tarball"; then
+    # Report failure if registry exists
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      local manual_steps="1. Download in your browser (bypasses firewall):
+   $download_url
+
+2. After downloading, extract and install:
+   tar -xzf ~/Downloads/${binary_name}.tar.gz
+   mv ${binary_path_in_tarball} ~/.local/bin/
+   chmod +x ~/.local/bin/${binary_name}
+
+3. Verify installation:
+   ${binary_name} --version"
+      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+    fi
     log_fatal "Failed to download from $download_url" "${BASH_SOURCE[0]}" "$LINENO"
   fi
   register_cleanup "rm -f '$temp_tarball' 2>/dev/null || true"
@@ -134,20 +150,32 @@ install_from_tarball() {
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed successfully"
   else
+    # Report failure if registry exists
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      local manual_steps="Binary installed but not found in PATH.
+
+Check that ~/.local/bin is in your PATH:
+   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Verify the binary exists:
+   ls -la ~/.local/bin/${binary_name}"
+      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
+    fi
     log_fatal "$binary_name not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
   fi
 }
 
 # Install from zip file
 # Downloads, extracts, installs binary to ~/.local/bin
-# Usage: install_from_zip <binary_name> <download_url> <binary_path_in_zip>
+# Usage: install_from_zip <binary_name> <download_url> <binary_path_in_zip> <version>
 #
 # Example:
-#   install_from_zip "yazi" "$URL" "yazi-x86_64-apple-darwin/yazi"
+#   install_from_zip "yazi" "$URL" "yazi-x86_64-apple-darwin/yazi" "v0.2.0"
 install_from_zip() {
   local binary_name="$1"
   local download_url="$2"
   local binary_path_in_zip="$3"
+  local version="${4:-latest}"
 
   local temp_zip="/tmp/${binary_name}.zip"
   local extract_dir="/tmp/${binary_name}-extract"
@@ -156,6 +184,20 @@ install_from_zip() {
   # Download
   log_info "Downloading $binary_name..."
   if ! curl -fsSL "$download_url" -o "$temp_zip"; then
+    # Report failure if registry exists
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      local manual_steps="1. Download in your browser (bypasses firewall):
+   $download_url
+
+2. After downloading, extract and install:
+   unzip ~/Downloads/${binary_name}.zip
+   mv ${binary_path_in_zip} ~/.local/bin/
+   chmod +x ~/.local/bin/${binary_name}
+
+3. Verify installation:
+   ${binary_name} --version"
+      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+    fi
     log_fatal "Failed to download from $download_url" "${BASH_SOURCE[0]}" "$LINENO"
   fi
   register_cleanup "rm -f '$temp_zip' 2>/dev/null || true"
@@ -176,6 +218,17 @@ install_from_zip() {
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed successfully"
   else
+    # Report failure if registry exists
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      local manual_steps="Binary installed but not found in PATH.
+
+Check that ~/.local/bin is in your PATH:
+   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Verify the binary exists:
+   ls -la ~/.local/bin/${binary_name}"
+      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
+    fi
     log_fatal "$binary_name not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
   fi
 }

@@ -16,8 +16,9 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
-# Source GitHub release installer library
+# Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 BINARY_NAME="duf"
 REPO="muesli/duf"
@@ -36,7 +37,7 @@ log_info "Latest version: $VERSION"
 PLATFORM_ARCH=$(get_platform_arch "darwin_x86_64" "darwin_arm64" "linux_x86_64")
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/duf_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
 
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "duf"
+install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "duf" "$VERSION"
 
 print_banner_success "Duf installation complete"
 exit_success

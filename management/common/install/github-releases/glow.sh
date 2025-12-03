@@ -16,8 +16,9 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
-# Source GitHub release installer library
+# Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 BINARY_NAME="glow"
 REPO="charmbracelet/glow"
@@ -37,7 +38,7 @@ PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/glow_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
 
 # Binary is in nested directory: glow_*_Darwin_x86_64/glow
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "glow_*_${PLATFORM_ARCH}/glow"
+install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "glow_*_${PLATFORM_ARCH}/glow" "$VERSION"
 
 print_banner_success "Glow installation complete"
 exit_success

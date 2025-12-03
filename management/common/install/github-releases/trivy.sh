@@ -7,6 +7,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 BINARY_NAME="trivy"
 REPO="aquasecurity/trivy"
@@ -32,7 +33,7 @@ fi
 
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/trivy_${VERSION#v}_${PLATFORM}-${ARCH}.tar.gz"
 
-install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "trivy"
+install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "trivy" "$VERSION"
 
 print_banner_success "Trivy installation complete"
 exit_success
