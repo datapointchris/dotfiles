@@ -35,13 +35,7 @@ create_sample_failure() {
   local version="${3:-v1.0}"
   local reason="${4:-Download failed}"
 
-  cat > "$DOTFILES_FAILURE_REGISTRY/$(date +%s)-${tool_name}.txt" <<EOF
-TOOL=$tool_name
-URL=$url
-VERSION=$version
-REASON=$reason
-MANUAL_STEPS<<STEPS_END
-1. Download in your browser:
+  local manual_steps="1. Download in your browser:
    $url
 
 2. After downloading:
@@ -50,9 +44,15 @@ MANUAL_STEPS<<STEPS_END
    chmod +x ~/.local/bin/${tool_name}
 
 3. Verify:
-   ${tool_name} --version
-STEPS_END
-EOF
+   ${tool_name} --version"
+
+  {
+    echo "TOOL='$tool_name'"
+    echo "URL='$url'"
+    echo "VERSION='$version'"
+    echo "REASON='$reason'"
+    printf "MANUAL_STEPS=%s\n" "$(printf '%q' "$manual_steps")"
+  } > "$DOTFILES_FAILURE_REGISTRY/$(date +%s)-${tool_name}.txt"
 }
 
 Describe 'Failure Registry Functions'
@@ -79,10 +79,10 @@ Describe 'Failure Registry Functions'
     It 'includes required fields'
       report_failure "yazi" "https://example.com/yazi.zip" "v2.0" "Steps" "Network timeout"
       failure_file=$(find "$DOTFILES_FAILURE_REGISTRY" -name "*-yazi.txt" -type f | head -1)
-      The contents of file "$failure_file" should include "TOOL=yazi"
-      The contents of file "$failure_file" should include "URL=https://example.com/yazi.zip"
-      The contents of file "$failure_file" should include "VERSION=v2.0"
-      The contents of file "$failure_file" should include "REASON=Network timeout"
+      The contents of file "$failure_file" should include "TOOL='yazi'"
+      The contents of file "$failure_file" should include "URL='https://example.com/yazi.zip'"
+      The contents of file "$failure_file" should include "VERSION='v2.0'"
+      The contents of file "$failure_file" should include "REASON='Network timeout'"
     End
 
     It 'skips when registry not set'
@@ -108,6 +108,7 @@ Describe 'Failure Registry Functions'
       When call display_failure_summary
       The output should include "Installation Summary"
       The output should include "yazi - Manual Installation Required"
+      The stderr should include "Some installations failed"
     End
 
     It 'displays multiple failures'
@@ -116,6 +117,7 @@ Describe 'Failure Registry Functions'
       When call display_failure_summary
       The output should include "yazi - Manual Installation Required"
       The output should include "glow - Manual Installation Required"
+      The stderr should include "Some installations failed"
     End
   End
 End

@@ -149,15 +149,14 @@ report_failure() {
   local failure_file="$DOTFILES_FAILURE_REGISTRY/$(date +%s)-${tool_name}.txt"
 
   # Write failure information in source-able format
-  cat > "$failure_file" <<EOF
-TOOL=$tool_name
-URL=$download_url
-VERSION=$version
-REASON=$error_reason
-MANUAL_STEPS<<STEPS_END
-$manual_steps
-STEPS_END
-EOF
+  # Use printf %q to properly escape the manual_steps for sourcing
+  {
+    echo "TOOL='$tool_name'"
+    echo "URL='$download_url'"
+    echo "VERSION='$version'"
+    echo "REASON='$error_reason'"
+    printf "MANUAL_STEPS=%s\n" "$(printf '%q' "$manual_steps")"
+  } > "$failure_file"
 }
 
 # Display failure summary at end of installation

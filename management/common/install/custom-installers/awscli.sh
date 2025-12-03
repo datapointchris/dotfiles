@@ -21,6 +21,9 @@ source "$SCRIPT_DIR/../../lib/program-helpers.sh"
 
 print_banner "Installing AWS CLI v2"
 
+# Initialize failure registry for resilient installation
+init_failure_registry
+
 # Detect platform and architecture
 PLATFORM=$(uname -s)
 ARCH=$(uname -m)
@@ -89,7 +92,23 @@ case $PLATFORM in
 
     # Install to user directory (no sudo needed)
     log_info "Installing AWS CLI v2 to ~/.local/..."
-    "$EXTRACT_DIR/aws/install" --install-dir "$HOME/.local/aws-cli" --bin-dir "$HOME/.local/bin" --update
+    if ! "$EXTRACT_DIR/aws/install" --install-dir "$HOME/.local/aws-cli" --bin-dir "$HOME/.local/bin" --update; then
+      # Report failure if registry exists
+      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+        manual_steps="The AWS CLI installer failed. Try manually:
+   1. Download: $ZIP_URL
+   2. Extract: unzip ~/Downloads/awscliv2.zip
+   3. Install: ./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
+
+Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+        report_failure "aws" "$ZIP_URL" "latest" "$manual_steps" "AWS installer failed"
+      fi
+      # Cleanup
+      rm -rf "$ZIP_FILE" "$EXTRACT_DIR"
+      log_warning "AWS CLI installation failed (see summary)"
+      display_failure_summary
+      exit 1
+    fi
 
     # Cleanup
     rm -rf "$ZIP_FILE" "$EXTRACT_DIR"
@@ -106,8 +125,27 @@ if command -v aws >/dev/null 2>&1; then
   INSTALLED_VERSION=$(aws --version 2>&1)
   log_success "$INSTALLED_VERSION"
 else
-  log_error "Installation verification failed"
+  # Report verification failure
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="AWS CLI installed but not found in PATH.
+
+Check installation:
+   ls -la ~/.local/bin/aws
+   ls -la ~/.local/aws-cli/
+
+Ensure ~/.local/bin is in PATH:
+   export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Re-run verification:
+   aws --version"
+    report_failure "aws" "unknown" "latest" "$manual_steps" "Installation verification failed"
+  fi
+  log_warning "AWS CLI installation verification failed (see summary)"
+  display_failure_summary
   exit 1
 fi
+
+# Display failure summary if there were any failures
+display_failure_summary
 
 print_banner_success "AWS CLI v2 installation complete"

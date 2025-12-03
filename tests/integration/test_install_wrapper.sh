@@ -144,8 +144,8 @@ test_wrapper_failure_unreported() {
 
         # Check file contents
         failure_file=$(find "$DOTFILES_FAILURE_REGISTRY" -name "*-failing-tool.txt" -type f | head -1)
-        if grep -q "TOOL=failing-tool" "$failure_file" && \
-           grep -q "REASON=Installation script exited with code 1" "$failure_file"; then
+        if grep -q "TOOL='failing-tool'" "$failure_file" && \
+           grep -q "REASON='Installation script exited with code 1'" "$failure_file"; then
             pass "Failure report includes correct details"
         else
             fail "Failure report missing required details"
@@ -171,7 +171,7 @@ test_wrapper_with_reported_failure() {
 
         # Verify it's the installer's report, not wrapper's generic one
         failure_file=$(find "$DOTFILES_FAILURE_REGISTRY" -name "*-tool-with-report.txt" -type f | head -1)
-        if grep -q "REASON=Download failed" "$failure_file"; then
+        if grep -q "REASON='Download failed'" "$failure_file"; then
             pass "Preserves installer's detailed failure reason"
         else
             fail "Should preserve installer's failure message"

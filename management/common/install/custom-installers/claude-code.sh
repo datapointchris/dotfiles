@@ -19,7 +19,14 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
+# Source helper functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../lib/program-helpers.sh"
+
 print_banner "Installing Claude Code"
+
+# Initialize failure registry for resilient installation
+init_failure_registry
 
 # Detect platform
 PLATFORM=$(uname -s)
@@ -68,9 +75,25 @@ elif echo "$INSTALLER_OUTPUT" | grep -qi "another process is currently installin
   log_warning "Installation skipped - Claude is currently running"
   log_info "Claude Code will be available after closing Claude"
   log_success "Skipping (non-blocking)"
+  display_failure_summary
   exit 0
 else
-  log_error "Installation failed with exit code: $INSTALLER_EXIT"
+  # Report failure if registry exists
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="The Claude Code installer failed.
+
+Try manually:
+   1. Download installer: curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
+   2. Review script: less /tmp/claude-install.sh
+   3. Run installer: bash /tmp/claude-install.sh
+
+If Claude is running, close it first and try again.
+
+Official docs: https://docs.claude.ai/docs/claude-code"
+    report_failure "claude-code" "https://claude.ai/install.sh" "latest" "$manual_steps" "Installer failed"
+  fi
+  log_warning "Claude Code installation failed (see summary)"
+  display_failure_summary
   exit 1
 fi
 
@@ -79,10 +102,27 @@ if command -v claude >/dev/null 2>&1; then
   INSTALLED_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
   log_success "Verified: $INSTALLED_VERSION"
 else
-  log_error "Installation verification failed"
-  log_info "claude not found in PATH"
-  log_info "Try closing and reopening your terminal"
+  # Report verification failure
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="Claude Code installed but not found in PATH.
+
+Check installation:
+   ls -la ~/.local/bin/claude
+   which claude
+
+Ensure ~/.local/bin is in PATH:
+   export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Try closing and reopening your terminal, then verify:
+   claude --version"
+    report_failure "claude-code" "unknown" "latest" "$manual_steps" "Installation verification failed"
+  fi
+  log_warning "Claude Code installation verification failed (see summary)"
+  display_failure_summary
   exit 1
 fi
+
+# Display failure summary if there were any failures
+display_failure_summary
 
 print_banner_success "Claude Code installation complete"

@@ -17,7 +17,14 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
+# Source helper functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../lib/program-helpers.sh"
+
 print_banner "Installing ShellSpec"
+
+# Initialize failure registry for resilient installation
+init_failure_registry
 
 # Configuration
 REPO="shellspec/shellspec"
@@ -34,12 +41,20 @@ fi
 # Get latest version from GitHub API
 log_info "Fetching latest version..."
 if ! VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/'); then
-  log_error "Failed to fetch latest version from GitHub API"
-  log_info "Manual installation:"
-  log_info "  1. Visit: https://github.com/${REPO}/releases/latest"
-  log_info "  2. Download source code (tar.gz)"
-  log_info "  3. Extract to ~/.local/lib/shellspec"
-  log_info "  4. Create symlink: ln -sf ~/.local/lib/shellspec/shellspec ~/.local/bin/shellspec"
+  # Report failure if registry exists
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="Failed to fetch latest version from GitHub API.
+
+Manual installation:
+   1. Visit: https://github.com/${REPO}/releases/latest
+   2. Download source code (tar.gz)
+   3. Extract: tar -xzf ~/Downloads/shellspec-*.tar.gz -C /tmp
+   4. Move: mv /tmp/shellspec-* ~/.local/lib/shellspec
+   5. Link: ln -sf ~/.local/lib/shellspec/shellspec ~/.local/bin/shellspec"
+    report_failure "shellspec" "https://github.com/${REPO}/releases/latest" "latest" "$manual_steps" "Failed to fetch version from GitHub API"
+  fi
+  log_warning "ShellSpec installation failed (see summary)"
+  display_failure_summary
   exit 1
 fi
 
@@ -53,12 +68,20 @@ EXTRACT_DIR="/tmp/shellspec-extract-$$"
 # Download
 log_info "Downloading ShellSpec..."
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
-  log_error "Download failed"
-  log_info "Manual installation:"
-  log_info "  1. Download: $DOWNLOAD_URL"
-  log_info "  2. Extract: tar -xzf ~/Downloads/shellspec-*.tar.gz -C /tmp"
-  log_info "  3. Move: mv /tmp/shellspec-* ~/.local/lib/shellspec"
-  log_info "  4. Link: ln -sf ~/.local/lib/shellspec/shellspec ~/.local/bin/shellspec"
+  # Report failure if registry exists
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="Download failed from GitHub.
+
+Manual installation:
+   1. Download in browser: $DOWNLOAD_URL
+   2. Extract: tar -xzf ~/Downloads/shellspec-*.tar.gz -C /tmp
+   3. Move: mv /tmp/shellspec-* ~/.local/lib/shellspec
+   4. Link: ln -sf ~/.local/lib/shellspec/shellspec ~/.local/bin/shellspec
+   5. Verify: shellspec --version"
+    report_failure "shellspec" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+  fi
+  log_warning "ShellSpec installation failed (see summary)"
+  display_failure_summary
   exit 1
 fi
 
@@ -95,6 +118,9 @@ if command -v shellspec >/dev/null 2>&1; then
 else
   log_fatal "Installation verification failed - shellspec not found in PATH" "${BASH_SOURCE[0]}" "$LINENO"
 fi
+
+# Display failure summary if there were any failures
+display_failure_summary
 
 print_banner_success "ShellSpec installation complete"
 exit_success

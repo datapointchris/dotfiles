@@ -7,6 +7,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 BINARY_NAME="terraform-ls"
 REPO="hashicorp/terraform-ls"
@@ -34,7 +35,7 @@ fi
 # Hashicorp moved to releases.hashicorp.com
 DOWNLOAD_URL="https://releases.hashicorp.com/terraform-ls/${VERSION#v}/terraform-ls_${VERSION#v}_${PLATFORM}_${ARCH}.zip"
 
-install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "terraform-ls"
+install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "terraform-ls" "$VERSION"
 
 print_banner_success "Terraform Language Server installation complete"
 exit_success
