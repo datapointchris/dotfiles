@@ -129,10 +129,10 @@ EOF
   fi
 
   # Check if report file was created
-  if ls "$HOME"/.dotfiles-installation-failures-*.txt 1> /dev/null 2>&1; then
-    pass "Saves report to home directory"
+  if ls /tmp/dotfiles-installation-failures-*.txt 1> /dev/null 2>&1; then
+    pass "Saves report to /tmp directory"
     # Clean up report files
-    rm -f "$HOME"/.dotfiles-installation-failures-*.txt
+    rm -f /tmp/dotfiles-installation-failures-*.txt
   else
     fail "Did not save report file"
   fi

@@ -271,7 +271,7 @@ echo ""
 cleanup_mock_installers
 
 # Clean up any test reports
-rm -f "$HOME"/.dotfiles-installation-failures-*.txt 2>/dev/null || true
+rm -f /tmp/dotfiles-installation-failures-*.txt 2>/dev/null || true
 
 # Summary
 echo ""

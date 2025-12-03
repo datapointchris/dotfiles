@@ -218,8 +218,8 @@ display_failure_summary() {
     )
   done
 
-  # Save full report to home directory for reference
-  local report_file="$HOME/.dotfiles-installation-failures-$(date +%Y%m%d-%H%M%S).txt"
+  # Save full report to /tmp for reference
+  local report_file="/tmp/dotfiles-installation-failures-$(date +%Y%m%d-%H%M%S).txt"
   {
     echo "Dotfiles Installation Failures Report"
     echo "Generated: $(date)"
