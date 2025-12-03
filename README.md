@@ -24,6 +24,8 @@ Skip font installation if needed:
 SKIP_FONTS=1 ./install.sh
 ```
 
+**Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
+
 See the [quickstart guide](https://datapointchris.github.io/dotfiles/getting-started/quickstart/) for details.
 
 ## Structure
@@ -53,7 +55,7 @@ The core philosophy: write configs once in `platforms/common/`, override only wh
 
 This setup follows some opinionated principles that make maintenance easier:
 
-**Fail Fast and Loud**: Scripts don't hide errors or work around problems silently. If something's wrong, you'll know immediately with a clear error message. No defensive programming that masks the real issue.
+**Fail Fast and Loud (But Keep Going)**: Individual installers exit immediately on errors with clear messages. But the wrapper catches failures and continues installing everything else. You get the full error context for what broke AND a working system with just a few missing pieces. No silent failures, no broken partial installations.
 
 **Explicit Over Hidden**: Platform-specific logic lives at the top level (bootstrap scripts, main Taskfile), not buried deep in install scripts. If there are OS conditionals, you see them upfront.
 
