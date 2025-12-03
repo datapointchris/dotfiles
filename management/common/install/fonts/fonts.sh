@@ -18,6 +18,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 enable_error_traps
 
@@ -942,6 +943,9 @@ refresh_font_cache() {
 # ================================================================
 
 run_download_phase() {
+  # Initialize failure registry for resilient downloads
+  init_failure_registry
+
   # Skip if fonts already exist (unless forcing)
   if [[ -d "$FONTS_DIR" ]] && [[ $(count_font_files "$FONTS_DIR") -gt 0 ]] && [[ "${FORCE_INSTALL:-false}" != "true" ]]; then
     local existing_count
@@ -986,6 +990,9 @@ run_download_phase() {
 
   echo ""
   print_header_success "Download Complete"
+
+  # Display failure summary if there were any failures
+  display_failure_summary
 }
 
 run_prune_phase() {
@@ -1108,6 +1115,36 @@ run_install_phase() {
 # Download Orchestration
 # ================================================================
 
+# Wrapper function to run font downloads with failure handling
+# Allows download to continue even if individual fonts fail
+# Usage: run_font_download <function_name> <font_name>
+run_font_download() {
+    local download_func="$1"
+    local font_name="$2"
+
+    # Run download function - if it fails, check if failure was reported
+    if $download_func; then
+        return 0
+    else
+        local exit_code=$?
+
+        # Check if failure was reported to registry
+        if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]] && \
+           compgen -G "$DOTFILES_FAILURE_REGISTRY/*-${font_name}.txt" > /dev/null 2>&1; then
+            # Failure was reported - good, just log it
+            log_warning "$font_name download failed (details in summary)"
+        else
+            # Unreported failure - create generic entry
+            report_failure "$font_name" "unknown" "latest" \
+                "Try downloading manually from nerdfonts.com or the font's GitHub repository" \
+                "Download failed"
+            log_warning "$font_name download failed (see summary)"
+        fi
+
+        return 1
+    fi
+}
+
 download_single_family() {
   local family="$1"
 
@@ -1142,27 +1179,27 @@ download_single_family() {
 }
 
 download_all_families() {
-  download_jetbrains
-  download_cascadia
-  download_meslo
-  download_monaspace
-  download_iosevka
-  download_iosevka_base
-  download_sgr_iosevka
-  download_victor
-  download_firacode
-  download_firacodescript
-  download_droid
-  download_commitmono
-  download_comicmono
-  download_seriousshanns
-  download_sourcecode
-  download_terminess
-  download_hack
-  download_3270
-  download_robotomono
-  download_spacemono
-  download_intelone
+  run_font_download download_jetbrains "jetbrains" || true
+  run_font_download download_cascadia "cascadia" || true
+  run_font_download download_meslo "meslo" || true
+  run_font_download download_monaspace "monaspace" || true
+  run_font_download download_iosevka "iosevka" || true
+  run_font_download download_iosevka_base "iosevka-base" || true
+  run_font_download download_sgr_iosevka "sgr-iosevka" || true
+  run_font_download download_victor "victor" || true
+  run_font_download download_firacode "firacode" || true
+  run_font_download download_firacodescript "firacodescript" || true
+  run_font_download download_droid "droid" || true
+  run_font_download download_commitmono "commitmono" || true
+  run_font_download download_comicmono "comicmono" || true
+  run_font_download download_seriousshanns "seriousshanns" || true
+  run_font_download download_sourcecode "sourcecode" || true
+  run_font_download download_terminess "terminess" || true
+  run_font_download download_hack "hack" || true
+  run_font_download download_3270 "3270" || true
+  run_font_download download_robotomono "robotomono" || true
+  run_font_download download_spacemono "spacemono" || true
+  run_font_download download_intelone "intelone" || true
 }
 
 # ================================================================
