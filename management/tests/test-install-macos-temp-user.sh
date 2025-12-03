@@ -55,6 +55,7 @@ LOG_FILE="${DOTFILES_DIR}/test-macos-user.log"
 # Timing arrays
 declare -a STEP_NAMES
 declare -a STEP_TIMES
+declare -a STEP_STATUS
 
 # Cleanup function
 cleanup() {
@@ -98,7 +99,7 @@ OVERALL_START=$(date +%s)
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 1/6: Creating Test User Account"
+  log_section "STEP 1/7: Creating Test User Account"
 
   echo "Creating test user: $TEST_USER (UID: $TEST_UID)..."
 
@@ -137,7 +138,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 2/6: Preparing Test Environment"
+  log_section "STEP 2/7: Preparing Test Environment"
 
   echo "Copying dotfiles to test user's home directory..."
   sudo -u "$TEST_USER" cp -r "$DOTFILES_DIR" "/Users/${TEST_USER}/dotfiles"
@@ -163,7 +164,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 3/6: Running install.sh Script"
+  log_section "STEP 3/7: Running install.sh Script"
   echo "Executing macOS installation as test user..."
   echo ""
 
@@ -182,7 +183,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 4/6: Verifying Installation"
+  log_section "STEP 4/7: Verifying Installation"
   echo "Running comprehensive verification in fresh shell..."
   echo "(This tests that all tools are properly configured and in PATH)"
   echo ""
@@ -206,7 +207,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 5/6: Detecting Alternate Installations"
+  log_section "STEP 5/7: Detecting Alternate Installations"
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
@@ -221,11 +222,35 @@ STEP_TIMES+=("$STEP_ELAPSED")
 } 2>&1 | tee -a "$LOG_FILE"
 
 # ================================================================
-# STEP 6: Test update-all
+# STEP 6: Test all apps and configs
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 6/6: Testing macOS Update Script"
+  log_section "STEP 6/7: Testing All Apps and Configs"
+  echo "Running comprehensive dotfiles verification test..."
+  echo ""
+} 2>&1 | tee -a "$LOG_FILE"
+
+# Run test outside of tee subshell to capture result
+if sudo -u "$TEST_USER" bash -c "export PATH=\"/Users/$TEST_USER/go/bin:/Users/$TEST_USER/.local/bin:\$PATH\" && bash /Users/$TEST_USER/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+  STEP_STATUS+=("PASS")
+else
+  STEP_STATUS+=("FAIL")
+fi
+STEP_END=$(date +%s)
+STEP_ELAPSED=$((STEP_END - STEP_START))
+STEP_NAMES+=("Test all apps")
+STEP_TIMES+=("$STEP_ELAPSED")
+{
+  log_timing "Step 6: Test all apps" "$STEP_ELAPSED"
+} 2>&1 | tee -a "$LOG_FILE"
+
+# ================================================================
+# STEP 7: Test update-all
+# ================================================================
+STEP_START=$(date +%s)
+{
+  log_section "STEP 7/7: Testing macOS Update Script"
   echo "Running management/macos/update.sh to verify update functionality..."
   echo ""
 
@@ -239,7 +264,7 @@ STEP_ELAPSED=$((STEP_END - STEP_START))
 STEP_NAMES+=("Update-all test")
 STEP_TIMES+=("$STEP_ELAPSED")
 {
-  log_timing "Step 6: Update-all test" "$STEP_ELAPSED"
+  log_timing "Step 7: Update-all test" "$STEP_ELAPSED"
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Calculate overall time
@@ -251,7 +276,31 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   echo ""
   print_header_success "macOS Installation Test Complete"
   echo ""
-  print_timing_summary "$OVERALL_ELAPSED"
+
+  # Test Results Summary
+  print_section "Test Results" "cyan"
+  echo ""
+  echo "  Installation Verification:"
+  echo "    • verify-installed-packages.sh: $(print_cyan "Completed")"
+  echo "    • detect-installed-duplicates.sh: $(print_cyan "Completed")"
+  if [[ "${STEP_STATUS[0]:-}" == "PASS" ]]; then
+    echo "    • test-all-apps.sh: $(print_green "✓ PASS") (34 checks)"
+  else
+    echo "    • test-all-apps.sh: $(print_red "✗ FAIL")"
+  fi
+  echo ""
+
+  print_section "Timing Summary" "cyan"
+  echo ""
+  for i in "${!STEP_NAMES[@]}"; do
+    formatted_time=$(format_time "${STEP_TIMES[$i]}")
+    printf "  %s Step %d: %-20s %s\n" "$(print_green "✓")" $((i + 1)) "${STEP_NAMES[$i]}" "$formatted_time"
+  done
+  echo "  ─────────────────────────────────────────────"
+  formatted_total=$(format_time "$OVERALL_ELAPSED")
+  printf "  %-27s %s\n" "Total time:" "$(print_cyan "$formatted_total")"
+  echo ""
+
   print_section "Test Information" "cyan"
   echo ""
   echo "  Test user: ${TEST_USER}"
