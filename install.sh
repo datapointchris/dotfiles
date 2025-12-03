@@ -79,6 +79,43 @@ fi
 # Source platform detection utility
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
+# Source program helpers for failure reporting
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+
+# ================================================================
+# FAILURE HANDLING WRAPPER
+# ================================================================
+
+# Wrapper function to run installers with failure handling
+# Allows installation to continue even if individual tools fail
+# Usage: run_phase_installer <script_path> <tool_name>
+run_phase_installer() {
+    local script="$1"
+    local tool_name="$2"
+
+    # Run installer - if it fails, check if failure was reported
+    if bash "$script"; then
+        return 0
+    else
+        local exit_code=$?
+
+        # Check if failure was reported to registry
+        if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]] && \
+           compgen -G "$DOTFILES_FAILURE_REGISTRY/*-${tool_name}.txt" > /dev/null 2>&1; then
+            # Failure was reported - good, just log it
+            log_warning "$tool_name installation failed (details in summary)"
+        else
+            # Unreported failure - create generic entry
+            report_failure "$tool_name" "unknown" "unknown" \
+                "Re-run: bash $script" \
+                "Installation script exited with code $exit_code"
+            log_warning "$tool_name installation failed (see summary)"
+        fi
+
+        return 1
+    fi
+}
+
 # ================================================================
 # COMMON INSTALLATION PHASES
 # ================================================================
@@ -87,6 +124,9 @@ install_common_phases() {
     # Ensure ~/.local/bin is in PATH for all installation phases
     # This allows verification checks to work across all platforms
     export PATH="$HOME/.local/bin:$PATH"
+
+    # Initialize failure registry for resilient installation
+    init_failure_registry
 
     # Local variables for frequently used paths
     local common_install="$DOTFILES_DIR/management/common/install"
@@ -119,23 +159,23 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 5 - GitHub Release Tools" "cyan"
-    bash "$github_releases/fzf.sh"
-    bash "$github_releases/neovim.sh"
-    bash "$github_releases/lazygit.sh"
-    bash "$github_releases/yazi.sh"
-    bash "$github_releases/glow.sh"
-    bash "$github_releases/duf.sh"
-    bash "$github_releases/tflint.sh"
-    bash "$github_releases/terraformer.sh"
-    bash "$github_releases/terrascan.sh"
-    bash "$github_releases/trivy.sh"
-    bash "$github_releases/zk.sh"
+    run_phase_installer "$github_releases/fzf.sh" "fzf" || true
+    run_phase_installer "$github_releases/neovim.sh" "neovim" || true
+    run_phase_installer "$github_releases/lazygit.sh" "lazygit" || true
+    run_phase_installer "$github_releases/yazi.sh" "yazi" || true
+    run_phase_installer "$github_releases/glow.sh" "glow" || true
+    run_phase_installer "$github_releases/duf.sh" "duf" || true
+    run_phase_installer "$github_releases/tflint.sh" "tflint" || true
+    run_phase_installer "$github_releases/terraformer.sh" "terraformer" || true
+    run_phase_installer "$github_releases/terrascan.sh" "terrascan" || true
+    run_phase_installer "$github_releases/trivy.sh" "trivy" || true
+    run_phase_installer "$github_releases/zk.sh" "zk" || true
     echo ""
 
     print_header "Phase 5b - Custom Distribution Tools" "cyan"
-    bash "$custom_installers/awscli.sh"
-    bash "$custom_installers/claude-code.sh"
-    bash "$custom_installers/terraform-ls.sh"
+    run_phase_installer "$custom_installers/awscli.sh" "awscli" || true
+    run_phase_installer "$custom_installers/claude-code.sh" "claude-code" || true
+    run_phase_installer "$custom_installers/terraform-ls.sh" "terraform-ls" || true
     echo ""
 
     print_header "Phase 6 - Rust/Cargo Tools" "cyan"
@@ -174,6 +214,9 @@ install_common_phases() {
     bash "$plugins/tpm.sh"
     bash "$plugins/tmux-plugins.sh"
     bash "$plugins/nvim-plugins.sh"
+
+    # Display failure summary if there were any failures
+    display_failure_summary
 }
 
 # ================================================================
