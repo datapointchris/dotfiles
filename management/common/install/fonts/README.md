@@ -10,7 +10,7 @@ These scripts handle the one-time setup of downloading and installing coding fon
 
 ### download.sh
 
-Downloads 23 curated coding font families from GitHub releases.
+Downloads 22 curated coding font families from GitHub releases.
 
 **Usage**:
 
@@ -29,14 +29,14 @@ task fonts:download
 - Phase control for interrupted downloads
 - Single family downloads with `-f`
 
-**Font Families** (23 total):
+**Font Families** (22 total):
 
 - JetBrains Mono, Cascadia Code, Meslo Nerd Font
 - Monaspace (5 variants), Iosevka (6 variants)
 - Victor Mono, Fira Code (2 variants), Commit Mono
 - Comic Mono, Serious Shanns, Source Code Pro
 - Terminus, Hack, IBM 3270, Roboto Mono
-- Space Mono, Intel One Mono, Nimbus Mono, Droid Sans
+- Space Mono, Intel One Mono, Droid Sans
 
 **Output**: `~/fonts/{family_name}/`
 

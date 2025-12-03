@@ -3,7 +3,7 @@
 # Font Management - Download, Process, and Install Coding Fonts
 # ================================================================
 # Unified font management script combining download and installation
-# Supports 23 curated font families with 4-phase workflow
+# Supports 22 curated font families with 4-phase workflow
 # Part of dotfiles install.sh Phase 3
 # ================================================================
 
@@ -42,7 +42,7 @@ FORCE=false
 SKIP_FILTER=false  # Legacy compatibility
 
 # Progress tracking
-TOTAL=23
+TOTAL=22
 CURRENT=0
 
 # Exclude list - fonts to never install
@@ -110,9 +110,9 @@ Platform-specific install locations:
   Linux:     ~/.local/share/fonts/
   WSL:       /mnt/c/Windows/Fonts/
 
-Available Families (23 total):
+Available Families (22 total):
   jetbrains, cascadia, meslo, monaspace, iosevka, iosevka-base,
-  sgr-iosevka, victor, firacode, firacodescript, nimbus, droid,
+  sgr-iosevka, victor, firacode, firacodescript, droid,
   commitmono, comicmono, seriousshanns, sourcecode, terminess,
   hack, 3270, robotomono, spacemono, intelone
 
@@ -136,7 +136,6 @@ list_families() {
   echo "  victor          - Victor Mono"
   echo "  firacode        - Fira Code"
   echo "  firacodescript  - FiraCodeiScript"
-  echo "  nimbus          - Nimbus Mono"
   echo "  droid           - DroidSansMono Nerd Font"
   echo "  commitmono      - Commit Mono"
   echo "  comicmono       - Comic Mono"
@@ -286,7 +285,6 @@ get_family_dir_name() {
     victor)         echo "VictorMono" ;;
     firacode)       echo "FiraCode" ;;
     firacodescript) echo "FiraCodeiScript" ;;
-    nimbus)         echo "NimbusMono" ;;
     droid)          echo "DroidSansM-Nerd-Font" ;;
     commitmono)     echo "CommitMono" ;;
     comicmono)      echo "ComicMono" ;;
@@ -483,21 +481,6 @@ download_firacodescript() {
 
   local downloaded
   downloaded=$(count_font_files "$FONTS_DIR/FiraCodeiScript")
-  log_success "Downloaded $downloaded files"
-}
-
-download_nimbus() {
-  download_progress "Nimbus Mono"
-
-  mkdir -p "$FONTS_DIR/NimbusMono"
-
-  log_verbose "Downloading Nimbus Mono from Font Squirrel..."
-  curl -fsSL -A "Mozilla/5.0" https://www.fontsquirrel.com/fonts/download/nimbus-mono -o NimbusMono.zip
-  unzip -qo NimbusMono.zip -d nimbus
-  find nimbus -name "*.otf" -exec mv {} "$FONTS_DIR/NimbusMono/" \; 2>/dev/null || true
-
-  local downloaded
-  downloaded=$(count_font_files "$FONTS_DIR/NimbusMono")
   log_success "Downloaded $downloaded files"
 }
 
@@ -983,7 +966,7 @@ run_download_phase() {
     print_header "Font Download: $DOWNLOAD_FAMILY" "cyan"
     TOTAL=1
   else
-    print_header "Font Download (23 families)" "cyan"
+    print_header "Font Download (22 families)" "cyan"
   fi
 
   echo "Target directory: $FONTS_DIR"
@@ -1139,7 +1122,6 @@ download_single_family() {
     victor)         download_victor ;;
     firacode)       download_firacode ;;
     firacodescript) download_firacodescript ;;
-    nimbus)         download_nimbus ;;
     droid)          download_droid ;;
     commitmono)     download_commitmono ;;
     comicmono)      download_comicmono ;;
@@ -1170,7 +1152,6 @@ download_all_families() {
   download_victor
   download_firacode
   download_firacodescript
-  download_nimbus
   download_droid
   download_commitmono
   download_comicmono
