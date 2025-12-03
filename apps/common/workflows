@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2016  # fzf preview commands use single quotes intentionally
+# ================================================================
+# workflows - Personal Workflow Quick Reference
+# ================================================================
+# Command-line interface for browsing multi-step workflows
+# ================================================================
+
+set -euo pipefail
+
+# Source formatting library
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
+
+WORKFLOWS_DIR="${WORKFLOWS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/workflows}"
+
+show_help() {
+  print_header "Workflows - Personal Process Reference" "brightcyan"
+  echo ""
+  echo "Quick reference for multi-step workflows and procedures."
+  echo ""
+
+  print_section "Commands" "brightmagenta"
+  echo "  $(print_cyan "workflows")                     Show this help"
+  echo "  $(print_cyan "workflows") <term>              Search for workflows matching term"
+  echo "  $(print_cyan "workflows search") [term]       Search and preview workflows with fzf"
+  echo "  $(print_cyan "workflows list")                List all available workflows"
+  echo "  $(print_cyan "workflows learn")               Show a random workflow (direct output)"
+  echo "  $(print_cyan "workflows random")              Show a random workflow (paginated)"
+  echo "  $(print_cyan "workflows show") <name>         Show specific workflow"
+  echo ""
+
+  print_section "Examples" "brightyellow"
+  echo "  $(print_green "workflows")                     # Show this help"
+  echo "  $(print_green "workflows colima")              # Search for 'colima'"
+  echo "  $(print_green "workflows search docker")       # Search for 'docker'"
+  echo "  $(print_green "workflows list")                # List all workflow names"
+  echo "  $(print_green "workflows learn")               # Show random workflow (for shell startup)"
+  echo "  $(print_green "workflows show colima-use-profiles")  # Show specific workflow"
+  echo ""
+
+  print_section "Location" "brightblue"
+  echo "  Workflows: $(print_cyan "$WORKFLOWS_DIR")"
+  echo "  Format:    $(print_cyan "*.md files")"
+}
+
+# Check if workflows directory exists
+if [[ ! -d "$WORKFLOWS_DIR" ]]; then
+  print_error "Workflows directory not found: $WORKFLOWS_DIR"
+  exit 1
+fi
+
+# Search and preview workflows with fzf
+cmd_search() {
+  if ! command -v fzf &>/dev/null; then
+    print_error "fzf is required for search"
+    echo "Install with: brew install fzf"
+    exit 1
+  fi
+
+  if ! command -v bat &>/dev/null; then
+    print_error "bat is required for previews"
+    echo "Install with: brew install bat"
+    exit 1
+  fi
+
+  # Join all arguments as search query (handles multi-word searches)
+  local query="$*"
+
+  local fzf_opts=(
+    --layout=reverse
+    --preview "bat --color=always --style=plain '$WORKFLOWS_DIR/{}.md'"
+    --preview-window=right:60%
+    --prompt 'Workflow: '
+    --header 'Select a workflow to view | Enter to open in editor'
+  )
+
+  # Add initial query if provided
+  if [[ -n "$query" ]]; then
+    fzf_opts+=(--query "$query")
+  fi
+
+  local selected
+  selected=$(
+    find -L "$WORKFLOWS_DIR" -type f -name "*.md" | \
+    sed 's|^'"$WORKFLOWS_DIR"'/||' | \
+    sed 's/\.md$//' | \
+    sort | \
+    fzf "${fzf_opts[@]}"
+  )
+
+  if [[ -n "$selected" ]]; then
+    if [[ -n "${EDITOR:-}" ]]; then
+      ${EDITOR} "$WORKFLOWS_DIR/$selected.md"
+    else
+      bat --style=plain "$WORKFLOWS_DIR/$selected.md"
+    fi
+  fi
+}
+
+# List all workflows
+cmd_list() {
+  print_section "Available Workflows" "brightcyan"
+  find -L "$WORKFLOWS_DIR" -type f -name "*.md" | \
+    sed 's|^'"$WORKFLOWS_DIR"'/||' | \
+    sed 's/\.md$//' | \
+    sort | \
+    while read -r workflow; do
+      echo "  • $(print_green "$workflow")"
+    done
+}
+
+# Show random workflow (with bat for colored output)
+cmd_random() {
+  local workflow
+  workflow=$(find -L "$WORKFLOWS_DIR" -type f -name "*.md" | shuf -n 1)
+
+  if [[ -z "$workflow" ]]; then
+    print_warning "No workflows found"
+    exit 1
+  fi
+
+  local name
+  name=$(basename "$workflow" .md)
+
+  print_header "Random Workflow: $name" "brightcyan"
+  echo ""
+
+  if command -v bat &>/dev/null; then
+    bat --style=plain "$workflow"
+  else
+    cat "$workflow"
+  fi
+}
+
+# Show random workflow (colored output without pager for shell startup)
+cmd_learn() {
+  local workflow
+  workflow=$(find -L "$WORKFLOWS_DIR" -type f -name "*.md" | shuf -n 1)
+
+  if [[ -z "$workflow" ]]; then
+    print_warning "No workflows found"
+    exit 1
+  fi
+
+  local name
+  name=$(basename "$workflow" .md)
+
+  print_header "Random Workflow: $name" "brightcyan"
+  echo ""
+
+  # Use bat with --paging=never for colored output without pager
+  if command -v bat &>/dev/null; then
+    bat --style=plain --paging=never "$workflow"
+  else
+    cat "$workflow"
+  fi
+}
+
+# Show specific workflow
+cmd_show() {
+  local name="${1:-}"
+
+  if [[ -z "$name" ]]; then
+    print_error "Workflow name required"
+    echo "Usage: workflows show <name>"
+    echo ""
+    echo "Available workflows:"
+    cmd_list
+    exit 1
+  fi
+
+  # Remove .md extension if provided
+  name="${name%.md}"
+
+  local filepath="$WORKFLOWS_DIR/$name.md"
+
+  if [[ ! -f "$filepath" ]]; then
+    print_error "Workflow not found: $name"
+    echo ""
+    echo "Available workflows:"
+    cmd_list
+    exit 1
+  fi
+
+  if command -v bat &>/dev/null; then
+    bat --style=plain "$filepath"
+  else
+    cat "$filepath"
+  fi
+}
+
+# Main command routing
+case "${1:-}" in
+  "")
+    # No args - show help
+    show_help
+    ;;
+
+  search)
+    # Search with optional query: workflows search [term...]
+    shift
+    cmd_search "$@"
+    ;;
+
+  list|ls)
+    cmd_list
+    ;;
+
+  learn)
+    cmd_learn
+    ;;
+
+  random|rand)
+    cmd_random
+    ;;
+
+  show|view)
+    cmd_show "${2:-}"
+    ;;
+
+  help|--help|-h)
+    show_help
+    ;;
+
+  *)
+    # Any unknown command is treated as a search query
+    # This allows: workflows colima, workflows docker logs, etc.
+    cmd_search "$@"
+    ;;
+esac

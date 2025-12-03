@@ -384,3 +384,10 @@ else
 fi
 
 echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
+
+# ------------------------------------------------------------------ #
+# WORKFLOWS - Random Learning (Shell Startup)
+# ------------------------------------------------------------------ #
+# Uncomment to show a random workflow on shell startup
+# Requires: workflows tool from dotfiles/apps/common/workflows
+# [[ -x "$HOME/.local/bin/workflows" ]] && workflows learn

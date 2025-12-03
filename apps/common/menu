@@ -27,6 +27,7 @@ choice=$(gum choose \
   "Find a tool" \
   "Change theme" \
   "Take/find a note" \
+  "Browse workflows" \
   "Browse documentation" \
   "Manage symlinks" \
   "View this help")
@@ -48,6 +49,9 @@ case "$choice" in
 
   "Take/find a note")
     notes ;;
+
+  "Browse workflows")
+    workflows search ;;
 
   "Browse documentation")
     print_green "Opening documentation..."
