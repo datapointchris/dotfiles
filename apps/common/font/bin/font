@@ -41,15 +41,15 @@ list_fonts() {
 usage() {
   # Check if formatting functions are available
   if command -v print_header &>/dev/null; then
-    print_header "Font Testing & Management" "cyan"
-    echo "Data-driven font tracking with automatic rankings"
-    echo ""
+    print_section "Font Testing & Management" "yellow"
 
     print_section "Commands" "blue"
     cat <<'EOF'
   current              Show currently active font
   change               Interactive font picker with previews
   apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  size-up              Increase Ghostty font size by 1
+  size-down            Decrease Ghostty font size by 1
   like [message]       Like current font with optional reason
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
@@ -66,6 +66,8 @@ EOF
     print_section "Examples" "yellow"
     if command -v print_cyan &>/dev/null; then
       echo "  $(print_cyan "font change")                         # Interactive picker"
+      echo "  $(print_cyan "font size-up")                        # Increase font size"
+      echo "  $(print_cyan "font size-down")                      # Decrease font size"
       echo "  $(print_cyan "font like \"Great ligatures\"")         # Like with reason"
       echo "  $(print_cyan "font dislike \"Too wide\"")             # Dislike with reason"
       echo "  $(print_cyan "font note \"Good for prose\"")          # Add note"
@@ -74,6 +76,8 @@ EOF
     else
       cat <<'EOF'
   font change                         # Interactive picker
+  font size-up                        # Increase font size
+  font size-down                      # Decrease font size
   font like "Great ligatures"         # Like with reason
   font dislike "Too wide"             # Dislike with reason
   font note "Good for prose"          # Add note
@@ -104,6 +108,8 @@ Commands
   current              Show currently active font
   change               Interactive font picker with previews
   apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  size-up              Increase Ghostty font size by 1
+  size-down            Decrease Ghostty font size by 1
   like [message]       Like current font with optional reason
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
@@ -117,6 +123,8 @@ Commands
 Examples
 ─────────────────────────
   font change                         # Interactive picker
+  font size-up                        # Increase font size
+  font size-down                      # Decrease font size
   font like "Great ligatures"         # Like with reason
   font dislike "Too wide"             # Dislike with reason
   font note "Good for prose"          # Add note
@@ -176,6 +184,54 @@ get_current_font() {
     grep "^font-family" "$GHOSTTY_CONFIG" | cut -d= -f2 | xargs
   else
     echo "Unknown"
+  fi
+}
+
+get_current_font_size() {
+  if [[ -f "$GHOSTTY_CONFIG" ]]; then
+    grep "^font-size" "$GHOSTTY_CONFIG" | cut -d= -f2 | xargs
+  else
+    echo "Unknown"
+  fi
+}
+
+change_font_size() {
+  local delta="$1"
+  local current_size
+  current_size=$(get_current_font_size)
+
+  if [[ "$current_size" == "Unknown" ]]; then
+    echo "Error: Could not read current font size from Ghostty config"
+    exit 1
+  fi
+
+  local new_size=$((current_size + delta))
+
+  # Enforce reasonable bounds
+  if [[ "$new_size" -lt 6 ]]; then
+    echo "Error: Font size cannot be less than 6"
+    exit 1
+  elif [[ "$new_size" -gt 72 ]]; then
+    echo "Error: Font size cannot be greater than 72"
+    exit 1
+  fi
+
+  # Update Ghostty config
+  if [[ -f "$GHOSTTY_CONFIG" ]] || [[ -L "$GHOSTTY_CONFIG" ]]; then
+    # Resolve symlink to get the actual file
+    local ghostty_target="$GHOSTTY_CONFIG"
+    if [[ -L "$GHOSTTY_CONFIG" ]]; then
+      ghostty_target="$(readlink -f "$GHOSTTY_CONFIG")"
+    fi
+
+    sed -i "s|^font-size = .*|font-size = ${new_size}|" "$ghostty_target"
+    echo "Font size: $current_size → $new_size"
+    echo "✓ Updated Ghostty config"
+    echo ""
+    echo "Restart Ghostty to see changes."
+  else
+    echo "Error: Ghostty config not found at $GHOSTTY_CONFIG"
+    exit 1
   fi
 }
 
@@ -586,6 +642,12 @@ main() {
         exit 1
       fi
       apply_font "$2"
+      ;;
+    size-up)
+      change_font_size 1
+      ;;
+    size-down)
+      change_font_size -1
       ;;
     like)
       mark_liked "${@:2}"
