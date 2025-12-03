@@ -154,7 +154,12 @@ reload_apps() {
 
   # Reload tmux
   if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
-    tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null && echo "$(print_green "✓") Tmux reloaded"
+    if command -v sess &> /dev/null; then
+      sess reload
+    else
+      tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null && echo "$(print_green "✓") Tmux reloaded (current session only)"
+      echo "$(print_yellow "  Tip:") Run 'sess reload' to reload all sessions"
+    fi
   fi
 
   # Rebuild bat cache

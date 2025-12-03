@@ -83,6 +83,7 @@ Built with Go, gum, and Cobra.`,
 	// Add subcommands
 	rootCmd.AddCommand(listCmd())
 	rootCmd.AddCommand(lastCmd())
+	rootCmd.AddCommand(reloadCmd())
 
 	// Execute the root command
 	// This parses command-line arguments and runs the appropriate command
@@ -219,6 +220,22 @@ func lastCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			manager := createSessionManager()
 			if err := manager.SwitchToLast(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+		},
+	}
+}
+
+// reloadCmd creates the "session reload" subcommand
+func reloadCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "reload",
+		Short: "Reload tmux config in all sessions",
+		Long:  "Reload tmux configuration file in all active sessions (useful after theme changes)",
+		Run: func(cmd *cobra.Command, args []string) {
+			tmuxClient := tmux.NewClient()
+			if err := tmuxClient.ReloadConfig(); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}

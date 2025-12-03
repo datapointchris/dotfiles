@@ -82,6 +82,16 @@ Switch to the previously active session:
 sess last
 ```
 
+### Reload Tmux Config
+
+Reload tmux configuration in all active sessions (useful after theme changes):
+
+```bash
+sess reload
+```
+
+This is equivalent to running `tmux source-file ~/.config/tmux/tmux.conf` in each session, but much more convenient. Perfect for applying theme changes with `theme-sync`.
+
 ## Configuration
 
 Default sessions are defined in YAML files:

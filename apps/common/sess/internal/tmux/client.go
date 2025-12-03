@@ -188,6 +188,31 @@ func (c *Client) SwitchToLastSession() error {
 	return cmd.Run()
 }
 
+// ReloadConfig reloads tmux configuration in all active sessions
+func (c *Client) ReloadConfig() error {
+	// Get all active sessions
+	sessions, err := c.ListSessions()
+	if err != nil {
+		return fmt.Errorf("failed to list sessions: %w", err)
+	}
+
+	if len(sessions) == 0 {
+		return fmt.Errorf("no active tmux sessions")
+	}
+
+	// Reload config in each session
+	configPath := os.ExpandEnv("$HOME/.config/tmux/tmux.conf")
+	for _, sess := range sessions {
+		cmd := exec.Command("tmux", "source-file", "-t", sess.Name, configPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to reload config for session %s: %w", sess.Name, err)
+		}
+		fmt.Printf("  ✓ Reloaded session: %s\n", sess.Name)
+	}
+
+	return nil
+}
+
 // Verify that Client implements the TmuxClient interface at compile time
 // This is a Go idiom - if Client doesn't implement TmuxClient, this won't compile
 // The _ means we're declaring a variable but never using it
