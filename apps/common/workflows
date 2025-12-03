@@ -120,12 +120,6 @@ cmd_random() {
     exit 1
   fi
 
-  local name
-  name=$(basename "$workflow" .md)
-
-  print_header "Random Workflow: $name" "brightcyan"
-  echo ""
-
   if command -v bat &>/dev/null; then
     bat --style=plain "$workflow"
   else
@@ -142,12 +136,6 @@ cmd_learn() {
     print_warning "No workflows found"
     exit 1
   fi
-
-  local name
-  name=$(basename "$workflow" .md)
-
-  print_header "Random Workflow: $name" "brightcyan"
-  echo ""
 
   # Use bat with --paging=never for colored output without pager
   if command -v bat &>/dev/null; then
