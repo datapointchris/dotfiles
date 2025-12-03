@@ -489,6 +489,16 @@ if [ $FAILED_CHECKS -gt 0 ]; then
     echo "  • $tool"
   done
   echo ""
+
+  # Check if there's a recent installation failure report
+  LATEST_FAILURE_REPORT=$(find /tmp -name "dotfiles-installation-failures-*.txt" -type f -mtime -1 2>/dev/null | sort | tail -1)
+  if [[ -n "$LATEST_FAILURE_REPORT" ]] && [[ -f "$LATEST_FAILURE_REPORT" ]]; then
+    echo ""
+    log_info "Installation failure report found: $LATEST_FAILURE_REPORT"
+    log_info "This may explain some missing tools - see the report for manual installation steps"
+  fi
+
+  echo ""
   print_header_error "Verification FAILED"
   exit 1
 else

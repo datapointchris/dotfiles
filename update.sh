@@ -15,9 +15,13 @@ export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 # Source platform detection utility
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
+
+# Initialize failure registry for resilient updates
+init_failure_registry
 
 # Detect platform and run appropriate update script
 PLATFORM=$(detect_platform)
@@ -27,15 +31,21 @@ START_TIME=$(date +%s)
 case "$PLATFORM" in
     macos)
         print_title "macOS Update All" "cyan"
-        bash "$DOTFILES_DIR/management/macos/update.sh"
+        if ! bash "$DOTFILES_DIR/management/macos/update.sh"; then
+            log_warning "Platform-specific updates encountered some errors (continuing)"
+        fi
         ;;
     wsl)
         print_title "WSL Ubuntu Update All" "cyan"
-        bash "$DOTFILES_DIR/management/wsl/update.sh"
+        if ! bash "$DOTFILES_DIR/management/wsl/update.sh"; then
+            log_warning "Platform-specific updates encountered some errors (continuing)"
+        fi
         ;;
     arch)
         print_title "Arch Linux Update All" "cyan"
-        bash "$DOTFILES_DIR/management/arch/update.sh"
+        if ! bash "$DOTFILES_DIR/management/arch/update.sh"; then
+            log_warning "Platform-specific updates encountered some errors (continuing)"
+        fi
         ;;
     *)
         log_error "Unknown platform: $PLATFORM"
@@ -45,10 +55,15 @@ case "$PLATFORM" in
 esac
 
 # Run common updates after platform-specific updates
-bash "$DOTFILES_DIR/management/common/update.sh"
+if ! bash "$DOTFILES_DIR/management/common/update.sh"; then
+    log_warning "Common updates encountered some errors (see details above)"
+fi
 
 END_TIME=$(date +%s)
 TOTAL_DURATION=$((END_TIME - START_TIME))
+
+# Display failure summary if there were any failures
+display_failure_summary
 
 print_title_success "Update Complete"
 log_info "Total time: ${TOTAL_DURATION}s"
