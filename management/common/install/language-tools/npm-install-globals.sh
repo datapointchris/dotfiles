@@ -10,6 +10,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 # Source nvm to get npm in PATH
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
@@ -29,6 +30,9 @@ fi
 
 echo "Installing npm global packages from packages.yml..."
 
+# Initialize failure registry for resilient installation
+init_failure_registry
+
 # Get npm packages from packages.yml via Python parser
 DOTFILES_DIR="$HOME/dotfiles"
 NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
@@ -39,10 +43,26 @@ for package in $NPM_PACKAGES; do
     echo "  $package already installed (skipping)"
   else
     log_info "Installing $package..."
-    npm install -g "$package"
+    if npm install -g "$package"; then
+      log_success "$package installed"
+    else
+      # Report failure
+      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+        manual_steps="Install manually with npm:
+   npm install -g $package
+
+View package on npm:
+   https://www.npmjs.com/package/$package"
+        report_failure "$package" "https://www.npmjs.com/package/$package" "latest" "$manual_steps" "Failed to install via npm"
+      fi
+      log_warning "$package installation failed (see summary)"
+    fi
   fi
 done
 
 echo ""
 echo "npm global packages installed"
 npm list -g --depth=0
+
+# Display failure summary if there were any failures
+display_failure_summary

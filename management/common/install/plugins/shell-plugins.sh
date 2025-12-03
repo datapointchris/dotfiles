@@ -15,6 +15,7 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 PLUGINS_DIR="$HOME/.config/zsh/plugins"
 
@@ -25,6 +26,9 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
 fi
 
 print_section "Installing shell plugins" "cyan"
+
+# Initialize failure registry for resilient installation
+init_failure_registry
 
 # Create plugins directory if it doesn't exist
 mkdir -p "$PLUGINS_DIR"
@@ -42,9 +46,22 @@ while IFS='|' read -r name repo; do
     if git clone "$repo" "$PLUGIN_DIR" --quiet; then
       log_success "$name installed"
     else
-      log_warning "Failed to install $name"
+      # Report failure
+      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+        manual_steps="Clone manually with git:
+   git clone $repo $PLUGIN_DIR
+
+Or install manually:
+   cd ~/.config/zsh/plugins
+   git clone $repo"
+        report_failure "$name" "$repo" "latest" "$manual_steps" "Failed to git clone plugin"
+      fi
+      log_warning "Failed to install $name (see summary)"
     fi
   fi
 done <<< "$PLUGINS"
 
 log_success "Shell plugins installed to $PLUGINS_DIR"
+
+# Display failure summary if there were any failures
+display_failure_summary

@@ -15,6 +15,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 # Check if Go is installed
 if ! command -v go &>/dev/null; then
@@ -31,6 +32,9 @@ fi
 
 print_section "Installing Go tools" "cyan"
 
+# Initialize failure registry for resilient installation
+init_failure_registry
+
 # Get Go tools from packages.yml via Python parser
 GOBIN="$HOME/go/bin"
 /usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go | while read -r tool; do
@@ -38,8 +42,20 @@ GOBIN="$HOME/go/bin"
   if go install "$tool@latest"; then
     echo "    ✓ $tool installed"
   else
-    log_warning "Failed to install $tool"
+    # Report failure
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      manual_steps="Install manually with go:
+   go install $tool@latest
+
+Tool will be installed to:
+   $GOBIN"
+      report_failure "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "Failed to install via go install"
+    fi
+    log_warning "Failed to install $tool (see summary)"
   fi
 done
 
 log_success "Go tools installed to $GOBIN"
+
+# Display failure summary if there were any failures
+display_failure_summary
