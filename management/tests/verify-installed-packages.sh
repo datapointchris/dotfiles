@@ -71,12 +71,20 @@ check_command_at_path() {
     local actual_location
     actual_location=$(command -v "$name" 2>/dev/null || echo "not found")
     if [ "$actual_location" != "not found" ]; then
-      log_error "$name: WRONG LOCATION - expected $expected_path, found at $actual_location"
+      # Special case: On Arch, go is installed via pacman to /usr/bin/go (acceptable)
+      if [ "$name" = "go" ] && [ -f /etc/arch-release ] && [ "$actual_location" = "/usr/bin/go" ]; then
+        log_success "$name: $actual_location (Arch system package)"
+        PASSED_CHECKS=$((PASSED_CHECKS + 1))
+      else
+        log_error "$name: WRONG LOCATION - expected $expected_path, found at $actual_location"
+        FAILED_CHECKS=$((FAILED_CHECKS + 1))
+        FAILED_TOOLS+=("$name")
+      fi
     else
       log_error "$name: NOT FOUND (expected at $expected_path)"
+      FAILED_CHECKS=$((FAILED_CHECKS + 1))
+      FAILED_TOOLS+=("$name")
     fi
-    FAILED_CHECKS=$((FAILED_CHECKS + 1))
-    FAILED_TOOLS+=("$name")
   fi
 }
 

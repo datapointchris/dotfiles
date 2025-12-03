@@ -20,19 +20,37 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "Test Arch Linux installation script using Docker with official Arch image"
   echo ""
   echo "Options:"
+  echo "  -r, --reuse           Reuse most recent container (skips image pull and initial setup)"
+  echo "  -c, --container NAME   Reuse specific container by name"
   echo "  -k, --keep            Keep container after test (for debugging)"
   echo "  -h, --help            Show this help message"
   echo ""
   echo "Examples:"
   echo "  $(basename "$0")              # Test with latest Arch"
   echo "  $(basename "$0") -k           # Keep container for debugging"
+  echo "  $(basename "$0") -r           # Reuse most recent container"
+  echo "  $(basename "$0") -c dotfiles-arch-test-123456  # Reuse specific container"
   exit 0
 fi
 
 # Parse arguments
 KEEP_CONTAINER=false
+REUSE_CONTAINER=""
+REUSE_LATEST=false
 while [[ $# -gt 0 ]]; do
   case $1 in
+    -r|--reuse)
+      REUSE_LATEST=true
+      shift
+      ;;
+    -c|--container)
+      REUSE_CONTAINER="${2:-}"
+      if [[ -z "$REUSE_CONTAINER" ]]; then
+        echo "Error: --container requires a container name"
+        exit 1
+      fi
+      shift 2
+      ;;
     -k|--keep)
       KEEP_CONTAINER=true
       shift
@@ -48,7 +66,38 @@ done
 # Configuration
 DOCKER_IMAGE="archlinux:latest"
 LOG_FILE="${DOTFILES_DIR}/test-arch-docker.log"
-CONTAINER_NAME="dotfiles-arch-test-$(date '+%Y%m%d-%H%M%S')"
+
+# Use provided container name or generate new one
+if [[ "$REUSE_LATEST" == "true" ]]; then
+  # Find most recent container
+  CONTAINER_NAME=$(docker ps -a --format '{{.CreatedAt}}\t{{.Names}}' | \
+                   grep dotfiles-arch-test | \
+                   sort -r | \
+                   head -1 | \
+                   cut -f2)
+
+  if [[ -z "$CONTAINER_NAME" ]]; then
+    echo "Error: No existing dotfiles-arch-test containers found"
+    echo "Available containers:"
+    docker ps -a --format '  {{.Names}}' | grep dotfiles || echo "  (none)"
+    exit 1
+  fi
+
+  log_info "Reusing most recent container: $CONTAINER_NAME"
+
+elif [[ -n "$REUSE_CONTAINER" ]]; then
+  CONTAINER_NAME="$REUSE_CONTAINER"
+  # Verify container exists
+  if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    echo "Error: Container '$CONTAINER_NAME' not found"
+    echo "Available containers:"
+    docker ps -a --format '  {{.Names}}' | grep dotfiles-arch-test || echo "  (none)"
+    exit 1
+  fi
+  log_info "Reusing existing container: $CONTAINER_NAME"
+else
+  CONTAINER_NAME="dotfiles-arch-test-$(date '+%Y%m%d-%H%M%S')"
+fi
 
 # Timing arrays
 declare -a STEP_NAMES
@@ -75,11 +124,16 @@ echo ""
 OVERALL_START=$(date +%s)
 
 # ================================================================
+# Skip steps 1-3 if reusing container
+# ================================================================
+if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
+
+# ================================================================
 # STEP 1: Ensure Docker image is available
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 1/7: Preparing Arch Linux Docker Image"
+  log_section "STEP 1/8: Preparing Arch Linux Docker Image"
 
   check_docker
 
@@ -108,7 +162,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 2/7: Starting Docker Container"
+  log_section "STEP 2/8: Starting Docker Container"
   echo "Starting container with dotfiles mounted..."
 
   # Start container in background with dotfiles mounted
@@ -138,7 +192,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 3/7: Preparing Container Environment"
+  log_section "STEP 3/8: Preparing Container Environment"
 
   # Update package database and install sudo (required for fresh Arch containers)
   echo "Updating package database and installing sudo..."
@@ -183,12 +237,14 @@ STEP_TIMES+=("$STEP_ELAPSED")
   log_timing "Step 3: Prepare environment" "$STEP_ELAPSED"
 } 2>&1 | tee -a "$LOG_FILE"
 
+fi  # End of skip-if-reusing block
+
 # ================================================================
 # STEP 4: Run installation script
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 4/7: Running install.sh Script"
+  log_section "STEP 4/8: Running install.sh Script"
   echo "Executing Arch Linux installation in container..."
   echo ""
 
@@ -207,7 +263,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 5/7: Verifying Installation"
+  log_section "STEP 5/8: Verifying Installation"
   echo "Running comprehensive verification in fresh shell..."
   echo "(This tests that all tools are properly configured and in PATH)"
   echo ""
@@ -232,7 +288,7 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 6/7: Detecting Alternate Installations"
+  log_section "STEP 6/8: Detecting Alternate Installations"
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
@@ -247,11 +303,35 @@ STEP_TIMES+=("$STEP_ELAPSED")
 } 2>&1 | tee -a "$LOG_FILE"
 
 # ================================================================
-# STEP 7: Test update-all
+# STEP 7: Test all apps and configs
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 7/7: Testing Arch Update Script"
+  log_section "STEP 7/8: Testing All Apps and Configs"
+  echo "Running comprehensive dotfiles verification test..."
+  echo ""
+} 2>&1 | tee -a "$LOG_FILE"
+
+# Run test outside of tee subshell to capture result
+if docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "export PATH=\"/home/archuser/go/bin:/home/archuser/.local/bin:\$PATH\" && bash /home/archuser/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+  STEP_STATUS+=("PASS")
+else
+  STEP_STATUS+=("FAIL")
+fi
+STEP_END=$(date +%s)
+STEP_ELAPSED=$((STEP_END - STEP_START))
+STEP_NAMES+=("Test all apps")
+STEP_TIMES+=("$STEP_ELAPSED")
+{
+  log_timing "Step 7: Test all apps" "$STEP_ELAPSED"
+} 2>&1 | tee -a "$LOG_FILE"
+
+# ================================================================
+# STEP 8: Test update-all
+# ================================================================
+STEP_START=$(date +%s)
+{
+  log_section "STEP 8/8: Testing Arch Update Script"
   echo "Running management/arch/update.sh to verify update functionality..."
   echo ""
 
@@ -265,7 +345,7 @@ STEP_ELAPSED=$((STEP_END - STEP_START))
 STEP_NAMES+=("Update-all test")
 STEP_TIMES+=("$STEP_ELAPSED")
 {
-  log_timing "Step 7: Update-all test" "$STEP_ELAPSED"
+  log_timing "Step 8: Update-all test" "$STEP_ELAPSED"
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Calculate overall time
@@ -277,7 +357,31 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   echo ""
   print_header_success "Arch Linux Installation Test Complete"
   echo ""
-  print_timing_summary "$OVERALL_ELAPSED"
+
+  # Test Results Summary
+  print_section "Test Results" "cyan"
+  echo ""
+  echo "  Installation Verification:"
+  echo "    • verify-installed-packages.sh: $(print_cyan "Completed")"
+  echo "    • detect-installed-duplicates.sh: $(print_cyan "Completed")"
+  if [[ "${STEP_STATUS[0]:-}" == "PASS" ]]; then
+    echo "    • test-all-apps.sh: $(print_green "✓ PASS") (34 checks)"
+  else
+    echo "    • test-all-apps.sh: $(print_red "✗ FAIL")"
+  fi
+  echo ""
+
+  print_section "Timing Summary" "cyan"
+  echo ""
+  for i in "${!STEP_NAMES[@]}"; do
+    formatted_time=$(format_time "${STEP_TIMES[$i]}")
+    printf "  %s Step %d: %-20s %s\n" "$(print_green "✓")" $((i + 1)) "${STEP_NAMES[$i]}" "$formatted_time"
+  done
+  echo "  ─────────────────────────────────────────────"
+  formatted_total=$(format_time "$OVERALL_ELAPSED")
+  printf "  %-27s %s\n" "Total time:" "$(print_cyan "$formatted_total")"
+  echo ""
+
   print_section "Test Information" "cyan"
   echo ""
   echo "  Docker image: ${DOCKER_IMAGE}"

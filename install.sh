@@ -84,6 +84,10 @@ source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 # ================================================================
 
 install_common_phases() {
+    # Ensure ~/.local/bin is in PATH for all installation phases
+    # This allows verification checks to work across all platforms
+    export PATH="$HOME/.local/bin:$PATH"
+
     # Local variables for frequently used paths
     local common_install="$DOTFILES_DIR/management/common/install"
     local github_releases="$common_install/github-releases"
