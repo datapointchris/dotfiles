@@ -133,6 +133,8 @@ declare -a STEP_STATUS
 
 # Cleanup function
 cleanup() {
+  local exit_code=$?
+
   if [[ "$KEEP_CONTAINER" == false ]]; then
     if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
       echo ""
@@ -140,11 +142,14 @@ cleanup() {
       docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
     fi
   else
-    echo ""
-    log_info "Container kept for debugging: $CONTAINER_NAME"
-    echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
-    echo "  • View logs: docker logs $CONTAINER_NAME"
-    echo "  • Remove container: docker rm -f $CONTAINER_NAME"
+    # Only show debug info if script exited with error
+    if [[ $exit_code -ne 0 ]]; then
+      echo ""
+      log_info "Container kept for debugging: $CONTAINER_NAME"
+      echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
+      echo "  • View logs: docker logs $CONTAINER_NAME"
+      echo "  • Remove container: docker rm -f $CONTAINER_NAME"
+    fi
   fi
 }
 
@@ -339,6 +344,9 @@ else
     echo "  Setting permissions..."
     docker exec "$CONTAINER_NAME" bash -c "chown -R \$(whoami):\$(whoami) ${CONTAINER_HOME}/dotfiles"
 
+    echo "  Cleaning pre-built binaries (force rebuild for Linux)..."
+    docker exec "$CONTAINER_NAME" bash -c "rm -f ${CONTAINER_HOME}/dotfiles/apps/common/sess/sess ${CONTAINER_HOME}/dotfiles/apps/common/toolbox/toolbox"
+
     log_success "Dotfiles updated in container"
   } 2>&1 | tee -a "$LOG_FILE"
   STEP_END=$(date +%s)
@@ -426,7 +434,7 @@ CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Run test outside of tee subshell to capture result
-if docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+if docker exec "$CONTAINER_NAME" bash -c "export PATH=\"${CONTAINER_HOME}/go/bin:${CONTAINER_HOME}/.local/bin:\$PATH\" && bash ${CONTAINER_HOME}/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
   STEP_STATUS+=("PASS")
 else
   STEP_STATUS+=("FAIL")
@@ -444,17 +452,15 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 8/8: Testing update-all Task"
-  echo "Running task wsl:update-all to verify update functionality..."
+  log_section "STEP 8/8: Testing WSL Update Script"
+  echo "Running management/wsl/update.sh to verify update functionality..."
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
   docker exec "$CONTAINER_NAME" bash -c "
     cd ${CONTAINER_HOME}/dotfiles
-    ZSHDOTDIR=${CONTAINER_HOME}/.config/zsh
-    export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; task wsl:update-all\"
-  "
+    bash management/wsl/update.sh
+  " || log_warning "WSL update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -517,3 +523,10 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   fi
   echo ""
 } 2>&1 | tee -a "$LOG_FILE"
+
+# Exit with error if any step failed
+for status in "${STEP_STATUS[@]}"; do
+  if [[ "$status" == "FAIL" ]]; then
+    exit 1
+  fi
+done

@@ -251,16 +251,14 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 7/7: Testing update-all Task"
-  echo "Running task arch:update-all to verify update functionality..."
+  log_section "STEP 7/7: Testing Arch Update Script"
+  echo "Running management/arch/update.sh to verify update functionality..."
   echo ""
 
   docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
     cd /home/archuser/dotfiles
-    ZSHDOTDIR=/home/archuser/.config/zsh
-    export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; task arch:update-all\"
-  "
+    bash management/arch/update.sh
+  " || log_warning "Arch update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

@@ -46,16 +46,34 @@ show_help() {
   print_section "Notebook" "brightblue"
   echo "  Location: $(print_cyan "$NOTES_DIR")"
   echo "  Config:   $(print_cyan "$HOME/.config/zk/config.toml")"
+
+  # Show warnings if dependencies are missing (but don't fail - help should always work)
+  if ! command -v zk &>/dev/null; then
+    echo ""
+    print_warning "zk is not installed - install with: brew install zk"
+  fi
+
+  if [[ ! -d "$NOTES_DIR" ]]; then
+    echo ""
+    print_warning "Notes directory not found: $NOTES_DIR - run: zk init $NOTES_DIR"
+  fi
 }
 
-# Check if zk is installed
+# Check if user wants help (before dependency validation)
+case "${1:-}" in
+  help|--help|-h|"")
+    show_help
+    exit 0
+    ;;
+esac
+
+# Validate dependencies for actual commands
 if ! command -v zk &>/dev/null; then
   print_error "zk is not installed"
   echo "Install with: brew install zk"
   exit 1
 fi
 
-# Check if notes directory exists
 if [[ ! -d "$NOTES_DIR" ]]; then
   print_error "Notes directory not found: $NOTES_DIR"
   echo "Run: zk init $NOTES_DIR"
@@ -213,7 +231,7 @@ cmd_browse() {
   fi
 }
 
-# Main command routing
+# Main command routing (help already handled above)
 case "${1:-}" in
   search)
     cmd_search
@@ -231,7 +249,9 @@ case "${1:-}" in
     cmd_browse
     ;;
 
-  help|--help|-h|*)
-    show_help
+  *)
+    print_error "Unknown command: $1"
+    echo "Run 'notes --help' for usage"
+    exit 1
     ;;
 esac

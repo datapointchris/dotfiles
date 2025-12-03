@@ -36,8 +36,11 @@ tasks:
         source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
         print_section "Creating symlinks" "cyan"
 
-        # Detect platform
-        if [ "$(uname)" = "Darwin" ]; then
+        # Detect platform (check env var first, then system detection)
+        if [ -n "${PLATFORM:-}" ]; then
+          # PLATFORM already set (e.g., from ~/.env in Docker tests)
+          :
+        elif [ "$(uname)" = "Darwin" ]; then
           PLATFORM="macos"
         elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
           PLATFORM="wsl"
@@ -58,8 +61,11 @@ tasks:
         source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
         print_section "Relinking symlinks" "cyan"
 
-        # Detect platform
-        if [ "$(uname)" = "Darwin" ]; then
+        # Detect platform (check env var first, then system detection)
+        if [ -n "${PLATFORM:-}" ]; then
+          # PLATFORM already set (e.g., from ~/.env in Docker tests)
+          :
+        elif [ "$(uname)" = "Darwin" ]; then
           PLATFORM="macos"
         elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
           PLATFORM="wsl"
@@ -76,8 +82,11 @@ tasks:
     desc: Verify all symlinks are correct
     cmds:
       - |
-        # Detect platform
-        if [ "$(uname)" = "Darwin" ]; then
+        # Detect platform (check env var first, then system detection)
+        if [ -n "${PLATFORM:-}" ]; then
+          # PLATFORM already set (e.g., from ~/.env in Docker tests)
+          :
+        elif [ "$(uname)" = "Darwin" ]; then
           PLATFORM="macos"
         elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
           PLATFORM="wsl"
@@ -94,8 +103,11 @@ tasks:
     desc: Show all configured symlinks
     cmds:
       - |
-        # Detect platform
-        if [ "$(uname)" = "Darwin" ]; then
+        # Detect platform (check env var first, then system detection)
+        if [ -n "${PLATFORM:-}" ]; then
+          # PLATFORM already set (e.g., from ~/.env in Docker tests)
+          :
+        elif [ "$(uname)" = "Darwin" ]; then
           PLATFORM="macos"
         elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
           PLATFORM="wsl"
@@ -112,8 +124,11 @@ tasks:
     desc: Remove all symlinks
     cmds:
       - |
-        # Detect platform
-        if [ "$(uname)" = "Darwin" ]; then
+        # Detect platform (check env var first, then system detection)
+        if [ -n "${PLATFORM:-}" ]; then
+          # PLATFORM already set (e.g., from ~/.env in Docker tests)
+          :
+        elif [ "$(uname)" = "Darwin" ]; then
           PLATFORM="macos"
         elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
           PLATFORM="wsl"

@@ -153,12 +153,12 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 9 - Custom Go Applications" "cyan"
-    cd "$DOTFILES_DIR/apps/common/sess" && PATH="/usr/local/go/bin:$PATH" task install
-    cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="/usr/local/go/bin:$PATH" task install
+    cd "$DOTFILES_DIR/apps/common/sess" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
+    cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
     echo ""
 
     print_header "Phase 10 - Symlinking Dotfiles" "cyan"
-    cd "$DOTFILES_DIR" && task symlinks:relink
+    cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
     echo ""
 
     print_header "Phase 11 - Theme System" "cyan"
@@ -260,11 +260,11 @@ install_arch() {
 configure_wsl_shell() {
     print_section "Configuring shell environment" "cyan"
 
-    # Set ZSHDOTDIR in system-wide zshenv if not already set
-    if ! grep -q "ZSHDOTDIR" /etc/zsh/zshenv 2>/dev/null; then
+    # Set ZDOTDIR in system-wide zshenv if not already set
+    if ! grep -q "ZDOTDIR" /etc/zshenv 2>/dev/null; then
         # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
-        echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv >/dev/null
-        log_success "ZSHDOTDIR configured in /etc/zsh/zshenv"
+        echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zshenv >/dev/null
+        log_success "ZDOTDIR configured in /etc/zshenv"
     else
         log_success "ZSHDOTDIR already configured"
     fi
@@ -283,11 +283,11 @@ configure_wsl_shell() {
 configure_arch_shell() {
     print_section "Configuring shell environment" "cyan"
 
-    # Set ZSHDOTDIR in system-wide zshenv if not already set
-    if ! grep -q "ZSHDOTDIR" /etc/zsh/zshenv 2>/dev/null; then
+    # Set ZDOTDIR in system-wide zshenv if not already set
+    if ! grep -q "ZDOTDIR" /etc/zshenv 2>/dev/null; then
         # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
-        echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv >/dev/null
-        log_success "ZSHDOTDIR configured in /etc/zsh/zshenv"
+        echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zshenv >/dev/null
+        log_success "ZDOTDIR configured in /etc/zshenv"
     else
         log_success "ZSHDOTDIR already configured"
     fi
@@ -309,7 +309,7 @@ configure_arch_shell() {
 
 main() {
     # Detect platform
-    PLATFORM=$(detect_platform)
+    export PLATFORM=$(detect_platform)
 
     if [[ "$PLATFORM" == "unknown" ]]; then
         die "Unsupported platform: $OSTYPE"

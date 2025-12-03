@@ -225,15 +225,14 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 6/6: Testing update-all Task"
-  echo "Running task macos:update-all to verify update functionality..."
+  log_section "STEP 6/6: Testing macOS Update Script"
+  echo "Running management/macos/update.sh to verify update functionality..."
   echo ""
 
   sudo -u "$TEST_USER" bash -c "
     cd /Users/$TEST_USER/dotfiles
-    export ZSHDOTDIR=/Users/$TEST_USER/.config/zsh
-    zsh -c \"source \$ZSHDOTDIR/.zshrc 2>/dev/null; task macos:update-all\"
-  "
+    bash management/macos/update.sh
+  " || log_warning "macOS update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

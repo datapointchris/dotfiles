@@ -127,7 +127,7 @@ test_cmd "tmux config valid" "tmux -f ~/.config/tmux/tmux.conf list-keys >/dev/n
 echo ""
 echo "Shell Environment:"
 test_cmd "apps in PATH" "echo \$PATH | grep -q '.local/bin'"
-test_cmd "ZDOTDIR set" "test -n \"\$ZDOTDIR\""
+test_cmd "ZDOTDIR configured" "test -n \"\$ZDOTDIR\" || (test -f /etc/zshenv && grep -q 'ZDOTDIR.*/.config/zsh' /etc/zshenv)"
 test_cmd "go bin in PATH" "echo \$PATH | grep -q 'go/bin'"
 
 # ================================================================

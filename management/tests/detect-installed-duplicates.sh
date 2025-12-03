@@ -21,7 +21,7 @@ set -euo pipefail
 
 # Source formatting library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
@@ -87,50 +87,69 @@ done
 # CACHE INITIALIZATION
 # ================================================================
 
+# Helper function to cache package manager output with timing
+cache_package_manager() {
+  local name="$1"
+  local command="$2"
+
+  local cache_start cache_end cache_elapsed
+  cache_start=$(date +%s)
+  echo "  • Caching $name..."
+
+  local result
+  result=$(eval "$command" 2>/dev/null || true)
+
+  cache_end=$(date +%s)
+  cache_elapsed=$((cache_end - cache_start))
+  echo "    ⏱  Completed in ${cache_elapsed}s"
+
+  echo "$result"
+}
+
 populate_package_manager_caches() {
   # Homebrew (macOS/Linux)
   if command -v brew &>/dev/null; then
-    BREW_LIST_CACHE=$(brew list 2>/dev/null || true)
+    BREW_LIST_CACHE=$(cache_package_manager "Homebrew packages" "brew list")
   fi
 
   # APT (Ubuntu/Debian)
   if command -v apt &>/dev/null; then
-    APT_LIST_CACHE=$(dpkg -l 2>/dev/null | grep "^ii" || true)
+    APT_LIST_CACHE=$(cache_package_manager "apt packages" "dpkg -l | grep '^ii'")
   fi
 
   # Pacman (Arch)
   if command -v pacman &>/dev/null; then
-    PACMAN_LIST_CACHE=$(pacman -Q 2>/dev/null || true)
+    PACMAN_LIST_CACHE=$(cache_package_manager "pacman packages" "pacman -Q")
   fi
 
   # Snap
   if command -v snap &>/dev/null; then
-    SNAP_LIST_CACHE=$(snap list 2>/dev/null || true)
+    SNAP_LIST_CACHE=$(cache_package_manager "snap packages" "snap list")
   fi
 
   # Flatpak
   if command -v flatpak &>/dev/null; then
-    FLATPAK_LIST_CACHE=$(flatpak list 2>/dev/null || true)
+    FLATPAK_LIST_CACHE=$(cache_package_manager "flatpak packages" "flatpak list")
   fi
 
   # pip/pip3
   if command -v pip3 &>/dev/null; then
-    PIP_LIST_CACHE=$(pip3 list 2>/dev/null || true)
+    PIP_LIST_CACHE=$(cache_package_manager "pip packages" "pip3 list")
   fi
 
   # uv
   if command -v uv &>/dev/null; then
-    UV_TOOL_LIST_CACHE=$(uv tool list 2>/dev/null || true)
+    UV_TOOL_LIST_CACHE=$(cache_package_manager "uv tools" "uv tool list")
   fi
 
   # npm global
   if command -v npm &>/dev/null; then
-    NPM_LIST_CACHE=$(npm list -g --depth=0 2>/dev/null || true)
+    NPM_LIST_CACHE=$(cache_package_manager "npm global packages" "npm list -g --depth=0")
   fi
 
   # cargo
   if command -v cargo &>/dev/null; then
-    CARGO_LIST_CACHE=$(cargo install --list 2>/dev/null || true)
+    CARGO_LIST_CACHE=$(cache_package_manager "cargo packages" "cargo install --list")
   fi
 }
 
@@ -418,9 +437,9 @@ print_header "Alternate Installation Detection" "cyan"
 echo ""
 
 if [[ "$CLEAN_MODE" == true ]]; then
-  log_warning "🧹 CLEAN MODE: Will remove alternate installations automatically"
+  log_warning "CLEAN MODE: Will remove alternate installations automatically"
 else
-  log_info "📊 REPORT MODE: Will only report alternate installations (use --clean to remove)"
+  log_info "REPORT MODE: Will only report alternate installations (use --clean to remove)"
 fi
 
 echo ""
@@ -428,7 +447,7 @@ log_info "Initializing package manager caches..."
 populate_package_manager_caches
 
 echo ""
-print_section "Checking for Alternate Installations" "blue"
+log_info "Checking for Alternate Installations"
 
 # GitHub Release Tools
 check_tool "go" "/usr/local/go/bin/go" "go" "golang" "golang-go"
@@ -503,18 +522,15 @@ check_tool "nbpreview" "$HOME/.local/bin/nbpreview" "nbpreview"
 # ================================================================
 
 echo ""
-print_header "Summary" "cyan"
+print_section "Summary" "cyan"
 
 if [[ "$DUPLICATES_FOUND" == false ]]; then
-  log_success "✓ No duplicates found! All installations are clean."
+  log_success "No duplicates found! All installations are clean."
   exit 0
 fi
 
 echo ""
-log_warning "Found ${#CLEANUP_COMMANDS[@]} alternate installations"
-# Output generic warning message that will be caught by log summarizers
-echo "WARNING: Detected ${#CLEANUP_COMMANDS[@]} tools installed in multiple locations"
-echo "WARNING: Multiple installations may cause PATH conflicts or version mismatches"
+log_warning "WARNING: Detected ${#CLEANUP_COMMANDS[@]} tools installed in multiple locations"
 
 if [[ "$CLEAN_MODE" == false ]]; then
   echo ""
