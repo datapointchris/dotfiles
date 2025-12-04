@@ -152,6 +152,7 @@ nav:
       - Error Handling: architecture/error-handling.md
       - Metrics Tracking: architecture/metrics-tracking.md
       - Commit Agent Design: architecture/commit-agent-design.md
+      - Commit Agent Testing: architecture/commit-agent-metrics-testing.md
       - GitHub Release Installer: architecture/github-release-installer.md
       - Resilient Installation: architecture/resilient-installation.md
   - Configuration:

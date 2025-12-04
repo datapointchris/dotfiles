@@ -52,31 +52,73 @@ def get_recent_commits():
         return f"ERROR: {e}"
 
 def get_key_directories():
-    """Snapshot of key directories"""
+    """Generate directory tree with file counts and key indicators"""
     try:
         project_root = get_repo_root()
 
-        dirs_to_check = [
-            "install/",
-            "tools/",
-            "docs/",
-            "taskfiles/",
-            "common/",
-            "macos/",
-            "wsl/",
-            "arch/"
-        ]
+        # Directories to ignore
+        ignore_dirs = {'.git', '.venv', 'node_modules', '__pycache__', '.task',
+                      '.ruff_cache', '.pytest_cache', 'site', '.wsl-rootfs-cache',
+                      'Users'}
 
-        structure = {}
-        for dir_path in dirs_to_check:
-            full_path = project_root / dir_path
-            if full_path.exists():
-                structure[dir_path] = len(list(full_path.rglob("*")))  # file count
+        structure = []
 
-        return structure
+        # Get all top-level directories
+        top_level_dirs = sorted([
+            d for d in project_root.iterdir()
+            if d.is_dir() and d.name not in ignore_dirs and not d.name.startswith('.')
+        ])
+
+        for dir_path in top_level_dirs:
+            # Count files and get key info
+            all_files = list(dir_path.rglob("*"))
+            file_count = len([f for f in all_files if f.is_file()])
+
+            # Detect key file types
+            indicators = []
+            exts = {}
+            for f in all_files:
+                if f.is_file():
+                    ext = f.suffix.lower()
+                    if ext:
+                        exts[ext] = exts.get(ext, 0) + 1
+
+            # Highlight important file types
+            if exts.get('.md', 0) > 0:
+                indicators.append(f"{exts['.md']} md")
+            if exts.get('.py', 0) > 0:
+                indicators.append(f"{exts['.py']} py")
+            if exts.get('.sh', 0) > 0:
+                indicators.append(f"{exts['.sh']} sh")
+            if exts.get('.go', 0) > 0:
+                indicators.append(f"{exts['.go']} go")
+            if exts.get('.yml', 0) + exts.get('.yaml', 0) > 0:
+                indicators.append(f"{exts.get('.yml', 0) + exts.get('.yaml', 0)} yml")
+
+            # Check for key files
+            key_files = []
+            if (dir_path / "Taskfile.yml").exists():
+                key_files.append("Taskfile")
+            if (dir_path / "README.md").exists():
+                key_files.append("README")
+            if (dir_path / "go.mod").exists():
+                key_files.append("go.mod")
+
+            info = f"{dir_path.name}/ ({file_count} files"
+            if indicators:
+                info += f": {', '.join(indicators)}"
+            if key_files:
+                info += f" | {', '.join(key_files)}"
+            info += ")"
+
+            structure.append(info)
+
+        return "\n".join(f"  {item}" for item in structure)
+
     except Exception as e:
         print(f"⚠️  [session-start] ERROR in get_key_directories: {e}", file=sys.stderr)
-        return {}
+        traceback.print_exc(file=sys.stderr)
+        return "ERROR: Could not generate directory structure"
 
 def get_pending_changelog():
     """Check for pending changelog entries"""
@@ -114,7 +156,7 @@ def main():
         context = {
             "git_status": get_git_status(),
             "recent_commits": get_recent_commits(),
-            "directory_counts": get_key_directories(),
+            "directory_structure": get_key_directories(),
             "pending_changelog": get_pending_changelog(),
             "cwd": hook_input["cwd"]
         }
@@ -134,7 +176,9 @@ def main():
 ```
 
 **Directory Structure:**
-{json.dumps(context['directory_counts'], indent=2)}
+```
+{context['directory_structure']}
+```
 """
 
         # Add pending changelog reminder if entries exist
