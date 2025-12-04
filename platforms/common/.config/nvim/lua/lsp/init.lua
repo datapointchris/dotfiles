@@ -10,7 +10,9 @@
 
 -- Set up LSP client capabilities for blink.cmp before enabling servers
 local capabilities = nil
-if pcall(require, 'blink.cmp') then capabilities = require('blink.cmp').get_lsp_capabilities() end
+if pcall(require, 'blink.cmp') then
+  capabilities = require('blink.cmp').get_lsp_capabilities()
+end
 
 vim.lsp.enable({
   'bashls',

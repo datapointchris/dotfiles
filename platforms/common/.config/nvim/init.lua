@@ -9,7 +9,9 @@ local required_env_vars = {
 
 local missing_vars = {}
 for _, var in ipairs(required_env_vars) do
-  if not vim.env[var] then table.insert(missing_vars, var) end
+  if not vim.env[var] then
+    table.insert(missing_vars, var)
+  end
 end
 
 if #missing_vars > 0 then
@@ -26,7 +28,9 @@ require('core.lazy') -- Load lazy.nvim in both VSCode and Neovim
 require('core.keymaps')
 
 -- Only load autocmds in regular Neovim
-if not vim.g.vscode then require('core.autocmds') end
+if not vim.g.vscode then
+  require('core.autocmds')
+end
 
 -- Load LSP configuration
 require('lsp')

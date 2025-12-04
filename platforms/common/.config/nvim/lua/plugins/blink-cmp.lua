@@ -20,10 +20,14 @@ return {
 
     -- Only add copilot if AI is enabled and not in VSCode
     -- This is the ONLY place to disable copilot and blink-cmp-copilot or it errors blink.cmp
-    if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then table.insert(default_sources, 'copilot') end
+    if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then
+      table.insert(default_sources, 'copilot')
+    end
 
     return {
-      enabled = function() return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype) end,
+      enabled = function()
+        return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype)
+      end,
       keymap = {
         preset = 'none',
         ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
@@ -131,7 +135,9 @@ return {
             module = 'blink-cmp-copilot',
             score_offset = 100, -- Prioritize Copilot suggestions
             async = true,
-            enabled = function() return not vim.g.vscode end,
+            enabled = function()
+              return not vim.g.vscode
+            end,
           },
           lsp = {
             name = 'LSP',
@@ -143,7 +149,9 @@ return {
             opts = {
               trailing_slash = false,
               label_trailing_slash = true,
-              get_cwd = function(context) return vim.fn.expand(('#%d:p:h'):format(context.bufnr)) end,
+              get_cwd = function(context)
+                return vim.fn.expand(('#%d:p:h'):format(context.bufnr))
+              end,
               show_hidden_files_by_default = true,
             },
           },

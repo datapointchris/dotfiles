@@ -20,7 +20,9 @@ return {
         view_options = {
           show_hidden = true,
           natural_order = true,
-          is_always_hidden = function(name, bufnr) return name == '..' or name == '.git' end,
+          is_always_hidden = function(name, bufnr)
+            return name == '..' or name == '.git'
+          end,
         },
         float = {
           padding = 5,

@@ -27,6 +27,7 @@ if pattern.endswith("/"):
 ```
 
 Results:
+
 - `/.git/` matches `foo/.git/bar` ✓
 - `.git/` matches `.git/config` ✓
 - `.git` does NOT match `.gitconfig` ✓

@@ -6,9 +6,11 @@
 ## Critical Files That Must Work Everywhere
 
 Git config files appear on all platforms and must NOT be excluded:
+
 - `.gitconfig`, `.gitignore`, `.gitattributes` - Excluded `.git/` directory must not match these files
 
 Shell configs have platform differences:
+
 - macOS: `.profile` for login shells
 - WSL: May use `.bash_profile` or `.bashrc`
 - All: Platform-specific aliases and functions
@@ -26,6 +28,7 @@ if "/.git/" in path_str or path_str.startswith(".git/"): return True
 ```
 
 **Patterns to watch**:
+
 - `.git/` vs `.gitconfig`, `.gitignore`, `.github/`
 - `node_modules/` vs `node_modules.txt`
 - `tmux/plugins/` vs `tmux/tmux.conf`
@@ -33,11 +36,13 @@ if "/.git/" in path_str or path_str.startswith(".git/"): return True
 ## Platform-Specific Files
 
 **WSL binary names differ**:
+
 - Ubuntu: `batcat`, `fdfind`
 - macOS: `bat`, `fd`
 Handle with symlinks in `~/.local/bin/`
 
 **Case sensitivity**:
+
 - Linux/WSL: Case-sensitive
 - macOS: Case-insensitive (default)
 

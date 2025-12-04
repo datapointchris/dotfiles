@@ -17,6 +17,28 @@
 
 set -euo pipefail
 
+# ================================================================
+# PLATFORM DETECTION
+# ================================================================
+
+# Get dotfiles directory
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+
+# Source platform detection utility (same as install.sh)
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
+
+# Detect current platform
+PLATFORM=$(detect_platform)
+
+if [[ "$PLATFORM" == "unknown" ]]; then
+    echo "ERROR: Unsupported platform: $OSTYPE"
+    exit 1
+fi
+
+# ================================================================
+# TEST TRACKING
+# ================================================================
+
 FAILED=0
 PASSED=0
 
@@ -67,7 +89,7 @@ test_symlink() {
   fi
 }
 
-echo -e "${CYAN}Testing Dotfiles Installation${NC}"
+echo -e "${CYAN}Testing Dotfiles Installation - $PLATFORM${NC}"
 echo "============================="
 echo -e "${YELLOW}Run this after install.sh and symlinks deployment${NC}"
 echo ""
@@ -81,6 +103,12 @@ test_cmd "sess list" "sess list"
 test_cmd "toolbox list" "toolbox list"
 test_cmd "theme-sync current" "theme-sync current"
 test_cmd "menu available" "command -v menu"
+test_cmd "backup-dirs help" "backup-dirs --help"
+test_cmd "workflows available" "command -v workflows"
+test_cmd "analyze-logsift-metrics available" "command -v analyze-logsift-metrics"
+test_cmd "printcolors available" "command -v printcolors"
+test_cmd "tmux-colors-from-tinty available" "command -v tmux-colors-from-tinty"
+test_cmd "shelldocsparser available" "command -v shelldocsparser"
 
 # ================================================================
 # 2. SHELL LIBRARIES
@@ -142,16 +170,31 @@ test_cmd "nvim installed" "command -v nvim"
 test_cmd "fzf installed" "command -v fzf"
 
 # ================================================================
-# 7. PLATFORM-SPECIFIC
+# 7. PLATFORM-SPECIFIC APPS
 # ================================================================
-if [[ "$(uname)" == "Darwin" ]]; then
+if [[ "$PLATFORM" == "macos" ]]; then
   echo ""
-  echo "macOS Specific:"
+  echo "macOS Specific Apps:"
   test_cmd "ghostty-theme help" "ghostty-theme --help"
   test_cmd "aws-profiles available" "command -v aws-profiles"
+  test_cmd "stitch-udacity-videos available" "command -v stitch-udacity-videos"
   test_file "ghostty config exists" "$HOME/.config/ghostty/config"
   test_cmd "brew installed" "command -v brew"
 fi
+
+# Add WSL-specific tests here when WSL apps are added
+# if [[ "$PLATFORM" == "wsl" ]]; then
+#   echo ""
+#   echo "WSL Specific Apps:"
+#   # test_cmd "wsl-app help" "wsl-app --help"
+# fi
+
+# Add Arch-specific tests here when Arch apps are added
+# if [[ "$PLATFORM" == "arch" ]]; then
+#   echo ""
+#   echo "Arch Specific Apps:"
+#   # test_cmd "arch-app help" "arch-app --help"
+# fi
 
 # ================================================================
 # SUMMARY

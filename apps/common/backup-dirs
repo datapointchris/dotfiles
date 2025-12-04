@@ -89,8 +89,8 @@ set -euo pipefail
 
 # Source required shell libraries
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/platforms/common/.local/lib/bash/formatting.sh"
-source "$DOTFILES_DIR/platforms/common/shell/colors.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/colors.sh"
 
 # ============================================================================
 # Configuration
