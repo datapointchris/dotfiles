@@ -141,3 +141,7 @@
 - [x] **No Regressions**: All commits conventional format, all hooks pass ✅
 
 **Overall**: 4/4 criteria met. PreToolUse hook successfully blocks direct git commits, CLAUDE.md provides optimized workflow guidance, and commit agent handles all operations in isolated context for maximum token savings.
+
+## Token Usage Test
+
+Test entry added to measure commit agent token consumption.
