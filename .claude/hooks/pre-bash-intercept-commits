@@ -1,10 +1,36 @@
 #!/usr/bin/env python3
 """
 Intercepts git commit commands and routes them to commit agent.
+Allows commits from subagents (detected via PPID) to prevent deadlock.
 Uses exit code 2 to block execution per Claude Code hook specification.
 """
 import json
 import sys
+import os
+import subprocess
+
+
+def is_subagent():
+    """
+    Detect if this hook is running in a subagent context.
+    Subagents run as child processes of the main 'claude' process.
+    """
+    try:
+        ppid = os.getppid()  # Get parent process ID
+        # Query the parent process name
+        result = subprocess.run(
+            ['ps', '-p', str(ppid), '-o', 'comm='],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        parent_name = result.stdout.strip()
+        # If parent is 'claude', we're in a subagent
+        return parent_name == 'claude'
+    except Exception:
+        # On error, assume we're not in a subagent (fail open)
+        return False
+
 
 try:
     data = json.load(sys.stdin)
@@ -12,8 +38,11 @@ try:
 
     # Check if this is a git commit command
     if 'git commit' in command:
-        # Exit code 2 blocks the tool execution
-        # stderr becomes the feedback message to Claude
+        # Allow commits from subagents (e.g., commit-agent)
+        if is_subagent():
+            sys.exit(0)
+
+        # Block direct commits from main agent
         print("⚠️ Direct git commits are not allowed. Use commit agent instead.", file=sys.stderr)
         print("", file=sys.stderr)
         print("Please invoke the Task tool with prompt:", file=sys.stderr)
