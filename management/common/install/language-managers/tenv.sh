@@ -20,14 +20,18 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 
-# Source GitHub release installer library
+# Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 BINARY_NAME="tenv"
 REPO="tofuutils/tenv"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 print_banner "Installing tenv"
+
+# Initialize failure registry
+init_failure_registry
 
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   exit_success
@@ -50,7 +54,22 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VER
 TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
 log_info "Downloading tenv..."
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
-  log_fatal "Failed to download from $DOWNLOAD_URL" "${BASH_SOURCE[0]}" "$LINENO"
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="1. Download in your browser (bypasses firewall):
+   $DOWNLOAD_URL
+
+2. After downloading, extract and install:
+   tar -xzf ~/Downloads/tenv_${VERSION}_${PLATFORM}_${ARCH}.tar.gz
+   mv tenv terraform tofu terragrunt terramate atmos tf ~/.local/bin/ 2>/dev/null || true
+   chmod +x ~/.local/bin/{tenv,terraform,tofu,terragrunt,terramate,atmos,tf} 2>/dev/null || true
+
+3. Verify installation:
+   tenv --version"
+    report_failure "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+  fi
+  log_warning "tenv installation failed (see summary)"
+  display_failure_summary
+  exit 1
 fi
 register_cleanup "rm -f '$TEMP_TARBALL' 2>/dev/null || true"
 
@@ -72,7 +91,22 @@ done
 if command -v tenv >/dev/null 2>&1; then
   log_success "tenv and proxy binaries installed successfully"
 else
-  log_fatal "tenv not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="tenv installed but not found in PATH.
+
+Check installation:
+   ls -la ~/.local/bin/tenv
+
+Ensure ~/.local/bin is in PATH:
+   export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Verify:
+   tenv --version"
+    report_failure "$BINARY_NAME" "unknown" "$VERSION" "$manual_steps" "Installation verification failed"
+  fi
+  log_warning "tenv installation verification failed (see summary)"
+  display_failure_summary
+  exit 1
 fi
 
 # Check if packages.yml exists for Terraform installation
@@ -101,5 +135,9 @@ echo "  Setting Terraform ${TERRAFORM_VERSION} as default..."
 tenv tf use "${TERRAFORM_VERSION}"
 
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
+
+# Display failure summary
+display_failure_summary
+
 print_banner_success "tenv and Terraform installation complete"
 exit_success
