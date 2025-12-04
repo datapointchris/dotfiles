@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""
+Track commit workflow token usage and method.
+Logs to .claude/metrics/ for comparison analysis.
+"""
+import json
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+
+
+def get_repo_root():
+    """Get git repository root directory"""
+    import subprocess
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        return Path.home() / "dotfiles"
+    return Path(result.stdout.strip())
+
+
+def extract_commit_info(transcript_path):
+    """Extract commit information from transcript"""
+    try:
+        with open(transcript_path, 'r') as f:
+            lines = f.readlines()
+
+        # Look for Task tool invocations (commit agent)
+        # vs Bash tool with git commit (direct)
+        method = None
+        tokens_estimate = 0
+
+        for line in lines:
+            try:
+                entry = json.loads(line)
+
+                # Check for Task tool (commit agent)
+                if entry.get('tool') == 'Task':
+                    params = entry.get('parameters', {})
+                    if 'commit' in params.get('prompt', '').lower():
+                        method = 'commit-agent'
+                        tokens_estimate = 100  # Minimal overhead
+
+                # Check for Bash with git commit (direct)
+                if entry.get('tool') == 'Bash':
+                    params = entry.get('parameters', {})
+                    if 'git commit' in params.get('command', ''):
+                        method = 'direct-git'
+                        tokens_estimate = 500  # Average overhead
+
+            except json.JSONDecodeError:
+                continue
+
+        return method, tokens_estimate
+    except Exception:
+        return None, 0
+
+
+def main():
+    try:
+        hook_input = json.loads(sys.stdin.read())
+
+        session_id = hook_input.get('session_id', 'unknown')
+        transcript_path = hook_input.get('transcript_path')
+
+        # Extract commit workflow info
+        method, tokens = extract_commit_info(transcript_path) if transcript_path else (None, 0)
+
+        if not method:
+            # No commit detected
+            sys.exit(0)
+
+        # Create metrics directory
+        repo_root = get_repo_root()
+        metrics_dir = repo_root / ".claude/metrics"
+        metrics_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create metric entry
+        timestamp = datetime.now().isoformat()
+        metric_entry = {
+            "timestamp": timestamp,
+            "session_id": session_id,
+            "workflow": "commit",
+            "method": method,  # 'commit-agent' or 'direct-git'
+            "estimated_tokens_overhead": tokens,
+            "agent_savings_claimed": 5000 if method == 'commit-agent' else 0,
+            "net_savings": 5000 - tokens if method == 'commit-agent' else -tokens,
+        }
+
+        # Append to daily log file
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        log_file = metrics_dir / f"commit-metrics-{date_str}.jsonl"
+
+        with open(log_file, 'a') as f:
+            f.write(json.dumps(metric_entry) + '\n')
+
+        print(f"📊 Logged commit metrics to {log_file}", file=sys.stderr)
+
+    except Exception as e:
+        print(f"⚠️ Commit metrics tracking failed: {e}", file=sys.stderr)
+        # Never block
+        pass
+
+
+if __name__ == "__main__":
+    main()
