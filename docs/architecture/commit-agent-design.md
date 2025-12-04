@@ -269,21 +269,29 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 | Verification | 100-200 |
 | **Total** | **3000-5900** |
 
-### With Commit Agent
+### With Commit Agent (Optimized Workflow)
 
 | Phase | Tokens | Context |
 |-------|--------|---------|
+| **Main Agent** | | |
+| Task invocation + context | 100 | **Main** |
+| Receive summary | 44 | **Main** |
+| **Total (Main Agent)** | **144** | **Main** |
+| | | |
+| **Commit Agent** | | |
 | Analyze state | 500 | Agent |
 | Group changes | 200 | Agent |
 | Generate message | 300 | Agent |
 | Pre-commit background | 0 | Agent |
 | Pre-commit logsift | 200 | Agent |
 | Commit + verify | 100 | Agent |
-| Summary to main agent | 200 | **Main** |
-| **Total (Main Agent)** | **200** | Main |
 | **Total (Agent)** | 1300 | Agent |
 
-**Savings in main agent context**: ~2800-5700 tokens per commit
+**Measured Savings** (from testing in `commit-agent-metrics-testing.md`):
+
+- Traditional approach: ~2400 tokens in main context
+- Optimized approach: **144 tokens in main context**
+- **Net savings: ~2256 tokens per commit workflow**
 
 **Additional benefits**:
 
@@ -291,6 +299,7 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 - Agent context can be discarded after commit
 - Multiple commits handled without main agent pollution
 - Pre-commit noise eliminated
+- 100% enforcement via PreToolUse hook
 
 ## Implementation Details
 
@@ -368,6 +377,73 @@ Claude reads agent description and auto-delegates based on keyword matching.
 ```
 
 Lists all available agents and allows interactive selection.
+
+### Optimized Invocation Pattern
+
+To minimize token usage in the main conversation context, follow this optimized workflow:
+
+**Main Agent Responsibilities**:
+
+✅ **DO**: Invoke immediately with brief context
+
+```python
+Task(subagent_type="commit-agent",
+     prompt="Create commits for this work. Context: implemented PreToolUse hook")
+```
+
+✅ **DO**: Pass relevant context about what was worked on
+
+- Example: "Context: fixed backup-dirs sourcing error"
+- Example: "Context: added metrics tracking and testing"
+- Helps commit agent understand changes without extra research
+
+❌ **DON'T**: Run git operations before invoking
+
+- Skip `git status` (agent will run it)
+- Skip `git diff` (agent will run it)
+- Skip `git add` (agent will stage appropriate files)
+- Skip reading docs to understand changes (agent analyzes directly)
+
+**Token Savings**:
+
+| Operation | Traditional | Optimized | Savings |
+|-----------|------------|-----------|---------|
+| git status/diff | ~300 tokens | 0 tokens | 300 |
+| File staging | ~100 tokens | 0 tokens | 100 |
+| Context reading | ~500 tokens | ~50 tokens | 450 |
+| Pre-commit handling | ~2000 tokens | 0 tokens | 2000 |
+| **Total overhead** | **~2900 tokens** | **~150 tokens** | **~2750** |
+
+**Measured Results** (from testing):
+
+- Main agent overhead: **144 tokens** (invocation + brief context)
+- Net savings vs traditional: **~2256 tokens per commit**
+- All pre-commit handling: **isolated in subagent context**
+
+**Example Optimal Flow**:
+
+```yaml
+User: "Let's commit this work"
+
+Main Agent: [~100 tokens]
+  Task(subagent_type="commit-agent",
+       prompt="Create commits. Context: documented PreToolUse hook")
+
+Commit Agent: [isolated context, ~5000 tokens]
+  - Runs git status, git diff
+  - Analyzes changes
+  - Stages appropriate files
+  - Creates atomic commits
+  - Handles pre-commit hooks
+  - Returns summary
+
+Main Agent: [~50 tokens]
+  Relays result to user
+
+Total main context: ~150 tokens
+```
+
+This approach keeps the main conversation focused on development while the commit agent handles all git complexity in isolation.
 
 ### PreToolUse Hook Enforcement
 
