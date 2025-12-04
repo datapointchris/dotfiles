@@ -132,6 +132,47 @@ pre-commit install
 pre-commit install --hook-type commit-msg
 ```
 
+## Slash Commands
+
+User-invoked commands for common workflows and tasks.
+
+!!! info "Complete Guide"
+    See [Working with Claude Code](../docs/claude-code/working-with-claude.md) for comprehensive usage instructions and [Quick Reference](../docs/claude-code/quick-reference.md) for command lookup.
+
+### Available Commands
+
+**logsift** (`.claude/commands/logsift.md`) - Run commands with explicit syntax
+
+```bash
+/logsift "bash management/tests/test-install-wsl-docker.sh" 15
+```
+
+**logsift-auto** (`.claude/commands/logsift-auto.md`) - Run commands with natural language
+
+```bash
+/logsift-auto run wsl docker test with reuse flag, 15 minutes
+```
+
+**Features**:
+
+- Automated error analysis and iterative fixing
+- 5-phase systematic methodology (analysis → investigation → strategy → iteration → verification)
+- Root cause identification vs independent error fixing
+- Metrics tracking for quality assessment
+
+**Documentation**:
+
+- User guide: [Working with Claude Code](../docs/claude-code/working-with-claude.md)
+- Technical details: [Metrics Tracking Architecture](../docs/architecture/metrics-tracking.md)
+- Quick reference: [Command Reference](../docs/claude-code/quick-reference.md)
+
+### Creating Custom Slash Commands
+
+1. Create markdown file in `.claude/commands/`
+2. Add frontmatter with description and argument-hint
+3. Use `$1`, `$2`, etc. for positional arguments or `$ARGUMENTS` for all args
+4. Document in this README and relevant user-facing docs
+
 ## Skill System
 
 Skills provide domain-specific expertise that auto-activates based on context.
@@ -158,6 +199,8 @@ Defines trigger conditions for each skill:
 
 ```text
 .claude/
+├── commands/                       # User-invoked slash commands
+│   └── logsift.md                  # Logsift monitor command
 ├── hooks/                          # Claude Code hooks
 │   ├── session-start               # SessionStart hook
 │   ├── user-prompt-submit-skill-activation  # Skill activation

@@ -150,6 +150,7 @@ nav:
       - Tool Composition: architecture/tool-composition.md
       - Structured Logging: architecture/structured-logging.md
       - Error Handling: architecture/error-handling.md
+      - Metrics Tracking: architecture/metrics-tracking.md
       - GitHub Release Installer: architecture/github-release-installer.md
       - Resilient Installation: architecture/resilient-installation.md
   - Configuration:
@@ -172,8 +173,10 @@ nav:
           - Task Reference: reference/tools/tasks.md
           - Skills System: reference/tools/skills.md
           - Hooks: reference/tools/hooks.md
-      - Claude Code:
-          - Usage Guide: claude-code/usage-guide.md
+      - Workflow Tools:
+          - Working with Claude Code: claude-code/working-with-claude.md
+          - Quick Reference: claude-code/quick-reference.md
+          - Legacy Monitoring Guide: claude-code/usage-guide.md
           - Log Monitoring Research: claude-code/log-monitoring-research.md
       - Support:
           - Troubleshooting: reference/support/troubleshooting.md
