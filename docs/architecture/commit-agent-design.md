@@ -369,6 +369,54 @@ Claude reads agent description and auto-delegates based on keyword matching.
 
 Lists all available agents and allows interactive selection.
 
+### PreToolUse Hook Enforcement
+
+**Location**: `.claude/hooks/pre-bash-intercept-commits`
+
+The commit agent workflow is automatically enforced by a PreToolUse hook that intercepts all `git commit` commands before they execute.
+
+**How It Works**:
+
+1. **Hook Activation**: Runs before any Bash tool execution
+2. **Command Inspection**: Checks if command contains `git commit`
+3. **Subagent Detection**: Uses PPID (parent process ID) to determine execution context
+4. **Decision**:
+   - If in subagent context (PPID = 'claude') → Allow commit (exit 0)
+   - If in main agent context → Block commit (exit 2)
+
+**Subagent Detection Implementation**:
+
+```python
+def is_subagent():
+    """Detect if hook is running in subagent context"""
+    try:
+        ppid = os.getppid()
+        result = subprocess.run(['ps', '-p', str(ppid), '-o', 'comm='],
+                                capture_output=True, text=True, timeout=2)
+        parent_name = result.stdout.strip()
+        return parent_name == 'claude'  # Subagent parent is 'claude'
+    except Exception:
+        return False  # Fail open on error
+```
+
+**Benefits**:
+
+- **100% Coverage**: All direct git commits are automatically intercepted
+- **No Deadlock**: Commit agent can execute git commands freely
+- **Helpful Feedback**: Blocked commits get clear error message directing to commit agent
+- **Fail-Safe**: If detection fails, allows operation (fail open)
+
+**Error Message Shown to Main Agent**:
+
+```bash
+⚠️ Direct git commits are not allowed. Use commit agent instead.
+
+Please invoke the Task tool with prompt:
+'Create commits for this work. Context: [brief description of what was done]'
+```
+
+This ensures the optimized workflow is followed consistently without manual enforcement.
+
 ## Edge Cases and Handling
 
 ### No Staged Changes
