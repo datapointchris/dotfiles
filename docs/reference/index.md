@@ -10,9 +10,21 @@ Quick lookup for platform differences, fonts, tools, and support.
 
 <div class="grid cards" markdown>
 
-- :material-laptop: __[Platform Differences](platforms/index.md)__
+- :material-laptop: __[Platform Differences](platforms/differences.md)__
 
-    Package names, commands, and tool availability across macOS, WSL, and Arch
+    System and environment differences across macOS, WSL, and Arch
+
+- :material-package: __[Package Differences](platforms/packages.md)__
+
+    Package names across different package managers
+
+- :material-console: __[Command Reference](platforms/commands.md)__
+
+    Platform-specific command variations
+
+- :material-wrench: __[Tool Availability](platforms/tools.md)__
+
+    Tool availability and alternatives by platform
 
 </div>
 
@@ -50,25 +62,33 @@ Quick lookup for platform differences, fonts, tools, and support.
 
     Available Task commands
 
-- :material-robot: __[Skills System](tools/skills.md)__
-
-    Claude Code skills
-
-- :material-hook: __[Hooks](tools/hooks.md)__
-
-    Claude Code hooks
-
 </div>
 
 ## Claude Code
 
 <div class="grid cards" markdown>
 
-- :material-book-open: __[Usage Guide](claude-code/usage-guide.md)__
+- :material-book-open: __[Working with Claude Code](../claude-code/working-with-claude.md)__
 
-    Using Claude Code with dotfiles
+    Comprehensive guide to using Claude Code with dotfiles
 
-- :material-monitor: __[Log Monitoring](claude-code/log-monitoring-research.md)__
+- :material-flash: __[Quick Reference](../claude-code/quick-reference.md)__
+
+    Fast lookup for common Claude Code commands
+
+- :material-robot: __[Skills System](tools/skills.md)__
+
+    Domain-specific expertise for Claude Code
+
+- :material-hook: __[Hooks](tools/hooks.md)__
+
+    Event-triggered automation for Claude Code
+
+- :material-information: __[Legacy Monitoring Guide](../claude-code/usage-guide.md)__
+
+    Historical usage patterns
+
+- :material-monitor: __[Log Monitoring Research](../claude-code/log-monitoring-research.md)__
 
     Research on log monitoring approaches
 

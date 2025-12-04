@@ -155,6 +155,7 @@ nav:
       - GitHub Release Installer: architecture/github-release-installer.md
       - Resilient Installation: architecture/resilient-installation.md
   - Configuration:
+      - icon: material/cog
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
       - Docker Setup: configuration/docker.md
   - Reference:
@@ -169,16 +170,16 @@ nav:
           - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
           - Terminal Fonts Guide: reference/fonts/terminal-fonts-guide.md
           - Font Comparison: reference/fonts/font-comparison.md
+      - Claude Code:
+          - Working with Claude Code: claude-code/working-with-claude.md
+          - Quick Reference: claude-code/quick-reference.md
+          - Legacy Monitoring Guide: claude-code/usage-guide.md
+          - Log Monitoring Research: claude-code/log-monitoring-research.md
       - Tools:
           - Symlinks Manager: reference/tools/symlinks.md
           - Task Reference: reference/tools/tasks.md
           - Skills System: reference/tools/skills.md
           - Hooks: reference/tools/hooks.md
-      - Workflow Tools:
-          - Working with Claude Code: claude-code/working-with-claude.md
-          - Quick Reference: claude-code/quick-reference.md
-          - Legacy Monitoring Guide: claude-code/usage-guide.md
-          - Log Monitoring Research: claude-code/log-monitoring-research.md
       - Support:
           - Troubleshooting: reference/support/troubleshooting.md
           - Corporate Setup: reference/support/corporate.md
@@ -194,6 +195,7 @@ nav:
       - Shell Formatting: development/shell-formatting.md
       - Publishing Docs: development/publishing-docs.md
   - Research:
+      - icon: material/flask
       - AI Research:
           - Overview: research/ai/overview.md
           - Commit Agent Research: research/ai/commit-agent-research.md
@@ -224,6 +226,7 @@ nav:
       - Go TUI Ecosystem Research: learnings/go-tui-ecosystem-research.md
       - Go CLI Architecture Analysis: learnings/go-cli-architecture-analysis.md
   - Changelog:
+      - icon: material/history
       - Summary: changelog.md
 
 validation:
