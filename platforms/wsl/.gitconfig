@@ -2,6 +2,7 @@
 [core]
 editor = nvim
 pager = delta
+	autoclrf = true
 
 [advice]
 addIgnoredFile = false
