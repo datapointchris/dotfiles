@@ -217,6 +217,33 @@ system_packages:
     brew: gpgme
     description: GPG Made Easy library (required by gpg-tui)
 
+  - name: libgpg-error
+    apt: libgpg-error-dev
+    pacman: libgpg-error
+    brew: libgpg-error
+    description: GPG error library (required by gpg-tui)
+
+  - name: libx11
+    apt: libx11-dev
+    pacman: libx11
+    brew: libx11
+    description: X11 client library (required by gpg-tui)
+
+  - name: libxcb-shape
+    apt: libxcb-shape0-dev
+    pacman: libxcb
+    description: X protocol C-language Binding - shape extension (required by gpg-tui on Linux)
+
+  - name: libxcb-xfixes
+    apt: libxcb-xfixes0-dev
+    pacman: libxcb
+    description: X protocol C-language Binding - xfixes extension (required by gpg-tui on Linux)
+
+  - name: libxkbcommon
+    apt: libxkbcommon-dev
+    pacman: libxkbcommon
+    description: Keyboard handling library (required by gpg-tui on Linux)
+
   # Media Processing
   - name: ffmpeg
     apt: ffmpeg
