@@ -151,6 +151,7 @@ nav:
       - Structured Logging: architecture/structured-logging.md
       - Error Handling: architecture/error-handling.md
       - Metrics Tracking: architecture/metrics-tracking.md
+      - Commit Agent Design: architecture/commit-agent-design.md
       - GitHub Release Installer: architecture/github-release-installer.md
       - Resilient Installation: architecture/resilient-installation.md
   - Configuration:
@@ -192,6 +193,15 @@ nav:
           - Bubbletea Reference: development/go-apps/bubbletea-quick-reference.md
       - Shell Formatting: development/shell-formatting.md
       - Publishing Docs: development/publishing-docs.md
+  - Research:
+      - AI Research:
+          - Overview: research/ai/overview.md
+          - Commit Agent Research: research/ai/commit-agent-research.md
+          - Context Engineering: research/ai/context-engineering.md
+          - Agent Architecture: research/ai/agent-architecture.md
+          - Logsift Workflow: research/ai/logsift-workflow.md
+          - Claude Code Features: research/ai/claude-code-features.md
+          - Prompt Engineering: research/ai/prompt-engineering.md
   - Learnings:
       - Overview: learnings/index.md
       - App Installation Patterns: learnings/app-installation-patterns.md
