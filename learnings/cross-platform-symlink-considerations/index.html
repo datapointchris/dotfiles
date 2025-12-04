@@ -906,6 +906,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1139,6 +1143,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../architecture/metrics-tracking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../architecture/github-release-installer/" class="md-nav__link">
         
   
@@ -1147,6 +1179,34 @@
     
   
     GitHub Release Installer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/resilient-installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilient Installation
   
 
     
@@ -1936,6 +1996,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1961,7 +2025,7 @@
   <span class="md-ellipsis">
     
   
-    Claude Code
+    Workflow Tools
   
 
     
@@ -1977,11 +2041,67 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Claude Code
+    Workflow Tools
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/working-with-claude/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1997,7 +2117,7 @@
   <span class="md-ellipsis">
     
   
-    Usage Guide
+    Legacy Monitoring Guide
   
 
     
@@ -2199,6 +2319,8 @@
       
         
       
+        
+      
     
     
     
@@ -2291,6 +2413,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../development/adding-failure-reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Failure Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -2317,10 +2467,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
         
           
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
             
   
   
@@ -2338,8 +2488,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3376,12 +3526,16 @@
 <p><strong>Date</strong>: 2025-11-04
 <strong>Context</strong>: Verified 132/132 symlinks working across common and macOS layers</p>
 <h2 id="critical-files-that-must-work-everywhere">Critical Files That Must Work Everywhere<a class="headerlink" href="#critical-files-that-must-work-everywhere" title="Permanent link">&para;</a></h2>
-<p>Git config files appear on all platforms and must NOT be excluded:
-- <code>.gitconfig</code>, <code>.gitignore</code>, <code>.gitattributes</code> - Excluded <code>.git/</code> directory must not match these files</p>
-<p>Shell configs have platform differences:
-- macOS: <code>.profile</code> for login shells
-- WSL: May use <code>.bash_profile</code> or <code>.bashrc</code>
-- All: Platform-specific aliases and functions</p>
+<p>Git config files appear on all platforms and must NOT be excluded:</p>
+<ul>
+<li><code>.gitconfig</code>, <code>.gitignore</code>, <code>.gitattributes</code> - Excluded <code>.git/</code> directory must not match these files</li>
+</ul>
+<p>Shell configs have platform differences:</p>
+<ul>
+<li>macOS: <code>.profile</code> for login shells</li>
+<li>WSL: May use <code>.bash_profile</code> or <code>.bashrc</code></li>
+<li>All: Platform-specific aliases and functions</li>
+</ul>
 <h2 id="common-exclusion-pattern-mistakes">Common Exclusion Pattern Mistakes<a class="headerlink" href="#common-exclusion-pattern-mistakes" title="Permanent link">&para;</a></h2>
 <p><strong>Don't use substring matching</strong> for directory patterns:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># WRONG: &quot;.git&quot; matches &quot;.gitconfig&quot;</span>
@@ -3390,18 +3544,24 @@
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># CORRECT: Check complete path components</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">if</span> <span class="s2">&quot;/.git/&quot;</span> <span class="ow">in</span> <span class="n">path_str</span> <span class="ow">or</span> <span class="n">path_str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;.git/&quot;</span><span class="p">):</span> <span class="k">return</span> <span class="kc">True</span>
 </span></code></pre></div>
-<p><strong>Patterns to watch</strong>:
-- <code>.git/</code> vs <code>.gitconfig</code>, <code>.gitignore</code>, <code>.github/</code>
-- <code>node_modules/</code> vs <code>node_modules.txt</code>
-- <code>tmux/plugins/</code> vs <code>tmux/tmux.conf</code></p>
+<p><strong>Patterns to watch</strong>:</p>
+<ul>
+<li><code>.git/</code> vs <code>.gitconfig</code>, <code>.gitignore</code>, <code>.github/</code></li>
+<li><code>node_modules/</code> vs <code>node_modules.txt</code></li>
+<li><code>tmux/plugins/</code> vs <code>tmux/tmux.conf</code></li>
+</ul>
 <h2 id="platform-specific-files">Platform-Specific Files<a class="headerlink" href="#platform-specific-files" title="Permanent link">&para;</a></h2>
-<p><strong>WSL binary names differ</strong>:
-- Ubuntu: <code>batcat</code>, <code>fdfind</code>
-- macOS: <code>bat</code>, <code>fd</code>
-Handle with symlinks in <code>~/.local/bin/</code></p>
-<p><strong>Case sensitivity</strong>:
-- Linux/WSL: Case-sensitive
-- macOS: Case-insensitive (default)</p>
+<p><strong>WSL binary names differ</strong>:</p>
+<ul>
+<li>Ubuntu: <code>batcat</code>, <code>fdfind</code></li>
+<li>macOS: <code>bat</code>, <code>fd</code>
+Handle with symlinks in <code>~/.local/bin/</code></li>
+</ul>
+<p><strong>Case sensitivity</strong>:</p>
+<ul>
+<li>Linux/WSL: Case-sensitive</li>
+<li>macOS: Case-insensitive (default)</li>
+</ul>
 <h2 id="testing-approach">Testing Approach<a class="headerlink" href="#testing-approach" title="Permanent link">&para;</a></h2>
 <p>Write tests for both what SHOULD and SHOULD NOT be excluded:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Directory should be excluded</span>
