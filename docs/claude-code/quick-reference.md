@@ -34,6 +34,29 @@ Quick lookup for common commands and workflows.
 /help          # View available commands
 ```
 
+## Commit Agent
+
+```text
+# Invoke with natural language
+"Let's commit this work"
+"Create a commit for these changes"
+"Commit the staged files"
+
+# Agent workflow:
+# 1. Analyzes staged changes
+# 2. Groups into atomic commits
+# 3. Generates conventional commit messages
+# 4. Runs pre-commit (background → logsift)
+# 5. Fixes errors iteratively
+# 6. Reports summary
+
+# Benefits:
+# - Saves ~5000-6000 tokens per commit
+# - Isolates commit workflow from main context
+# - Handles pre-commit automation
+# - Splits multi-concern changes intelligently
+```
+
 ## Analysis Tools
 
 ```bash

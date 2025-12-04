@@ -505,6 +505,59 @@ git commit               # Pre-commit hooks run automatically
 
 **Note**: Never use `git add -A` or `git add .` - see [Git Safety Protocol](../CLAUDE.md#git-safety-protocol)
 
+### Commit Agent (Automated Workflow)
+
+For complex commits or when you want to minimize token usage, use the commit agent:
+
+```text
+"Let's commit this work"
+"Create a commit for these changes"
+"Commit the staged files"
+```
+
+**What the agent does**:
+
+1. Analyzes staged changes and groups into atomic commits
+2. Generates semantic conventional commit messages
+3. Runs pre-commit in background (suppresses auto-fix noise)
+4. Re-adds files to capture pre-commit changes
+5. Runs pre-commit via logsift (only shows errors)
+6. Fixes errors iteratively until passing
+7. Reports concise summary back
+
+**Benefits**:
+
+- **Context Isolation**: Commit workflow runs in separate context window
+- **Token Optimization**: Saves ~5000-6000 tokens per commit session
+- **Atomic Commits**: Intelligently splits multi-concern changes
+- **Pre-commit Automation**: Handles formatting and linting automatically
+
+**Example workflow**:
+
+```text
+You: "Let's commit this work"
+
+Commit Agent:
+✅ Created 2 commits:
+
+1. [a1b2c3d] feat(metrics): add logsift command tracking
+2. [e4f5g6h] docs: update metrics documentation
+
+Files committed: 5
+Pre-commit iterations: 1 (markdown formatting auto-fixed)
+```
+
+**When to use**:
+
+- Multiple logical changes need separate commits
+- You want to minimize main agent context usage
+- Pre-commit has many auto-fixes (whitespace, formatting)
+- You're near context limit and need to save tokens
+
+**Manual commits** are still fine for simple, single-file changes where you want direct control.
+
+**Technical details**: `.claude/agents/commit-agent.md`
+
 ### Task Automation
 
 ```bash

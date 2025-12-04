@@ -195,19 +195,100 @@ Defines trigger conditions for each skill:
 - **enforcement**: suggest (non-blocking)
 - **priority**: high/medium/low
 
+## Agent System
+
+Agents are specialized AI assistants with isolated context windows that handle specific tasks autonomously.
+
+### Available Agents
+
+**commit-agent** (`.claude/agents/commit-agent.md`)
+
+Automatically handles commit workflow with minimal token usage:
+
+- Analyzes staged changes and groups into atomic commits
+- Generates semantic conventional commit messages
+- Runs pre-commit hooks with logsift to minimize context usage
+- Fixes pre-commit errors iteratively
+- Reports concise summary back to main agent
+
+**Features**:
+
+- **Context Isolation**: Separate context window prevents main agent pollution
+- **Token Optimization**: Saves ~5000-6000 tokens per commit via logsift + background pre-commit
+- **Git Protocol Compliance**: Strictly follows all git safety rules from CLAUDE.md
+- **Atomic Commits**: Intelligently groups changes into logical commits
+- **Pre-commit Automation**: Handles formatting fixes and error resolution
+
+**Invocation**:
+
+```text
+"Let's commit this work"
+"Create a commit for these changes"
+"Commit the staged files"
+```
+
+The agent automatically detects commit-related requests and delegates.
+
+**Workflow**:
+
+1. Analyzes `git status` and `git diff --staged`
+2. Groups changes into atomic commits (splits if needed)
+3. Generates conventional commit messages
+4. Runs pre-commit in background (suppress auto-fix noise)
+5. Re-adds files to capture pre-commit changes
+6. Runs pre-commit via logsift (only shows errors)
+7. Fixes errors iteratively until passing
+8. Reports summary: commit titles, file count, iteration count
+
+**Documentation**:
+
+- Agent file: `.claude/agents/commit-agent.md` (complete workflow and examples)
+- User guide: [Working with Claude Code](../docs/claude-code/working-with-claude.md)
+- Research: [Context Engineering](https://www.flowhunt.io/blog/context-engineering-ai-agents-token-optimization/)
+
+### Creating Custom Agents
+
+1. Create markdown file in `.claude/agents/`
+2. Add YAML frontmatter: name, description, tools, model
+3. Write system prompt with guidelines and examples
+4. Test invocation with natural language
+5. Document in this README and user-facing docs
+
+**Template**:
+
+```markdown
+---
+name: my-agent
+description: Brief description for auto-delegation (critical for discovery)
+tools: Read, Grep, Bash
+model: sonnet
+---
+
+# System prompt follows here
+You are an expert at...
+```
+
 ## Directory Structure
 
 ```text
 .claude/
+├── agents/                         # Specialized AI assistants
+│   └── commit-agent.md             # Commit workflow automation
 ├── commands/                       # User-invoked slash commands
-│   └── logsift.md                  # Logsift monitor command
+│   ├── logsift.md                  # Logsift monitor command
+│   └── logsift-auto.md             # Natural language logsift
 ├── hooks/                          # Claude Code hooks
 │   ├── session-start               # SessionStart hook
 │   ├── user-prompt-submit-skill-activation  # Skill activation
 │   ├── stop-build-check            # Build verification
 │   ├── stop-commit-reminder        # Changelog reminder
 │   ├── notification-desktop        # Desktop notifications
-│   └── pre-compact-save-state      # Session state saving
+│   ├── pre-compact-save-state      # Session state saving
+│   └── track-command-metrics       # Command usage tracking
+├── metrics/                        # Usage and quality tracking
+│   ├── README.md                   # Metrics framework
+│   ├── quality-log.md              # Manual quality assessments
+│   └── command-metrics-*.jsonl     # Automated metrics logs
 ├── skills/                         # Domain-specific skills
 │   └── symlinks-developer/
 │       ├── SKILL.md                # Main skill file
