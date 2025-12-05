@@ -375,7 +375,7 @@ Please resolve conflicts manually, then run me again.
 
 **Staged changes**:
 
-- `apps/common/analyze-logsift-metrics` (new file)
+- `apps/common/analyze-claude-metrics` (new file)
 - `.claude/hooks/track-command-metrics` (new file)
 - `docs/architecture/metrics-tracking.md` (new file)
 

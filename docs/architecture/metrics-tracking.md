@@ -27,7 +27,7 @@ graph TD
     E --> F[.claude/metrics/command-metrics-*.jsonl]
     D --> G[Logsift logs]
     G --> H[~/.local/share/logsift/logs/*.json]
-    F --> I[analyze-logsift-metrics]
+    F --> I[analyze-claude-metrics]
     H --> I
     I --> J[Summary report]
     F --> K[.claude/metrics/quality-log.md]
@@ -95,7 +95,7 @@ graph TD
 }
 ```
 
-**Usage**: Referenced by `analyze-logsift-metrics` for error/warning counts
+**Usage**: Referenced by `analyze-claude-metrics` for error/warning counts
 
 ### Manual Quality Log
 
@@ -155,9 +155,9 @@ graph TD
 
 **Configuration**: None required (uses git repo root + `.claude/metrics/`)
 
-### Analysis Script: analyze-logsift-metrics
+### Analysis Script: analyze-claude-metrics
 
-**File**: `apps/common/analyze-logsift-metrics`
+**File**: `apps/common/analyze-claude-metrics`
 
 **Language**: Bash + jq
 
@@ -177,9 +177,9 @@ graph TD
 **Usage**:
 
 ```bash
-analyze-logsift-metrics              # Summary
-analyze-logsift-metrics --details    # Detailed
-analyze-logsift-metrics --date 2025-12-03  # Specific date
+analyze-claude-metrics              # Summary
+analyze-claude-metrics --details    # Detailed
+analyze-claude-metrics --date 2025-12-03  # Specific date
 ```
 
 **Output sections**:
@@ -454,7 +454,7 @@ jq . < .claude/metrics/command-metrics-$(date +%Y-%m-%d).jsonl
 ### 2025-12-03 - Initial Implementation
 
 - Created `track-command-metrics` hook
-- Implemented `analyze-logsift-metrics` script
+- Implemented `analyze-claude-metrics` script
 - Defined JSONL schema for command metrics
 - Created quality log template
 - Documented KPIs and analysis methodology

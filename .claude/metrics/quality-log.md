@@ -11,7 +11,7 @@ Manual tracking of session quality, methodology adherence, and comparative analy
 **Next Steps**:
 
 - Use both commands in real scenarios
-- Track quantitative metrics via analyze-logsift-metrics
+- Track quantitative metrics via analyze-claude-metrics
 - Add quality entries after significant sessions
 - Compare effectiveness after 10+ sessions each
 

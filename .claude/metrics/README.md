@@ -1,67 +1,58 @@
-# Logsift Command Metrics
+# Claude Code Workflow Metrics
 
-Tracking system for measuring token usage, context efficiency, and quality of `/logsift` and `/logsift-auto` commands.
+Unified tracking system for all Claude Code workflows: logsift commands, commit agent, and future tools.
+
+## Overview
+
+This directory contains automated metrics for analyzing the performance and effectiveness of Claude Code workflows. Metrics are collected automatically via hooks and self-reporting, stored in daily JSONL files, and analyzed with `analyze-claude-metrics`.
 
 ## Metrics Collected
 
-### Quantitative Metrics (Automated)
+### Automated Metrics
 
-1. **Token Usage**
-   - Via `/cost` command during sessions
-   - OpenTelemetry export (when enabled)
-   - Input vs output tokens
-   - Cache hit rates
+**1. Commit Agent** (self-reported):
 
-2. **Command Execution**
-   - Total invocations per command type
-   - Timestamp and session ID
-   - Working directory context
-   - Command parameters
+- Commits created, files committed, pre-commit iterations
+- Token usage (internal + main agent overhead)
+- Phase 4/5 execution verification
+- Duration and tool usage
 
-3. **Error Resolution**
-   - Initial error count (from logsift)
-   - Final error count (from logsift)
-   - Iterations required to resolve
-   - Error types encountered
+**2. Logsift Commands** (PostToolUse hook):
 
-### Qualitative Metrics (Manual Tracking)
+- Command invocations (/logsift and /logsift-auto)
+- Exit codes, errors found, warnings found
+- Duration and log file locations
+- Natural language parsing success (logsift-auto)
 
-Track these in `quality-log.md` after each session:
+**3. Future Workflows**:
 
-1. **Correctness**
-   - Did the command complete successfully?
-   - Were all errors resolved?
-   - Were root causes identified?
-   - Were fixes appropriate?
+- Extensible JSONL format for new workflow types
+- Same analysis tool handles all types
 
-2. **Efficiency**
-   - How many iterations needed?
-   - Was Claude's approach optimal?
-   - Did it read necessary files?
-   - Did it avoid unnecessary exploration?
+### Qualitative Metrics (Manual)
 
-3. **Methodology Adherence**
-   - Did Claude follow the 5-phase approach?
-   - Did it distinguish related vs independent errors?
-   - Did it prioritize correctly?
-   - Did it background the process? (should never happen)
+Track in `quality-log.md` after significant sessions:
 
-4. **Comparison: /logsift vs /logsift-auto**
-   - Command parsing accuracy (auto only)
-   - Token difference
-   - Quality difference
-   - Time to resolution
+- **Correctness**: Were errors resolved? Root causes identified?
+- **Efficiency**: Iterations needed? Optimal approach?
+- **Methodology**: Following best practices? Proper tool usage?
 
 ## Data Files
 
 ```text
 .claude/metrics/
 ├── README.md                          # This file
-├── command-metrics-YYYY-MM-DD.jsonl   # Automated command logs
-├── quality-log.md                     # Manual quality assessments
-└── analysis/                          # Generated reports
-    ├── weekly-summary.md
-    └── comparison-logsift-vs-auto.md
+├── command-metrics-YYYY-MM-DD.jsonl   # Daily unified metrics (all types)
+└── quality-log.md                     # Manual quality assessments
+```
+
+### JSONL Format
+
+One JSON object per line, one line per command/workflow:
+
+```json
+{"timestamp": "2025-12-04T20:15:30", "session_id": "abc123", "type": "commit-agent", "commits_created": 2, "tokens_used": 15000, ...}
+{"timestamp": "2025-12-04T20:18:45", "session_id": "abc123", "type": "logsift", "exit_code": 0, "errors_found": 3, ...}
 ```
 
 ## Usage
@@ -69,27 +60,27 @@ Track these in `quality-log.md` after each session:
 ### View Metrics
 
 ```bash
-analyze-logsift-metrics              # Summary
-analyze-logsift-metrics --details    # Detailed breakdown
-analyze-logsift-metrics --date 2025-12-03  # Specific date
+analyze-claude-metrics                    # Summary of all workflows
+analyze-claude-metrics --type commit-agent # Only commit agent
+analyze-claude-metrics --type logsift      # Only logsift commands
+analyze-claude-metrics --date 2025-12-04  # Specific date
+analyze-claude-metrics --detailed         # Show recent commands
 ```
 
-### Manual Quality Entry Template
+### Manual Quality Entry
 
-Add to `quality-log.md` after significant logsift sessions:
+Add to `quality-log.md` after significant sessions:
 
 ```markdown
 ## YYYY-MM-DD HH:MM - Session ID
 
-**Command**: `/logsift "command here"` or `/logsift-auto description`
+**Workflow**: commit-agent | /logsift | /logsift-auto
 
-**Context**: Brief description of what you were testing
+**Context**: Brief description
 
 **Quantitative**:
-- Initial errors: X
-- Final errors: 0
-- Iterations: Y
-- Estimated tokens: Z (from /cost)
+- Metric 1: value
+- Metric 2: value
 
 **Qualitative**:
 - Correctness: ✅/⚠️/❌
@@ -99,84 +90,60 @@ Add to `quality-log.md` after significant logsift sessions:
 **Notes**:
 - What worked well
 - What could improve
-- Specific observations
-
-**Comparison** (if applicable):
-- /logsift vs /logsift-auto differences
 ```
 
-## Key Performance Indicators (KPIs)
+## Key Performance Indicators
 
-Based on [LLM agent best practices](https://www.confident-ai.com/blog/llm-evaluation-metrics-everything-you-need-for-llm-evaluation):
+### Commit Agent
 
-### Quality KPIs
+- **Average tokens per commit**: Lower is better (target: <2000)
+- **Phase 4/5 execution rate**: Should be 100%
+- **Pre-commit iterations**: Lower indicates cleaner code
+- **Files per commit**: Higher indicates batch commits (should be atomic)
 
-- **Success Rate**: % of sessions that resolved all errors
-- **Root Cause Accuracy**: % where root causes were correctly identified
-- **Methodology Compliance**: % following the 5-phase approach
-- **Anti-pattern Avoidance**: % avoiding backgrounding, symptom fixes, etc.
+### Logsift Commands
 
-### Efficiency KPIs
+- **Success rate**: % with exit code 0
+- **Errors resolved**: Total errors found and fixed
+- **Average iterations**: Lower is better
+- **Parsing accuracy** (/logsift-auto): % correctly interpreted
 
-- **Average Iterations to Success**: Lower is better
-- **Token Usage per Error Resolved**: Efficiency metric
-- **Context Usage Efficiency**: Tokens saved by logsift filtering
-- **Time to First Fix**: How quickly Claude starts fixing
+## How It Works
 
-### Comparative KPIs
+### Automated Collection
 
-- **/logsift vs /logsift-auto Success Delta**: Quality difference
-- **/logsift vs /logsift-auto Token Delta**: Context efficiency difference
-- **Parsing Accuracy**: % of /logsift-auto commands parsed correctly
+1. **Commit Agent**: Self-reports metrics in Phase 7 (internal)
+   - Uses `.claude/lib/commit-agent-metrics.py` helper
+   - Logs after commits created, before response
 
-## Analysis Cadence
+2. **Logsift Commands**: PostToolUse hook triggers after completion
+   - Hook: `.claude/hooks/track-slash-command-metrics`
+   - Parses logsift output for metrics
 
-- **Daily**: Quick review of command usage (`analyze-logsift-metrics`)
-- **Weekly**: Quality assessment of 5-10 sessions (manual log)
-- **Monthly**: Generate comparison reports and trends
+3. **Storage**: All metrics append to daily JSONL file
+   - File: `command-metrics-YYYY-MM-DD.jsonl`
+   - Format: One JSON object per line
+   - Never deleted (gitignored)
 
-## OpenTelemetry Export (Optional)
-
-For detailed token tracking:
+### Analysis
 
 ```bash
-# In ~/.zshrc or ~/.bashrc
-export CLAUDE_CODE_ENABLE_TELEMETRY=1
-export OTEL_LOGS_EXPORTER=otlp
-export OTEL_METRICS_EXPORTER=otlp
+# Quick overview
+analyze-claude-metrics
+
+# Commit agent deep dive
+analyze-claude-metrics --type commit-agent --detailed
+
+# Date-specific analysis
+analyze-claude-metrics --date 2025-12-04
 ```
 
-Exported metrics include:
+## Architecture
 
-- `claude_code.token.usage` - Token breakdown
-- `claude_code.api_request` - Request duration
-- `claude_code.tool_result` - Tool performance
-
-## Future Enhancements
-
-1. **Automated Quality Detection**
-   - Parse logsift analysis reports
-   - Detect methodology compliance from transcript
-   - Auto-score sessions
-
-2. **Cost Tracking Integration**
-   - Hook into Anthropic Admin API
-   - Track per-command costs
-   - Budget alerts
-
-3. **Comparison Dashboard**
-   - Visual comparison of /logsift vs /logsift-auto
-   - Token usage trends
-   - Success rate over time
-
-4. **Pre-commit Agent Metrics**
-   - Track commit agent usage
-   - Pre-commit hook token savings
-   - Quality of commit messages
+See `docs/architecture/metrics-tracking.md` for complete architecture documentation.
 
 ## References
 
-- [Claude Code Monitoring Usage](https://code.claude.com/docs/en/monitoring-usage.md)
-- [LLM Evaluation Metrics Guide](https://www.confident-ai.com/blog/llm-evaluation-metrics-everything-you-need-for-llm-evaluation)
-- [Token Usage Tracking in LLMs](https://codesignal.com/learn/courses/behavioral-benchmarking-of-llms/lessons/measuring-and-interpreting-token-usage-in-llms)
-- [LLM Observability Tools 2025](https://www.comet.com/site/blog/llm-observability-tools/)
+- [Unified Metrics Design](.planning/unified-metrics-system.md)
+- [Architecture Documentation](../docs/architecture/metrics-tracking.md)
+- [Claude Code Workflows](../docs/claude-code/working-with-claude.md)

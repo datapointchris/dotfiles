@@ -282,13 +282,13 @@ Every logsift command is automatically logged to `.claude/metrics/`.
 
 ```bash
 # Quick summary
-analyze-logsift-metrics
+analyze-claude-metrics
 
 # Detailed per-session breakdown
-analyze-logsift-metrics --details
+analyze-claude-metrics --details
 
 # Specific date
-analyze-logsift-metrics --date 2025-12-03
+analyze-claude-metrics --date 2025-12-03
 ```
 
 ### Manual Quality Assessment
@@ -376,7 +376,7 @@ Exports detailed metrics:
 
 ### Analysis Cadence
 
-- **Daily**: Run `analyze-logsift-metrics` for quick overview
+- **Daily**: Run `analyze-claude-metrics` for quick overview
 - **Weekly**: Add 5-10 quality log entries for significant sessions
 - **Monthly**: Generate comparison reports, identify trends
 
@@ -484,9 +484,9 @@ This repository uses a layered approach to Claude Code integration:
 
 ```bash
 # Metrics analysis
-analyze-logsift-metrics              # Summary of command usage
-analyze-logsift-metrics --details    # Per-session breakdown
-analyze-logsift-metrics --date YYYY-MM-DD  # Specific date
+analyze-claude-metrics              # Summary of command usage
+analyze-claude-metrics --details    # Per-session breakdown
+analyze-claude-metrics --date YYYY-MM-DD  # Specific date
 
 # Logsift usage
 logsift monitor -- <command>         # Run command with monitoring

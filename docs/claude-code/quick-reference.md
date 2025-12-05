@@ -61,13 +61,13 @@ Quick lookup for common commands and workflows.
 
 ```bash
 # View metrics summary
-analyze-logsift-metrics
+analyze-claude-metrics
 
 # Detailed breakdown
-analyze-logsift-metrics --details
+analyze-claude-metrics --details
 
 # Specific date
-analyze-logsift-metrics --date 2025-12-03
+analyze-claude-metrics --date 2025-12-03
 ```
 
 ## Common Workflows
@@ -185,7 +185,7 @@ cat ~/.local/share/logsift/logs/latest-session.json
 └── settings.json            # Hook configuration
 
 apps/common/
-└── analyze-logsift-metrics  # Analysis tool
+└── analyze-claude-metrics  # Analysis tool
 ```
 
 ## Related Docs

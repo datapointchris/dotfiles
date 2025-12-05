@@ -109,4 +109,5 @@ test-arch-*
 # Test coverage reports (handled by local .gitignore in each Go project)
 # Build artifacts are now managed by local .gitignore files in each Go project
 # See apps/common/sess/.gitignore and apps/common/toolbox/.gitignore
-.claude/metrics/
+# Claude Code metrics (track docs, ignore data)
+.claude/metrics/*.jsonl
