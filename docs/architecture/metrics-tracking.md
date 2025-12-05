@@ -500,7 +500,7 @@ bash tests/test_analyze_logsift_metrics.sh
 ```bash
 # Simulate command invocation
 echo '{"session_id": "test123", "cwd": "/tmp", "command": "/logsift"}' | \
-  .claude/hooks/track-command-metrics
+  .claude/hooks/track-slash-command-metrics
 
 # Verify file created
 test -f .claude/metrics/command-metrics-$(date +%Y-%m-%d).jsonl
@@ -527,10 +527,11 @@ jq . < .claude/metrics/command-metrics-$(date +%Y-%m-%d).jsonl
 
 ## Changelog
 
-### 2025-12-03 - Initial Implementation
+### 2025-12-04 - Unified Metrics System
 
-- Created `track-command-metrics` hook
-- Implemented `analyze-claude-metrics` script
-- Defined JSONL schema for command metrics
+- Created `track-slash-command-metrics` PostToolUse hook
+- Implemented `analyze-claude-metrics` script (pure Python)
+- Added commit agent self-reporting (Phase 7)
+- Defined unified JSONL schema for all workflow types
 - Created quality log template
 - Documented KPIs and analysis methodology
