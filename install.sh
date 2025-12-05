@@ -11,7 +11,9 @@
 # - Post-install configuration (shell setup, symlinks)
 # ================================================================
 
-set -euo pipefail
+# Use explicit error handling instead of set -e
+# This allows installation to continue even if individual tools fail
+set -uo pipefail
 
 # ================================================================
 # SETUP & INITIALIZATION
@@ -88,6 +90,10 @@ source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
 # Source program helpers for failure reporting
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+
+# Initialize failures log for new Option B pattern
+FAILURES_LOG="/tmp/dotfiles-install-failures-$(date +%Y%m%d-%H%M%S).txt"
+export FAILURES_LOG
 
 # ================================================================
 # FAILURE HANDLING WRAPPER
@@ -185,9 +191,6 @@ install_common_phases() {
     # Ensure ~/.local/bin is in PATH for all installation phases
     # This allows verification checks to work across all platforms
     export PATH="$HOME/.local/bin:$PATH"
-
-    # Initialize failure registry for resilient installation
-    init_failure_registry
 
     # Local variables for frequently used paths
     local common_install="$DOTFILES_DIR/management/common/install"
