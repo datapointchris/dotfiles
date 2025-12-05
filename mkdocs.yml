@@ -151,8 +151,6 @@ nav:
       - Structured Logging: architecture/structured-logging.md
       - Error Handling: architecture/error-handling.md
       - Metrics Tracking: architecture/metrics-tracking.md
-      - Commit Agent Design: architecture/commit-agent-design.md
-      - Commit Agent Testing: architecture/commit-agent-metrics-testing.md
       - GitHub Release Installer: architecture/github-release-installer.md
       - Resilient Installation: architecture/resilient-installation.md
   - Configuration:
@@ -170,11 +168,6 @@ nav:
           - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
           - Terminal Fonts Guide: reference/fonts/terminal-fonts-guide.md
           - Font Comparison: reference/fonts/font-comparison.md
-      - Claude Code:
-          - Working with Claude Code: claude-code/working-with-claude.md
-          - Quick Reference: claude-code/quick-reference.md
-          - Legacy Monitoring Guide: claude-code/usage-guide.md
-          - Log Monitoring Research: claude-code/log-monitoring-research.md
       - Tools:
           - Symlinks Manager: reference/tools/symlinks.md
           - Task Reference: reference/tools/tasks.md
@@ -194,14 +187,25 @@ nav:
           - Bubbletea Reference: development/go-apps/bubbletea-quick-reference.md
       - Shell Formatting: development/shell-formatting.md
       - Publishing Docs: development/publishing-docs.md
+  - Claude Code:
+      - claude-code/index.md
+      - Getting Started:
+          - Working with Claude Code: claude-code/working-with-claude.md
+          - Quick Reference: claude-code/quick-reference.md
+      - Commit Agent:
+          - Design: claude-code/commit-agent-design.md
+          - Testing: claude-code/commit-agent-metrics-testing.md
+          - Research: claude-code/commit-agent-research.md
+      - Advanced:
+          - Logsift Workflow: claude-code/logsift-workflow.md
+          - Features: claude-code/claude-code-features.md
+          - Log Monitoring Research: claude-code/log-monitoring-research.md
+          - Legacy Usage Guide: claude-code/usage-guide.md
   - Research:
       - AI Research:
           - Overview: research/ai/overview.md
-          - Commit Agent Research: research/ai/commit-agent-research.md
           - Context Engineering: research/ai/context-engineering.md
           - Agent Architecture: research/ai/agent-architecture.md
-          - Logsift Workflow: research/ai/logsift-workflow.md
-          - Claude Code Features: research/ai/claude-code-features.md
           - Prompt Engineering: research/ai/prompt-engineering.md
   - Learnings:
       - Overview: learnings/index.md
