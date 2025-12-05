@@ -103,8 +103,10 @@ rm -f /tmp/dotfiles-installation-failures-*.txt
 display_failure_summary > /tmp/test-summary-output.txt 2>&1
 
 # Check if permanent log was created
+# shellcheck disable=SC2012,SC2086
 if ls /tmp/dotfiles-installation-failures-*.txt >/dev/null 2>&1; then
-  PERMANENT_LOG=$(find /tmp -name "dotfiles-installation-failures-*.txt" -type f -print -quit)
+  # shellcheck disable=SC2012
+  PERMANENT_LOG=$(ls -t /tmp/dotfiles-installation-failures-*.txt 2>/dev/null | head -1)
   pass "Permanent failure log created: $PERMANENT_LOG"
 
   # Check log contents
