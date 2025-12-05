@@ -190,7 +190,7 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration
-- `.planning/` - Ephemeral planning guides and status or tracking, moved to archive when done
+- `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides, status tracking; moved to archive when done
 
 **Key Systems**:
 
