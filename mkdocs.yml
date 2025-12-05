@@ -197,6 +197,7 @@ nav:
           - Testing: claude-code/commit-agent-metrics-testing.md
           - Research: claude-code/commit-agent-research.md
       - Advanced:
+          - Transcript Access: claude-code/transcript-access.md
           - Logsift Workflow: claude-code/logsift-workflow.md
           - Features: claude-code/claude-code-features.md
           - Log Monitoring Research: claude-code/log-monitoring-research.md
