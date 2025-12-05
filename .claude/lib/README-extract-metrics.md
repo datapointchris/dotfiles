@@ -13,10 +13,12 @@ Comprehensive Python library for extracting metrics from Claude Code agent trans
 - Quality indicators (phases, logsift usage, compliance)
 - Model details (version, tier, context management)
 
-**Two Usage Modes**:
+**Fully Automated**:
 
-1. **Hook Context** (recommended): Use PostToolUse hook context file
-2. **Direct**: Directly from known agent transcript path
+- PostToolUse hook automatically extracts metrics after Task tool completes
+- No manual parameter passing required
+- Deterministic, supports concurrent agents
+- Works for commit-agent and any future Task agents
 
 ## Usage
 
@@ -106,30 +108,27 @@ JSONL with comprehensive metrics:
 
 ## Integration with Commit Agent
 
-Replace the current bash script in Phase 7:
+**Fully Automated via PostToolUse Hook**:
 
-**Before** (bash):
+Metrics extraction is now completely automated through a PostToolUse hook that fires after the commit-agent (or any Task agent) completes. The hook:
 
-```bash
-bash /Users/chris/dotfiles/.claude/lib/log-commit-metrics.sh ...
-```
+1. Receives session context via stdin
+2. Locates the agent transcript using the parent transcript path
+3. Extracts comprehensive metrics automatically
+4. Logs to `.claude/metrics/commit-metrics-YYYY-MM-DD.jsonl`
 
-**After** (Python):
+**No manual intervention required** - commit-agent focuses solely on creating commits, metrics are handled transparently by the hook system.
 
-```bash
-python3 /Users/chris/dotfiles/.claude/lib/extract_agent_metrics.py \
-  --context-file /tmp/claude-agent-context-{session_id}.json
-```
-
-The Python library auto-discovers:
+The library auto-discovers:
 
 - Agent ID from parent transcript
 - All token metrics from usage data
 - Git operations from tool calls
 - Pre-commit runs from logsift output
 - Phases from message content
+- Complete execution context
 
-No manual parameter passing required!
+**Configuration**: See `.claude/settings.json` PostToolUse → Task hook
 
 ## Metrics Collected
 
