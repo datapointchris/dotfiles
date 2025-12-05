@@ -99,6 +99,51 @@ get_latest_github_release() {
 }
 
 # ================================================================
+# Structured Failure Output (Option B Pattern)
+# ================================================================
+
+# Output structured failure data for wrapper to capture
+# This is the new approach that will replace the failure registry
+#
+# Usage: output_failure_data <tool_name> <download_url> <version> <manual_steps> <reason>
+#
+# Arguments:
+#   tool_name     - Name of the tool that failed (e.g., "yazi", "glow")
+#   download_url  - URL where the tool can be downloaded
+#   version       - Version that was attempted (or "latest")
+#   manual_steps  - Multi-line string with manual installation instructions
+#   reason        - Brief description of why it failed (e.g., "Download failed")
+#
+# Output format (to stderr):
+#   FAILURE_TOOL='toolname'
+#   FAILURE_URL='https://...'
+#   FAILURE_VERSION='v1.0'
+#   FAILURE_REASON='Download failed'
+#   FAILURE_MANUAL<<'END_MANUAL'
+#   Manual installation steps...
+#   END_MANUAL
+#
+# The wrapper script can capture this output and parse it for structured logging
+output_failure_data() {
+  local tool_name="$1"
+  local download_url="$2"
+  local version="${3:-unknown}"
+  local manual_steps="$4"
+  local reason="${5:-Installation failed}"
+
+  # Output to stderr in parseable format
+  cat >&2 << EOF
+FAILURE_TOOL='$tool_name'
+FAILURE_URL='$download_url'
+FAILURE_VERSION='$version'
+FAILURE_REASON='$reason'
+FAILURE_MANUAL<<'END_MANUAL'
+$manual_steps
+END_MANUAL
+EOF
+}
+
+# ================================================================
 # Failure Registry Functions (Resilient Installation)
 # ================================================================
 
@@ -218,6 +263,7 @@ display_failure_summary() {
       echo "────────────────────────────────────────────────────────────────"
       echo "$TOOL - Manual Installation Required"
       echo "────────────────────────────────────────────────────────────────"
+      # shellcheck disable=SC2153  # REASON is set by sourcing the failure file
       echo "  Reason: $REASON"
       echo "  Download: $URL"
       # shellcheck disable=SC2153  # VERSION is set by sourcing the failure file
