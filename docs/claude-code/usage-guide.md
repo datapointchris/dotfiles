@@ -156,5 +156,5 @@ bash ~/dotfiles/management/verify-installation.sh
 ## See Also
 
 - [Log Monitoring Research](./log-monitoring-research.md) - Full research findings
-- [Reference: Claude Code Hooks](../reference/hooks.md) - Available hooks
-- [Reference: Skills System](../reference/skills.md) - Skills overview
+- [Reference: Claude Code Hooks](../reference/tools/hooks.md) - Available hooks
+- [Reference: Skills System](../reference/tools/skills.md) - Skills overview

@@ -94,7 +94,7 @@ Common issues and solutions.
     sudo apt update         # Update package lists
     ```
 
-    Some tools need cargo install or manual installation on Ubuntu. See [Platform Differences](../platforms/index.md).
+    Some tools need cargo install or manual installation on Ubuntu. See [Platform Differences](../platforms/differences.md).
 
 ## WSL-Specific
 

@@ -229,4 +229,3 @@ task test     # Run tests
 ## See Also
 
 - [Menu System](menu.md) - Access sessions through menu
-- [Tmux Configuration](../reference/tmux.md) - Tmux setup and keybindings

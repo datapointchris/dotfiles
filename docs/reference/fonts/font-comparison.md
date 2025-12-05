@@ -724,4 +724,3 @@ Fonts you're unsure about, save for 6 months then delete.
 - [Nerd Fonts Explained](nerd-fonts-explained.md) - Understanding Nerd Font variants
 - [Font Weights and Variants](font-weights-and-variants.md) - When to use Bold, Italic
 - [Terminal Fonts Guide](terminal-fonts-guide.md) - Why monospace matters
-- [Font Workflow](../../workflows/fonts.md) - Systematic testing process

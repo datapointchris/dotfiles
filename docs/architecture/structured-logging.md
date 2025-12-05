@@ -352,5 +352,4 @@ logsift analyze test.log
 ## See Also
 
 - [Error Handling](error-handling.md) - Error handling patterns and trap usage
-- [Design Principles](design-principles.md) - Philosophy behind visual formatting
 - [Logsift Guide](../claude-code/log-monitoring-research.md) - Log monitoring with logsift

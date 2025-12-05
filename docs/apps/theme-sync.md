@@ -161,6 +161,5 @@ fi
 
 ## See Also
 
-- [Ghostty Theme Management](../reference/ghostty.md) - Terminal-specific themes
 - [Font Tool](font.md) - Similar workflow for font management
 - [Menu System](menu.md) - Quick access to workflow tools

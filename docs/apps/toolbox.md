@@ -213,4 +213,3 @@ Commit changes to dotfiles repo. Toolbox reads the registry on each invocation.
 ## See Also
 
 - [Menu System](menu.md) - Quick access to workflow tools
-- [Tool Registry](../tools/registry.yml) - Complete tool database

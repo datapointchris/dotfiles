@@ -7,7 +7,7 @@ Comprehensive research findings for automated git commit workflow with token opt
 **Date**: 2025-12-04
 **Status**: Complete - Implemented in production
 **Implementation**: `.claude/agents/commit-agent.md`
-**Architecture Doc**: [Commit Agent Design](../architecture/commit-agent-design.md)
+**Architecture Doc**: [Commit Agent Design](../../architecture/commit-agent-design.md)
 
 ## Problem Statement
 

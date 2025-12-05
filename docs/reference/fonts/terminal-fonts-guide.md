@@ -297,8 +297,6 @@ Some fonts say "Mono" but aren't truly monospace:
 
 ### Archive Them
 
-See [Font Hoard Management](../../workflows/fonts.md#dealing-with-the-font-hoard) for archiving strategy.
-
 **Realistic use cases**:
 
 - Maybe 5-10 for graphic design projects
@@ -552,4 +550,3 @@ Terminals require monospace fonts for:
 - [Nerd Fonts Explained](nerd-fonts-explained.md) - Understanding Nerd Font variants
 - [Font Weights and Variants](font-weights-and-variants.md) - When to use Bold, Italic, etc.
 - [Font Comparison](font-comparison.md) - Compare fonts in your collection
-- [Font Workflow](../../workflows/fonts.md) - Systematic font testing and management

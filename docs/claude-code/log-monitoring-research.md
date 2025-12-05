@@ -129,6 +129,3 @@ From Anthropic's guidelines:
 - [Context Management Guide](https://mcpcat.io/guides/managing-claude-code-context/)
 
 ## See Also
-
-- [efficiency-tips.md](./efficiency-tips.md) - General Claude Code optimization
-- [command-output-handling.md](./command-output-handling.md) - Screen thrashing prevention

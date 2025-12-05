@@ -136,7 +136,7 @@ When sourcing bash libraries with advanced features from Task, wrap in `bash <<'
 ## Related
 
 - [Shell Formatting](../development/shell-formatting.md) - Shell formatting library documentation
-- [Task Reference](../reference/tasks.md) - Task automation system
+- [Task Reference](../reference/tools/tasks.md) - Task automation system
 
 ## References
 

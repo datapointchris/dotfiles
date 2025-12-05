@@ -503,7 +503,7 @@ git add <file>           # Stage specific files (never use -A)
 git commit               # Pre-commit hooks run automatically
 ```
 
-**Note**: Never use `git add -A` or `git add .` - see [Git Safety Protocol](../CLAUDE.md#git-safety-protocol)
+**Note**: Never use `git add -A` or `git add .` to avoid accidentally staging unwanted files
 
 ### Commit Agent (Automated Workflow)
 

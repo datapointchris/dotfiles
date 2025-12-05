@@ -193,4 +193,4 @@ bash management/detect-alternate-installations.sh
 4. **Destroy** VM
 5. **Repeat** until flawless
 
-Document quirks discovered in [Platform Differences](../reference/platforms.md).
+Document quirks discovered in [Platform Differences](../reference/platforms/differences.md).

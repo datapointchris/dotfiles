@@ -150,7 +150,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Platform Knowledge**: Need to know whether to edit `platforms/common/` or platform dir. Experience makes this clear.
 
-See [Platform Differences](../reference/platforms/index.md) for platform-specific quirks.
+See [Platform Differences](../reference/platforms/differences.md) for platform-specific quirks.
 
 ## Deep Dives
 

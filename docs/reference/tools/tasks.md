@@ -393,6 +393,5 @@ The new system is more comprehensive and platform-specific.
 
 ## See Also
 
-- [Getting Started](../index.md#getting-started) - Installation and first configuration
-- [Platform Differences](platforms.md) - Package managers and platform-specific considerations
+- [Platform Differences](../platforms/differences.md) - Package managers and platform-specific considerations
 - [Taskfile Best Practices](https://taskfile.dev/docs/guide) - Official Taskfile documentation
