@@ -535,10 +535,6 @@ cargo_packages:
     command: cargo-install-update
     description: update installed cargo packages
 
-  - name: taplo-cli
-    command: taplo
-    description: TOML formatter and toolkit
-
   - name: gpg-tui
     command: gpg-tui
     description: Terminal UI for managing GPG keys
@@ -592,6 +588,9 @@ npm_globals:
 
     - name: gh-actions-language-server
       description: GitHub Actions LSP
+
+    - name: "@taplo/cli"
+      description: TOML language server and formatter
 
   # Linters & Formatters
   linters_formatters:
