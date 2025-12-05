@@ -4184,13 +4184,13 @@
 
 
 <h1 id="metrics-tracking-architecture">Metrics Tracking Architecture<a class="headerlink" href="#metrics-tracking-architecture" title="Permanent link">&para;</a></h1>
-<p>Technical documentation for the logsift command metrics and quality tracking system.</p>
+<p>Technical documentation for the unified Claude Code workflow metrics system.</p>
 <div class="admonition info">
 <p class="admonition-title">User Guide</p>
 <p>For usage instructions, see <a href="../../claude-code/working-with-claude/#metrics-quality-tracking">Working with Claude Code</a></p>
 </div>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>The metrics tracking system provides quantitative and qualitative assessment of logsift command effectiveness, enabling data-driven optimization of Claude Code workflows.</p>
+<p>The unified metrics tracking system provides quantitative and qualitative assessment of all Claude Code workflows (commit agent, logsift commands, future tools), enabling data-driven optimization and performance monitoring.</p>
 <h3 id="design-goals">Design Goals<a class="headerlink" href="#design-goals" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>Zero-friction collection</strong>: Metrics gathered automatically without user intervention</li>
@@ -4200,154 +4200,222 @@
 </ol>
 <h3 id="components">Components<a class="headerlink" href="#components" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>graph TD
-    A[User runs /logsift or /logsift-auto] --&gt; B[Claude executes command]
-    B --&gt; C[Logsift filters output]
-    C --&gt; D[Claude analyzes errors]
-    D --&gt; E[track-command-metrics hook]
-    E --&gt; F[.claude/metrics/command-metrics-*.jsonl]
-    D --&gt; G[Logsift logs]
-    G --&gt; H[~/.local/share/logsift/logs/*.json]
-    F --&gt; I[analyze-logsift-metrics]
-    H --&gt; I
-    I --&gt; J[Summary report]
-    F --&gt; K[.claude/metrics/quality-log.md]
-    H --&gt; K
-    K --&gt; L[Manual quality assessment]</code></pre>
+    A[User requests commit] --&gt; B[Main agent invokes commit-agent]
+    B --&gt; C[Commit agent creates commits]
+    C --&gt; D[Commit agent Phase 7: Self-report metrics]
+    D --&gt; E[.claude/metrics/command-metrics-*.jsonl]
+
+    F[User runs /logsift] --&gt; G[SlashCommand tool executes]
+    G --&gt; H[Logsift monitors command]
+    H --&gt; I[PostToolUse: track-slash-command-metrics]
+    I --&gt; E
+
+    E --&gt; J[analyze-claude-metrics]
+    J --&gt; K[Summary reports by type]
+    J --&gt; L[Detailed command history]
+
+    E --&gt; M[quality-log.md]
+    M --&gt; N[Manual quality assessment]</code></pre>
 <h2 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Permanent link">&para;</a></h2>
-<h3 id="automated-metrics">Automated Metrics<a class="headerlink" href="#automated-metrics" title="Permanent link">&para;</a></h3>
+<h3 id="unified-jsonl-format">Unified JSONL Format<a class="headerlink" href="#unified-jsonl-format" title="Permanent link">&para;</a></h3>
 <p><strong>File</strong>: <code>.claude/metrics/command-metrics-YYYY-MM-DD.jsonl</code></p>
-<p><strong>Format</strong>: JSON Lines (one JSON object per line)</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-03T15:30:45.123456&quot;</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123def456&quot;</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/logsift&quot;</span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;full_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/logsift \&quot;bash test.sh\&quot; 15&quot;</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/dotfiles&quot;</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logsift&quot;</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
-</span></code></pre></div>
-<p><strong>Schema</strong>:</p>
-<ul>
-<li><code>timestamp</code> (ISO 8601): When command was invoked</li>
-<li><code>session_id</code> (string): Claude Code session identifier</li>
-<li><code>command</code> (string): Slash command used (<code>/logsift</code> or <code>/logsift-auto</code>)</li>
-<li><code>full_command</code> (string): Complete command with arguments</li>
-<li><code>cwd</code> (string): Working directory</li>
-<li><code>type</code> (string): Command type for filtering</li>
-</ul>
+<p><strong>Format</strong>: JSON Lines (one JSON object per line, all workflow types in same file)</p>
 <p><strong>Why JSONL?</strong></p>
 <ul>
 <li>Append-only (no need to parse entire file)</li>
-<li>One command = one line = atomic operation</li>
-<li>Easy to process with <code>jq</code>, <code>grep</code>, streaming parsers</li>
+<li>One workflow = one line = atomic operation</li>
+<li>Easy to process with Python, <code>jq</code>, <code>grep</code>, streaming parsers</li>
 <li>Resilient to corruption (only last line at risk)</li>
+<li>Chronological view of all activity</li>
 </ul>
+<h3 id="metric-types">Metric Types<a class="headerlink" href="#metric-types" title="Permanent link">&para;</a></h3>
+<p><strong>Base schema</strong> (all entries):</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-04T20:15:30.123456&quot;</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123def456&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;commit-agent|logsift|logsift-auto&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/dotfiles&quot;</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Commit Agent Metrics</strong>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-04T20:15:30&quot;</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;commit-agent&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/dotfiles&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;commits_created&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">&quot;commit_hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;774eb33&quot;</span><span class="p">],</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">&quot;files_committed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">&quot;files_renamed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">&quot;files_modified&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">&quot;files_created&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">&quot;pre_commit_iterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">&quot;pre_commit_failures&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="nt">&quot;tokens_used&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">19600</span><span class="p">,</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="nt">&quot;tool_uses&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">&quot;phase_4_executed&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span><span class="nt">&quot;phase_5_executed&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nt">&quot;phase_5_logsift_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">  </span><span class="nt">&quot;read_own_instructions&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">  </span><span class="nt">&quot;main_agent_overhead_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">552</span><span class="p">,</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">54.2</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Logsift Metrics</strong>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-04T20:18:00&quot;</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logsift&quot;</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/dotfiles&quot;</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/logsift&quot;</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;full_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/logsift \&quot;bash test.sh\&quot; 15&quot;</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">&quot;underlying_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash test.sh&quot;</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">&quot;timeout_minutes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">125.3</span><span class="p">,</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nt">&quot;exit_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">&quot;errors_found&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span><span class="nt">&quot;warnings_found&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="nt">&quot;log_file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/.cache/logsift/raw/2025-12-04T20:18:00-bash-test.sh.log&quot;</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Logsift-Auto Metrics</strong>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-04T20:20:00&quot;</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logsift-auto&quot;</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/dotfiles&quot;</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/logsift-auto&quot;</span><span class="p">,</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;natural_language_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;run the test install script&quot;</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">&quot;interpreted_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash management/test-install.sh&quot;</span><span class="p">,</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">&quot;parsing_successful&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">180.5</span><span class="p">,</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="nt">&quot;exit_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="nt">&quot;errors_found&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">  </span><span class="nt">&quot;warnings_found&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">  </span><span class="nt">&quot;log_file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/chris/.cache/logsift/raw/...&quot;</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">}</span>
+</span></code></pre></div>
 <h3 id="logsift-analysis-data">Logsift Analysis Data<a class="headerlink" href="#logsift-analysis-data" title="Permanent link">&para;</a></h3>
 <p><strong>File</strong>: <code>~/.local/share/logsift/logs/session-*.json</code></p>
 <p><strong>Generated by</strong>: Logsift itself</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash test-install.sh&quot;</span><span class="p">,</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;duration&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;12m 34s&quot;</span><span class="p">,</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;exit_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;analysis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">&quot;error_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">&quot;warning_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">&quot;errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">142</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Package &#39;foo&#39; not found&quot;</span><span class="p">},</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Connection refused&quot;</span><span class="p">}</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p">],</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">89</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Deprecated flag --old-style&quot;</span><span class="p">}</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="p">]</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash test-install.sh&quot;</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;duration&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;12m 34s&quot;</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;exit_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">&quot;analysis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">&quot;error_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">&quot;warning_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">&quot;errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">142</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Package &#39;foo&#39; not found&quot;</span><span class="p">},</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Connection refused&quot;</span><span class="p">}</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">      </span><span class="p">{</span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">89</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Deprecated flag --old-style&quot;</span><span class="p">}</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="p">]</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="p">}</span>
 </span></code></pre></div>
-<p><strong>Usage</strong>: Referenced by <code>analyze-logsift-metrics</code> for error/warning counts</p>
+<p><strong>Usage</strong>: Referenced by <code>analyze-claude-metrics</code> for error/warning counts</p>
 <h3 id="manual-quality-log">Manual Quality Log<a class="headerlink" href="#manual-quality-log" title="Permanent link">&para;</a></h3>
 <p><strong>File</strong>: <code>.claude/metrics/quality-log.md</code></p>
 <p><strong>Format</strong>: Markdown with structured entries</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gu">## YYYY-MM-DD HH:MM - Session ID</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="gs">**Command**</span>: <span class="sb">`/logsift &quot;command&quot;`</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="gs">**Context**</span>: Brief description
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="gs">**Quantitative**</span>:
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="k">-</span><span class="w"> </span>Initial errors: X
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">-</span><span class="w"> </span>Final errors: 0
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="k">-</span><span class="w"> </span>Iterations: Y
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="k">-</span><span class="w"> </span>Tokens: Z (from /cost)
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="gs">**Qualitative**</span>:
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="k">-</span><span class="w"> </span>Correctness: ✅/⚠️/❌
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="k">-</span><span class="w"> </span>Efficiency: ✅/⚠️/❌
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="k">-</span><span class="w"> </span>Methodology: ✅/⚠️/❌
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="gs">**Notes**</span>:
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="k">-</span><span class="w"> </span>Observations
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="k">-</span><span class="w"> </span>What worked well
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="k">-</span><span class="w"> </span>What could improve
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
-</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="gs">**Comparison**</span> (if applicable):
-</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="k">-</span><span class="w"> </span>/logsift vs /logsift-auto differences
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="gu">## YYYY-MM-DD HH:MM - Session ID</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="gs">**Command**</span>: <span class="sb">`/logsift &quot;command&quot;`</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="gs">**Context**</span>: Brief description
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="gs">**Quantitative**</span>:
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">-</span><span class="w"> </span>Initial errors: X
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="k">-</span><span class="w"> </span>Final errors: 0
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="k">-</span><span class="w"> </span>Iterations: Y
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="k">-</span><span class="w"> </span>Tokens: Z (from /cost)
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="gs">**Qualitative**</span>:
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">-</span><span class="w"> </span>Correctness: ✅/⚠️/❌
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="k">-</span><span class="w"> </span>Efficiency: ✅/⚠️/❌
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="k">-</span><span class="w"> </span>Methodology: ✅/⚠️/❌
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="gs">**Notes**</span>:
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="k">-</span><span class="w"> </span>Observations
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="k">-</span><span class="w"> </span>What worked well
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="k">-</span><span class="w"> </span>What could improve
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="gs">**Comparison**</span> (if applicable):
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="k">-</span><span class="w"> </span>/logsift vs /logsift-auto differences
 </span></code></pre></div>
 <p><strong>Purpose</strong>: Capture qualitative assessments that can't be automated</p>
 <h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h2>
-<h3 id="hook-track-command-metrics">Hook: track-command-metrics<a class="headerlink" href="#hook-track-command-metrics" title="Permanent link">&para;</a></h3>
-<p><strong>File</strong>: <code>.claude/hooks/track-command-metrics</code></p>
-<p><strong>Language</strong>: Python 3</p>
-<p><strong>Trigger</strong>: PostToolUse or Stop hook (TBD - currently manual invocation)</p>
-<p><strong>Logic</strong>:</p>
+<h3 id="collection-methods">Collection Methods<a class="headerlink" href="#collection-methods" title="Permanent link">&para;</a></h3>
+<p><strong>1. Commit Agent Self-Reporting</strong> (Phase 7):</p>
+<ul>
+<li><strong>File</strong>: <code>.claude/agents/commit-agent.md</code> (Phase 7)</li>
+<li><strong>Helper</strong>: <code>.claude/lib/commit-agent-metrics.py</code></li>
+<li><strong>Trigger</strong>: After commits created, before response to main agent</li>
+<li><strong>Advantages</strong>: Most accurate (knows exact tokens, iterations, phases)</li>
+</ul>
+<p><strong>2. PostToolUse Hook for Slash Commands</strong>:</p>
+<ul>
+<li><strong>File</strong>: <code>.claude/hooks/track-slash-command-metrics</code></li>
+<li><strong>Language</strong>: Python 3</li>
+<li><strong>Trigger</strong>: PostToolUse hook (after SlashCommand tool completes)</li>
+<li><strong>Targets</strong>: <code>/logsift</code> and <code>/logsift-auto</code> commands</li>
+</ul>
+<h3 id="posttooluse-hook-logic">PostToolUse Hook Logic<a class="headerlink" href="#posttooluse-hook-logic" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Read hook input from stdin (JSON)</li>
-<li>Extract session_id, transcript_path, cwd</li>
-<li>Parse transcript to find last slash command</li>
-<li>Filter for /logsift commands</li>
+<li>Check if tool_name == "SlashCommand"</li>
+<li>Extract command from tool_input</li>
+<li>Filter for /logsift commands (skip others)</li>
 <li>Create metric entry with timestamp</li>
 <li>Append to daily JSONL file</li>
 </ol>
 <p><strong>Error handling</strong>: Never blocks - all exceptions caught and logged to stderr</p>
 <p><strong>Configuration</strong>: None required (uses git repo root + <code>.claude/metrics/</code>)</p>
-<h3 id="analysis-script-analyze-logsift-metrics">Analysis Script: analyze-logsift-metrics<a class="headerlink" href="#analysis-script-analyze-logsift-metrics" title="Permanent link">&para;</a></h3>
-<p><strong>File</strong>: <code>apps/common/analyze-logsift-metrics</code></p>
-<p><strong>Language</strong>: Bash + jq</p>
-<p><strong>Dependencies</strong>:</p>
+<h3 id="analysis-tool-analyze-claude-metrics">Analysis Tool: analyze-claude-metrics<a class="headerlink" href="#analysis-tool-analyze-claude-metrics" title="Permanent link">&para;</a></h3>
+<p><strong>File</strong>: <code>apps/common/analyze-claude-metrics</code></p>
+<p><strong>Language</strong>: Pure Python 3 (stdlib only)</p>
+<p><strong>Architecture</strong>:</p>
 <ul>
-<li><code>jq</code> - JSON parsing</li>
-<li><code>bc</code> - Floating point arithmetic</li>
-<li>Standard Unix tools (find, grep, tail, wc)</li>
+<li><code>MetricsAnalyzer</code> class for loading and analyzing JSONL</li>
+<li><code>CommitAgentMetrics</code> and <code>LogsiftMetrics</code> dataclasses</li>
+<li>Type hints and proper separation of concerns</li>
+<li>argparse CLI with colored ANSI output</li>
 </ul>
 <p><strong>Features</strong>:</p>
 <ul>
-<li>Summary mode: Count commands by type, show recent usage</li>
-<li>Details mode: Per-session breakdown with errors/warnings</li>
-<li>Date filtering: Analyze specific time periods</li>
-<li>Logsift integration: Read error counts from logsift logs</li>
+<li>Summary mode: Breakdown by workflow type with key metrics</li>
+<li>Detailed mode: Recent command history with timestamps</li>
+<li>Type filtering: <code>--type commit-agent|logsift|logsift-auto</code></li>
+<li>Date filtering: <code>--date YYYY-MM-DD</code></li>
+<li>Commit agent stats: tokens, phases, files, iterations</li>
+<li>Logsift stats: success rate, errors/warnings found</li>
 </ul>
 <p><strong>Usage</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>analyze-logsift-metrics<span class="w">              </span><span class="c1"># Summary</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>analyze-logsift-metrics<span class="w"> </span>--details<span class="w">    </span><span class="c1"># Detailed</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>analyze-logsift-metrics<span class="w"> </span>--date<span class="w"> </span><span class="m">2025</span>-12-03<span class="w">  </span><span class="c1"># Specific date</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>analyze-claude-metrics<span class="w">                    </span><span class="c1"># Summary of all workflows</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>analyze-claude-metrics<span class="w"> </span>--type<span class="w"> </span>commit-agent<span class="w"> </span><span class="c1"># Only commit agent</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>analyze-claude-metrics<span class="w"> </span>--date<span class="w"> </span><span class="m">2025</span>-12-04<span class="w">  </span><span class="c1"># Specific date</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>analyze-claude-metrics<span class="w"> </span>--detailed<span class="w">         </span><span class="c1"># With recent commands</span>
 </span></code></pre></div>
-<p><strong>Output sections</strong>:</p>
-<ol>
-<li>Command Usage: Counts by type</li>
-<li>Recent Commands: Last 10 invocations</li>
-<li>Error Resolution Analysis: From logsift logs</li>
-<li>Recommendations: Next steps</li>
-</ol>
+<p><strong>Output</strong>:</p>
+<ul>
+<li>Total commands tracked</li>
+<li>Breakdown by type (logsift, logsift-auto, commit-agent)</li>
+<li>Type-specific metrics (varies by workflow)</li>
+<li>Recent commands (detailed mode only)</li>
+</ul>
 <h2 id="key-performance-indicators">Key Performance Indicators<a class="headerlink" href="#key-performance-indicators" title="Permanent link">&para;</a></h2>
 <h3 id="quality-metrics-manual-assessment">Quality Metrics (Manual Assessment)<a class="headerlink" href="#quality-metrics-manual-assessment" title="Permanent link">&para;</a></h3>
 <p><strong>Success Rate</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Success Rate = (Successful Sessions / Total Sessions) * 100
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Success Rate = (Successful Sessions / Total Sessions) * 100
 </span></code></pre></div>
 <p>Where "successful" = all errors resolved, tests passing</p>
 <p><strong>Root Cause Accuracy</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>RCA Accuracy = (Correct Root Cause Identifications / Total Sessions with Related Errors) * 100
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>RCA Accuracy = (Correct Root Cause Identifications / Total Sessions with Related Errors) * 100
 </span></code></pre></div>
 <p>Requires manual assessment: Did Claude correctly identify the root cause?</p>
 <p><strong>Methodology Compliance</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Compliance = (Sessions Following 5-Phase Approach / Total Sessions) * 100
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Compliance = (Sessions Following 5-Phase Approach / Total Sessions) * 100
 </span></code></pre></div>
 <p>Check quality log for:</p>
 <ul>
@@ -4358,29 +4426,29 @@
 </ul>
 <h3 id="efficiency-metrics-semi-automated">Efficiency Metrics (Semi-Automated)<a class="headerlink" href="#efficiency-metrics-semi-automated" title="Permanent link">&para;</a></h3>
 <p><strong>Average Iterations</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Avg Iterations = Sum(Iterations per Session) / Total Sessions
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Avg Iterations = Sum(Iterations per Session) / Total Sessions
 </span></code></pre></div>
 <p>Track in quality log: How many logsift runs until success?</p>
 <p><strong>Token Usage per Error</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Tokens per Error = Total Tokens / Total Errors Resolved
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Tokens per Error = Total Tokens / Total Errors Resolved
 </span></code></pre></div>
 <p>Requires <code>/cost</code> data + error counts from logsift</p>
 <p><strong>Context Efficiency</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Context Saved = (Original Output Lines - Logsift Filtered Lines) / Original Output Lines * 100
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Context Saved = (Original Output Lines - Logsift Filtered Lines) / Original Output Lines * 100
 </span></code></pre></div>
 <p>Typical: 95-98% reduction (10,000 lines → 200 lines)</p>
 <h3 id="comparative-metrics">Comparative Metrics<a class="headerlink" href="#comparative-metrics" title="Permanent link">&para;</a></h3>
 <p><strong>Success Delta</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Delta = (Success Rate of /logsift-auto) - (Success Rate of /logsift)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Delta = (Success Rate of /logsift-auto) - (Success Rate of /logsift)
 </span></code></pre></div>
 <p>Positive = /logsift-auto more successful
 Negative = /logsift more successful</p>
 <p><strong>Token Delta</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Delta = Avg Tokens(/logsift-auto) - Avg Tokens(/logsift)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>Delta = Avg Tokens(/logsift-auto) - Avg Tokens(/logsift)
 </span></code></pre></div>
 <p>Hypothesis: /logsift-auto uses slightly more tokens for command interpretation</p>
 <p><strong>Parsing Accuracy</strong> (/logsift-auto only):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Parsing Accuracy = (Correctly Parsed Commands / Total /logsift-auto Invocations) * 100
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>Parsing Accuracy = (Correctly Parsed Commands / Total /logsift-auto Invocations) * 100
 </span></code></pre></div>
 <p>Manual assessment: Did Claude run the right command?</p>
 <h2 id="data-retention">Data Retention<a class="headerlink" href="#data-retention" title="Permanent link">&para;</a></h2>
@@ -4434,57 +4502,57 @@ Negative = /logsift more successful</p>
 <h2 id="future-enhancements">Future Enhancements<a class="headerlink" href="#future-enhancements" title="Permanent link">&para;</a></h2>
 <h3 id="automated-quality-detection">Automated Quality Detection<a class="headerlink" href="#automated-quality-detection" title="Permanent link">&para;</a></h3>
 <p>Parse transcripts to detect methodology compliance:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Pseudo-code</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">check_methodology</span><span class="p">(</span><span class="n">transcript</span><span class="p">):</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">checks</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>        <span class="s2">&quot;waited_for_analysis&quot;</span><span class="p">:</span> <span class="n">search_for</span><span class="p">(</span><span class="s2">&quot;logsift analysis complete&quot;</span><span class="p">),</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>        <span class="s2">&quot;determined_relationships&quot;</span><span class="p">:</span> <span class="n">search_for</span><span class="p">(</span><span class="s2">&quot;related|independent&quot;</span><span class="p">),</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="s2">&quot;read_before_edit&quot;</span><span class="p">:</span> <span class="n">check_tool_sequence</span><span class="p">([</span><span class="s2">&quot;Read&quot;</span><span class="p">,</span> <span class="s2">&quot;Edit&quot;</span><span class="p">]),</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        <span class="s2">&quot;iterated&quot;</span><span class="p">:</span> <span class="n">count_logsift_invocations</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="p">}</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="k">return</span> <span class="n">ComplianceScore</span><span class="p">(</span><span class="n">checks</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Pseudo-code</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">check_methodology</span><span class="p">(</span><span class="n">transcript</span><span class="p">):</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">checks</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>        <span class="s2">&quot;waited_for_analysis&quot;</span><span class="p">:</span> <span class="n">search_for</span><span class="p">(</span><span class="s2">&quot;logsift analysis complete&quot;</span><span class="p">),</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>        <span class="s2">&quot;determined_relationships&quot;</span><span class="p">:</span> <span class="n">search_for</span><span class="p">(</span><span class="s2">&quot;related|independent&quot;</span><span class="p">),</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>        <span class="s2">&quot;read_before_edit&quot;</span><span class="p">:</span> <span class="n">check_tool_sequence</span><span class="p">([</span><span class="s2">&quot;Read&quot;</span><span class="p">,</span> <span class="s2">&quot;Edit&quot;</span><span class="p">]),</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>        <span class="s2">&quot;iterated&quot;</span><span class="p">:</span> <span class="n">count_logsift_invocations</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="p">}</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="k">return</span> <span class="n">ComplianceScore</span><span class="p">(</span><span class="n">checks</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="cost-tracking-integration">Cost Tracking Integration<a class="headerlink" href="#cost-tracking-integration" title="Permanent link">&para;</a></h3>
 <p>Integrate with Anthropic Admin API:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Fetch usage for specific session</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: </span><span class="nv">$ADMIN_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>https://api.anthropic.com/v1/organizations/usage_report/messages<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.message_usage[] | select(.session_id == &quot;abc123&quot;)&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Fetch usage for specific session</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: </span><span class="nv">$ADMIN_API_KEY</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>https://api.anthropic.com/v1/organizations/usage_report/messages<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.message_usage[] | select(.session_id == &quot;abc123&quot;)&#39;</span>
 </span></code></pre></div>
 <p>Requires: Admin API key (organization admins only)</p>
 <h3 id="comparison-dashboard">Comparison Dashboard<a class="headerlink" href="#comparison-dashboard" title="Permanent link">&para;</a></h3>
 <p>Generate visual comparison report:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="gh"># Weekly Report: 2025-12-01 to 2025-12-07</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="gu">## Usage</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>| Command | Invocations | Avg Duration |
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>|---------|------------|--------------|
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>| /logsift | 15 | 8m 32s |
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>| /logsift-auto | 8 | 9m 15s |
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>
-</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="gu">## Success Rate</span>
-</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="k">-</span><span class="w"> </span>/logsift: 87% (13/15)
-</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="k">-</span><span class="w"> </span>/logsift-auto: 75% (6/8)
-</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
-</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="gu">## Token Efficiency</span>
-</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="k">-</span><span class="w"> </span>/logsift: 38k avg tokens
-</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="k">-</span><span class="w"> </span>/logsift-auto: 42k avg tokens (+10%)
-</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>
-</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="gu">## Recommendation</span>
-</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>Continue using /logsift for known commands.
-</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>Use /logsift-auto for exploratory testing.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="gh"># Weekly Report: 2025-12-01 to 2025-12-07</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="gu">## Usage</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>| Command | Invocations | Avg Duration |
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>|---------|------------|--------------|
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>| /logsift | 15 | 8m 32s |
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>| /logsift-auto | 8 | 9m 15s |
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="gu">## Success Rate</span>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="k">-</span><span class="w"> </span>/logsift: 87% (13/15)
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="k">-</span><span class="w"> </span>/logsift-auto: 75% (6/8)
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="gu">## Token Efficiency</span>
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="k">-</span><span class="w"> </span>/logsift: 38k avg tokens
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="k">-</span><span class="w"> </span>/logsift-auto: 42k avg tokens (+10%)
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="gu">## Recommendation</span>
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>Continue using /logsift for known commands.
+</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a>Use /logsift-auto for exploratory testing.
 </span></code></pre></div>
 <h3 id="pre-commit-agent-metrics">Pre-commit Agent Metrics<a class="headerlink" href="#pre-commit-agent-metrics" title="Permanent link">&para;</a></h3>
 <p>Extend to track commit workflows:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-03T16:00:00&quot;</span><span class="p">,</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;commit-agent&quot;</span><span class="p">,</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">&quot;pre_commit_hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;shellcheck&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;markdownlint&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;prettier&quot;</span><span class="p">],</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="nt">&quot;iterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span><span class="nt">&quot;initial_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">  </span><span class="nt">&quot;final_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">  </span><span class="nt">&quot;tokens_used&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12000</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-03T16:00:00&quot;</span><span class="p">,</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;commit-agent&quot;</span><span class="p">,</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">&quot;pre_commit_hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;shellcheck&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;markdownlint&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;prettier&quot;</span><span class="p">],</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="nt">&quot;iterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">  </span><span class="nt">&quot;initial_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span><span class="nt">&quot;final_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="nt">&quot;tokens_used&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12000</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Track:</p>
 <ul>
@@ -4495,22 +4563,22 @@ Negative = /logsift more successful</p>
 </ul>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <h3 id="unit-tests-future">Unit Tests (Future)<a class="headerlink" href="#unit-tests-future" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Test metric collection</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>.claude/hooks/test_track_command_metrics.py
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Test analysis script</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>bash<span class="w"> </span>tests/test_analyze_logsift_metrics.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Test metric collection</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>.claude/hooks/test_track_command_metrics.py
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Test analysis script</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>bash<span class="w"> </span>tests/test_analyze_logsift_metrics.sh
 </span></code></pre></div>
 <h3 id="integration-tests">Integration Tests<a class="headerlink" href="#integration-tests" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Simulate command invocation</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;session_id&quot;: &quot;test123&quot;, &quot;cwd&quot;: &quot;/tmp&quot;, &quot;command&quot;: &quot;/logsift&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>.claude/hooks/track-command-metrics
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="c1"># Verify file created</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="nb">test</span><span class="w"> </span>-f<span class="w"> </span>.claude/metrics/command-metrics-<span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>.jsonl
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="c1"># Verify content</span>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>jq<span class="w"> </span>.<span class="w"> </span>&lt;<span class="w"> </span>.claude/metrics/command-metrics-<span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>.jsonl
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Simulate command invocation</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;session_id&quot;: &quot;test123&quot;, &quot;cwd&quot;: &quot;/tmp&quot;, &quot;command&quot;: &quot;/logsift&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span>.claude/hooks/track-slash-command-metrics
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="c1"># Verify file created</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="nb">test</span><span class="w"> </span>-f<span class="w"> </span>.claude/metrics/command-metrics-<span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>.jsonl
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="c1"># Verify content</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>jq<span class="w"> </span>.<span class="w"> </span>&lt;<span class="w"> </span>.claude/metrics/command-metrics-<span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>.jsonl
 </span></code></pre></div>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <h3 id="external">External<a class="headerlink" href="#external" title="Permanent link">&para;</a></h3>
@@ -4528,11 +4596,12 @@ Negative = /logsift more successful</p>
 <li><a href="../../reference/tools/hooks/">Hooks Reference</a> - Available hooks</li>
 </ul>
 <h2 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h2>
-<h3 id="2025-12-03-initial-implementation">2025-12-03 - Initial Implementation<a class="headerlink" href="#2025-12-03-initial-implementation" title="Permanent link">&para;</a></h3>
+<h3 id="2025-12-04-unified-metrics-system">2025-12-04 - Unified Metrics System<a class="headerlink" href="#2025-12-04-unified-metrics-system" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Created <code>track-command-metrics</code> hook</li>
-<li>Implemented <code>analyze-logsift-metrics</code> script</li>
-<li>Defined JSONL schema for command metrics</li>
+<li>Created <code>track-slash-command-metrics</code> PostToolUse hook</li>
+<li>Implemented <code>analyze-claude-metrics</code> script (pure Python)</li>
+<li>Added commit agent self-reporting (Phase 7)</li>
+<li>Defined unified JSONL schema for all workflow types</li>
 <li>Created quality log template</li>
 <li>Documented KPIs and analysis methodology</li>
 </ul>
