@@ -61,6 +61,13 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
+# Source .env file if it exists (for environment variables like NVIM_AI_ENABLED)
+if [[ -f "$HOME/.env" ]]; then
+  set -a  # automatically export all variables
+  source "$HOME/.env"
+  set +a
+fi
+
 # Check if running as root (allow for Docker testing)
 if [[ $EUID -eq 0 ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
     die "Do not run this script as root"
