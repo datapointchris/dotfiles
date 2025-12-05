@@ -1,0 +1,5374 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/research/ai/metrics-analysis-research/">
+      
+      
+        <link rel="prev" href="../prompt-engineering/">
+      
+      
+        <link rel="next" href="../../../learnings/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Metrics Analysis - Dotfiles</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1%207.775V2.75C1%201.784%201.784%201%202.75%201h5.025c.464%200%20.91.184%201.238.513l6.25%206.25a1.75%201.75%200%200%201%200%202.474l-5.026%205.026a1.75%201.75%200%200%201-2.474%200l-6.25-6.25A1.75%201.75%200%200%201%201%207.775m1.5%200c0%20.066.026.13.073.177l6.25%206.25a.25.25%200%200%200%20.354%200l5.025-5.025a.25.25%200%200%200%200-.354l-6.25-6.25a.25.25%200%200%200-.177-.073H2.75a.25.25%200%200%200-.25.25ZM6%205a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E');--md-admonition-icon--abstract:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.5%201.75v11.5c0%20.138.112.25.25.25h3.17a.75.75%200%200%201%200%201.5H2.75A1.75%201.75%200%200%201%201%2013.25V1.75C1%20.784%201.784%200%202.75%200h8.5C12.216%200%2013%20.784%2013%201.75v7.736a.75.75%200%200%201-1.5%200V1.75a.25.25%200%200%200-.25-.25h-8.5a.25.25%200%200%200-.25.25m13.274%209.537zl-4.557%204.45a.75.75%200%200%201-1.055-.008l-1.943-1.95a.75.75%200%200%201%201.062-1.058l1.419%201.425%204.026-3.932a.75.75%200%201%201%201.048%201.074M4.75%204h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M4%207.75A.75.75%200%200%201%204.75%207h2a.75.75%200%200%201%200%201.5h-2A.75.75%200%200%201%204%207.75%22/%3E%3C/svg%3E');--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.5%207.75A.75.75%200%200%201%207.25%207h1a.75.75%200%200%201%20.75.75v2.75h.25a.75.75%200%200%201%200%201.5h-2a.75.75%200%200%201%200-1.5h.25v-2h-.25a.75.75%200%200%201-.75-.75M8%206a1%201%200%201%201%200-2%201%201%200%200%201%200%202%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M8%201.5c-2.363%200-4%201.69-4%203.75%200%20.984.424%201.625.984%202.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621%201.49a.75.75%200%200%201-1.484.211c-.04-.282-.163-.547-.37-.847a9%209%200%200%200-.542-.68q-.126-.149-.268-.32C3.201%207.75%202.5%206.766%202.5%205.25%202.5%202.31%204.863%200%208%200s5.5%202.31%205.5%205.25c0%201.516-.701%202.5-1.328%203.259q-.142.172-.268.319c-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751%200%200%201-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848q.113-.133.213-.253c.561-.679.985-1.32.985-2.304%200-2.06-1.637-3.75-4-3.75M5.75%2012h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M6%2015.25a.75.75%200%200%201%20.75-.75h2.5a.75.75%200%200%201%200%201.5h-2.5a.75.75%200%200%201-.75-.75%22/%3E%3C/svg%3E');--md-admonition-icon--success:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M13.78%204.22a.75.75%200%200%201%200%201.06l-7.25%207.25a.75.75%200%200%201-1.06%200L2.22%209.28a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018L6%2010.94l6.72-6.72a.75.75%200%200%201%201.06%200%22/%3E%3C/svg%3E');--md-admonition-icon--question:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.92%206.085h.001a.749.749%200%201%201-1.342-.67c.169-.339.436-.701.849-.977C6.845%204.16%207.369%204%208%204a2.76%202.76%200%200%201%201.637.525c.503.377.863.965.863%201.725%200%20.448-.115.83-.329%201.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6%206%200%200%200-.26.16%201%201%200%200%200-.276.245.75.75%200%200%201-1.248-.832c.184-.264.42-.489.692-.661q.154-.1.313-.195l.007-.004c.1-.061.182-.11.258-.161a1%201%200%200%200%20.277-.245C8.96%206.514%209%206.427%209%206.25a.61.61%200%200%200-.262-.525A1.27%201.27%200%200%200%208%205.5c-.369%200-.595.09-.74.187a1%201%200%200%200-.34.398M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M6.457%201.047c.659-1.234%202.427-1.234%203.086%200l6.082%2011.378A1.75%201.75%200%200%201%2014.082%2015H1.918a1.75%201.75%200%200%201-1.543-2.575Zm1.763.707a.25.25%200%200%200-.44%200L1.698%2013.132a.25.25%200%200%200%20.22.368h12.164a.25.25%200%200%200%20.22-.368Zm.53%203.996v2.5a.75.75%200%200%201-1.5%200v-2.5a.75.75%200%200%201%201.5%200M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--failure:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.344%202.343za8%208%200%200%201%2011.314%2011.314A8.002%208.002%200%200%201%20.234%2010.089a8%208%200%200%201%202.11-7.746m1.06%2010.253a6.5%206.5%200%201%200%209.108-9.275%206.5%206.5%200%200%200-9.108%209.275M6.03%204.97%208%206.94l1.97-1.97a.749.749%200%200%201%201.275.326.75.75%200%200%201-.215.734L9.06%208l1.97%201.97a.749.749%200%200%201-.326%201.275.75.75%200%200%201-.734-.215L8%209.06l-1.97%201.97a.749.749%200%200%201-1.275-.326.75.75%200%200%201%20.215-.734L6.94%208%204.97%206.03a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018%22/%3E%3C/svg%3E');--md-admonition-icon--danger:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M9.504.43a1.516%201.516%200%200%201%202.437%201.713L10.415%205.5h2.123c1.57%200%202.346%201.909%201.22%203.004l-7.34%207.142a1.25%201.25%200%200%201-.871.354h-.302a1.25%201.25%200%200%201-1.157-1.723L5.633%2010.5H3.462c-1.57%200-2.346-1.909-1.22-3.004zm1.047%201.074L3.286%208.571A.25.25%200%200%200%203.462%209H6.75a.75.75%200%200%201%20.694%201.034l-1.713%204.188%206.982-6.793A.25.25%200%200%200%2012.538%207H9.25a.75.75%200%200%201-.683-1.06l2.008-4.418.003-.006-.004-.009-.006-.006-.008-.001q-.005%200-.009.004%22/%3E%3C/svg%3E');--md-admonition-icon--bug:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M4.72.22a.75.75%200%200%201%201.06%200l1%20.999a3.5%203.5%200%200%201%202.441%200l.999-1a.748.748%200%200%201%201.265.332.75.75%200%200%201-.205.729l-.775.776c.616.63.995%201.493.995%202.444v.327q0%20.15-.025.292c.408.14.764.392%201.029.722l1.968-.787a.75.75%200%200%201%20.556%201.392L13%207.258V9h2.25a.75.75%200%200%201%200%201.5H13v.5q-.002.615-.141%201.186l2.17.868a.75.75%200%200%201-.557%201.392l-2.184-.873A5%205%200%200%201%208%2016a5%205%200%200%201-4.288-2.427l-2.183.873a.75.75%200%200%201-.558-1.392l2.17-.868A5%205%200%200%201%203%2011v-.5H.75a.75.75%200%200%201%200-1.5H3V7.258L.971%206.446a.75.75%200%200%201%20.558-1.392l1.967.787c.265-.33.62-.583%201.03-.722a1.7%201.7%200%200%201-.026-.292V4.5c0-.951.38-1.814.995-2.444L4.72%201.28a.75.75%200%200%201%200-1.06m.53%206.28a.75.75%200%200%200-.75.75V11a3.5%203.5%200%201%200%207%200V7.25a.75.75%200%200%200-.75-.75ZM6.173%205h3.654A.17.17%200%200%200%2010%204.827V4.5a2%202%200%201%200-4%200v.327c0%20.096.077.173.173.173%22/%3E%3C/svg%3E');--md-admonition-icon--example:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M5%205.782V2.5h-.25a.75.75%200%200%201%200-1.5h6.5a.75.75%200%200%201%200%201.5H11v3.282l3.666%205.76C15.619%2013.04%2014.543%2015%2012.767%2015H3.233c-1.776%200-2.852-1.96-1.899-3.458Zm-2.4%206.565a.75.75%200%200%200%20.633%201.153h9.534a.75.75%200%200%200%20.633-1.153L12.225%2010.5h-8.45ZM9.5%202.5h-3V6c0%20.143-.04.283-.117.403L4.73%209h6.54L9.617%206.403A.75.75%200%200%201%209.5%206Z%22/%3E%3C/svg%3E');--md-admonition-icon--quote:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1.75%202.5h10.5a.75.75%200%200%201%200%201.5H1.75a.75.75%200%200%201%200-1.5m4%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5m0%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5M2.5%207.75v6a.75.75%200%200%201-1.5%200v-6a.75.75%200%200%201%201.5%200%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dotfiles
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Metrics Analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../apps/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+    
+  
+  Apps
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../architecture/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../configuration/neovim-ai-assistants/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../reference/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 12h7v1.5h-7m0-4h7V11h-7m0 3.5h7V16h-7m8-12H3a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15h-9V6h9"/></svg>
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../development/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../claude-code/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Claude Code
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../learnings/" class="md-tabs__link">
+          
+  
+  
+    
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+    
+  
+  Learnings
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../changelog/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Changelog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dotfiles
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/datapointchris/dotfiles" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    datapointchris/dotfiles
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../apps/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 20h4v-4h-4m0-2h4v-4h-4m-6-2h4V4h-4m6 4h4V4h-4m-6 10h4v-4h-4m-6 4h4v-4H4m0 10h4v-4H4m6 4h4v-4h-4M4 8h4V4H4z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Apps
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Apps
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/font/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 8h3v12h1v1h-4v-1h1v-3h-4l-1.5 3H14v1h-4v-1h1zm1 1-3.5 7H18zM5 3h5c1.11 0 2 .89 2 2v11H9v-5H6v5H3V5c0-1.11.89-2 2-2m1 2v4h3V5z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Font
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/theme-sync/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.5 12a1.5 1.5 0 0 1-1.5-1.5A1.5 1.5 0 0 1 17.5 9a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1-1.5 1.5m-3-4A1.5 1.5 0 0 1 13 6.5 1.5 1.5 0 0 1 14.5 5 1.5 1.5 0 0 1 16 6.5 1.5 1.5 0 0 1 14.5 8m-5 0A1.5 1.5 0 0 1 8 6.5 1.5 1.5 0 0 1 9.5 5 1.5 1.5 0 0 1 11 6.5 1.5 1.5 0 0 1 9.5 8m-3 4A1.5 1.5 0 0 1 5 10.5 1.5 1.5 0 0 1 6.5 9 1.5 1.5 0 0 1 8 10.5 1.5 1.5 0 0 1 6.5 12M12 3a9 9 0 0 0-9 9 9 9 0 0 0 9 9 1.5 1.5 0 0 0 1.5-1.5c0-.39-.15-.74-.39-1-.23-.27-.38-.62-.38-1a1.5 1.5 0 0 1 1.5-1.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Theme Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/notes/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 7V5h2V4a2 2 0 0 1 2-2h6v7l2.5-1.5L18 9V2h1c1.05 0 2 .95 2 2v16c0 1.05-.95 2-2 2H7c-1.05 0-2-.95-2-2v-1H3v-2h2v-4H3v-2h2V7zm4 4H5v2h2zm0-4V5H5v2zm0 12v-2H5v2z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/sess/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/menu/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Menu
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/toolbox/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16h-2v-1H8v1H6v-1H2v5h20v-5h-4zm2-8h-3V6c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v4h4v-2h2v2h8v-2h2v2h4v-4c0-1.1-.9-2-2-2m-5 0H9V6h6z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Toolbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/backup-dirs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9H0l4 4 4-4H5a7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7c-1.5 0-2.91-.5-4.06-1.3L6.5 19.14A9.1 9.1 0 0 0 12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9m2 9a2 2 0 0 0-2-2 2 2 0 0 0-2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Backup Dirs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../apps/ghostty-theme/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 5H3V4h18z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Ghostty Theme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../architecture/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 15h-2v-2h2m0 6h-2v-2h2M13 7h-2V5h2m0 6h-2V9h2m0 6h-2v-2h2m0 6h-2v-2h2m-6-6H5V9h2m0 6H5v-2h2m0 6H5v-2h2m8-6V5l-3-3-3 3v2H3v14h18V11z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/shell-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Libraries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/package-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/path-ordering-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PATH Ordering Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/tool-composition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool Composition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/structured-logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structured Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/github-release-installer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Release Installer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/resilient-installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilient Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/neovim-ai-assistants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neovim AI Assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../reference/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 12h7v1.5h-7m0-4h7V11h-7m0 3.5h7V16h-7m8-12H3a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15h-9V6h9"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platforms
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Platforms
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/platforms/differences/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Differences
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/platforms/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Differences
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/platforms/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/platforms/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool Availability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fonts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Fonts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/fonts/nerd-fonts-explained/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nerd Fonts Explained
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/fonts/font-weights-and-variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Font Weights and Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/fonts/terminal-fonts-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Terminal Fonts Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/fonts/font-comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Font Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/tools/symlinks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Symlinks Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/tools/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/tools/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/tools/hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/support/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/support/corporate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Corporate Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../development/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2H3v2h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2v-2H8v-5a2 2 0 0 0-2-2 2 2 0 0 0 2-2V5h2V3m6 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VM Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/adding-failure-reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Failure Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Applications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Go Applications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/go-apps/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/go-apps/go-development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/go-apps/go-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bubbletea Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/shell-formatting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Formatting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../development/publishing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing Docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../claude-code/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Claude Code
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/working-with-claude/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commit Agent
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Commit Agent
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/commit-agent-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/commit-agent-metrics-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/commit-agent-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4" id="__nav_7_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/hook-registration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook Registration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/metrics-tracking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/transcript-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transcript Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/logsift-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logsift Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/claude-code-features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/log-monitoring-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Log Monitoring Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../claude-code/usage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    AI Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../prompt-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prompt Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../learnings/" class="md-nav__link ">
+              
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Learnings
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Learnings
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/posttooluse-hook-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostToolUse Hook Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/app-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    App Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arch Git libpcre2 Warning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Idempotent Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Bootstrap Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSL Ubuntu Package Versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/package-version-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Version Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash Testing Frameworks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/bash-script-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash Script Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bash TTY Detection in Command Substitution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Shell Printf Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/git-history-rewriting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git History Rewriting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/relative-path-calculation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relative Path Calculation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/directory-pattern-matching/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Directory Pattern Matching
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Platform Symlinks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation Consolidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go TUI Testing Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/go-testing-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go Testing Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go TUI Ecosystem Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go CLI Architecture Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/pretooluse-hooks-task-limitation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PreToolUse Hooks Task Limitation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/tools-over-instructions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools Over Instructions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Changelog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../changelog/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 2v6H2V2zM2 22v-6h2v6zm3-10c0 1.11-.89 2-2 2a2 2 0 1 1 2-2m19-6v12c0 1.11-.89 2-2 2H10a2 2 0 0 1-2-2v-4l-2-2 2-2V6a2 2 0 0 1 2-2h12c1.11 0 2 .89 2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Summary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../overview/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Research
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../overview/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    AI Research
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="metrics-analysis-research-architecture-and-tooling-strategy">Metrics Analysis Research: Architecture and Tooling Strategy<a class="headerlink" href="#metrics-analysis-research-architecture-and-tooling-strategy" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2025-12-05
+<strong>Status</strong>: Active Research
+<strong>Decision Point</strong>: Choose between building custom Python analysis vs OpenTelemetry integration</p>
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>After extensive research across modern Python data tools, OpenTelemetry observability stacks, and existing LLM agent monitoring solutions, a <strong>hybrid approach</strong> emerges as the optimal strategy:</p>
+<p><strong>Recommendation: Start with lightweight Python analysis (DuckDB + Parquet), design for future OpenTelemetry integration</strong></p>
+<p><strong>Key Findings</strong>:</p>
+<ol>
+<li>
+<p><strong>Current metrics extraction is sufficient</strong> - Our 60+ metrics from agent transcripts cover token usage, git operations, pre-commit runs, and quality indicators. OpenTelemetry would provide traces and spans but wouldn't fundamentally change the insights available for weekly analysis.</p>
+</li>
+<li>
+<p><strong>DuckDB + Parquet = Sweet Spot</strong> - DuckDB excels at analytical queries on Parquet files (the exact use case for weekly metrics analysis), requiring minimal code changes from our current JSONL approach. 5-10x faster than pandas, with SQL familiarity.</p>
+</li>
+<li>
+<p><strong>AI-assisted EDA tools can accelerate insight discovery</strong> - Libraries like Sweetviz, D-Tale, and RATH can generate automated reports and identify patterns in our metrics data with 2-3 lines of code, ideal for weekly analysis without building custom dashboards.</p>
+</li>
+<li>
+<p><strong>OpenTelemetry adds complexity for uncertain benefit</strong> - While Claude Code supports OTel export, the homelab infrastructure (collector, Prometheus, Grafana, storage) requires significant setup and maintenance. The payoff is stronger for real-time monitoring (not our use case) than periodic analysis.</p>
+</li>
+<li>
+<p><strong>No Claude Code community metrics tools exist yet</strong> - Claude Code is relatively new, and the community is focused on plugins, agents, and IDE integrations. We're pioneering the metrics analysis space, but can leverage general LLM observability patterns.</p>
+</li>
+</ol>
+<p><strong>Phased Approach</strong>:</p>
+<ul>
+<li><strong>Phase 1 (Complete)</strong>: Hook-based metrics extraction to JSONL ✅</li>
+<li><strong>Phase 2 (Next 2-4 weeks)</strong>: Migrate to Parquet storage, build DuckDB query library, integrate automated EDA</li>
+<li><strong>Phase 3 (3-6 months)</strong>: Add OpenTelemetry export alongside Parquet (dual-tracking), experiment with homelab Grafana</li>
+<li><strong>Phase 4 (6+ months)</strong>: Evaluate whether OTel provides enough value to replace custom analysis</li>
+</ul>
+<p>This approach maximizes learning and utility in the short term while keeping the path open for full observability infrastructure later.</p>
+<h2 id="research-questions">Research Questions<a class="headerlink" href="#research-questions" title="Permanent link">&para;</a></h2>
+<h3 id="1-modern-python-data-stack">1. Modern Python Data Stack<a class="headerlink" href="#1-modern-python-data-stack" title="Permanent link">&para;</a></h3>
+<ul>
+<li>DuckDB vs Polars vs Pandas for metrics analysis</li>
+<li>Parquet vs JSONL for storage</li>
+<li>AI-assisted EDA libraries (automated insight generation)</li>
+<li>Cost/benefit of custom analysis infrastructure</li>
+</ul>
+<h3 id="2-opentelemetry-integration">2. OpenTelemetry Integration<a class="headerlink" href="#2-opentelemetry-integration" title="Permanent link">&para;</a></h3>
+<ul>
+<li>What data does OTel provide beyond our current metrics?</li>
+<li>Would OTel replace or complement current metrics extraction?</li>
+<li>Open-source analysis tools: Prometheus, Grafana, Jaeger, etc.</li>
+<li>Infrastructure requirements for homelab OTel setup</li>
+<li>Migration path from current JSONL metrics</li>
+</ul>
+<h3 id="3-existing-solutions">3. Existing Solutions<a class="headerlink" href="#3-existing-solutions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Open-source Claude Code analysis tools</li>
+<li>LLM agent metrics/observability libraries</li>
+<li>Pre-built dashboards or analysis frameworks</li>
+<li>Community best practices</li>
+</ul>
+<h2 id="goals-and-constraints">Goals and Constraints<a class="headerlink" href="#goals-and-constraints" title="Permanent link">&para;</a></h2>
+<p><strong>Usage Pattern</strong>: Weekly or less frequent analysis (not real-time dashboards)</p>
+<p><strong>Primary Objectives</strong>:</p>
+<ul>
+<li>Identify optimization opportunities (token usage, cache efficiency)</li>
+<li>Understand Claude Code feature effectiveness</li>
+<li>Discover usage patterns and workflow improvements</li>
+</ul>
+<p><strong>Decision Criteria</strong>:</p>
+<ul>
+<li>Time/effort to implement vs value gained</li>
+<li>Risk of building infrastructure that becomes obsolete</li>
+<li>Ability to leverage existing open-source work</li>
+<li>Support for both simple and sophisticated analysis approaches</li>
+</ul>
+<hr />
+<h2 id="research-area-1-modern-python-data-libraries">Research Area 1: Modern Python Data Libraries<a class="headerlink" href="#research-area-1-modern-python-data-libraries" title="Permanent link">&para;</a></h2>
+<h3 id="duckdb">DuckDB<a class="headerlink" href="#duckdb" title="Permanent link">&para;</a></h3>
+<p><strong>Overview</strong>: SQL-based analytical database optimized for OLAP queries, designed to run embedded within applications. Combines cost-based optimizer with vectorized execution and late materialization for consistent performance.</p>
+<p><strong>Strengths</strong>:</p>
+<ul>
+<li><strong>Fastest for aggregations</strong>: 9.4× faster than pandas for GROUP BY operations (<a href="https://www.codecentric.de/en/knowledge-hub/blog/duckdb-vs-dataframe-libraries">codecentric</a>)</li>
+<li><strong>Minimal memory footprint</strong>: Uses least memory with automatic spill-to-disk for datasets larger than RAM</li>
+<li><strong>Handles massive datasets</strong>: Can process 50GB datasets on laptop by streaming through memory (<a href="https://motherduck.com/blog/duckdb-versus-pandas-versus-polars/">motherduck</a>)</li>
+<li><strong>SQL familiarity</strong>: No new API to learn, write standard SQL queries</li>
+<li><strong>Direct file querying</strong>: Can query Parquet files without loading into memory</li>
+<li><strong>Seamless integration</strong>: Works directly with Pandas and Polars dataframes</li>
+</ul>
+<p><strong>Weaknesses</strong>:</p>
+<ul>
+<li>Slower for filtering operations (22.18s vs Polars 1.89s due to SQL overhead)</li>
+<li>Requires SQL knowledge (though this is a strength for many users)</li>
+<li>Not ideal for complex data transformations requiring chaining operations</li>
+</ul>
+<p><strong>Fit for Metrics Analysis</strong>:</p>
+<p><strong>Excellent fit</strong> - Our use case is exactly what DuckDB excels at: analytical queries (aggregations, time-series analysis, trend detection) on structured data. Weekly metrics analysis involves GROUP BY date ranges, calculating averages, identifying outliers - all operations DuckDB is optimized for.</p>
+<h3 id="polars">Polars<a class="headerlink" href="#polars" title="Permanent link">&para;</a></h3>
+<p><strong>Overview</strong>: DataFrame library optimized for high-performance multithreaded computing on single nodes. Built in Rust with Python bindings, focuses on speed and memory efficiency with a lazy execution model.</p>
+<p><strong>Strengths</strong>:</p>
+<ul>
+<li><strong>Fastest for I/O and joins</strong>: 7.7× faster than pandas for CSV loading, 5× faster for joins (<a href="https://www.codecentric.de/en/knowledge-hub/blog/duckdb-vs-dataframe-libraries">codecentric</a>)</li>
+<li><strong>Best for ETL pipelines</strong>: Excels at filtering (1.89s vs pandas 9.47s), data transformations, chained operations</li>
+<li><strong>Query optimization</strong>: Lazy execution enables projection pushdown and predicate filtering</li>
+<li><strong>Modern API</strong>: Cleaner, more consistent API than pandas</li>
+<li><strong>Memory efficient</strong>: Substantially better memory usage than pandas</li>
+</ul>
+<p><strong>Weaknesses</strong>:</p>
+<ul>
+<li>Slightly slower than DuckDB for aggregations (8.7× vs 9.4× faster than pandas)</li>
+<li>Requires learning new API (though cleaner than pandas)</li>
+<li>Less mature ecosystem than pandas (though growing rapidly)</li>
+</ul>
+<p><strong>Fit for Metrics Analysis</strong>:</p>
+<p><strong>Good fit, but secondary to DuckDB</strong> - Polars shines for ETL and data transformations. If we were building complex data pipelines with filtering and reshaping, Polars would be ideal. For our use case (primarily analytical queries on structured metrics), DuckDB's SQL interface and aggregation performance are more aligned.</p>
+<h3 id="pandas-baseline-comparison">Pandas (Baseline Comparison)<a class="headerlink" href="#pandas-baseline-comparison" title="Permanent link">&para;</a></h3>
+<p><strong>Overview</strong>: Industry standard DataFrame library, ubiquitous in data science but showing its age in 2025.</p>
+<p><strong>Why User Prefers to Avoid</strong>:</p>
+<ul>
+<li><strong>Performance</strong>: 5-10× slower than DuckDB/Polars for operations &gt;1M rows</li>
+<li><strong>Memory inefficiency</strong>: Loads entire dataset into RAM, no streaming capabilities</li>
+<li><strong>API inconsistencies</strong>: Mix of functional, object-oriented, and numpy-style operations</li>
+<li><strong>Legacy design</strong>: Not designed for modern multi-core CPUs</li>
+</ul>
+<p><strong>When Pandas Still Makes Sense</strong>:</p>
+<ul>
+<li>Datasets under 1M rows where simplicity &gt; performance</li>
+<li>Heavy ecosystem dependencies (many libraries still expect pandas DataFrames)</li>
+<li>Quick exploratory work where familiarity reduces friction</li>
+</ul>
+<p><strong>Our Case</strong>: With weekly metrics analysis and potential growth to thousands of commits, we're in the "DuckDB/Polars sweet spot" where performance gains justify the learning curve.</p>
+<h3 id="parquet-storage-format">Parquet Storage Format<a class="headerlink" href="#parquet-storage-format" title="Permanent link">&para;</a></h3>
+<p><strong>Overview</strong>: Columnar storage format designed for efficient data analytics. Open-source, widely supported across big data ecosystems.</p>
+<p><strong>Advantages over JSONL</strong>:</p>
+<ol>
+<li><strong>Storage efficiency</strong>: 2-5× smaller than JSON/CSV due to columnar compression (<a href="https://towardsdatascience.com/data-lake-comparing-performance-of-known-big-data-formats-eace705b6fd8/">towardsdatascience</a>)</li>
+<li><strong>Query performance</strong>: Column pruning allows reading only needed columns, not entire rows (<a href="https://stackshare.io/stackups/apache-parquet-vs-json">stackshare</a>)</li>
+<li><strong>Analytics optimization</strong>: Columnar format ideal for aggregations, group-by operations</li>
+<li><strong>Type preservation</strong>: Stores schema and types, no parsing overhead</li>
+<li><strong>Compression</strong>: Per-column compression with high compression ratios</li>
+<li><strong>Ecosystem support</strong>: DuckDB, Polars, Spark, Athena all read Parquet natively</li>
+</ol>
+<p><strong>Migration Considerations</strong>:</p>
+<ul>
+<li><strong>Backward compatibility</strong>: Keep JSONL as append-only log, generate Parquet for analysis</li>
+<li><strong>Simple conversion</strong>: PyArrow can convert JSONL to Parquet in ~10 lines of code (<a href="https://medium.com/neural-engineer/converting-jsonl-to-parquet-a-technical-guide-c1b42025b48c">medium</a>)</li>
+<li><strong>Incremental approach</strong>: Convert historical data once, new metrics to both formats during transition</li>
+</ul>
+<p><strong>Migration Code Example</strong>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.json</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pj</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Read JSONL, write Parquet</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">table</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="s1">&#39;commit-metrics-2025-12-05.jsonl&#39;</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="s1">&#39;commit-metrics-2025-12-05.parquet&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="ai-assisted-eda-libraries">AI-Assisted EDA Libraries<a class="headerlink" href="#ai-assisted-eda-libraries" title="Permanent link">&para;</a></h3>
+<p><strong>Tools Researched</strong>:</p>
+<ol>
+<li><strong>Sweetviz</strong> - Automated EDA with dataset comparison capabilities (<a href="https://docs.kanaries.net/articles/python-auto-eda">kanaries</a>)</li>
+<li><strong>D-Tale</strong> - Interactive GUI for data analysis in browser</li>
+<li><strong>RATH</strong> - AI-powered automated discovery of patterns, insights, causal relationships with auto-generated visualizations</li>
+<li><strong>Dora</strong> - Generates visual summaries, statistical tests, feature engineering ideas</li>
+</ol>
+<p><strong>Capabilities</strong>:</p>
+<ul>
+<li><strong>Automated profiling</strong>: Generate comprehensive HTML reports with distributions, correlations, missing values</li>
+<li><strong>Pattern discovery</strong>: AI-powered identification of trends, anomalies, relationships</li>
+<li><strong>Visual summaries</strong>: Interactive charts and graphs without manual coding</li>
+<li><strong>Statistical tests</strong>: Automated hypothesis testing and significance analysis</li>
+<li><strong>Comparison mode</strong>: Side-by-side analysis of different time periods</li>
+</ul>
+<p><strong>Integration Potential for Our Use Case</strong>:</p>
+<p><strong>High value, low effort</strong> - For weekly metrics analysis, tools like Sweetviz can generate comprehensive reports with 2-3 lines of code:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sweetviz</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sv</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">duckdb</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Query last week&#39;s metrics with DuckDB</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">last_week</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM &#39;metrics.parquet&#39; WHERE date &gt;= &#39;2025-11-28&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">df</span><span class="p">()</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">this_week</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM &#39;metrics.parquet&#39; WHERE date &gt;= &#39;2025-12-05&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">df</span><span class="p">()</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Generate comparison report</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">report</span> <span class="o">=</span> <span class="n">sv</span><span class="o">.</span><span class="n">compare</span><span class="p">([</span><span class="n">last_week</span><span class="p">,</span> <span class="s2">&quot;Last Week&quot;</span><span class="p">],</span> <span class="p">[</span><span class="n">this_week</span><span class="p">,</span> <span class="s2">&quot;This Week&quot;</span><span class="p">])</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">report</span><span class="o">.</span><span class="n">show_html</span><span class="p">(</span><span class="s1">&#39;weekly_metrics_analysis.html&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>This provides automated insights (cache hit rate trends, token usage patterns, pre-commit success rates) without building custom dashboards.</p>
+<hr />
+<h2 id="research-area-2-opentelemetry-integration">Research Area 2: OpenTelemetry Integration<a class="headerlink" href="#research-area-2-opentelemetry-integration" title="Permanent link">&para;</a></h2>
+<h3 id="what-is-opentelemetry">What is OpenTelemetry?<a class="headerlink" href="#what-is-opentelemetry" title="Permanent link">&para;</a></h3>
+<p><strong>Overview</strong>: Vendor-neutral, open-source observability framework providing standardized APIs, SDKs, and tools for collecting telemetry data (traces, metrics, logs) from applications. Industry standard supported by CNCF, eliminates vendor lock-in.</p>
+<p><strong>Key Components</strong>:</p>
+<ul>
+<li><strong>OpenTelemetry SDK</strong>: Instruments code to emit telemetry</li>
+<li><strong>OpenTelemetry Collector</strong>: Receives, processes, and exports telemetry to backends</li>
+<li><strong>Semantic Conventions</strong>: Standardized attribute names and meanings</li>
+<li><strong>Exporters</strong>: Plugins for sending data to various backends (Prometheus, Jaeger, Grafana, etc.)</li>
+</ul>
+<h3 id="data-available-from-otel">Data Available from OTel<a class="headerlink" href="#data-available-from-otel" title="Permanent link">&para;</a></h3>
+<p><strong>Traces</strong>:</p>
+<ul>
+<li><strong>Distributed tracing</strong>: Track requests across multiple services/agents</li>
+<li><strong>Spans</strong>: Individual operations with start time, duration, parent/child relationships</li>
+<li><strong>Context propagation</strong>: Follow execution flow through complex systems</li>
+<li><strong>Exemplars</strong>: Link traces to metrics (e.g., "this slow query" → trace showing why)</li>
+</ul>
+<p><strong>For Claude Code</strong>: Traces would show the full execution path of an agent run: tool calls, API requests to Claude, context switches, thinking time. Valuable for debugging complex multi-agent workflows.</p>
+<p><strong>Metrics</strong>:</p>
+<ul>
+<li><strong>Counter</strong>: Cumulative values (total requests, errors)</li>
+<li><strong>Gauge</strong>: Point-in-time values (current memory usage, active connections)</li>
+<li><strong>Histogram</strong>: Distribution of values (request latency buckets)</li>
+<li><strong>Time-series data</strong>: Metrics over time for trending and alerting</li>
+</ul>
+<p><strong>For Claude Code</strong>: OTel metrics would capture token usage per request, API latency, cache hit rates, tool invocation counts - similar to what we already extract from transcripts.</p>
+<p><strong>Logs</strong>:</p>
+<ul>
+<li><strong>Structured logging</strong>: JSON-formatted logs with consistent fields</li>
+<li><strong>Log correlation</strong>: Link logs to traces via trace ID</li>
+<li><strong>Severity levels</strong>: ERROR, WARN, INFO, DEBUG with filtering</li>
+</ul>
+<p><strong>For Claude Code</strong>: Logs would capture agent messages, errors, warnings - again, similar to what we parse from transcripts.</p>
+<p><strong>Comparison to Current Metrics</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Current Transcript Parsing</th>
+<th>OpenTelemetry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Token metrics</strong></td>
+<td>✅ 13 fields (total, input, output, cache rates)</td>
+<td>✅ Similar data</td>
+</tr>
+<tr>
+<td><strong>Tool usage</strong></td>
+<td>✅ Tool types, counts, timing</td>
+<td>✅ Similar data</td>
+</tr>
+<tr>
+<td><strong>Git operations</strong></td>
+<td>✅ Commits, diffs, status checks</td>
+<td>✅ Would need custom instrumentation</td>
+</tr>
+<tr>
+<td><strong>Pre-commit metrics</strong></td>
+<td>✅ Runs, failures, logsift output</td>
+<td>✅ Would need custom instrumentation</td>
+</tr>
+<tr>
+<td><strong>Distributed tracing</strong></td>
+<td>❌ Single agent view</td>
+<td>✅ Multi-agent correlation</td>
+</tr>
+<tr>
+<td><strong>Real-time monitoring</strong></td>
+<td>❌ Post-hoc analysis</td>
+<td>✅ Live dashboards</td>
+</tr>
+<tr>
+<td><strong>Span-level detail</strong></td>
+<td>❌ Message-level granularity</td>
+<td>✅ Operation-level spans</td>
+</tr>
+<tr>
+<td><strong>Standard ecosystem</strong></td>
+<td>❌ Custom parsers</td>
+<td>✅ Standard tools (Grafana, etc.)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bottom line</strong>: OTel provides richer tracing and real-time capabilities, but for weekly analysis of single-agent runs, our current metrics capture the essential data. OTel's value proposition is stronger for complex multi-agent systems and real-time debugging.</p>
+<h3 id="open-source-analysis-tools">Open-Source Analysis Tools<a class="headerlink" href="#open-source-analysis-tools" title="Permanent link">&para;</a></h3>
+<h4 id="prometheus">Prometheus<a class="headerlink" href="#prometheus" title="Permanent link">&para;</a></h4>
+<p><strong>Overview</strong>: Time-series database designed for monitoring metrics. Pull-based architecture scrapes metrics from HTTP endpoints using PromQL query language.</p>
+<p><strong>Strengths</strong>:</p>
+<ul>
+<li>Flexible query language (PromQL) for data analysis</li>
+<li>Built-in alerting based on metric thresholds</li>
+<li>Efficient time-series storage with compression</li>
+<li>De facto standard for metrics in Kubernetes/cloud-native ecosystems</li>
+<li>Integrates seamlessly with Grafana for visualization</li>
+</ul>
+<p><strong>Fit for Our Use Case</strong>:</p>
+<p><strong>Moderate fit</strong> - Prometheus excels at real-time metrics scraping and alerting (e.g., "alert if cache hit rate &lt; 80%"). For weekly analysis, we don't need pull-based scraping or real-time alerts. We could push metrics to Prometheus, but it adds infrastructure overhead for uncertain benefit.</p>
+<h4 id="grafana">Grafana<a class="headerlink" href="#grafana" title="Permanent link">&para;</a></h4>
+<p><strong>Overview</strong>: Open-source platform for visualizing time-series data from multiple sources (Prometheus, Loki, Jaeger, etc.). Provides pre-built dashboards, alerting, and correlation across metrics/logs/traces.</p>
+<p><strong>Strengths</strong>:</p>
+<ul>
+<li><strong>Unified visualization</strong>: Single pane of glass for metrics, logs, traces</li>
+<li><strong>Pre-built dashboards</strong>: Community templates for common use cases</li>
+<li><strong>AI Observability</strong>: Native support for LLM monitoring with OpenLIT integration (<a href="https://grafana.com/blog/2024/07/18/a-complete-guide-to-llm-observability-with-opentelemetry-and-grafana-cloud/">grafana blog</a>)</li>
+<li><strong>Cost tracking</strong>: Built-in cost analysis for LLM usage</li>
+<li><strong>Self-hosted option</strong>: Can run Grafana locally or in homelab</li>
+</ul>
+<p><strong>Fit for Our Use Case</strong>:</p>
+<p><strong>Good fit for long-term</strong> - If we set up a homelab OTel stack, Grafana provides polished dashboards for visualizing trends. Grafana's LLM observability features (token usage, cost tracking, performance monitoring) align with our metrics. However, setup requires Prometheus/Loki/Jaeger backends first, making it a Phase 3+ initiative.</p>
+<h4 id="jaeger">Jaeger<a class="headerlink" href="#jaeger" title="Permanent link">&para;</a></h4>
+<p><strong>Overview</strong>: Distributed tracing system for microservices. Visualizes traces, spans, and service dependencies to identify performance bottlenecks.</p>
+<p><strong>Strengths</strong>:</p>
+<ul>
+<li>Tailored for distributed tracing and understanding request flows</li>
+<li>Web UI for visualizing traces and drilling into latency sources</li>
+<li>Pluggable storage backends (Cassandra, Elasticsearch, memory)</li>
+<li>Root cause analysis by tracing execution across services</li>
+</ul>
+<p><strong>Fit for Our Use Case</strong>:</p>
+<p><strong>Low priority</strong> - Jaeger shines for debugging complex multi-service architectures. For single commit-agent runs, traces provide limited value over our current message-level transcript parsing. Becomes more relevant if we build multi-agent orchestration systems.</p>
+<h4 id="other-tools">Other Tools<a class="headerlink" href="#other-tools" title="Permanent link">&para;</a></h4>
+<p><strong>OpenLLMetry/Traceloop</strong> (<a href="https://www.traceloop.com/openllmetry">traceloop</a>):</p>
+<ul>
+<li><strong>2-line setup</strong>: <code>pip install traceloop-sdk</code> + <code>Traceloop.init(app_name="...")</code></li>
+<li><strong>LLM-specific instrumentation</strong>: Automatically captures prompts, responses, token usage</li>
+<li><strong>Supports 20+ providers</strong>: OpenAI, Anthropic, Bedrock, Ollama, etc.</li>
+<li><strong>Export destinations</strong>: Traceloop (SaaS), Dynatrace, SigNoz, OTel Collector</li>
+</ul>
+<p><strong>Fit</strong>: High potential for Phase 3 - OpenLLMetry provides turnkey LLM observability without custom instrumentation. Could run alongside our transcript parsing to compare data fidelity.</p>
+<p><strong>OpenLIT</strong> (<a href="https://openlit.io">openlit.io</a>):</p>
+<ul>
+<li><strong>One-line integration</strong>: Automatic tracing for LLM apps</li>
+<li><strong>Pre-built Grafana dashboards</strong>: Import ready-made visualizations</li>
+<li><strong>Cost optimization</strong>: Track spending across models</li>
+<li><strong>Covers LLM stack</strong>: LLMs, vector DBs (Pinecone, Chroma), and GPUs</li>
+</ul>
+<p><strong>Fit</strong>: Similar to OpenLLMetry - turnkey solution for Phase 3 experimentation.</p>
+<h3 id="homelab-otel-server-architecture">Homelab OTel Server Architecture<a class="headerlink" href="#homelab-otel-server-architecture" title="Permanent link">&para;</a></h3>
+<p><strong>Infrastructure Requirements</strong>:</p>
+<p>Typical self-hosted stack (based on <a href="https://www.heinrichhartmann.com/posts/home-lab-observability/">heinrichhartmann.com</a> and <a href="https://blog.wildcat.io/2024/01/self-hosted-telemetry-solution-based-on-otel-en/">wildcat.io</a>):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">Services (Docker Compose)</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OpenTelemetry Collector (Central hub, accepts gRPC/HTTP on ports 4317/4318)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Prometheus (Metrics storage, ~500MB RAM for small deployments)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Loki (Log aggregation, ~300MB RAM)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Jaeger (Trace storage, ~400MB RAM + database)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Grafana (Visualization frontend, ~200MB RAM)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">Storage backend (optional)</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cassandra, Elasticsearch, or ClickHouse for scale</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">Total Resources</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~1.5-2GB RAM, 10-20GB disk for 30 days retention</span>
+</span></code></pre></div>
+<p><strong>Setup Complexity</strong>:</p>
+<ul>
+<li><strong>Initial setup</strong>: 4-8 hours to configure collector pipelines, storage backends, Grafana datasources</li>
+<li><strong>Network configuration</strong>: Expose ports, configure exporters, set up authentication</li>
+<li><strong>Data pipelines</strong>: Map OTel signals to backend storage formats</li>
+<li><strong>Dashboard creation</strong>: Build custom visualizations for Claude Code metrics</li>
+</ul>
+<p><strong>Maintenance Overhead</strong>:</p>
+<ul>
+<li><strong>Updates</strong>: Keep 5+ services updated (security patches, feature releases)</li>
+<li><strong>Scaling</strong>: Monitor disk usage, tune retention policies, manage data growth</li>
+<li><strong>Debugging</strong>: Troubleshoot collector pipelines, storage issues, missing data</li>
+<li><strong>Backup</strong>: Ensure metrics/traces backed up if infrastructure fails</li>
+</ul>
+<p><strong>Cost-Benefit Analysis</strong>:</p>
+<ul>
+<li><strong>Self-hosted cost</strong>: Electricity + hardware ~$5-10/month, plus ~5-10 hours/month maintenance (<a href="https://grafana.com/blog/2024/11/26/why-companies-choose-grafana-cloud-over-self-hosted-oss-stacks/">grafana blog</a>)</li>
+<li><strong>SaaS cost (Grafana Cloud)</strong>: ~$50-100/month for moderate usage, zero maintenance</li>
+<li><strong>Our use case</strong>: Weekly analysis doesn't justify real-time infrastructure overhead</li>
+</ul>
+<p><strong>Recommendation</strong>: Phase 3 experiment with lightweight setup (OTel Collector + Grafana + file-based storage) to evaluate value before committing to full stack.</p>
+<h3 id="migration-path">Migration Path<a class="headerlink" href="#migration-path" title="Permanent link">&para;</a></h3>
+<p><strong>Incremental Adoption</strong>:</p>
+<p><strong>Phase 1 (Completed)</strong>: Hook-based transcript parsing → JSONL metrics ✅</p>
+<p><strong>Phase 2 (Recommended Next)</strong>: JSONL → Parquet conversion, DuckDB analytics</p>
+<p><strong>Phase 3 (Experimental)</strong>: Dual-track approach</p>
+<ul>
+<li>Keep transcript parsing → Parquet (primary)</li>
+<li>Add Claude Code OTel export → OTel Collector → Prometheus</li>
+<li>Run both systems in parallel for 2-4 weeks</li>
+<li>Compare data fidelity, insight quality, operational overhead</li>
+</ul>
+<p><strong>Phase 4 (Decision Point)</strong>: Evaluate whether OTel provides sufficient incremental value:</p>
+<ul>
+<li>If yes → Migrate to OTel as primary, deprecate transcript parsing</li>
+<li>If no → Continue with Parquet/DuckDB, use OTel only for real-time debugging</li>
+</ul>
+<p><strong>Data Compatibility</strong>:</p>
+<p>Current JSONL metrics are already structured JSON - can be converted to OTel format:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Pseudo-code for OTel export from existing metrics</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">opentelemetry</span><span class="w"> </span><span class="kn">import</span> <span class="n">metrics</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">meter</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">get_meter</span><span class="p">(</span><span class="s2">&quot;claude-code-metrics&quot;</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">token_counter</span> <span class="o">=</span> <span class="n">meter</span><span class="o">.</span><span class="n">create_counter</span><span class="p">(</span><span class="s2">&quot;tokens.total&quot;</span><span class="p">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">cache_gauge</span> <span class="o">=</span> <span class="n">meter</span><span class="o">.</span><span class="n">create_gauge</span><span class="p">(</span><span class="s2">&quot;cache.hit_rate&quot;</span><span class="p">)</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Read JSONL metrics</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">read_jsonl_metrics</span><span class="p">():</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">token_counter</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">][</span><span class="s2">&quot;total_tokens&quot;</span><span class="p">])</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">cache_gauge</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">][</span><span class="s2">&quot;cache_hit_rate&quot;</span><span class="p">])</span>
+</span></code></pre></div>
+<p>This allows backfilling historical data into OTel backends.</p>
+<p><strong>Effort Estimate</strong>:</p>
+<ul>
+<li><strong>Parquet migration</strong>: 2-4 hours (write conversion script, test with historical data)</li>
+<li><strong>DuckDB query library</strong>: 8-12 hours (build common queries, test with real metrics)</li>
+<li><strong>EDA integration</strong>: 2-4 hours (experiment with Sweetviz/D-Tale, create weekly report script)</li>
+<li><strong>OTel setup (experimental)</strong>: 16-24 hours (homelab infrastructure, Claude Code integration, Grafana dashboards)</li>
+</ul>
+<p><strong>Total Phase 2 effort</strong>: ~12-20 hours over 2-3 weeks
+<strong>Total Phase 3 effort</strong>: ~20-30 hours over 4-6 weeks</p>
+<hr />
+<h2 id="research-area-3-existing-solutions">Research Area 3: Existing Solutions<a class="headerlink" href="#research-area-3-existing-solutions" title="Permanent link">&para;</a></h2>
+<h3 id="claude-code-specific-tools">Claude Code Specific Tools<a class="headerlink" href="#claude-code-specific-tools" title="Permanent link">&para;</a></h3>
+<p><strong>Findings</strong>: Claude Code is relatively new (launched 2024), and the community is still in early stages. No dedicated metrics/observability tools found.</p>
+<p><strong>What Exists</strong>:</p>
+<ul>
+<li><strong>Official Documentation</strong>: Claude Code supports OpenTelemetry metrics and events (<a href="https://docs.claude.com/en/docs/claude-code/monitoring-usage">docs.claude.com</a>)</li>
+<li><strong>Analytics Admin API</strong>: Provides daily aggregated usage metrics (sessions, LOC added/removed, commits, PRs) (<a href="https://docs.claude.com/en/api/claude-code-analytics-api">docs.claude.com</a>)</li>
+<li><strong>Grafana Integration</strong>: Anthropic integration for Grafana Cloud provides real-time cost/performance dashboards (<a href="https://grafana.com/blog/2025/08/19/how-to-monitor-claude-usage-and-costs-introducing-the-anthropic-integration-for-grafana-cloud/">grafana blog</a>)</li>
+<li><strong>Community Projects</strong>: Focus on plugins, slash commands, and IDE extensions, not metrics analysis (<a href="https://github.com/jqueryscript/awesome-claude-code">awesome-claude-code</a>)</li>
+</ul>
+<p><strong>Gap Analysis</strong>:</p>
+<ul>
+<li>✅ <strong>Infrastructure</strong>: OTel export supported by Claude Code</li>
+<li>✅ <strong>High-level metrics</strong>: Admin API provides session/commit counts</li>
+<li>❌ <strong>Agent-level analysis</strong>: No tools for analyzing individual agent performance</li>
+<li>❌ <strong>Transcript mining</strong>: No libraries for extracting insights from agent transcripts</li>
+<li>❌ <strong>Cost optimization</strong>: No tools for analyzing token efficiency or cache hit rates</li>
+</ul>
+<p><strong>Opportunity</strong>: We're pioneering agent-level metrics analysis. Our transcript parsing approach fills a gap that doesn't exist in the ecosystem yet.</p>
+<h3 id="llm-agent-observability-libraries">LLM Agent Observability Libraries<a class="headerlink" href="#llm-agent-observability-libraries" title="Permanent link">&para;</a></h3>
+<p><strong>Findings</strong>: Mature ecosystem exists for general LLM observability, but focused on production API usage rather than development workflows.</p>
+<p><strong>Key Libraries</strong>:</p>
+<h4 id="langsmith-langchain">LangSmith (LangChain)<a class="headerlink" href="#langsmith-langchain" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Purpose</strong>: Observability for LangChain applications (<a href="https://www.langchain.com/langsmith/observability">langchain.com</a>)</li>
+<li><strong>Capabilities</strong>: Tracing, real-time monitoring, alerting, prompt evaluation</li>
+<li><strong>Best Practices</strong>: Set up observability from the start, use metadata/tags for filtering (<a href="https://docs.smith.langchain.com/observability/how_to_guides">docs.smith.langchain.com</a>)</li>
+<li><strong>Limitations</strong>: Pre-built dashboards track success/error rates, not agent-specific workflows</li>
+</ul>
+<p><strong>Fit</strong>: Not directly applicable - LangSmith is for production LangChain apps, not Claude Code agents.</p>
+<h4 id="openllmetrytraceloop">OpenLLMetry/Traceloop<a class="headerlink" href="#openllmetrytraceloop" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Purpose</strong>: OpenTelemetry extensions for LLM applications (<a href="https://www.traceloop.com/openllmetry">traceloop</a>)</li>
+<li><strong>Capabilities</strong>: Automatic tracing of prompts, responses, token usage for 20+ providers</li>
+<li><strong>2-line setup</strong>: Minimal instrumentation overhead</li>
+<li><strong>Export options</strong>: SaaS (Traceloop), self-hosted (OTel Collector, Dynatrace, SigNoz)</li>
+</ul>
+<p><strong>Fit</strong>: Could instrument Claude Code if it uses standard LLM APIs, but Claude Code's agent framework may not integrate cleanly. Worth experimenting in Phase 3.</p>
+<h4 id="openlit">OpenLIT<a class="headerlink" href="#openlit" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Purpose</strong>: Monitoring framework for AI stack (LLMs, vector DBs, GPUs) (<a href="https://openlit.io">openlit.io</a>)</li>
+<li><strong>Capabilities</strong>: One-line integration, Grafana dashboards, cost tracking</li>
+<li><strong>Pre-built dashboards</strong>: Ready-made visualizations for common metrics</li>
+</ul>
+<p><strong>Fit</strong>: Similar to OpenLLMetry - useful if we adopt OTel export from Claude Code.</p>
+<p><strong>Bottom Line</strong>: These libraries provide infrastructure for LLM observability but don't solve our specific problem (analyzing Claude Code agent efficiency). We'd still need custom analysis layer on top.</p>
+<h3 id="pre-built-dashboards">Pre-Built Dashboards<a class="headerlink" href="#pre-built-dashboards" title="Permanent link">&para;</a></h3>
+<p><strong>GitHub/GitLab Projects</strong>:</p>
+<ul>
+<li><strong>OpenLIT Team's Grafana Dashboard</strong>: Pre-built dashboard for LLM performance (<a href="https://grafana.com/blog/2024/07/18/a-complete-guide-to-llm-observability-with-opentelemetry-and-grafana-cloud/">grafana blog</a>)</li>
+<li><strong>Awesome Claude lists</strong>: Curated collections of Claude tools, but focused on development, not analytics (<a href="https://github.com/jqueryscript/awesome-claude-code">awesome-claude-code</a>)</li>
+</ul>
+<p><strong>Commercial Solutions</strong>:</p>
+<ul>
+<li><strong>Grafana Cloud</strong>: Anthropic integration with pre-built dashboards for usage/cost (<a href="https://grafana.com/products/cloud/">grafana.com</a>)</li>
+<li><strong>Datadog</strong>: Cloud Cost Management for Claude usage tracking (<a href="https://www.datadoghq.com/blog/anthropic-usage-and-costs/">datadoghq.com</a>)</li>
+<li><strong>Traceloop</strong>: LLM observability platform (SaaS) (<a href="https://www.traceloop.com/">traceloop.com</a>)</li>
+</ul>
+<p><strong>Our Position</strong>: Commercial dashboards focus on org-wide usage and costs, not individual developer optimization. We need more granular analysis (cache efficiency, pre-commit success rates, phase execution patterns) which these tools don't provide.</p>
+<hr />
+<h2 id="comparative-analysis">Comparative Analysis<a class="headerlink" href="#comparative-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="option-1-custom-python-analysis-duckdb-parquet-eda">Option 1: Custom Python Analysis (DuckDB + Parquet + EDA)<a class="headerlink" href="#option-1-custom-python-analysis-duckdb-parquet-eda" title="Permanent link">&para;</a></h3>
+<p><strong>Description</strong>: Build lightweight Python analysis stack on top of current JSONL metrics. Convert to Parquet, use DuckDB for queries, integrate Sweetviz/D-Tale for automated reports.</p>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>✅ <strong>Minimal infrastructure</strong>: No services to run, just Python scripts</li>
+<li>✅ <strong>Fast implementation</strong>: 12-20 hours total effort, working solution in 2-3 weeks</li>
+<li>✅ <strong>Leverages existing work</strong>: Uses current 60+ metrics from transcript parsing</li>
+<li>✅ <strong>Low maintenance</strong>: File-based storage, no servers to update</li>
+<li>✅ <strong>Performance gains</strong>: 5-10× faster queries with DuckDB vs current ad-hoc parsing</li>
+<li>✅ <strong>Perfect fit for use case</strong>: Weekly analysis doesn't need real-time infrastructure</li>
+<li>✅ <strong>Learning value</strong>: Hands-on experience with DuckDB, Parquet, modern data stack</li>
+<li>✅ <strong>AI-assisted insights</strong>: Sweetviz generates comprehensive reports in 3 lines of code</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>❌ <strong>No real-time dashboards</strong>: Can't see live metrics during agent runs</li>
+<li>❌ <strong>Manual analysis workflow</strong>: Run scripts weekly, view HTML reports</li>
+<li>❌ <strong>Limited visualization</strong>: HTML reports vs interactive Grafana dashboards</li>
+<li>❌ <strong>Single-machine</strong>: Can't share dashboards with team (not relevant for solo dev)</li>
+<li>❌ <strong>Custom solution</strong>: Not industry-standard observability stack</li>
+</ul>
+<p><strong>Effort Estimate</strong>: 12-20 hours</p>
+<ul>
+<li>Parquet conversion script: 2-4 hours</li>
+<li>DuckDB query library: 8-12 hours</li>
+<li>EDA integration: 2-4 hours</li>
+</ul>
+<p><strong>Value Delivered</strong>:</p>
+<ul>
+<li><strong>Immediate</strong>: Weekly insights into token usage, cache efficiency, pre-commit patterns</li>
+<li><strong>Short-term</strong>: Identify optimization opportunities (e.g., "cache hit rate drops when X")</li>
+<li><strong>Learning</strong>: Modern data stack skills (DuckDB, Parquet) applicable to future projects</li>
+</ul>
+<h3 id="option-2-opentelemetry-grafana-full-observability-stack">Option 2: OpenTelemetry + Grafana (Full Observability Stack)<a class="headerlink" href="#option-2-opentelemetry-grafana-full-observability-stack" title="Permanent link">&para;</a></h3>
+<p><strong>Description</strong>: Set up homelab OTel Collector + Prometheus + Loki + Jaeger + Grafana. Export telemetry from Claude Code, build custom dashboards.</p>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>✅ <strong>Industry standard</strong>: Uses widely-adopted observability tools</li>
+<li>✅ <strong>Real-time monitoring</strong>: See metrics as agents run</li>
+<li>✅ <strong>Rich visualizations</strong>: Professional dashboards with Grafana</li>
+<li>✅ <strong>Distributed tracing</strong>: Track multi-agent workflows with Jaeger</li>
+<li>✅ <strong>Alerting</strong>: Get notified when cache hit rate drops, errors spike</li>
+<li>✅ <strong>Scalable</strong>: Infrastructure can grow with usage</li>
+<li>✅ <strong>Pre-built integrations</strong>: OpenLIT/OpenLLMetry provide turnkey LLM dashboards</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>❌ <strong>High infrastructure overhead</strong>: 5+ services to manage (Collector, Prometheus, Loki, Jaeger, Grafana)</li>
+<li>❌ <strong>Significant setup time</strong>: 16-24 hours initial setup, plus learning curve</li>
+<li>❌ <strong>Ongoing maintenance</strong>: ~5-10 hours/month updating, debugging, scaling</li>
+<li>❌ <strong>Resource usage</strong>: ~1.5-2GB RAM, 10-20GB disk continuous usage</li>
+<li>❌ <strong>Uncertain ROI</strong>: Weekly analysis doesn't require real-time infrastructure</li>
+<li>❌ <strong>Complexity</strong>: Many moving parts, more surface area for failures</li>
+<li>❌ <strong>Overlapping data</strong>: OTel metrics mostly duplicate what we extract from transcripts</li>
+</ul>
+<p><strong>Effort Estimate</strong>: 16-24 hours initial + 5-10 hours/month maintenance</p>
+<ul>
+<li>Homelab infrastructure: 8-12 hours</li>
+<li>Claude Code OTel integration: 4-6 hours</li>
+<li>Grafana dashboards: 4-6 hours</li>
+<li>Troubleshooting/tuning: Ongoing</li>
+</ul>
+<p><strong>Value Delivered</strong>:</p>
+<ul>
+<li><strong>Immediate</strong>: Real-time dashboards (limited value for weekly analysis)</li>
+<li><strong>Medium-term</strong>: Professional observability if building multi-agent systems</li>
+<li><strong>Long-term</strong>: Reusable infrastructure for future LLM projects</li>
+</ul>
+<h3 id="option-3-hybrid-approach-recommended">Option 3: Hybrid Approach (Recommended)<a class="headerlink" href="#option-3-hybrid-approach-recommended" title="Permanent link">&para;</a></h3>
+<p><strong>Description</strong>: Start with lightweight Python analysis (Option 1), add OTel export in Phase 3 for experimentation without replacing existing metrics.</p>
+<p><strong>Phased Implementation</strong>:</p>
+<p><strong>Phase 2 (Weeks 1-3):</strong></p>
+<ul>
+<li>Migrate JSONL → Parquet</li>
+<li>Build DuckDB query library</li>
+<li>Integrate Sweetviz for weekly reports</li>
+<li><strong>Deliverable</strong>: Weekly metrics analysis workflow operational</li>
+</ul>
+<p><strong>Phase 3 (Months 2-4):</strong></p>
+<ul>
+<li>Set up lightweight OTel stack (Collector + Grafana + file storage)</li>
+<li>Enable Claude Code OTel export</li>
+<li>Run dual-tracking (Parquet + OTel) for 4-6 weeks</li>
+<li><strong>Deliverable</strong>: Side-by-side comparison of data fidelity and insights</li>
+</ul>
+<p><strong>Phase 4 (Month 5+):</strong></p>
+<ul>
+<li>Evaluate which system provides better insights</li>
+<li><strong>Decision Point</strong>: Keep both, consolidate to one, or use OTel only for real-time debugging</li>
+</ul>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>✅ <strong>Incremental investment</strong>: Pay-as-you-go effort based on value</li>
+<li>✅ <strong>Risk mitigation</strong>: Don't bet everything on unproven approach</li>
+<li>✅ <strong>Learn by doing</strong>: Gain experience with both modern data analysis and observability</li>
+<li>✅ <strong>Optionality</strong>: Keep best parts of each system</li>
+<li>✅ <strong>No wasted work</strong>: Parquet analysis useful regardless of OTel decision</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>❌ <strong>Dual maintenance</strong>: Running two systems during Phase 3</li>
+<li>❌ <strong>Delayed full benefits</strong>: OTel advantages not realized until Phase 3</li>
+<li>❌ <strong>Potential redundancy</strong>: May end up deprecating one system</li>
+</ul>
+<p><strong>Effort Estimate</strong>:</p>
+<ul>
+<li>Phase 2: 12-20 hours</li>
+<li>Phase 3: 20-30 hours</li>
+<li><strong>Total</strong>: 32-50 hours over 4-6 months</li>
+</ul>
+<p><strong>Value Delivered</strong>:</p>
+<ul>
+<li><strong>Week 3</strong>: Working metrics analysis with DuckDB + EDA</li>
+<li><strong>Month 3</strong>: Comparative data on OTel vs custom analysis</li>
+<li><strong>Month 5</strong>: Informed decision with real-world experience</li>
+</ul>
+<h3 id="option-4-leverage-existing-solutions-openllmetry-grafana-cloud">Option 4: Leverage Existing Solutions (OpenLLMetry + Grafana Cloud)<a class="headerlink" href="#option-4-leverage-existing-solutions-openllmetry-grafana-cloud" title="Permanent link">&para;</a></h3>
+<p><strong>Description</strong>: Use turnkey LLM observability tools (OpenLLMetry or OpenLIT) with SaaS backend (Traceloop, Grafana Cloud).</p>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>✅ <strong>Fastest setup</strong>: 2-4 hours to get basic observability working</li>
+<li>✅ <strong>Zero infrastructure</strong>: SaaS handles all backend complexity</li>
+<li>✅ <strong>Pre-built dashboards</strong>: Professional visualizations out of the box</li>
+<li>✅ <strong>Proven solution</strong>: Battle-tested by LLM companies</li>
+<li>✅ <strong>Low maintenance</strong>: No self-hosted services to manage</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>❌ <strong>Monthly cost</strong>: $50-100/month for Grafana Cloud or Traceloop</li>
+<li>❌ <strong>Claude Code integration unknown</strong>: May not instrument cleanly</li>
+<li>❌ <strong>Limited customization</strong>: Can't analyze pre-commit runs, phase execution, git operations</li>
+<li>❌ <strong>Generic LLM metrics</strong>: Not tailored to Claude Code agent workflows</li>
+<li>❌ <strong>Data upload</strong>: Sending transcript data to third-party services</li>
+</ul>
+<p><strong>Effort Estimate</strong>: 2-4 hours setup + $50-100/month</p>
+<p><strong>Value Delivered</strong>:</p>
+<ul>
+<li><strong>Immediate</strong>: Standard LLM metrics (tokens, latency, costs)</li>
+<li><strong>Limited</strong>: Missing agent-specific insights (cache efficiency, pre-commit success, phases)</li>
+</ul>
+<hr />
+<h2 id="recommendations">Recommendations<a class="headerlink" href="#recommendations" title="Permanent link">&para;</a></h2>
+<p><strong>Primary Recommendation: Option 3 (Hybrid Approach)</strong></p>
+<p>Start with lightweight Python analysis, keep path open for OpenTelemetry experimentation without committing infrastructure resources prematurely.</p>
+<h3 id="short-term-next-2-3-weeks-phase-2">Short-term (Next 2-3 weeks) - Phase 2<a class="headerlink" href="#short-term-next-2-3-weeks-phase-2" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: Operational weekly metrics analysis workflow</p>
+<p><strong>Tasks</strong>:</p>
+<ol>
+<li><strong>Parquet Migration</strong> (2-4 hours)</li>
+<li>Write conversion script: JSONL → Parquet</li>
+<li>Convert historical metrics (5 existing JSONL files)</li>
+<li>Update metrics extraction hook to write both formats during transition</li>
+<li>
+<p>Validation: Ensure no data loss, schema preservation</p>
+</li>
+<li>
+<p><strong>DuckDB Query Library</strong> (8-12 hours)</p>
+</li>
+<li>Install DuckDB: <code>pip install duckdb</code></li>
+<li>Create <code>.claude/lib/analyze_metrics.py</code> with common queries:<ul>
+<li>Weekly aggregations (avg tokens, cache hit rate, commits created)</li>
+<li>Trend detection (week-over-week changes)</li>
+<li>Outlier identification (high token usage, failed pre-commits)</li>
+<li>Time-series analysis (metrics over time)</li>
+</ul>
+</li>
+<li>Document query patterns in docstrings</li>
+<li>
+<p>Test against historical data</p>
+</li>
+<li>
+<p><strong>EDA Integration</strong> (2-4 hours)</p>
+</li>
+<li>Install Sweetviz: <code>pip install sweetviz</code></li>
+<li>Create weekly report script: <code>.claude/scripts/generate_weekly_report.py</code></li>
+<li>Automate comparison of current week vs previous week</li>
+<li>Generate HTML report with automated insights</li>
+<li>Test report quality with real metrics</li>
+</ol>
+<p><strong>Deliverable</strong>: Run <code>python .claude/scripts/generate_weekly_report.py</code> → Get comprehensive HTML report analyzing past week's Claude Code usage</p>
+<p><strong>Success Criteria</strong>:</p>
+<ul>
+<li>✅ Can query metrics 5-10× faster than JSONL parsing</li>
+<li>✅ Weekly report highlights key trends (token usage, cache efficiency, pre-commit success rates)</li>
+<li>✅ Automated insights identify optimization opportunities (e.g., "cache hit rate dropped 15% this week")</li>
+</ul>
+<h3 id="medium-term-months-2-4-phase-3-optional">Medium-term (Months 2-4) - Phase 3 (Optional)<a class="headerlink" href="#medium-term-months-2-4-phase-3-optional" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: Evaluate OpenTelemetry for incremental value beyond Parquet analysis</p>
+<p><strong>Tasks</strong>:</p>
+<ol>
+<li><strong>Lightweight OTel Stack</strong> (8-12 hours)</li>
+<li>Set up Docker Compose with OTel Collector + Grafana</li>
+<li>Use file-based storage (avoid Prometheus/Loki/Jaeger initially)</li>
+<li>Minimal configuration to reduce complexity</li>
+<li>
+<p>Document setup for reproducibility</p>
+</li>
+<li>
+<p><strong>Claude Code Integration</strong> (4-6 hours)</p>
+</li>
+<li>Enable OTel export in Claude Code (environment variables)</li>
+<li>Configure exporters to send to local collector</li>
+<li>Verify metrics flowing through pipeline</li>
+<li>
+<p>Troubleshoot any integration issues</p>
+</li>
+<li>
+<p><strong>Dual-Tracking Period</strong> (4-6 weeks runtime, minimal hands-on)</p>
+</li>
+<li>Run both Parquet and OTel collection simultaneously</li>
+<li>Compare data fidelity (are metrics identical?)</li>
+<li>Evaluate insight quality (does Grafana surface patterns Sweetviz misses?)</li>
+<li>
+<p>Measure operational overhead (time spent maintaining OTel)</p>
+</li>
+<li>
+<p><strong>Comparative Analysis</strong> (4-6 hours)</p>
+</li>
+<li>Document findings in learnings</li>
+<li>Decide: Keep OTel, deprecate it, or use hybrid</li>
+<li>Update planning document with decision rationale</li>
+</ol>
+<p><strong>Success Criteria</strong>:</p>
+<ul>
+<li>✅ OTel captures same metrics as transcript parsing</li>
+<li>✅ Grafana dashboards provide actionable insights</li>
+<li>✅ Maintenance overhead is acceptable (&lt; 2 hours/month)</li>
+</ul>
+<p><strong>Decision Point</strong>: If OTel doesn't provide 2× better insights for 3× more effort, stick with Parquet analysis.</p>
+<h3 id="long-term-months-5-continuous-improvement">Long-term (Months 5+) - Continuous Improvement<a class="headerlink" href="#long-term-months-5-continuous-improvement" title="Permanent link">&para;</a></h3>
+<p><strong>Based on Phase 3 Outcomes</strong>:</p>
+<p><strong>If OTel provides clear value:</strong></p>
+<ul>
+<li>Migrate fully to OTel + Grafana</li>
+<li>Deprecate custom transcript parsing</li>
+<li>Invest in homelab infrastructure</li>
+</ul>
+<p><strong>If Parquet analysis is sufficient:</strong></p>
+<ul>
+<li>Enhance DuckDB query library with advanced analytics</li>
+<li>Add more automated insights (anomaly detection, predictive trends)</li>
+<li>Build custom visualization layer (Plotly dashboards if needed)</li>
+</ul>
+<p><strong>Regardless of path:</strong></p>
+<ul>
+<li>Publish learnings to docs/research/ai</li>
+<li>Share metrics extraction library as open-source</li>
+<li>Contribute Claude Code observability patterns to community</li>
+</ul>
+<h3 id="quick-decision-matrix">Quick Decision Matrix<a class="headerlink" href="#quick-decision-matrix" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Weight</th>
+<th>Option 1 (Custom)</th>
+<th>Option 2 (OTel)</th>
+<th>Option 3 (Hybrid)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Time to value</strong></td>
+<td>High</td>
+<td>⭐⭐⭐ 2-3 weeks</td>
+<td>⭐ 4-6 weeks</td>
+<td>⭐⭐⭐ 2-3 weeks</td>
+</tr>
+<tr>
+<td><strong>Effort required</strong></td>
+<td>High</td>
+<td>⭐⭐⭐ 12-20h</td>
+<td>⭐ 30-40h</td>
+<td>⭐⭐ 32-50h</td>
+</tr>
+<tr>
+<td><strong>Maintenance burden</strong></td>
+<td>Medium</td>
+<td>⭐⭐⭐ Minimal</td>
+<td>⭐ 5-10h/month</td>
+<td>⭐⭐ Low</td>
+</tr>
+<tr>
+<td><strong>Fits use case</strong></td>
+<td>High</td>
+<td>⭐⭐⭐ Perfect</td>
+<td>⭐⭐ Good</td>
+<td>⭐⭐⭐ Perfect</td>
+</tr>
+<tr>
+<td><strong>Learning value</strong></td>
+<td>Medium</td>
+<td>⭐⭐⭐ High</td>
+<td>⭐⭐ Medium</td>
+<td>⭐⭐⭐ Highest</td>
+</tr>
+<tr>
+<td><strong>Future-proofing</strong></td>
+<td>Low</td>
+<td>⭐⭐ Good</td>
+<td>⭐⭐⭐ Best</td>
+<td>⭐⭐⭐ Best</td>
+</tr>
+<tr>
+<td><strong>Real-time monitoring</strong></td>
+<td>Low</td>
+<td>❌ No</td>
+<td>⭐⭐⭐ Yes</td>
+<td>⭐⭐⭐ Phase 3</td>
+</tr>
+<tr>
+<td><strong>Industry standard</strong></td>
+<td>Low</td>
+<td>❌ No</td>
+<td>⭐⭐⭐ Yes</td>
+<td>⭐⭐⭐ Both</td>
+</tr>
+<tr>
+<td><strong>Total Score</strong></td>
+<td>-</td>
+<td><strong>18/24</strong></td>
+<td><strong>14/24</strong></td>
+<td><strong>20/24</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Winner</strong>: <strong>Option 3 (Hybrid)</strong> - Best balance of fast value delivery, learning, and future optionality.</p>
+<hr />
+<h2 id="resources-and-references">Resources and References<a class="headerlink" href="#resources-and-references" title="Permanent link">&para;</a></h2>
+<h3 id="modern-python-data-stack">Modern Python Data Stack<a class="headerlink" href="#modern-python-data-stack" title="Permanent link">&para;</a></h3>
+<p><strong>DuckDB vs Polars vs Pandas Comparisons</strong>:</p>
+<ul>
+<li><a href="https://www.codecentric.de/en/knowledge-hub/blog/duckdb-vs-dataframe-libraries">DuckDB vs. Polars vs. Pandas: Benchmark &amp; Comparison</a></li>
+<li><a href="https://motherduck.com/blog/duckdb-versus-pandas-versus-polars/">DuckDB vs Pandas vs Polars for Python Developers - MotherDuck</a></li>
+<li><a href="https://pipeline2insights.substack.com/p/pandas-vs-polars-vs-duckdb-vs-pyspark-benchmarking-real-experiments">Pandas vs. Polars vs. DuckDB vs. PySpark: Benchmarking with Real Experiments</a></li>
+<li><a href="https://www.confessionsofadataguy.com/duckdb-vs-polars-for-data-engineering/">DuckDB vs Polars for Data Engineering</a></li>
+</ul>
+<p><strong>Parquet Format</strong>:</p>
+<ul>
+<li><a href="https://stackshare.io/stackups/apache-parquet-vs-json">Apache Parquet vs JSON Comparison</a></li>
+<li><a href="https://medium.com/neural-engineer/converting-jsonl-to-parquet-a-technical-guide-c1b42025b48c">Converting JSONL to Parquet: Technical Guide</a></li>
+<li><a href="https://towardsdatascience.com/data-lake-comparing-performance-of-known-big-data-formats-eace705b6fd8/">Data Lake - Comparing Performance of Big Data Formats</a></li>
+</ul>
+<p><strong>AI-Assisted EDA Libraries</strong>:</p>
+<ul>
+<li><a href="https://docs.kanaries.net/articles/python-auto-eda">Top 10 Python Libraries for Automated Data Analysis</a></li>
+<li><a href="https://www.fyld.pt/blog/python-libraries-data-science-ai-in-2025/">Top Python Libraries for Data Science and AI in 2025</a></li>
+<li><a href="https://www.nb-data.com/p/python-packages-for-automated-eda">Top Automated EDA Python Packages for Efficient Data Analysis</a></li>
+</ul>
+<h3 id="opentelemetry-observability">OpenTelemetry &amp; Observability<a class="headerlink" href="#opentelemetry-observability" title="Permanent link">&para;</a></h3>
+<p><strong>OpenTelemetry for LLM/AI Agents</strong>:</p>
+<ul>
+<li><a href="https://opentelemetry.io/blog/2024/llm-observability/">Introduction to Observability for LLM-based Applications</a></li>
+<li><a href="https://opentelemetry.io/blog/2025/ai-agent-observability/">AI Agent Observability - Evolving Standards</a></li>
+<li><a href="https://github.com/traceloop/openllmetry">OpenLLMetry: Open-source Observability for GenAI/LLM Applications</a></li>
+<li><a href="https://www.trulens.org/blog/2025/06/02/telemetry-for-the-agentic-world-trulens--opentelemetry/">TruLens + OpenTelemetry for Agentic World</a></li>
+<li><a href="https://openlit.io">OpenLIT - OpenTelemetry-native GenAI Observability</a></li>
+</ul>
+<p><strong>Observability Stack Comparisons</strong>:</p>
+<ul>
+<li><a href="https://signoz.io/blog/jaeger-vs-prometheus/">Jaeger vs Prometheus Comparison [2025]</a></li>
+<li><a href="https://uptrace.dev/comparisons/jaeger-vs-prometheus">Jaeger vs Prometheus [2025]</a></li>
+<li><a href="https://openobserve.ai/blog/top-10-open-source-observability-tools-2025/">Top 10 Open Source Observability Tools in 2025</a></li>
+</ul>
+<p><strong>Self-Hosted OTel Setup</strong>:</p>
+<ul>
+<li><a href="https://www.heinrichhartmann.com/posts/home-lab-observability/">Home-Lab Observability with OpenTelemetry</a></li>
+<li><a href="https://blog.wildcat.io/2024/01/self-hosted-telemetry-solution-based-on-otel-en/">Self Hosted Telemetry Solution Based on Open Telemetry</a></li>
+<li><a href="https://github.com/JZiegener/homelab-monitoring">Homelab Monitoring GitHub - Monitoring tools and Open Telemetry</a></li>
+</ul>
+<p><strong>Cost Analysis</strong>:</p>
+<ul>
+<li><a href="https://grafana.com/blog/2024/11/26/why-companies-choose-grafana-cloud-over-self-hosted-oss-stacks/">Why Companies Choose Grafana Cloud Over Self-Hosted OSS Stacks</a></li>
+<li><a href="https://last9.io/blog/cloudwatch-vs-opentelemetry/">OpenTelemetry vs CloudWatch: Choosing What Fits Your Stack</a></li>
+</ul>
+<h3 id="claude-code-specific">Claude Code Specific<a class="headerlink" href="#claude-code-specific" title="Permanent link">&para;</a></h3>
+<p><strong>Official Documentation</strong>:</p>
+<ul>
+<li><a href="https://docs.claude.com/en/docs/claude-code/monitoring-usage">Claude Code Monitoring</a></li>
+<li><a href="https://docs.claude.com/en/api/claude-code-analytics-api">Claude Code Analytics API</a></li>
+<li><a href="https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk">Building Agents with Claude Agent SDK</a></li>
+</ul>
+<p><strong>Grafana/Datadog Integrations</strong>:</p>
+<ul>
+<li><a href="https://grafana.com/blog/2025/08/19/how-to-monitor-claude-usage-and-costs-introducing-the-anthropic-integration-for-grafana-cloud/">Monitor Claude Usage with Anthropic Integration for Grafana Cloud</a></li>
+<li><a href="https://grafana.com/blog/2024/07/18/a-complete-guide-to-llm-observability-with-opentelemetry-and-grafana-cloud/">Complete Guide to LLM Observability with OpenTelemetry and Grafana Cloud</a></li>
+<li><a href="https://www.datadoghq.com/blog/anthropic-usage-and-costs/">Monitor Claude Usage with Datadog Cloud Cost Management</a></li>
+</ul>
+<p><strong>Community Projects</strong>:</p>
+<ul>
+<li><a href="https://github.com/jqueryscript/awesome-claude-code">Awesome Claude Code - Curated Resources</a></li>
+<li><a href="https://github.com/hesreallyhim/awesome-claude-code">Awesome Claude Code - Commands and Workflows</a></li>
+</ul>
+<h3 id="llm-agent-observability">LLM Agent Observability<a class="headerlink" href="#llm-agent-observability" title="Permanent link">&para;</a></h3>
+<p><strong>LangSmith/LangChain</strong>:</p>
+<ul>
+<li><a href="https://www.langchain.com/langsmith/observability">LangSmith - Observability</a></li>
+<li><a href="https://docs.smith.langchain.com/observability/tutorials/observability">Add Observability to LLM Application</a></li>
+<li><a href="https://last9.io/blog/langchain-observability/">LangChain Observability: Zero to Production in 10 Minutes</a></li>
+</ul>
+<p><strong>Traceloop/OpenLLMetry</strong>:</p>
+<ul>
+<li><a href="https://www.traceloop.com/blog/diy-observability-for-llms-with-opentelemetry">DIY Observability for LLMs with OpenTelemetry</a></li>
+<li><a href="https://www.traceloop.com/docs/openllmetry/introduction">What is OpenLLMetry?</a></li>
+<li><a href="https://www.buildfastwithai.com/blogs/what-is-openllmetry">OpenLLMetry: Mastering Observability in LLM Applications</a></li>
+</ul>
+<h3 id="migration-best-practices">Migration &amp; Best Practices<a class="headerlink" href="#migration-best-practices" title="Permanent link">&para;</a></h3>
+<p><strong>JSONL to Parquet</strong>:</p>
+<ul>
+<li><a href="https://stackoverflow.com/questions/78794242/how-to-convert-jsonl-to-parquet-efficiently">How to Convert JSONL to Parquet Efficiently</a></li>
+<li><a href="https://medium.com/neural-engineer/converting-jsonl-to-parquet-a-technical-guide-c1b42025b48c">Converting JSONL to Parquet: Technical Guide</a></li>
+</ul>
+<p><strong>OpenTelemetry Migration</strong>:</p>
+<ul>
+<li><a href="https://last9.io/blog/getting-started-with-opentelemetry-custom-metrics/">Getting Started with OpenTelemetry Custom Metrics</a></li>
+<li><a href="https://medium.com/@gaeljw/migrating-a-jvm-application-from-prometheus-metrics-to-opentelemetry-32c36af1e565">Migrating JVM Application from Prometheus to OpenTelemetry</a></li>
+</ul>
+<hr />
+<h2 id="decision-log">Decision Log<a class="headerlink" href="#decision-log" title="Permanent link">&para;</a></h2>
+<p><strong>Date</strong>: 2025-12-05</p>
+<p><strong>Decision</strong>: Proceed with <strong>Option 3 (Hybrid Approach)</strong> - Start with DuckDB + Parquet + EDA, evaluate OpenTelemetry in Phase 3</p>
+<p><strong>Rationale</strong>:</p>
+<ol>
+<li><strong>Matches use case</strong>: Weekly analysis doesn't require real-time infrastructure overhead</li>
+<li><strong>Fast time-to-value</strong>: Working solution in 2-3 weeks vs 4-6 weeks for OTel</li>
+<li><strong>Low risk</strong>: Can always add OTel later without wasting current work</li>
+<li><strong>Learning maximization</strong>: Gain experience with modern data stack AND observability tools</li>
+<li><strong>Resource efficiency</strong>: ~15 hours effort vs ~40 hours for full OTel stack</li>
+<li><strong>Current metrics are sufficient</strong>: 60+ fields from transcript parsing cover essential insights</li>
+<li><strong>Community gap</strong>: No existing Claude Code metrics tools, so custom solution has value</li>
+<li><strong>Experimentation over commitment</strong>: Phase 3 evaluation prevents premature infrastructure investment</li>
+</ol>
+<p><strong>Next Steps</strong> (Phase 2 - Next 2-3 weeks):</p>
+<ol>
+<li>✅ Create Parquet conversion script (<code>.claude/scripts/convert_metrics_to_parquet.py</code>)</li>
+<li>✅ Convert historical JSONL metrics to Parquet format</li>
+<li>✅ Build DuckDB query library (<code>.claude/lib/analyze_metrics.py</code>) with common analytics</li>
+<li>✅ Integrate Sweetviz for automated weekly reports</li>
+<li>✅ Test report generation with real metrics data</li>
+<li>✅ Document usage in <code>.claude/README.md</code></li>
+<li>✅ Update planning document with Phase 2 completion notes</li>
+<li>⏸️ Evaluate Phase 3 (OTel) after 4-6 weeks of Parquet analysis experience</li>
+</ol>
+<p><strong>Review Date</strong>: 2025-02-01 (after 8 weeks of Phase 2 usage) - Decide whether to proceed with Phase 3 OTel experimentation</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/datapointchris/dotfiles" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
