@@ -9,9 +9,24 @@ the metrics extraction library to log comprehensive agent performance data.
 import sys
 import json
 from pathlib import Path
+from datetime import datetime
+
+# Debug logging
+debug_log = Path("/tmp/post-task-hook-debug.log")
+with open(debug_log, "a") as f:
+    f.write(f"\n=== Hook called at {datetime.now()} ===\n")
 
 # Read hook context from stdin
-hook_context = json.load(sys.stdin)
+try:
+    hook_context = json.load(sys.stdin)
+    with open(debug_log, "a") as f:
+        f.write(f"Hook context: {json.dumps(hook_context, indent=2)}\n")
+except Exception as e:
+    with open(debug_log, "a") as f:
+        f.write(f"Error reading stdin: {e}\n")
+    sys.exit(0)
+
+hook_context = hook_context if 'hook_context' in locals() else {}
 
 # Get session_id from context
 session_id = hook_context.get("session_id")
