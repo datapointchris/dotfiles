@@ -283,45 +283,11 @@ git log -1 --oneline
 
 **⚠️ IMPORTANT**: Do NOT report to main agent yet! Proceed to Phase 7 first.
 
-## Summary Reporting (REQUIRES Phase 7 Metrics First)
-
-**BEFORE you can create the summary below, you MUST execute Phase 7** to collect the following metrics:
-
-- `commits_created` - count from `git log`
-- `commit_hashes` - from `git log`
-- `tokens_used` - from your tool trace
-- `tool_uses` - count of tool calls
-- `pre_commit_iterations` - count from Phase 5
-- `duration_seconds` - time from start to finish
-
-**After Phase 7 completes**, report ONLY this to the main agent:
-
-```bash
-✅ Created 2 commits:
-
-1. [a1b2c3d] feat(install): add resilient font download with failure handling
-2. [e4f5g6h] docs: update installation guide with retry mechanism
-
-Files committed: 5
-Pre-commit iterations: 1 (all auto-fixed in background)
-```
-
-**DO NOT include**:
-
-- Full commit messages (just titles)
-- Pre-commit output (already filtered via logsift)
-- Detailed file changes (main agent already knows from context)
-- Any auto-fix messages from pre-commit
-
-**Token savings**:
-
-- Without agent: ~3000 tokens per commit (git diff + pre-commit output + commit message + verification)
-- With agent: ~200 tokens summary to main agent
-- **Savings: ~2800 tokens per commit**
-
-### Phase 7: Log Metrics and Transcript (Internal - DO NOT Report to Main Agent)
+### Phase 7: Log Metrics and Transcript (⚠️ MANDATORY - DO NOT SKIP)
 
 **CRITICAL**: Execute this phase AFTER commits are created but BEFORE responding to main agent.
+
+**This phase is MANDATORY** - you must execute it even though results are not reported to main agent.
 
 **Purpose**: Track commit agent performance and capture transcript for analysis.
 
@@ -436,6 +402,42 @@ This enables analysis of which operations consume the most tokens.
 **If you did NOT execute Phase 7**, STOP and execute it now. The metrics Python helper takes <100ms and is critical for performance tracking.
 
 **After Phase 7 completes**, proceed to summary reporting.
+
+## Summary Reporting (REQUIRES Phase 7 Metrics First)
+
+**BEFORE you can create the summary below, you MUST execute Phase 7** to collect the following metrics:
+
+- `commits_created` - count from `git log`
+- `commit_hashes` - from `git log`
+- `tokens_used` - from your tool trace
+- `tool_uses` - count of tool calls
+- `pre_commit_iterations` - count from Phase 5
+- `duration_seconds` - time from start to finish
+
+**After Phase 7 completes**, report ONLY this to the main agent:
+
+```bash
+✅ Created 2 commits:
+
+1. [a1b2c3d] feat(install): add resilient font download with failure handling
+2. [e4f5g6h] docs: update installation guide with retry mechanism
+
+Files committed: 5
+Pre-commit iterations: 1 (all auto-fixed in background)
+```
+
+**DO NOT include**:
+
+- Full commit messages (just titles)
+- Pre-commit output (already filtered via logsift)
+- Detailed file changes (main agent already knows from context)
+- Any auto-fix messages from pre-commit
+
+**Token savings**:
+
+- Without agent: ~3000 tokens per commit (git diff + pre-commit output + commit message + verification)
+- With agent: ~200 tokens summary to main agent
+- **Savings: ~2800 tokens per commit**
 
 ## Edge Cases and Special Handling
 
