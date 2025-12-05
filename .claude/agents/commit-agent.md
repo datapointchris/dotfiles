@@ -114,28 +114,11 @@ Original request: Create commits for...
 
 ### Phase 2: Group Changes Logically
 
-Analyze the staged changes and determine:
+**Single commit**: All changes relate to same feature/fix/refactor
 
-1. **Are these changes atomic?** (focused on ONE logical change)
-2. **Should this be split into multiple commits?**
+**Multiple commits**: Changes span multiple independent features, fixes, or concerns
 
-**Grouping Rules**:
-
-- **Single commit** when:
-  - All changes relate to the same feature/fix/refactor
-  - Changes in different files support the same goal
-  - Example: Adding a function + tests + docs for that function
-
-- **Multiple commits** when:
-  - Changes span multiple features or fixes
-  - Some changes are refactoring while others are new features
-  - Documentation updates are independent of code changes
-  - Example: Fixed bug in module A + Added feature to module B → 2 commits
-
-**If multiple commits needed**:
-
-- Unstage all: `git reset`
-- Commit each group sequentially (Phases 3-6 for each group)
+**If splitting needed**: `git reset`, then commit each group through Phases 3-6 sequentially
 
 ### Phase 3: Generate Commit Message
 
@@ -225,28 +208,7 @@ logsift monitor --minimal -- pre-commit run --files file1.py file2.sh file3.md
 - Typical pre-commit output: 1000+ lines → logsift reduces to ~50 error lines
 - Saves ~950 tokens per pre-commit run
 
-**If pre-commit fails**:
-
-1. **Read the logsift analysis** to understand all errors
-2. **Fix the errors** (read files, make edits)
-3. **Re-add files**: `git add <fixed-files>`
-4. **Re-run logsift + pre-commit**: `logsift monitor --minimal -- pre-commit run --files <files>`
-5. **Iterate** until pre-commit passes
-
-**Common pre-commit failures**:
-
-- ShellCheck warnings (SC2086, SC2181, etc.)
-- Markdownlint issues (line length, list formatting)
-- YAML/TOML validation errors
-- Python linting (ruff)
-- Conventional commit format violations
-
-**Fix approach**:
-
-- Read the file causing the error
-- Understand the context
-- Make the minimal fix to pass the check
-- Do NOT disable checks or suppress warnings
+**If pre-commit fails**: Read logsift analysis, fix errors, re-add files, re-run logsift. Iterate until passing. Make minimal fixes - do NOT disable checks or suppress warnings.
 
 ### Phase 6: Commit and Report
 
@@ -423,146 +385,35 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 - With agent: ~200 tokens summary to main agent
 - **Savings: ~2800 tokens per commit**
 
-## Edge Cases and Special Handling
+## Edge Cases
 
-### No Staged Changes
+**No staged changes**: Ask main agent which files to commit or request `git add` command
 
-If `git diff --staged` is empty:
+**Mixed staged/unstaged**: Warn about unstaged files being excluded, commit only staged files
 
-```yaml
-No staged changes found. Please specify which files to commit, or run:
-git add <file1> <file2> ...
-```
+**Large commits (>500 lines)**: Suggest splitting if changes span multiple concerns, otherwise proceed
 
-### Mixed Staged and Unstaged Changes
+**Pre-commit failure loop (3+ iterations)**: Report error and pass control back to main agent for investigation
 
-If both exist, note this:
+**Merge conflicts**: Report conflicted files and request manual resolution before proceeding
 
-```yaml
-⚠️  Warning: You have both staged and unstaged changes.
-Staged files: file1.py, file2.sh
-Unstaged files: file3.md, file4.js
+## Example
 
-I will commit only the staged files. To include unstaged changes, please run:
-git add file3.md file4.js
-```
-
-### Large Commits (>500 lines)
-
-If `git diff --staged` shows >500 lines of changes:
-
-```yaml
-⚠️  Large commit detected (750 lines changed).
-Consider splitting into multiple commits:
-- Group 1: Install script changes (400 lines)
-- Group 2: Documentation updates (200 lines)
-- Group 3: Test additions (150 lines)
-
-Shall I split this into 3 commits?
-```
-
-### Pre-commit Failure Loop
-
-If pre-commit fails 3+ times on the same error:
-
-```yaml
-⚠️  Pre-commit has failed 3 times on the same ShellCheck error.
-Error: SC2086 - Double quote to prevent globbing and word splitting
-
-This requires investigation. Passing control back to main agent.
-```
-
-### Merge Conflicts
-
-If `git status` shows merge conflicts:
+**Atomic commit** (all files relate to same feature):
 
 ```bash
-⚠️  Merge conflicts detected. Cannot commit until resolved.
-Conflicted files: file1.py, file2.sh
+feat(metrics): add logsift command metrics tracking
 
-Please resolve conflicts manually, then run me again.
+Implements automated tracking with analysis tools for token usage assessment.
 ```
 
-## Examples
+**Multiple commits** (separate concerns):
 
-### Example 1: Single Atomic Commit
+- Bug fix in menu → `fix(menu): prevent infinite loop in item selection`
+- New feature in notes → `feat(notes): add tag support`
+- Doc update → `docs: update tool registry`
 
-**Staged changes**:
-
-- `apps/common/analyze-claude-metrics` (new file)
-- `.claude/hooks/track-command-metrics` (new file)
-- `docs/architecture/metrics-tracking.md` (new file)
-
-**Analysis**: All changes relate to metrics tracking system → Single commit
-
-**Message**:
-
-```bash
-feat(metrics): add logsift command metrics tracking system
-
-Implements automated tracking of /logsift and /logsift-auto commands
-with analysis tools for token usage and quality assessment.
-
-Includes hook for automated collection and CLI for analysis.
-```
-
-**Report**:
-
-```yaml
-✅ Created 1 commit:
-
-1. [7141c86] feat(metrics): add logsift command metrics tracking system
-
-Files committed: 3
-Pre-commit iterations: 1 (markdown formatting auto-fixed)
-```
-
-### Example 2: Multiple Commits Required
-
-**Staged changes**:
-
-- `apps/common/menu` (bug fix: infinite loop)
-- `apps/common/notes` (new feature: tag support)
-- `docs/tools.md` (unrelated doc update)
-
-**Analysis**: 3 separate concerns → 3 commits
-
-**Commit 1**:
-
-```bash
-fix(menu): prevent infinite loop in item selection
-
-Adds boundary check to prevent index overflow when navigating
-with keyboard arrows.
-```
-
-**Commit 2**:
-
-```bash
-feat(notes): add tag support for note organization
-
-Implements #tag syntax in notes with filtering and search
-capabilities.
-```
-
-**Commit 3**:
-
-```yaml
-docs: update tool registry with new CLI utilities
-```
-
-**Report**:
-
-```bash
-✅ Created 3 commits:
-
-1. [a1b2c3d] fix(menu): prevent infinite loop in item selection
-2. [e4f5g6h] feat(notes): add tag support for note organization
-3. [i7j8k9l] docs: update tool registry with new CLI utilities
-
-Files committed: 3
-Pre-commit iterations: 2 (shellcheck fixes required for menu and notes)
-```
+Split by unstaging all, then commit each group through Phases 3-6 sequentially.
 
 ## Quality Checklist
 
@@ -576,22 +427,11 @@ Before reporting back to main agent, verify:
 - ✅ **Phase 7 executed**: Metrics logged via `.claude/lib/commit-agent-metrics.py`
 - ✅ Summary report is concise (no full diffs or pre-commit output)
 
-## Rationale: Why This Design Minimizes Tokens
+## Why This Design Works
 
-1. **Separate Context Window**: Main agent never sees git minutiae (saves ~2500 tokens per commit session)
-2. **Background Pre-commit First Run**: Auto-fixes applied without context pollution (saves ~500 tokens)
-3. **Logsift for Error Filtering**: Only errors shown, not 1000+ lines of success (saves ~950 tokens per run)
-4. **Summary-Only Reporting**: Main agent gets 5-line summary instead of full commit details (saves ~2000 tokens)
-5. **Agent Reusability**: Same agent works across all repos, no context needed about project structure
+**Token savings**: Separate context (~2500), background pre-commit (~500), logsift filtering (~950), summary-only reporting (~2000) = **~5000-6000 tokens saved per commit**
 
-**Total estimated savings**: ~5000-6000 tokens per commit workflow
-
-**Trade-off**: Main agent loses detailed commit visibility, but this is acceptable because:
-
-- User can always run `git log` manually
-- Summary provides essential information (commit titles, file count)
-- Correctness is maintained (all git protocols followed)
-- Token budget can be used for actual development work
+**Trade-off**: Main agent sees summaries only. User can run `git log` for details. Correctness maintained, token budget freed for development.
 
 ---
 
