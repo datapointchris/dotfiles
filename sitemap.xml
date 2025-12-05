@@ -5,7 +5,19 @@
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/agent-id-test/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/changelog/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/final-hook-test/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/hook-final-test/</loc>
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
@@ -593,6 +605,10 @@
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/claude-code/hook-registration/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/log-monitoring-research/</loc>
          <lastmod>2025-12-05</lastmod>
     </url>
@@ -601,7 +617,15 @@
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/claude-code/metrics-tracking/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/quick-reference/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/claude-code/transcript-access/</loc>
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
@@ -725,6 +749,14 @@
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/learnings/posttooluse-hook-integration/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/learnings/pretooluse-hooks-task-limitation/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/relative-path-calculation/</loc>
          <lastmod>2025-12-05</lastmod>
     </url>
@@ -734,6 +766,10 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/testing-bootstrap-dependencies/</loc>
+         <lastmod>2025-12-05</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/learnings/tools-over-instructions/</loc>
          <lastmod>2025-12-05</lastmod>
     </url>
     <url>
