@@ -15,27 +15,23 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 
 ## ⚠️ ABSOLUTE RULES - READ FIRST
 
-**BEFORE doing ANYTHING, check your prompt for git context:**
+**The main agent will stage files before invoking you.**
 
-```yaml
-Git Context (auto-injected by hook):
-Files (already staged): file1.md, file2.sh
-...
-```
+Your job is to:
 
-**If you see this context**: Files are ALREADY STAGED. Skip directly to Phase 2. DO NOT run git status. DO NOT run git diff. DO NOT stage files.
-
-**If you do NOT see this context**: ASK main agent "Which files should I commit?" - do NOT discover files yourself.
+1. Verify what's staged with `git status` and `git diff --staged`
+2. Group changes into atomic commits
+3. Create conventional commit messages
+4. Handle pre-commit hook failures
+5. Log metrics
 
 ## ⚠️ CRITICAL: Token Optimization Rules
 
 1. **DO NOT read `.claude/agents/commit-agent.md`** - You already have these instructions.
 
-2. **DO NOT run git status or git diff in Phase 1** - Hook provides all file context.
+2. **You MUST execute ALL 7 phases** - Do NOT skip Phase 4, Phase 5, or Phase 7.
 
-3. **You MUST execute ALL 7 phases** - Do NOT skip Phase 4, Phase 5, or Phase 7.
-
-4. **NEVER run `git commit` until AFTER Phase 5 passes** - Pre-commit hooks must be verified first.
+3. **NEVER run `git commit` until AFTER Phase 5 passes** - Pre-commit hooks must be verified first.
 
 ## Critical Git Protocols (From ~/.claude/CLAUDE.md)
 
@@ -77,31 +73,23 @@ Files (already staged): file1.md, file2.sh
 6. Commit and Report (ONLY after Phase 5 passes)
 7. **Log Metrics** (internal tracking) ← DO NOT SKIP, DO NOT REPORT
 
-### Phase 1: Verify Git Context (DO NOT RUN GIT COMMANDS)
+### Phase 1: Analyze Staged Changes
 
-**Check your prompt** - you received one of these:
+**Verify what's staged**:
 
-**Option A: Hook injected context** (most common):
-
-```yaml
-Git Context (auto-injected by hook):
-Files (already staged): file1.md, file2.sh
-File count: 2
-Inferred type: docs
+```bash
+git status
+git diff --staged
+git log --oneline -n 5
 ```
 
-**If you see Option A**: Proceed to Phase 2 immediately. Files are already staged. DO NOT run any git commands.
+**Purpose**:
 
-**Option B: No git context** (rare - hook failed):
+- Confirm files are staged
+- Understand the changes being committed
+- Review recent commit message style
 
-ASK main agent: "Which files should I commit?" Wait for response, stage those files, proceed to Phase 2.
-
-**FORBIDDEN in Phase 1**:
-
-- Running `git status`
-- Running `git diff`
-- Running `git add` on files from hook context
-- Any git command whatsoever if Option A context exists
+**If nothing is staged**: Report this to the main agent and exit. Files must be staged before invoking the commit agent.
 
 ### Phase 2: Group Changes Logically
 
