@@ -2,16 +2,15 @@
 # ================================================================
 # Error Handling Library
 # ================================================================
-# System-wide library providing robust error handling with:
-#   - Automatic cleanup on exit (success or failure)
-#   - Line number tracking in error messages
-#   - Stack traces for debugging
-#   - Consistent error reporting
-#   - Trap handlers for ERR and EXIT signals
+# System-wide library providing robust error handling utilities:
+#   - Cleanup function registration
+#   - Command verification
+#   - File/directory verification
+#   - Download with retry
+#   - Safe file operations
 #
 # Usage:
 #   source "$SHELL_DIR/error-handling.sh"
-#   enable_error_traps
 #
 #   # Register cleanup functions
 #   TMP_DIR=$(mktemp -d)
@@ -19,8 +18,10 @@
 #
 #   # Use helper functions
 #   require_commands curl tar
-#   run_with_context "Downloading package" curl -L "$URL" -o /tmp/package.tar.gz
 #   verify_file /tmp/package.tar.gz "Downloaded package"
+#
+# Note: Trap handlers removed in favor of simpler error handling.
+#       Scripts should use 'set -euo pipefail' directly.
 # ================================================================
 
 # Source logging library
@@ -40,9 +41,6 @@ fi
 
 # Track cleanup functions to run on exit
 declare -a CLEANUP_FUNCTIONS=()
-
-# Track script name for error messages
-SCRIPT_NAME="$(basename "${BASH_SOURCE[1]}" 2>/dev/null || echo "unknown")"
 
 # Track if we're already in cleanup (prevent recursion)
 CLEANUP_IN_PROGRESS=false
@@ -75,64 +73,18 @@ run_cleanup() {
 }
 
 # ================================================================
-# Error Traps
+# Error Traps (Deprecated - Kept for Backward Compatibility)
 # ================================================================
 
-# Trap handler for errors (ERR signal)
-error_trap_handler() {
-  local exit_code=$?
-  local line_number="${BASH_LINENO[0]}"
-  local command="${BASH_COMMAND}"
-
-  # Don't report errors from cleanup or test commands
-  if [[ "$CLEANUP_IN_PROGRESS" == "true" ]]; then
-    return
-  fi
-
-  # Don't report errors from conditional tests
-  if [[ "$command" == *"command -v"* ]] || [[ "$command" == *"[["* ]]; then
-    return
-  fi
-
-  log_error "Command failed with exit code $exit_code" "$SCRIPT_NAME" "$line_number"
-  log_error "Failed command: $command"
-
-  # Show stack trace in debug mode
-  if [[ "${DOTFILES_DEBUG:-false}" == "true" ]]; then
-    log_info "Stack trace:"
-    local frame=0
-    while caller $frame >&2 2>/dev/null; do
-      ((frame++))
-    done
-  fi
-}
-
-# Trap handler for exit (normal or error)
-exit_trap_handler() {
-  local exit_code=$?
-  run_cleanup
-
-  if [[ $exit_code -ne 0 ]] && [[ "$CLEANUP_IN_PROGRESS" != "cleanup_exit" ]]; then
-    log_error "Script exited with code $exit_code"
-  fi
-}
-
-# Enable error trapping
+# Deprecated: enable_error_traps() is now a no-op
+# Trap handlers have been removed from the error-handling library
+# Scripts should use simple 'set -euo pipefail' directly instead
+#
+# This stub remains for backward compatibility with existing scripts
+# that call enable_error_traps(). It will be removed in a future phase.
 enable_error_traps() {
-  # Exit on error, undefined variables, pipe failures
+  # Just set strict mode without complex trap handlers
   set -euo pipefail
-
-  # Enable error trap inheritance in functions/subshells
-  set -o errtrace
-
-  # Set up trap handlers
-  trap 'error_trap_handler' ERR
-  trap 'exit_trap_handler' EXIT
-
-  # Enhance error output with line numbers (Bash 4.1+)
-  if [[ "${BASH_VERSINFO[0]}" -ge 4 ]] && [[ "${BASH_VERSINFO[1]}" -ge 1 ]]; then
-    export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-  fi
 }
 
 # ================================================================
@@ -293,15 +245,16 @@ disable_debug() {
 # Usage Example
 # ================================================================
 # #!/usr/bin/env bash
+# set -euo pipefail  # Use simple error handling
 #
 # # Source error handling (includes logging)
 # SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 # source "$SHELL_DIR/error-handling.sh"
-# enable_error_traps
 #
-# # Setup cleanup
+# # Setup cleanup (runs on EXIT if you set a trap)
 # TMP_DIR=$(mktemp -d)
 # register_cleanup "rm -rf $TMP_DIR"
+# trap run_cleanup EXIT
 #
 # # Use helper functions
 # require_commands curl tar
@@ -314,8 +267,8 @@ disable_debug() {
 # # Safe move
 # safe_move "$TMP_DIR/binary" "$HOME/.local/bin/binary" "Binary"
 #
-# # Exit (cleanup runs automatically)
-# exit_success
+# # Exit (cleanup runs via trap)
+# exit 0
 # ================================================================
 
 # ================================================================
