@@ -43,6 +43,10 @@ def get_git_status():
             status = line[:2]
             filepath = line[3:].strip()
 
+            # Skip directories (shown with trailing / in git status)
+            if filepath.endswith('/'):
+                continue
+
             # Check if staged (first char is not space)
             if status[0] != ' ' and status[0] != '?':
                 staged.append(filepath)
@@ -70,6 +74,14 @@ def infer_change_type(files):
     extensions = set(Path(f).suffix for f in files)
     paths_lower = [f.lower() for f in files]
 
+    # CI/CD changes (check first - before config files)
+    if any('.github' in p or '.gitlab' in p or 'ci' in p for p in paths_lower):
+        return "ci"
+
+    # Test changes
+    if any('test' in p or 'spec' in p for p in paths_lower):
+        return "test"
+
     # Documentation changes
     if extensions <= {'.md', '.txt', '.rst', '.adoc'}:
         return "docs"
@@ -77,14 +89,6 @@ def infer_change_type(files):
     # Configuration changes
     if extensions <= {'.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg'}:
         return "chore"
-
-    # Test changes
-    if any('test' in p or 'spec' in p for p in paths_lower):
-        return "test"
-
-    # CI/CD changes
-    if any('.github' in p or '.gitlab' in p or 'ci' in p for p in paths_lower):
-        return "ci"
 
     # Shell scripts (could be feat/fix/chore)
     if extensions <= {'.sh', '.bash', '.zsh'}:
@@ -105,12 +109,14 @@ def main():
 
         # Only apply to commit-agent subagent
         if tool_input.get("subagent_type") != "commit-agent":
+            print(json.dumps(tool_input))
             sys.exit(0)
 
         # Get git status
         git_status = get_git_status()
         if not git_status or not git_status['all']:
             # No changes or git command failed - pass through unchanged
+            print(json.dumps(tool_input))
             sys.exit(0)
 
         # Determine which files to report
@@ -152,6 +158,11 @@ Original request: {current_prompt}"""
     except Exception as e:
         # Fail silently - don't block commit workflow
         print(f"⚠️  enhance-commit-context hook error (non-blocking): {e}", file=sys.stderr)
+        # Output original input unchanged
+        try:
+            print(json.dumps(tool_input))
+        except:
+            pass
         sys.exit(0)
 
 
