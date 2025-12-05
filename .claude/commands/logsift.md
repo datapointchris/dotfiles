@@ -28,6 +28,46 @@ logsift monitor -- $1
 - If you need logsift usage details, run: `logsift llm`
 - Logsift automatically backgrounds the command and shows periodic updates
 
+## 🚨 CRITICAL: Never Background Logsift 🚨
+
+**UNDER NO CIRCUMSTANCES should you ever background a logsift command.**
+
+This is the most common mistake that defeats the entire purpose of logsift:
+
+❌ **DO NOT**:
+
+- Use `run_in_background: true` when calling the Bash tool with logsift
+- Append `&` to the logsift command
+- Background the process in any way
+- Continuously check output every few seconds when waiting
+
+✅ **DO**:
+
+- Always run logsift in the FOREGROUND
+- Let logsift complete naturally and show its final analysis
+- If the timeout is reached and the script is still running:
+  - Set a new timeout for the same duration (e.g., if original was 10 minutes, add another 10 minutes)
+  - Keep the command running in the foreground
+  - Wait patiently - do NOT continuously check output
+- Trust that logsift will notify you when complete with a full analysis summary
+
+**Why this matters**: Backgrounding logsift means:
+
+- You lose the completion notification
+- You lose the automated error analysis summary
+- You have to manually read raw logs
+- You waste context with repeated output checks
+- The entire purpose of logsift (filtered error reporting) is defeated
+
+**Example of correct timeout handling**:
+
+```bash
+# Initial run with 10-minute timeout
+logsift monitor -- bash script.sh
+# If script is still running at 10 minutes, extend timeout to 20 minutes total
+# DO NOT background, DO NOT continuously check - just wait
+```
+
 ## Error Fixing Methodology
 
 When logsift reports errors, follow this systematic approach. **Balance efficiency with thoroughness** - prioritize correct fixes over token savings, but don't waste context on unnecessary analysis.

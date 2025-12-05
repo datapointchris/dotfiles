@@ -38,6 +38,30 @@ You need to interpret this natural language description and run the appropriate 
 
    **IMPORTANT**: Run in FOREGROUND (no `run_in_background: true` or `&`)
 
+## 🚨 CRITICAL: Never Background Logsift 🚨
+
+**UNDER NO CIRCUMSTANCES should you ever background a logsift command.**
+
+❌ **DO NOT**:
+
+- Use `run_in_background: true` when calling the Bash tool with logsift
+- Append `&` to the logsift command
+- Background the process in any way
+- Continuously check output every few seconds when waiting
+
+✅ **DO**:
+
+- Always run logsift in the FOREGROUND
+- Let logsift complete naturally and show its final analysis
+- If the timeout is reached and the script is still running:
+  - Set a new timeout for the same duration (e.g., if original was 10 minutes, add another 10 minutes)
+  - Keep the command running in the foreground
+  - Wait patiently - do NOT continuously check output
+- Trust that logsift will notify you when complete with a full analysis summary
+
+**Why this matters**: Backgrounding logsift defeats its entire purpose - you lose the completion notification and automated error analysis.
+
+<!-- markdownlint-disable-next-line MD029 -->
 4. **Follow the error fixing methodology** from the standard `/logsift` command:
    - Wait for logsift analysis
    - Determine if errors are related or independent
