@@ -220,6 +220,8 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 The `.claude/lib/log-commit-metrics.sh` script automatically discovers the transcript path and collects git metrics. You just need to provide your session-specific parameters.
 
+**Note on transcript path**: The script uses "most recent agent file" which may not be accurate if multiple commit-agents run concurrently. This is a best-effort approach since Claude Code does not expose agent IDs via environment variables.
+
 ```bash
 bash .claude/lib/log-commit-metrics.sh \
   <pre_commit_iterations> \

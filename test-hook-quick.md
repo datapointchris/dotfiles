@@ -1,1 +1,0 @@
-# Quick hook test
