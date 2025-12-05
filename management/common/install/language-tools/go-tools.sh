@@ -32,9 +32,6 @@ fi
 
 print_section "Installing Go tools" "cyan"
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Get Go tools from packages.yml via Python parser
 GOBIN="$HOME/go/bin"
 /usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go | while read -r tool; do
@@ -56,6 +53,3 @@ Tool will be installed to:
 done
 
 log_success "Go tools installed to $GOBIN"
-
-# Display failure summary if there were any failures
-display_failure_summary

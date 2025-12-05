@@ -16,9 +16,6 @@ PROVIDER="all"  # Install all-provider version
 
 print_banner "Installing Terraformer"
 
-# Initialize failure registry
-init_failure_registry
-
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   exit_success
 fi

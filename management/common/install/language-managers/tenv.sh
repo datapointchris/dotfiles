@@ -30,9 +30,6 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 print_banner "Installing tenv"
 
-# Initialize failure registry
-init_failure_registry
-
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   exit_success
 fi
@@ -68,7 +65,6 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
     report_failure "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
   fi
   log_warning "tenv installation failed (see summary)"
-  display_failure_summary
   exit 1
 fi
 register_cleanup "rm -f '$TEMP_TARBALL' 2>/dev/null || true"
@@ -105,7 +101,6 @@ Verify:
     report_failure "$BINARY_NAME" "unknown" "$VERSION" "$manual_steps" "Installation verification failed"
   fi
   log_warning "tenv installation verification failed (see summary)"
-  display_failure_summary
   exit 1
 fi
 
@@ -135,9 +130,6 @@ echo "  Setting Terraform ${TERRAFORM_VERSION} as default..."
 tenv tf use "${TERRAFORM_VERSION}"
 
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
-
-# Display failure summary
-display_failure_summary
 
 print_banner_success "tenv and Terraform installation complete"
 exit_success

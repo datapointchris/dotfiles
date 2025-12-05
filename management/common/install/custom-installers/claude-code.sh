@@ -25,9 +25,6 @@ source "$SCRIPT_DIR/../../lib/program-helpers.sh"
 
 print_banner "Installing Claude Code"
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Detect platform
 PLATFORM=$(uname -s)
 
@@ -75,7 +72,6 @@ elif echo "$INSTALLER_OUTPUT" | grep -qi "another process is currently installin
   log_warning "Installation skipped - Claude is currently running"
   log_info "Claude Code will be available after closing Claude"
   log_success "Skipping (non-blocking)"
-  display_failure_summary
   exit 0
 else
   # Report failure if registry exists
@@ -93,7 +89,6 @@ Official docs: https://docs.claude.ai/docs/claude-code"
     report_failure "claude-code" "https://claude.ai/install.sh" "latest" "$manual_steps" "Installer failed"
   fi
   log_warning "Claude Code installation failed (see summary)"
-  display_failure_summary
   exit 1
 fi
 
@@ -118,11 +113,7 @@ Try closing and reopening your terminal, then verify:
     report_failure "claude-code" "unknown" "latest" "$manual_steps" "Installation verification failed"
   fi
   log_warning "Claude Code installation verification failed (see summary)"
-  display_failure_summary
   exit 1
 fi
-
-# Display failure summary if there were any failures
-display_failure_summary
 
 print_banner_success "Claude Code installation complete"

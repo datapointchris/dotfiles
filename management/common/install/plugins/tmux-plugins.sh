@@ -16,9 +16,6 @@ source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
 
 log_info "Installing tmux plugins..."
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 TPM_DIR="$HOME/.config/tmux/plugins/tpm"
 
 if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
@@ -51,6 +48,3 @@ Then run plugin installation:
   fi
   log_error "TPM install script not found at $TPM_DIR/bin/install_plugins"
 fi
-
-# Display failure summary if there were any failures
-display_failure_summary

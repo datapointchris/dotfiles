@@ -23,9 +23,6 @@ source "$SCRIPT_DIR/../../lib/program-helpers.sh"
 
 print_banner "Installing ShellSpec"
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Configuration
 REPO="shellspec/shellspec"
 INSTALL_DIR="$HOME/.local/lib/shellspec"
@@ -54,7 +51,6 @@ Manual installation:
     report_failure "shellspec" "https://github.com/${REPO}/releases/latest" "latest" "$manual_steps" "Failed to fetch version from GitHub API"
   fi
   log_warning "ShellSpec installation failed (see summary)"
-  display_failure_summary
   exit 1
 fi
 
@@ -81,7 +77,6 @@ Manual installation:
     report_failure "shellspec" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
   fi
   log_warning "ShellSpec installation failed (see summary)"
-  display_failure_summary
   exit 1
 fi
 
@@ -118,9 +113,6 @@ if command -v shellspec >/dev/null 2>&1; then
 else
   log_fatal "Installation verification failed - shellspec not found in PATH" "${BASH_SOURCE[0]}" "$LINENO"
 fi
-
-# Display failure summary if there were any failures
-display_failure_summary
 
 print_banner_success "ShellSpec installation complete"
 exit_success

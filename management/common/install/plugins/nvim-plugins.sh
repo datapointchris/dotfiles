@@ -19,9 +19,6 @@ print_banner "Installing Neovim Plugins"
 
 log_info "Installing Neovim plugins via Lazy.nvim..."
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Run nvim headless to install all plugins
 # --headless: run without UI
 # +Lazy! sync: sync all plugins
@@ -45,6 +42,3 @@ Check Neovim config:
   fi
   log_warning "Neovim plugin installation failed (see summary)"
 fi
-
-# Display failure summary if there were any failures
-display_failure_summary

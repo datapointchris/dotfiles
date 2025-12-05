@@ -21,9 +21,6 @@ source "$SCRIPT_DIR/../../lib/program-helpers.sh"
 
 print_banner "Installing AWS CLI v2"
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Detect platform and architecture
 PLATFORM=$(uname -s)
 ARCH=$(uname -m)
@@ -106,7 +103,6 @@ Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-
       # Cleanup
       rm -rf "$ZIP_FILE" "$EXTRACT_DIR"
       log_warning "AWS CLI installation failed (see summary)"
-      display_failure_summary
       exit 1
     fi
 
@@ -141,11 +137,7 @@ Re-run verification:
     report_failure "aws" "unknown" "latest" "$manual_steps" "Installation verification failed"
   fi
   log_warning "AWS CLI installation verification failed (see summary)"
-  display_failure_summary
   exit 1
 fi
-
-# Display failure summary if there were any failures
-display_failure_summary
 
 print_banner_success "AWS CLI v2 installation complete"

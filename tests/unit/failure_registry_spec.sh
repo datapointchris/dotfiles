@@ -76,7 +76,7 @@ Describe 'Failure Registry Functions'
       The status should be success
     End
 
-    It 'includes required fields'
+    It 'includes required fields in registry file'
       report_failure "yazi" "https://example.com/yazi.zip" "v2.0" "Steps" "Network timeout"
       failure_file=$(find "$DOTFILES_FAILURE_REGISTRY" -name "*-yazi.txt" -type f | head -1)
       The contents of file "$failure_file" should include "TOOL='yazi'"
@@ -85,10 +85,56 @@ Describe 'Failure Registry Functions'
       The contents of file "$failure_file" should include "REASON='Network timeout'"
     End
 
-    It 'skips when registry not set'
-      unset DOTFILES_FAILURE_REGISTRY
-      When call report_failure "test" "url" "v1" "steps" "error"
+    It 'does not print to stdout when registry exists'
+      When call report_failure "test-tool" "https://example.com/test.tar.gz" "v1.0" "Manual steps here" "Download failed"
       The status should be success
+      The output should not include "Manual Installation Required"
+      The output should not include "Manual steps here"
+    End
+  End
+
+  Describe 'report_failure() without registry (standalone mode)'
+    After cleanup_mock_failure_registry
+    BeforeEach source_program_helpers
+
+    It 'prints manual steps to stdout when no registry'
+      unset DOTFILES_FAILURE_REGISTRY
+      When call report_failure "standalone-tool" "https://example.com/tool.tar.gz" "v1.5" "Install manually" "Download failed"
+      The status should be success
+      The output should include "Manual Installation Required"
+      The output should include "standalone-tool"
+      The output should include "Download failed"
+      The output should include "Install manually"
+      The output should include "https://example.com/tool.tar.gz"
+    End
+
+    It 'prints version when not latest or unknown'
+      unset DOTFILES_FAILURE_REGISTRY
+      When call report_failure "versioned-tool" "https://example.com/v2.0/tool.tar.gz" "v2.0" "Steps" "Failed"
+      The output should include "Version: v2.0"
+    End
+
+    It 'does not print version when latest'
+      unset DOTFILES_FAILURE_REGISTRY
+      When call report_failure "latest-tool" "https://example.com/tool.tar.gz" "latest" "Steps" "Failed"
+      The output should not include "Version: latest"
+    End
+
+    It 'does not print version when unknown'
+      unset DOTFILES_FAILURE_REGISTRY
+      When call report_failure "unknown-tool" "https://example.com/tool.tar.gz" "unknown" "Steps" "Failed"
+      The output should not include "Version: unknown"
+    End
+
+    It 'formats manual steps with indentation'
+      unset DOTFILES_FAILURE_REGISTRY
+      manual_steps="Step 1: Download
+Step 2: Extract
+Step 3: Install"
+      When call report_failure "indent-tool" "url" "v1" "$manual_steps" "Failed"
+      The output should include "    Step 1: Download"
+      The output should include "    Step 2: Extract"
+      The output should include "    Step 3: Install"
     End
   End
 

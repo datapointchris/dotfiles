@@ -943,9 +943,6 @@ refresh_font_cache() {
 # ================================================================
 
 run_download_phase() {
-  # Initialize failure registry for resilient downloads
-  init_failure_registry
-
   # Skip if fonts already exist (unless forcing)
   if [[ -d "$FONTS_DIR" ]] && [[ $(count_font_files "$FONTS_DIR") -gt 0 ]] && [[ "${FORCE_INSTALL:-false}" != "true" ]]; then
     local existing_count
@@ -990,9 +987,6 @@ run_download_phase() {
 
   echo ""
   print_header_success "Download Complete"
-
-  # Display failure summary if there were any failures
-  display_failure_summary
 }
 
 run_prune_phase() {

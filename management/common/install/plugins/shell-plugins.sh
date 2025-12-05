@@ -27,9 +27,6 @@ fi
 
 print_section "Installing shell plugins" "cyan"
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Create plugins directory if it doesn't exist
 mkdir -p "$PLUGINS_DIR"
 
@@ -62,6 +59,3 @@ Or install manually:
 done <<< "$PLUGINS"
 
 log_success "Shell plugins installed to $PLUGINS_DIR"
-
-# Display failure summary if there were any failures
-display_failure_summary

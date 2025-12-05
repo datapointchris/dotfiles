@@ -30,9 +30,6 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 print_banner "Installing Yazi"
 
-# Initialize failure registry
-init_failure_registry
-
 # Check if already installed
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   log_info "Proceeding to themes/plugins update..."

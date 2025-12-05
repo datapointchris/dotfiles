@@ -30,9 +30,6 @@ fi
 
 echo "Installing npm global packages from packages.yml..."
 
-# Initialize failure registry for resilient installation
-init_failure_registry
-
 # Get npm packages from packages.yml via Python parser
 DOTFILES_DIR="$HOME/dotfiles"
 NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
@@ -63,6 +60,3 @@ done
 echo ""
 echo "npm global packages installed"
 npm list -g --depth=0
-
-# Display failure summary if there were any failures
-display_failure_summary

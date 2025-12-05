@@ -128,8 +128,9 @@ init_failure_registry() {
 #   manual_steps  - Multi-line string with manual installation instructions
 #   error_reason  - Brief description of why it failed (e.g., "Download failed")
 #
-# Note: If DOTFILES_FAILURE_REGISTRY is not set, this function does nothing.
-#       This allows installer scripts to work standalone without the registry.
+# Behavior:
+#   - If registry exists: Adds failure to registry for batch summary
+#   - If no registry: Prints manual steps immediately (standalone script run)
 report_failure() {
   local tool_name="$1"
   local download_url="$2"
@@ -137,12 +138,27 @@ report_failure() {
   local manual_steps="$4"
   local error_reason="${5:-Installation failed}"
 
-  # Skip if no registry (running script standalone)
+  # If no registry, print manual steps immediately (standalone script execution)
   if [[ -z "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    echo ""
+    echo "════════════════════════════════════════════════════════════════"
+    echo "$tool_name - Manual Installation Required"
+    echo "════════════════════════════════════════════════════════════════"
+    echo "  Reason: $error_reason"
+    echo "  Download: $download_url"
+    if [[ "$version" != "latest" ]] && [[ "$version" != "unknown" ]]; then
+      echo "  Version: $version"
+    fi
+    echo ""
+    echo "  Manual Steps:"
+    while IFS= read -r line; do echo "    $line"; done <<< "$manual_steps"
+    echo ""
+    echo "════════════════════════════════════════════════════════════════"
+    echo ""
     return 0
   fi
 
-  # Ensure registry directory exists
+  # Registry exists - add failure for batch summary
   mkdir -p "$DOTFILES_FAILURE_REGISTRY"
 
   # Create failure file with timestamp prefix for uniqueness and ordering
