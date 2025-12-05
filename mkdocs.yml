@@ -230,6 +230,7 @@ nav:
       - Go TUI Ecosystem Research: learnings/go-tui-ecosystem-research.md
       - Go CLI Architecture Analysis: learnings/go-cli-architecture-analysis.md
       - PreToolUse Hooks Task Limitation: learnings/pretooluse-hooks-task-limitation.md
+      - Tools Over Instructions: learnings/tools-over-instructions.md
   - Changelog:
       - Summary: changelog.md
 
