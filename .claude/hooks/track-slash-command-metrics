@@ -19,6 +19,16 @@ def parse_logsift_output(output: str) -> dict:
     """
     Parse logsift command output to extract metrics.
 
+    Logsift outputs YAML format like:
+    summary:
+      status: success
+      exit_code: 0
+      duration_seconds: 1.023
+      log_file: "/path/to/log"
+    stats:
+      total_errors: 0
+      total_warnings: 0
+
     Returns dict with:
     - duration_seconds
     - exit_code
@@ -35,25 +45,30 @@ def parse_logsift_output(output: str) -> dict:
     }
 
     try:
-        # Look for JSON summary in output
-        if "summary:" in output:
-            # Extract JSON block after "summary:"
-            json_match = re.search(r'summary:\s*(\{.*?\})\s*stats:', output, re.DOTALL)
-            if json_match:
-                summary = json.loads(json_match.group(1))
-                metrics["duration_seconds"] = summary.get("duration_seconds")
-                metrics["exit_code"] = summary.get("exit_code")
-                metrics["log_file"] = summary.get("log_file")
+        # Parse YAML-style output using regex
+        # Extract duration_seconds (float)
+        duration_match = re.search(r'duration_seconds:\s*([\d.]+)', output)
+        if duration_match:
+            metrics["duration_seconds"] = float(duration_match.group(1))
+
+        # Extract exit_code (int)
+        exit_code_match = re.search(r'exit_code:\s*(-?\d+)', output)
+        if exit_code_match:
+            metrics["exit_code"] = int(exit_code_match.group(1))
+
+        # Extract log_file (quoted string)
+        log_file_match = re.search(r'log_file:\s*"([^"]+)"', output)
+        if log_file_match:
+            metrics["log_file"] = log_file_match.group(1)
 
         # Extract error/warning counts from stats section
-        if "stats:" in output:
-            errors_match = re.search(r'total_errors:\s*(\d+)', output)
-            warnings_match = re.search(r'total_warnings:\s*(\d+)', output)
+        errors_match = re.search(r'total_errors:\s*(\d+)', output)
+        if errors_match:
+            metrics["errors_found"] = int(errors_match.group(1))
 
-            if errors_match:
-                metrics["errors_found"] = int(errors_match.group(1))
-            if warnings_match:
-                metrics["warnings_found"] = int(warnings_match.group(1))
+        warnings_match = re.search(r'total_warnings:\s*(\d+)', output)
+        if warnings_match:
+            metrics["warnings_found"] = int(warnings_match.group(1))
 
     except Exception as e:
         print(f"⚠️ Failed to parse logsift output: {e}", file=sys.stderr)
