@@ -218,7 +218,10 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Part A: Reference Transcript Path**:
 
-Your conversation transcript is automatically saved by Claude Code at `$CLAUDE_TRANSCRIPT_PATH`. Include this path in your metrics so it can be analyzed later.
+Your conversation transcript is automatically saved by Claude Code to:
+`~/.claude/projects/-Users-chris-dotfiles/agent-{agentId}.jsonl`
+
+The exact path is not available via environment variables in Task subagents. The metrics will record "unavailable" and transcripts can be found by matching the session timestamp.
 
 **Part B: Log Structured Metrics**:
 
@@ -239,8 +242,8 @@ FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '
 ```bash
 python .claude/lib/commit-agent-metrics.py "$(cat << EOF
 {
-  "session_id": "${CLAUDE_SESSION_ID:-unknown}",
-  "transcript_path": "${CLAUDE_TRANSCRIPT_PATH:-unknown}",
+  "session_id": "unavailable",
+  "transcript_path": "unavailable",
   "commits_created": $COMMITS_CREATED,
   "commit_hashes": ["$COMMIT_HASH"],
   "files_committed": $FILES_COMMITTED,
