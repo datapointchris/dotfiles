@@ -65,16 +65,26 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 
 ### Phase 1: Analyze Current State
 
-Run these commands to understand the work:
+**⚠️ EFFICIENCY RULE**: Run ONLY these commands ONCE at the start. Do NOT repeat git status/diff multiple times.
 
 ```bash
 git status
 git diff --staged
 ```
 
-**If nothing is staged**: Analyze unstaged changes and ask the main agent which files should be committed.
+**If nothing is staged**:
+
+- Check unstaged changes: `git diff`
+- Determine which files to stage based on logical grouping
+- Stage them and proceed to Phase 2
 
 **If changes are staged**: Proceed to Phase 2.
+
+**DO NOT**:
+
+- Run `git status` multiple times
+- Run `git diff` variants (`git diff HEAD`, `git diff --name-only`, `git ls-files`) - the initial commands provide all needed info
+- Read files unless absolutely necessary for commit message generation (rely on diff output)
 
 ### Phase 2: Group Changes Logically
 
@@ -215,18 +225,30 @@ logsift monitor -- pre-commit run --files file1.py file2.sh file3.md
 
 **ONLY execute this phase AFTER Phase 5 (logsift pre-commit) passes successfully.**
 
-Once pre-commit passes in Phase 5, commit with your generated message:
+Once pre-commit passes in Phase 5, commit with suppressed hook output (we already verified in Phase 5):
 
 ```bash
-git commit -m "feat(install): add resilient font download with failure handling
+# Commit with pre-commit output suppressed
+# We redirect output and show only the commit result line
+COMMIT_OUTPUT=$(git commit -m "feat(install): add resilient font download with failure handling
 
 Downloads font releases from GitHub with retry logic and failure
 tracking. Stores failure reports in /tmp for debugging.
 
-Related install scripts updated to use new download pattern."
+Related install scripts updated to use new download pattern." 2>&1)
+
+# Show only the commit hash line (first line), suppress pre-commit output
+echo "$COMMIT_OUTPUT" | head -n 1
 ```
 
-**Verify the commit**:
+**Why suppress pre-commit output here?**
+
+- Phase 4 already ran pre-commit in background (auto-fixes applied)
+- Phase 5 already verified all hooks pass via logsift
+- The final commit's pre-commit output is redundant and wastes ~500-1000 tokens
+- We still respect hooks (they run), we just don't show their output since we know they'll pass
+
+**Verify the commit** (optional, use if commit hash not shown above):
 
 ```bash
 git log -1 --oneline
@@ -259,11 +281,26 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 - With agent: ~200 tokens summary to main agent
 - **Savings: ~2800 tokens per commit**
 
-### Phase 7: Log Metrics (Internal - DO NOT Report to Main Agent)
+### Phase 7: Log Metrics and Transcript (Internal - DO NOT Report to Main Agent)
 
 **CRITICAL**: Execute this phase AFTER commits are created but BEFORE responding to main agent.
 
-**Purpose**: Track commit agent performance for analysis and optimization.
+**Purpose**: Track commit agent performance and capture full transcript for detailed analysis.
+
+**Part A: Save Full Transcript** (for detailed token analysis like `.planning/commit-agent-too-much-work.md`):
+
+```bash
+# Create transcript directory
+mkdir -p .claude/metrics/transcripts
+
+# Save your complete conversation (copy your full thinking/tool calls/output)
+# This enables post-session analysis of token usage patterns
+cat > .claude/metrics/transcripts/commit-$(date +%Y%m%d-%H%M%S).log << 'TRANSCRIPT_EOF'
+[Paste your complete session output here, including all tool calls and reasoning]
+TRANSCRIPT_EOF
+```
+
+**Part B: Log Structured Metrics** (for automated analysis):
 
 **Metrics to collect**:
 
