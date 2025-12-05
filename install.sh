@@ -87,7 +87,7 @@ fi
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
 # Source program helpers for failure reporting
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 # ================================================================
 # FAILURE HANDLING WRAPPER
@@ -192,11 +192,11 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 7 - Language Package Managers" "cyan"
-    bash "$lang_managers/nvm.sh"
-    bash "$lang_tools/npm-install-globals.sh"
-    bash "$lang_managers/uv.sh"
-    bash "$lang_tools/uv-tools.sh"
-    bash "$lang_managers/tenv.sh"
+    bash "$lang_managers/nvm.sh" || true
+    bash "$lang_tools/npm-install-globals.sh" || true
+    bash "$lang_managers/uv.sh" || true
+    bash "$lang_tools/uv-tools.sh" || true
+    bash "$lang_managers/tenv.sh" || true
     echo ""
 
     print_header "Phase 8 - Shell Configuration" "cyan"

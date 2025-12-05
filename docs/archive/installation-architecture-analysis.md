@@ -379,7 +379,7 @@ If you want to tackle the broader management/ organization:
    │   ├── tools/       # Individual tool installers (install-*.sh)
    │   └── fonts/       # Font installation
    ├── update/          # Update scripts (update-*.sh)
-   ├── helpers/         # Helper scripts (install-program-helpers.sh, etc.)
+   ├── helpers/         # Helper scripts (install-install-helpers.sh, etc.)
    └── testing/         # Already exists
    ```
 

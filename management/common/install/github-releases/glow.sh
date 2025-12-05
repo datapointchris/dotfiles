@@ -18,7 +18,7 @@ enable_error_traps
 
 # Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 BINARY_NAME="glow"
 REPO="charmbracelet/glow"

@@ -45,7 +45,7 @@ Created audit script that:
 Added `set -euo pipefail` to 10 scripts that were missing it:
 - `management/lib/platform-detection.sh`
 - `management/lib/helpers.sh`
-- `management/common/lib/program-helpers.sh`
+- `management/common/lib/install-helpers.sh`
 - `management/common/lib/structured-logging.sh`
 - `management/macos/setup/macos-defaults.sh`
 - `management/macos/setup/mac.sh`
@@ -260,7 +260,7 @@ management/audit-error-safety.sh              # Audit tool (30 lines)
 # Error safety added (set -euo pipefail)
 management/lib/platform-detection.sh
 management/lib/helpers.sh
-management/common/lib/program-helpers.sh
+management/common/lib/install-helpers.sh
 management/common/lib/structured-logging.sh
 management/macos/setup/macos-defaults.sh
 management/macos/setup/mac.sh

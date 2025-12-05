@@ -78,7 +78,7 @@
 - install-nvim-plugins.sh
 
 **Utilities** (3 scripts):
-- install-program-helpers.sh
+- install-install-helpers.sh
 - brew-audit.sh
 - fonts/ (2 scripts)
 

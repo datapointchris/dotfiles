@@ -421,7 +421,7 @@ management/
 │   ├── docker/                 # Docker-specific
 │   │   └── setup-official-repo-ubuntu.sh
 │   └── helpers/                # Helper installers
-│       └── install-program-helpers.sh
+│       └── install-install-helpers.sh
 ├── update/                     # Platform update scripts
 │   ├── macos.sh
 │   ├── wsl.sh

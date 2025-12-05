@@ -16,7 +16,7 @@ export TERM=xterm
 # Source the libraries
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 # Test counter
 TESTS_RUN=0

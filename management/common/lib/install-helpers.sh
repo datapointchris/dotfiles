@@ -110,9 +110,8 @@ init_failure_registry() {
   export DOTFILES_FAILURE_REGISTRY="/tmp/dotfiles-failures-$$"
   mkdir -p "$DOTFILES_FAILURE_REGISTRY"
 
-  # Set up cleanup trap to remove registry on exit
-  # Note: This trap will be inherited by child shells
-  trap 'rm -rf "$DOTFILES_FAILURE_REGISTRY" 2>/dev/null || true' EXIT INT TERM
+  # Note: Registry is in /tmp and will be cleaned up by system
+  # We don't delete it on exit so it persists if installation exits early
 }
 
 # Report failure to registry
@@ -252,4 +251,7 @@ display_failure_summary() {
   echo "Full report saved to: $report_file"
   echo "════════════════════════════════════════════════════════════════"
   echo ""
+
+  # Clean up registry directory now that permanent log is created
+  rm -rf "$DOTFILES_FAILURE_REGISTRY" 2>/dev/null || true
 }

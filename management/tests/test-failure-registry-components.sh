@@ -42,7 +42,7 @@ echo ""
 # Source the library
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 # ================================================================
 # Test 1: init_failure_registry creates directory

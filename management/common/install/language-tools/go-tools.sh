@@ -15,7 +15,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 # Check if Go is installed
 if ! command -v go &>/dev/null; then
@@ -35,9 +35,9 @@ print_section "Installing Go tools" "cyan"
 # Get Go tools from packages.yml via Python parser
 GOBIN="$HOME/go/bin"
 /usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go | while read -r tool; do
-  echo "  Installing $tool..."
+  print_section "  Installing $tool..." "yellow"
   if go install "$tool@latest"; then
-    echo "    ✓ $tool installed"
+    log_success "$tool installed"
   else
     # Report failure
     if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then

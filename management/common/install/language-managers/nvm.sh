@@ -16,6 +16,9 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
+# Source program helpers for failure reporting
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+
 NVM_DIR="$HOME/.config/nvm"
 NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
 
@@ -34,8 +37,21 @@ if [[ ! -d "$NVM_DIR" ]]; then
   if curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
     echo "  ✓ nvm installed"
   else
+    # Report failure if registry exists
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      manual_steps="1. Download nvm install script in your browser:
+   $NVM_INSTALL_SCRIPT
+
+2. After downloading, install manually:
+   curl -o- ~/Downloads/install.sh | NVM_DIR=\"$NVM_DIR\" bash
+
+3. Verify installation:
+   source $NVM_DIR/nvm.sh
+   nvm --version"
+      report_failure "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "Download failed"
+    fi
     log_error "Failed to install nvm"
-    exit 1
+    return 1
   fi
 else
   echo "  nvm already installed"
@@ -50,6 +66,19 @@ print_section "Installing Node.js ${NODE_VERSION}" "cyan"
 if NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/management/common/install/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
   log_success "Node.js ${NODE_VERSION} installed and set as default"
 else
+  # Report failure if registry exists
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="1. First ensure nvm is installed (see above)
+
+2. Then install Node.js manually:
+   source $NVM_DIR/nvm.sh
+   nvm install ${NODE_VERSION}
+   nvm alias default ${NODE_VERSION}
+
+3. Verify installation:
+   node --version"
+    report_failure "nodejs" "https://nodejs.org" "$NODE_VERSION" "$manual_steps" "Node.js installation failed"
+  fi
   log_error "Failed to install Node.js"
-  exit 1
+  return 1
 fi

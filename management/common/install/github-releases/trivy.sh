@@ -7,7 +7,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 BINARY_NAME="trivy"
 REPO="aquasecurity/trivy"

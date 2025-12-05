@@ -75,7 +75,7 @@ Need:
 
 **Good Foundation Already Exists:**
 
-1. **program-helpers.sh** (management/common/lib/):
+1. **install-helpers.sh** (management/common/lib/):
    - `print_manual_install()` - displays manual installation instructions
    - `download_file()` - handles downloads with error checking
    - `get_latest_github_release()` - fetches version info from GitHub API
@@ -236,7 +236,7 @@ run_installer() {
 **2. Enhanced Failure Reporting (Installer Scripts)**
 
 ```bash
-# In program-helpers.sh
+# In install-helpers.sh
 report_failure() {
   local tool_name="$1"
   local download_url="$2"
@@ -338,7 +338,7 @@ STEPS_END
 - HEREDOC format preserves multiline manual steps
 - No external dependencies (no jq, no python parsing)
 
-### Component 2: Enhanced program-helpers.sh
+### Component 2: Enhanced install-helpers.sh
 
 **New Functions**:
 
@@ -671,7 +671,7 @@ Full report saved to: ~/.dotfiles-installation-failures-20251203-143022.txt
 
 **Tasks**:
 1. ✅ Create `.planning/resilient-installation-failure-handling.md` (this document)
-2. Update `management/common/lib/program-helpers.sh`:
+2. Update `management/common/lib/install-helpers.sh`:
    - Add `init_failure_registry()`
    - Add `report_failure()`
    - Add `download_file_with_reporting()`
@@ -1117,7 +1117,7 @@ shellspec tests/integration/  # Integration tests only
 2. `docs/architecture/shell-libraries.md` - Shell library usage guide
 3. `.planning/production-grade-management-enhancements.md` - Previous enhancement work
 4. `.planning/installation-architecture-analysis.md` - Installation system architecture
-5. `management/common/lib/program-helpers.sh` - Existing helper functions
+5. `management/common/lib/install-helpers.sh` - Existing helper functions
 6. `management/common/lib/github-release-installer.sh` - GitHub release patterns
 
 ### Example Implementations

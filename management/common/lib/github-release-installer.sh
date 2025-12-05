@@ -10,7 +10,7 @@
 # ================================================================
 
 # This library requires error-handling.sh (for structured logging)
-# and program-helpers.sh (for failure reporting)
+# and install-helpers.sh (for failure reporting)
 # They should already be sourced by the calling script
 
 # ================================================================

@@ -53,7 +53,7 @@ MANUAL_STEPS=$'1. Download in browser: https://...\n2. Extract and install...'
 
 ### 2. Core Functions
 
-Located in `management/common/lib/program-helpers.sh`:
+Located in `management/common/lib/install-helpers.sh`:
 
 #### `init_failure_registry()`
 
@@ -139,14 +139,14 @@ run_phase_installer() {
 
 ### 4. Installer Pattern
 
-Each installer sources program-helpers.sh and reports failures before exiting:
+Each installer sources install-helpers.sh and reports failures before exiting:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
 # Source libraries
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 # Initialize registry (if running standalone)
 init_failure_registry

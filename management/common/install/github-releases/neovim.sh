@@ -17,7 +17,7 @@ enable_error_traps
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/program-helpers.sh"
+source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
 # Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

@@ -4,7 +4,7 @@
 
 Adding resilient failure handling to a new installer script involves four key steps:
 
-1. Source program-helpers.sh
+1. Source install-helpers.sh
 2. Initialize failure registry
 3. Report failures before exit
 4. Display summary at end
@@ -27,7 +27,7 @@ export TERM=${TERM:-xterm}
 # Source libraries
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 print_banner "Installing Example Tool"
 
@@ -112,12 +112,12 @@ print_banner_success "$TOOL_NAME installation complete"
 
 ## Step-by-Step Guide
 
-### 1. Source program-helpers.sh
+### 1. Source install-helpers.sh
 
 Add this after sourcing logging and formatting libraries:
 
 ```bash
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 ```
 
 ### 2. Initialize Failure Registry
@@ -241,7 +241,7 @@ For standard GitHub releases, use the library:
 
 ```bash
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/program-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 # ... version detection ...
 
@@ -436,7 +436,7 @@ Your installer should:
 1. Exit 0 on success
 2. Call `report_failure()` before exiting with code 1
 3. Call `display_failure_summary()` before exit
-4. Work standalone (source program-helpers.sh, init registry)
+4. Work standalone (source install-helpers.sh, init registry)
 
 The wrapper will:
 
@@ -450,7 +450,7 @@ The wrapper will:
 
 Before submitting, verify:
 
-- [ ] Sources program-helpers.sh
+- [ ] Sources install-helpers.sh
 - [ ] Calls init_failure_registry
 - [ ] Wraps critical operations with error handling
 - [ ] Reports failures before exit with report_failure()
