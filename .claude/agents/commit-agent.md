@@ -19,7 +19,7 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 
 1. **DO NOT read `.claude/agents/commit-agent.md`** - You already have these instructions loaded as your system prompt. Reading this file wastes ~2000 tokens.
 
-2. **You MUST execute ALL 6 phases in order** - Do NOT skip Phase 4 or Phase 5. They save ~1500 tokens per commit.
+2. **You MUST execute ALL 7 phases in order** - Do NOT skip Phase 4, Phase 5, or Phase 7. Phases 4-5 save ~1500 tokens per commit. Phase 7 logs metrics and transcript.
 
 3. **NEVER run `git commit` until AFTER Phase 5 passes** - Running git commit before Phase 4 & 5 triggers unoptimized pre-commit hooks with full verbose output.
 
@@ -254,7 +254,9 @@ echo "$COMMIT_OUTPUT" | head -n 1
 git log -1 --oneline
 ```
 
-## Summary Reporting (Minimize Main Agent Context)
+**⚠️ IMPORTANT**: Do NOT report to main agent yet! Proceed to Phase 7 first.
+
+## Summary Reporting (AFTER Phase 7 - Minimize Main Agent Context)
 
 After all commits are complete, report ONLY this to the main agent:
 
