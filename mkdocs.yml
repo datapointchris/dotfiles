@@ -210,6 +210,7 @@ nav:
           - Prompt Engineering: research/ai/prompt-engineering.md
   - Learnings:
       - Overview: learnings/index.md
+      - PostToolUse Hook Integration: learnings/posttooluse-hook-integration.md
       - App Installation Patterns: learnings/app-installation-patterns.md
       - Arch Git libpcre2 Warning: learnings/arch-git-libpcre2-warning.md
       - Idempotent Installation Patterns: learnings/idempotent-installation-patterns.md
