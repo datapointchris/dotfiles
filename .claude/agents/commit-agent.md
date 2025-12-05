@@ -216,7 +216,7 @@ git add file1.py file2.sh file3.md
 Run pre-commit via logsift to see only errors:
 
 ```bash
-logsift monitor -- pre-commit run --files file1.py file2.sh file3.md
+logsift monitor --minimal -- pre-commit run --files file1.py file2.sh file3.md
 ```
 
 **Logsift benefits**:
@@ -230,7 +230,7 @@ logsift monitor -- pre-commit run --files file1.py file2.sh file3.md
 1. **Read the logsift analysis** to understand all errors
 2. **Fix the errors** (read files, make edits)
 3. **Re-add files**: `git add <fixed-files>`
-4. **Re-run logsift + pre-commit**: `logsift monitor -- pre-commit run --files <files>`
+4. **Re-run logsift + pre-commit**: `logsift monitor --minimal -- pre-commit run --files <files>`
 5. **Iterate** until pre-commit passes
 
 **Common pre-commit failures**:
