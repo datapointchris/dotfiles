@@ -13,6 +13,8 @@ The dotfiles implement a fully automated metrics collection system that captures
 - **Concurrent-Safe**: Uses session_id and agentId for unique identification
 - **Comprehensive**: 60+ metrics across 6 categories
 
+**Scope**: This document covers metrics **extraction** (data collection). For metrics **analysis** (DuckDB, Parquet, reporting), see the separate [ccm project](https://github.com/datapointchris/claude-code-metrics) at `~/code/claude-code-metrics`.
+
 ## How It Works
 
 ### 1. Hook Registration
