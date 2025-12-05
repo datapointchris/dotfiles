@@ -56,10 +56,18 @@ if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -L "$NVIM_BIN_LINK" ]] && com
 fi
 
 # Fetch latest version
-NVIM_VERSION=$(get_latest_github_release "$REPO")
+NVIM_VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
 if [[ -z "$NVIM_VERSION" ]]; then
-  print_manual_install "neovim" "https://github.com/${REPO}/releases/latest" "latest" "${NVIM_BINARY}.tar.gz" \
-    "tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz && ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim"
+  manual_steps="Failed to fetch latest version from GitHub API.
+
+Manual installation:
+1. Visit: https://github.com/${REPO}/releases/latest
+2. Download: ${NVIM_BINARY}.tar.gz
+3. Extract: tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
+4. Link: ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
+5. Verify: nvim --version"
+  report_failure "neovim" "https://github.com/${REPO}/releases/latest" "latest" "$manual_steps" "Failed to fetch version from GitHub API"
+  log_warning "Neovim installation failed (see summary)"
   exit 1
 fi
 
@@ -77,18 +85,40 @@ NVIM_URL="https://github.com/${REPO}/releases/download/${NVIM_VERSION}/${NVIM_BI
 NVIM_TARBALL="/tmp/${NVIM_BINARY}.tar.gz"
 
 # Download
-if ! download_file "$NVIM_URL" "$NVIM_TARBALL" "neovim"; then
-  print_manual_install "neovim" "$NVIM_URL" "$NVIM_VERSION" "${NVIM_BINARY}.tar.gz" \
-    "tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz && ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim"
+log_info "Downloading Neovim..."
+if ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
+  manual_steps="1. Download in your browser (bypasses firewall):
+   $NVIM_URL
+
+2. After downloading, extract and install:
+   tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
+   ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
+
+3. Verify installation:
+   nvim --version"
+  report_failure "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Download failed"
+  log_warning "Neovim installation failed (see summary)"
   exit 1
 fi
 
 # Verify it's a valid gzip file
 if ! file "$NVIM_TARBALL" | grep -q "gzip compressed"; then
-  log_error " Not a valid gzip archive: $(file "$NVIM_TARBALL")"
+  log_error "Not a valid gzip archive: $(file "$NVIM_TARBALL")"
   log_info "URL: $NVIM_URL"
-  print_manual_install "neovim" "$NVIM_URL" "$NVIM_VERSION" "${NVIM_BINARY}.tar.gz" \
-    "tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz && ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim"
+  manual_steps="Downloaded file is not a valid gzip archive.
+
+1. Download in your browser:
+   $NVIM_URL
+
+2. Verify the download is complete
+3. Extract and install:
+   tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
+   ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
+
+4. Verify:
+   nvim --version"
+  report_failure "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Invalid gzip archive"
+  log_warning "Neovim installation failed (see summary)"
   exit 1
 fi
 

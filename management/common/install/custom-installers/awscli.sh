@@ -75,9 +75,19 @@ case $PLATFORM in
     EXTRACT_DIR="/tmp/aws-cli-install"
 
     # Download
-    if ! download_file "$ZIP_URL" "$ZIP_FILE" "awscli"; then
-      print_manual_install "aws" "$ZIP_URL" "latest" "awscliv2.zip" \
-        "unzip ~/Downloads/awscliv2.zip && sudo ./aws/install"
+    log_info "Downloading AWS CLI..."
+    if ! curl -fsSL "$ZIP_URL" -o "$ZIP_FILE"; then
+      manual_steps="1. Download in your browser (bypasses firewall):
+   $ZIP_URL
+
+2. After downloading, extract and install:
+   unzip ~/Downloads/awscliv2.zip
+   ./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
+
+3. Verify installation:
+   aws --version"
+      report_failure "aws" "$ZIP_URL" "latest" "$manual_steps" "Download failed"
+      log_warning "AWS CLI installation failed (see summary)"
       exit 1
     fi
 
