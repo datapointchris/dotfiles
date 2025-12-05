@@ -252,34 +252,18 @@ logsift monitor --minimal -- pre-commit run --files file1.py file2.sh file3.md
 
 **ONLY execute this phase AFTER Phase 5 (logsift pre-commit) passes successfully.**
 
-Once pre-commit passes in Phase 5, commit with suppressed hook output (we already verified in Phase 5):
+Once pre-commit passes in Phase 5, create the commit with output suppressed:
 
 ```bash
-# Commit with pre-commit output suppressed
-# We redirect output and show only the commit result line
-COMMIT_OUTPUT=$(git commit -m "feat(install): add resilient font download with failure handling
+git commit -m "feat(install): add resilient font download with failure handling
 
 Downloads font releases from GitHub with retry logic and failure
 tracking. Stores failure reports in /tmp for debugging.
 
-Related install scripts updated to use new download pattern." 2>&1)
-
-# Show only the commit hash line (first line), suppress pre-commit output
-echo "$COMMIT_OUTPUT" | head -n 1
+Related install scripts updated to use new download pattern." > /dev/null 2>&1
 ```
 
-**Why suppress pre-commit output here?**
-
-- Phase 4 already ran pre-commit in background (auto-fixes applied)
-- Phase 5 already verified all hooks pass via logsift
-- The final commit's pre-commit output is redundant and wastes ~500-1000 tokens
-- We still respect hooks (they run), we just don't show their output since we know they'll pass
-
-**Verify the commit** (optional, use if commit hash not shown above):
-
-```bash
-git log -1 --oneline
-```
+**Why suppress output**: Phase 5 already verified hooks pass. The commit details are reported in your summary anyway. Suppressing saves ~500-1000 tokens per commit.
 
 **⚠️ IMPORTANT**: Do NOT report to main agent yet! Proceed to Phase 7 first.
 
