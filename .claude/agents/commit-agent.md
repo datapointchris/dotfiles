@@ -283,9 +283,18 @@ git log -1 --oneline
 
 **⚠️ IMPORTANT**: Do NOT report to main agent yet! Proceed to Phase 7 first.
 
-## Summary Reporting (AFTER Phase 7 - Minimize Main Agent Context)
+## Summary Reporting (REQUIRES Phase 7 Metrics First)
 
-After all commits are complete, report ONLY this to the main agent:
+**BEFORE you can create the summary below, you MUST execute Phase 7** to collect the following metrics:
+
+- `commits_created` - count from `git log`
+- `commit_hashes` - from `git log`
+- `tokens_used` - from your tool trace
+- `tool_uses` - count of tool calls
+- `pre_commit_iterations` - count from Phase 5
+- `duration_seconds` - time from start to finish
+
+**After Phase 7 completes**, report ONLY this to the main agent:
 
 ```bash
 ✅ Created 2 commits:
