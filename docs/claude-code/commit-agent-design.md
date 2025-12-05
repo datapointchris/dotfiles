@@ -687,6 +687,42 @@ Before reporting back to main agent, agent verifies:
 - [Git-Context-Controller](https://arxiv.org/html/2508.00031v1)
 - [Git Commit When AI Met Human Insight](https://medium.com/versent-tech-blog/git-commit-when-ai-met-human-insight-c3ae00f03cfb)
 
+## Metrics Tracking
+
+The commit agent automatically logs performance metrics in Phase 7 (internal, not reported to main agent):
+
+**Tracked Metrics**:
+
+- Commits created, files committed (renamed/modified/created breakdown)
+- Pre-commit iterations and failures
+- Token usage (internal + main agent overhead)
+- Phase 4/5 execution verification
+- Duration and tool usage count
+
+**Analysis**:
+
+```bash
+# View all commit agent metrics
+analyze-claude-metrics --type commit-agent
+
+# Detailed with recent commits
+analyze-claude-metrics --type commit-agent --detailed
+
+# Specific date
+analyze-claude-metrics --date 2025-12-04
+```
+
+**Key Performance Indicators**:
+
+- **Average tokens per commit**: Target <2000 (depends on complexity)
+- **Phase 4/5 execution rate**: Should be 100%
+- **Pre-commit iterations**: Lower indicates cleaner code
+- **Main agent overhead**: Target <500 tokens per invocation
+
+See [Metrics Tracking Architecture](../architecture/metrics-tracking.md) for complete details.
+
+---
+
 **Related Systems**:
 
 - Logsift workflow: `docs/claude-code/working-with-claude.md#logsift-workflow`
@@ -697,6 +733,4 @@ Before reporting back to main agent, agent verifies:
 
 **Last Updated**: 2025-12-04
 
-**Status**: Core implementation complete, ready for production use
-
-**Test Note**: Testing commit agent token optimization (dcac6c8 fixes)
+**Status**: Core implementation complete with automated metrics tracking

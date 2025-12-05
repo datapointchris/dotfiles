@@ -1,13 +1,13 @@
 # Metrics Tracking Architecture
 
-Technical documentation for the logsift command metrics and quality tracking system.
+Technical documentation for the unified Claude Code workflow metrics system.
 
 !!! info "User Guide"
     For usage instructions, see [Working with Claude Code](../claude-code/working-with-claude.md#metrics-quality-tracking)
 
 ## Overview
 
-The metrics tracking system provides quantitative and qualitative assessment of logsift command effectiveness, enabling data-driven optimization of Claude Code workflows.
+The unified metrics tracking system provides quantitative and qualitative assessment of all Claude Code workflows (commit agent, logsift commands, future tools), enabling data-driven optimization and performance monitoring.
 
 ### Design Goals
 
@@ -20,55 +20,119 @@ The metrics tracking system provides quantitative and qualitative assessment of 
 
 ```mermaid
 graph TD
-    A[User runs /logsift or /logsift-auto] --> B[Claude executes command]
-    B --> C[Logsift filters output]
-    C --> D[Claude analyzes errors]
-    D --> E[track-command-metrics hook]
-    E --> F[.claude/metrics/command-metrics-*.jsonl]
-    D --> G[Logsift logs]
-    G --> H[~/.local/share/logsift/logs/*.json]
-    F --> I[analyze-claude-metrics]
-    H --> I
-    I --> J[Summary report]
-    F --> K[.claude/metrics/quality-log.md]
-    H --> K
-    K --> L[Manual quality assessment]
+    A[User requests commit] --> B[Main agent invokes commit-agent]
+    B --> C[Commit agent creates commits]
+    C --> D[Commit agent Phase 7: Self-report metrics]
+    D --> E[.claude/metrics/command-metrics-*.jsonl]
+
+    F[User runs /logsift] --> G[SlashCommand tool executes]
+    G --> H[Logsift monitors command]
+    H --> I[PostToolUse: track-slash-command-metrics]
+    I --> E
+
+    E --> J[analyze-claude-metrics]
+    J --> K[Summary reports by type]
+    J --> L[Detailed command history]
+
+    E --> M[quality-log.md]
+    M --> N[Manual quality assessment]
 ```
 
 ## Data Model
 
-### Automated Metrics
+### Unified JSONL Format
 
 **File**: `.claude/metrics/command-metrics-YYYY-MM-DD.jsonl`
 
-**Format**: JSON Lines (one JSON object per line)
-
-```json
-{
-  "timestamp": "2025-12-03T15:30:45.123456",
-  "session_id": "abc123def456",
-  "command": "/logsift",
-  "full_command": "/logsift \"bash test.sh\" 15",
-  "cwd": "/Users/chris/dotfiles",
-  "type": "logsift"
-}
-```
-
-**Schema**:
-
-- `timestamp` (ISO 8601): When command was invoked
-- `session_id` (string): Claude Code session identifier
-- `command` (string): Slash command used (`/logsift` or `/logsift-auto`)
-- `full_command` (string): Complete command with arguments
-- `cwd` (string): Working directory
-- `type` (string): Command type for filtering
+**Format**: JSON Lines (one JSON object per line, all workflow types in same file)
 
 **Why JSONL?**
 
 - Append-only (no need to parse entire file)
-- One command = one line = atomic operation
-- Easy to process with `jq`, `grep`, streaming parsers
+- One workflow = one line = atomic operation
+- Easy to process with Python, `jq`, `grep`, streaming parsers
 - Resilient to corruption (only last line at risk)
+- Chronological view of all activity
+
+### Metric Types
+
+**Base schema** (all entries):
+
+```json
+{
+  "timestamp": "2025-12-04T20:15:30.123456",
+  "session_id": "abc123def456",
+  "type": "commit-agent|logsift|logsift-auto",
+  "cwd": "/Users/chris/dotfiles"
+}
+```
+
+**Commit Agent Metrics**:
+
+```json
+{
+  "timestamp": "2025-12-04T20:15:30",
+  "session_id": "abc123",
+  "type": "commit-agent",
+  "cwd": "/Users/chris/dotfiles",
+  "commits_created": 1,
+  "commit_hashes": ["774eb33"],
+  "files_committed": 7,
+  "files_renamed": 5,
+  "files_modified": 2,
+  "files_created": 1,
+  "pre_commit_iterations": 1,
+  "pre_commit_failures": 0,
+  "tokens_used": 19600,
+  "tool_uses": 9,
+  "phase_4_executed": true,
+  "phase_5_executed": true,
+  "phase_5_logsift_errors": 0,
+  "read_own_instructions": false,
+  "main_agent_overhead_tokens": 552,
+  "duration_seconds": 54.2
+}
+```
+
+**Logsift Metrics**:
+
+```json
+{
+  "timestamp": "2025-12-04T20:18:00",
+  "session_id": "abc123",
+  "type": "logsift",
+  "cwd": "/Users/chris/dotfiles",
+  "command": "/logsift",
+  "full_command": "/logsift \"bash test.sh\" 15",
+  "underlying_command": "bash test.sh",
+  "timeout_minutes": 15,
+  "duration_seconds": 125.3,
+  "exit_code": 0,
+  "errors_found": 5,
+  "warnings_found": 2,
+  "log_file": "/Users/chris/.cache/logsift/raw/2025-12-04T20:18:00-bash-test.sh.log"
+}
+```
+
+**Logsift-Auto Metrics**:
+
+```json
+{
+  "timestamp": "2025-12-04T20:20:00",
+  "session_id": "abc123",
+  "type": "logsift-auto",
+  "cwd": "/Users/chris/dotfiles",
+  "command": "/logsift-auto",
+  "natural_language_input": "run the test install script",
+  "interpreted_command": "bash management/test-install.sh",
+  "parsing_successful": true,
+  "duration_seconds": 180.5,
+  "exit_code": 0,
+  "errors_found": 3,
+  "warnings_found": 1,
+  "log_file": "/Users/chris/.cache/logsift/raw/..."
+}
+```
 
 ### Logsift Analysis Data
 
@@ -134,20 +198,28 @@ graph TD
 
 ## Implementation
 
-### Hook: track-command-metrics
+### Collection Methods
 
-**File**: `.claude/hooks/track-command-metrics`
+**1. Commit Agent Self-Reporting** (Phase 7):
 
-**Language**: Python 3
+- **File**: `.claude/agents/commit-agent.md` (Phase 7)
+- **Helper**: `.claude/lib/commit-agent-metrics.py`
+- **Trigger**: After commits created, before response to main agent
+- **Advantages**: Most accurate (knows exact tokens, iterations, phases)
 
-**Trigger**: PostToolUse or Stop hook (TBD - currently manual invocation)
+**2. PostToolUse Hook for Slash Commands**:
 
-**Logic**:
+- **File**: `.claude/hooks/track-slash-command-metrics`
+- **Language**: Python 3
+- **Trigger**: PostToolUse hook (after SlashCommand tool completes)
+- **Targets**: `/logsift` and `/logsift-auto` commands
+
+### PostToolUse Hook Logic
 
 1. Read hook input from stdin (JSON)
-2. Extract session_id, transcript_path, cwd
-3. Parse transcript to find last slash command
-4. Filter for /logsift commands
+2. Check if tool_name == "SlashCommand"
+3. Extract command from tool_input
+4. Filter for /logsift commands (skip others)
 5. Create metric entry with timestamp
 6. Append to daily JSONL file
 
@@ -155,39 +227,43 @@ graph TD
 
 **Configuration**: None required (uses git repo root + `.claude/metrics/`)
 
-### Analysis Script: analyze-claude-metrics
+### Analysis Tool: analyze-claude-metrics
 
 **File**: `apps/common/analyze-claude-metrics`
 
-**Language**: Bash + jq
+**Language**: Pure Python 3 (stdlib only)
 
-**Dependencies**:
+**Architecture**:
 
-- `jq` - JSON parsing
-- `bc` - Floating point arithmetic
-- Standard Unix tools (find, grep, tail, wc)
+- `MetricsAnalyzer` class for loading and analyzing JSONL
+- `CommitAgentMetrics` and `LogsiftMetrics` dataclasses
+- Type hints and proper separation of concerns
+- argparse CLI with colored ANSI output
 
 **Features**:
 
-- Summary mode: Count commands by type, show recent usage
-- Details mode: Per-session breakdown with errors/warnings
-- Date filtering: Analyze specific time periods
-- Logsift integration: Read error counts from logsift logs
+- Summary mode: Breakdown by workflow type with key metrics
+- Detailed mode: Recent command history with timestamps
+- Type filtering: `--type commit-agent|logsift|logsift-auto`
+- Date filtering: `--date YYYY-MM-DD`
+- Commit agent stats: tokens, phases, files, iterations
+- Logsift stats: success rate, errors/warnings found
 
 **Usage**:
 
 ```bash
-analyze-claude-metrics              # Summary
-analyze-claude-metrics --details    # Detailed
-analyze-claude-metrics --date 2025-12-03  # Specific date
+analyze-claude-metrics                    # Summary of all workflows
+analyze-claude-metrics --type commit-agent # Only commit agent
+analyze-claude-metrics --date 2025-12-04  # Specific date
+analyze-claude-metrics --detailed         # With recent commands
 ```
 
-**Output sections**:
+**Output**:
 
-1. Command Usage: Counts by type
-2. Recent Commands: Last 10 invocations
-3. Error Resolution Analysis: From logsift logs
-4. Recommendations: Next steps
+- Total commands tracked
+- Breakdown by type (logsift, logsift-auto, commit-agent)
+- Type-specific metrics (varies by workflow)
+- Recent commands (detailed mode only)
 
 ## Key Performance Indicators
 
