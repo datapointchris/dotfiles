@@ -237,12 +237,10 @@ Your conversation transcript is automatically saved by Claude Code at `$CLAUDE_T
 **Metrics to collect**:
 
 ```bash
-# Get commit information
 COMMITS_CREATED=$(git log --oneline HEAD --not --remotes | wc -l | tr -d ' ')
-COMMIT_HASHES=$(git log --oneline -n $COMMITS_CREATED --format=%h | tr '\n' ',' | sed 's/,$//')
+COMMIT_HASH=$(git log --oneline -n 1 --format=%h)
 FILES_COMMITTED=$(git diff --stat HEAD~${COMMITS_CREATED}..HEAD | tail -1 | awk '{print $1}')
 
-# Analyze file changes
 FILES_RENAMED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^R' || echo 0)
 FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^M' || echo 0)
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
@@ -251,15 +249,16 @@ FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '
 **Log metrics using helper script**:
 
 ```bash
-python .claude/lib/commit-agent-metrics.py '{
-  "session_id": "'"${CLAUDE_SESSION_ID:-unknown}"'",
-  "transcript_path": "'"${CLAUDE_TRANSCRIPT_PATH}"'",
-  "commits_created": '$COMMITS_CREATED',
-  "commit_hashes": ["'$(echo $COMMIT_HASHES | sed 's/,/","/g')'"],
-  "files_committed": '$FILES_COMMITTED',
-  "files_renamed": '$FILES_RENAMED',
-  "files_modified": '$FILES_MODIFIED',
-  "files_created": '$FILES_CREATED',
+python .claude/lib/commit-agent-metrics.py "$(cat << EOF
+{
+  "session_id": "${CLAUDE_SESSION_ID:-unknown}",
+  "transcript_path": "${CLAUDE_TRANSCRIPT_PATH:-unknown}",
+  "commits_created": $COMMITS_CREATED,
+  "commit_hashes": ["$COMMIT_HASH"],
+  "files_committed": $FILES_COMMITTED,
+  "files_renamed": $FILES_RENAMED,
+  "files_modified": $FILES_MODIFIED,
+  "files_created": $FILES_CREATED,
   "pre_commit_iterations": <actual count>,
   "pre_commit_failures": <actual count>,
   "tokens_used": <from your tool trace>,
@@ -275,7 +274,9 @@ python .claude/lib/commit-agent-metrics.py '{
   "phase_5_logsift_errors": <count from logsift>,
   "read_own_instructions": false,
   "duration_seconds": <time from start to finish>
-}' 2>/dev/null || true
+}
+EOF
+)" 2>/dev/null || true
 ```
 
 **Tool Usage Tracking**: Count each tool type you use during the session:
