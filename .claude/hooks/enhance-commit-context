@@ -104,21 +104,20 @@ def infer_change_type(files):
 
 def main():
     try:
-        # Read tool input from stdin
-        tool_input = json.loads(sys.stdin.read())
+        hook_input = json.loads(sys.stdin.read())
+        tool_input = hook_input.get("tool_input", hook_input)
 
-        # Only apply to commit-agent subagent
         if tool_input.get("subagent_type") != "commit-agent":
-            print(json.dumps(tool_input))
+            print(json.dumps(hook_input))
             sys.exit(0)
 
         git_status = get_git_status()
         if not git_status or not git_status['all']:
-            print(json.dumps(tool_input))
+            print(json.dumps(hook_input))
             sys.exit(0)
 
         if not git_status['staged']:
-            print(json.dumps(tool_input))
+            print(json.dumps(hook_input))
             sys.exit(0)
 
         files = git_status['staged']
@@ -142,7 +141,8 @@ Complexity: {complexity}
 Original request: {current_prompt}"""
 
         tool_input["prompt"] = context_header
-        print(json.dumps(tool_input))
+        hook_input["tool_input"] = tool_input
+        print(json.dumps(hook_input))
 
     except Exception as e:
         print(f"⚠️  enhance-commit-context hook error (non-blocking): {e}", file=sys.stderr)
