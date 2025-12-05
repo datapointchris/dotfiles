@@ -209,6 +209,7 @@ nav:
           - Context Engineering: research/ai/context-engineering.md
           - Agent Architecture: research/ai/agent-architecture.md
           - Prompt Engineering: research/ai/prompt-engineering.md
+          - Metrics Analysis: research/ai/metrics-analysis-research.md
   - Learnings:
       - Overview: learnings/index.md
       - PostToolUse Hook Integration: learnings/posttooluse-hook-integration.md
