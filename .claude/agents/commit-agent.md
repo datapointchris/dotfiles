@@ -216,12 +216,17 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Purpose**: Track commit agent performance and capture transcript for analysis.
 
-**Part A: Reference Transcript Path**:
+**Part A: Determine Transcript Path**:
 
-Your conversation transcript is automatically saved by Claude Code to:
+Your conversation transcript is automatically saved to:
 `~/.claude/projects/-Users-chris-dotfiles/agent-{agentId}.jsonl`
 
-The exact path is not available via environment variables in Task subagents. The metrics will record "unavailable" and transcripts can be found by matching the session timestamp.
+Discover your agent ID by finding the most recent agent file:
+
+```bash
+AGENT_FILE=$(ls -t ~/.claude/projects/-Users-chris-dotfiles/agent-*.jsonl 2>/dev/null | head -1)
+TRANSCRIPT_PATH="${AGENT_FILE:-unavailable}"
+```
 
 **Part B: Log Structured Metrics**:
 
@@ -243,7 +248,7 @@ FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '
 python .claude/lib/commit-agent-metrics.py "$(cat << EOF
 {
   "session_id": "unavailable",
-  "transcript_path": "unavailable",
+  "transcript_path": "$TRANSCRIPT_PATH",
   "commits_created": $COMMITS_CREATED,
   "commit_hashes": ["$COMMIT_HASH"],
   "files_committed": $FILES_COMMITTED,
