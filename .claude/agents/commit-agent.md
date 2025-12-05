@@ -409,8 +409,24 @@ This enables analysis of which operations consume the most tokens.
 
 - Run this silently (stderr suppressed with `2>/dev/null || true`)
 - Never block commit workflow if metrics fail
-- Do NOT mention metrics in your response to main agent
+- DO NOT mention metrics in your response to main agent
 - This phase is for internal tracking only
+
+## ⚠️ CRITICAL CHECKPOINT: Verify All Phases Executed
+
+**BEFORE responding to main agent, you MUST verify:**
+
+✅ Phase 1: Analyzed changes and staged files
+✅ Phase 2: Grouped changes into atomic commits
+✅ Phase 3: Created commits with semantic messages
+✅ Phase 4: Ran background pre-commit (if applicable)
+✅ Phase 5: Ran logsift-monitored pre-commit (if applicable)
+✅ Phase 6: Verified commits created successfully
+✅ **Phase 7: Logged metrics and transcript** ← **DO NOT SKIP THIS**
+
+**If you did NOT execute Phase 7**, STOP and execute it now. The metrics Python helper takes <100ms and is critical for performance tracking.
+
+**After Phase 7 completes**, proceed to summary reporting.
 
 ## Edge Cases and Special Handling
 
@@ -562,6 +578,7 @@ Before reporting back to main agent, verify:
 - ✅ Pre-commit hooks passed for all commits
 - ✅ No AI attribution in commit messages
 - ✅ No history rewriting commands used
+- ✅ **Phase 7 executed**: Metrics logged via `.claude/lib/commit-agent-metrics.py`
 - ✅ Summary report is concise (no full diffs or pre-commit output)
 
 ## Rationale: Why This Design Minimizes Tokens
