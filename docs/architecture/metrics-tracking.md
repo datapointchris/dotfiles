@@ -16,6 +16,7 @@ The unified metrics tracking system provides quantitative and qualitative assess
 3. **Quality over quantity**: Track correctness and methodology, not just token counts
 4. **Lightweight**: Minimal performance impact, fail-safe operation
 5. **Complete visibility**: Full transcripts captured for detailed post-session analysis
+6. **Hook-based automation**: PreToolUse hooks auto-inject context to minimize token overhead
 
 ### Components
 
