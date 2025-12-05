@@ -123,6 +123,60 @@ run_phase_installer() {
     fi
 }
 
+# New simplified installer wrapper (Option B pattern)
+# Captures output, checks exit code, logs failures to single file
+# Usage: run_installer <script_path> <tool_name>
+run_installer() {
+  local script="$1"
+  local tool_name="$2"
+
+  # Capture both stdout and stderr
+  local output
+  local exit_code
+
+  output=$(bash "$script" 2>&1)
+  exit_code=$?
+
+  if [[ $exit_code -eq 0 ]]; then
+    log_success "$tool_name installed"
+    return 0
+  else
+    log_warning "$tool_name installation failed (see $FAILURES_LOG)"
+
+    # Parse structured failure data from output
+    local failure_tool failure_url failure_version failure_reason failure_manual
+    failure_tool=$(echo "$output" | grep "^FAILURE_TOOL=" | cut -d"'" -f2 || echo "$tool_name")
+    failure_url=$(echo "$output" | grep "^FAILURE_URL=" | cut -d"'" -f2 || echo "")
+    failure_version=$(echo "$output" | grep "^FAILURE_VERSION=" | cut -d"'" -f2 || echo "")
+    failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
+
+    # Extract multiline manual steps
+    if echo "$output" | grep -q "^FAILURE_MANUAL<<"; then
+      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL<</,/^END_MANUAL/p' | sed '1d;$d')
+    fi
+
+    # Append to failures log
+    cat >> "$FAILURES_LOG" << EOF
+========================================
+$failure_tool - Installation Failed
+========================================
+Script: $script
+Exit Code: $exit_code
+Timestamp: $(date -Iseconds)
+${failure_url:+Download URL: $failure_url}
+${failure_version:+Version: $failure_version}
+${failure_reason:+Reason: $failure_reason}
+
+${failure_manual:+Manual Installation Steps:
+$failure_manual
+}
+---
+
+EOF
+    return 1
+  fi
+}
+
 # ================================================================
 # COMMON INSTALLATION PHASES
 # ================================================================
