@@ -183,6 +183,45 @@ EOF
   fi
 }
 
+# Display failures summary from log file (Option B pattern)
+# Simpler than old registry-based approach
+show_failures_summary() {
+  if [[ ! -f "$FAILURES_LOG" ]]; then
+    return 0
+  fi
+
+  # Check if file has content
+  if [[ ! -s "$FAILURES_LOG" ]]; then
+    return 0
+  fi
+
+  # Count failures (each has a separator line)
+  local failure_count
+  failure_count=$(grep -c "^---$" "$FAILURES_LOG" || echo 0)
+
+  if [[ $failure_count -eq 0 ]]; then
+    return 0
+  fi
+
+  # Display header
+  echo ""
+  echo "════════════════════════════════════════════════════════════════"
+  echo "Installation Summary"
+  echo "════════════════════════════════════════════════════════════════"
+  echo ""
+  log_warning "$failure_count installation(s) failed"
+  log_info "This is common in restricted network environments"
+  echo ""
+
+  # Display the log file contents (already formatted)
+  cat "$FAILURES_LOG"
+
+  echo "════════════════════════════════════════════════════════════════"
+  echo "Full report saved to: $FAILURES_LOG"
+  echo "════════════════════════════════════════════════════════════════"
+  echo ""
+}
+
 # ================================================================
 # COMMON INSTALLATION PHASES
 # ================================================================
