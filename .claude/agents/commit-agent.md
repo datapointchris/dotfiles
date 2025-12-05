@@ -216,14 +216,13 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Purpose**: Track commit agent performance and capture transcript for analysis.
 
-**Collect metrics and log in a single command**:
+**Execute this SINGLE bash command with ALL metrics collection**:
+
+Run the following as ONE complete bash command via the Bash tool. Fill in the placeholder values (items in angle brackets) with actual numbers from your session, then execute the entire block:
 
 ```bash
-# Discover transcript path
 AGENT_FILE=$(ls -t ~/.claude/projects/-Users-chris-dotfiles/agent-*.jsonl 2>/dev/null | head -1)
 TRANSCRIPT_PATH="${AGENT_FILE:-unavailable}"
-
-# Collect commit metrics
 COMMITS_CREATED=$(git log --oneline HEAD --not --remotes | wc -l | tr -d ' ')
 COMMIT_HASH=$(git log --oneline -n 1 --format=%h)
 FILES_COMMITTED=$(git diff --stat HEAD~${COMMITS_CREATED}..HEAD | tail -1 | awk '{print $1}')
@@ -231,7 +230,6 @@ FILES_RENAMED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '
 FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^M' || echo 0)
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
 
-# Log metrics using helper script
 python .claude/lib/commit-agent-metrics.py "$(cat <<EOF
 {
   "session_id": "unavailable",
@@ -242,25 +240,27 @@ python .claude/lib/commit-agent-metrics.py "$(cat <<EOF
   "files_renamed": $FILES_RENAMED,
   "files_modified": $FILES_MODIFIED,
   "files_created": $FILES_CREATED,
-  "pre_commit_iterations": <actual count>,
-  "pre_commit_failures": <actual count>,
-  "tokens_used": <from your tool trace>,
-  "tool_uses": <count of tool calls>,
+  "pre_commit_iterations": REPLACE_WITH_ACTUAL_COUNT,
+  "pre_commit_failures": REPLACE_WITH_ACTUAL_COUNT,
+  "tokens_used": REPLACE_WITH_TOKEN_COUNT,
+  "tool_uses": REPLACE_WITH_TOOL_COUNT,
   "tool_usage_breakdown": {
-    "Bash": <count>,
-    "Read": <count>,
-    "Grep": <count>,
-    "Glob": <count>
+    "Bash": REPLACE_WITH_BASH_COUNT,
+    "Read": REPLACE_WITH_READ_COUNT,
+    "Grep": REPLACE_WITH_GREP_COUNT,
+    "Glob": REPLACE_WITH_GLOB_COUNT
   },
-  "phase_4_executed": <true|false>,
-  "phase_5_executed": <true|false>,
-  "phase_5_logsift_errors": <count from logsift>,
+  "phase_4_executed": REPLACE_WITH_TRUE_OR_FALSE,
+  "phase_5_executed": REPLACE_WITH_TRUE_OR_FALSE,
+  "phase_5_logsift_errors": REPLACE_WITH_ERROR_COUNT,
   "read_own_instructions": false,
-  "duration_seconds": <time from start to finish>
+  "duration_seconds": REPLACE_WITH_DURATION
 }
 EOF
 )" 2>/dev/null || true
 ```
+
+Before executing, replace all `REPLACE_WITH_*` placeholders with actual values from your session.
 
 **Tool Usage Tracking**: Count each tool type you use during the session:
 
