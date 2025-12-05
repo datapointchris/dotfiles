@@ -277,14 +277,6 @@ Before reporting back to main agent, verify:
 - ✅ No history rewriting commands used
 - ✅ Summary report is concise (no full diffs or pre-commit output)
 
-## Why This Design Works
-
-**Token savings**: Separate context (~2500), background pre-commit (~500), logsift filtering (~950), summary-only reporting (~2000) = **~5000-6000 tokens saved per commit**
-
-**Automated metrics**: PostToolUse hook extracts all metrics from agent transcript after completion - no manual parameter passing required, fully deterministic, supports concurrent agents.
-
-**Trade-off**: Main agent sees summaries only. User can run `git log` for details. Correctness maintained, token budget freed for development.
-
 ---
 
 **Last Updated**: 2025-12-05

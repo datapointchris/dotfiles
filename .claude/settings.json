@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/lib/extract_agent_metrics.py --context-file /tmp/claude-agent-context-$CLAUDE_SESSION_ID.json"
+            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/post-task-extract-metrics"
           }
         ]
       }
