@@ -8,31 +8,31 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/research/ai/claude-code-features/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/claude-code/commit-agent-metrics-testing/">
       
       
-        <link rel="prev" href="../logsift-workflow/">
+        <link rel="prev" href="../commit-agent-design/">
       
       
-        <link rel="next" href="../prompt-engineering/">
+        <link rel="next" href="../commit-agent-research/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
-        <title>Claude Code Features - Dotfiles</title>
+        <title>Testing - Dotfiles</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
   
@@ -116,11 +116,11 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -156,7 +156,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -176,7 +176,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Claude Code Features
+              Testing
             
           </span>
         </div>
@@ -288,7 +288,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -309,7 +309,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../apps/" class="md-tabs__link">
+        <a href="../../apps/" class="md-tabs__link">
           
   
   
@@ -333,7 +333,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../architecture/" class="md-tabs__link">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   
@@ -357,7 +357,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../material/cog" class="md-tabs__link">
+        <a href="../../configuration/neovim-ai-assistants/" class="md-tabs__link">
           
   
   
@@ -379,7 +379,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   
@@ -403,7 +403,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../development/" class="md-tabs__link">
+        <a href="../../development/" class="md-tabs__link">
           
   
   
@@ -429,13 +429,13 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../../material/flask" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
     
   
-  Research
+  Claude Code
 
         </a>
       </li>
@@ -450,8 +450,40 @@
   
     
     
+      
+  
+  
+  
+  
+    
+    
       <li class="md-tabs__item">
-        <a href="../../../learnings/" class="md-tabs__link">
+        <a href="../../research/ai/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../learnings/" class="md-tabs__link">
           
   
   
@@ -475,7 +507,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../material/history" class="md-tabs__link">
+        <a href="../../changelog/" class="md-tabs__link">
           
   
   
@@ -517,7 +549,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -547,7 +579,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -615,7 +647,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../apps/" class="md-nav__link ">
+            <a href="../../apps/" class="md-nav__link ">
               
   
   
@@ -661,7 +693,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/font/" class="md-nav__link">
+      <a href="../../apps/font/" class="md-nav__link">
         
   
   
@@ -691,7 +723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/theme-sync/" class="md-nav__link">
+      <a href="../../apps/theme-sync/" class="md-nav__link">
         
   
   
@@ -721,7 +753,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/notes/" class="md-nav__link">
+      <a href="../../apps/notes/" class="md-nav__link">
         
   
   
@@ -751,7 +783,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/sess/" class="md-nav__link">
+      <a href="../../apps/sess/" class="md-nav__link">
         
   
   
@@ -781,7 +813,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/menu/" class="md-nav__link">
+      <a href="../../apps/menu/" class="md-nav__link">
         
   
   
@@ -811,7 +843,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/toolbox/" class="md-nav__link">
+      <a href="../../apps/toolbox/" class="md-nav__link">
         
   
   
@@ -841,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/backup-dirs/" class="md-nav__link">
+      <a href="../../apps/backup-dirs/" class="md-nav__link">
         
   
   
@@ -871,7 +903,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/ghostty-theme/" class="md-nav__link">
+      <a href="../../apps/ghostty-theme/" class="md-nav__link">
         
   
   
@@ -932,8 +964,6 @@
       
         
       
-        
-      
     
     
     
@@ -953,7 +983,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../architecture/" class="md-nav__link ">
+            <a href="../../architecture/" class="md-nav__link ">
               
   
   
@@ -999,7 +1029,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/shell-libraries/" class="md-nav__link">
+      <a href="../../architecture/shell-libraries/" class="md-nav__link">
         
   
   
@@ -1027,7 +1057,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/package-management/" class="md-nav__link">
+      <a href="../../architecture/package-management/" class="md-nav__link">
         
   
   
@@ -1055,7 +1085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/path-ordering-strategy/" class="md-nav__link">
+      <a href="../../architecture/path-ordering-strategy/" class="md-nav__link">
         
   
   
@@ -1083,7 +1113,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/tool-composition/" class="md-nav__link">
+      <a href="../../architecture/tool-composition/" class="md-nav__link">
         
   
   
@@ -1111,7 +1141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/structured-logging/" class="md-nav__link">
+      <a href="../../architecture/structured-logging/" class="md-nav__link">
         
   
   
@@ -1139,7 +1169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/error-handling/" class="md-nav__link">
+      <a href="../../architecture/error-handling/" class="md-nav__link">
         
   
   
@@ -1167,7 +1197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/metrics-tracking/" class="md-nav__link">
+      <a href="../../architecture/metrics-tracking/" class="md-nav__link">
         
   
   
@@ -1195,35 +1225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/commit-agent-design/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Commit Agent Design
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../architecture/github-release-installer/" class="md-nav__link">
+      <a href="../../architecture/github-release-installer/" class="md-nav__link">
         
   
   
@@ -1251,7 +1253,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/resilient-installation/" class="md-nav__link">
+      <a href="../../architecture/resilient-installation/" class="md-nav__link">
         
   
   
@@ -1287,8 +1289,6 @@
   
     
     
-      
-        
       
         
       
@@ -1348,35 +1348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../material/cog" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    icon
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../configuration/neovim-ai-assistants/" class="md-nav__link">
+      <a href="../../configuration/neovim-ai-assistants/" class="md-nav__link">
         
   
   
@@ -1404,7 +1376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../configuration/docker/" class="md-nav__link">
+      <a href="../../configuration/docker/" class="md-nav__link">
         
   
   
@@ -1453,8 +1425,6 @@
       
         
       
-        
-      
     
     
     
@@ -1474,7 +1444,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../reference/" class="md-nav__link ">
+            <a href="../../reference/" class="md-nav__link ">
               
   
   
@@ -1584,7 +1554,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/platforms/differences/" class="md-nav__link">
+      <a href="../../reference/platforms/differences/" class="md-nav__link">
         
   
   
@@ -1612,7 +1582,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/platforms/packages/" class="md-nav__link">
+      <a href="../../reference/platforms/packages/" class="md-nav__link">
         
   
   
@@ -1640,7 +1610,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/platforms/commands/" class="md-nav__link">
+      <a href="../../reference/platforms/commands/" class="md-nav__link">
         
   
   
@@ -1668,7 +1638,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/platforms/tools/" class="md-nav__link">
+      <a href="../../reference/platforms/tools/" class="md-nav__link">
         
   
   
@@ -1768,7 +1738,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/fonts/nerd-fonts-explained/" class="md-nav__link">
+      <a href="../../reference/fonts/nerd-fonts-explained/" class="md-nav__link">
         
   
   
@@ -1796,7 +1766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/fonts/font-weights-and-variants/" class="md-nav__link">
+      <a href="../../reference/fonts/font-weights-and-variants/" class="md-nav__link">
         
   
   
@@ -1824,7 +1794,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/fonts/terminal-fonts-guide/" class="md-nav__link">
+      <a href="../../reference/fonts/terminal-fonts-guide/" class="md-nav__link">
         
   
   
@@ -1852,7 +1822,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/fonts/font-comparison/" class="md-nav__link">
+      <a href="../../reference/fonts/font-comparison/" class="md-nav__link">
         
   
   
@@ -1923,7 +1893,7 @@
   <span class="md-ellipsis">
     
   
-    Claude Code
+    Tools
   
 
     
@@ -1939,190 +1909,6 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Claude Code
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../claude-code/working-with-claude/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Working with Claude Code
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../claude-code/quick-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Quick Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../claude-code/usage-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Legacy Monitoring Guide
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../claude-code/log-monitoring-research/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Log Monitoring Research
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tools
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
     Tools
   
 
@@ -2136,7 +1922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/symlinks/" class="md-nav__link">
+      <a href="../../reference/tools/symlinks/" class="md-nav__link">
         
   
   
@@ -2164,7 +1950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/tasks/" class="md-nav__link">
+      <a href="../../reference/tools/tasks/" class="md-nav__link">
         
   
   
@@ -2192,7 +1978,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/skills/" class="md-nav__link">
+      <a href="../../reference/tools/skills/" class="md-nav__link">
         
   
   
@@ -2220,7 +2006,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/hooks/" class="md-nav__link">
+      <a href="../../reference/tools/hooks/" class="md-nav__link">
         
   
   
@@ -2277,10 +2063,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
             
   
   
@@ -2298,8 +2084,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2316,7 +2102,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/support/troubleshooting/" class="md-nav__link">
+      <a href="../../reference/support/troubleshooting/" class="md-nav__link">
         
   
   
@@ -2344,7 +2130,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/support/corporate/" class="md-nav__link">
+      <a href="../../reference/support/corporate/" class="md-nav__link">
         
   
   
@@ -2422,7 +2208,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../development/" class="md-nav__link ">
+            <a href="../../development/" class="md-nav__link ">
               
   
   
@@ -2468,7 +2254,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/testing/" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
@@ -2496,7 +2282,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/adding-failure-reporting/" class="md-nav__link">
+      <a href="../../development/adding-failure-reporting/" class="md-nav__link">
         
   
   
@@ -2588,7 +2374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/overview/" class="md-nav__link">
+      <a href="../../development/go-apps/overview/" class="md-nav__link">
         
   
   
@@ -2616,7 +2402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/go-development/" class="md-nav__link">
+      <a href="../../development/go-apps/go-development/" class="md-nav__link">
         
   
   
@@ -2644,7 +2430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/go-quick-reference/" class="md-nav__link">
+      <a href="../../development/go-apps/go-quick-reference/" class="md-nav__link">
         
   
   
@@ -2672,7 +2458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
+      <a href="../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
         
   
   
@@ -2708,7 +2494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/shell-formatting/" class="md-nav__link">
+      <a href="../../development/shell-formatting/" class="md-nav__link">
         
   
   
@@ -2736,7 +2522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/publishing-docs/" class="md-nav__link">
+      <a href="../../development/publishing-docs/" class="md-nav__link">
         
   
   
@@ -2776,6 +2562,12 @@
     
       
         
+          
+        
+      
+        
+      
+        
       
         
       
@@ -2798,14 +2590,86 @@
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Claude Code
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Research
+    Getting Started
   
 
     
@@ -2816,12 +2680,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Research
+    Getting Started
   
 
           </label>
@@ -2834,14 +2698,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../material/flask" class="md-nav__link">
+      <a href="../working-with-claude/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    icon
+    Working with Claude Code
   
 
     
@@ -2859,20 +2723,48 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
   
     
     
-      
-        
-      
-        
-      
-        
-      
-        
       
         
       
@@ -2896,17 +2788,17 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    AI Research
+    Commit Agent
   
 
     
@@ -2917,12 +2809,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7_3">
             <span class="md-nav__icon md-icon"></span>
             
   
-    AI Research
+    Commit Agent
   
 
           </label>
@@ -2935,126 +2827,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../overview/" class="md-nav__link">
+      <a href="../commit-agent-design/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../commit-agent-research/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Commit Agent Research
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../context-engineering/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Context Engineering
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../agent-architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Agent Architecture
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../logsift-workflow/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Logsift Workflow
+    Design
   
 
     
@@ -3089,7 +2869,7 @@
   <span class="md-ellipsis">
     
   
-    Claude Code Features
+    Testing
   
 
     
@@ -3111,7 +2891,443 @@
   
   
     <li class="md-nav__item">
-      <a href="../prompt-engineering/" class="md-nav__link">
+      <a href="../commit-agent-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4" id="__nav_7_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logsift-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logsift Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../claude-code-features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../log-monitoring-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Log Monitoring Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_1" id="__nav_8_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    AI Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai/context-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai/agent-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai/prompt-engineering/" class="md-nav__link">
         
   
   
@@ -3213,11 +3429,11 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../learnings/" class="md-nav__link ">
+            <a href="../../learnings/" class="md-nav__link ">
               
   
   
@@ -3237,14 +3453,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3263,7 +3479,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/app-installation-patterns/" class="md-nav__link">
+      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
         
   
   
@@ -3291,7 +3507,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+      <a href="../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
         
   
   
@@ -3319,7 +3535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+      <a href="../../learnings/idempotent-installation-patterns/" class="md-nav__link">
         
   
   
@@ -3347,7 +3563,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
+      <a href="../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
         
   
   
@@ -3375,7 +3591,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+      <a href="../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
         
   
   
@@ -3403,7 +3619,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/package-version-analysis/" class="md-nav__link">
+      <a href="../../learnings/package-version-analysis/" class="md-nav__link">
         
   
   
@@ -3431,7 +3647,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
         
   
   
@@ -3459,7 +3675,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-script-testing/" class="md-nav__link">
+      <a href="../../learnings/bash-script-testing/" class="md-nav__link">
         
   
   
@@ -3487,7 +3703,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
+      <a href="../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
         
   
   
@@ -3515,7 +3731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+      <a href="../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
         
   
   
@@ -3543,7 +3759,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/git-history-rewriting/" class="md-nav__link">
+      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
         
   
   
@@ -3571,7 +3787,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -3599,7 +3815,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -3627,7 +3843,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -3655,7 +3871,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+      <a href="../../learnings/documentation-consolidation-principles/" class="md-nav__link">
         
   
   
@@ -3683,7 +3899,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+      <a href="../../learnings/go-tui-testing-strategies/" class="md-nav__link">
         
   
   
@@ -3711,7 +3927,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-testing-examples/" class="md-nav__link">
+      <a href="../../learnings/go-testing-examples/" class="md-nav__link">
         
   
   
@@ -3739,7 +3955,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+      <a href="../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
         
   
   
@@ -3767,7 +3983,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+      <a href="../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
         
   
   
@@ -3806,8 +4022,6 @@
       
         
       
-        
-      
     
     
     
@@ -3823,10 +4037,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
             
   
   
@@ -3844,8 +4058,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3862,35 +4076,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../material/history" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    icon
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../changelog/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
@@ -3963,7 +4149,7 @@
   
   
     <li class="md-path__item">
-      <a href="../../.." class="md-path__link">
+      <a href="../.." class="md-path__link">
         
   <span class="md-ellipsis">
     Home
@@ -3981,10 +4167,10 @@
     
     
       <li class="md-path__item">
-        <a href="../../../material/flask" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Research
+    Claude Code
   </span>
 
         </a>
@@ -3999,10 +4185,10 @@
     
     
       <li class="md-path__item">
-        <a href="../overview/" class="md-path__link">
+        <a href="../commit-agent-design/" class="md-path__link">
           
   <span class="md-ellipsis">
-    AI Research
+    Commit Agent
   </span>
 
         </a>
@@ -4024,326 +4210,161 @@
   
 
 
-<h1 id="claude-code-features-comparison">Claude Code Features Comparison<a class="headerlink" href="#claude-code-features-comparison" title="Permanent link">&para;</a></h1>
-<p>Decision matrix for slash commands, hooks, skills, and agents.</p>
-<h2 id="research-overview">Research Overview<a class="headerlink" href="#research-overview" title="Permanent link">&para;</a></h2>
-<p><strong>Date</strong>: 2025-12-03, updated 2025-12-04<br />
-<strong>Sources</strong>: Claude Code documentation, practical experience<br />
-<strong>Implementation</strong>: <code>.claude/commands/</code>, <code>.claude/hooks/</code>, <code>.claude/skills/</code>, <code>.claude/agents/</code></p>
-<h2 id="feature-comparison-matrix">Feature Comparison Matrix<a class="headerlink" href="#feature-comparison-matrix" title="Permanent link">&para;</a></h2>
+<h1 id="commit-agent-token-usage-test-results">Commit Agent Token Usage Test Results<a class="headerlink" href="#commit-agent-token-usage-test-results" title="Permanent link">&para;</a></h1>
+<p><strong>Test Date</strong>: 2024-12-04
+<strong>Session</strong>: Post-implementation controlled testing</p>
+<h2 id="test-b-agent-method-current-session">Test B: Agent Method (Current Session)<a class="headerlink" href="#test-b-agent-method-current-session" title="Permanent link">&para;</a></h2>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Created 3 minimal test changes to different files</li>
+<li>Staged files: <code>.pre-commit-config.yaml</code>, <code>docs/architecture/shell-libraries.md</code>, <code>management/common/update.sh</code></li>
+</ul>
+<h3 id="execution">Execution<a class="headerlink" href="#execution" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Invoked commit agent via Task tool with simple prompt</li>
+<li>Agent created commit <code>fd6ff72</code> - "test: add test comments for commit agent metrics validation"</li>
+<li>All pre-commit hooks passed</li>
+</ul>
+<h3 id="token-measurement">Token Measurement<a class="headerlink" href="#token-measurement" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Aspect</th>
-<th>Slash Command</th>
-<th>Hook</th>
-<th>Skill</th>
-<th>Agent</th>
+<th>Metric</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Discovery</strong></td>
-<td>Manual (<code>/cmd</code>)</td>
-<td>Automatic (event)</td>
-<td>Context-aware</td>
-<td>Automatic (LLM)</td>
+<td><strong>Before invocation</strong></td>
+<td>56,910 tokens</td>
 </tr>
 <tr>
-<td><strong>Invocation</strong></td>
-<td>User types <code>/cmd</code></td>
-<td>Lifecycle event</td>
-<td>Keyword/file match</td>
-<td>Natural language</td>
+<td><strong>After completion</strong></td>
+<td>57,354 tokens</td>
 </tr>
 <tr>
-<td><strong>Context</strong></td>
-<td>Main agent</td>
-<td>Decision gate</td>
-<td>Main agent</td>
-<td>Isolated window</td>
+<td><strong>Main context overhead</strong></td>
+<td><strong>444 tokens</strong></td>
 </tr>
 <tr>
-<td><strong>Autonomy</strong></td>
-<td>Prompt expansion</td>
-<td>Approve/deny</td>
-<td>Capability bundle</td>
-<td>Full reasoning</td>
+<td><strong>Subagent context</strong></td>
+<td>~5,000 tokens (isolated)</td>
 </tr>
 <tr>
-<td><strong>Complexity</strong></td>
-<td>Simple prompts</td>
-<td>Specific decision</td>
-<td>Organized resources</td>
-<td>Multi-step tasks</td>
-</tr>
-<tr>
-<td><strong>Storage</strong></td>
-<td><code>.claude/commands/</code></td>
-<td><code>.claude/hooks/</code></td>
-<td><code>.claude/skills/</code></td>
-<td><code>.claude/agents/</code></td>
+<td><strong>Total tokens</strong></td>
+<td>~5,444 tokens</td>
 </tr>
 </tbody>
 </table>
-<h2 id="when-to-use-each">When to Use Each<a class="headerlink" href="#when-to-use-each" title="Permanent link">&para;</a></h2>
-<h3 id="slash-commands">Slash Commands<a class="headerlink" href="#slash-commands" title="Permanent link">&para;</a></h3>
-<p><strong>Use for</strong>:</p>
-<ul>
-<li>✅ Quick, explicit workflows you run repeatedly</li>
-<li>✅ Templated prompts with parameters</li>
-<li>✅ Reminders of complex syntax</li>
-</ul>
-<p><strong>Examples</strong>:</p>
-<ul>
-<li><code>/logsift "command" timeout</code> - Run monitored command</li>
-<li><code>/commit</code> - Create git commit</li>
-<li><code>/review</code> - Code review checklist</li>
-</ul>
-<p><strong>Don't use for</strong>:</p>
-<ul>
-<li>❌ Complex multi-step workflows (use agent)</li>
-<li>❌ Automatic triggers (use hook)</li>
-<li>❌ Context-dependent activation (use skill)</li>
-</ul>
-<h3 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h3>
-<p><strong>Use for</strong>:</p>
-<ul>
-<li>✅ Automatic actions on lifecycle events</li>
-<li>✅ Intercepting tool calls for approval</li>
-<li>✅ Event-triggered automation</li>
-</ul>
-<p><strong>Examples</strong>:</p>
-<ul>
-<li><code>SessionStart</code> - Load git context</li>
-<li><code>Stop</code> - Run build checks</li>
-<li><code>PreToolUse</code> - Approve before tool runs</li>
-<li><code>PreCompact</code> - Save session state</li>
-</ul>
-<p><strong>Don't use for</strong>:</p>
-<ul>
-<li>❌ User-invoked workflows (use slash command)</li>
-<li>❌ Complex reasoning tasks (use agent)</li>
-<li>❌ Domain expertise (use skill)</li>
-</ul>
-<h3 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h3>
-<p><strong>Use for</strong>:</p>
-<ul>
-<li>✅ Domain-specific expertise</li>
-<li>✅ Progressive disclosure (core + resources)</li>
-<li>✅ Context-activated capabilities</li>
-</ul>
-<p><strong>Examples</strong>:</p>
-<ul>
-<li><code>symlinks-developer</code> - Symlink management expertise</li>
-<li><code>dotfiles-install</code> - Installation knowledge</li>
-<li><code>documentation</code> - Docs writing standards</li>
-</ul>
-<p><strong>Don't use for</strong>:</p>
-<ul>
-<li>❌ Simple prompts (use slash command)</li>
-<li>❌ Automatic workflows (use hook or agent)</li>
-<li>❌ Context isolation needed (use agent)</li>
-</ul>
-<h3 id="agents">Agents<a class="headerlink" href="#agents" title="Permanent link">&para;</a></h3>
-<p><strong>Use for</strong>:</p>
-<ul>
-<li>✅ Complex, multi-step tasks</li>
-<li>✅ Context isolation required</li>
-<li>✅ Repeatable workflows</li>
-<li>✅ Can return summary</li>
-</ul>
-<p><strong>Examples</strong>:</p>
-<ul>
-<li><code>commit-agent</code> - Git commit workflow</li>
-<li><code>code-reviewer</code> - PR review process</li>
-<li><code>test-runner</code> - Test execution and analysis</li>
-</ul>
-<p><strong>Don't use for</strong>:</p>
-<ul>
-<li>❌ Simple one-step tasks (use slash command)</li>
-<li>❌ Event triggers (use hook)</li>
-<li>❌ Context that should stay in main agent</li>
-</ul>
-<h2 id="decision-tree">Decision Tree<a class="headerlink" href="#decision-tree" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Need automation?
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├─ Yes
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│  ├─ Triggered by event? → Hook
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  ├─ Complex workflow? → Agent
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  └─ Context-dependent? → Skill
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>└─ No (manual invocation)
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   ├─ Simple prompt? → Slash Command
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   ├─ Multi-step task? → Agent
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   └─ Domain expertise? → Skill
-</span></code></pre></div>
-<h2 id="implementation-examples">Implementation Examples<a class="headerlink" href="#implementation-examples" title="Permanent link">&para;</a></h2>
-<h3 id="slash-command-logsift">Slash Command: /logsift<a class="headerlink" href="#slash-command-logsift" title="Permanent link">&para;</a></h3>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>---
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>description: &quot;Run command with logsift monitor&quot;
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="gu">argument-hint: &quot;&lt;command&gt; [timeout]&quot;</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="gu">---</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>Run the command <span class="sb">`$1`</span> using logsift with timeout ${2:-10} minutes.
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="gu">## What is Logsift?</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>Filters command output to show only errors...
-</span></code></pre></div>
-<p><strong>Characteristics</strong>:</p>
-<ul>
-<li>Simple prompt expansion</li>
-<li>Takes arguments (<code>$1</code>, <code>$2</code>)</li>
-<li>Runs in main context</li>
-</ul>
-<h3 id="hook-sessionstart">Hook: SessionStart<a class="headerlink" href="#hook-sessionstart" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="ch">#!/usr/bin/env python3</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Load git context</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">git_status</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">git_log</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="s2">&quot;-5&quot;</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Output to Claude</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Git Status:</span><span class="se">\n</span><span class="si">{</span><span class="n">git_status</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Recent Commits:</span><span class="se">\n</span><span class="si">{</span><span class="n">git_log</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span></code></pre></div>
-<p><strong>Characteristics</strong>:</p>
-<ul>
-<li>Triggered automatically</li>
-<li>Decision gate (approve/deny)</li>
-<li>Shell or Python script</li>
-</ul>
-<h3 id="skill-symlinks-developer">Skill: symlinks-developer<a class="headerlink" href="#skill-symlinks-developer" title="Permanent link">&para;</a></h3>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>---
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="gu">tags: [symlinks, dotfiles, installation]</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="gu">---</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>You are an expert at the dotfiles symlink management system.
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="gu">## Core Concepts</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>The symlink manager deploys configs from repo to home directory...
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="gu">## Resources</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="k">-</span><span class="w"> </span>[<span class="nt">Common Errors</span>](<span class="na">resources/common-errors.md</span>)
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="k">-</span><span class="w"> </span>[<span class="nt">Testing Guide</span>](<span class="na">resources/testing-guide.md</span>)
-</span></code></pre></div>
-<p><strong>Characteristics</strong>:</p>
-<ul>
-<li>Core + progressive resources</li>
-<li>Activated by keywords/files</li>
-<li>Stays in main context</li>
-</ul>
-<h3 id="agent-commit-agent">Agent: commit-agent<a class="headerlink" href="#agent-commit-agent" title="Permanent link">&para;</a></h3>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>---
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>name: commit-agent
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>description: &quot;Automatically invoked to analyze staged changes...&quot;
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>tools: Read, Grep, Glob, Bash
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="gu">model: sonnet</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="gu">---</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="gh"># Commit Agent: Semantic Commits</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>You are an expert at creating git commits...
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="gu">## Phase 1: Analyze State</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>Run these commands...
-</span></code></pre></div>
-<p><strong>Characteristics</strong>:</p>
-<ul>
-<li>Full system prompt (400+ lines)</li>
-<li>Isolated context window</li>
-<li>Returns summary only</li>
-<li>Automatic delegation</li>
-</ul>
-<h2 id="context-implications">Context Implications<a class="headerlink" href="#context-implications" title="Permanent link">&para;</a></h2>
-<h3 id="main-context-slash-commands-skills">Main Context (Slash Commands, Skills)<a class="headerlink" href="#main-context-slash-commands-skills" title="Permanent link">&para;</a></h3>
-<p><strong>Pros</strong>:</p>
-<ul>
-<li>Full conversation history available</li>
-<li>Can reference earlier work</li>
-<li>Seamless integration</li>
-</ul>
-<p><strong>Cons</strong>:</p>
-<ul>
-<li>Pollutes context with task details</li>
-<li>Token usage accumulates</li>
-<li>Can't discard context</li>
-</ul>
-<h3 id="isolated-context-agents">Isolated Context (Agents)<a class="headerlink" href="#isolated-context-agents" title="Permanent link">&para;</a></h3>
-<p><strong>Pros</strong>:</p>
-<ul>
-<li>Context pollution prevented</li>
-<li>Can discard after task</li>
-<li>Parallel execution possible</li>
-</ul>
-<p><strong>Cons</strong>:</p>
-<ul>
-<li>Can't see main conversation</li>
-<li>Handoff via summary only</li>
-<li>Coordination overhead</li>
-</ul>
-<h3 id="decision-gate-hooks">Decision Gate (Hooks)<a class="headerlink" href="#decision-gate-hooks" title="Permanent link">&para;</a></h3>
-<p><strong>Pros</strong>:</p>
-<ul>
-<li>Intercept before execution</li>
-<li>Safety guardrails</li>
-<li>No context usage</li>
-</ul>
-<p><strong>Cons</strong>:</p>
-<ul>
-<li>Limited to approve/deny/modify</li>
-<li>Can't do complex reasoning</li>
-<li>Must be fast (&lt;10s)</li>
-</ul>
-<h2 id="best-practices-by-feature">Best Practices by Feature<a class="headerlink" href="#best-practices-by-feature" title="Permanent link">&para;</a></h2>
-<h3 id="slash-commands_1">Slash Commands<a class="headerlink" href="#slash-commands_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Keep prompts &lt; 50 lines</li>
-<li>Use arguments for flexibility</li>
-<li>Document in README</li>
-<li>Link to detailed guides</li>
-</ul>
-<h3 id="hooks_1">Hooks<a class="headerlink" href="#hooks_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Fast execution (&lt;10s)</li>
-<li>Defensive scripting (error handling)</li>
-<li>Clear exit codes (0, 2)</li>
-<li>Don't run destructive commands</li>
-</ul>
-<h3 id="skills_1">Skills<a class="headerlink" href="#skills_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Core &lt; 500 tokens</li>
-<li>Resources loaded on demand</li>
-<li>Clear activation triggers</li>
-<li>Organized hierarchy</li>
-</ul>
-<h3 id="agents_1">Agents<a class="headerlink" href="#agents_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Single responsibility</li>
-<li>Detailed system prompt (300-500 lines)</li>
-<li>Minimal tool access</li>
-<li>Summary-only returns</li>
-</ul>
-<h2 id="related-research">Related Research<a class="headerlink" href="#related-research" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../agent-architecture/">Agent Architecture</a> - Agent deep dive</li>
-<li><a href="../commit-agent-research/">Commit Agent</a> - Agent implementation</li>
-<li><a href="../logsift-workflow/">Logsift Workflow</a> - Slash command implementation</li>
-</ul>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h3 id="analysis">Analysis<a class="headerlink" href="#analysis" title="Permanent link">&para;</a></h3>
+<p><strong>Lower Than Expected</strong>: The 444 token overhead is significantly lower than the original 6300 token estimate from the planning document.</p>
+<p><strong>Why the Difference</strong>:</p>
 <ol>
-<li><strong>Claude Code Documentation</strong></li>
-<li>Hooks: <a href="https://code.claude.com/docs/en/hooks.md">https://code.claude.com/docs/en/hooks.md</a></li>
-<li>Skills: <a href="https://code.claude.com/docs/en/skills.md">https://code.claude.com/docs/en/skills.md</a></li>
-<li>Agents: <a href="https://code.claude.com/docs/en/sub-agents.md">https://code.claude.com/docs/en/sub-agents.md</a></li>
+<li>CLAUDE.md instructions already in context (no need to re-read)</li>
+<li>Task tool invocation is simpler than manual agent invocation</li>
+<li>No need to read commit-agent.md documentation</li>
+<li>Files already staged (no staging overhead)</li>
+<li>Simple prompt worked (no detailed instructions needed)</li>
+<li>Agent summary was concise (no verbose monitoring)</li>
 </ol>
-<hr />
-<p><strong>Research Date</strong>: 2025-12-04<br />
-<strong>Status</strong>: All features implemented in dotfiles</p>
+<p><strong>Main Context Savings</strong>: Using the agent still saves ~5000 tokens in the main conversation context by offloading commit logic to the subagent.</p>
+<h3 id="comparison-to-baseline">Comparison to Baseline<a class="headerlink" href="#comparison-to-baseline" title="Permanent link">&para;</a></h3>
+<p><strong>Estimated Baseline</strong> (direct git commit without agent):</p>
+<ul>
+<li>Manual commit message drafting: ~500 tokens</li>
+<li>Git commands and verification: ~200 tokens</li>
+<li>Pre-commit hook handling in main context: ~2000 tokens</li>
+<li><strong>Estimated total</strong>: ~2700 tokens in main context</li>
+</ul>
+<p><strong>Agent Method</strong> (measured):</p>
+<ul>
+<li>Task invocation and summary: <strong>444 tokens in main context</strong></li>
+<li>Pre-commit hook handling in subagent: ~2000 tokens (isolated)</li>
+<li><strong>Net savings in main context</strong>: ~2256 tokens</li>
+</ul>
+<h2 id="test-c-automatic-hook-fixed-and-working">Test C: Automatic Hook (Fixed and Working)<a class="headerlink" href="#test-c-automatic-hook-fixed-and-working" title="Permanent link">&para;</a></h2>
+<p><strong>Status</strong>: ✅ PreToolUse hook now successfully intercepts git commit commands</p>
+<p><strong>Initial Test (First Attempt - Failed)</strong>:</p>
+<ol>
+<li>Created test change and staged it</li>
+<li>Attempted <code>git commit -m "test: hook interception test"</code> via Bash tool</li>
+<li><strong>Result</strong>: Hook did NOT block - commit proceeded to pre-commit hooks</li>
+<li>Manual test of hook script confirmed it works correctly in isolation</li>
+</ol>
+<p><strong>Root Cause Analysis</strong>:</p>
+<ul>
+<li>Hook script used incorrect response format: <code>{"block": true}</code></li>
+<li>Researched Claude Code PreToolUse hook specification</li>
+<li><strong>Correct format</strong>: Exit code 2 to block, stderr becomes feedback message</li>
+<li>Alternative format: Exit code 0 with JSON <code>{"hookSpecificOutput": {"permissionDecision": "deny"}}</code></li>
+</ul>
+<p><strong>Hook Fix (Second Iteration - Success)</strong>:</p>
+<ol>
+<li>Discovered actual hook input structure via debug hook</li>
+<li>Input contains: <code>tool_input.command</code> with the bash command</li>
+<li>Rewrote hook to use exit code 2 for blocking:</li>
+</ol>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">if</span> <span class="s1">&#39;git commit&#39;</span> <span class="ow">in</span> <span class="n">command</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;⚠️ Direct git commits not allowed. Use commit agent.&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># Blocks tool execution</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Allows other commands</span>
+</span></code></pre></div>
+<ol>
+<li>Committed working hook: <code>ffe2866</code></li>
+<li>Manual testing confirmed: blocks git commits, allows other commands</li>
+</ol>
+<p><strong>Current Status</strong>:</p>
+<ul>
+<li>✅ Hook blocks direct git commit commands</li>
+<li>✅ Hook provides helpful feedback directing to commit agent</li>
+<li>✅ CLAUDE.md instructions provide workflow guidance</li>
+<li>✅ Metrics tracking via Stop hook logs commit workflows</li>
+</ul>
+<h2 id="key-findings">Key Findings<a class="headerlink" href="#key-findings" title="Permanent link">&para;</a></h2>
+<ol>
+<li>✅ <strong>Commit agent is already efficient</strong>: 444 token overhead in main context</li>
+<li>✅ <strong>Saves ~2256 tokens</strong> vs estimated baseline in main context</li>
+<li>✅ <strong>Clean isolation</strong>: Pre-commit handling happens in subagent (not main context)</li>
+<li>✅ <strong>No regressions</strong>: All commits follow conventional format and pass hooks</li>
+<li>✅ <strong>PreToolUse hook works correctly</strong>: Automatically blocks git commits with exit code 2</li>
+<li>✅ <strong>CLAUDE.md enforcement works</strong>: Instructions provide workflow guidance</li>
+<li>✅ <strong>Metrics tracking functional</strong>: Stop hook logs commit methods successfully</li>
+</ol>
+<h2 id="final-architecture">Final Architecture<a class="headerlink" href="#final-architecture" title="Permanent link">&para;</a></h2>
+<p><strong>What Works</strong>:</p>
+<ul>
+<li>Commit agent saves ~2256 tokens per workflow in main context</li>
+<li>PreToolUse hook automatically blocks direct git commits</li>
+<li>CLAUDE.md instructions provide optimized workflow guidance</li>
+<li>Stop hook tracks metrics for analysis</li>
+<li>Pre-commit hooks handled in isolated subagent context</li>
+</ul>
+<p><strong>Implementation</strong>:</p>
+<ol>
+<li>PreToolUse hook intercepts all <code>git commit</code> commands</li>
+<li>Hook blocks execution and provides helpful error message</li>
+<li>CLAUDE.md instructions guide optimized invocation pattern</li>
+<li>Commit agent handles all git operations in isolated context</li>
+<li>Metrics tracked automatically via Stop hook</li>
+</ol>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ol>
+<li>✅ <strong>PreToolUse hook is working</strong> - Blocks git commits automatically</li>
+<li>✅ <strong>CLAUDE.md instructions updated</strong> - Optimized workflow documented</li>
+<li><strong>Collect real-world metrics</strong> as natural commits happen</li>
+<li><strong>Run analyze-commit-metrics</strong> after several commits to see trends</li>
+<li><strong>Update architecture docs</strong> with PreToolUse hook and optimized workflow</li>
+</ol>
+<h2 id="success-criteria-status">Success Criteria Status<a class="headerlink" href="#success-criteria-status" title="Permanent link">&para;</a></h2>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>Low Manual Overhead</strong>: 444 tokens is reasonable for commit workflows ✅</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>100% Coverage</strong>: PreToolUse hook ensures all commits use agent ✅</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>Measurable Savings</strong>: 2256 token net savings &gt; 2000 token target ✅</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>No Regressions</strong>: All commits conventional format, all hooks pass ✅</li>
+</ul>
+<p><strong>Overall</strong>: 4/4 criteria met. PreToolUse hook successfully blocks direct git commits, CLAUDE.md provides optimized workflow guidance, and commit agent handles all operations in isolated context for maximum token savings.</p>
+<h2 id="token-usage-test">Token Usage Test<a class="headerlink" href="#token-usage-test" title="Permanent link">&para;</a></h2>
+<p>Test entry added to measure commit agent token consumption.</p>
 
 
 
@@ -4412,10 +4433,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
       
     
   </body>
