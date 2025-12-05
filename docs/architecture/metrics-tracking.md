@@ -12,9 +12,10 @@ The unified metrics tracking system provides quantitative and qualitative assess
 ### Design Goals
 
 1. **Zero-friction collection**: Metrics gathered automatically without user intervention
-2. **Actionable insights**: Data structured for comparative analysis
+2. **Actionable insights**: Data structured for comparative analysis and debugging
 3. **Quality over quantity**: Track correctness and methodology, not just token counts
 4. **Lightweight**: Minimal performance impact, fail-safe operation
+5. **Complete visibility**: Full transcripts captured for detailed post-session analysis
 
 ### Components
 
