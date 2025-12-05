@@ -196,6 +196,7 @@ nav:
           - Testing: claude-code/commit-agent-metrics-testing.md
           - Research: claude-code/commit-agent-research.md
       - Advanced:
+          - Hook Registration: claude-code/hook-registration.md
           - Metrics Tracking: claude-code/metrics-tracking.md
           - Transcript Access: claude-code/transcript-access.md
           - Logsift Workflow: claude-code/logsift-workflow.md
