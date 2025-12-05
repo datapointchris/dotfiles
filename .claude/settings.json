@@ -35,10 +35,6 @@
           {
             "type": "command",
             "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-commit-reminder"
-          },
-          {
-            "type": "command",
-            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/track-commit-metrics"
           }
         ]
       }
@@ -50,6 +46,15 @@
           {
             "type": "command",
             "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/markdown_formatter.py"
+          }
+        ]
+      },
+      {
+        "matcher": "SlashCommand",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/track-slash-command-metrics"
           }
         ]
       }
