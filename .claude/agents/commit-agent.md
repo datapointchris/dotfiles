@@ -49,9 +49,9 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
    - Do not create commits that mix unrelated changes or that will need to be fixed later
    - Take time to ensure commits are correct the first time
 
-## Commit Workflow: 6-Phase Process
+## Commit Workflow: 7-Phase Process
 
-**MANDATORY SEQUENCE**: You MUST execute all 6 phases in order for EVERY commit. Do NOT skip any phase.
+**MANDATORY SEQUENCE**: You MUST execute all 7 phases in order for EVERY commit. Do NOT skip any phase.
 
 **Phase execution order**:
 
@@ -61,6 +61,7 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 4. **Pre-commit Background Run** (suppressed output) ← DO NOT SKIP
 5. **Pre-commit Logsift Verification** (filtered errors only) ← DO NOT SKIP
 6. Commit and Report (ONLY after Phase 5 passes)
+7. **Log Metrics** (internal tracking) ← DO NOT SKIP, DO NOT REPORT
 
 ### Phase 1: Analyze Current State
 
@@ -257,6 +258,56 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 - Without agent: ~3000 tokens per commit (git diff + pre-commit output + commit message + verification)
 - With agent: ~200 tokens summary to main agent
 - **Savings: ~2800 tokens per commit**
+
+### Phase 7: Log Metrics (Internal - DO NOT Report to Main Agent)
+
+**CRITICAL**: Execute this phase AFTER commits are created but BEFORE responding to main agent.
+
+**Purpose**: Track commit agent performance for analysis and optimization.
+
+**Metrics to collect**:
+
+```bash
+# Get commit information
+COMMITS_CREATED=$(git log --oneline HEAD --not --remotes | wc -l | tr -d ' ')
+COMMIT_HASHES=$(git log --oneline -n $COMMITS_CREATED --format=%h | tr '\n' ',' | sed 's/,$//')
+FILES_COMMITTED=$(git diff --stat HEAD~${COMMITS_CREATED}..HEAD | tail -1 | awk '{print $1}')
+
+# Analyze file changes
+FILES_RENAMED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^R' || echo 0)
+FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^M' || echo 0)
+FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
+```
+
+**Log metrics using helper script**:
+
+```bash
+python .claude/lib/commit-agent-metrics.py '{
+  "session_id": "'"${CLAUDE_SESSION_ID:-unknown}"'",
+  "commits_created": '$COMMITS_CREATED',
+  "commit_hashes": ["'$(echo $COMMIT_HASHES | sed 's/,/","/g')'"],
+  "files_committed": '$FILES_COMMITTED',
+  "files_renamed": '$FILES_RENAMED',
+  "files_modified": '$FILES_MODIFIED',
+  "files_created": '$FILES_CREATED',
+  "pre_commit_iterations": <actual count>,
+  "pre_commit_failures": <actual count>,
+  "tokens_used": <from your tool trace>,
+  "tool_uses": <count of tool calls>,
+  "phase_4_executed": <true|false>,
+  "phase_5_executed": <true|false>,
+  "phase_5_logsift_errors": <count from logsift>,
+  "read_own_instructions": false,
+  "duration_seconds": <time from start to finish>
+}' 2>/dev/null || true
+```
+
+**IMPORTANT**:
+
+- Run this silently (stderr suppressed with `2>/dev/null || true`)
+- Never block commit workflow if metrics fail
+- Do NOT mention metrics in your response to main agent
+- This phase is for internal tracking only
 
 ## Edge Cases and Special Handling
 
