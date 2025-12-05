@@ -216,35 +216,22 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Purpose**: Track commit agent performance and capture transcript for analysis.
 
-**Part A: Determine Transcript Path**:
-
-Your conversation transcript is automatically saved to:
-`~/.claude/projects/-Users-chris-dotfiles/agent-{agentId}.jsonl`
-
-Discover your agent ID by finding the most recent agent file:
+**Collect metrics and log in a single command**:
 
 ```bash
+# Discover transcript path
 AGENT_FILE=$(ls -t ~/.claude/projects/-Users-chris-dotfiles/agent-*.jsonl 2>/dev/null | head -1)
 TRANSCRIPT_PATH="${AGENT_FILE:-unavailable}"
-```
 
-**Part B: Log Structured Metrics**:
-
-**Metrics to collect**:
-
-```bash
+# Collect commit metrics
 COMMITS_CREATED=$(git log --oneline HEAD --not --remotes | wc -l | tr -d ' ')
 COMMIT_HASH=$(git log --oneline -n 1 --format=%h)
 FILES_COMMITTED=$(git diff --stat HEAD~${COMMITS_CREATED}..HEAD | tail -1 | awk '{print $1}')
-
 FILES_RENAMED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^R' || echo 0)
 FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^M' || echo 0)
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
-```
 
-**Log metrics using helper script**:
-
-```bash
+# Log metrics using helper script
 python .claude/lib/commit-agent-metrics.py "$(cat << EOF
 {
   "session_id": "unavailable",
