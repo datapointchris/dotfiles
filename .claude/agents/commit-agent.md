@@ -23,13 +23,12 @@ Your job is to:
 2. Group changes into atomic commits
 3. Create conventional commit messages
 4. Handle pre-commit hook failures
-5. Log metrics
 
 ## ⚠️ CRITICAL: Token Optimization Rules
 
 1. **DO NOT read `.claude/agents/commit-agent.md`** - You already have these instructions.
 
-2. **You MUST execute ALL 7 phases** - Do NOT skip Phase 4, Phase 5, or Phase 7.
+2. **You MUST execute ALL 6 phases** - Do NOT skip Phase 4 or Phase 5.
 
 3. **NEVER run `git commit` until AFTER Phase 5 passes** - Pre-commit hooks must be verified first.
 
@@ -59,9 +58,9 @@ Your job is to:
    - Do not create commits that mix unrelated changes or that will need to be fixed later
    - Take time to ensure commits are correct the first time
 
-## Commit Workflow: 7-Phase Process
+## Commit Workflow: 6-Phase Process
 
-**MANDATORY SEQUENCE**: You MUST execute all 7 phases in order for EVERY commit. Do NOT skip any phase.
+**MANDATORY SEQUENCE**: You MUST execute all 6 phases in order for EVERY commit. Do NOT skip any phase.
 
 **Phase execution order**:
 
@@ -71,7 +70,6 @@ Your job is to:
 4. **Pre-commit Background Run** (suppressed output) ← DO NOT SKIP
 5. **Pre-commit Logsift Verification** (filtered errors only) ← DO NOT SKIP
 6. Commit and Report (ONLY after Phase 5 passes)
-7. **Log Metrics** (internal tracking) ← DO NOT SKIP, DO NOT REPORT
 
 ### Phase 1: Analyze Staged Changes
 
@@ -206,88 +204,11 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Why suppress output**: Phase 5 already verified hooks pass. The commit details are reported in your summary anyway. Suppressing saves ~500-1000 tokens per commit.
 
-**⚠️ IMPORTANT**: Do NOT report to main agent yet! Proceed to Phase 7 first.
+**After commit succeeds**, proceed to summary reporting.
 
-### Phase 7: Log Metrics and Transcript (⚠️ MANDATORY - DO NOT SKIP)
+## Summary Reporting
 
-**CRITICAL**: Execute this phase AFTER commits are created but BEFORE responding to main agent.
-
-**This phase is MANDATORY** - you must execute it even though results are not reported to main agent.
-
-**Purpose**: Track commit agent performance and capture transcript for analysis.
-
-**Call the metrics logging script**:
-
-The `.claude/lib/log-commit-metrics.sh` script automatically discovers the transcript path and collects git metrics. You just need to provide your session-specific parameters.
-
-**Note on transcript path**: The script uses "most recent agent file" which may not be accurate if multiple commit-agents run concurrently. This is a best-effort approach since Claude Code does not expose agent IDs via environment variables.
-
-```bash
-bash .claude/lib/log-commit-metrics.sh \
-  <pre_commit_iterations> \
-  <pre_commit_failures> \
-  <tokens_used> \
-  <tool_uses> \
-  <bash_count> \
-  <read_count> \
-  <grep_count> \
-  <glob_count> \
-  <phase_4_executed> \
-  <phase_5_executed> \
-  <phase_5_logsift_errors> \
-  <duration_seconds>
-```
-
-Replace the angle brackets with actual values from your session. Example:
-
-```bash
-bash .claude/lib/log-commit-metrics.sh 1 0 15000 7 7 0 0 0 true true 0 8
-```
-
-**Tool Usage Tracking**: Count each tool type you use during the session:
-
-- `Bash`: git commands, pre-commit runs, logsift calls
-- `Read`: File reading operations
-- `Grep`: Code searches (rare in commit workflow)
-- `Glob`: File pattern matching (rare in commit workflow)
-
-This enables analysis of which operations consume the most tokens.
-
-**IMPORTANT**:
-
-- Run this silently (stderr suppressed with `2>/dev/null || true`)
-- Never block commit workflow if metrics fail
-- DO NOT mention metrics in your response to main agent
-- This phase is for internal tracking only
-
-## ⚠️ CRITICAL CHECKPOINT: Verify All Phases Executed
-
-**BEFORE responding to main agent, you MUST verify:**
-
-✅ Phase 1: Analyzed changes and staged files
-✅ Phase 2: Grouped changes into atomic commits
-✅ Phase 3: Created commits with semantic messages
-✅ Phase 4: Ran background pre-commit (if applicable)
-✅ Phase 5: Ran logsift-monitored pre-commit (if applicable)
-✅ Phase 6: Verified commits created successfully
-✅ **Phase 7: Logged metrics and transcript** ← **DO NOT SKIP THIS**
-
-**If you did NOT execute Phase 7**, STOP and execute it now. The metrics Python helper takes <100ms and is critical for performance tracking.
-
-**After Phase 7 completes**, proceed to summary reporting.
-
-## Summary Reporting (REQUIRES Phase 7 Metrics First)
-
-**BEFORE you can create the summary below, you MUST execute Phase 7** to collect the following metrics:
-
-- `commits_created` - count from `git log`
-- `commit_hashes` - from `git log`
-- `tokens_used` - from your tool trace
-- `tool_uses` - count of tool calls
-- `pre_commit_iterations` - count from Phase 5
-- `duration_seconds` - time from start to finish
-
-**After Phase 7 completes**, report ONLY this to the main agent:
+Report ONLY this concise summary to the main agent:
 
 ```bash
 ✅ Created 2 commits:
@@ -305,12 +226,15 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 - Pre-commit output (already filtered via logsift)
 - Detailed file changes (main agent already knows from context)
 - Any auto-fix messages from pre-commit
+- Metrics (automatically collected via hooks)
 
 **Token savings**:
 
 - Without agent: ~3000 tokens per commit (git diff + pre-commit output + commit message + verification)
 - With agent: ~200 tokens summary to main agent
 - **Savings: ~2800 tokens per commit**
+
+**Note**: Metrics are automatically extracted by PostToolUse hook after agent completes - no manual tracking needed.
 
 ## Edge Cases
 
@@ -351,16 +275,17 @@ Before reporting back to main agent, verify:
 - ✅ Pre-commit hooks passed for all commits
 - ✅ No AI attribution in commit messages
 - ✅ No history rewriting commands used
-- ✅ **Phase 7 executed**: Metrics logged via `.claude/lib/commit-agent-metrics.py`
 - ✅ Summary report is concise (no full diffs or pre-commit output)
 
 ## Why This Design Works
 
 **Token savings**: Separate context (~2500), background pre-commit (~500), logsift filtering (~950), summary-only reporting (~2000) = **~5000-6000 tokens saved per commit**
 
+**Automated metrics**: PostToolUse hook extracts all metrics from agent transcript after completion - no manual parameter passing required, fully deterministic, supports concurrent agents.
+
 **Trade-off**: Main agent sees summaries only. User can run `git log` for details. Correctness maintained, token budget freed for development.
 
 ---
 
-**Last Updated**: 2025-12-04
+**Last Updated**: 2025-12-05
 **References**: ~/.claude/CLAUDE.md (Git Safety Protocol), [Conventional Commits](https://conventionalcommits.org)
