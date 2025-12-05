@@ -140,7 +140,9 @@ Complexity: {complexity}
 
 Original request: {current_prompt}"""
 
-        respond_allow({"prompt": context_header}, "Enhanced with git context")
+        updated_input = dict(tool_input)
+        updated_input["prompt"] = context_header
+        respond_allow(updated_input, "Enhanced with git context")
 
     except Exception as e:
         print(f"⚠️  enhance-commit-context hook error (non-blocking): {e}", file=sys.stderr)
