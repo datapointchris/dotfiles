@@ -1,0 +1,12 @@
+Dotfiles Installation Failures Report
+Generated: Fri Dec  5 13:28:48 EST 2025
+==========================================
+
+TOOL='gpg-tui'
+URL='https://crates.io/crates/gpg-tui'
+VERSION='latest'
+REASON='Failed to install via cargo-binstall'
+MANUAL_STEPS=$'Install manually with cargo:\n   cargo install gpg-tui\n\nOr try cargo-binstall directly:\n   cargo binstall -y gpg-tui'
+
+----------------------------------------
+
