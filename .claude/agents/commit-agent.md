@@ -232,7 +232,7 @@ FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c 
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
 
 # Log metrics using helper script
-python .claude/lib/commit-agent-metrics.py "$(cat << EOF
+python .claude/lib/commit-agent-metrics.py "$(cat <<EOF
 {
   "session_id": "unavailable",
   "transcript_path": "$TRANSCRIPT_PATH",
