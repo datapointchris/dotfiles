@@ -79,38 +79,32 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 
 **⚠️ EFFICIENCY RULE**: Use the git context auto-injected by PreToolUse hook. Do NOT run git status/diff.
 
-**Expected input format** (from hook):
+**Expected input** (from hook):
 
 ```bash
 Git Context (auto-injected by hook):
-Files (staged/not staged yet): file1.md, file2.sh
+Files (already staged): file1.md, file2.sh
 File count: 2
 Inferred type: docs
 Complexity: simple
 
-Original request: Create commits for...
+Original request: Create commits
 ```
 
 **Your actions**:
 
-1. **If context shows files NOT staged**: Stage them explicitly
+Files are already staged by main agent. Proceed directly to Phase 2.
 
-   ```bash
-   git add file1.md file2.sh
-   ```
+**If no git context provided** (nothing was staged):
 
-2. **If context shows files ALREADY staged**: Proceed to Phase 2
-
-3. **If no git context provided** (hook failed):
-   - **ASK MAIN AGENT**: "Which files should I commit?"
-   - Main agent responds with file list
-   - Stage those files and proceed
+- **ASK MAIN AGENT**: "Which files should I commit?"
+- Main agent responds with file list
+- Stage those files and proceed
 
 **DO NOT**:
 
-- Run `git status` (hook already did this)
-- Run `git diff` to discover files (wastes tokens on large diffs)
-- Read files to understand changes (use git context + inference)
+- Run `git status` or `git diff`
+- Auto-stage files from hook context
 
 ### Phase 2: Group Changes Logically
 
@@ -237,39 +231,9 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Purpose**: Track commit agent performance and capture transcript for analysis.
 
-**Part A: Save Transcript** (minimal format for token analysis):
+**Part A: Reference Transcript Path**:
 
-```bash
-# Create transcript directory
-mkdir -p .claude/metrics/transcripts
-
-# Generate transcript filename
-TRANSCRIPT_FILE=".claude/metrics/transcripts/commit-$(date +%Y%m%d-%H%M%S).log"
-
-# Save minimal transcript (just tool usage summary, not full conversation)
-cat > "$TRANSCRIPT_FILE" << 'TRANSCRIPT_EOF'
-=== Commit Agent Session ===
-Timestamp: $(date -Iseconds)
-Session ID: ${CLAUDE_SESSION_ID:-unknown}
-
-=== Tool Usage ===
-Bash: [count]
-Read: [count]
-Grep: [count]
-Glob: [count]
-
-=== Git Commands ===
-[List git commands run]
-
-=== Files Read ===
-[List files if any]
-
-=== Summary ===
-Commits: [count]
-Pre-commit iterations: [count]
-Token estimate: [estimate]
-TRANSCRIPT_EOF
-```
+Your conversation transcript is automatically saved by Claude Code at `$CLAUDE_TRANSCRIPT_PATH`. Include this path in your metrics so it can be analyzed later.
 
 **Part B: Log Structured Metrics**:
 
@@ -287,12 +251,12 @@ FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c 
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
 ```
 
-**Log metrics using helper script** (include transcript reference):
+**Log metrics using helper script**:
 
 ```bash
 python .claude/lib/commit-agent-metrics.py '{
   "session_id": "'"${CLAUDE_SESSION_ID:-unknown}"'",
-  "transcript_file": "'"${TRANSCRIPT_FILE}"'",
+  "transcript_path": "'"${CLAUDE_TRANSCRIPT_PATH}"'",
   "commits_created": '$COMMITS_CREATED',
   "commit_hashes": ["'$(echo $COMMIT_HASHES | sed 's/,/","/g')'"],
   "files_committed": '$FILES_COMMITTED',

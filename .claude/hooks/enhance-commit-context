@@ -112,53 +112,40 @@ def main():
             print(json.dumps(tool_input))
             sys.exit(0)
 
-        # Get git status
         git_status = get_git_status()
         if not git_status or not git_status['all']:
-            # No changes or git command failed - pass through unchanged
             print(json.dumps(tool_input))
             sys.exit(0)
 
-        # Determine which files to report
-        if git_status['staged']:
-            files = git_status['staged']
-            staging_note = "already staged"
-        else:
-            files = git_status['unstaged']
-            staging_note = "not staged yet"
+        if not git_status['staged']:
+            print(json.dumps(tool_input))
+            sys.exit(0)
 
-        # Infer change type and complexity
+        files = git_status['staged']
         change_type = infer_change_type(files)
         file_count = len(files)
         complexity = "simple" if file_count <= 3 else "complex"
 
-        # Format file list (limit to first 10 files if many)
         if file_count <= 10:
             file_list = ", ".join(files)
         else:
             file_list = ", ".join(files[:10]) + f" (and {file_count - 10} more)"
 
-        # Build enhanced context
         current_prompt = tool_input.get("prompt", "")
 
         context_header = f"""Git Context (auto-injected by hook):
-Files ({staging_note}): {file_list}
+Files (already staged): {file_list}
 File count: {file_count}
 Inferred type: {change_type}
 Complexity: {complexity}
 
 Original request: {current_prompt}"""
 
-        # Update tool input with enhanced prompt
         tool_input["prompt"] = context_header
-
-        # Output modified input to stdout
         print(json.dumps(tool_input))
 
     except Exception as e:
-        # Fail silently - don't block commit workflow
         print(f"⚠️  enhance-commit-context hook error (non-blocking): {e}", file=sys.stderr)
-        # Output original input unchanged
         try:
             print(json.dumps(tool_input))
         except:

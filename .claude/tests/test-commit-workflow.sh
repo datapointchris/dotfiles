@@ -100,29 +100,24 @@ test_hook_other_subagent() {
     fi
 }
 
-# Test 3: Hook with unstaged changes
+# Test 3: Hook with unstaged changes only
 test_hook_unstaged_changes() {
-    log_test "Test 3: Hook with unstaged changes"
+    log_test "Test 3: Hook with unstaged changes only (nothing staged)"
 
-    # Create unstaged change
     echo "New content" > test.md
 
     local input='{"subagent_type":"commit-agent","prompt":"Create commits"}'
     local output=$(echo "$input" | python .claude/hooks/enhance-commit-context)
 
-    # Should inject git context
-    if echo "$output" | jq -e '.prompt | contains("Git Context")' >/dev/null 2>&1; then
-        log_pass "Hook injected git context for unstaged changes"
+    local input_prompt=$(echo "$input" | jq -r '.prompt')
+    local output_prompt=$(echo "$output" | jq -r '.prompt')
 
-        # Verify details
-        local files=$(echo "$output" | jq -r '.prompt' | grep "Files (not staged yet):" | cut -d: -f2)
-        log_info "  Files detected: $files"
-
-        # Clean up
+    if [ "$input_prompt" == "$output_prompt" ]; then
+        log_pass "Hook passes through unchanged when nothing staged"
         rm test.md
         return 0
     else
-        log_fail "Hook did not inject git context: $output"
+        log_fail "Hook modified input when nothing staged"
         rm test.md
         return 1
     fi
@@ -264,11 +259,10 @@ test_metrics_helper() {
 test_full_workflow() {
     log_test "Test 7: Full workflow simulation"
 
-    # Create change
     echo "# Documentation Update" > docs.md
     echo "This is a test change" >> docs.md
+    git add docs.md
 
-    # Step 1: Run hook
     log_info "  Step 1: Hook injects context"
     local input='{"subagent_type":"commit-agent","prompt":"Create commits"}'
     local hook_output=$(echo "$input" | python .claude/hooks/enhance-commit-context)
@@ -280,18 +274,11 @@ test_full_workflow() {
     fi
     log_info "    ✓ Context injected"
 
-    # Step 2: Simulate commit agent Phase 1 (stage files)
-    log_info "  Step 2: Stage files"
-    git add docs.md
-    log_info "    ✓ Files staged"
-
-    # Step 3: Simulate Phase 3 (create commit)
-    log_info "  Step 3: Create commit"
+    log_info "  Step 2: Create commit"
     git commit -m "docs: add test documentation" >/dev/null
     log_info "    ✓ Commit created"
 
-    # Step 4: Simulate Phase 7 (log metrics)
-    log_info "  Step 4: Log metrics"
+    log_info "  Step 3: Log metrics"
     local commit_hash=$(git log -1 --format=%h)
     local metrics='{
         "session_id": "workflow-test-'$$'",
