@@ -216,51 +216,31 @@ Related install scripts updated to use new download pattern." > /dev/null 2>&1
 
 **Purpose**: Track commit agent performance and capture transcript for analysis.
 
-**Execute this SINGLE bash command with ALL metrics collection**:
+**Call the metrics logging script**:
 
-Run the following as ONE complete bash command via the Bash tool. Fill in the placeholder values (items in angle brackets) with actual numbers from your session, then execute the entire block:
+The `.claude/lib/log-commit-metrics.sh` script automatically discovers the transcript path and collects git metrics. You just need to provide your session-specific parameters.
 
 ```bash
-AGENT_FILE=$(ls -t ~/.claude/projects/-Users-chris-dotfiles/agent-*.jsonl 2>/dev/null | head -1)
-TRANSCRIPT_PATH="${AGENT_FILE:-unavailable}"
-COMMITS_CREATED=$(git log --oneline HEAD --not --remotes | wc -l | tr -d ' ')
-COMMIT_HASH=$(git log --oneline -n 1 --format=%h)
-FILES_COMMITTED=$(git diff --stat HEAD~${COMMITS_CREATED}..HEAD | tail -1 | awk '{print $1}')
-FILES_RENAMED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^R' || echo 0)
-FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^M' || echo 0)
-FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
-
-python .claude/lib/commit-agent-metrics.py "$(cat <<EOF
-{
-  "session_id": "unavailable",
-  "transcript_path": "$TRANSCRIPT_PATH",
-  "commits_created": $COMMITS_CREATED,
-  "commit_hashes": ["$COMMIT_HASH"],
-  "files_committed": $FILES_COMMITTED,
-  "files_renamed": $FILES_RENAMED,
-  "files_modified": $FILES_MODIFIED,
-  "files_created": $FILES_CREATED,
-  "pre_commit_iterations": REPLACE_WITH_ACTUAL_COUNT,
-  "pre_commit_failures": REPLACE_WITH_ACTUAL_COUNT,
-  "tokens_used": REPLACE_WITH_TOKEN_COUNT,
-  "tool_uses": REPLACE_WITH_TOOL_COUNT,
-  "tool_usage_breakdown": {
-    "Bash": REPLACE_WITH_BASH_COUNT,
-    "Read": REPLACE_WITH_READ_COUNT,
-    "Grep": REPLACE_WITH_GREP_COUNT,
-    "Glob": REPLACE_WITH_GLOB_COUNT
-  },
-  "phase_4_executed": REPLACE_WITH_TRUE_OR_FALSE,
-  "phase_5_executed": REPLACE_WITH_TRUE_OR_FALSE,
-  "phase_5_logsift_errors": REPLACE_WITH_ERROR_COUNT,
-  "read_own_instructions": false,
-  "duration_seconds": REPLACE_WITH_DURATION
-}
-EOF
-)" 2>/dev/null || true
+bash .claude/lib/log-commit-metrics.sh \
+  <pre_commit_iterations> \
+  <pre_commit_failures> \
+  <tokens_used> \
+  <tool_uses> \
+  <bash_count> \
+  <read_count> \
+  <grep_count> \
+  <glob_count> \
+  <phase_4_executed> \
+  <phase_5_executed> \
+  <phase_5_logsift_errors> \
+  <duration_seconds>
 ```
 
-Before executing, replace all `REPLACE_WITH_*` placeholders with actual values from your session.
+Replace the angle brackets with actual values from your session. Example:
+
+```bash
+bash .claude/lib/log-commit-metrics.sh 1 0 15000 7 7 0 0 0 true true 0 8
+```
 
 **Tool Usage Tracking**: Count each tool type you use during the session:
 
