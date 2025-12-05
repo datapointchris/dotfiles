@@ -102,7 +102,7 @@ repos:
       # Test all user-facing apps can be invoked
       - id: test-all-apps
         name: Test all apps can be invoked
-        entry: bash tests/test-all-apps.sh
+        entry: bash tests/apps/all-apps.sh
         language: system
         pass_filenames: false
         always_run: false

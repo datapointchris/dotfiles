@@ -13,7 +13,7 @@ set -euo pipefail
 
 # Source structured logging library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
@@ -99,7 +99,7 @@ print_header "STEP 4/4: Testing All Apps and Configs" "cyan"
 echo "Running comprehensive dotfiles verification test..."
 echo ""
 
-if bash "$DOTFILES_DIR/tests/test-all-apps.sh"; then
+if bash "$DOTFILES_DIR/tests/apps/all-apps.sh"; then
   STEP_STATUS+=("PASS")
   log_success "Test-all-apps passed"
 else
