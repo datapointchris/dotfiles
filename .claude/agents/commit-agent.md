@@ -19,9 +19,21 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 
 1. **DO NOT read `.claude/agents/commit-agent.md`** - You already have these instructions loaded as your system prompt. Reading this file wastes ~2000 tokens.
 
-2. **You MUST execute ALL 7 phases in order** - Do NOT skip Phase 4, Phase 5, or Phase 7. Phases 4-5 save ~1500 tokens per commit. Phase 7 logs metrics and transcript.
+2. **Expect context from PreToolUse hook** - A hook automatically injects git context (files, type, complexity) into your prompt. Use this context instead of running git status/diff. Format:
 
-3. **NEVER run `git commit` until AFTER Phase 5 passes** - Running git commit before Phase 4 & 5 triggers unoptimized pre-commit hooks with full verbose output.
+   ```yaml
+   Git Context (auto-injected by hook):
+   Files (staged/not staged yet): file1.md, file2.sh
+   File count: 2
+   Inferred type: docs
+   Complexity: simple
+   ```
+
+   If context is missing, ASK main agent for file list instead of running git diff.
+
+3. **You MUST execute ALL 7 phases in order** - Do NOT skip Phase 4, Phase 5, or Phase 7. Phases 4-5 save ~1500 tokens per commit. Phase 7 logs metrics only.
+
+4. **NEVER run `git commit` until AFTER Phase 5 passes** - Running git commit before Phase 4 & 5 triggers unoptimized pre-commit hooks with full verbose output.
 
 ## Critical Git Protocols (From ~/.claude/CLAUDE.md)
 
@@ -65,26 +77,40 @@ Analyze staged changes, group them into logical atomic commits, generate semanti
 
 ### Phase 1: Analyze Current State
 
-**⚠️ EFFICIENCY RULE**: Run ONLY these commands ONCE at the start. Do NOT repeat git status/diff multiple times.
+**⚠️ EFFICIENCY RULE**: Use the git context auto-injected by PreToolUse hook. Do NOT run git status/diff.
+
+**Expected input format** (from hook):
 
 ```bash
-git status
-git diff --staged
+Git Context (auto-injected by hook):
+Files (staged/not staged yet): file1.md, file2.sh
+File count: 2
+Inferred type: docs
+Complexity: simple
+
+Original request: Create commits for...
 ```
 
-**If nothing is staged**:
+**Your actions**:
 
-- Check unstaged changes: `git diff`
-- Determine which files to stage based on logical grouping
-- Stage them and proceed to Phase 2
+1. **If context shows files NOT staged**: Stage them explicitly
 
-**If changes are staged**: Proceed to Phase 2.
+   ```bash
+   git add file1.md file2.sh
+   ```
+
+2. **If context shows files ALREADY staged**: Proceed to Phase 2
+
+3. **If no git context provided** (hook failed):
+   - **ASK MAIN AGENT**: "Which files should I commit?"
+   - Main agent responds with file list
+   - Stage those files and proceed
 
 **DO NOT**:
 
-- Run `git status` multiple times
-- Run `git diff` variants (`git diff HEAD`, `git diff --name-only`, `git ls-files`) - the initial commands provide all needed info
-- Read files unless absolutely necessary for commit message generation (rely on diff output)
+- Run `git status` (hook already did this)
+- Run `git diff` to discover files (wastes tokens on large diffs)
+- Read files to understand changes (use git context + inference)
 
 ### Phase 2: Group Changes Logically
 
@@ -143,13 +169,14 @@ Use **Conventional Commits** format:
 - Lowercase after type
 - Example: `feat(install): add resilient font download with failure handling`
 
-**Body** (optional but recommended for non-trivial changes):
+**Body** (optional - FAVOR BREVITY):
 
-- Explain WHAT and WHY, not HOW
-- Wrap at 72 characters
-- Leave blank line after subject
+- **Most commits don't need a body** - subject line is sufficient
+- Only add body for complex/non-obvious changes requiring explanation
+- If you do add body: explain WHY (not WHAT), wrap at 72 chars, blank line after subject
+- **Token savings**: Omitting body saves ~200-500 tokens per commit
 
-**Footer** (optional):
+**Footer** (rarely needed):
 
 - Breaking changes: `BREAKING CHANGE: description`
 - Issue references: `Fixes #123` or `Closes #456`
@@ -287,46 +314,43 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 
 **CRITICAL**: Execute this phase AFTER commits are created but BEFORE responding to main agent.
 
-**Purpose**: Track commit agent performance and capture full transcript for detailed analysis.
+**Purpose**: Track commit agent performance and capture transcript for analysis.
 
-**Part A: Save Full Transcript** (for detailed token analysis like `.planning/commit-agent-too-much-work.md`):
+**Part A: Save Transcript** (minimal format for token analysis):
 
 ```bash
 # Create transcript directory
 mkdir -p .claude/metrics/transcripts
 
-# Generate transcript filename (save to variable for metrics)
+# Generate transcript filename
 TRANSCRIPT_FILE=".claude/metrics/transcripts/commit-$(date +%Y%m%d-%H%M%S).log"
 
-# Save your complete conversation (copy your full thinking/tool calls/output)
-# Include: all git commands, file reads, pre-commit output, reasoning
+# Save minimal transcript (just tool usage summary, not full conversation)
 cat > "$TRANSCRIPT_FILE" << 'TRANSCRIPT_EOF'
 === Commit Agent Session ===
 Timestamp: $(date -Iseconds)
 Session ID: ${CLAUDE_SESSION_ID:-unknown}
-Working Directory: $(pwd)
 
-=== Tool Usage Breakdown ===
-Bash: [count of bash tool calls]
-Read: [count of read tool calls]
-Grep: [count of grep tool calls]
-Glob: [count of glob tool calls]
+=== Tool Usage ===
+Bash: [count]
+Read: [count]
+Grep: [count]
+Glob: [count]
 
-=== Git Commands Executed ===
-[List each git command with output size estimate]
+=== Git Commands ===
+[List git commands run]
 
 === Files Read ===
-[List files read with line counts]
+[List files if any]
 
-=== Complete Conversation ===
-[Paste your full session here - all tool calls, outputs, reasoning]
-This enables per-tool token analysis post-session.
+=== Summary ===
+Commits: [count]
+Pre-commit iterations: [count]
+Token estimate: [estimate]
 TRANSCRIPT_EOF
-
-echo "Transcript saved to: $TRANSCRIPT_FILE"
 ```
 
-**Part B: Log Structured Metrics** (for automated analysis):
+**Part B: Log Structured Metrics**:
 
 **Metrics to collect**:
 
@@ -342,7 +366,7 @@ FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c 
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
 ```
 
-**Log metrics using helper script** (include tool breakdown and transcript reference):
+**Log metrics using helper script** (include transcript reference):
 
 ```bash
 python .claude/lib/commit-agent-metrics.py '{

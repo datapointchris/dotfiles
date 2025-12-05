@@ -23,6 +23,15 @@
             "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/pre-bash-intercept-commits"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/enhance-commit-context"
+          }
+        ]
       }
     ],
     "Stop": [

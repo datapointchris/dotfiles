@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""
+PreToolUse hook for Task tool (commit-agent subagent).
+Automatically enhances commit agent prompts with git context.
+
+Injects:
+- File list (staged or unstaged)
+- File count
+- Inferred change type (docs/feat/fix/chore/test)
+- Complexity assessment (simple/complex)
+- Staging status
+
+This saves the commit agent from running git status/diff to discover files.
+"""
+import json
+import sys
+import subprocess
+from pathlib import Path
+
+
+def get_git_status():
+    """Get changed files from git status."""
+    try:
+        result = subprocess.run(
+            ["git", "status", "--short"],
+            capture_output=True,
+            text=True,
+            cwd=Path.cwd(),
+            timeout=2
+        )
+
+        if result.returncode != 0:
+            return None
+
+        lines = [line for line in result.stdout.strip().split('\n') if line]
+        if not lines:
+            return None
+
+        staged = []
+        unstaged = []
+
+        for line in lines:
+            status = line[:2]
+            filepath = line[3:].strip()
+
+            # Check if staged (first char is not space)
+            if status[0] != ' ' and status[0] != '?':
+                staged.append(filepath)
+            # Check if unstaged (second char is not space)
+            if status[1] != ' ':
+                unstaged.append(filepath)
+            # Untracked files
+            if status == '??':
+                unstaged.append(filepath)
+
+        return {
+            'staged': staged,
+            'unstaged': unstaged,
+            'all': list(set(staged + unstaged))
+        }
+    except Exception:
+        return None
+
+
+def infer_change_type(files):
+    """Infer change type from file paths and extensions."""
+    if not files:
+        return "unknown"
+
+    extensions = set(Path(f).suffix for f in files)
+    paths_lower = [f.lower() for f in files]
+
+    # Documentation changes
+    if extensions <= {'.md', '.txt', '.rst', '.adoc'}:
+        return "docs"
+
+    # Configuration changes
+    if extensions <= {'.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg'}:
+        return "chore"
+
+    # Test changes
+    if any('test' in p or 'spec' in p for p in paths_lower):
+        return "test"
+
+    # CI/CD changes
+    if any('.github' in p or '.gitlab' in p or 'ci' in p for p in paths_lower):
+        return "ci"
+
+    # Shell scripts (could be feat/fix/chore)
+    if extensions <= {'.sh', '.bash', '.zsh'}:
+        return "chore"
+
+    # Code changes (agent decides if feat or fix)
+    if extensions & {'.py', '.js', '.ts', '.go', '.rs', '.rb', '.java', '.cpp', '.c', '.lua'}:
+        return "feat/fix"
+
+    # Mixed or unclear
+    return "mixed"
+
+
+def main():
+    try:
+        # Read tool input from stdin
+        tool_input = json.loads(sys.stdin.read())
+
+        # Only apply to commit-agent subagent
+        if tool_input.get("subagent_type") != "commit-agent":
+            sys.exit(0)
+
+        # Get git status
+        git_status = get_git_status()
+        if not git_status or not git_status['all']:
+            # No changes or git command failed - pass through unchanged
+            sys.exit(0)
+
+        # Determine which files to report
+        if git_status['staged']:
+            files = git_status['staged']
+            staging_note = "already staged"
+        else:
+            files = git_status['unstaged']
+            staging_note = "not staged yet"
+
+        # Infer change type and complexity
+        change_type = infer_change_type(files)
+        file_count = len(files)
+        complexity = "simple" if file_count <= 3 else "complex"
+
+        # Format file list (limit to first 10 files if many)
+        if file_count <= 10:
+            file_list = ", ".join(files)
+        else:
+            file_list = ", ".join(files[:10]) + f" (and {file_count - 10} more)"
+
+        # Build enhanced context
+        current_prompt = tool_input.get("prompt", "")
+
+        context_header = f"""Git Context (auto-injected by hook):
+Files ({staging_note}): {file_list}
+File count: {file_count}
+Inferred type: {change_type}
+Complexity: {complexity}
+
+Original request: {current_prompt}"""
+
+        # Update tool input with enhanced prompt
+        tool_input["prompt"] = context_header
+
+        # Output modified input to stdout
+        print(json.dumps(tool_input))
+
+    except Exception as e:
+        # Fail silently - don't block commit workflow
+        print(f"⚠️  enhance-commit-context hook error (non-blocking): {e}", file=sys.stderr)
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
