@@ -219,6 +219,20 @@ def print_detailed(analyzer: MetricsAnalyzer) -> None:
             print(f"  [{timestamp}] commit-agent: {commits} commit(s), "
                   f"{files} files, {tokens:,} tokens")
 
+            # Show tool usage breakdown if available
+            tool_breakdown = entry.get("tool_usage_breakdown")
+            if tool_breakdown:
+                tools = ", ".join([f"{tool}: {count}"
+                                   for tool, count in tool_breakdown.items()
+                                   if count > 0])
+                if tools:
+                    print(f"            Tools: {tools}")
+
+            # Show transcript file link if available
+            transcript = entry.get("transcript_file")
+            if transcript:
+                print(f"            {Colors.BLUE}→ {transcript}{Colors.NC}")
+
         elif cmd_type in ["logsift", "logsift-auto"]:
             cmd = (entry.get("underlying_command") or
                    entry.get("interpreted_command", "unknown"))

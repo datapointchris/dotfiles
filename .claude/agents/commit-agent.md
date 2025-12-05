@@ -293,11 +293,35 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 # Create transcript directory
 mkdir -p .claude/metrics/transcripts
 
+# Generate transcript filename (save to variable for metrics)
+TRANSCRIPT_FILE=".claude/metrics/transcripts/commit-$(date +%Y%m%d-%H%M%S).log"
+
 # Save your complete conversation (copy your full thinking/tool calls/output)
-# This enables post-session analysis of token usage patterns
-cat > .claude/metrics/transcripts/commit-$(date +%Y%m%d-%H%M%S).log << 'TRANSCRIPT_EOF'
-[Paste your complete session output here, including all tool calls and reasoning]
+# Include: all git commands, file reads, pre-commit output, reasoning
+cat > "$TRANSCRIPT_FILE" << 'TRANSCRIPT_EOF'
+=== Commit Agent Session ===
+Timestamp: $(date -Iseconds)
+Session ID: ${CLAUDE_SESSION_ID:-unknown}
+Working Directory: $(pwd)
+
+=== Tool Usage Breakdown ===
+Bash: [count of bash tool calls]
+Read: [count of read tool calls]
+Grep: [count of grep tool calls]
+Glob: [count of glob tool calls]
+
+=== Git Commands Executed ===
+[List each git command with output size estimate]
+
+=== Files Read ===
+[List files read with line counts]
+
+=== Complete Conversation ===
+[Paste your full session here - all tool calls, outputs, reasoning]
+This enables per-tool token analysis post-session.
 TRANSCRIPT_EOF
+
+echo "Transcript saved to: $TRANSCRIPT_FILE"
 ```
 
 **Part B: Log Structured Metrics** (for automated analysis):
@@ -316,11 +340,12 @@ FILES_MODIFIED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c 
 FILES_CREATED=$(git diff --name-status HEAD~${COMMITS_CREATED}..HEAD | grep -c '^A' || echo 0)
 ```
 
-**Log metrics using helper script**:
+**Log metrics using helper script** (include tool breakdown and transcript reference):
 
 ```bash
 python .claude/lib/commit-agent-metrics.py '{
   "session_id": "'"${CLAUDE_SESSION_ID:-unknown}"'",
+  "transcript_file": "'"${TRANSCRIPT_FILE}"'",
   "commits_created": '$COMMITS_CREATED',
   "commit_hashes": ["'$(echo $COMMIT_HASHES | sed 's/,/","/g')'"],
   "files_committed": '$FILES_COMMITTED',
@@ -331,6 +356,12 @@ python .claude/lib/commit-agent-metrics.py '{
   "pre_commit_failures": <actual count>,
   "tokens_used": <from your tool trace>,
   "tool_uses": <count of tool calls>,
+  "tool_usage_breakdown": {
+    "Bash": <count>,
+    "Read": <count>,
+    "Grep": <count>,
+    "Glob": <count>
+  },
   "phase_4_executed": <true|false>,
   "phase_5_executed": <true|false>,
   "phase_5_logsift_errors": <count from logsift>,
@@ -338,6 +369,15 @@ python .claude/lib/commit-agent-metrics.py '{
   "duration_seconds": <time from start to finish>
 }' 2>/dev/null || true
 ```
+
+**Tool Usage Tracking**: Count each tool type you use during the session:
+
+- `Bash`: git commands, pre-commit runs, logsift calls
+- `Read`: File reading operations
+- `Grep`: Code searches (rare in commit workflow)
+- `Glob`: File pattern matching (rare in commit workflow)
+
+This enables analysis of which operations consume the most tokens.
 
 **IMPORTANT**:
 
