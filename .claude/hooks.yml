@@ -1,0 +1,5 @@
+hooks:
+  PreToolUse:
+    - event_matcher:
+        tool_name: "Task"
+      command: "python .claude/hooks/enhance-commit-context"
