@@ -7,14 +7,13 @@
 # No sudo required (user space)
 # ================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 # Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-enable_error_traps
 
 # Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
@@ -56,9 +55,7 @@ else
 
   log_info "Downloading yazi..."
   if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_ZIP"; then
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      manual_steps="1. Download in your browser (bypasses firewall):
+    manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, extract and install:
@@ -69,9 +66,9 @@ else
 
 3. Verify installation:
    yazi --version"
-      report_failure "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-    fi
-    log_fatal "Failed to download from $DOWNLOAD_URL" "${BASH_SOURCE[0]}" "$LINENO"
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+    log_error "Failed to download from $DOWNLOAD_URL"
+    exit 1
   fi
   register_cleanup "rm -f '$TEMP_ZIP' 2>/dev/null || true"
   register_cleanup "rm -rf '$EXTRACT_DIR' 2>/dev/null || true"
@@ -91,18 +88,16 @@ else
   if command -v yazi >/dev/null 2>&1; then
     log_success "yazi and ya installed successfully"
   else
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      manual_steps="Binary installed but not found in PATH.
+    manual_steps="Binary installed but not found in PATH.
 
 Check that ~/.local/bin is in your PATH:
    echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
 
 Verify the binary exists:
    ls -la ~/.local/bin/yazi"
-      report_failure "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
-    fi
-    log_fatal "yazi not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
+    log_error "yazi not found in PATH after installation"
+    exit 1
   fi
 fi
 

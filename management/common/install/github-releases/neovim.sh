@@ -9,11 +9,12 @@
 # No sudo required (user space)
 # ================================================================
 
+set -uo pipefail
+
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-enable_error_traps
 
 # Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -66,8 +67,8 @@ Manual installation:
 3. Extract: tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
 4. Link: ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
 5. Verify: nvim --version"
-  report_failure "neovim" "https://github.com/${REPO}/releases/latest" "latest" "$manual_steps" "Failed to fetch version from GitHub API"
-  log_warning "Neovim installation failed (see summary)"
+  output_failure_data "neovim" "https://github.com/${REPO}/releases/latest" "latest" "$manual_steps" "Failed to fetch version from GitHub API"
+  log_error "Neovim installation failed"
   exit 1
 fi
 
@@ -96,8 +97,8 @@ if ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
 
 3. Verify installation:
    nvim --version"
-  report_failure "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Download failed"
-  log_warning "Neovim installation failed (see summary)"
+  output_failure_data "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Download failed"
+  log_error "Neovim installation failed"
   exit 1
 fi
 
@@ -117,8 +118,8 @@ if ! file "$NVIM_TARBALL" | grep -q "gzip compressed"; then
 
 4. Verify:
    nvim --version"
-  report_failure "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Invalid gzip archive"
-  log_warning "Neovim installation failed (see summary)"
+  output_failure_data "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Invalid gzip archive"
+  log_error "Neovim installation failed"
   exit 1
 fi
 
