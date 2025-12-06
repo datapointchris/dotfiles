@@ -250,6 +250,36 @@ class ReferenceChecker:
 
         return symbol_table
 
+    def resolve_path(self, path_str: str, symbol_table: Dict[str, str], file_path: Path) -> str:
+        """
+        Resolve a path containing shell variables.
+
+        Args:
+            path_str: Path that may contain variables (e.g., "$SCRIPT_DIR/helpers.sh")
+            symbol_table: Dictionary of variable names to their resolved values
+            file_path: The file being checked (for context)
+
+        Returns:
+            Resolved path with variables substituted
+
+        Raises:
+            ValueError: If path contains unresolvable variables
+        """
+        resolved = path_str
+
+        # Substitute known variables from symbol table
+        for var_name, var_value in symbol_table.items():
+            # Handle both $VAR and ${VAR} syntax
+            resolved = resolved.replace(f"${var_name}", var_value)
+            resolved = resolved.replace(f"${{{var_name}}}", var_value)
+
+        # Check if there are still unresolved variables
+        if '$' in resolved:
+            # Can't resolve this path - raise exception
+            raise ValueError(f"Cannot resolve variables in: {path_str}")
+
+        return resolved
+
     def check_script_references(self):
         """Check that bash script references point to existing files."""
         script_pattern = re.compile(r'(?:bash|sh)\s+["\']?([^\s"\']+\.sh)["\']?')
