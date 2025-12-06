@@ -421,12 +421,44 @@ class ReferenceChecker:
             except (OSError, UnicodeDecodeError):
                 continue
 
+    def check_relative_traversal(self):
+        """Detect relative directory traversal patterns fragile to file moves."""
+        # Pattern: VARIABLE_DIR="$(cd "$OTHER_DIR/../../.." && pwd)"
+        traversal_pattern = re.compile(
+            r'([A-Z_]+_DIR)=.*\$\(cd.*\.\./.*pwd\)'
+        )
+
+        for file_path in self.find_files("**/*.sh"):
+            try:
+                rel_path = file_path.relative_to(self.root_dir)
+
+                with open(file_path, "r", encoding="utf-8") as f:
+                    for line_num, line in enumerate(f, 1):
+                        match = traversal_pattern.search(line)
+                        if not match:
+                            continue
+
+                        var_name = match.group(1)
+
+                        self.warnings.append(
+                            Warning(
+                                file=rel_path,
+                                line_num=line_num,
+                                check_type=CheckType.FRAGILE_REFACTOR,
+                                message=f"{var_name} uses relative directory traversal (../) - fragile to file moves",
+                                suggestion="Consider dynamic root detection: git rev-parse --show-toplevel, or search for project marker (.git, etc.)",
+                            )
+                        )
+            except (OSError, UnicodeDecodeError):
+                continue
+
     def run_all_checks(self):
         """Run all validation checks."""
         self.check_pattern("management/tests/", "Update to tests/install/")
         self.check_source_statements()
         self.check_script_references()
         self.check_relative_path_fragility()
+        self.check_relative_traversal()
 
     def print_results(self):
         """Print validation results."""
