@@ -87,11 +87,15 @@ class ReferenceChecker:
         search_path: Path = None,
         skip_docs: bool = False,
         file_type: str = None,
+        warn_fragile: bool = True,
+        strict: bool = False,
     ):
         self.root_dir = root_dir or Path.cwd()
         self.search_path = search_path or self.root_dir
         self.skip_docs = skip_docs
         self.file_type = file_type
+        self.warn_fragile = warn_fragile
+        self.strict = strict
         self.issues: List[Issue] = []
         self.warnings: List[Warning] = []
         self.exclude_dirs = self.DEFAULT_EXCLUDES.copy()
@@ -457,8 +461,11 @@ class ReferenceChecker:
         self.check_pattern("management/tests/", "Update to tests/install/")
         self.check_source_statements()
         self.check_script_references()
-        self.check_relative_path_fragility()
-        self.check_relative_traversal()
+
+        # Only run warning checks if enabled
+        if self.warn_fragile:
+            self.check_relative_path_fragility()
+            self.check_relative_traversal()
 
     def print_results(self):
         """Print validation results."""
@@ -586,6 +593,16 @@ Exit codes:
         action="store_true",
         help="Skip documentation (.md) files",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors (exit 1 if warnings found)",
+    )
+    parser.add_argument(
+        "--no-warn",
+        action="store_true",
+        help="Disable fragile path warnings (only check for errors)",
+    )
     args = parser.parse_args()
 
     root_dir = Path.cwd()
@@ -603,6 +620,8 @@ Exit codes:
         search_path=search_path,
         skip_docs=args.skip_docs,
         file_type=args.type,
+        warn_fragile=not args.no_warn,
+        strict=args.strict,
     )
 
     if args.pattern:
@@ -612,7 +631,16 @@ Exit codes:
 
     checker.print_results()
 
-    sys.exit(1 if checker.issues else 0)
+    # Exit code logic:
+    # - Always exit 1 if there are errors
+    # - Exit 1 if strict mode and there are warnings
+    # - Otherwise exit 0
+    if checker.issues:
+        sys.exit(1)
+    elif checker.strict and checker.warnings:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
