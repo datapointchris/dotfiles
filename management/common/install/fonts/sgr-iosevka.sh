@@ -22,7 +22,6 @@ download_sgriosevka() {
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || exit 1
 
-  log_verbose "Fetching latest Iosevka release info..."
   local release_json
   if ! release_json=$(curl -fsSL https://api.github.com/repos/be5invis/Iosevka/releases/latest); then
     manual_steps="Download manually from GitHub:
@@ -63,7 +62,6 @@ Extract and install:
   mkdir -p "$download_dir/SGr-IosevkaSlab"
   mkdir -p "$download_dir/SGr-IosevkaTermSlab"
 
-  log_verbose "Downloading SGr-Iosevka..."
   if ! curl -fsSL "$sgr_iosevka_url" -o SGr-Iosevka.zip; then
     output_failure_data "SGr-Iosevka" "$sgr_iosevka_url" "latest" "Download failed" "Download failed"
     cd - > /dev/null
@@ -73,7 +71,6 @@ Extract and install:
   unzip -qo SGr-Iosevka.zip || exit 1
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-Iosevka/" \; 2>/dev/null || true
 
-  log_verbose "Downloading SGr-IosevkaTerm..."
   if ! curl -fsSL "$sgr_term_url" -o SGr-IosevkaTerm.zip; then
     output_failure_data "SGr-IosevkaTerm" "$sgr_term_url" "latest" "Download failed" "Download failed"
     cd - > /dev/null
@@ -83,7 +80,6 @@ Extract and install:
   unzip -qo SGr-IosevkaTerm.zip || exit 1
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaTerm/" \; 2>/dev/null || true
 
-  log_verbose "Downloading SGr-IosevkaSlab..."
   if ! curl -fsSL "$sgr_slab_url" -o SGr-IosevkaSlab.zip; then
     output_failure_data "SGr-IosevkaSlab" "$sgr_slab_url" "latest" "Download failed" "Download failed"
     cd - > /dev/null
@@ -93,7 +89,6 @@ Extract and install:
   unzip -qo SGr-IosevkaSlab.zip || exit 1
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaSlab/" \; 2>/dev/null || true
 
-  log_verbose "Downloading SGr-IosevkaTermSlab..."
   if ! curl -fsSL "$sgr_termslab_url" -o SGr-IosevkaTermSlab.zip; then
     output_failure_data "SGr-IosevkaTermSlab" "$sgr_termslab_url" "latest" "Download failed" "Download failed"
     cd - > /dev/null
