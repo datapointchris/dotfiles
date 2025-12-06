@@ -33,6 +33,3 @@ fi
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terrascan_${VERSION#v}_${PLATFORM}_${ARCH}.tar.gz"
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "terrascan" "$VERSION"
-
-print_banner_success "Terrascan installation complete"
-exit_success

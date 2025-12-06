@@ -38,6 +38,3 @@ fi
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/zk-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "zk" "$VERSION"
-
-print_banner_success "zk installation complete"
-exit_success

@@ -35,6 +35,3 @@ fi
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tflint_${PLATFORM}_${ARCH}.zip"
 
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "tflint" "$VERSION"
-
-print_banner_success "TFLint installation complete"
-exit_success

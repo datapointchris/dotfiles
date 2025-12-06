@@ -38,6 +38,3 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/glow_${VER
 
 # Binary is in nested directory: glow_*_Darwin_x86_64/glow
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "glow_*_${PLATFORM_ARCH}/glow" "$VERSION"
-
-print_banner_success "Glow installation complete"
-exit_success

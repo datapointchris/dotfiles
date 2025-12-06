@@ -6,7 +6,7 @@ allowed-tools: ["Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 # Logsift Monitor: Automated Error Analysis & Fixing
 
-Run the command `$1` using logsift monitor with a timeout of ${2:-10} minutes.
+Run the command `$1` using logsift monitor with a timeout of ${2:-30} minutes.
 
 ## What is Logsift?
 
@@ -46,7 +46,7 @@ This is the most common mistake that defeats the entire purpose of logsift:
 - Always run logsift in the FOREGROUND
 - Let logsift complete naturally and show its final analysis
 - If the timeout is reached and the script is still running:
-  - Set a new timeout for the same duration (e.g., if original was 10 minutes, add another 10 minutes)
+  - Set a new timeout for the same duration (e.g., if original was 30 minutes, add another 30 minutes)
   - Keep the command running in the foreground
   - Wait patiently - do NOT continuously check output
 - Trust that logsift will notify you when complete with a full analysis summary
@@ -62,9 +62,9 @@ This is the most common mistake that defeats the entire purpose of logsift:
 **Example of correct timeout handling**:
 
 ```bash
-# Initial run with 10-minute timeout
+# Initial run with 30-minute timeout (default)
 logsift monitor -- bash script.sh
-# If script is still running at 10 minutes, extend timeout to 20 minutes total
+# If script is still running at 30 minutes, extend timeout to 60 minutes total
 # DO NOT background, DO NOT continuously check - just wait
 ```
 

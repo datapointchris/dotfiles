@@ -72,6 +72,3 @@ Verify the binary exists:
   fi
   log_fatal "terraformer not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
 fi
-
-print_banner_success "Terraformer installation complete"
-exit_success

@@ -24,7 +24,10 @@
 #   DEBUG=true log_debug "Cache hit for key: $key"
 # ================================================================
 
-set -euo pipefail
+# Note: Libraries that are sourced should not use 'set -e' as it modifies
+# the error handling behavior of scripts that source them. Scripts using
+# this library should manage their own error handling.
+set -uo pipefail
 
 # ================================================================
 # Source Dependencies

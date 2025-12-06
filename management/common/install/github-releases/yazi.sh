@@ -123,6 +123,3 @@ log_info "Installing plugins..."
 ya pkg add AnirudhG07/nbpreview || true
 ya pkg add pirafrank/what-size || true
 ya pkg add yazi-rs/plugins:git || true
-
-print_banner_success "Yazi installation complete"
-exit_success

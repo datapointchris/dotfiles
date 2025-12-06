@@ -47,6 +47,3 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${
 
 # Install (binary is at root of tarball)
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit" "$VERSION"
-
-print_banner_success "LazyGit installation complete"
-exit_success

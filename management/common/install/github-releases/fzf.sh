@@ -47,6 +47,3 @@ fi
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/fzf-${VERSION#v}-${PLATFORM}_${ARCH}.tar.gz"
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "fzf" "$VERSION"
-
-print_banner_success "fzf installation complete"
-exit_success

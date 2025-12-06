@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""
+PreToolUse hook to block backgrounding of logsift commands.
+Logsift handles backgrounding internally - running it in background defeats the purpose.
+Uses exit code 2 to block execution per Claude Code hook specification.
+"""
+import json
+import sys
+
+
+def is_logsift_command(command: str) -> bool:
+    """Check if command contains logsift monitor."""
+    return "logsift monitor" in command
+
+
+def is_backgrounded(command: str, tool_input: dict) -> bool:
+    """Check if command is being run in background."""
+    # Check for run_in_background flag
+    if tool_input.get("run_in_background"):
+        return True
+
+    # Check for & at end of command (after stripping whitespace)
+    if command.strip().endswith("&"):
+        return True
+
+    return False
+
+
+try:
+    data = json.load(sys.stdin)
+    tool_name = data.get('tool_name', '')
+
+    # Only check Bash tool
+    if tool_name != 'Bash':
+        sys.exit(0)
+
+    tool_input = data.get('tool_input', {})
+    command = tool_input.get('command', '')
+
+    # Check if this is a backgrounded logsift command
+    if is_logsift_command(command) and is_backgrounded(command, tool_input):
+        print("❌ BLOCKED: Logsift commands must run in FOREGROUND", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("From CLAUDE.md:", file=sys.stderr)
+        print("  ✅ CORRECT: logsift monitor -- bash script.sh", file=sys.stderr)
+        print("  ❌ WRONG: logsift monitor -- bash script.sh &", file=sys.stderr)
+        print("  ❌ WRONG: run_in_background: true", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Logsift handles backgrounding internally and shows periodic updates.", file=sys.stderr)
+        print("Running it in background defeats the purpose of the monitoring wrapper.", file=sys.stderr)
+        sys.exit(2)  # Block execution
+
+    # Allow all other commands
+    sys.exit(0)
+
+except Exception as e:
+    # On error, allow the command (fail open)
+    print(f"Hook error: {e}", file=sys.stderr)
+    sys.exit(0)

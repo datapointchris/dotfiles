@@ -33,6 +33,3 @@ fi
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/trivy_${VERSION#v}_${PLATFORM}-${ARCH}.tar.gz"
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "trivy" "$VERSION"
-
-print_banner_success "Trivy installation complete"
-exit_success

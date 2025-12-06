@@ -145,5 +145,3 @@ else
   log_info "Make sure ~/.local/bin is in your PATH"
   exit 1
 fi
-
-print_banner_success "Neovim installation complete"
