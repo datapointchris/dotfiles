@@ -15,7 +15,7 @@ font_extension="otf"
 
 platform=$(detect_platform)
 system_font_dir=$(get_system_font_dir)
-download_dir="/tmp/fonts-$nerd_font_package"
+download_dir="/tmp/fonts-${font_name// /}"
 trap 'rm -rf "$download_dir"' EXIT
 
 print_section "Installing $font_name" "yellow"
@@ -25,7 +25,7 @@ if is_font_installed "$system_font_dir" "*Monaspice*NerdFont*.$font_extension"; 
   exit 0
 fi
 
-log_info "Downloading $nerd_font_package..."
+log_info "Downloading $font_name..."
 download_nerd_font "$nerd_font_package" "$font_extension" "$download_dir"
 
 log_info "Pruning unwanted variants..."
