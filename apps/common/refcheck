@@ -30,10 +30,21 @@ class CheckType(Enum):
     PATTERN = "old_pattern"
     SOURCE = "broken_source"
     SCRIPT = "broken_script"
+    FRAGILE_CWD = "fragile_cwd"
+    FRAGILE_REFACTOR = "fragile_refactor"
 
 
 @dataclass
 class Issue:
+    file: Path
+    line_num: int
+    check_type: CheckType
+    message: str
+    suggestion: Optional[str] = None
+
+
+@dataclass
+class Warning:
     file: Path
     line_num: int
     check_type: CheckType
@@ -82,6 +93,7 @@ class ReferenceChecker:
         self.skip_docs = skip_docs
         self.file_type = file_type
         self.issues: List[Issue] = []
+        self.warnings: List[Warning] = []
         self.exclude_dirs = self.DEFAULT_EXCLUDES.copy()
         self.exclude_patterns = self.DEFAULT_EXCLUDE_PATTERNS.copy()
 
@@ -355,28 +367,62 @@ class ReferenceChecker:
     def print_results(self):
         """Print validation results."""
         try:
-            if not self.issues:
-                search_info = f" in {self.search_path.relative_to(self.root_dir)}" if self.search_path != self.root_dir else ""
+            search_info = f" in {self.search_path.relative_to(self.root_dir)}" if self.search_path != self.root_dir else ""
+
+            # If no issues or warnings, success!
+            if not self.issues and not self.warnings:
                 print(f"\n✅ All file references valid{search_info}\n")
                 return
 
-            by_type: Dict[CheckType, List[Issue]] = {}
-            for issue in self.issues:
-                by_type.setdefault(issue.check_type, []).append(issue)
+            # Print summary header
+            error_count = len(self.issues)
+            warning_count = len(self.warnings)
 
-            search_info = f" in {self.search_path.relative_to(self.root_dir)}" if self.search_path != self.root_dir else ""
-            print(f"\n❌ Found {len(self.issues)} broken reference(s){search_info}\n")
+            if error_count > 0 and warning_count > 0:
+                print(f"\n❌ Found {error_count} error(s) and {warning_count} warning(s){search_info}\n")
+            elif error_count > 0:
+                print(f"\n❌ Found {error_count} error(s){search_info}\n")
+            else:
+                print(f"\n⚠️  Found {warning_count} warning(s){search_info}\n")
 
-            for check_type, issues in sorted(by_type.items(), key=lambda x: x[0].value):
-                print(
-                    f"\n{check_type.value.replace('_', ' ').title()} ({len(issues)}):"
-                )
+            # Print errors
+            if self.issues:
+                print("Errors:")
                 print("─" * 60)
-                for issue in issues:
-                    print(f"  {issue.file}:{issue.line_num}")
-                    print(f"    {issue.message}")
-                    if issue.suggestion:
-                        print(f"    → {issue.suggestion}")
+
+                by_type: Dict[CheckType, List[Issue]] = {}
+                for issue in self.issues:
+                    by_type.setdefault(issue.check_type, []).append(issue)
+
+                for check_type, issues in sorted(by_type.items(), key=lambda x: x[0].value):
+                    print(f"\n{check_type.value.replace('_', ' ').title()} ({len(issues)}):")
+                    print("─" * 60)
+                    for issue in issues:
+                        print(f"  {issue.file}:{issue.line_num}")
+                        print(f"    {issue.message}")
+                        if issue.suggestion:
+                            print(f"    → {issue.suggestion}")
+
+            # Print warnings
+            if self.warnings:
+                if self.issues:
+                    print()  # Extra space between errors and warnings
+
+                print("Warnings:")
+                print("─" * 60)
+
+                by_type: Dict[CheckType, List[Warning]] = {}
+                for warning in self.warnings:
+                    by_type.setdefault(warning.check_type, []).append(warning)
+
+                for check_type, warnings in sorted(by_type.items(), key=lambda x: x[0].value):
+                    print(f"\n{check_type.value.replace('_', ' ').title()} ({len(warnings)}):")
+                    print("─" * 60)
+                    for warning in warnings:
+                        print(f"  {warning.file}:{warning.line_num}")
+                        print(f"    {warning.message}")
+                        if warning.suggestion:
+                            print(f"    → {warning.suggestion}")
 
             print()
         except BrokenPipeError:
