@@ -296,7 +296,7 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 8 - Shell Configuration" "cyan"
-    bash "$plugins/shell-plugins.sh"
+    run_installer "$plugins/shell-plugins.sh" "shell-plugins"
     echo ""
 
     print_header "Phase 9 - Custom Go Applications" "cyan"
@@ -314,9 +314,9 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 12 - Plugin Installation" "cyan"
-    bash "$plugins/tpm.sh"
-    bash "$plugins/tmux-plugins.sh"
-    bash "$plugins/nvim-plugins.sh"
+    run_installer "$plugins/tpm.sh" "tpm"
+    run_installer "$plugins/tmux-plugins.sh" "tmux-plugins"
+    run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
 
     # Display failure summary if there were any failures
     display_failure_summary
