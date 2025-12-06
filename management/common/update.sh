@@ -61,8 +61,15 @@ source "$HOME/.local/bin/env" 2>/dev/null || true
 if uv tool upgrade --all; then
     log_success "Python tools updated"
 else
-    log_warning "Some Python tools failed to update"
-    log_info "Update manually with: uv tool upgrade --all"
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+        manual_steps="Update Python tools manually:
+   uv tool upgrade --all
+
+List installed tools:
+   uv tool list"
+        report_failure "uv-tools" "unknown" "latest" "$manual_steps" "Failed to upgrade UV tools"
+    fi
+    log_warning "Some Python tools failed to update (see summary)"
 fi
 echo ""
 
@@ -73,8 +80,15 @@ source "$HOME/.cargo/env"
 if cargo install-update -a; then
     log_success "Rust packages updated"
 else
-    log_warning "Some Rust packages failed to update"
-    log_info "Update manually with: cargo install-update -a"
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+        manual_steps="Update Rust packages manually:
+   cargo install-update -a
+
+List installed packages:
+   cargo install --list"
+        report_failure "cargo-packages" "unknown" "latest" "$manual_steps" "Failed to update cargo packages"
+    fi
+    log_warning "Some Rust packages failed to update (see summary)"
 fi
 echo ""
 
@@ -97,8 +111,13 @@ for name in $PLUGINS; do
     if git pull origin "$DEFAULT_BRANCH" --quiet; then
       log_success "$name updated"
     else
+      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+        manual_steps="Update plugin manually:
+   cd $PLUGIN_DIR
+   git pull origin $DEFAULT_BRANCH"
+        report_failure "$name" "unknown" "latest" "$manual_steps" "Git pull failed"
+      fi
       log_warning "$name update failed"
-      log_info "Update manually: cd $PLUGIN_DIR && git pull origin $DEFAULT_BRANCH"
       PLUGIN_UPDATE_FAILURES=$((PLUGIN_UPDATE_FAILURES + 1))
     fi
   else
@@ -125,9 +144,15 @@ else
   if "$TPM_DIR/bin/update_plugins" all; then
     log_success "Tmux plugins updated"
   else
-    log_warning "Tmux plugins update failed"
-    log_info "Update manually: $TPM_DIR/bin/update_plugins all"
-    log_info "Or from within tmux: prefix + U"
+    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+      manual_steps="Update tmux plugins manually:
+   $TPM_DIR/bin/update_plugins all
+
+Or update from within tmux:
+   Press prefix + U (capital u)"
+      report_failure "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM update failed"
+    fi
+    log_warning "Tmux plugins update failed (see summary)"
   fi
 fi
 echo ""

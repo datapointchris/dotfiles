@@ -1,14 +1,21 @@
 # refcheck
 
-Fast reference validator for codebases. Finds broken file references and old path patterns.
+Fast reference validator for codebases. Finds broken file references, fragile path patterns, and validates variable-based paths.
 
 ## What it does
 
 `refcheck` validates file references across your codebase, checking for:
 
-1. **Broken source statements** - Missing files in `source` commands
+### Errors (always exit 1)
+
+1. **Broken source statements** - Missing files in `source` commands (including variable paths like `$SCRIPT_DIR/file.sh`)
 2. **Broken script references** - Missing files in `bash` or `sh` commands
 3. **Old path patterns** - Stale references after refactoring
+
+### Warnings (exit 0 unless --strict)
+
+1. **Fragile to working directory** - Relative paths that only work from specific directories
+2. **Fragile to refactoring** - Variable assignments using `../` traversal (breaks when files move)
 
 ## Why use it
 
@@ -30,6 +37,20 @@ Fast reference validator for codebases. Finds broken file references and old pat
 - Automatically filters false positives (docs, planning, dynamic paths)
 - Structured output with suggestions
 - Exit codes for CI/CD integration
+
+**Variable path validation:**
+
+- Resolves shell variables like `$SCRIPT_DIR` and `$DOTFILES_DIR` before validation
+- Detects broken paths hidden behind variables
+- Shows both original and resolved paths in error messages
+- Gracefully skips unresolvable variables to avoid false positives
+
+**Warning system:**
+
+- Detects fragile patterns that may break in different contexts
+- Configurable severity: warnings (default) or errors (--strict)
+- Can be disabled for legacy codebases (--no-warn)
+- Actionable suggestions for each warning
 
 ## Installation
 
@@ -59,6 +80,12 @@ refcheck --skip-docs
 
 # Combine filters
 refcheck --pattern "FooClass" --type py --skip-docs src/
+
+# Disable warnings (only check for errors)
+refcheck --no-warn
+
+# Treat warnings as errors (strict mode for CI)
+refcheck --strict
 ```
 
 ## Common workflows
@@ -89,24 +116,80 @@ refcheck management/
 refcheck apps/ --type sh
 ```
 
+### Use in CI/CD
+
+```bash
+# Strict mode - fail build on warnings
+refcheck --strict
+
+# Regular mode - warnings don't fail build
+refcheck
+
+# Disable warnings for legacy code
+refcheck --no-warn
+```
+
+### Detect fragile patterns
+
+```bash
+# Find paths that only work from specific directories
+refcheck  # Shows warnings for fragile relative paths
+
+# Find variable assignments using ../ traversal
+refcheck  # Shows warnings for SCRIPT_DIR="$(cd "$DIR/../../.." && pwd)"
+```
+
 ## Output
 
-**When issues found:**
+**When errors found:**
 
 ```yaml
-❌ Found 3 broken reference(s)
+❌ Found 2 error(s)
 
-Broken Source (1):
+Errors:
+
+Broken Source (2):
 ────────────────────────────────────────────────────────────
+  tests/broken.sh:4
+    Missing: $SCRIPT_DIR/nonexistent.sh → /path/to/nonexistent.sh
+    → Verify path exists or update reference
+
   src/install.sh:15
     Missing: /path/to/missing.sh
     → Verify path exists or update reference
+```
 
-Old Pattern (2):
+**When warnings found:**
+
+```yaml
+⚠️  Found 2 warning(s)
+
+Warnings:
+
+Fragile to Working Directory (1):
 ────────────────────────────────────────────────────────────
-  src/deploy.sh:42
-    Found: old/path/
-    → Update to new/path/
+  scripts/deploy.sh:3
+    Relative path only valid from: repo root
+    source tests/helpers.sh
+    → Use root directory variable (e.g., $PROJECT_ROOT, $REPO_ROOT)
+
+Fragile to Refactoring (1):
+────────────────────────────────────────────────────────────
+  scripts/setup.sh:8
+    SCRIPT_DIR uses relative directory traversal (../) - fragile to file moves
+    → Consider dynamic root detection: git rev-parse --show-toplevel
+```
+
+**When errors and warnings found:**
+
+```yaml
+❌ Found 1 error(s) and 2 warning(s)
+
+Errors:
+[... errors listed ...]
+
+Warnings:
+[... warnings listed ...]
 ```
 
 **When all valid:**
@@ -117,16 +200,35 @@ Old Pattern (2):
 
 ## Exit codes
 
-- `0` - All references valid
-- `1` - Found broken references
+- `0` - All references valid, or only warnings found (default mode)
+- `1` - Found errors, or warnings in strict mode (`--strict`)
 
-Use in scripts:
+**Exit code behavior:**
 
 ```bash
+# Always exits 1 if errors found
+refcheck  # Exit 1 if errors, exit 0 if only warnings
+
+# Strict mode: treat warnings as errors
+refcheck --strict  # Exit 1 if errors OR warnings
+
+# Disable warnings: only check errors
+refcheck --no-warn  # Exit 1 if errors, never warns
+```
+
+**Use in scripts:**
+
+```bash
+# Normal mode - warnings don't fail
 if refcheck; then
-  echo "All references valid, safe to deploy"
+  echo "All references valid (warnings OK)"
+fi
+
+# Strict mode - warnings fail
+if refcheck --strict; then
+  echo "All references valid (no errors or warnings)"
 else
-  echo "Broken references found, fix before deploying"
+  echo "Issues found, fix before deploying"
   exit 1
 fi
 ```
@@ -140,6 +242,8 @@ fi
 | `--desc DESC` | Description for pattern | `--desc "Now new/"` |
 | `--type, -t TYPE` | Filter by file type | `--type sh` |
 | `--skip-docs` | Skip markdown files | `--skip-docs` |
+| `--strict` | Treat warnings as errors (exit 1) | `--strict` |
+| `--no-warn` | Disable fragile path warnings | `--no-warn` |
 | `--help, -h` | Show help | `--help` |
 
 ## Smart filtering

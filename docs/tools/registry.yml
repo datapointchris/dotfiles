@@ -3,7 +3,7 @@
 
 refcheck:
   name: refcheck
-  description: Find broken file references and old path patterns in codebases
+  description: Find broken file references, validate variable paths, and detect fragile path patterns
   category: development
   type: custom
   installed_via: symlink
@@ -16,8 +16,14 @@ refcheck:
       description: "Find old pattern after refactoring"
     - command: "refcheck --type sh --skip-docs"
       description: "Check only shell scripts, skip documentation"
+    - command: "refcheck --strict"
+      description: "Treat warnings as errors (strict mode for CI)"
+    - command: "refcheck --no-warn"
+      description: "Disable fragile path warnings (only check errors)"
   use_cases:
     - "Proactive error detection before running tests"
     - "Refactoring safety after moving/renaming files"
     - "Fast validation (seconds vs minutes for full test suites)"
+    - "Variable path validation (resolves $SCRIPT_DIR, $DOTFILES_DIR, etc.)"
+    - "Detect fragile patterns (CWD-dependent paths, ../ traversal)"
   docs: "docs/apps/refcheck.md"

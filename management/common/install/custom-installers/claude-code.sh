@@ -74,9 +74,21 @@ elif echo "$INSTALLER_OUTPUT" | grep -qi "another process is currently installin
   log_success "Skipping (non-blocking)"
   exit 0
 else
-  log_warning "Claude Code installation failed"
-  log_info "Try manually: curl -fsSL https://claude.ai/install.sh | bash"
-  log_info "See: https://docs.claude.ai/docs/claude-code"
+  # Report failure if registry exists
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="The Claude Code installer failed.
+
+Try manually:
+   1. Download installer: curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
+   2. Review script: less /tmp/claude-install.sh
+   3. Run installer: bash /tmp/claude-install.sh
+
+If Claude is running, close it first and try again.
+
+Official docs: https://docs.claude.ai/docs/claude-code"
+    report_failure "claude-code" "https://claude.ai/install.sh" "latest" "$manual_steps" "Installer failed"
+  fi
+  log_warning "Claude Code installation failed (see summary)"
   exit 1
 fi
 
@@ -85,8 +97,22 @@ if command -v claude >/dev/null 2>&1; then
   INSTALLED_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
   log_success "Verified: $INSTALLED_VERSION"
 else
-  log_warning "Claude Code not found in PATH after installation"
-  log_info "Try closing and reopening your terminal, then verify: claude --version"
+  # Report verification failure
+  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
+    manual_steps="Claude Code installed but not found in PATH.
+
+Check installation:
+   ls -la ~/.local/bin/claude
+   which claude
+
+Ensure ~/.local/bin is in PATH:
+   export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Try closing and reopening your terminal, then verify:
+   claude --version"
+    report_failure "claude-code" "unknown" "latest" "$manual_steps" "Installation verification failed"
+  fi
+  log_warning "Claude Code installation verification failed (see summary)"
   exit 1
 fi
 

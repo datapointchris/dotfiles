@@ -20,6 +20,9 @@ source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 # Source platform detection utility
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
+# Initialize failure registry for resilient updates
+init_failure_registry
+
 # Detect platform and run appropriate update script
 PLATFORM=$(detect_platform)
 
@@ -58,6 +61,9 @@ fi
 
 END_TIME=$(date +%s)
 TOTAL_DURATION=$((END_TIME - START_TIME))
+
+# Display failure summary if there were any failures
+display_failure_summary
 
 print_title_success "Update Complete"
 log_info "Total time: ${TOTAL_DURATION}s"
