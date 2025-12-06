@@ -28,8 +28,8 @@ run_installer() {
     failure_version=$(echo "$output" | grep "^FAILURE_VERSION=" | cut -d"'" -f2 || echo "")
     failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
 
-    if echo "$output" | grep -q "^FAILURE_MANUAL<<"; then
-      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL<</,/^END_MANUAL/p' | sed '1d;$d')
+    if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
+      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
     fi
     cat >> "$FAILURES_LOG" << EOF
 ========================================

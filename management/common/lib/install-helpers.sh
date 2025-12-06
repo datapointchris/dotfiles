@@ -132,14 +132,14 @@ output_failure_data() {
   local manual_steps="$4"
   local reason="${5:-Installation failed}"
 
-  # Output to stderr in parseable format
-  cat >&2 << EOF
-FAILURE_TOOL='$tool_name'
-FAILURE_URL='$download_url'
-FAILURE_VERSION='$version'
-FAILURE_REASON='$reason'
-FAILURE_MANUAL<<'END_MANUAL'
-$manual_steps
-END_MANUAL
-EOF
+  # Output to stderr in parseable format (using clean markers)
+  {
+    echo "FAILURE_TOOL='$tool_name'"
+    echo "FAILURE_URL='$download_url'"
+    echo "FAILURE_VERSION='$version'"
+    echo "FAILURE_REASON='$reason'"
+    echo "FAILURE_MANUAL_START"
+    echo "$manual_steps"
+    echo "FAILURE_MANUAL_END"
+  } >&2
 }

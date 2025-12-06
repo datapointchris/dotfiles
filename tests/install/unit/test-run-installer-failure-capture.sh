@@ -75,8 +75,8 @@ run_installer_fixed() {
     failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
 
     # Extract multiline manual steps
-    if echo "$output" | grep -q "^FAILURE_MANUAL<<"; then
-      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL<</,/^END_MANUAL/p' | sed '1d;$d')
+    if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
+      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
     fi
 
     # Append to failures log
