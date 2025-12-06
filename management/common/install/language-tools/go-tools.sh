@@ -39,15 +39,13 @@ GOBIN="$HOME/go/bin"
   if go install "$tool@latest"; then
     log_success "$tool installed"
   else
-    # Report failure
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      manual_steps="Install manually with go:
+    manual_steps="Install manually with go:
    go install $tool@latest
 
 Tool will be installed to:
    $GOBIN"
-      report_failure "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "Failed to install via go install"
-    fi
+
+    output_failure_data "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "Failed to install via go install"
     log_warning "Failed to install $tool (see summary)"
   fi
 done

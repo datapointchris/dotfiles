@@ -30,15 +30,13 @@ log_info "Reading packages from packages.yml..."
   if cargo binstall -y "$package"; then
     log_success "$package installed"
   else
-    # Report failure
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      manual_steps="Install manually with cargo:
+    manual_steps="Install manually with cargo:
    cargo install $package
 
 Or try cargo-binstall directly:
    cargo binstall -y $package"
-      report_failure "$package" "https://crates.io/crates/$package" "latest" "$manual_steps" "Failed to install via cargo-binstall"
-    fi
+
+    output_failure_data "$package" "https://crates.io/crates/$package" "latest" "$manual_steps" "Failed to install via cargo-binstall"
     log_warning "$package installation failed (see summary)"
   fi
 done
