@@ -37,9 +37,7 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terraforme
 
 log_info "Downloading terraformer..."
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
-  # Report failure if registry exists
-  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-    manual_steps="1. Download in your browser (bypasses firewall):
+  manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, install:
@@ -48,8 +46,8 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
 
 3. Verify installation:
    terraformer --version"
-    report_failure "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-  fi
+
+  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
   log_fatal "Failed to download from $DOWNLOAD_URL" "${BASH_SOURCE[0]}" "$LINENO"
 fi
 
@@ -59,16 +57,14 @@ chmod +x "$TARGET_BIN"
 if command -v terraformer >/dev/null 2>&1; then
   log_success "terraformer installed successfully"
 else
-  # Report failure if registry exists
-  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-    manual_steps="Binary installed but not found in PATH.
+  manual_steps="Binary installed but not found in PATH.
 
 Check that ~/.local/bin is in your PATH:
    echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
 
 Verify the binary exists:
    ls -la ~/.local/bin/terraformer"
-    report_failure "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
-  fi
+
+  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
   log_fatal "terraformer not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
 fi
