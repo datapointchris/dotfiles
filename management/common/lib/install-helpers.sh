@@ -11,10 +11,8 @@
 # - GitHub release version fetching
 # - Failure registry for resilient installations
 
-# Note: Libraries that are sourced should not use 'set -e' as it modifies
-# the error handling behavior of scripts that source them. Scripts using
-# this library should manage their own error handling.
-set -uo pipefail
+# Note: Libraries that are sourced should not set shell options.
+# Scripts that source this library should manage their own error handling.
 
 # Get configuration from packages.yml
 get_package_config() {

@@ -6,7 +6,8 @@
 # Sources this file and call detect_platform to get: macos, wsl, arch, linux, unknown
 # ================================================================
 
-set -euo pipefail
+# Note: Libraries that are sourced should not set shell options.
+# Scripts that source this library should manage their own error handling.
 
 detect_platform() {
     local platform=""
