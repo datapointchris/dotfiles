@@ -110,9 +110,7 @@ install_from_tarball() {
   # Download
   log_info "Downloading $binary_name..."
   if ! curl -fsSL "$download_url" -o "$temp_tarball"; then
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      local manual_steps="1. Download in your browser (bypasses firewall):
+    local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
 2. After downloading, extract and install:
@@ -122,9 +120,11 @@ install_from_tarball() {
 
 3. Verify installation:
    ${binary_name} --version"
-      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
-    fi
-    log_fatal "Failed to download from $download_url" "${BASH_SOURCE[0]}" "$LINENO"
+
+    # Output structured failure data (Option B pattern)
+    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+    log_error "Failed to download from $download_url"
+    return 1
   fi
   register_cleanup "rm -f '$temp_tarball' 2>/dev/null || true"
 
@@ -150,18 +150,18 @@ install_from_tarball() {
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed successfully"
   else
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      local manual_steps="Binary installed but not found in PATH.
+    local manual_steps="Binary installed but not found in PATH.
 
 Check that ~/.local/bin is in your PATH:
    echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
 
 Verify the binary exists:
    ls -la ~/.local/bin/${binary_name}"
-      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
-    fi
-    log_fatal "$binary_name not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
+
+    # Output structured failure data (Option B pattern)
+    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
+    log_error "$binary_name not found in PATH after installation"
+    return 1
   fi
 }
 
@@ -184,9 +184,7 @@ install_from_zip() {
   # Download
   log_info "Downloading $binary_name..."
   if ! curl -fsSL "$download_url" -o "$temp_zip"; then
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      local manual_steps="1. Download in your browser (bypasses firewall):
+    local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
 2. After downloading, extract and install:
@@ -196,9 +194,11 @@ install_from_zip() {
 
 3. Verify installation:
    ${binary_name} --version"
-      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
-    fi
-    log_fatal "Failed to download from $download_url" "${BASH_SOURCE[0]}" "$LINENO"
+
+    # Output structured failure data (Option B pattern)
+    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+    log_error "Failed to download from $download_url"
+    return 1
   fi
   register_cleanup "rm -f '$temp_zip' 2>/dev/null || true"
   register_cleanup "rm -rf '$extract_dir' 2>/dev/null || true"
@@ -218,17 +218,17 @@ install_from_zip() {
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed successfully"
   else
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      local manual_steps="Binary installed but not found in PATH.
+    local manual_steps="Binary installed but not found in PATH.
 
 Check that ~/.local/bin is in your PATH:
    echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
 
 Verify the binary exists:
    ls -la ~/.local/bin/${binary_name}"
-      report_failure "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
-    fi
-    log_fatal "$binary_name not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
+
+    # Output structured failure data (Option B pattern)
+    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
+    log_error "$binary_name not found in PATH after installation"
+    return 1
   fi
 }
