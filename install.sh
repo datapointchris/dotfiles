@@ -257,8 +257,8 @@ install_common_phases() {
     fi
 
     print_header "Phase 4 - Go Toolchain" "cyan"
-    bash "$lang_managers/go.sh"
-    PATH="/usr/local/go/bin:$PATH" bash "$lang_tools/go-tools.sh"
+    run_installer "$lang_managers/go.sh" "go"
+    PATH="/usr/local/go/bin:$PATH" run_installer "$lang_tools/go-tools.sh" "go-tools"
     echo ""
 
     print_header "Phase 5 - GitHub Release Tools" "cyan"
@@ -282,17 +282,17 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 6 - Rust/Cargo Tools" "cyan"
-    bash "$lang_managers/rust.sh"
-    bash "$lang_tools/cargo-binstall.sh"
-    bash "$lang_tools/cargo-tools.sh"
+    run_installer "$lang_managers/rust.sh" "rust"
+    run_installer "$lang_tools/cargo-binstall.sh" "cargo-binstall"
+    run_installer "$lang_tools/cargo-tools.sh" "cargo-tools"
     echo ""
 
     print_header "Phase 7 - Language Package Managers" "cyan"
-    bash "$lang_managers/nvm.sh" || true
-    bash "$lang_tools/npm-install-globals.sh" || true
-    bash "$lang_managers/uv.sh" || true
-    bash "$lang_tools/uv-tools.sh" || true
-    bash "$lang_managers/tenv.sh" || true
+    run_installer "$lang_managers/nvm.sh" "nvm"
+    run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
+    run_installer "$lang_managers/uv.sh" "uv"
+    run_installer "$lang_tools/uv-tools.sh" "uv-tools"
+    run_installer "$lang_managers/tenv.sh" "tenv"
     echo ""
 
     print_header "Phase 8 - Shell Configuration" "cyan"
