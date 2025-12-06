@@ -31,11 +31,11 @@ import argparse
 
 
 class CheckType(Enum):
-    PATTERN = "old_pattern"
-    SOURCE = "broken_source"
-    SCRIPT = "broken_script"
-    FRAGILE_CWD = "fragile_cwd"
-    FRAGILE_REFACTOR = "fragile_refactor"
+    PATTERN = "old_path_pattern"
+    SOURCE = "missing_sourced_file"
+    SCRIPT = "missing_script_file"
+    FRAGILE_CWD = "fragile_cwd_path"
+    FRAGILE_REFACTOR = "fragile_traversal_path"
 
 
 @dataclass
@@ -562,13 +562,13 @@ Examples:
 
 What it checks:
   Errors (always checked, exit 1):
-    - Broken source statements (missing sourced files)
-    - Broken script references (bash/sh commands to missing files)
+    - Missing sourced files (source statements pointing to non-existent files)
+    - Missing script files (bash/sh commands pointing to non-existent scripts)
     - Old path patterns (after moving/renaming directories)
 
   Warnings (checked by default, exit 0 unless --strict):
-    - Fragile CWD: Relative paths that only work from specific directories
-    - Fragile refactor: Directory variables using ../ traversal (fragile to file moves)
+    - Fragile CWD paths: Relative paths that only work from specific directories
+    - Fragile traversal paths: Directory variables using ../ traversal (fragile to file moves)
 
 Exit codes:
   0 - No errors (warnings OK unless --strict)
