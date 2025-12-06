@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-refcheck - Find broken file references and old path patterns
+refcheck - Find broken file references and fragile path patterns
 
 A fast reference validator for codebases. Catches broken source statements,
-missing script references, and old path patterns after refactoring.
+missing script references, old path patterns, and fragile paths that break
+when run from different directories or after file moves.
 
 Designed for:
   - Proactive error detection before running tests
   - Refactoring safety (find stale references after moving files)
+  - Path fragility detection (warn about working-directory-dependent paths)
   - Fast feedback (runs in seconds vs minutes for full test suites)
 
 Common workflows:
-  refcheck                           # Validate all references in repo
+  refcheck                           # Validate all references + warn about fragile paths
+  refcheck --no-warn                 # Only check for errors, skip warnings
+  refcheck --strict                  # Treat warnings as errors (CI mode)
   refcheck management/               # Check specific directory
   refcheck --pattern "old/" --desc "Now new/"  # After refactoring
   refcheck --type sh --skip-docs     # Only shell scripts, skip docs
@@ -540,7 +544,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Validate all references (source statements, script paths)
+  # Validate all references + warn about fragile paths
   %(prog)s
   %(prog)s --skip-docs              # Skip markdown files
 
@@ -548,22 +552,27 @@ Examples:
   %(prog)s management/
   %(prog)s apps/ --type sh          # Only shell scripts in apps/
 
+  # Control warnings
+  %(prog)s --no-warn                # Only check errors, skip fragile path warnings
+  %(prog)s --strict                 # Treat warnings as errors (CI mode)
+
   # Find old patterns after refactoring
   %(prog)s --pattern "old/path/"
   %(prog)s --pattern "FooClass" --desc "Renamed to BarClass"
-  %(prog)s --pattern "old/" src/    # Search only in src/
-
-  # Combine filters
-  %(prog)s --type py --skip-docs tests/
 
 What it checks:
-  - Broken source statements (missing sourced files)
-  - Broken script references (bash/sh commands to missing files)
-  - Old path patterns (after moving/renaming directories)
+  Errors (always checked, exit 1):
+    - Broken source statements (missing sourced files)
+    - Broken script references (bash/sh commands to missing files)
+    - Old path patterns (after moving/renaming directories)
+
+  Warnings (checked by default, exit 0 unless --strict):
+    - Fragile CWD: Relative paths that only work from specific directories
+    - Fragile refactor: Directory variables using ../ traversal (fragile to file moves)
 
 Exit codes:
-  0 - All references valid
-  1 - Found broken references
+  0 - No errors (warnings OK unless --strict)
+  1 - Found errors, or warnings in --strict mode
         """,
     )
     parser.add_argument(
