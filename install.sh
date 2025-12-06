@@ -319,7 +319,7 @@ install_common_phases() {
     run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
 
     # Display failure summary if there were any failures
-    display_failure_summary
+    show_failures_summary
 }
 
 # ================================================================
