@@ -4,7 +4,6 @@ set -uo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
@@ -16,7 +15,7 @@ PROVIDER="all"  # Install all-provider version
 print_banner "Installing Terraformer"
 
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
+  exit 0
 fi
 
 VERSION=$(get_latest_version "$REPO")
@@ -48,7 +47,8 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
    terraformer --version"
 
   output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-  log_fatal "Failed to download from $DOWNLOAD_URL" "${BASH_SOURCE[0]}" "$LINENO"
+  log_error "Failed to download from $DOWNLOAD_URL"
+  exit 1
 fi
 
 chmod +x "$TARGET_BIN"
@@ -66,5 +66,6 @@ Verify the binary exists:
    ls -la ~/.local/bin/terraformer"
 
   output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
-  log_fatal "terraformer not found in PATH after installation" "${BASH_SOURCE[0]}" "$LINENO"
+  log_error "terraformer not found in PATH after installation"
+  exit 1
 fi
