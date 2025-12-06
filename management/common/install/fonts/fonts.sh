@@ -1116,25 +1116,12 @@ run_font_download() {
     local download_func="$1"
     local font_name="$2"
 
-    # Run download function - if it fails, check if failure was reported
+    # Run download function - if it fails, log warning
     if $download_func; then
         return 0
     else
-        local exit_code=$?
-
-        # Check if failure was reported to registry
-        if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]] && \
-           compgen -G "$DOTFILES_FAILURE_REGISTRY/*-${font_name}.txt" > /dev/null 2>&1; then
-            # Failure was reported - good, just log it
-            log_warning "$font_name download failed (details in summary)"
-        else
-            # Unreported failure - create generic entry
-            report_failure "$font_name" "unknown" "latest" \
-                "Try downloading manually from nerdfonts.com or the font's GitHub repository" \
-                "Download failed"
-            log_warning "$font_name download failed (see summary)"
-        fi
-
+        log_warning "$font_name download failed"
+        log_info "Try downloading manually from nerdfonts.com"
         return 1
     fi
 }

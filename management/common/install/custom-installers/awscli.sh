@@ -77,17 +77,8 @@ case $PLATFORM in
     # Download
     log_info "Downloading AWS CLI..."
     if ! curl -fsSL "$ZIP_URL" -o "$ZIP_FILE"; then
-      manual_steps="1. Download in your browser (bypasses firewall):
-   $ZIP_URL
-
-2. After downloading, extract and install:
-   unzip ~/Downloads/awscliv2.zip
-   ./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
-
-3. Verify installation:
-   aws --version"
-      report_failure "aws" "$ZIP_URL" "latest" "$manual_steps" "Download failed"
-      log_warning "AWS CLI installation failed (see summary)"
+      log_warning "AWS CLI download failed"
+      log_info "Download manually: $ZIP_URL"
       exit 1
     fi
 
@@ -100,19 +91,10 @@ case $PLATFORM in
     # Install to user directory (no sudo needed)
     log_info "Installing AWS CLI v2 to ~/.local/..."
     if ! "$EXTRACT_DIR/aws/install" --install-dir "$HOME/.local/aws-cli" --bin-dir "$HOME/.local/bin" --update; then
-      # Report failure if registry exists
-      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-        manual_steps="The AWS CLI installer failed. Try manually:
-   1. Download: $ZIP_URL
-   2. Extract: unzip ~/Downloads/awscliv2.zip
-   3. Install: ./aws/install --install-dir ~/.local/aws-cli --bin-dir ~/.local/bin
-
-Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-        report_failure "aws" "$ZIP_URL" "latest" "$manual_steps" "AWS installer failed"
-      fi
       # Cleanup
       rm -rf "$ZIP_FILE" "$EXTRACT_DIR"
-      log_warning "AWS CLI installation failed (see summary)"
+      log_warning "AWS CLI installation failed"
+      log_info "See: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
       exit 1
     fi
 
@@ -131,22 +113,8 @@ if command -v aws >/dev/null 2>&1; then
   INSTALLED_VERSION=$(aws --version 2>&1)
   log_success "$INSTALLED_VERSION"
 else
-  # Report verification failure
-  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-    manual_steps="AWS CLI installed but not found in PATH.
-
-Check installation:
-   ls -la ~/.local/bin/aws
-   ls -la ~/.local/aws-cli/
-
-Ensure ~/.local/bin is in PATH:
-   export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Re-run verification:
-   aws --version"
-    report_failure "aws" "unknown" "latest" "$manual_steps" "Installation verification failed"
-  fi
-  log_warning "AWS CLI installation verification failed (see summary)"
+  log_warning "AWS CLI not found in PATH after installation"
+  log_info "Ensure ~/.local/bin is in PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
   exit 1
 fi
 
