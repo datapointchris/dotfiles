@@ -210,6 +210,7 @@ nav:
           - Metrics Analysis: research/ai/metrics-analysis-research.md
   - Learnings:
       - Overview: learnings/index.md
+      - Script Refactoring Principles: learnings/script-refactoring-principles.md
       - PostToolUse Hook Integration: learnings/posttooluse-hook-integration.md
       - App Installation Patterns: learnings/app-installation-patterns.md
       - Arch Git libpcre2 Warning: learnings/arch-git-libpcre2-warning.md
