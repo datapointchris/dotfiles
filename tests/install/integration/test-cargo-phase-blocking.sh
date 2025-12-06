@@ -9,8 +9,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-source "$SCRIPT_DIR/helpers.sh"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+source "$DOTFILES_DIR/tests/install/helpers.sh"
 
 # Configuration
 UBUNTU_VERSION="24.04"
