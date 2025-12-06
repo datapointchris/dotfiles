@@ -30,6 +30,7 @@ tasks:
 
   symlinks:link:
     desc: Create symlinks from dotfiles to home directory
+    silent: true
     cmds:
       - |
         export TERM=${TERM:-xterm}
@@ -51,10 +52,13 @@ tasks:
           exit 1
         fi
 
+        # Link common first (base layer), then platform (overlay)
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks link common
         cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks link "$PLATFORM"
 
   symlinks:relink:
     desc: Remove all symlinks and recreate them (idempotent)
+    silent: true
     cmds:
       - |
         export TERM=${TERM:-xterm}
@@ -80,50 +84,25 @@ tasks:
 
   symlinks:check:
     desc: Verify all symlinks are correct
+    silent: true
     cmds:
-      - |
-        # Detect platform (check env var first, then system detection)
-        if [ -n "${PLATFORM:-}" ]; then
-          # PLATFORM already set (e.g., from ~/.env in Docker tests)
-          :
-        elif [ "$(uname)" = "Darwin" ]; then
-          PLATFORM="macos"
-        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-          PLATFORM="wsl"
-        elif [ -f /etc/arch-release ]; then
-          PLATFORM="arch"
-        else
-          echo "Unknown platform"
-          exit 1
-        fi
-
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks check "$PLATFORM"
+      - cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks check
 
   symlinks:show:
     desc: Show all configured symlinks
+    silent: true
     cmds:
-      - |
-        # Detect platform (check env var first, then system detection)
-        if [ -n "${PLATFORM:-}" ]; then
-          # PLATFORM already set (e.g., from ~/.env in Docker tests)
-          :
-        elif [ "$(uname)" = "Darwin" ]; then
-          PLATFORM="macos"
-        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-          PLATFORM="wsl"
-        elif [ -f /etc/arch-release ]; then
-          PLATFORM="arch"
-        else
-          echo "Unknown platform"
-          exit 1
-        fi
-
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks show "$PLATFORM"
+      - cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks show
 
   symlinks:unlink:
     desc: Remove all symlinks
+    silent: true
     cmds:
       - |
+        export TERM=${TERM:-xterm}
+        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
+        print_section "Removing symlinks" "cyan"
+
         # Detect platform (check env var first, then system detection)
         if [ -n "${PLATFORM:-}" ]; then
           # PLATFORM already set (e.g., from ~/.env in Docker tests)
@@ -139,7 +118,9 @@ tasks:
           exit 1
         fi
 
+        # Unlink platform first (overlay), then common (base layer)
         cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks unlink "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks unlink common
 
   # ================================================================
   # DOCUMENTATION
