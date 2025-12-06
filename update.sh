@@ -1,250 +1,151 @@
 #!/usr/bin/env bash
-# ================================================================
-# Update All Packages - Consolidated Script
-# ================================================================
-# Updates platform-specific packages and common language tools
-# Continues on errors with warnings (no auto-exit)
-# ================================================================
-
 set -uo pipefail
 
-# Dotfiles directory (script is in root of dotfiles repo)
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export DOTFILES_DIR
-
-# Source formatting and logging libraries
 export TERM=${TERM:-xterm}
+
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-
-# Source platform detection utility
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
-PLATFORM=$(detect_platform)
-
-# ================================================================
-# Platform Update Functions
-# ================================================================
-
-upgrade_homebrew() {
-  brew update || return 1
-  brew upgrade || return 1
-  brew upgrade --cask --greedy || return 1
-  return 0
-}
-
-upgrade_mas() {
-  command -v mas >/dev/null 2>&1 || return 0
-  mas upgrade
-}
-
-upgrade_apt() {
-  sudo apt update || return 1
-  sudo apt upgrade -y || return 1
-  return 0
-}
-
-upgrade_pacman() {
-  sudo pacman -Syu --noconfirm
-}
-
-upgrade_yay() {
-  command -v yay >/dev/null 2>&1 || return 0
-  yay -Syu --noconfirm
-}
-
-# ================================================================
-# Language & Tool Update Functions
-# ================================================================
-
-update_npm_globals() {
-  local nvm_dir="$HOME/.config/nvm"
-  [[ ! -d "$nvm_dir" ]] && return 0
-
-  export NVM_DIR="$nvm_dir"
-  # shellcheck disable=SC1091
-  [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-
-  local lang_tools="$DOTFILES_DIR/management/common/install/language-tools"
-  bash "$lang_tools/npm-install-globals.sh"
-}
-
-update_uv_tools() {
-  command -v uv >/dev/null 2>&1 || return 0
-
-  # shellcheck disable=SC1091
-  source "$HOME/.local/bin/env" 2>/dev/null || true
-  uv tool upgrade --all
-}
-
-update_cargo_packages() {
-  command -v cargo >/dev/null 2>&1 || return 0
-
-  # shellcheck disable=SC1091
-  source "$HOME/.cargo/env" 2>/dev/null || true
-
-  # Check if cargo-update is installed
-  if ! cargo install-update --help >/dev/null 2>&1; then
-    echo "cargo-update not installed, run: cargo install cargo-update" >&2
-    return 1
-  fi
-
-  cargo install-update -a
-}
 
 update_shell_plugins() {
-  local plugins_dir="$HOME/.config/shell/plugins"
-  [[ ! -d "$plugins_dir" ]] && return 0
-
   local plugins
   plugins=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" \
     --type=shell-plugins --format=names)
 
-  local failed=0
   for name in $plugins; do
-    local plugin_dir="$plugins_dir/$name"
+    local plugin_dir="$HOME/.config/shell/plugins/$name"
     [[ ! -d "$plugin_dir" ]] && continue
 
     cd "$plugin_dir" || continue
 
-    # Get default branch
     local branch
     branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
     [[ -z "$branch" ]] && branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
 
-    # Update plugin
-    if ! git pull origin "$branch" --quiet; then
-      echo "Failed to update $name" >&2
-      failed=$((failed + 1))
+    log_info "Updating $name via $(print_green "git pull origin $branch")"
+    if git pull origin "$branch" --quiet; then
+      log_success "$name updated"
+    else
+      log_error "$name update failed"
     fi
   done
-
-  return $failed
 }
 
-update_tmux_plugins() {
-  local tpm_dir="$HOME/.config/tmux/plugins/tpm"
-  local update_script="$tpm_dir/bin/update_plugins"
+update_common_tools() {
+  update_shell_plugins
 
-  [[ ! -f "$update_script" ]] && return 0
+  print_section "Updating npm global packages via $(print_green "npm update -g")" $section_color
+  if npm update -g 2>&1 | grep -v "npm warn"; then
+    log_success "npm global packages updated (warnings suppressed)"
+  else
+    log_warning "npm global packages update failed"
+  fi
 
-  "$update_script" all
+  print_section "Updating Python tools via $(print_green "uv tool upgrade --all")" $section_color
+  if uv tool upgrade --all; then
+    log_success "Python tools updated"
+  else
+    log_warning "Python tools update failed"
+  fi
+
+  print_section "Updating Rust packages via $(print_green "cargo install-update -a")" $section_color
+  if cargo install-update -a; then
+    log_success "Rust packages updated"
+  else
+    log_warning "Rust packages update failed"
+  fi
+
+  print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")" $section_color
+  if "$HOME/.config/tmux/plugins/tpm/bin/update_plugins" all; then
+    log_success "tmux plugins updated"
+  else
+    log_warning "tmux plugins update failed"
+  fi
 }
 
-# ================================================================
-# Main Update Orchestration
-# ================================================================
+main() {
+  local platform start_time end_time total_duration title_color header_color section_color
+  platform=$(detect_platform)
+  start_time=$(date +%s)
+  title_color="blue"
+  header_color="orange"
+  section_color="yellow"
 
-START_TIME=$(date +%s)
+  print_title "System Update - $platform" $title_color
 
-print_header "Dotfiles Update" "brightcyan"
+  case "$platform" in
+    macos)
+      print_header "Updating System Packages" $header_color
 
-# Platform-specific updates
-print_section "Platform Updates" "brightmagenta"
+      print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")" $section_color
+      if brew update && brew upgrade && brew upgrade --cask --greedy; then
+        log_success "Homebrew packages updated"
+      else
+        log_warning "Homebrew packages update failed"
+      fi
 
-case "$PLATFORM" in
-  macos)
-    log_info "Updating Homebrew packages..."
-    if upgrade_homebrew; then
-      log_success "Homebrew packages updated"
-    else
-      print_warning "Homebrew update failed"
-      print_info "Run manually: brew update && brew upgrade && brew upgrade --cask --greedy"
-    fi
+      print_section "Updating Mac App Store apps via $(print_green "mas upgrade")" $section_color
+      if mas upgrade; then
+        log_success "Mac App Store apps updated"
+      else
+        log_warning "Mac App Store apps update failed"
+      fi
 
-    log_info "Updating Mac App Store apps..."
-    if upgrade_mas; then
-      log_success "Mac App Store apps updated"
-    else
-      print_warning "mas update failed"
-      print_info "If not signed in, run: mas signin"
-    fi
-    ;;
+      print_header "Updating Language Tools" $header_color
+      update_common_tools
+      ;;
 
-  wsl)
-    log_info "Updating system packages..."
-    if upgrade_apt; then
-      log_success "System packages updated"
-    else
-      print_warning "apt update failed"
-      print_info "Run manually: sudo apt update && sudo apt upgrade -y"
-    fi
-    ;;
+    wsl)
+      print_header "Updating System Packages" $header_color
 
-  arch)
-    log_info "Updating system packages..."
-    if upgrade_pacman; then
-      log_success "System packages updated"
-    else
-      print_warning "pacman update failed"
-      print_info "Run manually: sudo pacman -Syu"
-    fi
+      print_section "Updating system packages via $(print_green "apt update && apt upgrade")" $section_color
+      if sudo apt update && sudo apt upgrade -y; then
+        log_success "system packages updated"
+      else
+        log_warning "system packages update failed"
+      fi
 
-    log_info "Updating AUR packages..."
-    if upgrade_yay; then
-      log_success "AUR packages updated"
-    else
-      print_warning "yay update failed (yay may not be installed)"
-      print_info "Install yay: https://github.com/Jguer/yay#installation"
-    fi
-    ;;
+      print_header "Updating Language Tools" $header_color
+      update_common_tools
+      ;;
 
-  *)
-    log_error "Unknown platform: $PLATFORM"
-    log_info "Supported platforms: macos, wsl, arch"
-    exit 1
-    ;;
-esac
+    arch)
+      print_header "Updating System Packages" $header_color
 
-echo ""
+      print_section "Updating system packages via $(print_green "pacman -Syu")" $section_color
+      if sudo pacman -Syu --noconfirm; then
+        log_success "system packages updated"
+      else
+        log_warning "system packages update failed"
+      fi
 
-# Language & tool updates
-print_section "Language & Tools" "brightmagenta"
+      print_section "Updating AUR packages via $(print_green "yay -Syu")" $section_color
+      if yay -Syu --noconfirm; then
+        log_success "AUR packages updated"
+      else
+        log_warning "AUR packages update failed"
+      fi
 
-log_info "Updating npm global packages..."
-if update_npm_globals; then
-  log_success "npm global packages updated"
-else
-  print_warning "npm update failed"
-  print_info "Check nvm installation: ls -la ~/.config/nvm"
-fi
+      print_header "Updating Language Tools" $header_color
+      update_common_tools
+      ;;
 
-log_info "Updating Python tools (uv)..."
-if update_uv_tools; then
-  log_success "Python tools updated"
-else
-  print_warning "uv update failed"
-  print_info "Run manually: uv tool upgrade --all"
-fi
+    *)
+      log_error "Unknown platform: $platform"
+      exit 1
+      ;;
+  esac
 
-log_info "Updating Rust packages (cargo)..."
-if update_cargo_packages; then
-  log_success "Rust packages updated"
-else
-  print_warning "cargo update failed"
-  print_info "Ensure cargo-update is installed: cargo install cargo-update"
-fi
+  echo ""
 
-log_info "Updating shell plugins..."
-if update_shell_plugins; then
-  log_success "Shell plugins updated"
-else
-  print_warning "Some shell plugins failed to update"
-  print_info "Check plugin directories: ls -la ~/.config/shell/plugins"
-fi
+  local end_time
+  end_time=$(date +%s)
+  local total_duration=$((end_time - start_time))
 
-log_info "Updating tmux plugins..."
-if update_tmux_plugins; then
-  log_success "Tmux plugins updated"
-else
-  print_warning "tmux plugin update failed"
-  print_info "Update manually from tmux: prefix + U (capital u)"
-fi
+  print_title_success "Updates complete (${total_duration}s)"
+  echo ""
+}
 
-echo ""
-
-END_TIME=$(date +%s)
-TOTAL_DURATION=$((END_TIME - START_TIME))
-
-print_banner_success "Updates complete"
-log_info "Total time: ${TOTAL_DURATION}s"
-echo ""
+main
