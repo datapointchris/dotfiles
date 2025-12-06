@@ -151,7 +151,6 @@ nav:
       - Tool Composition: architecture/tool-composition.md
       - Error Handling: architecture/error-handling.md
       - GitHub Release Installer: architecture/github-release-installer.md
-      - Resilient Installation: architecture/resilient-installation.md
   - Configuration:
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
       - Docker Setup: configuration/docker.md
@@ -178,7 +177,6 @@ nav:
   - Development:
       - development/index.md
       - VM Testing: development/testing.md
-      - Adding Failure Reporting: development/adding-failure-reporting.md
       - Go Applications:
           - Overview: development/go-apps/overview.md
           - Development Standards: development/go-apps/go-development.md
