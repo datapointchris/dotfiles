@@ -7,9 +7,9 @@ run_installer() {
   local stderr_file
   stderr_file=$(mktemp)
 
-  bash "$script" 2> >(tee "$stderr_file" >&2)
+  # Capture stderr to file only (not console yet)
+  bash "$script" 2>"$stderr_file"
   exit_code=$?
-  wait
 
   if [[ $exit_code -eq 0 ]]; then
     rm -f "$stderr_file"
@@ -20,8 +20,13 @@ run_installer() {
 
     local output
     output=$(cat "$stderr_file")
+
+    # Show only non-structured error lines to user (filter out FAILURE_* markers)
+    grep -v "^FAILURE_TOOL=\|^FAILURE_URL=\|^FAILURE_VERSION=\|^FAILURE_REASON=\|^FAILURE_MANUAL_START\|^FAILURE_MANUAL_END" "$stderr_file" >&2 || true
+
     rm -f "$stderr_file"
 
+    # Parse structured data for failure log
     local failure_tool failure_url failure_version failure_reason failure_manual
     failure_tool=$(echo "$output" | grep "^FAILURE_TOOL=" | cut -d"'" -f2 || echo "$tool_name")
     failure_url=$(echo "$output" | grep "^FAILURE_URL=" | cut -d"'" -f2 || echo "")
