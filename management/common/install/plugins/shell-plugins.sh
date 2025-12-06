@@ -43,16 +43,14 @@ while IFS='|' read -r name repo; do
     if git clone "$repo" "$PLUGIN_DIR" --quiet; then
       log_success "$name installed"
     else
-      # Report failure
-      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-        manual_steps="Clone manually with git:
+      manual_steps="Clone manually with git:
    git clone $repo $PLUGIN_DIR
 
 Or install manually:
    cd ~/.config/zsh/plugins
    git clone $repo"
-        report_failure "$name" "$repo" "latest" "$manual_steps" "Failed to git clone plugin"
-      fi
+
+      output_failure_data "$name" "$repo" "latest" "$manual_steps" "Failed to git clone plugin"
       log_warning "Failed to install $name (see summary)"
     fi
   fi

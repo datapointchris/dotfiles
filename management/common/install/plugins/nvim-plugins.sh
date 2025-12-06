@@ -26,9 +26,7 @@ log_info "Installing Neovim plugins via Lazy.nvim..."
 if nvim --headless "+Lazy! sync" +qa 2>&1 | grep -v "^$"; then
   log_success "Neovim plugins installed"
 else
-  # Report failure
-  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-    manual_steps="Install plugins manually from within Neovim:
+  manual_steps="Install plugins manually from within Neovim:
    nvim
    :Lazy sync
 
@@ -38,7 +36,7 @@ Or run headless again:
 Check Neovim config:
    nvim --version
    ls -la ~/.config/nvim"
-    report_failure "neovim-plugins" "unknown" "latest" "$manual_steps" "Lazy.nvim plugin sync failed"
-  fi
+
+  output_failure_data "neovim-plugins" "unknown" "latest" "$manual_steps" "Lazy.nvim plugin sync failed"
   log_warning "Neovim plugin installation failed (see summary)"
 fi

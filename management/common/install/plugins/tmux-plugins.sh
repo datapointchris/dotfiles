@@ -22,9 +22,7 @@ if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
   if "$TPM_DIR/bin/install_plugins"; then
     log_success "Tmux plugins installed"
   else
-    # Report failure
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      manual_steps="Run TPM installation manually:
+    manual_steps="Run TPM installation manually:
    $TPM_DIR/bin/install_plugins
 
 Or install plugins from within tmux:
@@ -32,19 +30,17 @@ Or install plugins from within tmux:
 
 Verify TPM is installed:
    ls -la $TPM_DIR"
-      report_failure "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM plugin installation failed"
-    fi
+
+    output_failure_data "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM plugin installation failed"
     log_warning "Tmux plugin installation failed (see summary)"
   fi
 else
-  # Report failure - TPM not found
-  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-    manual_steps="TPM install script not found. Install TPM first:
+  manual_steps="TPM install script not found. Install TPM first:
    bash $DOTFILES_DIR/management/common/install/plugins/tpm.sh
 
 Then run plugin installation:
    $TPM_DIR/bin/install_plugins"
-    report_failure "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM not found"
-  fi
+
+  output_failure_data "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM not found"
   log_error "TPM install script not found at $TPM_DIR/bin/install_plugins"
 fi
