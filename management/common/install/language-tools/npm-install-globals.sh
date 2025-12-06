@@ -43,16 +43,8 @@ for package in $NPM_PACKAGES; do
     if npm install -g "$package"; then
       log_success "$package installed"
     else
-      # Report failure
-      if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-        manual_steps="Install manually with npm:
-   npm install -g $package
-
-View package on npm:
-   https://www.npmjs.com/package/$package"
-        report_failure "$package" "https://www.npmjs.com/package/$package" "latest" "$manual_steps" "Failed to install via npm"
-      fi
-      log_warning "$package installation failed (see summary)"
+      log_warning "$package installation failed"
+      log_info "Install manually: npm install -g $package"
     fi
   fi
 done
