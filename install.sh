@@ -99,37 +99,7 @@ export FAILURES_LOG
 # FAILURE HANDLING WRAPPER
 # ================================================================
 
-# Wrapper function to run installers with failure handling
-# Allows installation to continue even if individual tools fail
-# Usage: run_phase_installer <script_path> <tool_name>
-run_phase_installer() {
-    local script="$1"
-    local tool_name="$2"
-
-    # Run installer - if it fails, check if failure was reported
-    if bash "$script"; then
-        return 0
-    else
-        local exit_code=$?
-
-        # Check if failure was reported to registry
-        if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]] && \
-           compgen -G "$DOTFILES_FAILURE_REGISTRY/*-${tool_name}.txt" > /dev/null 2>&1; then
-            # Failure was reported - good, just log it
-            log_warning "$tool_name installation failed (details in summary)"
-        else
-            # Unreported failure - create generic entry
-            report_failure "$tool_name" "unknown" "unknown" \
-                "Re-run: bash $script" \
-                "Installation script exited with code $exit_code"
-            log_warning "$tool_name installation failed (see summary)"
-        fi
-
-        return 1
-    fi
-}
-
-# New simplified installer wrapper (Option B pattern)
+# Simplified installer wrapper (Option B pattern)
 # Captures output, checks exit code, logs failures to single file
 # Usage: run_installer <script_path> <tool_name>
 run_installer() {
