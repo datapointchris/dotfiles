@@ -72,7 +72,7 @@ cmd_search() {
     --preview "bat --color=always --style=plain '$WORKFLOWS_DIR/{}.md'"
     --preview-window=right:60%
     --prompt 'Workflow: '
-    --header 'Select a workflow to view | Enter to open in editor'
+    --header 'Select a workflow to view | Enter to open with bat'
   )
 
   # Add initial query if provided
@@ -90,11 +90,7 @@ cmd_search() {
   )
 
   if [[ -n "$selected" ]]; then
-    if [[ -n "${EDITOR:-}" ]]; then
-      ${EDITOR} "$WORKFLOWS_DIR/$selected.md"
-    else
-      bat --style=plain "$WORKFLOWS_DIR/$selected.md"
-    fi
+    bat --style=plain "$WORKFLOWS_DIR/$selected.md"
   fi
 }
 
