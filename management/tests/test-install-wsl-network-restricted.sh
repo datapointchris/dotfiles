@@ -3,12 +3,14 @@
 # WSL Installation Testing Script (Network-Restricted)
 # ================================================================
 # Tests WSL installation using Docker with GitHub downloads blocked
-# Simulates corporate firewall blocking github.com and raw.githubusercontent.com
-# Verifies that:
+# Simulates corporate firewall blocking githubusercontent.com domains
+#
+# Verifies refactored installation system (Option B):
 #   - Installation continues despite failures
-#   - Only ONE failure log file is created
-#   - ALL failures are reported to that log
+#   - Only ONE failure log file is created (/tmp/dotfiles-install-failures-*.txt)
+#   - ALL failures are reported to that single log
 #   - Summary is displayed at the end
+#   - Structured failure data is properly captured
 # ================================================================
 
 set -euo pipefail
@@ -102,7 +104,7 @@ cleanup() {
       echo ""
       log_info "Container kept for debugging: $CONTAINER_NAME"
       echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
-      echo "  • View failure logs: docker exec $CONTAINER_NAME cat /tmp/dotfiles-installation-failures-*.txt"
+      echo "  • View failure log: docker exec $CONTAINER_NAME cat /tmp/dotfiles-install-failures-*.txt"
       echo "  • Remove container: docker rm -f $CONTAINER_NAME"
   rm -f "$FAILURE_TRACKER" 2>/dev/null || true
     fi
@@ -291,23 +293,23 @@ STEP_START=$(date +%s)
 
   # Test 1: Verify only ONE failure log file exists
   echo "Test 1: Checking for single failure log file..."
-  FAILURE_LOG_COUNT=$(docker exec "$CONTAINER_NAME" bash -c "ls -1 /tmp/dotfiles-installation-failures-*.txt 2>/dev/null | wc -l")
+  FAILURE_LOG_COUNT=$(docker exec "$CONTAINER_NAME" bash -c "ls -1 /tmp/dotfiles-install-failures-*.txt 2>/dev/null | wc -l")
   if [[ "$FAILURE_LOG_COUNT" -eq 1 ]]; then
     log_success "✓ Only ONE failure log file created"
   else
     log_error "✗ Expected 1 failure log, found $FAILURE_LOG_COUNT"
-    docker exec "$CONTAINER_NAME" bash -c "ls -la /tmp/dotfiles-installation-failures-*.txt 2>/dev/null || true"
+    docker exec "$CONTAINER_NAME" bash -c "ls -la /tmp/dotfiles-install-failures-*.txt 2>/dev/null || true"
     echo "F" >> "$FAILURE_TRACKER"
   fi
   echo ""
 
   # Get failure log path
-  FAILURE_LOG=$(docker exec "$CONTAINER_NAME" bash -c "ls /tmp/dotfiles-installation-failures-*.txt 2>/dev/null | head -1" || echo "")
+  FAILURE_LOG=$(docker exec "$CONTAINER_NAME" bash -c "ls /tmp/dotfiles-install-failures-*.txt 2>/dev/null | head -1" || echo "")
 
   if [[ -n "$FAILURE_LOG" ]]; then
     # Test 2: Count failures in log (expect 8-10 GitHub tools)
     echo "Test 2: Counting failures in log..."
-    FAILURE_COUNT=$(docker exec "$CONTAINER_NAME" bash -c "grep -c \"^TOOL='\" $FAILURE_LOG || echo 0")
+    FAILURE_COUNT=$(docker exec "$CONTAINER_NAME" bash -c "grep -c \"^---\$\" $FAILURE_LOG || echo 0")
     echo "  Found $FAILURE_COUNT tool failures"
     if [[ $FAILURE_COUNT -ge 7 ]]; then
       log_success "✓ Multiple GitHub tool failures logged (>= 7)"
@@ -321,7 +323,7 @@ STEP_START=$(date +%s)
     echo "Test 3: Verifying specific tools failed as expected..."
     EXPECTED_FAILURES=("yazi" "glow" "duf" "lazygit" "neovim")
     for tool in "${EXPECTED_FAILURES[@]}"; do
-      if docker exec "$CONTAINER_NAME" bash -c "grep -q \"TOOL='$tool'\" $FAILURE_LOG"; then
+      if docker exec "$CONTAINER_NAME" bash -c "grep -q \"$tool - Installation Failed\" $FAILURE_LOG"; then
         echo "  ✓ $tool failure logged"
       else
         log_warning "  ✗ $tool failure NOT logged (expected due to GitHub block)"
@@ -332,7 +334,7 @@ STEP_START=$(date +%s)
 
     # Test 4: Display failure log summary
     echo "Test 4: Failure log contents:"
-    docker exec "$CONTAINER_NAME" bash -c "cat $FAILURE_LOG | grep \"^TOOL=\" | sed \"s/TOOL='//g\" | sed \"s/'//g\" | sed 's/^/  - /'"
+    docker exec "$CONTAINER_NAME" bash -c "grep \" - Installation Failed\" $FAILURE_LOG | sed 's/^/  - /'"
     echo ""
 
     # Test 5: Verify installation log shows summary
@@ -374,7 +376,7 @@ STEP_START=$(date +%s)
 {
   log_section "STEP 6/6: Failure Log Details"
 
-  FAILURE_LOG=$(docker exec "$CONTAINER_NAME" bash -c "ls /tmp/dotfiles-installation-failures-*.txt 2>/dev/null | head -1" || echo "")
+  FAILURE_LOG=$(docker exec "$CONTAINER_NAME" bash -c "ls /tmp/dotfiles-install-failures-*.txt 2>/dev/null | head -1" || echo "")
 
   if [[ -n "$FAILURE_LOG" ]]; then
     echo "Full failure log contents:"
@@ -435,7 +437,7 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
     print_section "Debug Information" "cyan"
     echo "  Container kept for debugging"
     echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
-    echo "  • View failure log: docker exec $CONTAINER_NAME cat /tmp/dotfiles-installation-failures-*.txt"
+    echo "  • View failure log: docker exec $CONTAINER_NAME cat /tmp/dotfiles-install-failures-*.txt"
     echo "  • Remove when done: docker rm -f $CONTAINER_NAME"
   rm -f "$FAILURE_TRACKER" 2>/dev/null || true
   fi
