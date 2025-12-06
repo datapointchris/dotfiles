@@ -268,6 +268,27 @@ test_case "Should validate apps/ directory" 0 \
   "$REFCHECK" apps/ --type sh
 
 # ================================================================
+# Test 13: Variable path resolution
+# ================================================================
+print_section "Test 13: Variable path resolution" "yellow"
+
+FIXTURES_DIR="$DOTFILES_DIR/tests/apps/fixtures/refcheck-variables"
+
+# Should detect all 3 broken variable references in the fixtures directory
+test_case "Should detect broken variable references" 1 \
+  "$REFCHECK" "$FIXTURES_DIR/"
+
+# Verify count of broken references (should be 3)
+broken_count=$("$REFCHECK" "$FIXTURES_DIR/" 2>&1 | grep -c "Missing:" || echo 0)
+if [[ $broken_count -eq 3 ]]; then
+  log_success "Detected all 3 broken variable references"
+  PASSED=$((PASSED + 1))
+else
+  log_error "Expected 3 broken references, found $broken_count"
+  FAILED=$((FAILED + 1))
+fi
+
+# ================================================================
 # Summary
 # ================================================================
 echo ""

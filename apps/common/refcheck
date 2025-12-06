@@ -169,6 +169,10 @@ class ReferenceChecker:
         for file_path in self.find_files("**/*.sh"):
             try:
                 rel_path = file_path.relative_to(self.root_dir)
+
+                # Build symbol table for this file
+                symbol_table = self.parse_variable_assignments(file_path)
+
                 with open(file_path, "r", encoding="utf-8") as f:
                     for line_num, line in enumerate(f, 1):
                         if "source" not in line:
@@ -179,8 +183,22 @@ class ReferenceChecker:
                             continue
 
                         source_path = match.group(1) or match.group(2)
-                        if not source_path or self.is_dynamic_path(source_path):
+                        if not source_path:
                             continue
+
+                        # Check if path is dynamic BEFORE trying to resolve variables
+                        # (only check original path, not resolved paths)
+                        if not '$' in source_path and self.is_dynamic_path(source_path):
+                            continue
+
+                        # Try to resolve variables in the path
+                        original_path = source_path
+                        if '$' in source_path:
+                            try:
+                                source_path = self.resolve_path(source_path, symbol_table, file_path)
+                            except ValueError:
+                                # Cannot resolve this path - skip gracefully
+                                continue
 
                         if source_path.startswith("/"):
                             resolved = Path(source_path)
@@ -193,7 +211,9 @@ class ReferenceChecker:
                                     file=rel_path,
                                     line_num=line_num,
                                     check_type=CheckType.SOURCE,
-                                    message=f"Missing: {source_path}",
+                                    message=f"Missing: {original_path}" + (
+                                        f" → {source_path}" if original_path != source_path else ""
+                                    ),
                                     suggestion="Verify path exists or update reference",
                                 )
                             )
