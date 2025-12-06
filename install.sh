@@ -161,7 +161,37 @@ install_common_phases() {
             echo ""
         fi
 
-        bash "$common_install/fonts/fonts.sh" --full
+        # Nerd Fonts
+        run_installer "$common_install/fonts/jetbrains.sh" "jetbrains-font"
+        run_installer "$common_install/fonts/cascadia.sh" "cascadia-font"
+        run_installer "$common_install/fonts/meslo.sh" "meslo-font"
+        run_installer "$common_install/fonts/monaspace.sh" "monaspace-font"
+        run_installer "$common_install/fonts/iosevka.sh" "iosevka-font"
+        run_installer "$common_install/fonts/droid.sh" "droid-font"
+        run_installer "$common_install/fonts/seriousshanns.sh" "seriousshanns-font"
+        run_installer "$common_install/fonts/sourcecode.sh" "sourcecode-font"
+        run_installer "$common_install/fonts/terminess.sh" "terminess-font"
+        run_installer "$common_install/fonts/hack.sh" "hack-font"
+        run_installer "$common_install/fonts/3270.sh" "3270-font"
+        run_installer "$common_install/fonts/robotomono.sh" "robotomono-font"
+        run_installer "$common_install/fonts/spacemono.sh" "spacemono-font"
+
+        # GitHub Release Fonts
+        run_installer "$common_install/fonts/firacode.sh" "firacode-font"
+        run_installer "$common_install/fonts/commitmono.sh" "commitmono-font"
+        run_installer "$common_install/fonts/intelone.sh" "intelone-font"
+
+        # Iosevka Variants
+        run_installer "$common_install/fonts/sgr-iosevka.sh" "sgr-iosevka-font"
+        run_installer "$common_install/fonts/iosevka-base.sh" "iosevka-base-font"
+
+        # Direct Download Fonts
+        run_installer "$common_install/fonts/firacodescript.sh" "firacodescript-font"
+        run_installer "$common_install/fonts/comicmono.sh" "comicmono-font"
+
+        # Source Zip Fonts
+        run_installer "$common_install/fonts/victor.sh" "victor-font"
+
         echo ""
     else
         log_info "Skipping font installation (SKIP_FONTS=1)"
