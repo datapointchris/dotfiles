@@ -7,11 +7,8 @@ run_installer() {
   local stderr_file
   stderr_file=$(mktemp)
 
-  set +e
   bash "$script" 2> >(tee "$stderr_file" >&2)
   exit_code=$?
-  set -e
-
   wait
 
   if [[ $exit_code -eq 0 ]]; then
