@@ -40,7 +40,7 @@ trap cleanup EXIT
 log_section "STEP 1/4: Checking Docker Image"
 if ! docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
   echo "Docker image not found. Run the full test first to create it:"
-  echo "  bash management/tests/test-install-wsl-network-restricted.sh"
+  echo "  bash tests/install/e2e/wsl-network-restricted.sh"
   exit 1
 fi
 log_success "Docker image exists: $DOCKER_IMAGE"

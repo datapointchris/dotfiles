@@ -97,7 +97,6 @@ cleanup() {
       echo ""
       log_info "Cleaning up container: $CONTAINER_NAME"
       docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
-  rm -f "$FAILURE_TRACKER" 2>/dev/null || true
     fi
   else
     if [[ $exit_code -ne 0 ]] || [[ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) -gt 0 ]]; then
@@ -106,7 +105,6 @@ cleanup() {
       echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
       echo "  • View failure log: docker exec $CONTAINER_NAME cat /tmp/dotfiles-install-failures-*.txt"
       echo "  • Remove container: docker rm -f $CONTAINER_NAME"
-  rm -f "$FAILURE_TRACKER" 2>/dev/null || true
     fi
   fi
 }
@@ -439,12 +437,15 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
     echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
     echo "  • View failure log: docker exec $CONTAINER_NAME cat /tmp/dotfiles-install-failures-*.txt"
     echo "  • Remove when done: docker rm -f $CONTAINER_NAME"
-  rm -f "$FAILURE_TRACKER" 2>/dev/null || true
   fi
   echo ""
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Exit with error if any tests failed
 if [[ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) -gt 0 ]]; then
+  rm -f "$FAILURE_TRACKER" 2>/dev/null || true
   exit 1
 fi
+
+# Clean up test tracker file
+rm -f "$FAILURE_TRACKER" 2>/dev/null || true

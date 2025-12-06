@@ -13,30 +13,19 @@ tests/
 │   ├── formatting.sh                    # Test formatting.sh library
 │   └── error-handling.sh                # Test error-handling.sh library
 └── install/
-    ├── unit/
-    │   └── failure-registry.sh          # Test failure registry functions
-    ├── integration/
-    │   └── install-wrapper.sh           # Test installer wrapper behavior
-    └── e2e/
-        ├── wsl-docker.sh                # E2E: WSL installation
-        ├── arch-docker.sh               # E2E: Arch installation
-        ├── macos-temp-user.sh           # E2E: macOS installation
-        └── current-user.sh              # E2E: Current platform installation
-
-management/tests/
-├── verify-installed-packages.sh         # Validation
-├── detect-installed-duplicates.sh       # Validation
-├── test-dns-blocking.sh                 # Component: DNS blocking
-├── test-cargo-phase-blocking.sh         # Component: Cargo phase
-└── helpers.sh                           # Shared utilities
+    ├── unit/                            # Unit tests for installer functions
+    ├── integration/                     # Integration tests for components
+    ├── e2e/                             # End-to-end installation tests
+    ├── docker/                          # Docker-based tests
+    ├── utils/                           # Validation and utility scripts
+    └── helpers.sh                       # Shared test utilities
 ```
 
 **Logic:**
 
 - `tests/apps/` = Tests for user-facing applications
 - `tests/libraries/` = Tests for shared shell libraries
-- `tests/install/` = Tests for installation system (unit → integration → e2e)
-- `management/tests/` = Component tests and validation scripts
+- `tests/install/` = Tests for installation system (unit → integration → e2e → utils)
 
 ## Running Tests
 
@@ -54,13 +43,21 @@ Tests all user-facing tools can be invoked:
 
 **Speed:** Fast (~5 seconds)
 
-### Management Tests
+### Installation Tests
+
+#### Validate File References
+
+```bash
+bash tests/install/utils/verify-file-references.sh
+```
+
+Checks for broken file references before running expensive tests.
 
 #### Validate Installation
 
 ```bash
-bash management/tests/verify-installed-packages.sh
-bash management/tests/detect-installed-duplicates.sh
+bash tests/install/utils/verify-installed-packages.sh
+bash tests/install/utils/detect-installed-duplicates.sh
 ```
 
 #### Full E2E Installation Test
@@ -92,7 +89,6 @@ Create or update tests in `tests/libraries/`:
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Test library functions
 source "$DOTFILES_DIR/platforms/common/.local/shell/my-library.sh"
 # Add tests...
 ```
@@ -109,4 +105,4 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/my-library.sh"
 - Only test non-interactive commands
 - Test workflows, not implementation details
 - Focus on what matters, not what changes
-- Don't add tests to apps still evolving
+- Run `verify-file-references.sh` before expensive e2e tests

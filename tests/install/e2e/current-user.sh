@@ -60,10 +60,10 @@ echo ""
 # ================================================================
 STEP_START=$(date +%s)
 print_header "STEP 2/4: Running Verification" "cyan"
-echo "Running: bash management/tests/verify-installed-packages.sh"
+echo "Running: bash tests/install/utils/verify-installed-packages.sh"
 echo ""
 
-if bash "$DOTFILES_DIR/management/tests/verify-installed-packages.sh"; then
+if bash "$DOTFILES_DIR/tests/install/utils/verify-installed-packages.sh"; then
   log_success "Verification passed"
 else
   EXIT_CODE=$?
@@ -81,10 +81,10 @@ echo ""
 # ================================================================
 STEP_START=$(date +%s)
 print_header "STEP 3/4: Checking for Alternate Installations" "cyan"
-echo "Running: bash management/tests/detect-installed-duplicates.sh"
+echo "Running: bash tests/install/utils/detect-installed-duplicates.sh"
 echo ""
 
-bash "$DOTFILES_DIR/management/tests/detect-installed-duplicates.sh"
+bash "$DOTFILES_DIR/tests/install/utils/detect-installed-duplicates.sh"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
 STEP_NAMES+=("Detect alternates")

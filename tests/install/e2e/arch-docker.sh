@@ -11,7 +11,7 @@ set -euo pipefail
 # Source shared test helpers (includes formatting library)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-source "$DOTFILES_DIR/management/tests/helpers.sh"
+source "$DOTFILES_DIR/tests/install/helpers.sh"
 
 # Show usage
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -272,7 +272,7 @@ STEP_START=$(date +%s)
   docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
     ZSHDOTDIR=/home/archuser/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /home/archuser/dotfiles/management/tests/verify-installed-packages.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /home/archuser/dotfiles/tests/install/utils/verify-installed-packages.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -292,7 +292,7 @@ STEP_START=$(date +%s)
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/management/tests/detect-installed-duplicates.sh"
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/tests/install/utils/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

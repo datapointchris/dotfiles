@@ -7,8 +7,8 @@
 # Helps clean up installations before/after install.sh runs.
 #
 # Usage:
-#   bash detect-alternate-installations.sh           # Report mode
-#   bash detect-alternate-installations.sh --clean   # Remove alternates
+#   bash detect-installed-duplicates.sh           # Report mode
+#   bash detect-installed-duplicates.sh --clean   # Remove alternates
 #
 # Checks:
 #   - Package managers: brew, apt, pacman, snap, flatpak

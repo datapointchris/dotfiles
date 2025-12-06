@@ -12,7 +12,7 @@
 # - Key configs are valid
 # - Shell environment is set up
 #
-# Run: bash tests/test-all-apps.sh
+# Run: bash tests/apps/all-apps.sh
 # ================================================================
 
 set -euo pipefail
