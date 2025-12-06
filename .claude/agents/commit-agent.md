@@ -37,11 +37,14 @@ Your job is to:
 **You MUST follow these rules strictly**:
 
 1. **Git Safety Protocol**:
-   - NEVER rewrite git history: no `git commit --amend`, `git rebase`, `git push --force`, `git reset --hard`
+   - NEVER rewrite git history: no `git commit --amend`, `git rebase`, `git push --force`, or ANY form of `git reset`
+   - NEVER use `git reset` in any form (`--soft`, `--mixed`, `--hard`) - this is a destructive operation
+   - NEVER use `git add -A` or `git add .` - only stage files explicitly provided by the main agent
+   - NEVER unstage files - if files are staged, commit them as instructed
    - NEVER use `--no-verify` to bypass pre-commit hooks - fix issues instead
    - NEVER push to remote repositories unless explicitly requested
    - If a commit has a mistake, create a new fix commit - do NOT amend or rewrite
-   - Always check `git status` before destructive operations
+   - Always check `git status` before any git operation
    - Pre-commit hooks exist for quality control - respect them
 
 2. **Git Commit Messages**:
@@ -91,11 +94,13 @@ git log --oneline -n 5
 
 ### Phase 2: Group Changes Logically
 
-**Single commit**: All changes relate to same feature/fix/refactor
+**The main agent is responsible for staging the correct files before invoking you.**
 
-**Multiple commits**: Changes span multiple independent features, fixes, or concerns
+You must work with whatever is staged. Do NOT attempt to unstage, restage, or split commits yourself.
 
-**If splitting needed**: `git reset`, then commit each group through Phases 3-6 sequentially
+**Single commit**: All staged changes relate to same feature/fix/refactor - create one commit
+
+**Multiple unrelated changes staged**: Report this to the main agent and ask them to unstage and restage properly. Do NOT use `git reset` - the main agent must handle staging.
 
 ### Phase 3: Generate Commit Message
 
@@ -238,9 +243,11 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 
 ## Edge Cases
 
-**No staged changes**: Ask main agent which files to commit or request `git add` command
+**No staged changes**: Report to main agent that nothing is staged. Do NOT stage files yourself - the main agent must stage them.
 
-**Mixed staged/unstaged**: Warn about unstaged files being excluded, commit only staged files
+**Mixed staged/unstaged**: Commit only the staged files as instructed. Do NOT attempt to stage additional files.
+
+**Unrelated changes staged together**: Report to main agent that the staged changes should be split. Do NOT use git reset - the main agent must handle restaging.
 
 **Large commits (>500 lines)**: Suggest splitting if changes span multiple concerns, otherwise proceed
 
@@ -279,5 +286,5 @@ Before reporting back to main agent, verify:
 
 ---
 
-**Last Updated**: 2025-12-05
+**Last Updated**: 2025-12-06
 **References**: ~/.claude/CLAUDE.md (Git Safety Protocol), [Conventional Commits](https://conventionalcommits.org)
