@@ -53,7 +53,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Get script and dotfiles directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Use $0 as fallback if BASH_SOURCE is not set (e.g., when run via docker exec)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
 export DOTFILES_DIR
 export FORCE_INSTALL
