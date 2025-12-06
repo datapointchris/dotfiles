@@ -358,11 +358,75 @@ class ReferenceChecker:
             except (OSError, UnicodeDecodeError):
                 continue
 
+    def check_relative_path_fragility(self):
+        """Check if relative paths are fragile to working directory changes."""
+        # Match: source "path" OR source 'path' OR source path (unquoted)
+        source_pattern = re.compile(
+            r'source\s+(?:["\']([^"\']+)["\']|([^\s]+))'
+        )
+
+        for file_path in self.find_files("**/*.sh"):
+            try:
+                rel_path = file_path.relative_to(self.root_dir)
+
+                # Build symbol table for this file
+                symbol_table = self.parse_variable_assignments(file_path)
+
+                with open(file_path, "r", encoding="utf-8") as f:
+                    for line_num, line in enumerate(f, 1):
+                        if "source" not in line:
+                            continue
+
+                        match = source_pattern.search(line)
+                        if not match:
+                            continue
+
+                        source_path = match.group(1) or match.group(2)
+                        if not source_path:
+                            continue
+
+                        # Skip if it has variables (will be resolved) or is absolute or dynamic
+                        if '$' in source_path or source_path.startswith("/") or self.is_dynamic_path(source_path):
+                            continue
+
+                        # This is a plain relative path - test from multiple directories
+                        test_dirs = [
+                            self.root_dir,              # Repo root
+                            file_path.parent,           # Script's directory
+                            file_path.parent.parent,    # One level up
+                        ]
+
+                        valid_from = []
+                        for test_dir in test_dirs:
+                            resolved = test_dir / source_path
+                            if resolved.exists():
+                                valid_from.append(test_dir)
+
+                        # If it only works from some directories (not all), it's fragile
+                        if len(valid_from) > 0 and len(valid_from) < len(test_dirs):
+                            try:
+                                valid_desc = ", ".join(str(d.relative_to(self.root_dir)) if d != self.root_dir else "repo root" for d in valid_from)
+                            except ValueError:
+                                valid_desc = ", ".join(str(d) for d in valid_from)
+
+                            self.warnings.append(
+                                Warning(
+                                    file=rel_path,
+                                    line_num=line_num,
+                                    check_type=CheckType.FRAGILE_CWD,
+                                    message=f"Relative path only valid from: {valid_desc}",
+                                    suggestion="Use absolute path or root directory variable (e.g., $PROJECT_ROOT, $REPO_ROOT)",
+                                )
+                            )
+            except (OSError, UnicodeDecodeError):
+                continue
+
     def run_all_checks(self):
         """Run all validation checks."""
         self.check_pattern("management/tests/", "Update to tests/install/")
         self.check_source_statements()
         self.check_script_references()
+        self.check_relative_path_fragility()
 
     def print_results(self):
         """Print validation results."""
