@@ -17,8 +17,8 @@ set -euo pipefail
 
 # Source shared test helpers (includes formatting library)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-source "$SCRIPT_DIR/helpers.sh"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+source "$DOTFILES_DIR/tests/install/helpers.sh"
 
 # Show usage
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
