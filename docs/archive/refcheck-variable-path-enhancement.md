@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-During test consolidation (moving `management/tests/` → `tests/install/`), we encountered **4 broken path references** that refcheck didn't catch because they used shell variables:
+During test consolidation (moving `tests/install/` → `tests/install/`), we encountered **4 broken path references** that refcheck didn't catch because they used shell variables:
 
 ```bash
 # ❌ Refcheck skipped these (has variables)
@@ -393,7 +393,7 @@ def test_finds_broken_source(test_repo):
     assert "Missing: /nonexistent/file.sh" in result.stderr
 
 @pytest.mark.parametrize("pattern,should_find", [
-    ("management/tests/", True),
+    ("tests/install/", True),
     ("nonexistent-pattern/", False),
 ])
 def test_pattern_finding(test_repo, pattern, should_find):

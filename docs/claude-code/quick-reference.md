@@ -10,7 +10,7 @@ Quick lookup for common commands and workflows.
 ### Run with Explicit Command
 
 ```bash
-/logsift "bash ~/dotfiles/management/tests/test-install-wsl-docker.sh --reuse" 15
+/logsift "bash ~/dotfiles/tests/install/test-install-wsl-docker.sh --reuse" 15
 ```
 
 - First argument: Exact command in quotes

@@ -93,8 +93,8 @@ refcheck --strict
 ### After moving files
 
 ```bash
-# Moved management/tests/ to tests/install/
-refcheck --pattern "management/tests/"
+# Moved tests/install/ to tests/install/
+refcheck --pattern "tests/install/"
 # Finds all stale references across repo
 ```
 

@@ -44,7 +44,7 @@ Heavy testing with max profile:
 ```bash
 colima stop
 colima start -p max
-bash management/tests/test-install-wsl-docker.sh
+bash tests/install/test-install-wsl-docker.sh
 colima stop -p max
 colima start
 ```

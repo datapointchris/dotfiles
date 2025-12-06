@@ -1,6 +1,6 @@
 # Refcheck Enhancement Validation
 
-This document validates that the enhanced refcheck can now detect the 4 original path issues we encountered during the test consolidation from `management/tests/` → `tests/install/`.
+This document validates that the enhanced refcheck can now detect the 4 original path issues we encountered during the test consolidation from `tests/install/` → `tests/install/`.
 
 ## Original Issues Encountered
 

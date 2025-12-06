@@ -32,7 +32,7 @@ Running installation/test scripts produces massive output:
 ### How It Works
 
 ```bash
-logsift monitor -- bash management/tests/test-install.sh
+logsift monitor -- bash tests/install/test-install.sh
 
 # 1. Runs command in background
 # 2. Captures all output
@@ -112,7 +112,7 @@ Edit file.sh  # Make informed change
 ### /logsift - Explicit Command
 
 ```bash
-/logsift "bash ~/dotfiles/management/tests/test-install.sh --reuse" 15
+/logsift "bash ~/dotfiles/tests/install/test-install.sh --reuse" 15
 ```
 
 **Pros**:

@@ -144,7 +144,7 @@ User-invoked commands for common workflows and tasks.
 **logsift** (`.claude/commands/logsift.md`) - Run commands with explicit syntax
 
 ```bash
-/logsift "bash management/tests/test-install-wsl-docker.sh" 15
+/logsift "bash tests/install/test-install-wsl-docker.sh" 15
 ```
 
 **logsift-auto** (`.claude/commands/logsift-auto.md`) - Run commands with natural language

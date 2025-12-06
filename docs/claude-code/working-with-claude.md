@@ -20,7 +20,7 @@ This repository has custom Claude Code slash commands, hooks, and tools optimize
 
 ```bash
 # Run scripts with automated error analysis
-/logsift "bash management/tests/test-install-wsl-docker.sh --reuse" 15
+/logsift "bash tests/install/test-install-wsl-docker.sh --reuse" 15
 
 # Or use natural language
 /logsift-auto run wsl docker test with reuse flag, 15 minutes
@@ -73,7 +73,7 @@ Logsift is a command output analysis tool that **filters huge command outputs to
 Use when you know the exact command:
 
 ```bash
-/logsift "bash ~/dotfiles/management/tests/test-install-wsl-docker.sh --reuse" 15
+/logsift "bash ~/dotfiles/tests/install/test-install-wsl-docker.sh --reuse" 15
 ```
 
 **Syntax**: `/logsift "<exact-command>" [timeout_minutes]`

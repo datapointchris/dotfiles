@@ -21,8 +21,8 @@ You need to interpret this natural language description and run the appropriate 
 2. **Construct the exact command** following these patterns:
 
    **For test scripts**:
-   - Location: `~/dotfiles/management/tests/test-*.sh`
-   - Example: "wsl-install-docker" → `bash ~/dotfiles/management/tests/test-install-wsl-docker.sh`
+   - Location: `~/dotfiles/tests/install/test-*.sh`
+   - Example: "wsl-install-docker" → `bash ~/dotfiles/tests/install/test-install-wsl-docker.sh`
 
    **Common flags**:
    - `--reuse` - Reuse existing resources
@@ -76,16 +76,16 @@ Logsift filters command output and log files to show only errors and warnings, p
 ## Examples of Natural Language Requests
 
 - "run wsl-install-docker script with --reuse flag and 15 minute timeout"
-  → `logsift monitor -- bash ~/dotfiles/management/tests/test-install-wsl-docker.sh --reuse` (timeout: 15 min)
+  → `logsift monitor -- bash ~/dotfiles/tests/install/test-install-wsl-docker.sh --reuse` (timeout: 15 min)
 
 - "test macos installation with verbose output"
-  → `logsift monitor -- bash ~/dotfiles/management/tests/test-install-macos.sh --verbose`
+  → `logsift monitor -- bash ~/dotfiles/tests/install/test-install-macos.sh --verbose`
 
 - "run task build with 5 minute timeout"
   → `logsift monitor -- task build` (timeout: 5 min)
 
 - "execute the shellspec tests"
-  → `logsift monitor -- bash ~/dotfiles/management/tests/run-tests.sh`
+  → `logsift monitor -- bash ~/dotfiles/tests/install/run-tests.sh`
 
 ## Success Criteria
 

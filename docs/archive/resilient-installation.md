@@ -300,7 +300,7 @@ Full report saved to: /tmp/dotfiles-installation-failures-20250103-143022.txt
 Run verification script in a fresh shell:
 
 ```bash
-bash management/tests/verify-installed-packages.sh
+bash tests/install/verify-installed-packages.sh
 ```
 
 If there are failures and a recent installation report exists:
