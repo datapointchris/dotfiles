@@ -262,20 +262,20 @@ STEP_START=$(date +%s)
     HOME_DIR="/root"
   fi
 
-  # shellcheck disable=SC2086  # USER_FLAG intentionally unquoted (empty or --user ubuntu)
   # Set SKIP_FONTS based on --test-fonts flag
   SKIP_FONTS_ENV=""
   if [[ "$TEST_FONTS" == "false" ]]; then
     SKIP_FONTS_ENV="--env SKIP_FONTS=1"
   fi
 
+  # shellcheck disable=SC2086  # USER_FLAG and SKIP_FONTS_ENV intentionally unquoted (empty or flag)
   docker run -d \
     --name "$CONTAINER_NAME" \
-    "$USER_FLAG" \
+    $USER_FLAG \
     --env PATH="$HOME_DIR/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     --env HOME="$HOME_DIR" \
     --env DOTFILES_DOCKER_TEST=true \
-    "$SKIP_FONTS_ENV" \
+    $SKIP_FONTS_ENV \
     --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
     "$DOCKER_IMAGE" \
     /usr/bin/sleep infinity

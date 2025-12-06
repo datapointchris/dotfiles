@@ -206,7 +206,7 @@ STEP_START=$(date +%s)
   fi
 
   # Start container
-  # shellcheck disable=SC2086
+  # shellcheck disable=SC2086  # USER_FLAG and SKIP_FONTS_ENV intentionally unquoted (empty or flag)
   docker run -d \
     --name "$CONTAINER_NAME" \
     $USER_FLAG \
