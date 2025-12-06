@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+"""
+refcheck - Find broken file references and old path patterns
+
+A fast reference validator for codebases. Catches broken source statements,
+missing script references, and old path patterns after refactoring.
+
+Designed for:
+  - Proactive error detection before running tests
+  - Refactoring safety (find stale references after moving files)
+  - Fast feedback (runs in seconds vs minutes for full test suites)
+
+Common workflows:
+  refcheck                           # Validate all references in repo
+  refcheck management/               # Check specific directory
+  refcheck --pattern "old/" --desc "Now new/"  # After refactoring
+  refcheck --type sh --skip-docs     # Only shell scripts, skip docs
+"""
+
+import re
+import sys
+from pathlib import Path
+from typing import List, Dict, Optional
+from dataclasses import dataclass
+from enum import Enum
+import argparse
+
+
+class CheckType(Enum):
+    PATTERN = "old_pattern"
+    SOURCE = "broken_source"
+    SCRIPT = "broken_script"
+
+
+@dataclass
+class Issue:
+    file: Path
+    line_num: int
+    check_type: CheckType
+    message: str
+    suggestion: Optional[str] = None
+
+
+class ReferenceChecker:
+    """Validates file references across a codebase."""
+
+    DEFAULT_EXCLUDES = {
+        ".git",
+        "node_modules",
+        ".venv",
+        "site",
+        "__pycache__",
+        ".cache",
+    }
+
+    DEFAULT_EXCLUDE_PATTERNS = [
+        "*.pyc",
+        ".claude/metrics/**",
+        ".planning/**",
+        "site/**",
+    ]
+
+    DYNAMIC_PATH_PATTERNS = [
+        r"^\$",
+        r"^/tmp/",
+        r"^/root/",
+        r"^/home/",
+        r"^/Users/",
+        r"/nvm\.sh$",
+        r"^/lib/lib\.sh",
+    ]
+
+    def __init__(
+        self,
+        root_dir: Path = None,
+        search_path: Path = None,
+        skip_docs: bool = False,
+        file_type: str = None,
+    ):
+        self.root_dir = root_dir or Path.cwd()
+        self.search_path = search_path or self.root_dir
+        self.skip_docs = skip_docs
+        self.file_type = file_type
+        self.issues: List[Issue] = []
+        self.exclude_dirs = self.DEFAULT_EXCLUDES.copy()
+        self.exclude_patterns = self.DEFAULT_EXCLUDE_PATTERNS.copy()
+
+    def should_skip_file(self, file_path: Path) -> bool:
+        """Determine if file should be skipped."""
+        for part in file_path.parts:
+            if part in self.exclude_dirs:
+                return True
+
+        for pattern in self.exclude_patterns:
+            if file_path.match(pattern):
+                return True
+
+        if file_path.suffix in {".pyc", ".so", ".o", ".a", ".dylib"}:
+            return True
+
+        return False
+
+    def is_dynamic_path(self, path: str) -> bool:
+        """Check if path is dynamic/runtime-generated."""
+        for pattern in self.DYNAMIC_PATH_PATTERNS:
+            if re.search(pattern, path):
+                return True
+        return False
+
+    def find_files(self, pattern: str = "**/*") -> List[Path]:
+        """Find all files matching pattern, respecting exclusions."""
+        files = []
+        search_root = self.search_path
+
+        for file_path in search_root.glob(pattern):
+            if not file_path.is_file():
+                continue
+
+            try:
+                rel_path = file_path.relative_to(self.root_dir)
+            except ValueError:
+                continue
+
+            if self.should_skip_file(rel_path):
+                continue
+
+            if self.file_type and file_path.suffix != f".{self.file_type}":
+                continue
+
+            files.append(file_path)
+
+        return files
+
+    def check_pattern(self, pattern: str, description: str = None):
+        """Check for old path pattern references."""
+        description = description or f"Old pattern: {pattern}"
+
+        for file_path in self.find_files():
+            if self.skip_docs and file_path.suffix == ".md":
+                continue
+
+            # Skip verification scripts themselves
+            if file_path.name in ("refcheck", "verify-references.py", "verify-file-references.sh"):
+                continue
+
+            try:
+                rel_path = file_path.relative_to(self.root_dir)
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line_num, line in enumerate(f, 1):
+                        if pattern in line:
+                            self.issues.append(
+                                Issue(
+                                    file=rel_path,
+                                    line_num=line_num,
+                                    check_type=CheckType.PATTERN,
+                                    message=f"Found: {pattern}",
+                                    suggestion=description,
+                                )
+                            )
+            except (OSError, UnicodeDecodeError):
+                continue
+
+    def check_source_statements(self):
+        """Check that source statements point to existing files."""
+        source_pattern = re.compile(
+            r'source\s+["\']([^"\']+)["\']|source\s+\$[^/]*(/[^\s]+)'
+        )
+
+        for file_path in self.find_files("**/*.sh"):
+            try:
+                rel_path = file_path.relative_to(self.root_dir)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    for line_num, line in enumerate(f, 1):
+                        if "source" not in line:
+                            continue
+
+                        match = source_pattern.search(line)
+                        if not match:
+                            continue
+
+                        source_path = match.group(1) or match.group(2)
+                        if not source_path or self.is_dynamic_path(source_path):
+                            continue
+
+                        if source_path.startswith("/"):
+                            resolved = Path(source_path)
+                        else:
+                            resolved = self.root_dir / source_path
+
+                        if not resolved.exists():
+                            self.issues.append(
+                                Issue(
+                                    file=rel_path,
+                                    line_num=line_num,
+                                    check_type=CheckType.SOURCE,
+                                    message=f"Missing: {source_path}",
+                                    suggestion="Verify path exists or update reference",
+                                )
+                            )
+            except (OSError, UnicodeDecodeError):
+                continue
+
+    def check_script_references(self):
+        """Check that bash script references point to existing files."""
+        script_pattern = re.compile(r'(?:bash|sh)\s+["\']?([^\s"\']+\.sh)["\']?')
+
+        for file_path in self.find_files("**/*.sh"):
+            if self.skip_docs and file_path.suffix == ".md":
+                continue
+
+            try:
+                rel_path = file_path.relative_to(self.root_dir)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    for line_num, line in enumerate(f, 1):
+                        if "bash" not in line and "sh" not in line:
+                            continue
+
+                        for match in script_pattern.finditer(line):
+                            script_path = match.group(1).rstrip('"\'')
+
+                            if not script_path or self.is_dynamic_path(script_path):
+                                continue
+
+                            # Skip self-references in usage comments
+                            if (
+                                line.strip().startswith("#")
+                                and script_path == file_path.name
+                            ):
+                                continue
+
+                            if script_path.startswith("/"):
+                                resolved = Path(script_path)
+                            else:
+                                resolved = self.root_dir / script_path
+
+                            if not resolved.exists():
+                                self.issues.append(
+                                    Issue(
+                                        file=rel_path,
+                                        line_num=line_num,
+                                        check_type=CheckType.SCRIPT,
+                                        message=f"Missing: {script_path}",
+                                        suggestion="Verify script exists or update reference",
+                                    )
+                                )
+            except (OSError, UnicodeDecodeError):
+                continue
+
+    def run_all_checks(self):
+        """Run all validation checks."""
+        self.check_pattern("management/tests/", "Update to tests/install/")
+        self.check_source_statements()
+        self.check_script_references()
+
+    def print_results(self):
+        """Print validation results."""
+        try:
+            if not self.issues:
+                search_info = f" in {self.search_path.relative_to(self.root_dir)}" if self.search_path != self.root_dir else ""
+                print(f"\n✅ All file references valid{search_info}\n")
+                return
+
+            by_type: Dict[CheckType, List[Issue]] = {}
+            for issue in self.issues:
+                by_type.setdefault(issue.check_type, []).append(issue)
+
+            search_info = f" in {self.search_path.relative_to(self.root_dir)}" if self.search_path != self.root_dir else ""
+            print(f"\n❌ Found {len(self.issues)} broken reference(s){search_info}\n")
+
+            for check_type, issues in sorted(by_type.items(), key=lambda x: x[0].value):
+                print(
+                    f"\n{check_type.value.replace('_', ' ').title()} ({len(issues)}):"
+                )
+                print("─" * 60)
+                for issue in issues:
+                    print(f"  {issue.file}:{issue.line_num}")
+                    print(f"    {issue.message}")
+                    if issue.suggestion:
+                        print(f"    → {issue.suggestion}")
+
+            print()
+        except BrokenPipeError:
+            sys.stderr.close()
+            pass
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="refcheck",
+        description="Find broken file references and old path patterns",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Validate all references (source statements, script paths)
+  %(prog)s
+  %(prog)s --skip-docs              # Skip markdown files
+
+  # Check specific directory
+  %(prog)s management/
+  %(prog)s apps/ --type sh          # Only shell scripts in apps/
+
+  # Find old patterns after refactoring
+  %(prog)s --pattern "old/path/"
+  %(prog)s --pattern "FooClass" --desc "Renamed to BarClass"
+  %(prog)s --pattern "old/" src/    # Search only in src/
+
+  # Combine filters
+  %(prog)s --type py --skip-docs tests/
+
+What it checks:
+  - Broken source statements (missing sourced files)
+  - Broken script references (bash/sh commands to missing files)
+  - Old path patterns (after moving/renaming directories)
+
+Exit codes:
+  0 - All references valid
+  1 - Found broken references
+        """,
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        type=Path,
+        help="Directory to check (default: current directory)",
+    )
+    parser.add_argument(
+        "--pattern",
+        metavar="PATTERN",
+        help="Check for specific old path pattern (e.g., 'old/path/')",
+    )
+    parser.add_argument(
+        "--desc",
+        metavar="DESC",
+        help="Description for pattern check",
+    )
+    parser.add_argument(
+        "--type",
+        "-t",
+        metavar="TYPE",
+        help="Filter by file type (e.g., 'sh', 'py')",
+    )
+    parser.add_argument(
+        "--skip-docs",
+        action="store_true",
+        help="Skip documentation (.md) files",
+    )
+    args = parser.parse_args()
+
+    root_dir = Path.cwd()
+    search_path = args.path.resolve() if args.path else root_dir
+
+    # Ensure search_path is within or is root_dir
+    try:
+        search_path.relative_to(root_dir)
+    except ValueError:
+        # search_path is outside root_dir, use it as new root
+        root_dir = search_path
+
+    checker = ReferenceChecker(
+        root_dir=root_dir,
+        search_path=search_path,
+        skip_docs=args.skip_docs,
+        file_type=args.type,
+    )
+
+    if args.pattern:
+        checker.check_pattern(args.pattern, args.desc)
+    else:
+        checker.run_all_checks()
+
+    checker.print_results()
+
+    sys.exit(1 if checker.issues else 0)
+
+
+if __name__ == "__main__":
+    main()

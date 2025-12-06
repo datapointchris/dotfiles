@@ -1,0 +1,23 @@
+# Tools Registry
+# Registry of development tools with descriptions, examples, and documentation
+
+refcheck:
+  name: refcheck
+  description: Find broken file references and old path patterns in codebases
+  category: development
+  type: custom
+  installed_via: symlink
+  examples:
+    - command: "refcheck"
+      description: "Validate all file references in current directory"
+    - command: "refcheck management/"
+      description: "Check specific directory for broken references"
+    - command: "refcheck --pattern 'old/path/' --desc 'Now new/path/'"
+      description: "Find old pattern after refactoring"
+    - command: "refcheck --type sh --skip-docs"
+      description: "Check only shell scripts, skip documentation"
+  use_cases:
+    - "Proactive error detection before running tests"
+    - "Refactoring safety after moving/renaming files"
+    - "Fast validation (seconds vs minutes for full test suites)"
+  docs: "docs/apps/refcheck.md"

@@ -140,6 +140,7 @@ nav:
       - Session Manager: apps/sess.md
       - Menu: apps/menu.md
       - Toolbox: apps/toolbox.md
+      - Refcheck: apps/refcheck.md
       - Backup Dirs: apps/backup-dirs.md
       - Ghostty Theme: apps/ghostty-theme.md
   - Architecture:
