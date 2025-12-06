@@ -8,7 +8,7 @@
 # Requires: sudo (for system-wide installation)
 # ================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 # Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -103,8 +103,8 @@ Manual installation:
 3. Install: sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/go*.tar.gz
 4. Add to PATH: export PATH=\$PATH:/usr/local/go/bin
 5. Verify: go version"
-  report_failure "go" "https://go.dev/dl/" "latest" "$manual_steps" "Failed to fetch version"
-  log_warning "Go installation failed (see summary)"
+  output_failure_data "go" "https://go.dev/dl/" "latest" "$manual_steps" "Failed to fetch version"
+  log_error "Go installation failed"
   exit 1
 fi
 
@@ -129,8 +129,8 @@ if ! curl -fsSL "$GO_URL" -o "$GO_TARBALL"; then
 
 4. Verify installation:
    go version"
-  report_failure "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Download failed"
-  log_warning "Go installation failed (see summary)"
+  output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Download failed"
+  log_error "Go installation failed"
   exit 1
 fi
 

@@ -6,7 +6,7 @@
 # Uses --no-modify-path since we manage PATH in dotfiles
 # ================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 # Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

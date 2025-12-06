@@ -5,7 +5,7 @@
 # Universal script for all platforms
 # ================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 # Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

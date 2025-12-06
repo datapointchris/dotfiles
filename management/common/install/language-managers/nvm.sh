@@ -6,7 +6,7 @@
 # Universal script for all platforms
 # ================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
@@ -37,9 +37,7 @@ if [[ ! -d "$NVM_DIR" ]]; then
   if curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
     echo "  ✓ nvm installed"
   else
-    # Report failure if registry exists
-    if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-      manual_steps="1. Download nvm install script in your browser:
+    manual_steps="1. Download nvm install script in your browser:
    $NVM_INSTALL_SCRIPT
 
 2. After downloading, install manually:
@@ -48,8 +46,7 @@ if [[ ! -d "$NVM_DIR" ]]; then
 3. Verify installation:
    source $NVM_DIR/nvm.sh
    nvm --version"
-      report_failure "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "Download failed"
-    fi
+    output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "Download failed"
     log_error "Failed to install nvm"
     return 1
   fi
@@ -66,9 +63,7 @@ print_section "Installing Node.js ${NODE_VERSION}" "cyan"
 if NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/management/common/install/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
   log_success "Node.js ${NODE_VERSION} installed and set as default"
 else
-  # Report failure if registry exists
-  if [[ -n "${DOTFILES_FAILURE_REGISTRY:-}" ]]; then
-    manual_steps="1. First ensure nvm is installed (see above)
+  manual_steps="1. First ensure nvm is installed (see above)
 
 2. Then install Node.js manually:
    source $NVM_DIR/nvm.sh
@@ -77,8 +72,7 @@ else
 
 3. Verify installation:
    node --version"
-    report_failure "nodejs" "https://nodejs.org" "$NODE_VERSION" "$manual_steps" "Node.js installation failed"
-  fi
+  output_failure_data "nodejs" "https://nodejs.org" "$NODE_VERSION" "$manual_steps" "Node.js installation failed"
   log_error "Failed to install Node.js"
   return 1
 fi
