@@ -262,23 +262,23 @@ install_common_phases() {
     echo ""
 
     print_header "Phase 5 - GitHub Release Tools" "cyan"
-    run_phase_installer "$github_releases/fzf.sh" "fzf" || true
-    run_phase_installer "$github_releases/neovim.sh" "neovim" || true
-    run_phase_installer "$github_releases/lazygit.sh" "lazygit" || true
-    run_phase_installer "$github_releases/yazi.sh" "yazi" || true
-    run_phase_installer "$github_releases/glow.sh" "glow" || true
-    run_phase_installer "$github_releases/duf.sh" "duf" || true
-    run_phase_installer "$github_releases/tflint.sh" "tflint" || true
-    run_phase_installer "$github_releases/terraformer.sh" "terraformer" || true
-    run_phase_installer "$github_releases/terrascan.sh" "terrascan" || true
-    run_phase_installer "$github_releases/trivy.sh" "trivy" || true
-    run_phase_installer "$github_releases/zk.sh" "zk" || true
+    run_installer "$github_releases/fzf.sh" "fzf"
+    run_installer "$github_releases/neovim.sh" "neovim"
+    run_installer "$github_releases/lazygit.sh" "lazygit"
+    run_installer "$github_releases/yazi.sh" "yazi"
+    run_installer "$github_releases/glow.sh" "glow"
+    run_installer "$github_releases/duf.sh" "duf"
+    run_installer "$github_releases/tflint.sh" "tflint"
+    run_installer "$github_releases/terraformer.sh" "terraformer"
+    run_installer "$github_releases/terrascan.sh" "terrascan"
+    run_installer "$github_releases/trivy.sh" "trivy"
+    run_installer "$github_releases/zk.sh" "zk"
     echo ""
 
     print_header "Phase 5b - Custom Distribution Tools" "cyan"
-    run_phase_installer "$custom_installers/awscli.sh" "awscli" || true
-    run_phase_installer "$custom_installers/claude-code.sh" "claude-code" || true
-    run_phase_installer "$custom_installers/terraform-ls.sh" "terraform-ls" || true
+    run_installer "$custom_installers/awscli.sh" "awscli"
+    run_installer "$custom_installers/claude-code.sh" "claude-code"
+    run_installer "$custom_installers/terraform-ls.sh" "terraform-ls"
     echo ""
 
     print_header "Phase 6 - Rust/Cargo Tools" "cyan"
