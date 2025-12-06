@@ -523,8 +523,7 @@ jq . < .claude/metrics/command-metrics-$(date +%Y-%m-%d).jsonl
 ### Internal
 
 - [Working with Claude Code](../claude-code/working-with-claude.md) - User guide
-- [Structured Logging](./structured-logging.md) - Log format standards
-- [Shell Libraries](./shell-libraries.md) - Logging implementations
+- [Shell Libraries](./shell-libraries.md) - Logging implementations and standards
 - [Hooks Reference](../reference/tools/hooks.md) - Available hooks
 
 ## Changelog

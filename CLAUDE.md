@@ -116,7 +116,7 @@ See `docs/architecture/shell-libraries.md` for complete guide
 - There is NO `.zprofile` or `.zshenv` in the home directory (and there should NOT be)
 - `.zshrc` is located in `~/.config/zsh/.zshrc` (symlinked from dotfiles repo)
 - This XDG-compliant setup is intentional and correct
-- Standalone shell scripts in `apps/` must source structured-logging library if they need logging (they run in their own bash process, not in the shell environment)
+- Standalone shell scripts in `apps/` must source logging.sh library if they need logging (they run in their own bash process, not in the shell environment)
 
 **run-and-summarize.sh Usage** (⚠️ CRITICAL - DO NOT RUN IN BACKGROUND):
 

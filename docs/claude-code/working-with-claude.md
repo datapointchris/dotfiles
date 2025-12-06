@@ -649,7 +649,6 @@ cat .claude/settings.json
 
 - [Metrics Tracking Architecture](../architecture/metrics-tracking.md) - System design and implementation
 - [Shell Libraries](../architecture/shell-libraries.md) - Logging and error handling patterns
-- [Structured Logging](../architecture/structured-logging.md) - Log format specifications
 
 ### Technical Reference
 

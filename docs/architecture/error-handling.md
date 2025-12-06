@@ -18,14 +18,14 @@ Error handling in this repository follows the "fail fast and loud" principle:
 
 ### Library Chain
 
-```
+```text
 script.sh
   └─> error-handling.sh
        ├─> set -euo pipefail (error safety)
        ├─> Trap handlers (ERR, EXIT)
        ├─> Cleanup registration
-       └─> structured-logging.sh
-            └─> formatting.sh (visual mode only)
+       └─> logging.sh
+            └─> colors.sh
 ```
 
 Sourcing `error-handling.sh` and calling `enable_error_traps` provides:
@@ -115,14 +115,14 @@ log_success "Installation complete"
 
 **Terminal (visual):**
 
-```
+```yaml
 ✗ Failed to download file
   at install-tool.sh:42
 ```
 
 **Pipe/log (structured):**
 
-```
+```bash
 [FATAL] Failed to download file in install-tool.sh:42
 ```
 
@@ -136,7 +136,7 @@ DOTFILES_DEBUG=true bash management/common/install/github-releases/tool.sh
 
 **Output:**
 
-```
+```bash
 [ERROR] Command failed with exit code 1 in install-tool.sh:42
 [ERROR] Failed command: curl -fsSL https://example.com/file.tar.gz
 [INFO] Stack trace:
@@ -316,13 +316,13 @@ verify_file "$TMP_DIR/file.tar.gz" "Downloaded file"
 
 **Before (no context):**
 
-```
+```yaml
 Error: Failed to download file
 ```
 
 **After (with context):**
 
-```
+```bash
 [ERROR] Failed to download file in install-tool.sh:42
 ```
 
@@ -383,7 +383,7 @@ DOTFILES_DEBUG=true bash script.sh
 
 ## Related Documentation
 
-- [Structured Logging](structured-logging.md)
+- [Shell Libraries](shell-libraries.md)
 - [GitHub Release Installer](github-release-installer.md)
 - Production-Grade Management Enhancements (planning doc)
 
@@ -391,8 +391,8 @@ DOTFILES_DEBUG=true bash script.sh
 
 **Library:**
 
-- `management/common/lib/error-handling.sh` (120 lines)
-- `management/common/lib/structured-logging.sh` (244 lines)
+- `platforms/common/.local/shell/error-handling.sh` (319 lines)
+- `platforms/common/.local/shell/logging.sh` (116 lines)
 
 **All scripts using error-handling:**
 

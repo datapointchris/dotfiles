@@ -46,4 +46,4 @@ Claude Code configuration is stored in `.claude/` directory:
 
 - [Hooks Reference](../reference/tools/hooks.md) - Hook system documentation
 - [Skills System](../reference/tools/skills.md) - Skills framework guide
-- [Structured Logging](../architecture/structured-logging.md) - Logging system used by hooks
+- [Shell Libraries](../architecture/shell-libraries.md) - Logging system used by hooks

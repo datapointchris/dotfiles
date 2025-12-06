@@ -149,7 +149,6 @@ nav:
       - Package Management: architecture/package-management.md
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Tool Composition: architecture/tool-composition.md
-      - Structured Logging: architecture/structured-logging.md
       - Error Handling: architecture/error-handling.md
       - GitHub Release Installer: architecture/github-release-installer.md
       - Resilient Installation: architecture/resilient-installation.md

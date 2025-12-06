@@ -21,8 +21,8 @@ The library follows the "medium abstraction" principle:
 ```text
 installer-script.sh
   └─> error-handling.sh (set -euo pipefail, traps, cleanup)
-       └─> structured-logging.sh (dual-mode: visual/structured)
-            └─> formatting.sh (visual mode only)
+       └─> logging.sh (status messages with [LEVEL] prefixes)
+            └─> colors.sh
 ```
 
 Each installer script sources `error-handling.sh`, which automatically provides:
@@ -351,7 +351,7 @@ bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 ## Related Documentation
 
 - [Error Handling](error-handling.md)
-- [Structured Logging](structured-logging.md)
+- [Shell Libraries](shell-libraries.md)
 - Production-Grade Management Enhancements (planning doc)
 
 ## Files

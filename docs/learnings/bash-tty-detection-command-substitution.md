@@ -20,7 +20,7 @@ Testing TTY detection:
   test -t 2 (stderr): TTY
 ```
 
-The issue was in `structured-logging.sh`:
+The issue was in the old `structured-logging.sh` (now replaced by simpler logging.sh):
 
 ```bash
 detect_log_mode() {
@@ -80,4 +80,4 @@ Running `bash /tmp/tty_test.sh` 10 times with minor variations wastes time. One 
 
 - [How can I detect if my shell script is running through a pipe? - Stack Overflow](https://stackoverflow.com/questions/911168/how-can-i-detect-if-my-shell-script-is-running-through-a-pipe)
 - [check isatty in bash - Stack Overflow](https://stackoverflow.com/questions/10022323/check-isatty-in-bash)
-- Affected file: `management/common/lib/structured-logging.sh:34`
+- Historical note: This issue occurred in the old `structured-logging.sh` file, which has since been replaced by simpler `logging.sh` that doesn't use mode detection

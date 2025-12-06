@@ -375,6 +375,5 @@ Functions are available directly in interactive shells - no need to source.
 
 ## See Also
 
-- `docs/architecture/structured-logging.md` - Details on log parsing
 - `platforms/common/.local/shell/colors.sh` - Color definitions
 - `.claude/skills/symlinks-developer` - Symlinks manager documentation
