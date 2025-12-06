@@ -200,6 +200,56 @@ class ReferenceChecker:
             except (OSError, UnicodeDecodeError):
                 continue
 
+    def go_up_n_levels(self, file_path: Path, n: int) -> Path:
+        """Go up N directory levels from file_path."""
+        path = file_path.parent
+        for _ in range(n - 1):
+            path = path.parent
+        return path
+
+    def find_repo_root(self, file_path: Path) -> Path:
+        """Find git repo root from file path."""
+        current = file_path.parent
+        while current != current.parent:  # Stop at filesystem root
+            if (current / ".git").exists():
+                return current
+            current = current.parent
+        # If no .git found, return current root_dir
+        return self.root_dir
+
+    def parse_variable_assignments(self, file_path: Path) -> Dict[str, str]:
+        """
+        Parse common shell variable assignment patterns.
+        Returns dict of {var_name: computed_value}
+        """
+        symbol_table = {}
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except (OSError, UnicodeDecodeError):
+            return symbol_table
+
+        # Pattern 1: SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if re.search(r'SCRIPT_DIR="\$\(cd.*BASH_SOURCE', content):
+            symbol_table['SCRIPT_DIR'] = str(file_path.parent)
+
+        # Pattern 2: DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+        # Extract the number of ../ levels
+        match = re.search(r'DOTFILES_DIR="\$\(cd "\$SCRIPT_DIR/((?:\.\./?)+)" && pwd\)"', content)
+        if match:
+            relative_path = match.group(1)
+            levels_up = relative_path.count('..')
+            # We need to go up from the file's parent directory
+            symbol_table['DOTFILES_DIR'] = str(self.go_up_n_levels(file_path, levels_up + 1))
+
+        # Pattern 3: DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+        if re.search(r'DOTFILES_DIR="\$\{DOTFILES_DIR:-\$HOME/dotfiles\}"', content):
+            # Use actual repo root if we can detect it
+            symbol_table['DOTFILES_DIR'] = str(self.find_repo_root(file_path))
+
+        return symbol_table
+
     def check_script_references(self):
         """Check that bash script references point to existing files."""
         script_pattern = re.compile(r'(?:bash|sh)\s+["\']?([^\s"\']+\.sh)["\']?')
