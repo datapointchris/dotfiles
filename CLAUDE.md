@@ -40,6 +40,15 @@ See `docs/learnings/app-installation-patterns.md` for full details.
   4. Test a different hypothesis based on research
   - Running the same command 10 times with minor variations wastes time and misses root cause
 
+**CRITICAL: Never Commit Untested Fixes** (⚠️ MANDATORY):
+
+- **NEVER commit a "fix" that has not been tested and validated**
+- **NEVER use git commit directly - ALWAYS use the commit-agent via Task tool**
+- Workflow: Make change → Test thoroughly → Verify it works → THEN commit via commit-agent
+- If tests fail: iterate and fix until tests pass, ONLY THEN commit
+- Commits labeled "fix" MUST have evidence the issue is actually fixed
+- A commit history full of untested "fixes" that don't work is worse than no commits
+
 **Critical Bash Gotcha - Arithmetic with set -e** (⚠️ This has caught us 4+ times):
 
 - `((COUNTER++))` returns 0 (false) when COUNTER is 0, causing `set -e` to exit the script
