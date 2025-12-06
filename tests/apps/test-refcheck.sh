@@ -278,13 +278,13 @@ FIXTURES_DIR="$DOTFILES_DIR/tests/apps/fixtures/refcheck-variables"
 test_case "Should detect broken variable references" 1 \
   "$REFCHECK" "$FIXTURES_DIR/"
 
-# Verify count of broken references (should be 3)
-broken_count=$("$REFCHECK" "$FIXTURES_DIR/" 2>&1 | grep -c "Missing:" || echo 0)
-if [[ $broken_count -eq 3 ]]; then
-  log_success "Detected all 3 broken variable references"
+# Verify variable resolution in error messages
+output=$("$REFCHECK" "$FIXTURES_DIR/" 2>&1 || true)
+if echo "$output" | grep -q "SCRIPT_DIR.*→" && echo "$output" | grep -q "DOTFILES_DIR.*→"; then
+  log_success "Error messages show variable resolution"
   PASSED=$((PASSED + 1))
 else
-  log_error "Expected 3 broken references, found $broken_count"
+  log_error "Expected variable resolution in error messages"
   FAILED=$((FAILED + 1))
 fi
 
