@@ -2,493 +2,292 @@
 
 ## Quick Reference
 
-`set -e`          Exit immediately on any command failure
-`set -u`          Exit if referencing undefined variables
-`set -o pipefail` Fail if ANY command in a pipe fails
-`set -x`          Print commands before executing (debug mode)
+```bash
+set -e           # Exit immediately on any command failure
+set -u           # Exit if referencing undefined variables
+set -o pipefail  # Fail if ANY command in a pipe fails
+set -x           # Print commands before executing (debug)
 
-## Common Combinations
+# Convention (counter-intuitive!):
+set -X   # ENABLE option X
+set +X   # DISABLE option X (back to default)
+```
 
-### Implicit Error Exit (Auto-Stop)
+**Default bash:** `set +e +u +o pipefail` - No error checking! (dangerous)
+
+## The Three Modes
+
+**1. Default Mode (AVOID!)** - `set +e +u +o pipefail`
+Script continues on all failures, exits 0 even when broken. Almost never use.
+
+**2. Implicit/Auto-Stop** - `set -euo pipefail`
+Script exits immediately on first failure. Use for: simple scripts, fail-fast workflows, sub-scripts.
+
+**3. Explicit/Manual** - `set -uo pipefail` (note: no `-e`)
+Script continues, you check errors you care about. Use for: orchestrators, error recovery, failure summaries.
+
+## Default Behavior (Why It's Dangerous)
 
 ```bash
 #!/usr/bin/env bash
-set -euo pipefail
+# Default: set +e +u +o pipefail (no error checking)
 
-curl -fsSL "$URL" -o file  # Exits automatically if curl fails
-tar -xzf file              # Exits automatically if tar fails
-./install.sh               # Exits automatically if install fails
+curl http://bad-url -o file.zip      # FAILS (exit 1)
+echo "Still running!"                 # RUNS! Script continues
+unzip file.zip                        # FAILS (file corrupt)
+cd extracted-dir                      # FAILS (dir doesn't exist)
+echo "Current dir: $(pwd)"            # RUNS! (WRONG directory)
+rm -rf *                              # RUNS! (deletes files in wrong place!)
+exit 0                                # Script "succeeds" - lies!
 ```
 
-**When to use:**
-
-- Standalone scripts that should stop completely on any error
-- Simple linear workflows with no error recovery needed
-- Sub-scripts called by wrappers that handle failures
-
-**Pros:** Clean, simple, no error checking boilerplate
-**Cons:** Can't continue after failures, no custom error handling
-
----
-
-### Explicit Error Handling (Manual Check)
+**Real data corruption example:**
 
 ```bash
 #!/usr/bin/env bash
-set -uo pipefail
-
-if ! curl -fsSL "$URL" -o file; then
-  echo "Download failed, trying alternative..."
-  curl -fsSL "$ALT_URL" -o file || exit 1
-fi
-
-tar -xzf file || { echo "Extraction failed"; exit 1; }
+curl http://api/users.json -o users.json  # FAILS, creates EMPTY file
+jq '.users[]' users.json > list.txt       # Processes empty, creates EMPTY output
+while read user; do                       # Loop never runs
+  delete_user "$user"                     # Never executes
+done < list.txt
+echo "Deleted all users!"                 # Lies! Nothing was deleted
 ```
 
-**When to use:**
+**Lesson:** You should check errors to avoid silent corruption, not because the shell forces you.
 
-- Orchestrator scripts that coordinate multiple tasks
-- Scripts that need to continue after some failures
-- When you need custom error messages or recovery logic
-- Top-level scripts using wrapper functions
+## Individual Flags
 
-**Pros:** Full control, continue-on-error, custom recovery
-**Cons:** Must check every error explicitly
+**set -e (exit on error)**
+Exits immediately when any command returns non-zero.
 
----
-
-### Minimal Safety (Maximum Flexibility)
+Caveats - these DON'T trigger exit:
 
 ```bash
-#!/usr/bin/env bash
-set -u
-
-# Must check everything manually
-curl -fsSL "$URL" -o file
-if [[ $? -ne 0 ]]; then
-  handle_error
-fi
+if false; then ...  # Conditionals disable -e
+false || echo "ok"  # || and && disable -e
+false | true        # Only checks last pipe command
 ```
 
-**When to use:**
-
-- Complex scripts with many expected failures
-- When you need maximum control over error handling
-- Interactive scripts that shouldn't exit on errors
-
----
-
-## Individual Flag Details
-
-### set -e (exit on error)
-
-**What it does:**
-
-- Exits script immediately when any command returns non-zero
-- Prevents subsequent commands from running after failures
-
-**Caveats:**
+These DO trigger exit:
 
 ```bash
-set -e
-
-# These DON'T trigger exit:
-if false; then echo "in if"; fi     # ✓ Conditionals disable -e
-false || echo "fallback"             # ✓ || and && disable -e
-false | true                         # ✓ Only checks last pipe command
-
-# These DO trigger exit:
-false                                # ✗ Exits immediately
-result=$(false)                      # ✗ Exits (command substitution)
+false               # Exits immediately
+result=$(false)     # Exits (command substitution)
 ```
 
-**Override in specific blocks:**
+**set -u (undefined variable check)**
+Exits if referencing undefined variables. Use `${VAR:-default}` for optional vars.
 
 ```bash
-set -e
-
-# Temporarily disable for expected failures
-set +e
-optional_command_that_might_fail
-set -e
+echo "$UNDEFINED"              # ✗ Exits
+echo "${OPTIONAL:-default}"    # ✓ Works
+DEBUG="${DEBUG:-false}"        # ✓ Common pattern
 ```
 
----
-
-### set -u (undefined variable check)
-
-**What it does:**
-
-- Exits if script references an undefined variable
-- Forces explicit variable initialization
-
-**Examples:**
+**set -o pipefail (pipe failure checking)**
+Returns exit code of FIRST failing command in pipe, not just the last.
 
 ```bash
-set -u
-
-echo "$UNDEFINED"              # ✗ Exits with error
-
-VAR=""                         # ✓ Explicit empty
-echo "$VAR"                    # ✓ Works
-
-echo "${OPTIONAL:-default}"    # ✓ Use default if unset
-echo "${REQUIRED:?Must set}"   # ✓ Custom error message
-```
-
-**Common pattern for optional variables:**
-
-```bash
-DEBUG="${DEBUG:-false}"        # Default to false if not set
-SKIP_TESTS="${SKIP_TESTS:-0}"  # Default to 0 if not set
-```
-
----
-
-### set -o pipefail (pipe failure checking)
-
-**What it does:**
-
-- Makes pipes return the exit code of the FIRST failing command
-- Without it, only the LAST command's exit code matters
-
-**Examples:**
-
-```bash
-# Without pipefail (default):
-set +o pipefail
+# Without pipefail:
 false | true        # Returns 0 (success) - only checks 'true'
-curl bad | jq       # Returns jq's exit code, ignores curl failure
 
 # With pipefail:
-set -o pipefail
 false | true        # Returns 1 (failure) - checks all commands
 curl bad | jq       # Returns curl's exit code if curl fails
 ```
 
-**Why it matters:**
+## Top-Level vs Sub-Level Patterns
+
+**Pattern 1: Orchestrator (top) + Workers (sub)**
 
 ```bash
-set -eo pipefail
-
-# This catches curl failures:
-curl -fsSL "$URL" | jq '.version' || exit 1
-
-# Without pipefail, this would succeed even if curl fails
-# (as long as jq succeeds on its empty input)
-```
-
----
-
-## Top-Level vs Sub-Level Scripts
-
-### Pattern 1: Orchestrator + Workers
-
-**Top-level (orchestrator):**
-
-```bash
+# install.sh (top-level orchestrator)
 #!/usr/bin/env bash
-set -uo pipefail  # Explicit handling - don't auto-exit
+set -uo pipefail  # Explicit - don't auto-exit
 
 run_installer() {
-  local script="$1"
-  local tool="$2"
-
-  if ! bash "$script" 2>&1; then
-    log_error "$tool installation failed"
-    return 1
-  fi
+  bash "$1" 2>&1 || log_error "$2 failed"  # Continue on failure
 }
 
-# Continue even if some fail
-run_installer "aws.sh" "aws" || true
-run_installer "node.sh" "node" || true
+run_installer "aws.sh" "aws"
+run_installer "node.sh" "node"
 show_summary
 ```
 
-**Sub-level (worker):**
+```bash
+# aws.sh (worker)
+#!/usr/bin/env bash
+set -euo pipefail  # Auto-exit - wrapper catches failures
+
+curl -fsSL "$URL" -o file  # Exits on failure
+tar -xzf file              # Wrapper handles exit
+```
+
+**Pattern 2: All Explicit**
+
+```bash
+# Both parent and child use set -uo pipefail
+# Parent: if ! bash "$script"; then handle_error; fi
+# Child:  if ! curl ...; then exit 1; fi
+```
+
+## Common Gotchas
+
+**Arithmetic with set -e:**
+
+```bash
+COUNTER=0
+((COUNTER++))  # ✗ Exits when COUNTER is 0! (returns false)
+COUNTER=$((COUNTER + 1))  # ✓ Safe
+```
+
+**Conditionals disable set -e:**
+
+```bash
+if false; then echo "x"; fi  # Doesn't exit
+false  # Exits immediately
+```
+
+**Functions and subshells inherit settings:**
+
+```bash
+set -euo pipefail
+my_func() { false; }  # Exits entire script
+my_func  # Script exits here
+
+(false; echo "x")  # Subshell exits, doesn't print
+```
+
+**Sourcing vs Executing (CRITICAL!):**
+
+`bash script.sh` - Creates NEW shell, settings isolated (safe)
+`source script.sh` - Runs in CURRENT shell, settings PERSIST (dangerous!)
+
+```bash
+# parent.sh
+#!/usr/bin/env bash
+bash child.sh     # ✓ Safe - child's set -e doesn't affect parent
+source child.sh   # ✗ Dangerous - child's set -e now affects parent!
+```
+
+**Libraries must NEVER set error modes:**
+
+```bash
+# logging.sh (BAD!)
+set -euo pipefail  # ❌ Affects scripts that source it!
+
+# logging.sh (GOOD!)
+# No set options! Just function definitions
+log_info() { echo "[INFO] $*"; }
+```
+
+**Why:** Libraries are sourced. `set` options persist in calling script, causing unexpected behavior.
+
+**Safe library pattern:**
+
+```bash
+# my-lib.sh
+# Note: Libraries should not set shell options.
+# Scripts that source this manage their own error handling.
+
+my_function() {
+  [[ -z "$1" ]] && { echo "Error" >&2; return 1; }
+  echo "Processing: $1"
+}
+```
+
+**Real dotfiles example:**
+
+```bash
+# platforms/common/.local/shell/logging.sh - ✓ No set options!
+# management/common/install/custom-installers/awscli.sh
+set -uo pipefail  # Script controls error handling
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"  # Safe!
+```
+
+## Decision Tree
+
+Starting a new script?
+
+- Multiple tasks, some can fail? → `set -uo pipefail` (explicit)
+- Any failure should stop script? → `set -euo pipefail` (implicit)
+- Called by a wrapper? → `set -euo pipefail` (wrapper handles it)
+- It's a library (sourced)? → NO set options at all!
+
+## Real-World Examples
+
+**Install orchestrator:**
 
 ```bash
 #!/usr/bin/env bash
-set -euo pipefail  # Auto-exit - wrapper handles failures
+set -uo pipefail
+FAILURES_LOG="/tmp/failures.log"
 
-# Script exits on first error, wrapper catches it
-curl -fsSL "$URL" -o file
-tar -xzf file
-./install
+run_installer() {
+  bash "$1" 2>&1 || echo "$2 failed" >> "$FAILURES_LOG"
+}
+
+run_installer "aws.sh" "aws"
+run_installer "node.sh" "node"
+cat "$FAILURES_LOG"
 ```
 
----
-
-### Pattern 2: All Explicit
-
-**Top-level:**
+**Installer worker:**
 
 ```bash
 #!/usr/bin/env bash
 set -uo pipefail
 
-run_installer() {
-  bash "$1" 2>&1
-  if [[ $? -ne 0 ]]; then
-    log_failure "$2"
-  fi
-}
-```
-
-**Sub-level:**
-
-```bash
-#!/usr/bin/env bash
-set -uo pipefail  # Match parent style
-
-if ! curl -fsSL "$URL" -o file; then
-  output_failure_data "..."
-  exit 1
-fi
-```
-
-Both scripts use explicit error handling for consistency.
-
----
-
-## Common Gotchas
-
-### Gotcha 1: Arithmetic with set -e
-
-```bash
-set -euo pipefail
-
-# ✗ EXITS when COUNTER is 0 (returns 0/false)
-COUNTER=0
-((COUNTER++))  # Script exits here!
-
-# ✓ SAFE - always returns true
-COUNTER=0
-COUNTER=$((COUNTER + 1))
-
-# ✓ SAFE - explicit || true
-((COUNTER++)) || true
-```
-
-**Why:** `((expr))` returns the result of the expression. When COUNTER is 0,
-`((COUNTER++))` evaluates to 0 (false), triggering set -e.
-
----
-
-### Gotcha 2: Conditionals Disable set -e
-
-```bash
-set -euo pipefail
-
-# This succeeds (doesn't exit):
-if false; then
-  echo "never runs"
-fi
-
-# This exits immediately:
-false  # Script exits here
-
-# Command substitution still exits:
-result=$(false)  # Script exits here
-```
-
----
-
-### Gotcha 3: Functions Inherit Settings
-
-```bash
-set -euo pipefail
-
-my_function() {
-  # Inherits set -euo pipefail
-  false  # Exits entire script
-}
-
-my_function  # Script exits in function
-```
-
-**Override in function:**
-
-```bash
-my_function() {
-  set +e  # Disable for this function
-  false   # Doesn't exit
-  set -e  # Re-enable
-}
-```
-
----
-
-### Gotcha 4: Subshells Inherit Settings
-
-```bash
-set -euo pipefail
-
-# Subshell inherits -e
-(false; echo "never runs")  # Subshell exits
-
-# Override in subshell
-(set +e; false; echo "runs")  # Works
-
-# Backgrounded commands inherit
-false &  # Background process exits immediately
-```
-
----
-
-## Decision Tree
-
-**Starting a new script?**
-
-┌─ Will this script coordinate multiple tasks that might fail?
-│  └─ YES → Use `set -uo pipefail` (explicit handling)
-│  └─ NO  → Continue below
-│
-├─ Is this script called by a wrapper that handles failures?
-│  └─ YES → Use `set -euo pipefail` (auto-exit, wrapper catches)
-│  └─ NO  → Continue below
-│
-├─ Should any error stop the entire script?
-│  └─ YES → Use `set -euo pipefail` (auto-exit)
-│  └─ NO  → Use `set -uo pipefail` (explicit handling)
-│
-└─ Need to ignore many expected failures?
-   └─ YES → Use `set -u` (minimal safety)
-
----
-
-## Real-World Examples
-
-### Example 1: Install Script (Top-Level)
-
-```bash
-#!/usr/bin/env bash
-set -uo pipefail  # Explicit - handle multiple failures
-
-FAILURES_LOG="/tmp/failures.log"
-
-run_installer() {
-  if ! bash "$1" 2>&1; then
-    echo "$2 failed" >> "$FAILURES_LOG"
-  fi
-}
-
-# Continue even if individual installers fail
-run_installer "aws.sh" "aws"
-run_installer "node.sh" "node"
-run_installer "python.sh" "python"
-
-# Show summary
-cat "$FAILURES_LOG"
-```
-
----
-
-### Example 2: Installer Worker (Sub-Level)
-
-```bash
-#!/usr/bin/env bash
-set -uo pipefail  # Explicit - report structured failures
-
 if ! curl -fsSL "$URL" -o /tmp/file; then
   output_failure_data "tool" "$URL" "v1.0" "manual steps" "Download failed"
-  exit 1  # Parent catches this
-fi
-
-tar -xzf /tmp/file || {
-  output_failure_data "tool" "$URL" "v1.0" "manual steps" "Extraction failed"
   exit 1
-}
+fi
 ```
 
----
-
-### Example 3: Simple Deployment Script
+**Simple deployment (fail-fast):**
 
 ```bash
 #!/usr/bin/env bash
-set -euo pipefail  # Auto-exit - stop on any failure
-
+set -euo pipefail
 git pull origin main
 npm ci
 npm run build
-rsync -avz dist/ user@server:/var/www/
-
-echo "Deployment successful"
+rsync -avz dist/ server:/var/www/
 ```
 
----
-
-### Example 4: Complex Update Script
+**Update script (continue-on-error):**
 
 ```bash
 #!/usr/bin/env bash
-set -uo pipefail  # Explicit - continue updating other tools
+set -uo pipefail
 
-update_npm() {
-  if npm update -g; then
-    echo "npm: ✓"
-  else
-    echo "npm: ✗ failed"
-  fi
-}
-
-update_cargo() {
-  if cargo install-update -a; then
-    echo "cargo: ✓"
-  else
-    echo "cargo: ✗ failed"
-  fi
-}
-
-# Run all updates, continue even if some fail
-update_npm
-update_cargo
-update_python
+npm update -g && echo "npm: ✓" || echo "npm: ✗"
+cargo install-update -a && echo "cargo: ✓" || echo "cargo: ✗"
 ```
 
----
-
-## Testing Your Error Handling
+## Testing
 
 ```bash
-# Test that errors are caught:
+# Test errors are caught:
 bash -c 'set -euo pipefail; false; echo "should not print"'
 
-# Test undefined variable catching:
+# Test undefined variables:
 bash -c 'set -u; echo "$UNDEFINED"'
 
 # Test pipefail:
 bash -c 'set -o pipefail; false | true; echo $?'  # Should be 1
-
-# Test your script's error handling:
-SIMULATE_FAILURE=1 bash your-script.sh
 ```
-
----
 
 ## Summary
 
-**Use `set -euo pipefail` when:**
+**Golden Rules:**
 
-- Script should stop completely on any error
-- Simple linear workflows
-- Sub-scripts called by error-handling wrappers
+- **Always use `set -u`** - undefined variables are bugs
+- **Always use `set -o pipefail`** - catch pipe failures
+- **Never skip error handling** - default mode causes silent failures
+- **Libraries never set error modes** - they're sourced, not executed
+- **Choose `-e` (auto-exit) vs `+e` (manual-check)** based on needs
 
-**Use `set -uo pipefail` when:**
+**Quick decision:** Multiple tasks with some expected failures? Use `set -uo pipefail`. Any failure should stop everything? Use `set -euo pipefail`. Writing a library? No `set` options at all!
 
-- Orchestrating multiple tasks
-- Need to continue after failures
-- Custom error recovery needed
-- Top-level scripts with failure summaries
-
-**Use `set -u` when:**
-
-- Maximum control needed
-- Many expected failures
-- Complex conditional logic
-
-**Always use `set -u`** - undefined variables are always bugs.
-**Always use `set -o pipefail`** - pipe failures should be caught.
-**Choose -e vs +e** based on whether you want automatic vs explicit error handling.
+**Remember:** Default bash continues on failures. Check errors to avoid silent corruption, not because the shell forces you. The "Deleted all users!" script that deleted nothing is why we care about error handling.
