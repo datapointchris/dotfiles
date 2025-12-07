@@ -1,54 +1,42 @@
-# Claude Code Hooks System
+# Claude Code - Dotfiles Project Configuration
 
-Comprehensive hooks system for dotfiles automation and development workflow enhancement.
+Project-specific Claude Code configuration for the dotfiles repository.
 
 ## Overview
 
-The hooks system provides:
+This directory contains **dotfiles-specific** configuration. Universal hooks and configuration are managed in `~/.claude/`.
 
-- Automatic project context loading on session start
-- Build verification and error catching
-- Conventional commits enforcement via pre-commit
-- Skill-based auto-activation
-- Desktop notifications for events
-- Session state preservation across compactions
+**Universal (in ~/.claude/)**:
 
-## Hook Types
+- Session-start hooks
+- Metrics tracking
+- Git safety hooks
+- Markdown formatting
+- Desktop notifications
+- Pre-compact state saving
 
-### SessionStart - Project Context
+**Dotfiles-specific (in this directory)**:
 
-**File**: `.claude/hooks/session-start`
+- Bash error safety checks
+- Build verification (stop-build-check)
+- Changelog reminder (stop-dotfiles-changelog-reminder)
+- Commit agent
+- Logsift commands
 
-Automatically loads project context when Claude Code session starts.
+## Dotfiles-Specific Hooks
 
-**Provides**:
+### PreToolUse - Bash Error Safety
 
-- Current git status
-- Recent commits (last 5)
-- Directory structure snapshot
-- Working directory info
+**File**: `.claude/hooks/check-bash-error-safety`
 
-**Triggers**: Every time a new Claude Code session starts
+Validates bash scripts have proper error handling flags before execution.
 
-### UserPromptSubmit - Skill Activation
+**Checks**:
 
-**File**: `.claude/hooks/user-prompt-submit-skill-activation`
+- Ensures scripts use `set -e` or `set -euo pipefail`
+- Prevents silent failures in bash scripts
 
-Analyzes user prompts and file context to suggest relevant skills automatically.
-
-**Activation Triggers**:
-
-- Keyword matching (e.g., "symlink", "install", "docs")
-- Intent pattern matching via regex
-- File path patterns (e.g., editing `tools/symlinks/*.py`)
-
-**Configured Skills**:
-
-- `symlinks-developer` - Dotfiles symlink system expertise
-- `dotfiles-install` - Bootstrap and installation processes
-- `documentation` - Documentation writing and updates
-
-**Configuration**: `.claude/skill-rules.json`
+**Triggers**: Before Bash tool executes
 
 ### Stop - Build Check
 
@@ -67,9 +55,9 @@ Runs builds and tests on modified tools to catch errors immediately.
 - `0` - All tests passed or no relevant changes
 - `2` - Critical errors that block (Claude must fix)
 
-### Stop - Commit Reminder
+### Stop - Changelog Reminder
 
-**File**: `.claude/hooks/stop-commit-reminder`
+**File**: `.claude/hooks/stop-dotfiles-changelog-reminder`
 
 Reminds about pending changelog entries after commits.
 
@@ -77,37 +65,15 @@ Reminds about pending changelog entries after commits.
 
 **Purpose**: Ensures commits are documented in changelog files
 
-### Notification - Desktop Alerts
+## Universal Hooks (in ~/.claude/)
 
-**File**: `.claude/hooks/notification-desktop`
+Universal hooks apply to all projects. See `~/.claude/README.md` for details:
 
-Sends desktop notifications for Claude Code events.
-
-**Platforms**:
-
-- macOS: Uses `osascript`
-- Linux: Uses `notify-send`
-
-**Use Cases**:
-
-- Long-running operations complete
-- Waiting for user input
-- Important events or milestones
-
-### PreCompact - Session State
-
-**File**: `.claude/hooks/pre-compact-save-state`
-
-Saves session metadata before memory compaction.
-
-**Saves**:
-
-- Timestamp
-- Working directory
-- Session ID
-- Transcript path
-
-**Storage**: `.claude/sessions/session-{timestamp}.json`
+- **SessionStart**: Project context loading, git status, recent commits
+- **PreToolUse**: Git safety (intercept commits), logsift background blocking
+- **PostToolUse**: Markdown formatting, metrics tracking, logsift monitoring
+- **Notification**: Desktop alerts for events
+- **PreCompact**: Session state preservation
 
 ## Git Hooks (Pre-commit Framework)
 
@@ -272,33 +238,27 @@ You are an expert at...
 
 ```text
 .claude/
-├── agents/                         # Specialized AI assistants
+├── agents/                         # Dotfiles-specific agents
 │   └── commit-agent.md             # Commit workflow automation
-├── commands/                       # User-invoked slash commands
+├── commands/                       # Dotfiles-specific slash commands
 │   ├── logsift.md                  # Logsift monitor command
 │   └── logsift-auto.md             # Natural language logsift
-├── hooks/                          # Claude Code hooks
-│   ├── session-start               # SessionStart hook
-│   ├── user-prompt-submit-skill-activation  # Skill activation
+├── hooks/                          # Dotfiles-specific hooks only
+│   ├── check-bash-error-safety     # Bash error handling validation
+│   ├── check-feature-docs          # Feature documentation check
 │   ├── stop-build-check            # Build verification
-│   ├── stop-commit-reminder        # Changelog reminder
-│   ├── notification-desktop        # Desktop notifications
-│   ├── pre-compact-save-state      # Session state saving
-│   └── track-command-metrics       # Command usage tracking
-├── metrics/                        # Usage and quality tracking
+│   └── stop-dotfiles-changelog-reminder  # Changelog reminder
+├── lib/                            # Shared libraries (symlinked to ~/.claude/lib)
+├── metrics/                        # Dotfiles-specific metrics
 │   ├── README.md                   # Metrics framework
 │   ├── quality-log.md              # Manual quality assessments
 │   └── command-metrics-*.jsonl     # Automated metrics logs
-├── skills/                         # Domain-specific skills
-│   └── symlinks-developer/
-│       ├── SKILL.md                # Main skill file
-│       └── resources/              # Progressive disclosure
-├── sessions/                       # Saved session states
-├── settings.json                   # Hook configuration
-├── skill-rules.json                # Skill activation rules
-├── HOOKS_IMPLEMENTATION_PLAN.md    # Implementation guide
+├── tests/                          # Hook and library tests
+├── settings.json                   # Dotfiles-specific hook configuration
 └── README.md                       # This file
 ```
+
+**Note**: Universal hooks, agents, and configuration are in `~/.claude/` and apply to all projects.
 
 ## Safety Guardrails
 

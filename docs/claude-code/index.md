@@ -35,12 +35,21 @@ The commit agent is a specialized agent that automates git commit workflows with
 
 ## Configuration
 
-Claude Code configuration is stored in `.claude/` directory:
+Claude Code configuration uses a two-tier system:
 
-- `.claude/settings.json` - Permissions and hooks configuration
-- `.claude/agents/` - Custom agent definitions
-- `.claude/hooks/` - Hook scripts for automation
-- `.claude/skills/` - Custom skill definitions
+**Universal configuration** (`~/.claude/`):
+
+- Applies to all projects automatically
+- Session-start hooks, metrics tracking, git safety
+- Markdown formatting, desktop notifications
+- See `~/.claude/README.md` for details
+
+**Project-specific configuration** (`.claude/`):
+
+- Dotfiles-specific hooks and agents
+- `.claude/settings.json` - Project hook configuration
+- `.claude/agents/` - Project-specific agents (commit-agent, logsift)
+- `.claude/hooks/` - Dotfiles-specific hooks only
 
 ## Related Documentation
 

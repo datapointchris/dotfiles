@@ -1,6 +1,18 @@
 # Claude Code Hooks & Git Workflow Reference
 
-This dotfiles repository uses a comprehensive hooks system combining **Claude Code hooks** (for AI workflow automation) and **Git hooks** (via pre-commit framework) to maintain code quality and documentation standards.
+This repository uses a comprehensive hooks system combining **Claude Code hooks** (for AI workflow automation) and **Git hooks** (via pre-commit framework) to maintain code quality and documentation standards.
+
+## Hook Organization
+
+**Two-tier system**:
+
+1. **Universal hooks** (`~/.claude/`): Apply to all projects
+   - Session-start, metrics tracking, git safety, markdown formatting
+   - See `~/.claude/README.md` for universal hook documentation
+
+2. **Project-specific hooks** (`.claude/`): Dotfiles-specific only
+   - Bash error safety, build verification, changelog reminders
+   - Documented below
 
 ## Overview
 
@@ -11,65 +23,24 @@ The hook system works on multiple layers:
 
 Together, these enforce atomic commits, up-to-date documentation, and maintain code quality throughout the development workflow.
 
-## Claude Code Hooks
+## Dotfiles-Specific Claude Code Hooks
 
-These hooks integrate directly with Claude Code's lifecycle and only run during active Claude sessions.
+The following hooks are **project-specific** to dotfiles. Universal hooks are documented in `~/.claude/README.md`.
 
-### SessionStart Hook
+### PreToolUse Hook - Bash Error Safety
 
-**Purpose**: Automatically loads project context when a new Claude Code session starts.
+**Purpose**: Validates bash scripts have proper error handling before execution.
 
-**Location**: `.claude/hooks/session-start`
+**Location**: `.claude/hooks/check-bash-error-safety`
 
-**When it runs**: Before Claude sees any messages at the start of a new session.
-
-**What it provides**:
-
-- Current git status (modified/untracked files)
-- Last 5 commits in oneline format
-- File counts for key directories (install/, tools/, docs/, common/, etc.)
-
-**Why it exists**: After conversation compaction or starting fresh, Claude loses awareness of uncommitted changes and recent work. This hook proactively loads relevant context so Claude knows the current state immediately.
-
-**Example output**:
-
-```text
-## 📁 Project Context (Auto-loaded)
-
-**Git Status:**
-M .claude/settings.json
-M docs/reference/hooks.md
-
-**Recent Commits:**
-abc1234 feat: add session-start hook
-def5678 feat: add stop-build-check hook
-ghi9012 docs: update hooks documentation
-
-**Directory Structure:**
-{
-  "install/": 3,
-  "tools/": 1138,
-  "docs/": 72
-}
-```
-
-### UserPromptSubmit Hook
-
-**Purpose**: Automatically activates relevant skills based on user prompt content before Claude sees the message.
-
-**Location**: `.claude/hooks/user-prompt-submit-skill-activation`
-
-**When it runs**: After user submits a prompt, before Claude processes it.
+**When it runs**: Before Bash tool executes.
 
 **What it does**:
 
-- Analyzes the user's prompt for keywords and patterns
-- Checks which skills are relevant based on configured triggers
-- Injects skill activation reminders into Claude's context
+- Ensures scripts use `set -e` or `set -euo pipefail`
+- Prevents silent failures in bash scripts
 
-**Why it exists**: Ensures Claude has the right context and guidelines loaded based on what the user is asking about, without requiring manual skill invocation.
-
-**Example**: If you ask about the menu system, the hook automatically suggests activating the menu-developer skill.
+**Why it exists**: Enforces bash error handling best practices in dotfiles scripts.
 
 ### Stop Hook - Build Verification
 
