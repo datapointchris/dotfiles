@@ -33,61 +33,6 @@ update_shell_plugins() {
 }
 
 update_common_tools() {
-  local common_install="$DOTFILES_DIR/management/common/install"
-  local github_releases="$common_install/github-releases"
-  local custom_installers="$common_install/custom-installers"
-  local lang_managers="$common_install/language-managers"
-  local lang_tools="$common_install/language-tools"
-
-  # Source run_installer wrapper
-  source "$DOTFILES_DIR/management/orchestration/run-installer.sh"
-  export FORCE_INSTALL=true  # Skip idempotency checks for updates
-
-  print_section "Updating Custom Distribution Tools" $section_color
-  log_info "Checking for updates to BATS, AWS CLI, Claude Code, Terraform LS..."
-  run_installer "$custom_installers/bats.sh" "bats" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$custom_installers/awscli.sh" "awscli" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$custom_installers/claude-code.sh" "claude-code" 2>&1 | grep -E "Already installed|installed successfully|Verified|Skipping" || true
-  run_installer "$custom_installers/terraform-ls.sh" "terraform-ls" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  log_success "Custom distribution tools checked"
-
-  print_section "Updating GitHub Release Tools" $section_color
-  log_info "Checking for updates to fzf, neovim, lazygit, yazi, etc..."
-  run_installer "$github_releases/fzf.sh" "fzf" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/neovim.sh" "neovim" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/lazygit.sh" "lazygit" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/yazi.sh" "yazi" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/glow.sh" "glow" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/duf.sh" "duf" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/tflint.sh" "tflint" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/terraformer.sh" "terraformer" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/terrascan.sh" "terrascan" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/trivy.sh" "trivy" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  run_installer "$github_releases/zk.sh" "zk" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  log_success "GitHub release tools checked"
-
-  print_section "Updating Go Toolchain" $section_color
-  log_info "Checking for Go updates..."
-  run_installer "$lang_managers/go.sh" "go" 2>&1 | grep -E "Already installed|installed successfully|Verified" || true
-  if [[ -d "/usr/local/go/bin" ]]; then
-    PATH="/usr/local/go/bin:$PATH" run_installer "$lang_tools/go-tools.sh" "go-tools" 2>&1 | grep -E "Already installed|installed successfully" || true
-  fi
-  log_success "Go toolchain checked"
-
-  print_section "Rebuilding Custom Go Applications" $section_color
-  if [[ -d "$DOTFILES_DIR/apps/common/sess" ]]; then
-    log_info "Rebuilding sess..."
-    cd "$DOTFILES_DIR/apps/common/sess" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
-    log_success "sess rebuilt"
-  fi
-  if [[ -d "$DOTFILES_DIR/apps/common/toolbox" ]]; then
-    log_info "Rebuilding toolbox..."
-    cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
-    log_success "toolbox rebuilt"
-  fi
-
-  unset FORCE_INSTALL  # Clean up environment variable
-
   print_section "Updating npm global packages via $(print_green "npm update -g")" $section_color
   if npm update -g 2>&1 | grep -v "npm warn"; then
     log_success "npm global packages updated (warnings suppressed)"
