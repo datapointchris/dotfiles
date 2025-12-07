@@ -44,7 +44,7 @@
           },
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-commit-reminder"
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-dotfiles-changelog-reminder"
           }
         ]
       }
