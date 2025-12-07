@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-print_banner "Installing BATS Testing Framework"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking BATS for updates"
+else
+  print_banner "Installing BATS Testing Framework"
+fi
 
 # Installation configuration
-BATS_VERSION="${BATS_VERSION:-v1.13.0}"
 INSTALL_PREFIX="$HOME/.local"
 BATS_LIB_DIR="$INSTALL_PREFIX/lib"
 
@@ -18,18 +27,49 @@ BATS_CORE_REPO="https://github.com/bats-core/bats-core.git"
 BATS_SUPPORT_REPO="https://github.com/bats-core/bats-support.git"
 BATS_ASSERT_REPO="https://github.com/bats-core/bats-assert.git"
 
-# Check if BATS is already installed (skip check if FORCE_INSTALL=true)
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v bats >/dev/null 2>&1; then
-  CURRENT_VERSION=$(bats --version 2>&1 | head -n1 || echo "installed")
-  CURRENT_PATH=$(command -v bats)
+# Fetch latest version from GitHub
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  BATS_VERSION=$(fetch_github_latest_version "bats-core/bats-core")
+  if [[ -z "$BATS_VERSION" ]]; then
+    log_error "Failed to fetch latest BATS version from GitHub"
+    exit 1
+  fi
+  log_info "Latest version: $BATS_VERSION"
+else
+  # Explicitly set version (don't rely on environment variable)
+  BATS_VERSION="v1.13.0"
+fi
 
-  # Check if it's installed in our target location
-  if [[ "$CURRENT_PATH" == "$INSTALL_PREFIX/bin/bats" ]]; then
-    log_success "Already installed: $CURRENT_VERSION at $CURRENT_PATH"
-    exit 0
+# Check if BATS is already installed
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if ! command -v bats >/dev/null 2>&1; then
+    log_info "BATS not installed, will install"
   else
-    log_info "Found BATS at: $CURRENT_PATH"
-    log_info "Will install to: $INSTALL_PREFIX/bin/bats"
+    CURRENT_VERSION=$(bats --version 2>&1 | head -n1)
+    CURRENT_VERSION=$(parse_version "$CURRENT_VERSION")
+
+    if [[ -z "$CURRENT_VERSION" ]]; then
+      log_warning "Could not parse current version, will reinstall"
+    elif version_compare "$CURRENT_VERSION" "$BATS_VERSION"; then
+      log_success "Already at latest version: $BATS_VERSION"
+      exit 0
+    else
+      log_info "Update available: $CURRENT_VERSION → $BATS_VERSION"
+    fi
+  fi
+else
+  if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v bats >/dev/null 2>&1; then
+    CURRENT_VERSION=$(bats --version 2>&1 | head -n1 || echo "installed")
+    CURRENT_PATH=$(command -v bats)
+
+    # Check if it's installed in our target location
+    if [[ "$CURRENT_PATH" == "$INSTALL_PREFIX/bin/bats" ]]; then
+      log_success "Already installed: $CURRENT_VERSION at $CURRENT_PATH"
+      exit 0
+    else
+      log_info "Found BATS at: $CURRENT_PATH"
+      log_info "Will install to: $INSTALL_PREFIX/bin/bats"
+    fi
   fi
 fi
 
@@ -166,4 +206,8 @@ if [[ "$HELPERS_INSTALLED" == "true" ]]; then
   log_info "  load \"\$HOME/.local/lib/bats-assert/load.bash\""
 fi
 
-print_banner_success "BATS installation complete"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner_success "BATS update complete"
+else
+  print_banner_success "BATS installation complete"
+fi

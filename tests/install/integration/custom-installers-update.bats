@@ -53,3 +53,21 @@ setup() {
   assert_success
   assert_output --partial "Current version"
 }
+
+@test "bats: accepts --update flag" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/bats.sh" --update
+  assert_success
+  assert_output --partial "Checking BATS for updates"
+}
+
+@test "bats: normal install mode works" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/bats.sh"
+  assert_success
+  assert_output --partial "Installing BATS Testing Framework"
+}
+
+@test "bats: shows already at latest version when current" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/bats.sh" --update
+  assert_success
+  assert_output --partial "Already at latest version"
+}
