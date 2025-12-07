@@ -9,7 +9,7 @@ get_system_font_dir() {
     linux|arch) echo "$HOME/.local/share/fonts" ;;
     *)
       log_error "Unsupported platform: $platform"
-      exit 1
+      return 1
       ;;
   esac
 }
@@ -42,28 +42,28 @@ download_nerd_font() {
 
   local temp_dir
   temp_dir=$(mktemp -d)
-  cd "$temp_dir" || exit 1
+  cd "$temp_dir" || return 1
 
   if ! curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${package}.tar.xz" -o "${package}.tar.xz"; then
     manual_steps="Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
 Extract: tar -xf ${package}.tar.xz
 Move to: $download_dir"
     output_failure_data "$package" "https://github.com/ryanoasis/nerd-fonts/releases/latest" "latest" "$manual_steps" "Download failed"
-    cd - > /dev/null || exit 1
+    cd - > /dev/null || return 1
     rm -rf "$temp_dir"
-    exit 1
+    return 1
   fi
 
-  tar -xf "${package}.tar.xz" || exit 1
+  tar -xf "${package}.tar.xz" || return 1
   mkdir -p "$download_dir"
   find . -maxdepth 1 -name "*NerdFont*.$extension" -exec mv {} "$download_dir/" \; 2>/dev/null || true
 
-  cd - > /dev/null || exit 1
+  cd - > /dev/null || return 1
   rm -rf "$temp_dir"
 
   local count
   count=$(count_font_files "$download_dir")
-  [[ $count -eq 0 ]] && log_error "No fonts found after extraction" && exit 1
+  [[ $count -eq 0 ]] && log_error "No fonts found after extraction" && return 1
   log_success "Downloaded $count files"
 }
 
