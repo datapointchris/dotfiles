@@ -13,6 +13,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
@@ -29,21 +30,9 @@ fi
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
-# fzf uses: fzf-{version}-{platform}_{arch}.tar.gz
-# Platform: darwin or linux (lowercase)
-# Arch: amd64, arm64
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  PLATFORM="darwin"
-  ARCH=$(uname -m)
-  [[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
-else
-  PLATFORM="linux"
-  ARCH=$(uname -m)
-  [[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
-  [[ "$ARCH" == "aarch64" ]] && ARCH="arm64"
-fi
+OS=$(detect_os)
+ARCH=$(detect_arch)
 
-# fzf strips the 'v' from version in asset filename
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/fzf-${VERSION#v}-${PLATFORM}_${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/fzf-${VERSION#v}-${OS}_${ARCH}.tar.gz"
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "fzf" "$VERSION"

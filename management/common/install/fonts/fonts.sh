@@ -1043,7 +1043,7 @@ run_install_phase() {
 
   # Detect platform
   local platform
-  platform=$(detect_platform)
+  platform=$(detect_distro)
 
   local target_dir
   target_dir=$(get_font_target_dir "$platform")

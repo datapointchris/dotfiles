@@ -13,6 +13,7 @@ set -uo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 
 # Source GitHub release installer library and failure reporting
@@ -33,17 +34,16 @@ print_banner "Installing Yazi"
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   log_info "Proceeding to themes/plugins update..."
 else
-  # Get latest version
   VERSION=$(get_latest_version "$REPO")
   log_info "Latest version: $VERSION"
 
-  # Detect platform target
-  # Yazi uses format: yazi-{arch}-{platform}.zip
-  ARCH=$(uname -m)
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    YAZI_TARGET="${ARCH}-apple-darwin"
+  OS=$(detect_os)
+  RAW_ARCH=$(uname -m)
+
+  if [[ "$OS" == "darwin" ]]; then
+    YAZI_TARGET="${RAW_ARCH}-apple-darwin"
   else
-    YAZI_TARGET="${ARCH}-unknown-linux-gnu"
+    YAZI_TARGET="${RAW_ARCH}-unknown-linux-gnu"
   fi
 
   # Build download URL

@@ -15,20 +15,20 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
-# Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
-# Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=min_version)
 REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=repo)
 
-# Detect platform and architecture
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  ARCH=$(uname -m)
-  if [[ "$ARCH" == "x86_64" ]]; then
+OS=$(detect_os)
+ARCH=$(detect_arch)
+
+if [[ "$OS" == "darwin" ]]; then
+  if [[ "$ARCH" == "amd64" ]]; then
     NVIM_BINARY="nvim-macos-x86_64"
   else
     NVIM_BINARY="nvim-macos-arm64"

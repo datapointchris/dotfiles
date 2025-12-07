@@ -4,6 +4,7 @@ set -uo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
@@ -22,16 +23,9 @@ VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
 # Platform detection (lowercase, amd64 for x86_64)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  PLATFORM="darwin"
-  ARCH=$(uname -m)
-  [[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
-else
-  PLATFORM="linux"
-  ARCH="amd64"
-fi
+OS=$(detect_os)
+ARCH=$(detect_arch)
 
-# tflint uses simplified naming without version number
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tflint_${PLATFORM}_${ARCH}.zip"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tflint_${OS}_${ARCH}.zip"
 
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "tflint" "$VERSION"

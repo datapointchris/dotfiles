@@ -10,13 +10,12 @@
 
 set -uo pipefail
 
-# Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
-# Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
@@ -61,32 +60,31 @@ if [[ ! -x "/usr/local/go/bin/go" ]] && command -v go >/dev/null 2>&1; then
   log_info "Installing to /usr/local/go/bin/go anyway (PATH priority will use this one)"
 fi
 
-# Detect platform and architecture
-PLATFORM=$(uname -s)
-ARCH=$(uname -m)
+OS=$(detect_os)
+ARCH=$(detect_arch)
+
 case $ARCH in
-  x86_64)
+  amd64)
     GO_ARCH="amd64"
     ;;
-  aarch64|arm64)
+  arm64)
     GO_ARCH="arm64"
     ;;
   *)
-    log_error " Unsupported architecture: $ARCH"
+    log_error "Unsupported architecture: $ARCH"
     exit 1
     ;;
 esac
 
-# Detect platform
-case $PLATFORM in
-  Darwin)
+case $OS in
+  darwin)
     GO_OS="darwin"
     ;;
-  Linux)
+  linux)
     GO_OS="linux"
     ;;
   *)
-    log_error " Unsupported platform: $PLATFORM"
+    log_error "Unsupported OS: $OS"
     exit 1
     ;;
 esac

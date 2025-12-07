@@ -24,7 +24,6 @@ update_shell_plugins() {
     branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
     [[ -z "$branch" ]] && branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
 
-    log_info "Updating $name via $(print_green "git pull origin $branch")"
     if git pull origin "$branch" --quiet; then
       log_success "$name updated"
     else
@@ -34,8 +33,6 @@ update_shell_plugins() {
 }
 
 update_common_tools() {
-  update_shell_plugins
-
   print_section "Updating npm global packages via $(print_green "npm update -g")" $section_color
   if npm update -g 2>&1 | grep -v "npm warn"; then
     log_success "npm global packages updated (warnings suppressed)"
@@ -57,28 +54,39 @@ update_common_tools() {
     log_warning "Rust packages update failed"
   fi
 
+  log_info "Updating Shell plugins via $(print_green "git pull")"
+  if update_shell_plugins; then
+    log_success "Shell plugins updated"
+  else
+    log_warning "Shell plugins update failed"
+  fi
+
   print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")" $section_color
   if "$HOME/.config/tmux/plugins/tpm/bin/update_plugins" all; then
     log_success "tmux plugins updated"
   else
     log_warning "tmux plugins update failed"
   fi
+
+  print_section "Updating Neovim plugins via $(print_green ":Lazy update")" $section_color
+  if nvim --headless +Lazy! update +qa 2>&1; then
+    log_success "Neovim plugins updated"
+  else
+    log_warning "Neovim plugins update failed"
+  fi
 }
 
 main() {
-  local platform start_time end_time total_duration title_color header_color section_color
-  platform=$(detect_platform)
+  local platform start_time end_time total_duration title_color section_color
+  platform=$(detect_distro)
   start_time=$(date +%s)
   title_color="blue"
-  header_color="orange"
   section_color="yellow"
 
   print_title "System Update - $platform" $title_color
 
   case "$platform" in
     macos)
-      print_header "Updating System Packages" $header_color
-
       print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")" $section_color
       if brew update && brew upgrade && brew upgrade --cask --greedy; then
         log_success "Homebrew packages updated"
@@ -93,13 +101,10 @@ main() {
         log_warning "Mac App Store apps update failed"
       fi
 
-      print_header "Updating Language Tools" $header_color
       update_common_tools
       ;;
 
     wsl)
-      print_header "Updating System Packages" $header_color
-
       print_section "Updating system packages via $(print_green "apt update && apt upgrade")" $section_color
       if sudo apt update && sudo apt upgrade -y; then
         log_success "system packages updated"
@@ -107,13 +112,10 @@ main() {
         log_warning "system packages update failed"
       fi
 
-      print_header "Updating Language Tools" $header_color
       update_common_tools
       ;;
 
     arch)
-      print_header "Updating System Packages" $header_color
-
       print_section "Updating system packages via $(print_green "pacman -Syu")" $section_color
       if sudo pacman -Syu --noconfirm; then
         log_success "system packages updated"
@@ -128,7 +130,6 @@ main() {
         log_warning "AUR packages update failed"
       fi
 
-      print_header "Updating Language Tools" $header_color
       update_common_tools
       ;;
 
@@ -137,15 +138,11 @@ main() {
       exit 1
       ;;
   esac
-
-  echo ""
-
   local end_time
   end_time=$(date +%s)
   local total_duration=$((end_time - start_time))
 
-  print_title_success "Updates complete (${total_duration}s)"
-  echo ""
+  print_title_success "System Update - $platform COMPLETE (${total_duration}s)"
 }
 
 main

@@ -4,6 +4,7 @@ set -uo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
@@ -22,17 +23,10 @@ VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
 # Detect platform (lowercase)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  PLATFORM="darwin"
-else
-  PLATFORM="linux"
-fi
-ARCH=$(uname -m)
-[[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
+OS=$(detect_os)
+ARCH=$(detect_arch)
 
-# Terraformer is a raw binary (no archive)
-# Format: terraformer-all-darwin-amd64
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terraformer-${PROVIDER}-${PLATFORM}-${ARCH}"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terraformer-${PROVIDER}-${OS}-${ARCH}"
 
 log_info "Downloading terraformer..."
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then

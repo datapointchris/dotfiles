@@ -1,32 +1,36 @@
 #!/usr/bin/env bash
-# ================================================================
-# Platform Detection Utility
-# ================================================================
-# Provides detect_platform() function for use across all scripts
-# Sources this file and call detect_platform to get: macos, wsl, arch, linux, unknown
-# ================================================================
 
-# Note: Libraries that are sourced should not set shell options.
-# Scripts that source this library should manage their own error handling.
+detect_os() {
+    case "$(uname -s)" in
+        Darwin) echo "darwin" ;;
+        Linux)  echo "linux" ;;
+        *)      echo "unknown" ;;
+    esac
+}
 
-detect_platform() {
-    local platform=""
+detect_arch() {
+    case "$(uname -m)" in
+        x86_64|amd64)     echo "amd64" ;;
+        arm64|aarch64)    echo "arm64" ;;
+        *)                uname -m ;;
+    esac
+}
 
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        platform="macos"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-            platform="wsl"
+detect_distro() {
+    local os
+    os=$(detect_os)
+
+    if [[ "$os" == "darwin" ]]; then
+        echo "macos"
+    elif [[ "$os" == "linux" ]]; then
+        if grep -q "Microsoft\|WSL" /proc/version 2>/dev/null; then
+            echo "wsl"
         elif [[ -f /etc/arch-release ]]; then
-            platform="arch"
-        elif [[ -f /etc/debian_version ]]; then
-            platform="wsl"  # Assume Ubuntu/Debian is WSL for our use case
+            echo "arch"
         else
-            platform="linux"
+            echo "linux"
         fi
     else
-        platform="unknown"
+        echo "unknown"
     fi
-
-    echo "$platform"
 }

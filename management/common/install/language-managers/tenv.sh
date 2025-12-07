@@ -37,14 +37,18 @@ VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
 # Detect platform (tenv uses x86_64 and arm64 directly)
-if [[ "$OSTYPE" == "darwin"* ]]; then
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
+
+OS=$(detect_os)
+RAW_ARCH=$(uname -m)
+
+if [[ "$OS" == "darwin" ]]; then
   PLATFORM="Darwin"
 else
   PLATFORM="Linux"
 fi
-ARCH=$(uname -m)
 
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VERSION}_${PLATFORM}_${RAW_ARCH}.tar.gz"
 
 # Download and extract
 TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"

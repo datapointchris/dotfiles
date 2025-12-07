@@ -14,19 +14,17 @@ set -uo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
-# Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
 print_banner "Installing AWS CLI v2"
 
-# Detect platform and architecture
-PLATFORM=$(uname -s)
-ARCH=$(uname -m)
+OS=$(detect_os)
+ARCH=$(detect_arch)
 
-# macOS: AWS CLI installed via Homebrew (see packages.yml)
-if [[ "$PLATFORM" == "Darwin" ]]; then
+if [[ "$OS" == "darwin" ]]; then
   if command -v aws >/dev/null 2>&1; then
     CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
     log_success "macOS: AWS CLI managed by Homebrew"
@@ -52,17 +50,15 @@ if [ ! -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
   log_info "AWS CLI official installer will be used"
 fi
 
-case $PLATFORM in
-  Linux)
-    # Linux installation (WSL/Arch)
+case $OS in
+  linux)
     log_info "Platform: Linux ($ARCH)"
 
-    # Detect architecture
     case $ARCH in
-      x86_64)
+      amd64)
         ZIP_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
         ;;
-      aarch64|arm64)
+      arm64)
         ZIP_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
         ;;
       *)
@@ -120,7 +116,7 @@ Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-
     ;;
 
   *)
-    log_error "Unsupported platform: $PLATFORM"
+    log_error "Unsupported OS: $OS"
     exit 1
     ;;
 esac

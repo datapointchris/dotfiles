@@ -13,7 +13,7 @@ font_name="SeriousShanns Nerd Font"
 nerd_font_package="ComicShannsMono"
 font_extension="otf"
 
-platform=$(detect_platform)
+distro=$(detect_distro)
 system_font_dir=$(get_system_font_dir)
 download_dir="/tmp/fonts-${font_name// /}"
 trap 'rm -rf "$download_dir"' EXIT
@@ -35,9 +35,9 @@ log_info "Standardizing filenames..."
 standardize_font_family "$download_dir"
 
 log_info "Installing to system fonts directory..."
-install_font_files "$download_dir" "$system_font_dir" "$platform"
+install_font_files "$download_dir" "$system_font_dir" "$distro"
 
 log_info "Refreshing font cache..."
-refresh_font_cache "$platform" "$system_font_dir"
+refresh_font_cache "$distro" "$system_font_dir"
 
 log_success "$font_name installation complete"

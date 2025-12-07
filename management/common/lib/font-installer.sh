@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 get_system_font_dir() {
-  local platform
-  platform=$(detect_platform)
-  case "$platform" in
+  local distro
+  distro=$(detect_distro)
+  case "$distro" in
     macos) echo "$HOME/Library/Fonts" ;;
     wsl)   echo "/mnt/c/Windows/Fonts" ;;
     linux|arch) echo "$HOME/.local/share/fonts" ;;
     *)
-      log_error "Unsupported platform: $platform"
+      log_error "Unsupported distro: $distro"
       exit 1
       ;;
   esac
@@ -111,7 +111,7 @@ standardize_font_family() {
 install_font_files() {
   local source_dir="$1"
   local target_dir="$2"
-  local platform="$3"
+  local distro="$3"
 
   mkdir -p "$target_dir"
 
@@ -127,7 +127,7 @@ install_font_files() {
       continue
     fi
 
-    if [[ "$platform" == "wsl" ]]; then
+    if [[ "$distro" == "wsl" ]]; then
       if cp "$font_file" "$target_dir/" 2>/dev/null; then
         installed=$((installed + 1))
       fi
@@ -147,10 +147,10 @@ install_font_files() {
 }
 
 refresh_font_cache() {
-  local platform="$1"
+  local distro="$1"
   local target_dir="$2"
 
-  case "$platform" in
+  case "$distro" in
     linux|arch)
       if command -v fc-cache &> /dev/null; then
         fc-cache -f "$target_dir" 2>/dev/null || true

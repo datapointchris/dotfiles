@@ -18,23 +18,19 @@ set -uo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
-# Source helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
 print_banner "Installing Claude Code"
 
-# Detect platform
-PLATFORM=$(uname -s)
+DISTRO=$(detect_distro)
 
-# Skip on WSL - Claude Code should be installed on Windows host
-if [[ "$PLATFORM" == "Linux" ]]; then
-  if grep -q "Microsoft\|WSL" /proc/version 2>/dev/null; then
-    log_info "WSL detected - skipping Claude Code installation"
-    log_info "Install Claude Code on your Windows host instead"
-    exit 0
-  fi
+if [[ "$DISTRO" == "wsl" ]]; then
+  log_info "WSL detected - skipping Claude Code installation"
+  log_info "Install Claude Code on your Windows host instead"
+  exit 0
 fi
 
 # Check if Claude is already installed (skip check if FORCE_INSTALL=true)
