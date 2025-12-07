@@ -176,6 +176,7 @@ nav:
           - Corporate Setup: reference/support/corporate.md
   - Development:
       - development/index.md
+      - AWS Glue Local Workflow: development/aws-glue-local-workflow.md
       - VM Testing: development/testing.md
       - Go Applications:
           - Overview: development/go-apps/overview.md
