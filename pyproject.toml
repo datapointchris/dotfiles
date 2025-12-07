@@ -12,3 +12,128 @@ dependencies = [
     "pygments>=2.19.2",
     "pymdown-extensions>=10.16.1",
 ]
+
+
+# ---------- Tool Configurations ---------- #
+
+
+[tool.bandit]
+exclude_dirs = [".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".venv", "tests"]
+skips = ["B113", "B311"]
+
+
+[tool.codespell]
+skip = '*.css.map'
+ignore-words-list = "astroid,aNULL,ANULL,anull"
+check-filenames = true
+
+
+[tool.coverage.run]
+parallel = true
+branch = true
+source = ["management/symlinks"]
+omit = []
+
+[tool.coverage.paths]
+source = ["management/symlinks"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "@abstractmethod"]
+
+
+[tool.docformatter]
+recursive = true
+in-place = true
+exclude = [".git", ".mypy_cache", ".venv", "build", "dist"]
+wrap-summaries = 140
+wrap-descriptions = 140
+close-quotes-on-newline = true
+blank = false
+
+
+[tool.mypy]
+pretty = true
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_return_any = false
+
+
+[tool.pyright]
+analyzeUnannotatedFunctions = true
+reportAny = false
+reportImplicitOverride = false
+reportMissingParameterType = false
+reportMissingTypeArgument = false
+reportMissingTypeStubs = false
+reportPossiblyUnboundVariable = false
+reportUnknownArgumentType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnusedCallResult = false
+
+
+[tool.pytest.ini_options]
+addopts = "-vv"
+minversion = "8.0"
+testpaths = ["tests"]
+
+
+[tool.refurb]
+ignore = [
+    "FURB184",  # Allow separate assignment and assertion in tests for readability
+]
+
+
+[tool.ruff]
+line-length = 140
+exclude = [
+    ".git",
+    "__pycache__",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".vscode",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+ignore = ["SIM108"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+
+# ---------- Build System ---------- #
+
+
+[build-system]
+requires = ["uv_build>=0.9.13,<0.10.0"]
+build-backend = "uv_build"
