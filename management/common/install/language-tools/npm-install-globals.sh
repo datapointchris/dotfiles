@@ -28,7 +28,7 @@ echo "Installing npm global packages from packages.yml..."
 # Get npm packages from packages.yml via Python parser
 NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
 
-# Install each package (skip if already installed at same version)
+FAILURE_COUNT=0
 for package in $NPM_PACKAGES; do
   if npm list -g "$package" --depth=0 &>/dev/null; then
     echo "  $package already installed (skipping)"
@@ -45,10 +45,17 @@ View package on npm:
 
       output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" "$manual_steps" "Failed to install via npm"
       log_warning "$package installation failed (see summary)"
+      FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi
   fi
 done
 
 echo ""
-echo "npm global packages installed"
-npm list -g --depth=0
+if [[ $FAILURE_COUNT -gt 0 ]]; then
+  log_warning "$FAILURE_COUNT package(s) failed to install"
+  npm list -g --depth=0
+  exit 1
+else
+  echo "All npm global packages installed successfully"
+  npm list -g --depth=0
+fi

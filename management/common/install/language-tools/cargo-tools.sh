@@ -12,7 +12,9 @@ source "$HOME/.cargo/env"
 print_banner "Installing Rust CLI Tools"
 
 log_info "Reading packages from packages.yml..."
-/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=cargo | while read -r package; do
+
+FAILURE_COUNT=0
+while read -r package; do
   log_info "Installing $package..."
   if cargo binstall -y "$package"; then
     log_success "$package installed"
@@ -25,8 +27,14 @@ Or try cargo-binstall directly:
 
     output_failure_data "$package" "https://crates.io/crates/$package" "latest" "$manual_steps" "Failed to install via cargo-binstall"
     log_warning "$package installation failed (see summary)"
+    FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done
+done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=cargo)
 
-log_success "Rust CLI tools installation complete"
-log_info "Installed to: ~/.cargo/bin (highest PATH priority)"
+if [[ $FAILURE_COUNT -gt 0 ]]; then
+  log_warning "$FAILURE_COUNT package(s) failed to install"
+  exit 1
+else
+  log_success "All Rust CLI tools installed successfully"
+  log_info "Installed to: ~/.cargo/bin (highest PATH priority)"
+fi

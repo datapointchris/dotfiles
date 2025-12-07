@@ -25,7 +25,9 @@ print_section "Installing Go tools" "cyan"
 
 # Get Go tools from packages.yml via Python parser
 GOBIN="$HOME/go/bin"
-/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go | while read -r tool; do
+
+FAILURE_COUNT=0
+while read -r tool; do
   print_section "  Installing $tool..." "yellow"
   if go install "$tool@latest"; then
     log_success "$tool installed"
@@ -38,7 +40,13 @@ Tool will be installed to:
 
     output_failure_data "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "Failed to install via go install"
     log_warning "Failed to install $tool (see summary)"
+    FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done
+done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go)
 
-log_success "Go tools installed to $GOBIN"
+if [[ $FAILURE_COUNT -gt 0 ]]; then
+  log_warning "$FAILURE_COUNT tool(s) failed to install"
+  exit 1
+else
+  log_success "All Go tools installed successfully to $GOBIN"
+fi
