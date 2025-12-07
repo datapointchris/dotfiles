@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Setup Docker Official Repository - Ubuntu/Debian
-# ================================================================
-# Adds Docker's official apt repository for latest versions
-# Run this BEFORE installing docker packages
-# No sudo required if user has sudo access
-# ================================================================
-
 set -euo pipefail
 
-# Source formatting and logging libraries
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"

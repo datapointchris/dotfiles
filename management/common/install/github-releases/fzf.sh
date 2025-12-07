@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install fzf (Fuzzy Finder) from GitHub Releases
-# ================================================================
-# Downloads pre-built fzf binary from GitHub releases
-# Installation location: ~/.local/bin/fzf
-# No build tools required
-# ================================================================
-
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

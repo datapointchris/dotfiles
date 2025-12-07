@@ -1,17 +1,8 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install WSL Ubuntu System Packages
-# ================================================================
-# Installs system packages from packages.yml via apt
-# WSL Ubuntu-specific
-# ================================================================
-
 set -euo pipefail
 
-# Use DOTFILES_DIR if set (by install.sh), otherwise default to ~/dotfiles
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
-# Source formatting library
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"

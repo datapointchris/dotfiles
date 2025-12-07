@@ -1,28 +1,13 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Yazi from GitHub Releases
-# ================================================================
-# Downloads and installs Yazi file manager with flavors and plugins
-# Installation location: ~/.local/bin/yazi, ~/.local/bin/ya
-# No sudo required (user space)
-# ================================================================
-
 set -uo pipefail
 
-# Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-
-# Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
-
-# ================================================================
-# Configuration
-# ================================================================
 
 BINARY_NAME="yazi"
 REPO="sxyazi/yazi"
@@ -30,7 +15,6 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 print_banner "Installing Yazi"
 
-# Check if already installed
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   log_info "Proceeding to themes/plugins update..."
 else
@@ -46,10 +30,8 @@ else
     YAZI_TARGET="${RAW_ARCH}-unknown-linux-gnu"
   fi
 
-  # Build download URL
   DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/yazi-${YAZI_TARGET}.zip"
 
-  # Download and extract
   TEMP_ZIP="/tmp/${BINARY_NAME}.zip"
   EXTRACT_DIR="/tmp/yazi-extract"
 
@@ -75,14 +57,12 @@ else
   mkdir -p "$EXTRACT_DIR"
   unzip -q "$TEMP_ZIP" -d "$EXTRACT_DIR"
 
-  # Install both yazi and ya binaries
   log_info "Installing to ~/.local/bin..."
   mkdir -p "$HOME/.local/bin"
   mv "$EXTRACT_DIR/yazi-${YAZI_TARGET}/yazi" "$TARGET_BIN"
   mv "$EXTRACT_DIR/yazi-${YAZI_TARGET}/ya" "$HOME/.local/bin/ya"
   chmod +x "$TARGET_BIN" "$HOME/.local/bin/ya"
 
-  # Verify
   if command -v yazi >/dev/null 2>&1; then
     log_success "yazi and ya installed successfully"
   else
@@ -98,10 +78,6 @@ Verify the binary exists:
     exit 1
   fi
 fi
-
-# ================================================================
-# Install Themes and Plugins
-# ================================================================
 
 # Configure git to not prompt for credentials (prevents hanging)
 export GIT_TERMINAL_PROMPT=0

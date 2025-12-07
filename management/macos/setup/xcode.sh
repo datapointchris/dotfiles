@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Setup Xcode
-# ================================================================
-# Accept Xcode license and run first launch setup
-# macOS-specific
-# ================================================================
-
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

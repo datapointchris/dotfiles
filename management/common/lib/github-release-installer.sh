@@ -1,21 +1,8 @@
 #!/usr/bin/env bash
-# ================================================================
-# GitHub Release Installer Library
-# ================================================================
-# Focused helpers for GitHub release installers
-# - Platform detection (handles capitalization variations)
-# - Skip checking (FORCE_INSTALL + existence)
-# - Latest version fetching
-# - Standard install patterns (tarball, zip)
-# ================================================================
 
 # This library requires error-handling.sh (for structured logging)
 # and install-helpers.sh (for failure reporting)
 # They should already be sourced by the calling script
-
-# ================================================================
-# Platform Detection
-# ================================================================
 
 # Get platform_arch string with customizable capitalization
 # Usage: get_platform_arch <darwin_x86> <darwin_arm> <linux_x86>
@@ -39,10 +26,6 @@ get_platform_arch() {
     echo "$linux_x86"
   fi
 }
-
-# ================================================================
-# Version and Installation Checking
-# ================================================================
 
 # Get latest GitHub release version
 # Usage: get_latest_version <repo>
@@ -71,12 +54,10 @@ should_skip_install() {
   local binary_path="$1"
   local binary_name="$2"
 
-  # FORCE_INSTALL overrides everything
   if [[ "${FORCE_INSTALL:-false}" == "true" ]]; then
     return 1  # Don't skip, install
   fi
 
-  # Check if exists and in PATH
   if [[ -f "$binary_path" ]] && command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name already installed, skipping"
     return 0  # Skip
@@ -84,10 +65,6 @@ should_skip_install() {
 
   return 1  # Don't skip, install
 }
-
-# ================================================================
-# Standard Installation Patterns
-# ================================================================
 
 # Install from tarball (most common pattern)
 # Downloads, extracts, installs binary to ~/.local/bin
@@ -107,7 +84,6 @@ install_from_tarball() {
   local temp_tarball="/tmp/${binary_name}.tar.gz"
   local target_bin="$HOME/.local/bin/$binary_name"
 
-  # Download
   log_info "Downloading $binary_name..."
   if ! curl -fsSL "$download_url" -o "$temp_tarball"; then
     local manual_steps="1. Download in your browser (bypasses firewall):
@@ -121,21 +97,17 @@ install_from_tarball() {
 3. Verify installation:
    ${binary_name} --version"
 
-    # Output structured failure data (Option B pattern)
     output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
     log_error "Failed to download from $download_url"
     return 1
   fi
 
-  # Extract
   log_info "Extracting..."
   tar -xzf "$temp_tarball" -C /tmp
 
-  # Install
   log_info "Installing to ~/.local/bin..."
   mkdir -p "$HOME/.local/bin"
 
-  # Handle wildcards in path
   if [[ "$binary_path_in_tarball" == *"*"* ]]; then
     # shellcheck disable=SC2086
     mv /tmp/$binary_path_in_tarball "$target_bin"
@@ -145,7 +117,6 @@ install_from_tarball() {
 
   chmod +x "$target_bin"
 
-  # Verify
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed successfully"
   else
@@ -157,7 +128,6 @@ Check that ~/.local/bin is in your PATH:
 Verify the binary exists:
    ls -la ~/.local/bin/${binary_name}"
 
-    # Output structured failure data (Option B pattern)
     output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
     log_error "$binary_name not found in PATH after installation"
     return 1
@@ -180,7 +150,6 @@ install_from_zip() {
   local extract_dir="/tmp/${binary_name}-extract"
   local target_bin="$HOME/.local/bin/$binary_name"
 
-  # Download
   log_info "Downloading $binary_name..."
   if ! curl -fsSL "$download_url" -o "$temp_zip"; then
     local manual_steps="1. Download in your browser (bypasses firewall):
@@ -194,24 +163,20 @@ install_from_zip() {
 3. Verify installation:
    ${binary_name} --version"
 
-    # Output structured failure data (Option B pattern)
     output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
     log_error "Failed to download from $download_url"
     return 1
   fi
 
-  # Extract
   log_info "Extracting..."
   mkdir -p "$extract_dir"
   unzip -q "$temp_zip" -d "$extract_dir"
 
-  # Install
   log_info "Installing to ~/.local/bin..."
   mkdir -p "$HOME/.local/bin"
   mv "$extract_dir/$binary_path_in_zip" "$target_bin"
   chmod +x "$target_bin"
 
-  # Verify
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed successfully"
   else
@@ -223,7 +188,6 @@ Check that ~/.local/bin is in your PATH:
 Verify the binary exists:
    ls -la ~/.local/bin/${binary_name}"
 
-    # Output structured failure data (Option B pattern)
     output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
     log_error "$binary_name not found in PATH after installation"
     return 1

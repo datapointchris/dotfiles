@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install tenv and Terraform
-# ================================================================
-# Installs tenv (Terraform/OpenTofu version manager) and Terraform runtime
-# Configuration read from: management/packages.yml
-# Installation location: ~/.local/bin/tenv + proxy binaries
-# No sudo required (user space)
-# ================================================================
-
 set -uo pipefail
 
-# Source error handling (includes structured logging)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
@@ -18,8 +8,6 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-
-# Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 

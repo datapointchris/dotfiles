@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Rust via rustup
-# ================================================================
-# Universal script for all platforms
-# Uses --no-modify-path since we manage PATH in dotfiles
-# ================================================================
-
 set -uo pipefail
 
-# Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"

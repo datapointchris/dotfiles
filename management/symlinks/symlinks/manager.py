@@ -38,33 +38,25 @@ class SymlinkManager:
         print(f"[blue]Creating {layer} symlinks...[/]")
         count = 0
 
-        # Find all files and symlinks in source
         for item in source_dir.rglob("*"):
             if not (item.is_file() or item.is_symlink()):
                 continue
 
-            # Get relative path from source dir
             try:
                 relative_path = item.relative_to(source_dir)
             except ValueError:
                 continue
 
-            # Skip excluded files
             if should_exclude(relative_path):
                 continue
 
-            # Target path
             target_path = self.target_dir / relative_path
 
-            # Create parent directory
             target_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Calculate relative symlink path
             relative_link = make_relative_symlink(item, target_path)
 
-            # Create symlink
             try:
-                # Remove existing if it exists
                 if target_path.exists() or target_path.is_symlink():
                     target_path.unlink()
 
@@ -91,9 +83,7 @@ class SymlinkManager:
         count = 0
         source_dir = source_dir.resolve()
 
-        # Find all symlinks in target
         for symlink in self._find_symlinks(self.target_dir):
-            # Resolve symlink target
             try:
                 # For broken symlinks, use resolve_broken_symlink
                 if not symlink.exists():
@@ -101,7 +91,6 @@ class SymlinkManager:
                 else:
                     target = symlink.resolve()
 
-                # Check if symlink points to our source directory
                 if target and str(target).startswith(str(source_dir)):
                     symlink.unlink()
                     relative_path = symlink.relative_to(self.target_dir)
@@ -110,7 +99,6 @@ class SymlinkManager:
             except (OSError, ValueError):
                 continue
 
-        # Cleanup empty directories
         removed_dirs = cleanup_empty_directories(self.target_dir, settings.get_cleanup_paths())
         if removed_dirs:
             print(f"[dim]Cleaned up {len(removed_dirs)} empty directories:[/]")
@@ -129,11 +117,9 @@ class SymlinkManager:
         broken = []
 
         for symlink in self._find_symlinks(self.target_dir):
-            # Check if symlink is broken
             if symlink.exists():
                 continue
 
-            # Check if it points to dotfiles
             target = resolve_broken_symlink(symlink)
             if target and "dotfiles" in str(target):
                 broken.append(symlink)
@@ -172,7 +158,6 @@ class SymlinkManager:
             except OSError:
                 pass
 
-        # Cleanup empty directories
         removed_dirs = cleanup_empty_directories(self.target_dir, settings.get_cleanup_paths())
         if removed_dirs:
             print(f"[dim]Cleaned up {len(removed_dirs)} empty directories:[/]")
@@ -200,7 +185,6 @@ class SymlinkManager:
 
         for symlink in self._find_symlinks(self.target_dir):
             try:
-                # Check if this symlink points to our source
                 if symlink.exists():
                     target = symlink.resolve()
                 else:
@@ -257,16 +241,13 @@ class SymlinkManager:
             if app.is_dir():
                 bin_dir = app / "bin"
                 if bin_dir.exists() and bin_dir.is_dir():
-                    # Link executables from bin/ subdirectory
                     for executable in bin_dir.iterdir():
                         if executable.is_file() and not should_exclude(executable):
                             target = target_bin / executable.name
 
-                            # Remove existing symlink or file
                             if target.exists() or target.is_symlink():
                                 target.unlink()
 
-                            # Create relative symlink
                             relative_source = make_relative_symlink(executable, target)
                             target.symlink_to(relative_source)
                             print(f"  [green]✓[/] {app.name}/{executable.name} → ~/.local/bin/{executable.name}")
@@ -279,11 +260,9 @@ class SymlinkManager:
 
             target = target_bin / app.name
 
-            # Remove existing symlink or file
             if target.exists() or target.is_symlink():
                 target.unlink()
 
-            # Create relative symlink
             relative_source = make_relative_symlink(app, target)
             target.symlink_to(relative_source)
             print(f"  [green]✓[/] {app.name} → ~/.local/bin/{app.name}")
@@ -370,7 +349,6 @@ class SymlinkManager:
                     if item.is_dir() and should_exclude_dir(item):
                         continue
 
-                    # Check if it's a symlink
                     if item.is_symlink():
                         symlinks.append(item)
 
@@ -378,7 +356,6 @@ class SymlinkManager:
                     if item.is_dir() and not item.is_symlink():
                         walk_limited(item, current_depth + 1)
             except (PermissionError, OSError):
-                # Skip directories we can't access
                 pass
 
         walk_limited(base_dir)

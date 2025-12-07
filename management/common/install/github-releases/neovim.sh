@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Latest Neovim from GitHub Releases
-# ================================================================
-# Downloads and installs the latest stable Neovim release
-# Configuration read from: management/packages.yml
-# Installation location: ~/.local/nvim-{platform}-{arch}/
-# Binary symlink: ~/.local/bin/nvim
-# No sudo required (user space)
-# ================================================================
-
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -42,7 +32,6 @@ NVIM_BIN_LINK="$HOME/.local/bin/nvim"
 
 print_banner "Installing Neovim"
 
-# Check if Neovim is already installed with acceptable version (skip check if FORCE_INSTALL=true)
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -L "$NVIM_BIN_LINK" ]] && command -v nvim >/dev/null 2>&1; then
   CURRENT_VERSION=$(nvim --version | head -n1 | sed 's/.*v\([0-9]*\.[0-9]*\).*/\1/')
   log_info "Current version: $CURRENT_VERSION"
@@ -56,7 +45,6 @@ if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -L "$NVIM_BIN_LINK" ]] && com
   log_info "Upgrading..."
 fi
 
-# Fetch latest version
 NVIM_VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
 if [[ -z "$NVIM_VERSION" ]]; then
   manual_steps="Failed to fetch latest version from GitHub API.
@@ -74,18 +62,15 @@ fi
 
 log_info "Latest: $NVIM_VERSION"
 
-# Check for alternate installations
 if [[ ! -L "$NVIM_BIN_LINK" ]] && command -v nvim >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v nvim)
   log_warning " nvim found at $ALTERNATE_LOCATION"
   log_info "Installing to $NVIM_BIN_LINK anyway (PATH priority will use this one)"
 fi
 
-# Download URL
 NVIM_URL="https://github.com/${REPO}/releases/download/${NVIM_VERSION}/${NVIM_BINARY}.tar.gz"
 NVIM_TARBALL="/tmp/${NVIM_BINARY}.tar.gz"
 
-# Download
 log_info "Downloading Neovim..."
 if ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
   manual_steps="1. Download in your browser (bypasses firewall):
@@ -123,7 +108,6 @@ if ! file "$NVIM_TARBALL" | grep -q "gzip compressed"; then
   exit 1
 fi
 
-# Install
 log_info "Installing to ~/.local/..."
 if [[ -d "$NVIM_INSTALL_DIR" ]]; then
   rm -rf "$NVIM_INSTALL_DIR"
@@ -136,7 +120,6 @@ log_info "Creating symlink..."
 mkdir -p "$HOME/.local/bin"
 ln -sf "$NVIM_INSTALL_DIR/bin/nvim" "$NVIM_BIN_LINK"
 
-# Verify
 if command -v nvim >/dev/null 2>&1; then
   INSTALLED_VERSION=$(nvim --version | head -n1)
   log_success " $INSTALLED_VERSION"

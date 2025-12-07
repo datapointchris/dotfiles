@@ -1,22 +1,12 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install NVM and Node.js
-# ================================================================
-# Installs nvm to ~/.config/nvm and Node.js version from packages.yml
-# Universal script for all platforms
-# ================================================================
-
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-# Source formatting library
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-
-# Source program helpers for failure reporting
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 NVM_DIR="$HOME/.config/nvm"

@@ -1,21 +1,10 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Glow from GitHub Releases
-# ================================================================
-# Downloads and installs Glow markdown renderer
-# Installation location: ~/.local/bin/glow
-# No sudo required (user space)
-# ================================================================
-
 set -uo pipefail
 
-# Source error handling (includes structured logging)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-
-# Source GitHub release installer library and failure reporting
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 

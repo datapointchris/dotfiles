@@ -1,17 +1,8 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Go Tools
-# ================================================================
-# Installs Go CLI tools from packages.yml via go install
-# Universal script for all platforms
-# ================================================================
-
 set -euo pipefail
 
-# Use DOTFILES_DIR if set (by install.sh), otherwise default to ~/dotfiles
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
-# Source formatting library
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"

@@ -12,7 +12,7 @@ total=0
 while IFS= read -r -d '' file; do
   total=$((total + 1))
   if grep -q "set -euo pipefail" "$file"; then
-    :  # Has it, continue
+    :
   else
     missing+=("$file")
   fi

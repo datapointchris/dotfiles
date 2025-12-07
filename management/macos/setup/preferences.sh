@@ -1,25 +1,4 @@
 #!/usr/bin/env bash
-
-##############################################################################
-# macOS Preferences - Current Setup
-##############################################################################
-# Applies macOS settings based on current working configuration
-#
-# Covers:
-#   - Finder (file management, search, display)
-#   - Dock (position, size, behavior)
-#   - Safari (privacy, developer features)
-#   - Mail (threading, formatting)
-#   - System (keyboard, save dialogs, screenshots)
-#   - Mac App Store (auto-updates)
-#   - Photos (auto-import behavior)
-#   - Messages (text substitution)
-#   - Security (privacy settings)
-#
-# Usage:
-#   bash management/macos/setup/preferences.sh
-##############################################################################
-
 set -euo pipefail
 
 # ================================================================

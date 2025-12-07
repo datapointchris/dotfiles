@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install AWS CLI v2 (Official Installer)
-# ================================================================
-# Downloads and installs AWS CLI v2 using official AWS installer
-# Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-# Installation location: ~/.local/aws-cli (user space)
-# Binary symlink: ~/.local/bin/aws
-# No sudo required
-# ================================================================
-
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -43,7 +33,6 @@ if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/aws" ] &&
   exit 0
 fi
 
-# Check for alternate installations
 if [ ! -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v aws)
   log_warning "aws found at $ALTERNATE_LOCATION"
@@ -70,7 +59,6 @@ case $OS in
     ZIP_FILE="/tmp/awscliv2.zip"
     EXTRACT_DIR="/tmp/aws-cli-install"
 
-    # Download
     log_info "Downloading AWS CLI..."
     if ! curl -fsSL "$ZIP_URL" -o "$ZIP_FILE"; then
       manual_steps="1. Download in your browser (bypasses firewall):
@@ -88,7 +76,6 @@ case $OS in
       exit 1
     fi
 
-    # Extract
     log_info "Extracting installer..."
     rm -rf "$EXTRACT_DIR"
     mkdir -p "$EXTRACT_DIR"
@@ -105,13 +92,11 @@ case $OS in
 Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
 
       output_failure_data "aws" "$ZIP_URL" "latest" "$manual_steps" "AWS installer failed"
-      # Cleanup
       rm -rf "$ZIP_FILE" "$EXTRACT_DIR"
       log_warning "AWS CLI installation failed (see summary)"
       exit 1
     fi
 
-    # Cleanup
     rm -rf "$ZIP_FILE" "$EXTRACT_DIR"
     ;;
 
@@ -121,7 +106,6 @@ Official docs: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-
     ;;
 esac
 
-# Verify installation
 if command -v aws >/dev/null 2>&1; then
   INSTALLED_VERSION=$(aws --version 2>&1)
   log_success "$INSTALLED_VERSION"

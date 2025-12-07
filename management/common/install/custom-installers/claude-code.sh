@@ -1,18 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Claude Code (Official Installer)
-# ================================================================
-# Downloads and installs Claude Code CLI using official installer
-# Official docs: https://docs.claude.ai/docs/claude-code
-# Installation location: ~/.local/bin/claude-code
-# No sudo required
-#
-# Platform support:
-#   - macOS: Supported
-#   - Linux (Arch): Supported
-#   - WSL: Supported (installs inside WSL environment)
-# ================================================================
-
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -32,14 +18,12 @@ if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v claude >/dev/null 2>&
   exit 0
 fi
 
-# Check if Claude is currently running (which blocks installation)
 if pgrep -i "claude" >/dev/null 2>&1; then
   log_warning "Claude appears to be running"
   log_info "The installer may fail if Claude is running"
   log_info "If installation fails, close Claude and try again"
 fi
 
-# Check for alternate installations
 if command -v claude >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v claude)
   log_info "claude found at $ALTERNATE_LOCATION"
@@ -77,7 +61,6 @@ Official docs: https://docs.claude.ai/docs/claude-code"
   exit 1
 fi
 
-# Verify installation
 if command -v claude >/dev/null 2>&1; then
   INSTALLED_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
   log_success "Verified: $INSTALLED_VERSION"

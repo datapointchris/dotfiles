@@ -1,20 +1,8 @@
 #!/usr/bin/env bash
-# ================================================================
-# Shared Helper Functions for GitHub Binary Installation
-# ================================================================
-# Common functions used across all install-*.sh scripts
-#
-# Features:
-# - Package configuration parsing
-# - Manual installation instructions
-# - Download handling with failure reporting
-# - GitHub release version fetching
-# - Failure registry for resilient installations
 
 # Note: Libraries that are sourced should not set shell options.
 # Scripts that source this library should manage their own error handling.
 
-# Get configuration from packages.yml
 get_package_config() {
   local tool_name="$1"
   local field="$2"
@@ -23,7 +11,6 @@ get_package_config() {
   /usr/bin/python3 "$dotfiles_dir/management/parse-packages.py" --github-binary="$tool_name" --field="$field"
 }
 
-# Print manual installation instructions when download fails
 print_manual_install() {
   local tool_name="$1"
   local download_url="$2"
@@ -60,7 +47,6 @@ ${binary_pattern:+   Look for: ${binary_pattern}}
 EOF
 }
 
-# Download file with error handling
 download_file() {
   local url="$1"
   local output="$2"
@@ -74,7 +60,6 @@ download_file() {
     return 1
   fi
 
-  # Verify download succeeded
   if [[ ! -f "$output" ]] || [[ ! -s "$output" ]]; then
     log_error " Downloaded file is missing or empty" >&2
     return 1
@@ -83,7 +68,6 @@ download_file() {
   return 0
 }
 
-# Fetch latest release version from GitHub
 get_latest_github_release() {
   local repo="$1"
   local version
@@ -98,10 +82,6 @@ get_latest_github_release() {
 
   echo "$version"
 }
-
-# ================================================================
-# Structured Failure Output (Option B Pattern)
-# ================================================================
 
 # Output structured failure data for wrapper to capture
 # This is the new approach that will replace the failure registry

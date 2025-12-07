@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Mac App Store Apps
-# ================================================================
-# Installs Mac App Store apps from packages.yml using mas CLI
-# macOS-specific
-# ================================================================
-
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

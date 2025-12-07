@@ -74,7 +74,6 @@ def show(
             raise typer.Exit(1)
         manager.show_symlinks(source_dir, target)
     else:
-        # Show all dotfiles symlinks
         manager.show_symlinks(None, "all dotfiles")
 
 

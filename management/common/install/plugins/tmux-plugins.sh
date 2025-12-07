@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Tmux Plugins via TPM
-# ================================================================
-# Universal script for all platforms
-# ================================================================
-
 set -euo pipefail
 
-# Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"

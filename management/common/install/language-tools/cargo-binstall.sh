@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install cargo-binstall
-# ================================================================
-# Universal script for all platforms
-# Fast binary installation for Rust crates
-# ================================================================
-
 set -euo pipefail
 
-# Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"

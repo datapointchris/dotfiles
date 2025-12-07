@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install npm global packages
-# ================================================================
-
 set -euo pipefail
 
-# Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"

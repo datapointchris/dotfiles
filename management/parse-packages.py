@@ -187,14 +187,12 @@ def main():
 
     data = load_packages()
 
-    # Handle --taps for extracting macOS Homebrew taps
     if args.taps:
         taps = get_macos_taps(data)
         for tap in taps:
             print(tap)
         return
 
-    # Handle --github-binary for extracting GitHub binary metadata
     if args.github_binary:
         if not args.field:
             print("Error: --field required with --github-binary", file=sys.stderr)
@@ -207,13 +205,11 @@ def main():
             sys.exit(1)
         return
 
-    # Handle --get for extracting specific values
     if args.get:
         value = get_value(data, args.get)
         print(value)
         return
 
-    # Handle package type extraction
     if not args.type:
         parser.print_help()
         sys.exit(1)
@@ -244,7 +240,6 @@ def main():
     elif args.type == 'macos-casks':
         packages = get_macos_casks(data)
 
-    # Output one per line
     for pkg in packages:
         print(pkg)
 

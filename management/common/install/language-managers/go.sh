@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Latest Go from go.dev
-# ================================================================
-# Downloads and installs the latest stable Go release
-# Configuration read from: management/packages.yml
-# Installation location: /usr/local/go (official recommendation)
-# Requires: sudo (for system-wide installation)
-# ================================================================
-
 set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
@@ -19,7 +10,6 @@ source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
-# Read configuration from packages.yml
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.go.min_version)
 

@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# ================================================================
-# Install Neovim Plugins via Lazy.nvim
-# ================================================================
-# Universal script for all platforms
-# Runs nvim in headless mode to install all plugins
-# ================================================================
-
 set -euo pipefail
 
-# Source formatting library
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
