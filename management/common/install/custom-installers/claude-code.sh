@@ -25,9 +25,9 @@ source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
 print_banner "Installing Claude Code"
 
-DISTRO=$(detect_distro)
+PLATFORM=$(detect_platform)
 
-if [[ "$DISTRO" == "wsl" ]]; then
+if [[ "$PLATFORM" == "wsl" ]]; then
   log_info "WSL detected - skipping Claude Code installation"
   log_info "Install Claude Code on your Windows host instead"
   exit 0

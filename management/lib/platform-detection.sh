@@ -16,7 +16,7 @@ detect_arch() {
     esac
 }
 
-detect_distro() {
+detect_platform() {
     local os
     os=$(detect_os)
 

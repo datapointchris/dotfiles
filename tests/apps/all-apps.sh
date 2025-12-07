@@ -28,7 +28,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
 
 # Detect current platform
-PLATFORM=$(detect_distro)
+PLATFORM=$(detect_platform)
 
 if [[ "$PLATFORM" == "unknown" ]]; then
     echo "ERROR: Unsupported platform: $OSTYPE"

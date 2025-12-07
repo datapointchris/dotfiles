@@ -78,7 +78,7 @@ update_common_tools() {
 
 main() {
   local platform start_time end_time total_duration title_color section_color
-  platform=$(detect_distro)
+  platform=$(detect_platform)
   start_time=$(date +%s)
   title_color="blue"
   section_color="yellow"

@@ -12,7 +12,7 @@ source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 font_name="Iosevka Base"
 font_extension="ttc"
 
-distro=$(detect_distro)
+platform=$(detect_platform)
 system_font_dir=$(get_system_font_dir)
 download_dir="/tmp/fonts-${font_name// /}"
 trap 'rm -rf "$download_dir"' EXIT
@@ -88,9 +88,9 @@ log_info "Standardizing filenames..."
 standardize_font_family "$download_dir"
 
 log_info "Installing to system fonts directory..."
-install_font_files "$download_dir" "$system_font_dir" "$distro"
+install_font_files "$download_dir" "$system_font_dir" "$platform"
 
 log_info "Refreshing font cache..."
-refresh_font_cache "$distro" "$system_font_dir"
+refresh_font_cache "$platform" "$system_font_dir"
 
 log_success "$font_name installation complete"

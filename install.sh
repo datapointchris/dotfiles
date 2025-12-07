@@ -225,7 +225,7 @@ main() {
     local header_color="magenta"
     local section_color="yellow"
 
-    platform=$(detect_distro)
+    platform=$(detect_platform)
     start_time=$(date +%s)
 
     print_title "Dotfiles Installation - $platform" $title_color
