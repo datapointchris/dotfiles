@@ -104,6 +104,7 @@ install_common_phases() {
   run_installer "$github_releases/zk.sh" "zk"
 
   print_header "Custom Distribution Tools" $header_color
+  run_installer "$custom_installers/bats.sh" "bats"
   run_installer "$custom_installers/awscli.sh" "awscli"
   run_installer "$custom_installers/claude-code.sh" "claude-code"
   run_installer "$custom_installers/terraform-ls.sh" "terraform-ls"

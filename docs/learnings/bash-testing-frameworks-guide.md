@@ -1,12 +1,14 @@
 # Bash Testing Frameworks and Best Practices Guide (2025)
 
+> **Note**: This dotfiles project has **adopted BATS** as the official testing framework. See [testing.md](../development/testing.md) for usage examples and `tests/install/integration/` for test files.
+
 ## Executive Summary
 
 This guide provides a comprehensive overview of bash testing frameworks available in 2025, with detailed comparisons, installation instructions, and best practices for testing shell scripts. The research focuses on four main frameworks: **Bats-core**, **ShellSpec**, **shunit2**, and **Bach**.
 
 ### Quick Recommendation
 
-- **For general bash testing**: Bats-core (most popular, TAP-compliant, good ecosystem)
+- **For general bash testing**: Bats-core (most popular, TAP-compliant, good ecosystem) ← **✅ Adopted by this project**
 - **For BDD-style tests with advanced features**: ShellSpec (modern, full-featured, code coverage)
 - **For traditional xUnit-style tests**: shunit2 (stable, well-supported, simple)
 - **For testing dangerous commands safely**: Bach (dry-run mode, safe for rm -rf testing)

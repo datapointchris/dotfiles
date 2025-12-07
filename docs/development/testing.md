@@ -1,4 +1,54 @@
-# Installation Testing
+# Testing
+
+The dotfiles repository uses two types of testing:
+
+1. **Unit/Integration Testing** - BATS tests for installer scripts and library functions
+2. **Installation Testing** - Docker-based testing across platforms
+
+## Unit and Integration Testing
+
+The project uses [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core) for testing installer scripts and shell libraries.
+
+### Running Tests
+
+```sh
+# Run all tests
+task test
+
+# Run integration tests only
+task test:integration
+
+# Watch mode (requires entr)
+task test:watch
+```
+
+### Test Location
+
+Tests are organized in `tests/install/integration/`:
+
+- `bats-installer.bats` - Tests for the BATS installer itself (meta-testing!)
+- `language-managers-pattern-improved.bats` - Tests for language manager installer pattern
+
+### Writing Tests
+
+Tests use BATS with assertion helpers:
+
+```bash
+#!/usr/bin/env bats
+
+# Load helpers
+load "$HOME/.local/lib/bats-support/load.bash"
+load "$HOME/.local/lib/bats-assert/load.bash"
+
+@test "installer checks for dependencies" {
+  run bash "$INSTALLER_SCRIPT"
+  assert_output --partial "Checking dependencies"
+}
+```
+
+See [bash-testing-frameworks-guide.md](../learnings/bash-testing-frameworks-guide.md) for detailed BATS usage.
+
+## Installation Testing
 
 Testing dotfiles installation across platforms using containers and virtual machines.
 

@@ -123,6 +123,35 @@ tasks:
         cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks unlink common
 
   # ================================================================
+  # TESTING
+  # ================================================================
+
+  test:
+    desc: Run all BATS tests
+    cmds:
+      - bats tests/install/integration/*.bats
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - echo "No unit tests yet"
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - bats tests/install/integration/*.bats
+
+  test:watch:
+    desc: Run tests on file changes (requires entr)
+    cmds:
+      - |
+        if ! command -v entr >/dev/null 2>&1; then
+          echo "entr not installed. Install with: brew install entr (macOS) or apt install entr (Linux)"
+          exit 1
+        fi
+        find tests -name '*.bats' | entr -c bats tests/install/integration/*.bats
+
+  # ================================================================
   # DOCUMENTATION
   # ================================================================
 
