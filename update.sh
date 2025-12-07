@@ -33,27 +33,15 @@ update_shell_plugins() {
 }
 
 update_common_tools() {
-  print_section "Updating npm global packages via $(print_green "npm update -g")" $section_color
-  if npm update -g 2>&1 | grep -v "npm warn"; then
-    log_success "npm global packages updated (warnings suppressed)"
+  # Go toolchain and tools
+  print_section "Updating Go toolchain via $(print_green "go.sh --update")" $section_color
+  if bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update; then
+    log_success "Go updated"
   else
-    log_warning "npm global packages update failed"
+    log_warning "Go update failed"
   fi
 
-  print_section "Updating uv package manager via $(print_green "uv self update")" $section_color
-  if uv self update; then
-    log_success "uv updated"
-  else
-    log_warning "uv update failed"
-  fi
-
-  print_section "Updating Python tools via $(print_green "uv tool upgrade --all")" $section_color
-  if uv tool upgrade --all; then
-    log_success "Python tools updated"
-  else
-    log_warning "Python tools update failed"
-  fi
-
+  # Rust toolchain and packages
   print_section "Updating Rust toolchain via $(print_green "rustup update")" $section_color
   if rustup update; then
     log_success "Rust toolchain updated"
@@ -68,13 +56,22 @@ update_common_tools() {
     log_warning "Rust packages update failed"
   fi
 
-  print_section "Updating Go toolchain via $(print_green "go.sh --update")" $section_color
-  if bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update; then
-    log_success "Go updated"
+  # Python package manager and tools
+  print_section "Updating uv package manager via $(print_green "uv self update")" $section_color
+  if uv self update; then
+    log_success "uv updated"
   else
-    log_warning "Go update failed"
+    log_warning "uv update failed"
   fi
 
+  print_section "Updating Python tools via $(print_green "uv tool upgrade --all")" $section_color
+  if uv tool upgrade --all; then
+    log_success "Python tools updated"
+  else
+    log_warning "Python tools update failed"
+  fi
+
+  # Node.js version manager and npm packages
   print_section "Updating nvm and Node.js via $(print_green "nvm.sh --update")" $section_color
   if bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update; then
     log_success "nvm and Node.js updated"
@@ -82,6 +79,14 @@ update_common_tools() {
     log_warning "nvm and Node.js update failed"
   fi
 
+  print_section "Updating npm global packages via $(print_green "npm update -g")" $section_color
+  if npm update -g 2>&1 | grep -v "npm warn"; then
+    log_success "npm global packages updated (warnings suppressed)"
+  else
+    log_warning "npm global packages update failed"
+  fi
+
+  # Terraform version manager and runtime
   print_section "Updating tenv and Terraform via $(print_green "tenv.sh --update")" $section_color
   if bash "$DOTFILES_DIR/management/common/install/github-releases/tenv.sh" --update; then
     log_success "tenv and Terraform updated"
@@ -89,6 +94,7 @@ update_common_tools() {
     log_warning "tenv and Terraform update failed"
   fi
 
+  # Shell plugins
   log_info "Updating Shell plugins via $(print_green "git pull")"
   if update_shell_plugins; then
     log_success "Shell plugins updated"
