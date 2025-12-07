@@ -31,7 +31,7 @@ print_banner "Installing LazyGit"
 
 # Check if already installed
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
+  exit 0
 fi
 
 # Get latest version and build URL

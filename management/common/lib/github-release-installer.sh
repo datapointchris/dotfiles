@@ -126,7 +126,6 @@ install_from_tarball() {
     log_error "Failed to download from $download_url"
     return 1
   fi
-  register_cleanup "rm -f '$temp_tarball' 2>/dev/null || true"
 
   # Extract
   log_info "Extracting..."
@@ -200,8 +199,6 @@ install_from_zip() {
     log_error "Failed to download from $download_url"
     return 1
   fi
-  register_cleanup "rm -f '$temp_zip' 2>/dev/null || true"
-  register_cleanup "rm -rf '$extract_dir' 2>/dev/null || true"
 
   # Extract
   log_info "Extracting..."

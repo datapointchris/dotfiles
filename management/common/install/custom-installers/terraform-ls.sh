@@ -15,7 +15,7 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 print_banner "Installing Terraform Language Server"
 
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
+  exit 0
 fi
 
 VERSION=$(get_latest_version "$REPO")
@@ -29,4 +29,3 @@ DOWNLOAD_URL="https://releases.hashicorp.com/terraform-ls/${VERSION#v}/terraform
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "terraform-ls" "$VERSION"
 
 print_banner_success "Terraform Language Server installation complete"
-exit_success

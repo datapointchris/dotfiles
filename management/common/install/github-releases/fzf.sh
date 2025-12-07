@@ -24,7 +24,7 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 print_banner "Installing fzf (Fuzzy Finder)"
 
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
+  exit 0
 fi
 
 VERSION=$(get_latest_version "$REPO")

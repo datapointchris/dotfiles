@@ -1237,9 +1237,6 @@ main() {
   # Validate phase modes
   validate_phase_modes
 
-  # Setup cleanup
-  register_cleanup cleanup_temp_files
-
   # Create directories
   mkdir -p "$FONTS_DIR"
 

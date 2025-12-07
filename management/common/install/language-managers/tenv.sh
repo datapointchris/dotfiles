@@ -30,7 +30,7 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 print_banner "Installing tenv"
 
 if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit_success
+  exit 0
 fi
 
 VERSION=$(get_latest_version "$REPO")
@@ -68,7 +68,6 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
   log_error "tenv installation failed"
   exit 1
 fi
-register_cleanup "rm -f '$TEMP_TARBALL' 2>/dev/null || true"
 
 log_info "Extracting..."
 tar -xzf "$TEMP_TARBALL" -C /tmp
@@ -107,7 +106,7 @@ fi
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   log_warning "packages.yml not found, skipping Terraform installation"
   print_banner_success "tenv installation complete"
-  exit_success
+  exit 0
 fi
 
 # Read Terraform version from packages.yml
@@ -131,4 +130,3 @@ tenv tf use "${TERRAFORM_VERSION}"
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
 
 print_banner_success "tenv and Terraform installation complete"
-exit_success

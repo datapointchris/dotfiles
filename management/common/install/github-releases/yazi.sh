@@ -70,8 +70,6 @@ else
     log_error "Failed to download from $DOWNLOAD_URL"
     exit 1
   fi
-  register_cleanup "rm -f '$TEMP_ZIP' 2>/dev/null || true"
-  register_cleanup "rm -rf '$EXTRACT_DIR' 2>/dev/null || true"
 
   log_info "Extracting..."
   mkdir -p "$EXTRACT_DIR"

@@ -301,5 +301,3 @@ print_banner_success "macOS Preferences Applied Successfully"
 echo ""
 log_success "All preferences have been configured"
 log_info "Changes will take effect on next login or reboot"
-
-exit_success
