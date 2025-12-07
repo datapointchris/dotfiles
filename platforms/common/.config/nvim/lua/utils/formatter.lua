@@ -33,7 +33,9 @@ local function format_with_external(formatter, file_path)
     table.insert(args, file_path)
     local result = vim.fn.system(cmd .. ' ' .. table.concat(args, ' '))
     if vim.v.shell_error == 0 then
-      vim.cmd('checktime') -- Reload file
+      -- Read the formatted file from disk and update buffer
+      local formatted_content = vim.fn.readfile(file_path)
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, formatted_content)
       return true, 'Formatted with ' .. cmd
     else
       return false, cmd .. ' failed: ' .. result
@@ -72,7 +74,9 @@ local function format_with_external(formatter, file_path)
     table.insert(args, file_path)
     local result = vim.fn.system(cmd .. ' ' .. table.concat(args, ' '))
     if vim.v.shell_error == 0 then
-      vim.cmd('checktime')
+      -- Read the formatted file from disk and update buffer
+      local formatted_content = vim.fn.readfile(file_path)
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, formatted_content)
       return true, 'Formatted with ' .. cmd
     else
       return false, cmd .. ' failed: ' .. result
