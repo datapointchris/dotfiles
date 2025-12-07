@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
@@ -13,12 +19,30 @@ BINARY_NAME="yazi"
 REPO="sxyazi/yazi"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
-print_banner "Installing Yazi"
-
-if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  log_info "Proceeding to themes/plugins update..."
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking Yazi for updates"
 else
-  VERSION=$(get_latest_version "$REPO")
+  print_banner "Installing Yazi"
+fi
+
+VERSION=$(get_latest_version "$REPO")
+log_info "Latest version: $VERSION"
+
+SKIP_BINARY_INSTALL=false
+
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then
+    SKIP_BINARY_INSTALL=true
+    log_info "Proceeding to themes/plugins update..."
+  fi
+else
+  if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
+    SKIP_BINARY_INSTALL=true
+    log_info "Proceeding to themes/plugins update..."
+  fi
+fi
+
+if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
   log_info "Latest version: $VERSION"
 
   OS=$(detect_os)

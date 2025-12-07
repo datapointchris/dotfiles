@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
@@ -13,14 +18,24 @@ BINARY_NAME="duf"
 REPO="muesli/duf"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
-print_banner "Installing Duf"
-
-if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit 0
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking Duf for updates"
+else
+  print_banner "Installing Duf"
 fi
 
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
+
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then
+    exit 0
+  fi
+else
+  if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
+    exit 0
+  fi
+fi
 
 # Duf uses lowercase: duf_0.8.1_darwin_x86_64.tar.gz
 PLATFORM_ARCH=$(get_platform_arch "darwin_x86_64" "darwin_arm64" "linux_x86_64")

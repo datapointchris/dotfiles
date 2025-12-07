@@ -3,6 +3,9 @@
 # This library requires error-handling.sh (for structured logging)
 # and failure-logging.sh (for failure reporting)
 # They should already be sourced by the calling script
+#
+# For update support, also source version-helpers.sh:
+#   source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 
 # Get platform_arch string with customizable capitalization
 # Usage: get_platform_arch <darwin_x86> <darwin_arm> <linux_x86>
@@ -64,6 +67,45 @@ should_skip_install() {
   fi
 
   return 1  # Don't skip, install
+}
+
+# Check if update is needed for a binary
+# Returns 0 (update needed) or 1 (already up to date)
+# Usage: check_if_update_needed <binary_name> <latest_version>
+# Example: check_if_update_needed "lazygit" "v0.40.2"
+#
+# Requires version-helpers.sh to be sourced by calling script
+check_if_update_needed() {
+  local binary_name="$1"
+  local latest_version="$2"
+
+  if ! command -v "$binary_name" >/dev/null 2>&1; then
+    log_info "$binary_name not installed, will install"
+    return 0
+  fi
+
+  local current_version
+  current_version=$("$binary_name" --version 2>&1 | head -1)
+
+  if [[ -z "$current_version" ]]; then
+    log_warning "Could not determine current version, will reinstall"
+    return 0
+  fi
+
+  current_version=$(parse_version "$current_version")
+
+  if [[ -z "$current_version" ]]; then
+    log_warning "Could not parse current version, will reinstall"
+    return 0
+  fi
+
+  if version_compare "$current_version" "$latest_version"; then
+    log_success "Already at latest version: $latest_version"
+    return 1
+  fi
+
+  log_info "Update available: $current_version → $latest_version"
+  return 0
 }
 
 # Install from tarball (most common pattern)
