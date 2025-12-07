@@ -40,11 +40,25 @@ update_common_tools() {
     log_warning "npm global packages update failed"
   fi
 
+  print_section "Updating uv package manager via $(print_green "uv self update")" $section_color
+  if uv self update; then
+    log_success "uv updated"
+  else
+    log_warning "uv update failed"
+  fi
+
   print_section "Updating Python tools via $(print_green "uv tool upgrade --all")" $section_color
   if uv tool upgrade --all; then
     log_success "Python tools updated"
   else
     log_warning "Python tools update failed"
+  fi
+
+  print_section "Updating Rust toolchain via $(print_green "rustup update")" $section_color
+  if rustup update; then
+    log_success "Rust toolchain updated"
+  else
+    log_warning "Rust toolchain update failed"
   fi
 
   print_section "Updating Rust packages via $(print_green "cargo install-update -a")" $section_color
