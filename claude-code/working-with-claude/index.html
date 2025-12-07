@@ -628,6 +628,8 @@
       
         
       
+        
+      
     
     
     
@@ -873,6 +875,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../apps/refcheck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Refcheck
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../apps/backup-dirs/" class="md-nav__link">
         
   
@@ -944,10 +974,6 @@
       
         
           
-        
-      
-        
-      
         
       
         
@@ -1139,34 +1165,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/structured-logging/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Structured Logging
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../architecture/error-handling/" class="md-nav__link">
         
   
@@ -1203,34 +1201,6 @@
     
   
     GitHub Release Installer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/resilient-installation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Resilient Installation
   
 
     
@@ -2157,8 +2127,6 @@
       
         
       
-        
-      
     
     
     
@@ -2251,34 +2219,6 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../development/adding-failure-reporting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Adding Failure Reporting
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
     
     
       
@@ -2305,10 +2245,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
         
           
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
             
   
   
@@ -2326,8 +2266,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3510,6 +3450,8 @@
       
         
       
+        
+      
     
     
     
@@ -3566,6 +3508,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/script-refactoring-principles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Script Refactoring Principles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -4405,7 +4375,7 @@
 <p>This repository has custom Claude Code slash commands, hooks, and tools optimized for dotfiles development.</p>
 <p><strong>Key commands you'll use</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Run scripts with automated error analysis</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>/logsift<span class="w"> </span><span class="s2">&quot;bash management/tests/test-install-wsl-docker.sh --reuse&quot;</span><span class="w"> </span><span class="m">15</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>/logsift<span class="w"> </span><span class="s2">&quot;bash tests/install/test-install-wsl-docker.sh --reuse&quot;</span><span class="w"> </span><span class="m">15</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or use natural language</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>/logsift-auto<span class="w"> </span>run<span class="w"> </span>wsl<span class="w"> </span>docker<span class="w"> </span><span class="nb">test</span><span class="w"> </span>with<span class="w"> </span>reuse<span class="w"> </span>flag,<span class="w"> </span><span class="m">15</span><span class="w"> </span>minutes
@@ -4446,7 +4416,7 @@
 <h3 id="two-commands-explicit-vs-natural-language">Two Commands: Explicit vs Natural Language<a class="headerlink" href="#two-commands-explicit-vs-natural-language" title="Permanent link">&para;</a></h3>
 <h4 id="logsift-explicit-command"><code>/logsift</code> - Explicit Command<a class="headerlink" href="#logsift-explicit-command" title="Permanent link">&para;</a></h4>
 <p>Use when you know the exact command:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/logsift<span class="w"> </span><span class="s2">&quot;bash ~/dotfiles/management/tests/test-install-wsl-docker.sh --reuse&quot;</span><span class="w"> </span><span class="m">15</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/logsift<span class="w"> </span><span class="s2">&quot;bash ~/dotfiles/tests/install/test-install-wsl-docker.sh --reuse&quot;</span><span class="w"> </span><span class="m">15</span>
 </span></code></pre></div>
 <p><strong>Syntax</strong>: <code>/logsift "&lt;exact-command&gt;" [timeout_minutes]</code></p>
 <p><strong>Pros</strong>:</p>
@@ -4918,7 +4888,6 @@
 <ul>
 <li><a href="../../architecture/metrics-tracking/">Metrics Tracking Architecture</a> - System design and implementation</li>
 <li><a href="../../architecture/shell-libraries/">Shell Libraries</a> - Logging and error handling patterns</li>
-<li><a href="../../architecture/structured-logging/">Structured Logging</a> - Log format specifications</li>
 </ul>
 <h3 id="technical-reference">Technical Reference<a class="headerlink" href="#technical-reference" title="Permanent link">&para;</a></h3>
 <ul>

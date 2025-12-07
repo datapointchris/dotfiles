@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/architecture/resilient-installation/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/learnings/script-refactoring-principles/">
       
       
-        <link rel="prev" href="../github-release-installer/">
+        <link rel="prev" href="../">
       
       
-        <link rel="next" href="../../configuration/neovim-ai-assistants/">
+        <link rel="next" href="../posttooluse-hook-integration/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Resilient Installation - Dotfiles</title>
+        <title>Script Refactoring Principles - Dotfiles</title>
       
     
     
@@ -176,7 +176,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Resilient Installation
+              Script Refactoring Principles
             
           </span>
         </div>
@@ -329,13 +329,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   
@@ -479,11 +477,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../learnings/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -610,6 +610,8 @@
       
         
           
+        
+      
         
       
         
@@ -873,6 +875,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../apps/refcheck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Refcheck
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../apps/backup-dirs/" class="md-nav__link">
         
   
@@ -937,8 +967,6 @@
       
   
   
-    
-  
   
   
     
@@ -960,31 +988,26 @@
       
         
       
-        
-      
-        
-      
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../architecture/" class="md-nav__link ">
               
   
   
@@ -1004,13 +1027,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1030,7 +1053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-libraries/" class="md-nav__link">
+      <a href="../../architecture/shell-libraries/" class="md-nav__link">
         
   
   
@@ -1058,7 +1081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../package-management/" class="md-nav__link">
+      <a href="../../architecture/package-management/" class="md-nav__link">
         
   
   
@@ -1086,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../path-ordering-strategy/" class="md-nav__link">
+      <a href="../../architecture/path-ordering-strategy/" class="md-nav__link">
         
   
   
@@ -1114,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tool-composition/" class="md-nav__link">
+      <a href="../../architecture/tool-composition/" class="md-nav__link">
         
   
   
@@ -1142,35 +1165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../structured-logging/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Structured Logging
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../error-handling/" class="md-nav__link">
+      <a href="../../architecture/error-handling/" class="md-nav__link">
         
   
   
@@ -1198,7 +1193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../github-release-installer/" class="md-nav__link">
+      <a href="../../architecture/github-release-installer/" class="md-nav__link">
         
   
   
@@ -1214,42 +1209,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Resilient Installation
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
     </li>
   
 
@@ -2168,8 +2127,6 @@
       
         
       
-        
-      
     
     
     
@@ -2262,34 +2219,6 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../development/adding-failure-reporting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Adding Failure Reporting
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
     
     
       
@@ -2316,10 +2245,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
         
           
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
             
   
   
@@ -2337,8 +2266,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3448,6 +3377,8 @@
       
   
   
+    
+  
   
   
     
@@ -3501,26 +3432,29 @@
       
         
       
+        
+      
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../learnings/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -3540,13 +3474,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -3563,10 +3497,46 @@
                 
   
   
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Script Refactoring Principles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/posttooluse-hook-integration/" class="md-nav__link">
+      <a href="../posttooluse-hook-integration/" class="md-nav__link">
         
   
   
@@ -3594,7 +3564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
+      <a href="../app-installation-patterns/" class="md-nav__link">
         
   
   
@@ -3622,7 +3592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+      <a href="../arch-git-libpcre2-warning/" class="md-nav__link">
         
   
   
@@ -3650,7 +3620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+      <a href="../idempotent-installation-patterns/" class="md-nav__link">
         
   
   
@@ -3678,7 +3648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
+      <a href="../testing-bootstrap-dependencies/" class="md-nav__link">
         
   
   
@@ -3706,7 +3676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+      <a href="../wsl-ubuntu-package-versions/" class="md-nav__link">
         
   
   
@@ -3734,7 +3704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/package-version-analysis/" class="md-nav__link">
+      <a href="../package-version-analysis/" class="md-nav__link">
         
   
   
@@ -3762,7 +3732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+      <a href="../bash-testing-frameworks-guide/" class="md-nav__link">
         
   
   
@@ -3790,7 +3760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/bash-script-testing/" class="md-nav__link">
+      <a href="../bash-script-testing/" class="md-nav__link">
         
   
   
@@ -3818,7 +3788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
+      <a href="../bash-tty-detection-command-substitution/" class="md-nav__link">
         
   
   
@@ -3846,7 +3816,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+      <a href="../task-shell-printf-compatibility/" class="md-nav__link">
         
   
   
@@ -3874,7 +3844,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
+      <a href="../git-history-rewriting/" class="md-nav__link">
         
   
   
@@ -3902,7 +3872,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="../relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -3930,7 +3900,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="../directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -3958,7 +3928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="../cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -3986,7 +3956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+      <a href="../documentation-consolidation-principles/" class="md-nav__link">
         
   
   
@@ -4014,7 +3984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+      <a href="../go-tui-testing-strategies/" class="md-nav__link">
         
   
   
@@ -4042,7 +4012,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/go-testing-examples/" class="md-nav__link">
+      <a href="../go-testing-examples/" class="md-nav__link">
         
   
   
@@ -4070,7 +4040,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+      <a href="../go-tui-ecosystem-research/" class="md-nav__link">
         
   
   
@@ -4098,7 +4068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+      <a href="../go-cli-architecture-analysis/" class="md-nav__link">
         
   
   
@@ -4126,7 +4096,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/pretooluse-hooks-task-limitation/" class="md-nav__link">
+      <a href="../pretooluse-hooks-task-limitation/" class="md-nav__link">
         
   
   
@@ -4154,7 +4124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../learnings/tools-over-instructions/" class="md-nav__link">
+      <a href="../tools-over-instructions/" class="md-nav__link">
         
   
   
@@ -4341,7 +4311,7 @@
         <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Architecture
+    Learnings
   </span>
 
         </a>
@@ -4363,316 +4333,397 @@
   
 
 
-<h1 id="resilient-installation-system">Resilient Installation System<a class="headerlink" href="#resilient-installation-system" title="Permanent link">&para;</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>The dotfiles installation system is designed to handle failures gracefully in restricted network environments (corporate firewalls, VPNs, air-gapped networks). Instead of crashing on the first download failure, the system continues installation and provides a comprehensive failure report with manual remediation steps at the end.</p>
-<p>This architecture solves the critical problem: <strong>first failure crashes entire install.sh causing broken partial installation instead of a mostly-working system with a few missing packages</strong>.</p>
-<h2 id="design-principles">Design Principles<a class="headerlink" href="#design-principles" title="Permanent link">&para;</a></h2>
-<h3 id="fail-fast-child-scripts-resilient-wrapper">Fail-Fast Child Scripts, Resilient Wrapper<a class="headerlink" href="#fail-fast-child-scripts-resilient-wrapper" title="Permanent link">&para;</a></h3>
+<h1 id="script-refactoring-principles">Script Refactoring Principles<a class="headerlink" href="#script-refactoring-principles" title="Permanent link">&para;</a></h1>
+<p><strong>Context</strong>: Refactoring update.sh from 6 fragmented files (326 lines) to single consolidated script (156 lines).
+<strong>Commits</strong>: c7205d5, 862b9ea
+<strong>Date</strong>: December 2025</p>
+<h2 id="the-problem-pattern">The Problem Pattern<a class="headerlink" href="#the-problem-pattern" title="Permanent link">&para;</a></h2>
+<p>Scripts often accumulate complexity over time through well-intentioned but misguided additions:</p>
 <ul>
-<li><strong>Individual installers</strong> maintain <code>set -euo pipefail</code> and use <code>exit 1</code> on failures</li>
-<li><strong>Wrapper scripts</strong> (install.sh, update.sh) catch failures and continue</li>
-<li>This separation of concerns keeps scripts simple and testable</li>
+<li>Comments explaining structure (instead of using visual indicators)</li>
+<li>Abstraction layers "for reusability" (that get called once)</li>
+<li>Defensive checks "just in case" (that make assumptions about the environment)</li>
+<li>Fragmentation "for organization" (that creates indirection)</li>
 </ul>
-<h3 id="backwards-compatibility">Backwards Compatibility<a class="headerlink" href="#backwards-compatibility" title="Permanent link">&para;</a></h3>
-<ul>
-<li>All scripts work standalone without the failure registry</li>
-<li>Registry is optional - scripts check <code>${DOTFILES_FAILURE_REGISTRY:-}</code> before reporting</li>
-<li>No breaking changes to existing installer contracts</li>
-</ul>
-<h3 id="user-friendly-reporting">User-Friendly Reporting<a class="headerlink" href="#user-friendly-reporting" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Homebrew-style summary at the end of installation</li>
-<li>Detailed manual installation steps for each failure</li>
-<li>Full report saved to <code>/tmp/dotfiles-installation-failures-*.txt</code></li>
-<li>Generic error messages (avoid assumptions about root cause)</li>
-</ul>
-<h2 id="architecture-components">Architecture Components<a class="headerlink" href="#architecture-components" title="Permanent link">&para;</a></h2>
-<h3 id="1-failure-registry">1. Failure Registry<a class="headerlink" href="#1-failure-registry" title="Permanent link">&para;</a></h3>
-<p><strong>Location</strong>: <code>/tmp/dotfiles-failures-$$/</code></p>
-<p>Temporary directory created per installation session to track all failures.</p>
-<p><strong>File Format</strong>: Source-able bash format for easy parsing</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">TOOL</span><span class="o">=</span><span class="s1">&#39;yazi&#39;</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">URL</span><span class="o">=</span><span class="s1">&#39;https://github.com/sxyazi/yazi/releases/download/v0.2.4/yazi-x86_64-unknown-linux-gnu.zip&#39;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">VERSION</span><span class="o">=</span><span class="s1">&#39;v0.2.4&#39;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">REASON</span><span class="o">=</span><span class="s1">&#39;Download failed&#39;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">MANUAL_STEPS</span><span class="o">=</span><span class="s1">$&#39;1. Download in browser: https://...\n2. Extract and install...&#39;</span>
+<p>This refactor demonstrates how to recognize and reverse these patterns.</p>
+<h2 id="core-principles">Core Principles<a class="headerlink" href="#core-principles" title="Permanent link">&para;</a></h2>
+<h3 id="1-visual-indicators-over-comments">1. Visual Indicators Over Comments<a class="headerlink" href="#1-visual-indicators-over-comments" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Update Homebrew packages</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>brew<span class="w"> </span>update
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>brew<span class="w"> </span>upgrade
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Update Mac App Store</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>mas<span class="w"> </span>upgrade
 </span></code></pre></div>
-<p><strong>Why source-able format?</strong></p>
+<p><strong>Good Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>print_header<span class="w"> </span><span class="s2">&quot;Updating System Packages&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>log_info<span class="w"> </span><span class="s2">&quot;Updating Homebrew packages...&quot;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>brew<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>brew<span class="w"> </span>upgrade
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>log_info<span class="w"> </span><span class="s2">&quot;Updating Mac App Store apps...&quot;</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>mas<span class="w"> </span>upgrade
+</span></code></pre></div>
+<p><strong>Why</strong>: Comments are passive and easily outdated. Visual indicators (headers, logs) actively communicate structure during execution, are always in sync with code, and provide user feedback.</p>
+<p><strong>When building new scripts</strong>: If you're writing a comment to explain what a section does, use a print/log function instead.</p>
+<h3 id="2-inline-over-unnecessary-abstraction">2. Inline Over Unnecessary Abstraction<a class="headerlink" href="#2-inline-over-unnecessary-abstraction" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong> (6 files):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># update.sh</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/macos/update.sh&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/update.sh&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># management/macos/update.sh</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>update_homebrew<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>brew<span class="w"> </span>update<span class="p">;</span><span class="w"> </span>brew<span class="w"> </span>upgrade<span class="p">;</span><span class="w"> </span><span class="o">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>update_mas<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>mas<span class="w"> </span>upgrade<span class="p">;</span><span class="w"> </span><span class="o">}</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>update_homebrew
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>update_mas
+</span></code></pre></div>
+<p><strong>Good Pattern</strong> (1 file):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>main<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$platform</span><span class="s2">&quot;</span><span class="w"> </span><span class="k">in</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>macos<span class="o">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span>log_info<span class="w"> </span><span class="s2">&quot;Updating Homebrew packages...&quot;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">      </span>brew<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>brew<span class="w"> </span>upgrade
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span>log_info<span class="w"> </span><span class="s2">&quot;Updating Mac App Store apps...&quot;</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span>mas<span class="w"> </span>upgrade
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="p">;;</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="k">esac</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="o">}</span>
+</span></code></pre></div>
+<p><strong>Why</strong>: Each layer of abstraction (separate file, wrapper function) adds cognitive overhead without adding value. The actual work is simple - just run the commands.</p>
+<p><strong>Decision Tree</strong>:</p>
 <ul>
-<li>Simple to parse with bash <code>source</code> command</li>
-<li>No external dependencies (jq, yq)</li>
-<li>Variables automatically available in current shell</li>
+<li>Single command or simple sequence → inline it</li>
+<li>Complex logic (loops, conditionals, parsing) → extract to function</li>
+<li>Called once → inline it</li>
+<li>Called multiple times → consider function (but still might inline for clarity)</li>
 </ul>
-<h3 id="2-core-functions">2. Core Functions<a class="headerlink" href="#2-core-functions" title="Permanent link">&para;</a></h3>
-<p>Located in <code>management/common/lib/program-helpers.sh</code>:</p>
-<h4 id="init_failure_registry"><code>init_failure_registry()</code><a class="headerlink" href="#init_failure_registry" title="Permanent link">&para;</a></h4>
-<p>Initialize the failure registry for the current session.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>init_failure_registry
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Creates: /tmp/dotfiles-failures-&lt;PID&gt;/</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Sets: DOTFILES_FAILURE_REGISTRY environment variable</span>
+<p><strong>When building new scripts</strong>: Start inline. Only extract to function when you have a concrete reason (complexity, reuse, testing).</p>
+<h3 id="3-trust-your-environment">3. Trust Your Environment<a class="headerlink" href="#3-trust-your-environment" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>update_uv_tools<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>uv<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin/env&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>uv<span class="w"> </span>tool<span class="w"> </span>upgrade<span class="w"> </span>--all
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="o">}</span>
 </span></code></pre></div>
-<p><strong>When to call</strong>: Once at the beginning of install.sh or update.sh</p>
-<h4 id="report_failure"><code>report_failure()</code><a class="headerlink" href="#report_failure" title="Permanent link">&para;</a></h4>
-<p>Report a failed installation with context.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>report_failure<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tool_name</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$download_url</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$version</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$manual_steps</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$error_reason</span><span class="s2">&quot;</span>
+<p><strong>Good Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>update_common_tools<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>log_info<span class="w"> </span><span class="s2">&quot;Updating Python tools via </span><span class="k">$(</span>print_green<span class="w"> </span><span class="s2">&quot;uv tool upgrade --all&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span>uv<span class="w"> </span>tool<span class="w"> </span>upgrade<span class="w"> </span>--all<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>log_success<span class="w"> </span><span class="s2">&quot;Python tools updated&quot;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="k">else</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span>log_warning<span class="w"> </span><span class="s2">&quot;Python tools update failed&quot;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="k">fi</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="o">}</span>
 </span></code></pre></div>
-<p><strong>Parameters</strong>:</p>
+<p><strong>Why</strong>:</p>
 <ul>
-<li><code>tool_name</code>: Name of the tool (e.g., "yazi", "lazygit")</li>
-<li><code>download_url</code>: URL that failed (or "unknown")</li>
-<li><code>version</code>: Version attempted (or "latest", "unknown")</li>
-<li><code>manual_steps</code>: Multi-line instructions for manual installation</li>
-<li><code>error_reason</code>: Brief reason (e.g., "Download failed", "Installation verification failed")</li>
+<li>If <code>uv</code> isn't in PATH during updates, something is already broken - let it fail loudly</li>
+<li>Silent failures hide problems</li>
+<li>Defensive checks add noise and suggest unreliable environment</li>
+<li>Update scripts assume a working system (unlike install scripts)</li>
 </ul>
-<p><strong>File naming</strong>: <code>&lt;timestamp&gt;-&lt;tool_name&gt;.txt</code> for uniqueness and ordering</p>
-<h4 id="display_failure_summary"><code>display_failure_summary()</code><a class="headerlink" href="#display_failure_summary" title="Permanent link">&para;</a></h4>
-<p>Display formatted summary of all failures at end of installation.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>display_failure_summary
-</span></code></pre></div>
-<p><strong>Output</strong>:</p>
+<p><strong>When building new scripts</strong>:</p>
 <ul>
-<li>Console summary with all failures</li>
-<li>Manual installation steps for each</li>
-<li>Full report saved to <code>/tmp/dotfiles-installation-failures-&lt;timestamp&gt;.txt</code></li>
+<li>Install scripts: Check and handle missing tools</li>
+<li>Update scripts: Assume tools exist, fail clearly if not</li>
+<li>Internal scripts: Trust the environment completely</li>
 </ul>
-<h3 id="3-wrapper-pattern-installsh">3. Wrapper Pattern (install.sh)<a class="headerlink" href="#3-wrapper-pattern-installsh" title="Permanent link">&para;</a></h3>
-<p>The main installation script wraps each installer with error catching:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>run_phase_installer<span class="o">()</span><span class="w"> </span><span class="o">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">script</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">tool_name</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$2</span><span class="s2">&quot;</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$script</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="k">else</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">exit_code</span><span class="o">=</span><span class="nv">$?</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="c1"># Check if installer reported failure itself</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_FAILURE_REGISTRY</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">           </span><span class="nb">compgen</span><span class="w"> </span>-G<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_FAILURE_REGISTRY</span><span class="s2">/*-</span><span class="si">${</span><span class="nv">tool_name</span><span class="si">}</span><span class="s2">.txt&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">            </span>log_warning<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tool_name</span><span class="s2"> installation failed (details in summary)&quot;</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">        </span><span class="k">else</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">            </span><span class="c1"># Create generic failure report</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">            </span>report_failure<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tool_name</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;unknown&quot;</span><span class="w"> </span><span class="s2">&quot;unknown&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">                </span><span class="s2">&quot;Re-run: bash </span><span class="nv">$script</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">                </span><span class="s2">&quot;Installation script exited with code </span><span class="nv">$exit_code</span><span class="s2">&quot;</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">            </span>log_warning<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tool_name</span><span class="s2"> installation failed (see summary)&quot;</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">        </span><span class="k">fi</span>
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>
-</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
-</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">    </span><span class="k">fi</span>
-</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="o">}</span>
+<h3 id="4-proper-encapsulation-with-main">4. Proper Encapsulation with main()<a class="headerlink" href="#4-proper-encapsulation-with-main" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">PLATFORM</span><span class="o">=</span><span class="k">$(</span>detect_platform<span class="k">)</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Global level code</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>brew<span class="w"> </span>update
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>mas<span class="w"> </span>upgrade
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>npm<span class="w"> </span>update<span class="w"> </span>-g
 </span></code></pre></div>
-<p><strong>How it works</strong>:</p>
+<p><strong>Good Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>update_common_tools<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="c1"># Helper functions</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="o">}</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>main<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span>platform
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="nv">platform</span><span class="o">=</span><span class="k">$(</span>detect_platform<span class="k">)</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$platform</span><span class="s2">&quot;</span><span class="w"> </span><span class="k">in</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span>macos<span class="o">)</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">      </span><span class="c1"># Platform-specific logic</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">      </span><span class="p">;;</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span><span class="k">esac</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="o">}</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>main
+</span></code></pre></div>
+<p><strong>Why</strong>:</p>
+<ul>
+<li>Everything in functions = testable, readable, organized</li>
+<li>Local variables in main = no global state pollution</li>
+<li>Clear entry point = obvious execution flow</li>
+<li>Follows install.sh pattern = consistency</li>
+</ul>
+<p><strong>When building new scripts</strong>: Start with main() from the beginning. Put setup and helpers above, orchestration in main().</p>
+<h3 id="5-consistent-heading-hierarchy">5. Consistent Heading Hierarchy<a class="headerlink" href="#5-consistent-heading-hierarchy" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong> (inconsistent levels):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>print_header<span class="w"> </span><span class="s2">&quot;Dotfiles Update&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>print_section<span class="w"> </span><span class="s2">&quot;Platform Updates&quot;</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>log_info<span class="w"> </span><span class="s2">&quot;Updating brew...&quot;</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Later...</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>print_banner_success<span class="w"> </span><span class="s2">&quot;Updates complete&quot;</span><span class="w">  </span><span class="c1"># Different from print_header!</span>
+</span></code></pre></div>
+<p><strong>Good Pattern</strong> (consistent hierarchy):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>print_title<span class="w"> </span><span class="s2">&quot;System Update - </span><span class="nv">$platform</span><span class="s2">&quot;</span><span class="w">        </span><span class="c1"># h1 - main title</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>print_header<span class="w"> </span><span class="s2">&quot;Updating System Packages&quot;</span><span class="w">     </span><span class="c1"># h2 - major section</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span>print_section<span class="w"> </span><span class="s2">&quot;Updating Homebrew...&quot;</span><span class="w">       </span><span class="c1"># h3 - subsection</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span>log_info/success/warning/error<span class="w">           </span><span class="c1"># body text</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>print_title_success<span class="w"> </span><span class="s2">&quot;Updates complete (23s)&quot;</span><span class="w">   </span><span class="c1"># h1 - matching end</span>
+</span></code></pre></div>
+<p><strong>Why</strong>: Like markdown heading levels (h1 &gt; h2 &gt; h3), visual hierarchy should be consistent and meaningful. Users mentally parse the structure.</p>
+<p><strong>When building new scripts</strong>: Choose your heading functions deliberately:</p>
+<ul>
+<li><code>print_title</code> - once at start, once at end (with <code>_success</code>)</li>
+<li><code>print_header</code> - major sections (2-5 per script)</li>
+<li><code>print_section</code> - subsections within headers</li>
+<li><code>log_*</code> - individual operations</li>
+</ul>
+<h3 id="6-explicit-commands-with-color">6. Explicit Commands with Color<a class="headerlink" href="#6-explicit-commands-with-color" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>log_info<span class="w"> </span><span class="s2">&quot;Updating npm global packages...&quot;</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>npm<span class="w"> </span>update<span class="w"> </span>-g
+</span></code></pre></div>
+<p><strong>Good Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>print_section<span class="w"> </span><span class="s2">&quot;Updating npm global packages via </span><span class="k">$(</span>print_green<span class="w"> </span><span class="s2">&quot;npm update -g&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">if</span><span class="w"> </span>npm<span class="w"> </span>update<span class="w"> </span>-g<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;npm warn&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>log_success<span class="w"> </span><span class="s2">&quot;npm global packages updated (warnings suppressed)&quot;</span>
+</span></code></pre></div>
+<p><strong>Why</strong>:</p>
+<ul>
+<li>Shows user exactly what command is running</li>
+<li>Green color distinguishes command from surrounding text</li>
+<li>Helps debugging (can copy-paste the exact command)</li>
+<li>Documents the script's behavior in its output</li>
+</ul>
+<p><strong>When building new scripts</strong>: Always show the actual command being executed, especially for:</p>
+<ul>
+<li>Package managers (brew, apt, npm, cargo)</li>
+<li>Version control operations</li>
+<li>Network operations</li>
+<li>Any command that might fail</li>
+</ul>
+<h3 id="7-consolidation-over-fragmentation">7. Consolidation Over Fragmentation<a class="headerlink" href="#7-consolidation-over-fragmentation" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>update.sh                      # Wrapper
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├─ management/macos/update.sh  # 40 lines
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>├─ management/wsl/update.sh    # 23 lines
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>├─ management/arch/update.sh   # 33 lines
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>└─ management/common/update.sh # 159 lines
+</span></code></pre></div>
+<p><strong>Good Pattern</strong>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>update.sh                      # 156 lines total
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>├─ update_shell_plugins()      # Complex logic
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>├─ update_common_tools()       # Simple wrappers
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>└─ main()                      # Platform switch + orchestration
+</span></code></pre></div>
+<p><strong>Why</strong>:</p>
+<ul>
+<li>Single source of truth - all logic in one place</li>
+<li>Easy to see full behavior at once</li>
+<li>No jumping between files</li>
+<li>Reduced boilerplate (one setup instead of six)</li>
+</ul>
+<p><strong>Decision criteria for when to split</strong>:</p>
+<ul>
+<li>File &gt; 500 lines → consider splitting by major functionality</li>
+<li>Truly independent concerns → separate files</li>
+<li>Shared across multiple scripts → extract to library</li>
+<li>Otherwise → keep consolidated</li>
+</ul>
+<p><strong>When building new scripts</strong>: Start with single file. Only split when you have concrete evidence it's too large or truly independent.</p>
+<h3 id="8-simplify-dependencies">8. Simplify Dependencies<a class="headerlink" href="#8-simplify-dependencies" title="Permanent link">&para;</a></h3>
+<p><strong>Bad Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>update_npm_globals<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nb">export</span><span class="w"> </span><span class="nv">NVM_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.config/nvm&quot;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="o">[</span><span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$NVM_DIR</span><span class="s2">/nvm.sh&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$NVM_DIR</span><span class="s2">/nvm.sh&quot;</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/install/language-tools/npm-install-globals.sh&quot;</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="o">}</span>
+</span></code></pre></div>
+<p><strong>Good Pattern</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>update_common_tools<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>print_section<span class="w"> </span><span class="s2">&quot;Updating npm global packages via </span><span class="k">$(</span>print_green<span class="w"> </span><span class="s2">&quot;npm update -g&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span>npm<span class="w"> </span>update<span class="w"> </span>-g<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;npm warn&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span>log_success<span class="w"> </span><span class="s2">&quot;npm global packages updated (warnings suppressed)&quot;</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="k">fi</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="o">}</span>
+</span></code></pre></div>
+<p><strong>Why</strong>:</p>
+<ul>
+<li>Install scripts handle setup (source nvm, install packages from packages.yml)</li>
+<li>Update scripts assume working environment (npm in PATH, packages installed)</li>
+<li>Mixing install and update logic is confusing</li>
+<li>Each script has a clear, focused purpose</li>
+</ul>
+<p><strong>When building new scripts</strong>: Understand the script's lifecycle position:</p>
+<ul>
+<li>Bootstrap scripts: Handle everything from scratch</li>
+<li>Install scripts: Set up environment, install tools</li>
+<li>Update scripts: Assume environment works, just update</li>
+<li>Runtime scripts: Pure execution, no setup</li>
+</ul>
+<h2 id="anti-patterns-to-avoid">Anti-Patterns to Avoid<a class="headerlink" href="#anti-patterns-to-avoid" title="Permanent link">&para;</a></h2>
+<h3 id="defensive-overengineering">Defensive Overengineering<a class="headerlink" href="#defensive-overengineering" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom</strong>: <code>command -v tool || return 0</code> for every tool in an update script</p>
+<p><strong>Why it's bad</strong>: Silently skipping updates hides problems. If <code>cargo</code> isn't in PATH, the user should know.</p>
+<p><strong>Fix</strong>: Remove checks. Let failures fail loudly with clear error messages.</p>
+<h3 id="abstraction-for-single-use">Abstraction for Single Use<a class="headerlink" href="#abstraction-for-single-use" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom</strong>: Function with 3 lines called once</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>update_homebrew<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>brew<span class="w"> </span>update<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>brew<span class="w"> </span>upgrade<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="o">}</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1"># Called exactly once</span>
+</span></code></pre></div>
+<p><strong>Why it's bad</strong>: No reuse, adds indirection, makes code harder to follow</p>
+<p><strong>Fix</strong>: Inline it where it's used</p>
+<h3 id="comments-instead-of-code-structure">Comments Instead of Code Structure<a class="headerlink" href="#comments-instead-of-code-structure" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># ================================================================</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># Update Homebrew packages</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="c1"># ================================================================</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>brew<span class="w"> </span>update
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>brew<span class="w"> </span>upgrade
+</span></code></pre></div>
+<p><strong>Why it's bad</strong>: Comments are passive, easily outdated, not visible to users</p>
+<p><strong>Fix</strong>: Use visual indicators that execute:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>print_header<span class="w"> </span><span class="s2">&quot;Updating System Packages&quot;</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>log_info<span class="w"> </span><span class="s2">&quot;Updating Homebrew packages...&quot;</span>
+</span></code></pre></div>
+<h3 id="fragmentation-for-organization">Fragmentation for "Organization"<a class="headerlink" href="#fragmentation-for-organization" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom</strong>: 6 files totaling 300 lines with 200 lines of boilerplate</p>
+<p><strong>Why it's bad</strong>:</p>
+<ul>
+<li>Each file needs setup boilerplate (source libraries, set variables)</li>
+<li>Navigation overhead (jumping between files)</li>
+<li>Harder to see complete behavior</li>
+<li>More places for bugs to hide</li>
+</ul>
+<p><strong>Fix</strong>: Consolidate into sections within single file</p>
+<h2 id="refactoring-checklist">Refactoring Checklist<a class="headerlink" href="#refactoring-checklist" title="Permanent link">&para;</a></h2>
+<p>When refactoring an existing script:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Remove defensive checks</strong> - Assume environment is set up (for update/runtime scripts)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Replace comments with visual indicators</strong> - Use print/log functions</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Inline single-use functions</strong> - Remove unnecessary abstraction</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Consolidate fragmented files</strong> - Single source of truth</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Add main() function</strong> - Proper encapsulation</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Use consistent heading hierarchy</strong> - title &gt; header &gt; section &gt; logs</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Show commands in output</strong> - Use $(print_green "command") pattern</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Remove sourcing</strong> - Trust PATH (for update/runtime scripts)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Use if-then-else over one-liners</strong> - Readability over cleverness</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Check for dead code</strong> - Incomplete refactors leave fragments</li>
+</ul>
+<h2 id="building-new-scripts-correctly">Building New Scripts Correctly<a class="headerlink" href="#building-new-scripts-correctly" title="Permanent link">&para;</a></h2>
+<p>Start with this template to avoid needing refactoring:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nb">set</span><span class="w"> </span>-uo<span class="w"> </span>pipefail
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="nb">export</span><span class="w"> </span>DOTFILES_DIR
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TERM</span><span class="o">=</span><span class="si">${</span><span class="nv">TERM</span><span class="k">:-</span><span class="nv">xterm</span><span class="si">}</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/platforms/common/.local/shell/logging.sh&quot;</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/platforms/common/.local/shell/formatting.sh&quot;</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="c1"># Only extract complex logic to helper functions</span>
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>helper_function_if_truly_needed<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="w">  </span><span class="c1"># Complex logic (loops, parsing, conditionals)</span>
+</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="o">}</span>
+</span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>
+</span><span id="__span-19-16"><a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a>main<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-19-17"><a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span>platform<span class="w"> </span>start_time<span class="w"> </span>end_time<span class="w"> </span>total_duration
+</span><span id="__span-19-18"><a id="__codelineno-19-18" name="__codelineno-19-18" href="#__codelineno-19-18"></a><span class="w">  </span><span class="nv">platform</span><span class="o">=</span><span class="k">$(</span>detect_platform<span class="k">)</span>
+</span><span id="__span-19-19"><a id="__codelineno-19-19" name="__codelineno-19-19" href="#__codelineno-19-19"></a><span class="w">  </span><span class="nv">start_time</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%s<span class="k">)</span>
+</span><span id="__span-19-20"><a id="__codelineno-19-20" name="__codelineno-19-20" href="#__codelineno-19-20"></a>
+</span><span id="__span-19-21"><a id="__codelineno-19-21" name="__codelineno-19-21" href="#__codelineno-19-21"></a><span class="w">  </span>print_title<span class="w"> </span><span class="s2">&quot;Script Purpose - </span><span class="nv">$platform</span><span class="s2">&quot;</span>
+</span><span id="__span-19-22"><a id="__codelineno-19-22" name="__codelineno-19-22" href="#__codelineno-19-22"></a>
+</span><span id="__span-19-23"><a id="__codelineno-19-23" name="__codelineno-19-23" href="#__codelineno-19-23"></a><span class="w">  </span><span class="c1"># Inline simple operations directly in main</span>
+</span><span id="__span-19-24"><a id="__codelineno-19-24" name="__codelineno-19-24" href="#__codelineno-19-24"></a><span class="w">  </span>print_header<span class="w"> </span><span class="s2">&quot;Major Section&quot;</span>
+</span><span id="__span-19-25"><a id="__codelineno-19-25" name="__codelineno-19-25" href="#__codelineno-19-25"></a>
+</span><span id="__span-19-26"><a id="__codelineno-19-26" name="__codelineno-19-26" href="#__codelineno-19-26"></a><span class="w">  </span>print_section<span class="w"> </span><span class="s2">&quot;Doing something via </span><span class="k">$(</span>print_green<span class="w"> </span><span class="s2">&quot;actual-command&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-19-27"><a id="__codelineno-19-27" name="__codelineno-19-27" href="#__codelineno-19-27"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span>actual-command<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-19-28"><a id="__codelineno-19-28" name="__codelineno-19-28" href="#__codelineno-19-28"></a><span class="w">    </span>log_success<span class="w"> </span><span class="s2">&quot;something completed&quot;</span>
+</span><span id="__span-19-29"><a id="__codelineno-19-29" name="__codelineno-19-29" href="#__codelineno-19-29"></a><span class="w">  </span><span class="k">else</span>
+</span><span id="__span-19-30"><a id="__codelineno-19-30" name="__codelineno-19-30" href="#__codelineno-19-30"></a><span class="w">    </span>log_warning<span class="w"> </span><span class="s2">&quot;something failed&quot;</span>
+</span><span id="__span-19-31"><a id="__codelineno-19-31" name="__codelineno-19-31" href="#__codelineno-19-31"></a><span class="w">  </span><span class="k">fi</span>
+</span><span id="__span-19-32"><a id="__codelineno-19-32" name="__codelineno-19-32" href="#__codelineno-19-32"></a>
+</span><span id="__span-19-33"><a id="__codelineno-19-33" name="__codelineno-19-33" href="#__codelineno-19-33"></a><span class="w">  </span><span class="nv">end_time</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%s<span class="k">)</span>
+</span><span id="__span-19-34"><a id="__codelineno-19-34" name="__codelineno-19-34" href="#__codelineno-19-34"></a><span class="w">  </span><span class="nv">total_duration</span><span class="o">=</span><span class="k">$((</span><span class="nv">end_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">start_time</span><span class="k">))</span>
+</span><span id="__span-19-35"><a id="__codelineno-19-35" name="__codelineno-19-35" href="#__codelineno-19-35"></a>
+</span><span id="__span-19-36"><a id="__codelineno-19-36" name="__codelineno-19-36" href="#__codelineno-19-36"></a><span class="w">  </span>print_title_success<span class="w"> </span><span class="s2">&quot;Complete (</span><span class="si">${</span><span class="nv">total_duration</span><span class="si">}</span><span class="s2">s)&quot;</span>
+</span><span id="__span-19-37"><a id="__codelineno-19-37" name="__codelineno-19-37" href="#__codelineno-19-37"></a><span class="o">}</span>
+</span><span id="__span-19-38"><a id="__codelineno-19-38" name="__codelineno-19-38" href="#__codelineno-19-38"></a>
+</span><span id="__span-19-39"><a id="__codelineno-19-39" name="__codelineno-19-39" href="#__codelineno-19-39"></a>main
+</span></code></pre></div>
+<p><strong>Key decisions</strong>:</p>
+<ul>
+<li>main() from the start (not added later)</li>
+<li>Visual indicators, not comments</li>
+<li>Inline by default, extract only when complex</li>
+<li>Consistent heading hierarchy</li>
+<li>Show commands in output</li>
+<li>Trust environment (or fail clearly)</li>
+</ul>
+<h2 id="metrics-of-good-refactoring">Metrics of Good Refactoring<a class="headerlink" href="#metrics-of-good-refactoring" title="Permanent link">&para;</a></h2>
+<p><strong>Quantitative</strong>:</p>
+<ul>
+<li>Line count reduction (but not at expense of clarity)</li>
+<li>File count reduction</li>
+<li>Function count reduction</li>
+<li>Reduced nesting depth</li>
+</ul>
+<p><strong>Qualitative</strong>:</p>
+<ul>
+<li>Can understand flow without jumping files</li>
+<li>Visual output matches code structure</li>
+<li>Failures are loud and clear</li>
+<li>Easy to modify without touching multiple files</li>
+<li>No "what does this do?" moments</li>
+</ul>
+<h2 id="learning-from-incomplete-refactors">Learning from Incomplete Refactors<a class="headerlink" href="#learning-from-incomplete-refactors" title="Permanent link">&para;</a></h2>
+<p><strong>What happened</strong>: Earlier failure registry refactor converted most files to new pattern but missed cleaning up old error-handling imports and dead code checks.</p>
+<p><strong>Lesson</strong>: Comprehensive refactoring requires:</p>
 <ol>
-<li>Run installer script</li>
-<li>If fails, check if it reported failure itself</li>
-<li>If not, create generic failure entry</li>
-<li>Continue to next installer</li>
+<li>Searching for ALL instances (don't trust memory)</li>
+<li>Checking both active code and imports/setup</li>
+<li>Running checks (grep for old patterns)</li>
+<li>Testing the actual behavior</li>
+<li>Reviewing the diff to catch missed cleanup</li>
 </ol>
-<h3 id="4-installer-pattern">4. Installer Pattern<a class="headerlink" href="#4-installer-pattern" title="Permanent link">&para;</a></h3>
-<p>Each installer sources program-helpers.sh and reports failures before exiting:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="ch">#!/usr/bin/env bash</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Source libraries</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/program-helpers.sh&quot;</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Initialize registry (if running standalone)</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>init_failure_registry
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Download</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>curl<span class="w"> </span>-fsSL<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOWNLOAD_URL</span><span class="s2">&quot;</span><span class="w"> </span>-o<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TEMP_FILE</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_FAILURE_REGISTRY</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="nv">manual_steps</span><span class="o">=</span><span class="s2">&quot;1. Download in browser: </span><span class="nv">$DOWNLOAD_URL</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s2">2. Extract: tar -xzf ~/Downloads/tool.tar.gz</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="s2">3. Install: mv tool ~/.local/bin/</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="s2">4. Verify: tool --version&quot;</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span>report_failure<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOOL_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOWNLOAD_URL</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$VERSION</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$manual_steps</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;Download failed&quot;</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span><span class="k">fi</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">  </span>log_warning<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOOL_NAME</span><span class="s2"> installation failed (see summary)&quot;</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span>display_failure_summary
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">  </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="k">fi</span>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>
-</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="c1"># ... rest of installation ...</span>
-</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>
-</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="c1"># Display summary at end</span>
-</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>display_failure_summary
+<p><strong>Prevention</strong>: When refactoring, grep for patterns:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Find old pattern usage</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;old_function&quot;</span><span class="w"> </span>.
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;old_variable&quot;</span><span class="w"> </span>.
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;old_import&quot;</span><span class="w"> </span>.
 </span></code></pre></div>
-<h2 id="implementation-coverage">Implementation Coverage<a class="headerlink" href="#implementation-coverage" title="Permanent link">&para;</a></h2>
-<h3 id="phase-1-core-infrastructure">Phase 1: Core Infrastructure ✅<a class="headerlink" href="#phase-1-core-infrastructure" title="Permanent link">&para;</a></h3>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>Great scripts are:</p>
 <ul>
-<li>Failure registry system</li>
-<li>Core functions (init, report, display)</li>
-<li>Wrapper in install.sh</li>
-<li>Comprehensive test suite (ShellSpec + bash integration tests)</li>
+<li><strong>Visual</strong>: Structure shown through execution, not comments</li>
+<li><strong>Simple</strong>: Inline by default, abstract only when needed</li>
+<li><strong>Trustful</strong>: Fail loudly when environment is wrong</li>
+<li><strong>Consolidated</strong>: Single source of truth</li>
+<li><strong>Explicit</strong>: Show what you're doing</li>
+<li><strong>Hierarchical</strong>: Consistent heading levels</li>
+<li><strong>Maintainable</strong>: Easy to modify, understand, and debug</li>
 </ul>
-<h3 id="phase-2-github-release-installers">Phase 2: GitHub Release Installers ✅<a class="headerlink" href="#phase-2-github-release-installers" title="Permanent link">&para;</a></h3>
-<p><strong>11 tools with enhanced library</strong>:</p>
-<ul>
-<li>github-release-installer.sh library functions updated</li>
-<li>lazygit, glow, duf, fzf, zk, tflint, terrascan, trivy (via library)</li>
-<li>yazi, terraformer, neovim (custom implementations)</li>
-</ul>
-<h3 id="phase-3-fonts-installer">Phase 3: Fonts Installer ✅<a class="headerlink" href="#phase-3-fonts-installer" title="Permanent link">&para;</a></h3>
-<p><strong>22 font families</strong> with resilient download:</p>
-<ul>
-<li>Wrapper function for each font download</li>
-<li>Continues downloading remaining fonts if one fails</li>
-<li>Groups font failures in summary</li>
-</ul>
-<h3 id="phase-4-language-tools-plugins">Phase 4: Language Tools &amp; Plugins ✅<a class="headerlink" href="#phase-4-language-tools-plugins" title="Permanent link">&para;</a></h3>
-<p><strong>6 installer scripts</strong>:</p>
-<ul>
-<li>cargo-tools.sh - Rust package installation</li>
-<li>npm-install-globals.sh - Node.js global packages</li>
-<li>go-tools.sh - Go tool installation</li>
-<li>shell-plugins.sh - ZSH plugins via git clone</li>
-<li>tmux-plugins.sh - TPM plugin installation</li>
-<li>nvim-plugins.sh - Lazy.nvim plugin sync</li>
-</ul>
-<h3 id="phase-5-custom-installers">Phase 5: Custom Installers ✅<a class="headerlink" href="#phase-5-custom-installers" title="Permanent link">&para;</a></h3>
-<p><strong>4 custom installers</strong>:</p>
-<ul>
-<li>terraform-ls.sh - HashiCorp language server</li>
-<li>awscli.sh - AWS CLI official installer</li>
-<li>claude-code.sh - Claude Code official installer</li>
-<li>shellspec.sh - BDD testing framework</li>
-</ul>
-<h3 id="phase-6-update-scripts">Phase 6: Update Scripts ✅<a class="headerlink" href="#phase-6-update-scripts" title="Permanent link">&para;</a></h3>
-<p><strong>Update workflow resilience</strong>:</p>
-<ul>
-<li>update.sh - Main wrapper with failure handling</li>
-<li>common/update.sh - Individual command error handling</li>
-<li>verify-installed-packages.sh - References installation failure reports</li>
-</ul>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<h3 id="unit-tests-shellspec">Unit Tests (ShellSpec)<a class="headerlink" href="#unit-tests-shellspec" title="Permanent link">&para;</a></h3>
-<p><strong>7 examples</strong> testing core functionality:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>shellspec<span class="w"> </span>tests/unit/
-</span></code></pre></div>
-<p>Tests:</p>
-<ul>
-<li><code>init_failure_registry()</code> creates registry</li>
-<li><code>report_failure()</code> writes files correctly</li>
-<li>Source-able format validation</li>
-<li><code>display_failure_summary()</code> output formatting</li>
-</ul>
-<h3 id="integration-tests-bash">Integration Tests (Bash)<a class="headerlink" href="#integration-tests-bash" title="Permanent link">&para;</a></h3>
-<p><strong>10 assertions</strong> testing wrapper behavior:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>bash<span class="w"> </span>tests/integration/test_install_wrapper.sh
-</span></code></pre></div>
-<p>Tests:</p>
-<ul>
-<li>Wrapper handles successful installation</li>
-<li>Wrapper reports unreported failures</li>
-<li>Wrapper accepts self-reported failures</li>
-<li>Installation continues after failures</li>
-<li>Summary displays all failures</li>
-</ul>
-<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
-<h3 id="running-installation">Running Installation<a class="headerlink" href="#running-installation" title="Permanent link">&para;</a></h3>
-<p>Normal installation (with automatic failure handling):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>./install.sh
-</span></code></pre></div>
-<p>If failures occur, you'll see:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>════════════════════════════════════════════════════════════════
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Installation<span class="w"> </span>Summary
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>════════════════════════════════════════════════════════════════
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="o">[</span>WARNING<span class="o">]</span><span class="w"> </span>▲<span class="w"> </span>Some<span class="w"> </span>installations<span class="w"> </span>failed
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>This<span class="w"> </span>is<span class="w"> </span>common<span class="w"> </span><span class="k">in</span><span class="w"> </span>restricted<span class="w"> </span>network<span class="w"> </span>environments
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>────────────────────────────────────────────────────────────────
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>yazi<span class="w"> </span>-<span class="w"> </span>Manual<span class="w"> </span>Installation<span class="w"> </span>Required
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>────────────────────────────────────────────────────────────────
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span>Reason:<span class="w"> </span>Download<span class="w"> </span>failed
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span>Download:<span class="w"> </span>https://github.com/sxyazi/yazi/releases/download/v0.2.4/yazi.zip
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">  </span>Version:<span class="w"> </span>v0.2.4
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
-</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span>Manual<span class="w"> </span>Steps:
-</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="m">1</span>.<span class="w"> </span>Download<span class="w"> </span><span class="k">in</span><span class="w"> </span>browser:<span class="w"> </span>https://github.com/sxyazi/yazi/...
-</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="m">2</span>.<span class="w"> </span>Extract:<span class="w"> </span>unzip<span class="w"> </span>~/Downloads/yazi.zip
-</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">    </span><span class="m">3</span>.<span class="w"> </span>Install:<span class="w"> </span>mv<span class="w"> </span>yazi<span class="w"> </span>~/.local/bin/
-</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="m">4</span>.<span class="w"> </span>Verify:<span class="w"> </span>yazi<span class="w"> </span>--version
-</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>
-</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>════════════════════════════════════════════════════════════════
-</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>Full<span class="w"> </span>report<span class="w"> </span>saved<span class="w"> </span>to:<span class="w"> </span>/tmp/dotfiles-installation-failures-20250103-143022.txt
-</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>════════════════════════════════════════════════════════════════
-</span></code></pre></div>
-<h3 id="verification-after-installation">Verification After Installation<a class="headerlink" href="#verification-after-installation" title="Permanent link">&para;</a></h3>
-<p>Run verification script in a fresh shell:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>bash<span class="w"> </span>management/tests/verify-installed-packages.sh
-</span></code></pre></div>
-<p>If there are failures and a recent installation report exists:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>Installation<span class="w"> </span>failure<span class="w"> </span>report<span class="w"> </span>found:<span class="w"> </span>/tmp/dotfiles-installation-failures-20250103-143022.txt
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>This<span class="w"> </span>may<span class="w"> </span>explain<span class="w"> </span>some<span class="w"> </span>missing<span class="w"> </span>tools<span class="w"> </span>-<span class="w"> </span>see<span class="w"> </span>the<span class="w"> </span>report<span class="w"> </span><span class="k">for</span><span class="w"> </span>manual<span class="w"> </span>installation<span class="w"> </span>steps
-</span></code></pre></div>
-<h3 id="updating-packages">Updating Packages<a class="headerlink" href="#updating-packages" title="Permanent link">&para;</a></h3>
-<p>Updates now continue even if individual packages fail:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>./update.sh
-</span></code></pre></div>
-<p>Same failure reporting mechanism applies.</p>
-<h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
-<h3 id="why-tmp-instead-of-home">Why /tmp instead of $HOME?<a class="headerlink" href="#why-tmp-instead-of-home" title="Permanent link">&para;</a></h3>
-<p>User explicitly requested no extra files in home directory. Failure reports are temporary and only relevant during/after installation.</p>
-<h3 id="why-source-able-format">Why source-able format?<a class="headerlink" href="#why-source-able-format" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Simplicity</strong>: No external parsers needed (jq, yq)</li>
-<li><strong>Performance</strong>: Fast to read and parse</li>
-<li><strong>Compatibility</strong>: Works in any bash environment</li>
-<li><strong>Maintenance</strong>: Easy to debug - just cat the file</li>
-</ul>
-<h3 id="why-not-modify-individual-scripts-to-remove-set-e">Why not modify individual scripts to remove set -e?<a class="headerlink" href="#why-not-modify-individual-scripts-to-remove-set-e" title="Permanent link">&para;</a></h3>
-<p><strong>Separation of concerns</strong>:</p>
-<ul>
-<li>Installers stay simple - fail fast on errors</li>
-<li>Wrapper handles orchestration and resilience</li>
-<li>Easier to test - scripts have clear contracts</li>
-<li>No mixing of concerns in installer logic</li>
-</ul>
-<h3 id="why-generic-error-messages">Why generic error messages?<a class="headerlink" href="#why-generic-error-messages" title="Permanent link">&para;</a></h3>
-<p>Corporate networks fail for many reasons:</p>
-<ul>
-<li>Firewalls blocking GitHub</li>
-<li>Proxy authentication required</li>
-<li>DNS resolution issues</li>
-<li>SSL certificate problems</li>
-<li>Bandwidth throttling</li>
-</ul>
-<p>We can't know the root cause, so we provide generic guidance ("Download failed") instead of assuming ("Firewall blocked download").</p>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="installation-succeeds-but-tool-missing">Installation succeeds but tool missing<a class="headerlink" href="#installation-succeeds-but-tool-missing" title="Permanent link">&para;</a></h3>
-<p>Check the failure report:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>cat<span class="w"> </span>/tmp/dotfiles-installation-failures-*.txt
-</span></code></pre></div>
-<p>Follow manual installation steps for the missing tool.</p>
-<h3 id="want-to-re-run-just-failed-installers">Want to re-run just failed installers<a class="headerlink" href="#want-to-re-run-just-failed-installers" title="Permanent link">&para;</a></h3>
-<p>Each failure report includes the exact command:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>bash<span class="w"> </span>management/common/install/github-releases/yazi.sh
-</span></code></pre></div>
-<h3 id="verification-shows-failures-but-no-report">Verification shows failures but no report<a class="headerlink" href="#verification-shows-failures-but-no-report" title="Permanent link">&para;</a></h3>
-<p>The report is only created during installation/update. If you're running verification later, the report may have been cleaned up (system reboot, /tmp cleanup).</p>
-<p>Re-run installation to regenerate the report:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>./install.sh
-</span></code></pre></div>
-<h2 id="future-enhancements">Future Enhancements<a class="headerlink" href="#future-enhancements" title="Permanent link">&para;</a></h2>
-<p>Potential improvements for consideration:</p>
-<ol>
-<li><strong>Persistent failure tracking</strong>: Option to save reports to <code>~/.cache/dotfiles/</code> for long-term reference</li>
-<li><strong>Retry mechanism</strong>: Automatic retry with exponential backoff for network failures</li>
-<li><strong>Alternative download sources</strong>: Fallback to mirrors when primary source fails</li>
-<li><strong>Failure analytics</strong>: Track common failure patterns across installations</li>
-<li><strong>Interactive mode</strong>: Prompt user to manually fix failures during installation</li>
-</ol>
-<h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../error-handling/">Error Handling</a> - General error handling patterns</li>
-<li><a href="../shell-libraries/">Shell Libraries</a> - Logging and formatting libraries</li>
-<li><a href="../github-release-installer/">GitHub Release Installer</a> - GitHub release installer library</li>
-<li><a href="../package-management/">Package Management</a> - Overall package management strategy</li>
-</ul>
+<p>When building new scripts, start with these principles. When refactoring old scripts, move toward them systematically.</p>
+<p>The best refactoring makes code so clear that the next person (often future you) says "obviously it should be this way" and forgets it was ever different.</p>
 
 
 
