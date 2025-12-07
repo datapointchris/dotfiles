@@ -418,7 +418,7 @@ github_binaries:
   # Terraform ecosystem tools
   - name: tenv
     repo: tofuutils/tenv
-    install_script: language-managers/tenv.sh
+    install_script: github-releases/tenv.sh
     binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
     description: Version manager for Terraform/OpenTofu/Terragrunt and Terraform runtime

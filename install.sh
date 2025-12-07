@@ -119,7 +119,7 @@ install_common_phases() {
   run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
   run_installer "$lang_managers/uv.sh" "uv"
   run_installer "$lang_tools/uv-tools.sh" "uv-tools"
-  run_installer "$lang_managers/tenv.sh" "tenv"
+  run_installer "$github_releases/tenv.sh" "tenv"
 
   print_header "Shell Plugins" $header_color
   run_installer "$plugins/shell-plugins.sh" "shell-plugins"

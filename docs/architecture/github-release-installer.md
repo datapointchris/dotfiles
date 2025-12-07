@@ -380,6 +380,6 @@ bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 - `management/common/install/custom-installers/claude-code.sh` - Uses official installer script
 - `management/common/install/custom-installers/terraform-ls.sh` - Uses releases.hashicorp.com (not GitHub)
 
-**Moved to Language Managers:**
+**Moved back to GitHub Releases:**
 
-- `management/common/install/language-managers/tenv.sh` - Merged with terraform.sh to match nvm/uv pattern
+- `management/common/install/github-releases/tenv.sh` - Terraform is a program, not a language. Grouped by installation method (GitHub releases)

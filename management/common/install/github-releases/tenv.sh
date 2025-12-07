@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
@@ -13,14 +19,24 @@ BINARY_NAME="tenv"
 REPO="tofuutils/tenv"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
-print_banner "Installing tenv"
-
-if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-  exit 0
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking tenv for updates"
+else
+  print_banner "Installing tenv"
 fi
 
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
+
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then
+    exit 0
+  fi
+else
+  if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
+    exit 0
+  fi
+fi
 
 # Detect platform (tenv uses x86_64 and arm64 directly)
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
@@ -91,7 +107,11 @@ fi
 # Check if packages.yml exists for Terraform installation
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   log_warning "packages.yml not found, skipping Terraform installation"
-  print_banner_success "tenv installation complete"
+  if [[ "$UPDATE_MODE" == "true" ]]; then
+    print_banner_success "tenv update complete"
+  else
+    print_banner_success "tenv installation complete"
+  fi
   exit 0
 fi
 
@@ -131,4 +151,8 @@ fi
 
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
 
-print_banner_success "tenv and Terraform installation complete"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner_success "tenv and Terraform update complete"
+else
+  print_banner_success "tenv and Terraform installation complete"
+fi
