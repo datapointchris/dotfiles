@@ -22,16 +22,23 @@ run_installer() {
     output=$(cat "$stderr_file")
 
     # Show only non-structured error lines to user (filter out FAILURE_* markers)
-    grep -v "^FAILURE_TOOL=\|^FAILURE_URL=\|^FAILURE_VERSION=\|^FAILURE_REASON=\|^FAILURE_MANUAL_START\|^FAILURE_MANUAL_END" "$stderr_file" >&2 || true
+    grep -v "^FAILURE_" "$stderr_file" >&2 || true
 
     rm -f "$stderr_file"
 
-    # Parse structured data for failure log
+    # Parse structured failure data from installer output
+    # Format: FAILURE_FIELD='value'
+    parse_failure_field() {
+      local field="$1"
+      local default="${2:-}"
+      echo "$output" | grep "^FAILURE_$field=" | cut -d"'" -f2 || echo "$default"
+    }
+
     local failure_tool failure_url failure_version failure_reason failure_manual
-    failure_tool=$(echo "$output" | grep "^FAILURE_TOOL=" | cut -d"'" -f2 || echo "$tool_name")
-    failure_url=$(echo "$output" | grep "^FAILURE_URL=" | cut -d"'" -f2 || echo "")
-    failure_version=$(echo "$output" | grep "^FAILURE_VERSION=" | cut -d"'" -f2 || echo "")
-    failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
+    failure_tool=$(parse_failure_field "TOOL" "$tool_name")
+    failure_url=$(parse_failure_field "URL")
+    failure_version=$(parse_failure_field "VERSION")
+    failure_reason=$(parse_failure_field "REASON")
 
     if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
       failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
