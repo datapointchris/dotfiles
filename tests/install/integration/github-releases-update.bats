@@ -41,6 +41,12 @@ setup() {
   assert_output --partial "Checking Yazi for updates"
 }
 
+@test "neovim: accepts --update flag" {
+  run bash "$DOTFILES_DIR/management/common/install/github-releases/neovim.sh" --update
+  assert_success
+  assert_output --partial "Checking Neovim for updates"
+}
+
 # Test version checking behavior
 
 @test "lazygit: shows already at latest version when current" {
@@ -71,7 +77,7 @@ setup() {
   assert_output --partial "Installing fzf"
 }
 
-# Test all 10 installers have --update support
+# Test all 11 installers have --update support
 
 @test "all github release installers accept --update flag" {
   local installers=(
@@ -80,6 +86,7 @@ setup() {
     "glow"
     "duf"
     "yazi"
+    "neovim"
     "tflint"
     "terraformer"
     "terrascan"

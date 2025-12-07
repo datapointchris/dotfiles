@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=min_version)
 REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=repo)
 
 OS=$(detect_os)
@@ -26,19 +31,10 @@ fi
 NVIM_INSTALL_DIR="$HOME/.local/${NVIM_BINARY}"
 NVIM_BIN_LINK="$HOME/.local/bin/nvim"
 
-print_banner "Installing Neovim"
-
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -L "$NVIM_BIN_LINK" ]] && command -v nvim >/dev/null 2>&1; then
-  CURRENT_VERSION=$(nvim --version | head -n1 | sed 's/.*v\([0-9]*\.[0-9]*\).*/\1/')
-  log_info "Current version: $CURRENT_VERSION"
-
-  # Simple version comparison (major.minor)
-  if [[ $(echo -e "$MIN_VERSION\n$CURRENT_VERSION" | sort -V | head -n1) == "$MIN_VERSION" ]]; then
-    log_success " Acceptable version (>= $MIN_VERSION), skipping"
-    exit 0
-  fi
-
-  log_info "Upgrading..."
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking Neovim for updates"
+else
+  print_banner "Installing Neovim"
 fi
 
 NVIM_VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
@@ -57,6 +53,29 @@ Manual installation:
 fi
 
 log_info "Latest: $NVIM_VERSION"
+
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if ! command -v nvim >/dev/null 2>&1; then
+    log_info "nvim not installed, will install"
+  else
+    CURRENT_VERSION=$(nvim --version 2>&1 | head -1)
+    CURRENT_VERSION=$(parse_version "$CURRENT_VERSION")
+
+    if [[ -z "$CURRENT_VERSION" ]]; then
+      log_warning "Could not parse current version, will reinstall"
+    elif version_compare "$CURRENT_VERSION" "$NVIM_VERSION"; then
+      log_success "Already at latest version: $NVIM_VERSION"
+      exit 0
+    else
+      log_info "Update available: $CURRENT_VERSION → $NVIM_VERSION"
+    fi
+  fi
+else
+  if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -L "$NVIM_BIN_LINK" ]] && command -v nvim >/dev/null 2>&1; then
+    log_success "nvim already installed, skipping"
+    exit 0
+  fi
+fi
 
 if [[ ! -L "$NVIM_BIN_LINK" ]] && command -v nvim >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v nvim)
