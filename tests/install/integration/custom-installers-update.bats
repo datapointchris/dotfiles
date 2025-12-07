@@ -71,3 +71,21 @@ setup() {
   assert_success
   assert_output --partial "Already at latest version"
 }
+
+@test "claude-code: accepts --update flag" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/claude-code.sh" --update
+  assert_success
+  assert_output --partial "Checking Claude Code for updates"
+}
+
+@test "claude-code: normal install mode works" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/claude-code.sh"
+  assert_success
+  assert_output --partial "Installing Claude Code"
+}
+
+@test "claude-code: shows already at latest version when current" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/claude-code.sh" --update
+  assert_success
+  assert_output --partial "Already at latest version"
+}
