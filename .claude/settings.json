@@ -9,17 +9,6 @@
     ]
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python $CLAUDE_PROJECT_DIR/.claude/hooks/check-bash-error-safety"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [

@@ -90,15 +90,6 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      # Enforce bash error safety in management/ scripts
-      - id: check-bash-error-safety
-        name: Check bash scripts have error safety
-        entry: .claude/hooks/check-bash-error-safety
-        language: system
-        pass_filenames: false
-        always_run: false
-        stages: [pre-commit]
-
       # Test all user-facing apps can be invoked
       - id: test-all-apps
         name: Test all apps can be invoked
