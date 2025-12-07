@@ -101,17 +101,33 @@ TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py
 print_section "Installing Terraform ${TERRAFORM_VERSION}" "cyan"
 
 # Install specific Terraform version
-echo "  Installing Terraform ${TERRAFORM_VERSION}..."
-if tenv tf install "${TERRAFORM_VERSION}"; then
-  echo "    ✓ Terraform installed"
-else
+log_info "Installing Terraform ${TERRAFORM_VERSION}..."
+if ! tenv tf install "${TERRAFORM_VERSION}"; then
+  manual_steps="Install Terraform manually with tenv:
+   tenv tf install ${TERRAFORM_VERSION}
+   tenv tf use ${TERRAFORM_VERSION}
+
+Verify:
+   terraform --version"
+
+  output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf install failed"
   log_error "Failed to install Terraform"
   exit 1
 fi
 
 # Set as default version
-echo "  Setting Terraform ${TERRAFORM_VERSION} as default..."
-tenv tf use "${TERRAFORM_VERSION}"
+log_info "Setting Terraform ${TERRAFORM_VERSION} as default..."
+if ! tenv tf use "${TERRAFORM_VERSION}"; then
+  manual_steps="Set Terraform version manually:
+   tenv tf use ${TERRAFORM_VERSION}
+
+Verify:
+   terraform --version"
+
+  output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf use failed"
+  log_error "Failed to set Terraform version"
+  exit 1
+fi
 
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
 

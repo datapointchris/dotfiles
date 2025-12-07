@@ -130,7 +130,18 @@ if /usr/local/go/bin/go version >/dev/null 2>&1; then
   INSTALLED_VERSION=$(/usr/local/go/bin/go version)
   log_success " $INSTALLED_VERSION"
 else
-  log_error " Installation verification failed"
+  manual_steps="Binary installed but not working.
+
+Verify installation:
+   /usr/local/go/bin/go version
+
+Add to PATH:
+   export PATH=\$PATH:/usr/local/go/bin
+
+Verify in PATH:
+   go version"
+  output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Installation verification failed"
+  log_error "Installation verification failed"
   exit 1
 fi
 

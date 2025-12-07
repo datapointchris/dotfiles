@@ -21,11 +21,9 @@ print_section "Installing nvm" "cyan"
 
 # Install nvm if not already installed
 if [[ ! -d "$NVM_DIR" ]]; then
-  echo "  Installing nvm to $NVM_DIR..."
+  log_info "Installing nvm to $NVM_DIR..."
   mkdir -p "$NVM_DIR"
-  if curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
-    echo "  ✓ nvm installed"
-  else
+  if ! curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
     manual_steps="1. Download nvm install script in your browser:
    $NVM_INSTALL_SCRIPT
 
@@ -35,12 +33,13 @@ if [[ ! -d "$NVM_DIR" ]]; then
 3. Verify installation:
    source $NVM_DIR/nvm.sh
    nvm --version"
-    output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "Download failed"
+    output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "curl install script failed"
     log_error "Failed to install nvm"
-    return 1
+    exit 1
   fi
+  log_success "nvm installed"
 else
-  echo "  nvm already installed"
+  log_info "nvm already installed"
 fi
 
 # Read Node version from packages.yml using Python parser
@@ -49,9 +48,7 @@ NODE_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --g
 print_section "Installing Node.js ${NODE_VERSION}" "cyan"
 
 # Install Node.js using the existing nvm-install-node.sh script
-if NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/management/common/install/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
-  log_success "Node.js ${NODE_VERSION} installed and set as default"
-else
+if ! NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/management/common/install/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
   manual_steps="1. First ensure nvm is installed (see above)
 
 2. Then install Node.js manually:
@@ -63,5 +60,7 @@ else
    node --version"
   output_failure_data "nodejs" "https://nodejs.org" "$NODE_VERSION" "$manual_steps" "Node.js installation failed"
   log_error "Failed to install Node.js"
-  return 1
+  exit 1
 fi
+
+log_success "Node.js ${NODE_VERSION} installed and set as default"
