@@ -10,7 +10,7 @@
 # Platform support:
 #   - macOS: Supported
 #   - Linux (Arch): Supported
-#   - WSL: NOT supported (skipped - would conflict with Windows installation)
+#   - WSL: Supported (installs inside WSL environment)
 # ================================================================
 
 set -uo pipefail
@@ -24,14 +24,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/install-helpers.sh"
 
 print_banner "Installing Claude Code"
-
-PLATFORM=$(detect_platform)
-
-if [[ "$PLATFORM" == "wsl" ]]; then
-  log_info "WSL detected - skipping Claude Code installation"
-  log_info "Install Claude Code on your Windows host instead"
-  exit 0
-fi
 
 # Check if Claude is already installed (skip check if FORCE_INSTALL=true)
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v claude >/dev/null 2>&1; then
@@ -53,7 +45,6 @@ if command -v claude >/dev/null 2>&1; then
   log_info "claude found at $ALTERNATE_LOCATION"
 fi
 
-log_info "Platform: $PLATFORM"
 log_info "Installing via official installer..."
 
 # Download and run official installer
