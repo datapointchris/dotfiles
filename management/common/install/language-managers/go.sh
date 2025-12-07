@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
@@ -8,12 +13,13 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.go.min_version)
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking Go for updates"
+else
+  print_banner "Installing Go"
+fi
 
-print_banner "Installing Go"
-
-# Check if Go is already installed with acceptable version
-# Check both in PATH and at standard installation location
+# Check if Go is already installed
 GO_BIN=""
 if command -v go >/dev/null 2>&1; then
   GO_BIN="go"
@@ -21,29 +27,10 @@ elif [[ -x "/usr/local/go/bin/go" ]]; then
   GO_BIN="/usr/local/go/bin/go"
 fi
 
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
-  CURRENT_VERSION=$($GO_BIN version | awk '{print $3}' | sed 's/go//')
-  log_info "Current version: $CURRENT_VERSION"
-
-  # Compare versions (simple major.minor comparison)
-  CURRENT_MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
-  CURRENT_MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
-  REQUIRED_MAJOR=$(echo "$MIN_VERSION" | cut -d. -f1)
-  REQUIRED_MINOR=$(echo "$MIN_VERSION" | cut -d. -f2)
-
-  if [[ $CURRENT_MAJOR -gt $REQUIRED_MAJOR ]] || \
-     [[ $CURRENT_MAJOR -eq $REQUIRED_MAJOR && $CURRENT_MINOR -ge $REQUIRED_MINOR ]]; then
-    log_success "Acceptable version (>= $MIN_VERSION), skipping"
-    exit 0
-  fi
-
-  log_info "Upgrading from $CURRENT_VERSION..."
-fi
-
 # Check for alternate installations
 if [[ ! -x "/usr/local/go/bin/go" ]] && command -v go >/dev/null 2>&1; then
   ALTERNATE_LOCATION=$(command -v go)
-  log_warning " go found at $ALTERNATE_LOCATION"
+  log_warning "go found at $ALTERNATE_LOCATION"
   log_info "Installing to /usr/local/go/bin/go anyway (PATH priority will use this one)"
 fi
 
@@ -93,7 +80,37 @@ Manual installation:
   exit 1
 fi
 
-log_info "Latest: $GO_VERSION ($PLATFORM/$ARCH → $GO_OS/$GO_ARCH)"
+log_info "Latest version: $GO_VERSION"
+
+# Check if update/install needed
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if [[ -z "$GO_BIN" ]]; then
+    log_info "Go not installed, installing..."
+  else
+    CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}'); CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
+    LATEST_VERSION=${GO_VERSION#go}
+    log_info "Current version: $CURRENT_VERSION"
+
+    if [[ "$CURRENT_VERSION" == "$LATEST_VERSION" ]]; then
+      log_success "Already at latest version ($LATEST_VERSION)"
+      if [[ "$UPDATE_MODE" == "true" ]]; then
+        print_banner_success "Go is up to date"
+      fi
+      exit 0
+    fi
+
+    log_info "Upgrading from $CURRENT_VERSION to $LATEST_VERSION..."
+  fi
+else
+  # Install mode - skip if already installed (unless FORCE_INSTALL)
+  if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
+    CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}'); CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
+    log_success "Go $CURRENT_VERSION already installed, skipping"
+    exit 0
+  fi
+fi
+
+log_info "Platform: $PLATFORM/$ARCH → $GO_OS/$GO_ARCH"
 
 # Download URL
 GO_URL="https://go.dev/dl/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
@@ -128,7 +145,7 @@ rm "$GO_TARBALL"
 # Verify
 if /usr/local/go/bin/go version >/dev/null 2>&1; then
   INSTALLED_VERSION=$(/usr/local/go/bin/go version)
-  log_success " $INSTALLED_VERSION"
+  log_success "$INSTALLED_VERSION"
 else
   manual_steps="Binary installed but not working.
 
@@ -145,4 +162,8 @@ Verify in PATH:
   exit 1
 fi
 
-print_banner_success "Go installation complete"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner_success "Go update complete"
+else
+  print_banner_success "Go installation complete"
+fi
