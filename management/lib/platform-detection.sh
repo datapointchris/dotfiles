@@ -17,6 +17,12 @@ detect_arch() {
 }
 
 detect_platform() {
+    # Respect PLATFORM environment variable if already set (for testing)
+    if [[ -n "${PLATFORM:-}" ]]; then
+        echo "$PLATFORM"
+        return 0
+    fi
+
     local os
     os=$(detect_os)
 
