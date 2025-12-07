@@ -27,17 +27,15 @@ BATS_CORE_REPO="https://github.com/bats-core/bats-core.git"
 BATS_SUPPORT_REPO="https://github.com/bats-core/bats-support.git"
 BATS_ASSERT_REPO="https://github.com/bats-core/bats-assert.git"
 
-# Fetch latest version from GitHub
+# Fetch latest version from GitHub (both install and update modes)
+BATS_VERSION=$(fetch_github_latest_version "bats-core/bats-core")
+if [[ -z "$BATS_VERSION" ]]; then
+  log_error "Failed to fetch latest BATS version from GitHub"
+  exit 1
+fi
+
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  BATS_VERSION=$(fetch_github_latest_version "bats-core/bats-core")
-  if [[ -z "$BATS_VERSION" ]]; then
-    log_error "Failed to fetch latest BATS version from GitHub"
-    exit 1
-  fi
   log_info "Latest version: $BATS_VERSION"
-else
-  # Explicitly set version (don't rely on environment variable)
-  BATS_VERSION="v1.13.0"
 fi
 
 # Check if BATS is already installed
