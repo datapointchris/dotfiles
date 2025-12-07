@@ -68,6 +68,27 @@ update_common_tools() {
     log_warning "Rust packages update failed"
   fi
 
+  print_section "Updating Go toolchain via $(print_green "go.sh --update")" $section_color
+  if bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update; then
+    log_success "Go updated"
+  else
+    log_warning "Go update failed"
+  fi
+
+  print_section "Updating nvm and Node.js via $(print_green "nvm.sh --update")" $section_color
+  if bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update; then
+    log_success "nvm and Node.js updated"
+  else
+    log_warning "nvm and Node.js update failed"
+  fi
+
+  print_section "Updating tenv and Terraform via $(print_green "tenv.sh --update")" $section_color
+  if bash "$DOTFILES_DIR/management/common/install/github-releases/tenv.sh" --update; then
+    log_success "tenv and Terraform updated"
+  else
+    log_warning "tenv and Terraform update failed"
+  fi
+
   log_info "Updating Shell plugins via $(print_green "git pull")"
   if update_shell_plugins; then
     log_success "Shell plugins updated"
