@@ -7,7 +7,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 BINARY_NAME="duf"
 REPO="muesli/duf"

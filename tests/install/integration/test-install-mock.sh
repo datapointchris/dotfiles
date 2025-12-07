@@ -17,7 +17,7 @@ export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 print_banner "Mock Installation Test"
 
@@ -151,7 +151,7 @@ set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 TOOL_NAME="mock-failure"
 DOWNLOAD_URL="https://github.com/mock/mock-failure/releases/download/v1.0.0/mock-failure.tar.gz"

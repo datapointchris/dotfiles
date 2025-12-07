@@ -6,7 +6,7 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 NVM_DIR="$HOME/.config/nvm"
 NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"

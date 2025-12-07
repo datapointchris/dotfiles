@@ -17,7 +17,7 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # Source libraries
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 # Colors
 GREEN='\033[0;32m'
@@ -54,7 +54,7 @@ set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 # Simulate GitHub release installer that fails
 TOOL_NAME="mock-tool"
@@ -98,8 +98,8 @@ run_installer() {
     failure_version=$(echo "$output" | grep "^FAILURE_VERSION=" | cut -d"'" -f2 || echo "")
     failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
 
-    if echo "$output" | grep -q "^FAILURE_MANUAL<<"; then
-      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL<</,/^END_MANUAL/p' | sed '1d;$d')
+    if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
+      failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
     fi
 
     cat >> "$FAILURES_LOG" << EOF

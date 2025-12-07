@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # This library requires error-handling.sh (for structured logging)
-# and install-helpers.sh (for failure reporting)
+# and failure-logging.sh (for failure reporting)
 # They should already be sourced by the calling script
 
 # Get platform_arch string with customizable capitalization

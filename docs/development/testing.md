@@ -86,7 +86,7 @@ Located in `management/testing/`:
 - `test-wsl-install-docker.sh` - WSL Ubuntu testing with Docker
 - `test-arch-install-docker.sh` - Arch Linux testing with Docker
 - `test-macos-install-user.sh` - macOS testing with fresh user account
-- `test-install-helpers.sh` - Shared utilities for formatting and timing
+- `helpers.sh` - Shared utilities for formatting and timing
 
 ### Why Docker for Testing
 

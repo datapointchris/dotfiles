@@ -32,7 +32,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 # Mock install_from_tarball that always fails
 install_from_tarball() {

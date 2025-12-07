@@ -14,6 +14,10 @@ Comprehensive research documentation for AI-assisted development, tools, and wor
 
     Research on AI-assisted development, Claude Code integration, context engineering, and automated workflows
 
+- :material-docker: __[Development Environments](development-environments.md)__
+
+    Comprehensive comparison of development environments: devcontainers, WSL2, VMs, Docker, remote development, and Nix-based approaches with dotfiles integration patterns
+
 </div>
 
 ## About Research Documentation

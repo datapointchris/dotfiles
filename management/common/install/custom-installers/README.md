@@ -28,8 +28,8 @@ Scripts in this directory typically source:
 ```bash
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/lib/platform-detection.sh"  # If platform-specific
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"  # For error reporting
+source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"  # If platform-specific
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"  # For error reporting
 ```
 
 ## Standard Pattern
@@ -41,7 +41,7 @@ set -uo pipefail
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 print_banner "Installing ToolName"
 

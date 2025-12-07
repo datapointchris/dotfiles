@@ -26,7 +26,7 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 FAILURES_LOG="$TEST_DIR/failures.txt"
 export FAILURES_LOG
 
-source "$DOTFILES_DIR/management/lib/run-installer.sh"
+source "$DOTFILES_DIR/management/orchestration/run-installer.sh"
 
 # Backup binaries we're going to test
 declare -A BACKUPS

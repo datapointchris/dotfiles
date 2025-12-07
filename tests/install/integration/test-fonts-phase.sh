@@ -8,7 +8,7 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/lib/run-installer.sh"
+source "$DOTFILES_DIR/management/orchestration/run-installer.sh"
 
 # Test setup
 TEST_DIR="/tmp/font-installer-test-$$"

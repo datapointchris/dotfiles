@@ -27,7 +27,7 @@ Scripts in this directory typically source:
 ```bash
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"  # For error reporting
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"  # For error reporting
 ```
 
 ## Standard Patterns
@@ -43,7 +43,7 @@ set -euo pipefail
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 PLUGIN_MANAGER_DIR="$HOME/.local/share/plugin-manager"
 
@@ -107,7 +107,7 @@ set -euo pipefail
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.local/share/zsh/plugins}"
 mkdir -p "$ZSH_CUSTOM"

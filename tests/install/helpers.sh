@@ -11,7 +11,7 @@ set -euo pipefail
 # Ensure this file is sourced, not executed
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "Error: This file should be sourced, not executed directly"
-  echo "Usage: source test-install-helpers.sh"
+  echo "Usage: source helpers.sh"
   exit 1
 fi
 

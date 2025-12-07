@@ -305,7 +305,7 @@ Located in `management/scripts/`:
 
 **Core Helpers**:
 
-- `install-install-helpers.sh` - Shared functions for GitHub binary installation, version checking, manual install instructions
+- `failure-logging.sh` - Structured failure reporting for installer scripts
 
 **GitHub Release Tools**:
 
@@ -330,7 +330,7 @@ Located in `management/scripts/`:
 
 - `install-tmux-plugins.sh` - Install tmux plugins
 
-All GitHub release scripts use `install-install-helpers.sh` for consistent error handling, version checking, and graceful firewall failure recovery with manual installation instructions.
+All installer scripts use `failure-logging.sh` for consistent structured error reporting and manual recovery instructions.
 
 ### Taskfile Organization
 

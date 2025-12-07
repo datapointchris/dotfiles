@@ -7,7 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 BINARY_NAME="tenv"
 REPO="tofuutils/tenv"
@@ -23,7 +23,7 @@ VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 
 # Detect platform (tenv uses x86_64 and arm64 directly)
-source "$DOTFILES_DIR/management/lib/platform-detection.sh"
+source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 
 OS=$(detect_os)
 RAW_ARCH=$(uname -m)

@@ -13,8 +13,8 @@ cd "$DOTFILES_DIR" || exit 1
 
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
-source "$DOTFILES_DIR/management/lib/run-installer.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/management/orchestration/run-installer.sh"
 
 FAILURES_LOG="/tmp/test-install-$(date +%s).log"
 export FAILURES_LOG

@@ -119,7 +119,7 @@ docker exec "$CONTAINER_NAME" bash -c "
   # Source libraries
   source platforms/common/.local/shell/logging.sh
   source platforms/common/.local/shell/formatting.sh
-  source management/common/lib/install-helpers.sh
+  source management/common/lib/failure-logging.sh
 
   # Initialize failure registry
   init_failure_registry

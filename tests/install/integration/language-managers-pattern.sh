@@ -17,7 +17,7 @@ DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # Source libraries
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 # Colors
 GREEN='\033[0;32m'
@@ -54,7 +54,7 @@ set -uo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 # Simulate language manager installer that fails
 TOOL_NAME="mock-lang-manager"

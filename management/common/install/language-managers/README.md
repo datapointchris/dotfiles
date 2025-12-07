@@ -27,7 +27,7 @@ All scripts in this directory source:
 ```bash
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"  # For error reporting
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"  # For error reporting
 ```
 
 ## Standard Pattern
@@ -40,7 +40,7 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 print_banner "Installing ToolName"
 

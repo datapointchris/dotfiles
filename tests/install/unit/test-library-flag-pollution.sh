@@ -93,7 +93,7 @@ echo ""
 test_library "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 echo ""
 
-test_library "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
+test_library "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -101,7 +101,7 @@ echo "Testing Management Libraries"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-test_library "$DOTFILES_DIR/management/lib/platform-detection.sh"
+test_library "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 echo ""
 
 test_library "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"

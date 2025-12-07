@@ -1,36 +1,76 @@
-# Taskfile Helper Scripts
+# Common Installation Scripts
 
-Shell scripts used by taskfiles for complex operations.
+Cross-platform installer scripts organized by installation method. These scripts are called by `install.sh` via `run_installer()`.
 
-## Why Separate Scripts?
+## Directory Structure
 
-Following Taskfile best practices:
-
-- Complex shell logic moved to separate scripts
-- Easier to test and debug
-- Better error handling with `set -euo pipefail`
-- Cleaner taskfile YAML
-
-## Usage
-
-Scripts are called from taskfiles:
-
-```yaml
-tasks:
-  install-node:
-    cmds:
-      - NVM_DIR={{.NVM_DIR}} {{.ROOT_DIR}}/management/scripts/nvm-install-node.sh {{.NODE_VERSION}}
+```text
+management/common/install/
+├── github-releases/     # Install binaries from GitHub releases
+├── fonts/               # Install Nerd Fonts and font families
+├── language-managers/   # Install language version managers
+├── language-tools/      # Install tools via language package managers
+├── plugins/             # Install tmux/nvim/shell plugins
+└── custom-installers/   # Tools with unique installation methods
 ```
 
-## Scripts
+Each category has its own README with specific examples and patterns.
 
-- **nvm-install-node.sh** - Install specific Node.js version via nvm
-- **nvm-install-lts.sh** - Install latest LTS Node.js via nvm
-- **npm-install-globals.sh** - Install npm global packages (requires nvm)
+## Installation Flow
 
-All scripts:
+```yaml
+install.sh
+    ↓ sources orchestration/run-installer.sh
+run_installer()
+    ↓ executes
+installer script (e.g., github-releases/lazygit.sh)
+    ↓ sources common/lib/ utilities
+    - failure-logging.sh (error reporting)
+    - github-release-installer.sh (GitHub release helpers)
+    - font-installer.sh (font installation)
+```
 
-- Exit on error (`set -euo pipefail`)
-- Are executable (`chmod +x`)
-- Handle their own error messages
-- Return non-zero on failure
+## Standard Installer Pattern
+
+All installer scripts follow this pattern:
+
+```bash
+#!/usr/bin/env bash
+set -uo pipefail
+
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+# + category-specific libraries
+
+print_banner "Installing Tool"
+
+# Idempotency check
+if already_installed; then
+  log_success "already installed"
+  exit 0
+fi
+
+# Installation logic
+if ! install_tool; then
+  manual_steps="..."
+  output_failure_data "tool" "$URL" "$VERSION" "$manual_steps" "Reason"
+  log_error "Installation failed"
+  exit 1
+fi
+
+log_success "Installation complete"
+```
+
+## Key Principles
+
+**Idempotency**: All scripts check if already installed and exit 0 if so
+
+**Error Reporting**: All scripts use `output_failure_data()` for structured failures
+
+**Explicit Configuration**: Each script contains its own configuration inline (no complex YAML parsing)
+
+**No set -e**: Scripts use explicit error checking (`if ! command; then`) instead of `set -e` to ensure `output_failure_data()` runs before exit
+
+See individual category READMEs for specific examples and patterns.

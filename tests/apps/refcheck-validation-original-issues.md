@@ -14,7 +14,7 @@ This document validates that the enhanced refcheck can now detect the 4 original
 ### Issue 2: Relative path without $DOTFILES_DIR in single-installer.sh
 
 **File**: `tests/install/integration/single-installer.sh:16`
-**Original bug**: `source management/common/lib/install-helpers.sh`
+**Original bug**: `source management/common/lib/failure-logging.sh`
 **Problem**: Fragile relative path, should use `$DOTFILES_DIR/management/...`
 **Status**: ⚠️ **Partially caught** - refcheck catches this if run from wrong directory, but doesn't enforce $DOTFILES_DIR usage
 

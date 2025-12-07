@@ -202,6 +202,8 @@ nav:
           - Log Monitoring Research: claude-code/log-monitoring-research.md
           - Legacy Usage Guide: claude-code/usage-guide.md
   - Research:
+      - research/index.md
+      - Development Environments: research/development-environments.md
       - AI Research:
           - Overview: research/ai/overview.md
           - Context Engineering: research/ai/context-engineering.md
