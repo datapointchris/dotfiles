@@ -23,6 +23,18 @@ setup() {
   assert_output --partial "Installing Terraform Language Server"
 }
 
+@test "awscli: accepts --update flag" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/awscli.sh" --update
+  assert_success
+  assert_output --partial "Checking AWS CLI for updates"
+}
+
+@test "awscli: normal install mode works" {
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/awscli.sh"
+  assert_success
+  assert_output --partial "Installing AWS CLI"
+}
+
 # Test version checking behavior
 
 @test "terraform-ls: shows already at latest version when current" {
@@ -30,4 +42,14 @@ setup() {
   run bash "$DOTFILES_DIR/management/common/install/custom-installers/terraform-ls.sh" --update
   assert_success
   assert_output --partial "Already at latest version"
+}
+
+@test "awscli: reports current version on macOS" {
+  if [[ "$OSTYPE" != "darwin"* ]]; then
+    skip "macOS-specific test"
+  fi
+
+  run bash "$DOTFILES_DIR/management/common/install/custom-installers/awscli.sh" --update
+  assert_success
+  assert_output --partial "Current version"
 }

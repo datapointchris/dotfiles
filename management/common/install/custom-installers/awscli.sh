@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+UPDATE_MODE=false
+if [[ "${1:-}" == "--update" ]]; then
+  UPDATE_MODE=true
+fi
+
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-print_banner "Installing AWS CLI v2"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner "Checking AWS CLI for updates"
+else
+  print_banner "Installing AWS CLI v2"
+fi
 
 OS=$(detect_os)
 ARCH=$(detect_arch)
@@ -15,26 +24,47 @@ ARCH=$(detect_arch)
 if [[ "$OS" == "darwin" ]]; then
   if command -v aws >/dev/null 2>&1; then
     CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
-    log_success "macOS: AWS CLI managed by Homebrew"
-    log_success "Current version: $CURRENT_VERSION"
+    if [[ "$UPDATE_MODE" == "true" ]]; then
+      log_success "Current version: $CURRENT_VERSION"
+      log_info "macOS: AWS CLI managed by Homebrew"
+      log_info "Update via: brew upgrade awscli"
+    else
+      log_success "macOS: AWS CLI managed by Homebrew"
+      log_success "Current version: $CURRENT_VERSION"
+    fi
   else
-    log_info "macOS: AWS CLI will be installed via Homebrew"
-    log_info "Add 'awscli' to packages.yml and run: task macos:install-packages"
+    if [[ "$UPDATE_MODE" == "true" ]]; then
+      log_info "AWS CLI not installed"
+      log_info "macOS: Install via Homebrew: brew install awscli"
+    else
+      log_info "macOS: AWS CLI will be installed via Homebrew"
+      log_info "Add 'awscli' to packages.yml and run: task macos:install-packages"
+    fi
   fi
   exit 0
 fi
 
-# Linux: Check if AWS CLI is already installed at expected location (skip check if FORCE_INSTALL=true)
-if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
-  CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
-  log_success "Current version: $CURRENT_VERSION, skipping"
-  exit 0
-fi
+# Linux: Version checking
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  if ! command -v aws >/dev/null 2>&1; then
+    log_info "AWS CLI not installed, will install"
+  else
+    CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
+    log_info "Current version: $CURRENT_VERSION"
+    log_info "AWS installer will check for updates..."
+  fi
+else
+  if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [ -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
+    CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
+    log_success "Current version: $CURRENT_VERSION, skipping"
+    exit 0
+  fi
 
-if [ ! -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
-  ALTERNATE_LOCATION=$(command -v aws)
-  log_warning "aws found at $ALTERNATE_LOCATION"
-  log_info "AWS CLI official installer will be used"
+  if [ ! -f "$HOME/.local/bin/aws" ] && command -v aws >/dev/null 2>&1; then
+    ALTERNATE_LOCATION=$(command -v aws)
+    log_warning "aws found at $ALTERNATE_LOCATION"
+    log_info "AWS CLI official installer will be used"
+  fi
 fi
 
 case $OS in
@@ -125,4 +155,8 @@ Re-run verification:
   exit 1
 fi
 
-print_banner_success "AWS CLI v2 installation complete"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+  print_banner_success "AWS CLI update check complete"
+else
+  print_banner_success "AWS CLI v2 installation complete"
+fi
