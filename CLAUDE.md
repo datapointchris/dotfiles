@@ -2,7 +2,19 @@
 
 ## Critical Rules
 
-**Note**: Git Safety Protocol, Git Commit Messages, and Git Hygiene rules are defined in `~/.claude/CLAUDE.md` and apply universally to all projects.
+**Note**: The following universal rules are defined in `~/.claude/CLAUDE.md` and apply to ALL projects:
+
+- System Environment (GNU tools)
+- Git Safety Protocol, Git Commit Messages, Git Hygiene
+- Commit Agent Workflow
+- Never Commit Untested Fixes
+- Problem Solving Philosophy (including "never repeat same test")
+- Code Comments Philosophy
+- Tools Over Instructions
+- Command Output Handling
+- Logsift Monitoring
+
+**This file contains ONLY dotfiles-specific rules and patterns.**
 
 **File Naming and Organization**:
 
@@ -10,44 +22,23 @@
 - Exceptions: README.md and CLAUDE.md (standard conventions)
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
-**App Installation Patterns** (⚠️ Common source of confusion - 3rd time addressing this):
+**App Installation Patterns** (⚠️ CRITICAL - Read this carefully, mistakes here are costly):
 
-Two distinct app types with different installation methods:
+**This has caused issues 3+ times. Follow these rules exactly:**
 
 1. **Go Apps** (sess/, toolbox/): Directories with source code
-   - Built with `task install` → installs to `~/go/bin/`
-   - **NEVER symlinked** - they install themselves
+   - ✅ Built with `task install` → installs to `~/go/bin/`
+   - ❌ **NEVER symlinked** - they install themselves
    - Added via Taskfile.yml: `cd apps/common/{app} && task install`
 
 2. **Shell Script Apps** (menu, notes, theme-sync, etc.): Executable files
-   - Symlinked from `apps/{platform}/` → `~/.local/bin/`
-   - Handled by `link_apps()` in symlinks manager
-   - `link_apps()` skips directories, only symlinks files
+   - ✅ Symlinked from `apps/{platform}/` → `~/.local/bin/`
+   - ✅ Handled by `link_apps()` in symlinks manager
+   - Note: `link_apps()` skips directories, only symlinks files
+
+**Test your understanding**: Before modifying app installation, re-read this section.
 
 See `docs/learnings/app-installation-patterns.md` for full details.
-
-**Problem Solving Philosophy**:
-
-- Solve root causes, not symptoms - no band-aid solutions
-- Think through issues before adding code - analyze existing behavior first
-- Test minimal changes instead of complex workarounds
-- DRY principles - avoid duplication and unnecessary abstractions
-- When debugging, check symlinks first after structural changes
-- **NEVER repeat the same test/approach more than 2-3 times** - If stuck, STOP and:
-  1. Research the issue online (web search for error messages/behavior)
-  2. Get the bigger picture of how the system works
-  3. Think through the problem systematically with new information
-  4. Test a different hypothesis based on research
-  - Running the same command 10 times with minor variations wastes time and misses root cause
-
-**CRITICAL: Never Commit Untested Fixes** (⚠️ MANDATORY):
-
-- **NEVER commit a "fix" that has not been tested and validated**
-- **NEVER use git commit directly - ALWAYS use the commit-agent via Task tool**
-- Workflow: Make change → Test thoroughly → Verify it works → THEN commit via commit-agent
-- If tests fail: iterate and fix until tests pass, ONLY THEN commit
-- Commits labeled "fix" MUST have evidence the issue is actually fixed
-- A commit history full of untested "fixes" that don't work is worse than no commits
 
 **Critical Bash Gotcha - Arithmetic with set -e** (⚠️ This has caught us 4+ times):
 
@@ -94,10 +85,12 @@ The dotfiles provide three shell libraries in `~/.local/shell/`:
 
 **Decision Guide**:
 
-- Script will be logged/monitored? → Use `log_*` functions
-- Script is purely visual/interactive? → Use `print_*` status functions
-- Script has visual structure? → Use `print_header/section/banner/title`
-- Script needs cleanup/traps? → Source `error-handling.sh`
+| Scenario | Library | Functions |
+|----------|---------|-----------|
+| Script will be logged/monitored | logging.sh | log_info/success/warning/error/fatal |
+| Script is purely visual/interactive | formatting.sh | print_success/error/warning/info |
+| Script needs visual structure | formatting.sh | print_header/section/banner/title |
+| Script needs cleanup/traps | error-handling.sh | enable_error_traps, register_cleanup |
 
 See `docs/architecture/shell-libraries.md` for complete guide
 
@@ -118,24 +111,14 @@ See `docs/architecture/shell-libraries.md` for complete guide
 - This XDG-compliant setup is intentional and correct
 - Standalone shell scripts in `apps/` must source logging.sh library if they need logging (they run in their own bash process, not in the shell environment)
 
-**run-and-summarize.sh Usage** (⚠️ CRITICAL - DO NOT RUN IN BACKGROUND):
+**run-and-summarize.sh Usage** (⚠️ Legacy - prefer logsift for new code):
 
-- NEVER use `run_in_background: true` when calling run-and-summarize.sh
-- NEVER add `&` to the end of the command
-- This script handles backgrounding internally and shows periodic updates
-- Running it in background defeats the purpose of the monitoring wrapper
-- Correct usage:
-
-```bash
-# ✅ CORRECT - Run in foreground
-bash management/run-and-summarize.sh "task install" /tmp/log.txt 30
-
-# ❌ WRONG - Do not background
-bash management/run-and-summarize.sh "task install" /tmp/log.txt 30 &
-
-# ❌ WRONG - Do not use run_in_background flag in Bash tool
-<parameter name="run_in_background">true
-```
+- **Note**: This script predates logsift. For new code, use logsift instead (see universal CLAUDE.md)
+- If using run-and-summarize.sh for existing code:
+  - NEVER use `run_in_background: true` when calling it
+  - NEVER add `&` to the end of the command
+  - This script handles backgrounding internally and shows periodic updates
+  - Correct usage: `bash management/run-and-summarize.sh "task install" /tmp/log.txt 30`
 
 **Installation Script Testing Constraints**:
 
