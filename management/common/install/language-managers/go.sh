@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/install-helpers.sh"
-
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 MIN_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.go.min_version)
 
 print_banner "Installing Go"

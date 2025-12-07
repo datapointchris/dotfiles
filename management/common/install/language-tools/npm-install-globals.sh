@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
@@ -26,7 +26,6 @@ fi
 echo "Installing npm global packages from packages.yml..."
 
 # Get npm packages from packages.yml via Python parser
-DOTFILES_DIR="$HOME/dotfiles"
 NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
 
 # Install each package (skip if already installed at same version)

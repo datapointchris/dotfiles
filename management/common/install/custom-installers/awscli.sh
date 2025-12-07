@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/lib/platform-detection.sh"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/install-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/install-helpers.sh"
 
 print_banner "Installing AWS CLI v2"
 

@@ -5,7 +5,7 @@ set -euo pipefail
 # Setup and Initialization
 # ================================================================
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
