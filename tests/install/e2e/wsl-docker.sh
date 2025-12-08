@@ -403,7 +403,7 @@ STEP_START=$(date +%s)
   docker exec "$CONTAINER_NAME" bash -c "
     ZSHDOTDIR=${CONTAINER_HOME}/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/tests/install/utils/verify-installed-packages.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${CONTAINER_HOME}/dotfiles/tests/install/verification/verify-installed-packages.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -424,7 +424,7 @@ STEP_START=$(date +%s)
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/tests/install/utils/detect-installed-duplicates.sh"
+  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/tests/install/verification/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

@@ -191,7 +191,7 @@ STEP_START=$(date +%s)
   # Run verification script as test user in fresh zsh shell (continue even if verification fails)
   sudo -u "$TEST_USER" bash -c "
     export ZSHDOTDIR=/Users/$TEST_USER/.config/zsh
-    zsh -c \"source \$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /Users/$TEST_USER/dotfiles/tests/install/utils/verify-installed-packages.sh\"
+    zsh -c \"source \$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /Users/$TEST_USER/dotfiles/tests/install/verification/verify-installed-packages.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -211,7 +211,7 @@ STEP_START=$(date +%s)
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
-  sudo -u "$TEST_USER" bash "/Users/${TEST_USER}/dotfiles/tests/install/utils/detect-installed-duplicates.sh"
+  sudo -u "$TEST_USER" bash "/Users/${TEST_USER}/dotfiles/tests/install/verification/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
