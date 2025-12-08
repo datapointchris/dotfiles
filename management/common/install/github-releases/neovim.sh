@@ -13,7 +13,7 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --github-binary=neovim --field=repo)
+REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --github-binary=neovim --field=repo)
 
 OS=$(detect_os)
 ARCH=$(detect_arch)

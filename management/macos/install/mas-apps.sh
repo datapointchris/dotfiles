@@ -28,7 +28,7 @@ FAILED=0
 SKIPPED=0
 
 # Install each app
-/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=mas | while read -r app_id; do
+/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=mas | while read -r app_id; do
   # Check if already installed
   if mas list | grep -q "^$app_id "; then
     log_info "App $app_id already installed"

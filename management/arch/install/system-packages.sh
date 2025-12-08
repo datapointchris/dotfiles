@@ -12,13 +12,13 @@ print_section "Installing Arch Linux packages" "cyan"
 log_info "Updating package database..."
 sudo pacman -Sy
 
-# Bootstrap: Install python-yaml first (needed for parse-packages.py)
+# Bootstrap: Install python-yaml first (needed for parse_packages.py)
 log_info "Installing bootstrap packages..."
 sudo pacman -S --needed --noconfirm python-yaml
 
 # Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=pacman | tr '\n' ' ')
+PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=pacman | tr '\n' ' ')
 # shellcheck disable=SC2086
 sudo pacman -S --needed --noconfirm $PACKAGES
 

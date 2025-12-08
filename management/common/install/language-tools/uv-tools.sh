@@ -25,7 +25,7 @@ fi
 print_section "Installing Python tools via uv" "cyan"
 
 # Get uv tools from packages.yml via Python parser
-/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=uv | while read -r tool; do
+/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=uv | while read -r tool; do
   echo "  Installing $tool..."
   if uv tool install "$tool"; then
     echo "    ✓ $tool installed"

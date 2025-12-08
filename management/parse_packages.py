@@ -3,24 +3,24 @@
 Parse packages.yml and output package lists for installation.
 
 Usage:
-    python parse-packages.py --type=system --manager=apt
-    python parse-packages.py --type=cargo
-    python parse-packages.py --type=npm
-    python parse-packages.py --type=uv
-    python parse-packages.py --type=go
-    python parse-packages.py --type=mas
-    python parse-packages.py --type=github
-    python parse-packages.py --type=linux-gui
-    python parse-packages.py --type=macos-casks
-    python parse-packages.py --taps
-    python parse-packages.py --get=runtimes.node.version
+    python parse_packages.py --type=system --manager=apt
+    python parse_packages.py --type=cargo
+    python parse_packages.py --type=npm
+    python parse_packages.py --type=uv
+    python parse_packages.py --type=go
+    python parse_packages.py --type=mas
+    python parse_packages.py --type=github
+    python parse_packages.py --type=linux-gui
+    python parse_packages.py --type=macos-casks
+    python parse_packages.py --taps
+    python parse_packages.py --get=runtimes.node.version
 
 Note: This script requires PyYAML to be installed.
     - Install scripts use /usr/bin/python3 which has PyYAML installed
     - If running manually and getting "No module named 'yaml'", use:
-        /usr/bin/python3 management/parse-packages.py [args]
+        /usr/bin/python3 management/parse_packages.py [args]
       OR
-        uv run --python python3 management/parse-packages.py [args]
+        uv run --python python3 management/parse_packages.py [args]
 """
 
 import argparse

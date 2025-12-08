@@ -1,5 +1,5 @@
 """
-Tests for parse-packages.py
+Tests for parse_packages.py
 
 Run with: pytest tests/management/test_parse_packages.py
 Or from project root: python -m pytest tests/management/
@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-# Add management directory to path so we can import parse-packages
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "management"))
 import parse_packages
 

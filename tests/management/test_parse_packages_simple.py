@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Simple tests for parse-packages.py (no pytest required)
+Simple tests for parse_packages.py (no pytest required)
 
 Run with: /usr/bin/python3 tests/management/test_parse_packages_simple.py
 or: python3 tests/management/test_parse_packages_simple.py (if yaml is available)
@@ -9,14 +9,8 @@ or: python3 tests/management/test_parse_packages_simple.py (if yaml is available
 import sys
 from pathlib import Path
 
-# Add management directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "management"))
-
-# Import parse-packages.py (has hyphen so use importlib)
-import importlib.util
-spec = importlib.util.spec_from_file_location("parse_packages", Path(__file__).parent.parent.parent / "management" / "parse-packages.py")
-parse_packages = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(parse_packages)
+import parse_packages
 
 
 def test_get_value():
@@ -152,7 +146,7 @@ def test_get_shell_plugins():
 
 def main():
     """Run all tests."""
-    print("Running parse-packages.py tests...\n")
+    print("Running parse_packages.py tests...\n")
 
     test_get_value()
     test_get_cargo_packages()

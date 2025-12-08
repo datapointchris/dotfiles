@@ -29,7 +29,7 @@ Or try cargo-binstall directly:
     log_warning "$package installation failed (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=cargo)
+done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo)
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT package(s) failed to install"

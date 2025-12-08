@@ -73,7 +73,7 @@ else
 fi
 
 # Read Node version from packages.yml using Python parser
-NODE_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.node.version)
+NODE_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --get=runtimes.node.version)
 
 # Source nvm to check current version
 if [[ -s "$NVM_DIR/nvm.sh" ]]; then

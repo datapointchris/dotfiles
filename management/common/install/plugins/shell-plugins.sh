@@ -22,7 +22,7 @@ print_section "Installing shell plugins" "cyan"
 mkdir -p "$PLUGINS_DIR"
 
 # Read plugins from management/packages.yml via Python parser
-PLUGINS=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=shell-plugins --format=name_repo)
+PLUGINS=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=shell-plugins --format=name_repo)
 
 while IFS='|' read -r name repo; do
   PLUGIN_DIR="$PLUGINS_DIR/$name"

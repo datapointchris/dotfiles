@@ -165,23 +165,6 @@ system_packages:
   # On Linux (apt/pacman), completions are included with docker packages
 
   # Programming Languages
-  - name: lua
-    apt: lua5.4
-    pacman: lua
-    brew: lua
-    description: Lua scripting language
-
-  - name: luajit
-    apt: luajit
-    pacman: luajit
-    brew: luajit
-    description: LuaJIT compiler
-
-  - name: luarocks
-    pacman: luarocks
-    brew: luarocks
-    description: Lua package manager
-
   - name: ruby
     brew: ruby
     description: Ruby programming language (macOS only in Brewfile)

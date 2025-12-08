@@ -116,7 +116,7 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
 fi
 
 # Read Terraform version from packages.yml
-TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --get=runtimes.terraform.version)
+TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --get=runtimes.terraform.version)
 
 print_section "Installing Terraform ${TERRAFORM_VERSION}" "cyan"
 

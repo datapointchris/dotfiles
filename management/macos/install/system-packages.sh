@@ -20,7 +20,7 @@ fi
 
 # Step 2: Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=brew | tr '\n' ' ')
+PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=brew | tr '\n' ' ')
 # shellcheck disable=SC2086
 if brew install $PACKAGES; then
   log_success "System packages installed"

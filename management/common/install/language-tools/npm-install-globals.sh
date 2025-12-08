@@ -26,7 +26,7 @@ fi
 echo "Installing npm global packages from packages.yml..."
 
 # Get npm packages from packages.yml via Python parser
-NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=npm)
+NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=npm)
 
 FAILURE_COUNT=0
 for package in $NPM_PACKAGES; do

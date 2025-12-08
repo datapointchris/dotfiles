@@ -42,7 +42,7 @@ Tool will be installed to:
     log_warning "Failed to install $tool (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=go)
+done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=go)
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT tool(s) failed to install"

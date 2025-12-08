@@ -12,7 +12,7 @@ print_section "Installing WSL Ubuntu packages" "cyan"
 log_info "Updating package lists..."
 sudo apt update
 
-# Bootstrap: Install python3-yaml first (needed for parse-packages.py)
+# Bootstrap: Install python3-yaml first (needed for parse_packages.py)
 log_info "Installing bootstrap packages..."
 sudo apt install -y python3-yaml
 
@@ -22,11 +22,11 @@ log_info "Installing system packages from packages.yml..."
 # Skip Docker packages if running in Docker test environment
 if [[ "${DOTFILES_DOCKER_TEST:-}" == "true" ]]; then
   log_info "Docker test mode - excluding Docker packages"
-  PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=apt | \
+  PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=apt | \
     grep -v -E '^(docker-ce|docker-ce-cli|containerd\.io|docker-buildx-plugin|docker-compose-plugin)$' | \
     tr '\n' ' ')
 else
-  PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" --type=system --manager=apt | tr '\n' ' ')
+  PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=apt | tr '\n' ' ')
 fi
 
 # shellcheck disable=SC2086
