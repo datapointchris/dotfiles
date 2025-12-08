@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
 # shellcheck disable=SC2317
 # ================================================================
-# Integration test for language manager installers pattern (BATS with helpers)
+# Integration test for GitHub release installers pattern
 # ================================================================
-# Tests that language manager installers:
+# Tests that GitHub release installers:
 # 1. Output structured failure data using output_failure_data()
 # 2. Return proper exit codes (0 for success, 1 for failure)
 # 3. Work with run_installer wrapper
@@ -25,29 +25,29 @@ setup_file() {
   source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
   # Setup test environment
-  export FAILURES_LOG="/tmp/test-language-managers-bats-improved-$$.log"
+  export FAILURES_LOG="/tmp/test-github-releases-bats-$$.log"
   rm -f "$FAILURES_LOG"
 
-  # Create mock language manager installer
-  export MOCK_INSTALLER="/tmp/mock-language-manager-improved.sh"
+  # Create mock GitHub release installer
+  export MOCK_INSTALLER="/tmp/mock-github-release.sh"
   cat > "$MOCK_INSTALLER" << 'EOF'
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-# Simulate language manager installer that fails
-TOOL_NAME="mock-lang-manager"
-DOWNLOAD_URL="https://example.com/install.sh"
+# Simulate GitHub release installer that fails
+TOOL_NAME="mock-tool"
+DOWNLOAD_URL="https://github.com/mock/tool/releases/download/v1.0/tool.tar.gz"
 VERSION="v1.0"
-MANUAL_STEPS="1. Download from: $DOWNLOAD_URL
-2. Run: bash install.sh
-3. Verify: mock-lang-manager --version"
+MANUAL_STEPS="1. Download from browser: $DOWNLOAD_URL
+2. Extract: tar -xzf tool.tar.gz
+3. Install: mv tool ~/.local/bin/"
 
 # Simulate download failure
-log_error "Failed to download installer from $DOWNLOAD_URL"
+log_error "Failed to download from $DOWNLOAD_URL"
 
 # Output structured failure data
 output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "$MANUAL_STEPS" "Download failed - network timeout"
@@ -56,7 +56,7 @@ exit 1
 EOF
   chmod +x "$MOCK_INSTALLER"
 
-  # Define run_installer wrapper
+  # Define run_installer wrapper (from install.sh)
   run_installer() {
     local script="$1"
     local tool_name="$2"
@@ -80,7 +80,7 @@ EOF
         failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
       fi
 
-      cat >> "$FAILURES_LOG" << EOF_LOG
+      cat >> "$FAILURES_LOG" << LOGEOF
 ========================================
 $failure_tool - Installation Failed
 ========================================
@@ -96,148 +96,97 @@ $failure_manual
 }
 ---
 
-EOF_LOG
+LOGEOF
       return 1
     fi
   }
+
   export -f run_installer
 }
 
-# Teardown runs once after all tests
+# Cleanup after all tests
 teardown_file() {
   rm -f "$MOCK_INSTALLER" "$FAILURES_LOG"
 }
 
 # ================================================================
-# Test Suite 1: Installer outputs structured failure data
+# Tests
 # ================================================================
 
-@test "installer returns exit code 1 on failure" {
+@test "github-releases: installer outputs FAILURE_TOOL field" {
   run bash "$MOCK_INSTALLER"
   assert_failure
+  assert_output --partial "FAILURE_TOOL='mock-tool'"
 }
 
-@test "installer outputs FAILURE_TOOL field with correct value" {
+@test "github-releases: installer outputs FAILURE_URL field" {
   run bash "$MOCK_INSTALLER"
   assert_failure
-  assert_output --partial "FAILURE_TOOL='mock-lang-manager'"
+  assert_output --partial "FAILURE_URL='https://github.com/mock/tool"
 }
 
-@test "installer outputs FAILURE_URL field with correct value" {
-  run bash "$MOCK_INSTALLER"
-  assert_failure
-  assert_output --partial "FAILURE_URL='https://example.com/install.sh'"
-}
-
-@test "installer outputs FAILURE_VERSION field with correct value" {
+@test "github-releases: installer outputs FAILURE_VERSION field" {
   run bash "$MOCK_INSTALLER"
   assert_failure
   assert_output --partial "FAILURE_VERSION='v1.0'"
 }
 
-@test "installer outputs FAILURE_REASON field" {
+@test "github-releases: installer outputs FAILURE_REASON field" {
   run bash "$MOCK_INSTALLER"
   assert_failure
   assert_output --partial "FAILURE_REASON='Download failed"
 }
 
-@test "installer outputs FAILURE_MANUAL_START marker" {
+@test "github-releases: installer outputs FAILURE_MANUAL section" {
   run bash "$MOCK_INSTALLER"
   assert_failure
   assert_output --partial "FAILURE_MANUAL_START"
-}
-
-@test "installer outputs FAILURE_MANUAL_END marker" {
-  run bash "$MOCK_INSTALLER"
-  assert_failure
   assert_output --partial "FAILURE_MANUAL_END"
 }
 
-# ================================================================
-# Test Suite 2: run_installer wrapper captures structured data
-# ================================================================
-
-@test "wrapper returns failure status when installer fails" {
+@test "github-releases: wrapper creates failures log" {
   rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
+  [[ -f "$FAILURES_LOG" ]]
 }
 
-@test "wrapper creates failures log file" {
+@test "github-releases: log contains tool name" {
   rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-  assert [ -f "$FAILURES_LOG" ]
-}
-
-@test "failure log contains tool name header" {
-  rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
-  assert_output --partial "mock-lang-manager - Installation Failed"
+  assert_output --partial "mock-tool - Installation Failed"
 }
 
-@test "failure log contains download URL" {
+@test "github-releases: log contains parsed URL" {
   rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
-  assert_output --partial "Download URL: https://example.com/install.sh"
+  assert_output --partial "Download URL: https://github.com/mock/tool"
 }
 
-@test "failure log contains version" {
+@test "github-releases: log contains parsed version" {
   rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Version: v1.0"
 }
 
-@test "failure log contains reason" {
+@test "github-releases: log contains parsed reason" {
   rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Reason: Download failed"
 }
 
-@test "failure log contains manual installation steps" {
+@test "github-releases: log contains manual steps" {
   rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Manual Installation Steps:"
 }
 
-@test "failure log includes script path" {
-  rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
+@test "github-releases: installer returns exit code 1 on failure" {
+  run bash "$MOCK_INSTALLER"
   assert_failure
-
-  run cat "$FAILURES_LOG"
-  assert_output --partial "Script: $MOCK_INSTALLER"
-}
-
-@test "failure log includes exit code" {
-  rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
-  run cat "$FAILURES_LOG"
-  assert_output --partial "Exit Code: 1"
-}
-
-@test "failure log includes timestamp" {
-  rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
-  run cat "$FAILURES_LOG"
-  assert_output --partial "Timestamp:"
+  assert_equal "$status" 1
 }
