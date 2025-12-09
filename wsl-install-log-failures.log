@@ -1,0 +1,2179 @@
+
+
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                                                                                      Dotfiles Installation - wsl
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ System Packages (apt)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+Installing WSL Ubuntu packages
+─────────────────────────────────────────────
+[INFO] ● Updating package lists...
+[sudo] password for chris:
+Get:1 https://apt.releases.hashicorp.com noble InRelease [12.9 kB]
+Get:2 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Hit:3 http://archive.ubuntu.com/ubuntu noble InRelease
+Get:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+Get:5 http://security.ubuntu.com/ubuntu noble-security/main amd64 Packages [1350 kB]
+Get:6 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+Get:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1627 kB]
+Get:8 http://security.ubuntu.com/ubuntu noble-security/main Translation-en [221 kB]
+Get:9 http://security.ubuntu.com/ubuntu noble-security/main amd64 Components [21.5 kB]
+Get:10 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Packages [915 kB]
+Get:11 http://security.ubuntu.com/ubuntu noble-security/universe Translation-en [206 kB]
+Get:12 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Components [71.4 kB]
+Get:13 http://security.ubuntu.com/ubuntu noble-security/universe amd64 c-n-f Metadata [19.4 kB]
+Get:14 http://security.ubuntu.com/ubuntu noble-security/restricted amd64 Components [212 B]
+Get:15 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Components [212 B]
+Get:16 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [175 kB]
+Get:17 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 c-n-f Metadata [15.7 kB]
+Get:18 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1501 kB]
+Get:19 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components [378 kB]
+Get:20 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 c-n-f Metadata [31.4 kB]
+Get:21 http://archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Components [212 B]
+Get:22 http://archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components [940 B]
+Get:23 http://archive.ubuntu.com/ubuntu noble-backports/main amd64 Components [7140 B]
+Get:24 http://archive.ubuntu.com/ubuntu noble-backports/universe amd64 Components [11.0 kB]
+Get:25 http://archive.ubuntu.com/ubuntu noble-backports/restricted amd64 Components [216 B]
+Get:26 http://archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Components [212 B]
+Fetched 6944 kB in 2s (3518 kB/s)
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+17 packages can be upgraded. Run 'apt list --upgradable' to see them.
+[INFO] ● Installing bootstrap packages...
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+python3-yaml is already the newest version (6.0.1-2build2).
+0 upgraded, 0 newly installed, 0 to remove and 17 not upgraded.
+[INFO] ● Installing system packages from packages.yml...
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Package docker-ce is not available, but is referred to by another package.
+This may mean that the package is missing, has been obsoleted, or
+is only available from another source
+
+Package docker-ce-cli is not available, but is referred to by another package.
+This may mean that the package is missing, has been obsoleted, or
+is only available from another source
+
+E: Package 'docker-ce' has no installation candidate
+E: Package 'docker-ce-cli' has no installation candidate
+E: Unable to locate package containerd.io
+E: Couldn't find any package by glob 'containerd.io'
+E: Unable to locate package docker-buildx-plugin
+E: Unable to locate package docker-compose-plugin
+[WARNING] ▲ Some packages may have failed to install
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Coding Fonts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[WARNING] ▲ WSL detected - fonts install to Windows (may require manual steps)
+
+
+Installing JetBrains Mono Nerd Font
+──────────────────────────────────────────────────
+[INFO] ● Downloading JetBrains Mono Nerd Font...
+[WARNING] ▲ jetbrains-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf JetBrainsMono.tar.xz
+Move to: /tmp/fonts-JetBrainsMonoNerdFont
+
+
+Installing Cascadia Code Nerd Font
+─────────────────────────────────────────────────
+[INFO] ● Downloading Cascadia Code Nerd Font...
+[WARNING] ▲ cascadia-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf CascadiaCode.tar.xz
+Move to: /tmp/fonts-CascadiaCodeNerdFont
+
+
+Installing Meslo Nerd Font
+─────────────────────────────────────────
+[INFO] ● Downloading Meslo Nerd Font...
+[WARNING] ▲ meslo-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Meslo.tar.xz
+Move to: /tmp/fonts-MesloNerdFont
+
+
+Installing Monaspace Nerd Font
+─────────────────────────────────────────────
+[INFO] ● Downloading Monaspace Nerd Font...
+[WARNING] ▲ monaspace-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Monaspace.tar.xz
+Move to: /tmp/fonts-MonaspaceNerdFont
+
+
+Installing Iosevka Nerd Font
+───────────────────────────────────────────
+[INFO] ● Downloading Iosevka Nerd Font...
+[WARNING] ▲ iosevka-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Iosevka.tar.xz
+Move to: /tmp/fonts-IosevkaNerdFont
+
+
+Installing DroidSansMono Nerd Font
+─────────────────────────────────────────────────
+[INFO] ● Downloading DroidSansMono Nerd Font...
+[WARNING] ▲ droid-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf DroidSansMono.tar.xz
+Move to: /tmp/fonts-DroidSansMonoNerdFont
+
+
+Installing SeriousShanns Nerd Font
+─────────────────────────────────────────────────
+[INFO] ● Downloading SeriousShanns Nerd Font...
+[WARNING] ▲ seriousshanns-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf ComicShannsMono.tar.xz
+Move to: /tmp/fonts-SeriousShannsNerdFont
+
+
+Installing Source Code Pro Nerd Font
+───────────────────────────────────────────────────
+[INFO] ● Downloading Source Code Pro Nerd Font...
+[WARNING] ▲ sourcecode-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf SourceCodePro.tar.xz
+Move to: /tmp/fonts-SourceCodeProNerdFont
+
+
+Installing Terminess Nerd Font
+─────────────────────────────────────────────
+[INFO] ● Downloading Terminess Nerd Font...
+[WARNING] ▲ terminess-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Terminus.tar.xz
+Move to: /tmp/fonts-TerminessNerdFont
+
+
+Installing Hack Nerd Font
+────────────────────────────────────────
+[INFO] ● Downloading Hack Nerd Font...
+[WARNING] ▲ hack-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Hack.tar.xz
+Move to: /tmp/fonts-HackNerdFont
+
+
+Installing 3270 Nerd Font
+────────────────────────────────────────
+[INFO] ● Downloading 3270 Nerd Font...
+[WARNING] ▲ 3270-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf 3270.tar.xz
+Move to: /tmp/fonts-3270NerdFont
+
+
+Installing RobotoMono Nerd Font
+──────────────────────────────────────────────
+[INFO] ● Downloading RobotoMono Nerd Font...
+[WARNING] ▲ robotomono-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf RobotoMono.tar.xz
+Move to: /tmp/fonts-RobotoMonoNerdFont
+
+
+Installing SpaceMono Nerd Font
+─────────────────────────────────────────────
+[INFO] ● Downloading SpaceMono Nerd Font...
+[WARNING] ▲ spacemono-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf SpaceMono.tar.xz
+Move to: /tmp/fonts-SpaceMonoNerdFont
+
+
+Installing Fira Code
+───────────────────────────────────
+[INFO] ● Downloading Fira Code...
+[WARNING] ▲ firacode-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually from GitHub:
+   https://github.com/tonsky/FiraCode/releases/latest
+
+Extract and install:
+   unzip Fira_Code_v6.2.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   cp ttf/*.ttf /mnt/c/Windows/Fonts/
+
+
+Installing Commit Mono
+─────────────────────────────────────
+[INFO] ● Downloading Commit Mono...
+[WARNING] ▲ commitmono-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually from:
+   https://github.com/eigilnikolajsen/commit-mono/releases/download/v1.143/CommitMono-1.143.zip
+
+Extract and install:
+   unzip CommitMono.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   cp *.otf /mnt/c/Windows/Fonts/
+
+
+Installing Intel One Mono
+────────────────────────────────────────
+[INFO] ● Downloading Intel One Mono...
+[WARNING] ▲ intelone-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually from:
+   https://github.com/intel/intel-one-mono/releases/download/V1.4.0/ttf.zip
+
+Extract and install:
+   unzip IntelOneMono.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   cp ttf/*.ttf /mnt/c/Windows/Fonts/
+
+
+Installing SGr-Iosevka Variants
+──────────────────────────────────────────────
+[INFO] ● Downloading SGr-Iosevka Variants...
+[WARNING] ▲ sgr-iosevka-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download failed
+
+
+Installing Iosevka Base
+──────────────────────────────────────
+[INFO] ● Downloading Iosevka Base...
+[WARNING] ▲ iosevka-base-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually from:
+   https://github.com/be5invis/Iosevka/releases/download/v33.3.6/PkgTTC-Iosevka-33.3.6.zip
+
+Extract and install:
+   unzip Iosevka-base.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   mv *.ttc /mnt/c/Windows/Fonts/
+
+
+Installing FiraCodeiScript
+─────────────────────────────────────────
+[INFO] ● Downloading FiraCodeiScript...
+[WARNING] ▲ firacodescript-font installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+Download manually from GitHub:
+   https://github.com/kencrocken/FiraCodeiScript/raw/master/FiraCodeiScript-Regular.ttf
+
+Or browse the repository:
+   https://github.com/kencrocken/FiraCodeiScript
+
+Save files to:
+   /mnt/c/Windows/Fonts/
+
+
+Installing Comic Mono
+────────────────────────────────────
+[INFO] ● Downloading Comic Mono...
+[INFO] ✓ Downloaded 2 files
+[INFO] ● Pruning unwanted variants...
+[INFO] ✓ Pruned 0 files (kept 2)
+[INFO] ● Standardizing filenames...
+[INFO] ● Installing to system fonts directory...
+[INFO] ● Refreshing font cache...
+[INFO] ✓ Comic Mono installation complete
+[INFO] ✓ comicmono-font installed
+
+
+Installing Victor Mono
+─────────────────────────────────────
+[INFO] ● Downloading Victor Mono...
+[INFO] ✓ Downloaded 21 files
+[INFO] ● Pruning unwanted variants...
+[INFO] ✓ Pruned 15 files (kept 6)
+[INFO] ● Standardizing filenames...
+[INFO] ● Installing to system fonts directory...
+[INFO] ● Refreshing font cache...
+[INFO] ✓ Victor Mono installation complete
+[INFO] ✓ victor-font installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Go Toolchain
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════
+Installing Go
+═══════════════════════════════════════════
+
+[INFO] ● Fetching latest version...
+[INFO] ● Latest version: go1.25.5
+[INFO] ✓ Go 1.25.2 already installed, skipping
+[INFO] ✓ go installed
+
+
+Installing Go tools
+──────────────────────────────────
+
+
+  Installing github.com/go-task/task/v3/cmd/task...
+──────────────────────────────────────────────────────────────────
+[INFO] ✓ github.com/go-task/task/v3/cmd/task installed
+
+
+  Installing github.com/cheat/cheat/cmd/cheat...
+───────────────────────────────────────────────────────────────
+[INFO] ✓ github.com/cheat/cheat/cmd/cheat installed
+
+
+  Installing github.com/terraform-docs/terraform-docs...
+───────────────────────────────────────────────────────────────────────
+[INFO] ✓ github.com/terraform-docs/terraform-docs installed
+
+
+  Installing github.com/charmbracelet/gum...
+───────────────────────────────────────────────────────────
+[INFO] ✓ github.com/charmbracelet/gum installed
+
+
+  Installing github.com/jesseduffield/lazydocker...
+──────────────────────────────────────────────────────────────────
+[INFO] ✓ github.com/jesseduffield/lazydocker installed
+
+
+  Installing github.com/rhysd/actionlint/cmd/actionlint...
+─────────────────────────────────────────────────────────────────────────
+[INFO] ✓ github.com/rhysd/actionlint/cmd/actionlint installed
+[INFO] ✓ All Go tools installed successfully to /home/chris/go/bin
+[INFO] ✓ go-tools installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GitHub Release Tools
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════
+Installing fzf (Fuzzy Finder)
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.67.0
+[INFO] ✓ fzf already installed, skipping
+[INFO] ✓ fzf installed
+═══════════════════════════════════════════
+Installing Neovim
+═══════════════════════════════════════════
+
+[INFO] ● Latest: v0.11.5
+[INFO] ✓ nvim already installed, skipping
+[INFO] ✓ neovim installed
+═══════════════════════════════════════════
+Installing LazyGit
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.57.0
+[INFO] ✓ lazygit already installed, skipping
+[INFO] ✓ lazygit installed
+═══════════════════════════════════════════
+Installing Yazi
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v25.5.31
+[INFO] ● Latest version: v25.5.31
+[INFO] ● Downloading yazi...
+[INFO] ● Extracting...
+[INFO] ● Installing to ~/.local/bin...
+[INFO] ✓ yazi and ya installed successfully
+[INFO] ● Installing flavors...
+
+  Upgrading package `tokyo-night.yazi`
+
+
+  Deploying package `tokyo-night.yazi`
+
+
+  Upgrading package `kanagawa.yazi`
+
+
+  Deploying package `kanagawa.yazi`
+
+
+  Upgrading package `gruvbox-dark.yazi`
+
+
+  Deploying package `gruvbox-dark.yazi`
+
+
+  Upgrading package `ayu-dark.yazi`
+
+
+  Deploying package `ayu-dark.yazi`
+
+
+  Upgrading package `everforest-medium.yazi`
+
+
+  Deploying package `everforest-medium.yazi`
+
+
+  Upgrading package `flexoki-dark.yazi`
+
+
+  Deploying package `flexoki-dark.yazi`
+
+[INFO] ● Installing plugins...
+
+  Upgrading package `nbpreview.yazi`
+
+
+  Deploying package `nbpreview.yazi`
+
+[INFO] ✓ yazi installed
+═══════════════════════════════════════════
+Installing Glow
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v2.1.1
+[INFO] ● Downloading glow...
+[INFO] ● Extracting...
+[INFO] ● Installing to ~/.local/bin...
+[INFO] ✓ glow installed successfully
+[INFO] ✓ glow installed
+═══════════════════════════════════════════
+Installing Duf
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.9.1
+[INFO] ● Downloading duf...
+[INFO] ● Extracting...
+[INFO] ● Installing to ~/.local/bin...
+[INFO] ✓ duf installed successfully
+[INFO] ✓ duf installed
+═══════════════════════════════════════════
+Installing TFLint
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.60.0
+[INFO] ✓ tflint already installed, skipping
+[INFO] ✓ tflint installed
+═══════════════════════════════════════════
+Installing Terraformer
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: 0.8.30
+[INFO] ● Latest version: 0.8.30
+[INFO] ● Downloading terraformer...
+[INFO] ✓ terraformer installed successfully
+[INFO] ✓ terraformer installed
+═══════════════════════════════════════════
+Installing Terrascan
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v1.19.9
+[INFO] ● Downloading terrascan...
+[INFO] ● Extracting...
+[INFO] ● Installing to ~/.local/bin...
+[INFO] ✓ terrascan installed successfully
+[INFO] ✓ terrascan installed
+═══════════════════════════════════════════
+Installing Trivy
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.68.1
+[INFO] ● Downloading trivy...
+[INFO] ● Extracting...
+[INFO] ● Installing to ~/.local/bin...
+[INFO] ✓ trivy installed successfully
+[INFO] ✓ trivy installed
+═══════════════════════════════════════════
+Installing zk
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.15.1
+[INFO] ● Latest version: v0.15.1
+[INFO] ● Downloading zk...
+[INFO] ● Extracting...
+[INFO] ● Installing to ~/.local/bin...
+[INFO] ✓ zk installed successfully
+[INFO] ✓ zk installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Custom Distribution Tools
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════
+Installing BATS Testing Framework
+═══════════════════════════════════════════
+
+[INFO] ✓ Already installed: Bats 1.13.0 at /home/chris/.local/bin/bats
+[INFO] ✓ bats installed
+═══════════════════════════════════════════
+Installing AWS CLI v2
+═══════════════════════════════════════════
+
+[INFO] ✓ Current version: 2.32.9, skipping
+[INFO] ✓ awscli installed
+═══════════════════════════════════════════
+Installing Claude Code
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: 2.0.62
+[INFO] ● Installing via official installer...
+[INFO] ✓ Claude Code installed successfully
+[INFO] ✓ Verified: 2.0.62 (Claude Code)
+═══════════════════════════════════════════
+✅ Claude Code installation complete
+═══════════════════════════════════════════
+
+[INFO] ✓ claude-code installed
+═══════════════════════════════════════════
+Installing Terraform Language Server
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v0.38.3
+[INFO] ✓ terraform-ls already installed, skipping
+[INFO] ✓ terraform-ls installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Rust/Cargo Tools
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════
+Installing Rust
+═══════════════════════════════════════════
+
+[INFO] ✓ Rust already installed: rustc 1.91.1 (ed61e7d7e 2025-11-07)
+[INFO] ✓ rust installed
+═══════════════════════════════════════════
+Installing cargo-binstall
+═══════════════════════════════════════════
+
+[INFO] ✓ cargo-binstall already installed
+[INFO] ✓ cargo-binstall installed
+═══════════════════════════════════════════
+Installing Rust CLI Tools
+═══════════════════════════════════════════
+
+[INFO] ● Reading packages from packages.yml...
+[INFO] ✓ bat already installed, skipping
+[INFO] ✓ fd-find already installed, skipping
+[INFO] ✓ eza already installed, skipping
+[INFO] ✓ zoxide already installed, skipping
+[INFO] ✓ git-delta already installed, skipping
+[INFO] ✓ tinty already installed, skipping
+[INFO] ✓ cargo-update already installed, skipping
+[INFO] ✓ All Rust CLI tools installed successfully
+[INFO] ● Installed to: ~/.cargo/bin (highest PATH priority)
+[INFO] ✓ cargo-tools installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Language Package Managers
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════
+Installing nvm and Node.js
+═══════════════════════════════════════════
+
+[INFO] ● nvm already installed
+Installing Node.js 24.11.0...
+Now using node v24.11.0 (npm v11.6.1)
+Now using node v24.11.0 (npm v11.6.1)
+default -> 24.11.0 (-> v24.11.0)
+Node.js 24.11.0 installed and set as default
+v24.11.0
+11.6.1
+[INFO] ✓ Node.js 24.11.0 installed and set as default
+═══════════════════════════════════════════
+✅ nvm and Node.js installation complete
+═══════════════════════════════════════════
+
+[INFO] ✓ nvm installed
+Installing npm global packages from packages.yml...
+  typescript-language-server already installed (skipping)
+  typescript already installed (skipping)
+  bash-language-server already installed (skipping)
+  yaml-language-server already installed (skipping)
+  vscode-langservers-extracted already installed (skipping)
+  gh-actions-language-server already installed (skipping)
+  @taplo/cli already installed (skipping)
+  eslint already installed (skipping)
+  prettier already installed (skipping)
+  markdownlint-cli already installed (skipping)
+
+All npm global packages installed successfully
+/home/chris/.config/nvm/versions/node/v24.11.0/lib
+├── @taplo/cli@0.7.0
+├── bash-language-server@5.6.0
+├── corepack@0.34.0
+├── eslint@9.39.1
+├── gh-actions-language-server@0.0.3
+├── markdownlint-cli@0.46.0
+├── npm@11.6.1
+├── prettier@3.6.2
+├── typescript-language-server@5.1.3
+├── typescript@5.9.3
+├── vscode-langservers-extracted@4.10.0
+└── yaml-language-server@1.19.2
+
+[INFO] ✓ npm-globals installed
+═══════════════════════════════════════════
+Installing uv
+═══════════════════════════════════════════
+
+[INFO] ✓ uv already installed: uv 0.8.11
+[INFO] ✓ uv installed
+
+
+Installing Python tools via uv
+─────────────────────────────────────────────
+  Installing ruff...
+    ✓ ruff installed
+  Installing mypy...
+    ✓ mypy installed
+  Installing basedpyright...
+    ✓ basedpyright installed
+  Installing codespell...
+    ✓ codespell installed
+  Installing sqlfluff...
+    ✓ sqlfluff installed
+  Installing djlint...
+    ✓ djlint installed
+  Installing keymap-drawer...
+    ✓ keymap-drawer installed
+  Installing nbpreview...
+    ✓ nbpreview installed
+  Installing numpy...
+    ✓ numpy installed
+  Installing pre-commit...
+    ✓ pre-commit installed
+  Installing tldr...
+    ✓ tldr installed
+[INFO] ✓ Python tools installed
+[INFO] ✓ uv-tools installed
+═══════════════════════════════════════════
+Installing tenv
+═══════════════════════════════════════════
+
+[INFO] ● Latest version: v4.9.0
+[INFO] ● Downloading tenv...
+[WARNING] ▲ tenv installation failed (see /tmp/dotfiles-install-failures-20251209-092234.txt)
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+/home/chris/dotfiles/management/common/install/github-releases/tenv.sh: line 68: ARCH: unbound variable
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Shell Plugins
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+Installing shell plugins
+───────────────────────────────────────
+[INFO] ● git-open already installed
+[INFO] ● zsh-vi-mode already installed
+[INFO] ● forgit already installed
+[INFO] ● zsh-syntax-highlighting already installed
+[INFO] ✓ Shell plugins installed to /home/chris/.config/zsh/plugins
+[INFO] ✓ shell-plugins installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Custom Go Applications
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+task: [clean] echo "Cleaning..."
+Cleaning...
+task: [clean] rm -f ./sess
+task: [clean] rm -f coverage.out coverage.html
+task: [clean] echo "Clean complete"
+Clean complete
+task: [build] echo "Building sess..."
+Building sess...
+task: [build] go build -ldflags "-X main.Version=0a5c034d -X main.Commit=0a5c034d" -o ./sess ./cmd/session
+task: [build] echo "Build complete: ./sess"
+Build complete: ./sess
+task: [install] echo "Installing sess to /home/chris/go/bin..."
+Installing sess to /home/chris/go/bin...
+task: [install] mkdir -p /home/chris/go/bin
+task: [install] cp ./sess /home/chris/go/bin/sess
+task: [install] chmod +x /home/chris/go/bin/sess
+task: [install] echo "Installed: /home/chris/go/bin/sess"
+Installed: /home/chris/go/bin/sess
+task: [clean] echo "Cleaning..."
+Cleaning...
+task: [clean] rm -f ./toolbox
+task: [clean] rm -f coverage.out coverage.html
+task: [clean] echo "Clean complete"
+Clean complete
+task: [build] echo "Building toolbox..."
+Building toolbox...
+task: [build] go build -o ./toolbox
+task: [build] echo "Build complete: ./toolbox"
+Build complete: ./toolbox
+task: [install] echo "Installing toolbox to /home/chris/go/bin..."
+Installing toolbox to /home/chris/go/bin...
+task: [install] mkdir -p /home/chris/go/bin
+task: [install] cp ./toolbox /home/chris/go/bin/toolbox
+task: [install] chmod +x /home/chris/go/bin/toolbox
+task: [install] echo "Installed: /home/chris/go/bin/toolbox"
+Installed: /home/chris/go/bin/toolbox
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Symlinking Dotfiles
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+Relinking symlinks
+─────────────────────────────────
+Complete relink for wsl
+
+Step 1/6: Removing platform symlinks
+Removing wsl symlinks...
+✓ Removed: .bash_prompt
+✓ Removed: .profile
+✓ Removed: .gitconfig
+✓ Removed: .bashrc
+✓ Removed: .local/shell/wsl-aliases.sh
+✓ Removed: .local/shell/wsl-functions.sh
+✓ Removed: .bash_profile
+✓ Removed: .config/yazi/package.toml
+Cleaned up 3 empty directories:
+  - .config/go/telemetry/upload
+  - .config/tinted-theming/tinty
+  - .config/tinted-theming
+Removed 8 symlinks
+
+Step 2/6: Removing common symlinks
+Removing common symlinks...
+✓ Removed: .local/shell/error-handling.sh
+✓ Removed: .local/shell/fzf-functions.sh
+✓ Removed: .local/shell/formatting.sh
+✓ Removed: .local/shell/aliases.sh
+✓ Removed: .local/shell/colors.sh
+✓ Removed: .local/shell/functions.sh
+✓ Removed: .local/shell/logging.sh
+✓ Removed: .local/share/font/.gitkeep
+✓ Removed: .local/share/workflows/colima-use-profiles.md
+✓ Removed: .local/share/workflows/run-shell-command-pipe-or-tee-to-log.md
+✓ Removed: .local/share/workflows/bash-error-handling-set-flags.md
+✓ Removed: .config/sesh/sesh.toml
+✓ Removed: .config/wget/wgetrc
+✓ Removed: .config/cheat/conf.yml
+✓ Removed: .config/cheat/cheatsheets/personal/sess
+✓ Removed: .config/zsh/prompt.zsh
+✓ Removed: .config/zsh/.zshrc
+✓ Removed: .config/toolbox/registry.yml
+✓ Removed: .config/wezterm/wezterm.lua
+✓ Removed: .config/nvim/.stylua.toml
+✓ Removed: .config/nvim/lua/core/lazy.lua
+✓ Removed: .config/nvim/lua/core/autocmds.lua
+✓ Removed: .config/nvim/lua/core/keymaps.lua
+✓ Removed: .config/nvim/lua/core/options.lua
+✓ Removed: .config/nvim/lua/plugins/sidekick.lua
+✓ Removed: .config/nvim/lua/plugins/blink-cmp.lua
+✓ Removed: .config/nvim/lua/plugins/nvim-web-devicons.lua
+✓ Removed: .config/nvim/lua/plugins/octo.lua
+✓ Removed: .config/nvim/lua/plugins/codecompanion.lua
+✓ Removed: .config/nvim/lua/plugins/bufferline.lua
+✓ Removed: .config/nvim/lua/plugins/noice.lua
+✓ Removed: .config/nvim/lua/plugins/cinnamon-smooth-scroll.lua
+✓ Removed: .config/nvim/lua/plugins/treesitter.lua
+✓ Removed: .config/nvim/lua/plugins/markdown-toc.lua
+✓ Removed: .config/nvim/lua/plugins/lazygit.lua
+✓ Removed: .config/nvim/lua/plugins/lualine.lua
+✓ Removed: .config/nvim/lua/plugins/todo-comments.lua
+✓ Removed: .config/nvim/lua/plugins/dressing.lua
+✓ Removed: .config/nvim/lua/plugins/debug.lua
+✓ Removed: .config/nvim/lua/plugins/diffview.lua
+✓ Removed: .config/nvim/lua/plugins/copilot.lua
+✓ Removed: .config/nvim/lua/plugins/trouble.lua
+✓ Removed: .config/nvim/lua/plugins/which-key.lua
+✓ Removed: .config/nvim/lua/plugins/telescope.lua
+✓ Removed: .config/nvim/lua/plugins/yazi.lua
+✓ Removed: .config/nvim/lua/plugins/render-markdown.lua
+✓ Removed: .config/nvim/lua/plugins/vim-visual-multi.lua
+✓ Removed: .config/nvim/lua/plugins/gitsigns.lua
+✓ Removed: .config/nvim/lua/plugins/vim-tmux-navigator.lua
+✓ Removed: .config/nvim/lua/plugins/fidget.lua
+✓ Removed: .config/nvim/lua/plugins/zk.lua
+✓ Removed: .config/nvim/lua/plugins/web-devicons.lua
+✓ Removed: .config/nvim/lua/plugins/oil.lua
+✓ Removed: .config/nvim/lua/plugins/autopairs.lua
+✓ Removed: .config/nvim/lua/plugins/neovim-tips.lua
+✓ Removed: .config/nvim/lua/plugins/zen-mode.lua
+✓ Removed: .config/nvim/lua/plugins/inc-rename.lua
+✓ Removed: .config/nvim/lua/plugins/molten.lua
+✓ Removed: .config/nvim/lua/plugins/vim-maximizer.lua
+✓ Removed: .config/nvim/lua/plugins/nvim-treesitter-text-objects.lua
+✓ Removed: .config/nvim/lua/plugins/lazydev.lua
+✓ Removed: .config/nvim/lua/plugins/snipe.lua
+✓ Removed: .config/nvim/lua/plugins/mini.lua
+✓ Removed: .config/nvim/lua/plugins/gx.lua
+✓ Removed: .config/nvim/lua/plugins/auto-session.lua
+✓ Removed: .config/nvim/lua/plugins/colorscheme-manager.lua
+✓ Removed: .config/nvim/lua/plugins/winresize.lua
+✓ Removed: .config/nvim/lua/plugins/indent-line.lua
+✓ Removed: .config/nvim/lua/lsp/init.lua
+✓ Removed: .config/nvim/lua/snippets/python.lua
+✓ Removed: .config/nvim/lua/utils/formatter.lua
+✓ Removed: .config/nvim/lua/utils/notes.lua
+✓ Removed: .config/nvim/lua/utils/workflows.lua
+✓ Removed: .config/nvim/.markdownlintignore
+✓ Removed: .config/nvim/init.lua
+✓ Removed: .config/nvim/plugin/floaterminal.lua
+✓ Removed: .config/nvim/lazyvim.json
+✓ Removed: .config/nvim/.luarc.json
+✓ Removed: .config/nvim/ftplugin/markdown.lua
+✓ Removed: .config/nvim/help.txt
+✓ Removed: .config/nvim/lsp/bashls.lua
+✓ Removed: .config/nvim/lsp/lua_ls.lua
+✓ Removed: .config/nvim/lsp/tflint.lua
+✓ Removed: .config/nvim/lsp/gopls.lua
+✓ Removed: .config/nvim/lsp/cssls.lua
+✓ Removed: .config/nvim/lsp/terraformls.lua
+✓ Removed: .config/nvim/lsp/html.lua
+✓ Removed: .config/nvim/lsp/ts_ls.lua
+✓ Removed: .config/nvim/lsp/taplo.lua
+✓ Removed: .config/nvim/lsp/gh_actions_ls.lua
+✓ Removed: .config/nvim/lsp/eslint.lua
+✓ Removed: .config/nvim/lsp/jsonls.lua
+✓ Removed: .config/nvim/lsp/ruff.lua
+✓ Removed: .config/nvim/lsp/basedpyright.lua
+✓ Removed: .config/nvim/lsp/rust_analyzer.lua
+✓ Removed: .config/nvim/lsp/sqls.lua
+✓ Removed: .config/nvim/lsp/docker_language_server.lua
+✓ Removed: .config/nvim/lsp/yamlls.lua
+✓ Removed: .config/nvim/lsp/marksman.lua
+✓ Removed: .config/nvim/README.md
+✓ Removed: .config/zk/config.toml
+✓ Removed: .config/tmux/tmux.conf
+✓ Removed: .config/ripgrep/ripgreprc
+✓ Removed: .config/yazi/keymap.toml
+✓ Removed: .config/yazi/init.lua
+✓ Removed: .config/yazi/theme.toml
+✓ Removed: .config/yazi/yazi.toml
+✓ Removed: .config/readline/inputrc
+Cleaned up 20 empty directories:
+  - .config/nvim/lua/core
+  - .config/nvim/lua/lsp
+  - .config/nvim/lua/snippets
+  - .config/nvim/lua/utils
+  - .config/cheat/cheatsheets/personal
+  - .config/cheat/cheatsheets
+  - .config/nvim/plugin
+  - .config/nvim/ftplugin
+  - .config/nvim/lsp
+  - .config/sesh
+  - .config/wget
+  - .config/cheat
+  - .config/toolbox
+  - .config/wezterm
+  - .config/zk
+  - .config/ripgrep
+  - .config/readline
+  - .local/share/font
+  - .local/share/workflows
+  - .local/shell
+Removed 108 symlinks
+
+Step 3/6: Checking for broken symlinks
+Scanning for broken symlinks...
+✓ No broken symlinks found
+
+Step 4/6: Creating common base layer
+Creating common symlinks...
+✓ .config/sesh/sesh.toml → ../../dotfiles/platforms/common/.config/sesh/sesh.toml
+✓ .config/wget/wgetrc → ../../dotfiles/platforms/common/.config/wget/wgetrc
+✓ .config/cheat/conf.yml → ../../dotfiles/platforms/common/.config/cheat/conf.yml
+✓ .config/zsh/prompt.zsh → ../../dotfiles/platforms/common/.config/zsh/prompt.zsh
+✓ .config/zsh/.zshrc → ../../dotfiles/platforms/common/.config/zsh/.zshrc
+✓ .config/toolbox/registry.yml → ../../dotfiles/platforms/common/.config/toolbox/registry.yml
+✓ .config/wezterm/wezterm.lua → ../../dotfiles/platforms/common/.config/wezterm/wezterm.lua
+✓ .config/nvim/.stylua.toml → ../../dotfiles/platforms/common/.config/nvim/.stylua.toml
+✓ .config/nvim/.markdownlintignore → ../../dotfiles/platforms/common/.config/nvim/.markdownlintignore
+✓ .config/nvim/init.lua → ../../dotfiles/platforms/common/.config/nvim/init.lua
+✓ .config/nvim/lazyvim.json → ../../dotfiles/platforms/common/.config/nvim/lazyvim.json
+✓ .config/nvim/.luarc.json → ../../dotfiles/platforms/common/.config/nvim/.luarc.json
+✓ .config/nvim/help.txt → ../../dotfiles/platforms/common/.config/nvim/help.txt
+✓ .config/nvim/README.md → ../../dotfiles/platforms/common/.config/nvim/README.md
+✓ .config/zk/config.toml → ../../dotfiles/platforms/common/.config/zk/config.toml
+✓ .config/tmux/tmux.conf → ../../dotfiles/platforms/common/.config/tmux/tmux.conf
+✓ .config/ripgrep/ripgreprc → ../../dotfiles/platforms/common/.config/ripgrep/ripgreprc
+✓ .config/yazi/keymap.toml → ../../dotfiles/platforms/common/.config/yazi/keymap.toml
+✓ .config/yazi/init.lua → ../../dotfiles/platforms/common/.config/yazi/init.lua
+✓ .config/yazi/theme.toml → ../../dotfiles/platforms/common/.config/yazi/theme.toml
+✓ .config/yazi/yazi.toml → ../../dotfiles/platforms/common/.config/yazi/yazi.toml
+✓ .config/readline/inputrc → ../../dotfiles/platforms/common/.config/readline/inputrc
+✓ .config/nvim/plugin/floaterminal.lua → ../../../dotfiles/platforms/common/.config/nvim/plugin/floaterminal.lua
+✓ .config/nvim/ftplugin/markdown.lua → ../../../dotfiles/platforms/common/.config/nvim/ftplugin/markdown.lua
+✓ .config/nvim/lsp/bashls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/bashls.lua
+✓ .config/nvim/lsp/lua_ls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/lua_ls.lua
+✓ .config/nvim/lsp/tflint.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/tflint.lua
+✓ .config/nvim/lsp/gopls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/gopls.lua
+✓ .config/nvim/lsp/cssls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/cssls.lua
+✓ .config/nvim/lsp/terraformls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/terraformls.lua
+✓ .config/nvim/lsp/html.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/html.lua
+✓ .config/nvim/lsp/ts_ls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/ts_ls.lua
+✓ .config/nvim/lsp/taplo.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/taplo.lua
+✓ .config/nvim/lsp/gh_actions_ls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/gh_actions_ls.lua
+✓ .config/nvim/lsp/eslint.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/eslint.lua
+✓ .config/nvim/lsp/jsonls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/jsonls.lua
+✓ .config/nvim/lsp/ruff.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/ruff.lua
+✓ .config/nvim/lsp/basedpyright.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/basedpyright.lua
+✓ .config/nvim/lsp/rust_analyzer.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/rust_analyzer.lua
+✓ .config/nvim/lsp/sqls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/sqls.lua
+✓ .config/nvim/lsp/docker_language_server.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/docker_language_server.lua
+✓ .config/nvim/lsp/yamlls.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/yamlls.lua
+✓ .config/nvim/lsp/marksman.lua → ../../../dotfiles/platforms/common/.config/nvim/lsp/marksman.lua
+✓ .config/nvim/lua/core/lazy.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/core/lazy.lua
+✓ .config/nvim/lua/core/autocmds.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/core/autocmds.lua
+✓ .config/nvim/lua/core/keymaps.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/core/keymaps.lua
+✓ .config/nvim/lua/core/options.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/core/options.lua
+✓ .config/nvim/lua/plugins/sidekick.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/sidekick.lua
+✓ .config/nvim/lua/plugins/blink-cmp.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/blink-cmp.lua
+✓ .config/nvim/lua/plugins/nvim-web-devicons.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/nvim-web-devicons.lua
+✓ .config/nvim/lua/plugins/octo.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/octo.lua
+✓ .config/nvim/lua/plugins/codecompanion.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/codecompanion.lua
+✓ .config/nvim/lua/plugins/bufferline.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/bufferline.lua
+✓ .config/nvim/lua/plugins/noice.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/noice.lua
+✓ .config/nvim/lua/plugins/cinnamon-smooth-scroll.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/cinnamon-smooth-scroll.lua
+✓ .config/nvim/lua/plugins/treesitter.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/treesitter.lua
+✓ .config/nvim/lua/plugins/markdown-toc.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/markdown-toc.lua
+✓ .config/nvim/lua/plugins/lazygit.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/lazygit.lua
+✓ .config/nvim/lua/plugins/lualine.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/lualine.lua
+✓ .config/nvim/lua/plugins/todo-comments.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/todo-comments.lua
+✓ .config/nvim/lua/plugins/dressing.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/dressing.lua
+✓ .config/nvim/lua/plugins/debug.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/debug.lua
+✓ .config/nvim/lua/plugins/conform.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/conform.lua
+✓ .config/nvim/lua/plugins/diffview.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/diffview.lua
+✓ .config/nvim/lua/plugins/copilot.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/copilot.lua
+✓ .config/nvim/lua/plugins/trouble.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/trouble.lua
+✓ .config/nvim/lua/plugins/which-key.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/which-key.lua
+✓ .config/nvim/lua/plugins/telescope.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/telescope.lua
+✓ .config/nvim/lua/plugins/yazi.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/yazi.lua
+✓ .config/nvim/lua/plugins/render-markdown.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/render-markdown.lua
+✓ .config/nvim/lua/plugins/vim-visual-multi.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/vim-visual-multi.lua
+✓ .config/nvim/lua/plugins/gitsigns.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/gitsigns.lua
+✓ .config/nvim/lua/plugins/vim-tmux-navigator.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/vim-tmux-navigator.lua
+✓ .config/nvim/lua/plugins/fidget.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/fidget.lua
+✓ .config/nvim/lua/plugins/zk.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/zk.lua
+✓ .config/nvim/lua/plugins/web-devicons.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/web-devicons.lua
+✓ .config/nvim/lua/plugins/oil.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/oil.lua
+✓ .config/nvim/lua/plugins/autopairs.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/autopairs.lua
+✓ .config/nvim/lua/plugins/neovim-tips.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/neovim-tips.lua
+✓ .config/nvim/lua/plugins/zen-mode.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/zen-mode.lua
+✓ .config/nvim/lua/plugins/inc-rename.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/inc-rename.lua
+✓ .config/nvim/lua/plugins/molten.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/molten.lua
+✓ .config/nvim/lua/plugins/vim-maximizer.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/vim-maximizer.lua
+✓ .config/nvim/lua/plugins/nvim-treesitter-text-objects.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/nvim-treesitter-text-objects.lua
+✓ .config/nvim/lua/plugins/lazydev.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/lazydev.lua
+✓ .config/nvim/lua/plugins/snipe.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/snipe.lua
+✓ .config/nvim/lua/plugins/mini.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/mini.lua
+✓ .config/nvim/lua/plugins/gx.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/gx.lua
+✓ .config/nvim/lua/plugins/auto-session.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/auto-session.lua
+✓ .config/nvim/lua/plugins/colorscheme-manager.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/colorscheme-manager.lua
+✓ .config/nvim/lua/plugins/winresize.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/winresize.lua
+✓ .config/nvim/lua/plugins/indent-line.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/plugins/indent-line.lua
+✓ .config/nvim/lua/lsp/init.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/lsp/init.lua
+✓ .config/nvim/lua/snippets/python.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/snippets/python.lua
+✓ .config/nvim/lua/utils/notes.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/utils/notes.lua
+✓ .config/nvim/lua/utils/workflows.lua → ../../../../dotfiles/platforms/common/.config/nvim/lua/utils/workflows.lua
+✓ .config/cheat/cheatsheets/personal/sess → ../../../../dotfiles/platforms/common/.config/cheat/cheatsheets/personal/sess
+✓ .local/shell/error-handling.sh → ../../dotfiles/platforms/common/.local/shell/error-handling.sh
+✓ .local/shell/fzf-functions.sh → ../../dotfiles/platforms/common/.local/shell/fzf-functions.sh
+✓ .local/shell/formatting.sh → ../../dotfiles/platforms/common/.local/shell/formatting.sh
+✓ .local/shell/aliases.sh → ../../dotfiles/platforms/common/.local/shell/aliases.sh
+✓ .local/shell/colors.sh → ../../dotfiles/platforms/common/.local/shell/colors.sh
+✓ .local/shell/functions.sh → ../../dotfiles/platforms/common/.local/shell/functions.sh
+✓ .local/shell/logging.sh → ../../dotfiles/platforms/common/.local/shell/logging.sh
+✓ .local/share/font/.gitkeep → ../../../dotfiles/platforms/common/.local/share/font/.gitkeep
+✓ .local/share/workflows/git-checkout-switch-reset.md → ../../../dotfiles/platforms/common/.local/share/workflows/git-checkout-switch-reset.md
+✓ .local/share/workflows/colima-use-profiles.md → ../../../dotfiles/platforms/common/.local/share/workflows/colima-use-profiles.md
+✓ .local/share/workflows/run-shell-command-pipe-or-tee-to-log.md → ../../../dotfiles/platforms/common/.local/share/workflows/run-shell-command-pipe-or-tee-to-log.md
+✓ .local/share/workflows/tmux-sessions.md → ../../../dotfiles/platforms/common/.local/share/workflows/tmux-sessions.md
+✓ .local/share/workflows/bash-error-handling-set-flags.md → ../../../dotfiles/platforms/common/.local/share/workflows/bash-error-handling-set-flags.md
+Created 110 symlinks
+
+Step 5/6: Creating platform overlay
+Creating wsl symlinks...
+✓ .bash_prompt → dotfiles/platforms/wsl/.bash_prompt
+✓ .profile → dotfiles/platforms/wsl/.profile
+✓ .gitconfig → dotfiles/platforms/wsl/.gitconfig
+✓ .bashrc → dotfiles/platforms/wsl/.bashrc
+✓ .bash_profile → dotfiles/platforms/wsl/.bash_profile
+✓ .config/yazi/package.toml → ../../dotfiles/platforms/wsl/.config/yazi/package.toml
+✓ .local/shell/wsl-aliases.sh → ../../dotfiles/platforms/wsl/.local/shell/wsl-aliases.sh
+✓ .local/shell/wsl-functions.sh → ../../dotfiles/platforms/wsl/.local/shell/wsl-functions.sh
+Created 8 symlinks
+
+Step 6/6: Linking apps
+Linking common apps to ~/.local/bin/...
+  ✓ theme-sync → ~/.local/bin/theme-sync
+  ✓ refcheck → ~/.local/bin/refcheck
+  ✓ notes → ~/.local/bin/notes
+  ✓ font/font → ~/.local/bin/font
+  ✓ tmux-colors-from-tinty → ~/.local/bin/tmux-colors-from-tinty
+  ✓ printcolors → ~/.local/bin/printcolors
+  ✓ menu → ~/.local/bin/menu
+  ✓ workflows → ~/.local/bin/workflows
+  ✓ backup-dirs → ~/.local/bin/backup-dirs
+  ✓ shelldocsparser → ~/.local/bin/shelldocsparser
+Linked 10 apps
+
+✓ Relink complete! wsl environment refreshed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Theme System
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+tinted-shell already installed
+schemes already installed
+tinted-shell already installed
+schemes already installed
+tinted-shell up to date
+schemes up to date
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Tmux Plugins
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[INFO] ✓ TPM already installed
+[INFO] ✓ tpm installed
+[INFO] ● Installing tmux plugins...
+Already installed "tpm"
+Already installed "tmux-fzf"
+Already installed "tmux-cpu"
+Already installed "tmux-sidebar"
+Already installed "tmux-yank"
+Already installed "tmux-resurrect"
+Already installed "tmux-continuum"
+[INFO] ✓ Tmux plugins installed
+[INFO] ✓ tmux-plugins installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Neovim Plugins
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════
+Installing Neovim Plugins
+═══════════════════════════════════════════
+
+[INFO] ● Installing Neovim plugins via Lazy.nvim...
+[conform.nvim]    clone | Running task clone
+[conform.nvim]    clone | Cloning into '/home/chris/.local/share/nvim/lazy/conform.nvim'...
+[conform.nvim]    clone | remote: Enumerating objects: 3328, done.
+[conform.nvim]    clone | remote: Counting objects: 100% (985/985), done.
+[conform.nvim]    clone | remote: Compressing objects: 100% (165/165), done.
+[conform.nvim]    clone | remote: Total 3328 (delta 968), reused 820 (delta 819), pack-reused 2343 (from 3)
+[conform.nvim]    clone | Receiving objects: 100% (3328/3328), 551.49 KiB | 5.35 MiB/s, done.
+[conform.nvim]    clone | Resolving deltas: 100% (1861/1861), done.
+[conform.nvim]    clone | Finished task clone in 705ms
+[conform.nvim] checkout | Running task checkout
+[conform.nvim] checkout | Finished task checkout in 1ms
+[conform.nvim]     docs | Running task docs
+[conform.nvim]     docs |
+[conform.nvim]     docs | Finished task docs in 1ms
+
+Error detected while processing command line:
+Failed to run `config` for image.nvim
+
+...ocal/share/nvim/lazy/image.nvim/lua/image/utils/term.lua:34: Failed to get terminal size
+
+# stacktrace:
+  - /image.nvim/lua/image/utils/term.lua:34 _in_ **update_size**
+  - /image.nvim/lua/image/utils/term.lua:46
+  - /image.nvim/lua/image/utils/init.lua:8
+  - /image.nvim/lua/image/init.lua:1
+  - ~/.config/nvim/lua/core/lazy.lua:17
+  - ~/.config/nvim/init.lua:27[auto-session]    fetch | Running task fetch
+[blink-cmp-copilot] fetch | Running task fetch
+[blink.cmp]       fetch | Running task fetch
+[bufferline.nvim] fetch | Running task fetch
+[cinnamon.nvim]   fetch | Running task fetch
+[codecompanion.nvim] fetch | Running task fetch
+[conform.nvim]    fetch | Running task fetch
+[copilot-lualine] fetch | Running task fetch
+[copilot.lua]     fetch | Running task fetch
+[diffview.nvim]   fetch | Running task fetch
+[dressing.nvim]   fetch | Running task fetch
+[fidget.nvim]     fetch | Running task fetch
+[flexoki-moon-nvim] fetch | Running task fetch
+[friendly-snippets] fetch | Running task fetch
+[github-theme]    fetch | Running task fetch
+[gitsigns.nvim]   fetch | Running task fetch
+[gruvbox.nvim]    fetch | Running task fetch
+[gx.nvim]         fetch | Running task fetch
+[hererocks]       fetch | Running task fetch
+[image.nvim]      fetch | Running task fetch
+[inc-rename.nvim] fetch | Running task fetch
+[indent-blankline.nvim] fetch | Running task fetch
+[kanagawa.nvim]   fetch | Running task fetch
+[lazy.nvim]       fetch | Running task fetch
+[lazydev.nvim]    fetch | Running task fetch
+[lazygit.nvim]    fetch | Running task fetch
+[lualine.nvim]    fetch | Running task fetch
+[luvit-meta]      fetch | Running task fetch
+[markdown-toc.nvim] fetch | Running task fetch
+[mini.nvim]       fetch | Running task fetch
+[molten-nvim]     fetch | Running task fetch
+[neovim-tips]     fetch | Running task fetch
+[nightfox.nvim]   fetch | Running task fetch
+[noice.nvim]      fetch | Running task fetch
+[nordic.nvim]     fetch | Running task fetch
+[nui.nvim]        fetch | Running task fetch
+[nvim-autopairs]  fetch | Running task fetch
+[nvim-cmp]        fetch | Running task fetch
+[nvim-dap]        fetch | Running task fetch
+[nvim-dap-go]     fetch | Running task fetch
+[nvim-dap-python] fetch | Running task fetch
+[nvim-dap-ui]     fetch | Running task fetch
+[nvim-nio]        fetch | Running task fetch
+[nvim-treesitter] fetch | Running task fetch
+[nvim-treesitter-textobjects] fetch | Running task fetch
+[nvim-web-devicons] fetch | Running task fetch
+[oceanic-next]    fetch | Running task fetch
+[octo.nvim]       fetch | Running task fetch
+[oil.nvim]        fetch | Running task fetch
+[plenary.nvim]    fetch | Running task fetch
+[render-markdown.nvim] fetch | Running task fetch
+[rose-pine]       fetch | Running task fetch
+[sidekick.nvim]   fetch | Running task fetch
+[snipe.nvim]      fetch | Running task fetch
+[solarized-osaka.nvim] fetch | Running task fetch
+[telescope-fzf-native.nvim] fetch | Running task fetch
+[telescope-ui-select.nvim] fetch | Running task fetch
+[telescope.nvim]  fetch | Running task fetch
+[todo-comments.nvim] fetch | Running task fetch
+[trouble.nvim]    fetch | Running task fetch
+[vim-maximizer]   fetch | Running task fetch
+[vim-tmux-navigator] fetch | Running task fetch
+[vim-visual-multi] fetch | Running task fetch
+[which-key.nvim]  fetch | Running task fetch
+[winresize.nvim]  fetch | Running task fetch
+[yazi.nvim]       fetch | Running task fetch
+[zen-mode.nvim]   fetch | Running task fetch
+[zk-nvim]         fetch | Running task fetch
+[blink-cmp-copilot] fetch | Finished task fetch in 261ms
+[blink-cmp-copilot] status | Running task status
+[bufferline.nvim] fetch | Finished task fetch in 298ms
+[bufferline.nvim] status | Running task status
+[blink.cmp]       fetch | Finished task fetch in 310ms
+[conform.nvim]    fetch | Finished task fetch in 309ms
+[cinnamon.nvim]   fetch | Finished task fetch in 323ms
+[blink.cmp]      status | Running task status
+[cinnamon.nvim]  status | Running task status
+[conform.nvim]   status | Running task status
+[auto-session]    fetch | Finished task fetch in 336ms
+[copilot-lualine] fetch | Finished task fetch in 333ms
+[copilot.lua]     fetch | Finished task fetch in 411ms
+[blink-cmp-copilot] status | Finished task status in 151ms
+[auto-session]   status | Running task status
+[blink-cmp-copilot] checkout | Running task checkout
+[blink-cmp-copilot] checkout | Finished task checkout in 1ms
+[copilot-lualine] status | Running task status
+[copilot.lua]    status | Running task status
+[codecompanion.nvim] fetch | remote: Enumerating objects: 41, done.
+[codecompanion.nvim] fetch | remote: Counting objects: 100% (41/41), done.
+[codecompanion.nvim] fetch | remote: Compressing objects: 100% (24/24), done.
+[codecompanion.nvim] fetch | remote: Total 41 (delta 19), reused 31 (delta 16), pack-reused 0 (from 0)
+[flexoki-moon-nvim] fetch | Finished task fetch in 431ms
+[inc-rename.nvim] fetch | Finished task fetch in 428ms
+[nightfox.nvim]   fetch | Finished task fetch in 425ms
+[bufferline.nvim] status | Finished task status in 136ms
+[blink.cmp]      status | Finished task status in 111ms
+[codecompanion.nvim] fetch | Receiving objects: 100% (41/41), 10.33 KiB | 10.33 MiB/s, done.
+[blink.cmp]    checkout | Running task checkout 36% (7/19)
+[bufferline.nvim] checkout | Running task checkout
+[flexoki-moon-nvim] status | Running task status
+[inc-rename.nvim] status | Running task status
+[nightfox.nvim]  status | Running task status
+[cinnamon.nvim]  status | Finished task status in 113ms
+[blink.cmp]    checkout | HEAD is now at 57d900e feat(nix): change plugin pname to blink.cmp
+[conform.nvim]   status | Finished task status in 133ms
+[auto-session]   status | Finished task status in 44ms
+[codecompanion.nvim] fetch | Resolving deltas: 100% (19/19), completed with 9 local objects.
+[auto-session] checkout | Running task checkout
+[cinnamon.nvim] checkout | Running task checkout
+[conform.nvim] checkout | Running task checkout
+[conform.nvim] checkout | Finished task checkout in 2ms
+[copilot-lualine] status | Finished task status in 47ms
+[copilot.lua]    status | Finished task status in 47ms
+[blink.cmp]    checkout | Finished task checkout in 30ms
+[auto-session] checkout | HEAD is now at 292492a Merge pull request #502 from cameronr/chore/emmylua-cleanup
+[copilot-lualine] checkout | Running task checkout
+[copilot.lua]  checkout | Running task checkout
+[bufferline.nvim] checkout | Finished task checkout in 31ms
+[inc-rename.nvim] status | Finished task status in 31ms
+[copilot-lualine] checkout | HEAD is now at 222e90b fix(sleep): move call for blink copilot cmp outside for less times called
+[inc-rename.nvim] checkout | Running task checkout
+[plenary.nvim]    fetch | Finished task fetch in 456ms
+[codecompanion.nvim] fetch | From https://github.com/olimorris/codecompanion.nvim
+[codecompanion.nvim] fetch |  * [new branch]      refactor/window-opts -> origin/refactor/window-opts
+[markdown-toc.nvim] fetch | Finished task fetch in 466ms
+[auto-session] checkout | Finished task checkout in 19ms
+[codecompanion.nvim] fetch |    a3b606b..3c9772d  v18                  -> origin/v18
+[copilot.lua]  checkout | HEAD is now at efe5638 feat: update to latest Copilot LSP
+[inc-rename.nvim] checkout | HEAD is now at 2597bcc Fix error that occurs when you have no renames
+[markdown-toc.nvim] status | Running task status
+[plenary.nvim]   status | Running task status
+[flexoki-moon-nvim] status | Finished task status in 42ms
+[copilot-lualine] checkout | Finished task checkout in 12ms
+[cinnamon.nvim] checkout | HEAD is now at ecd211e chore(docs): auto-generate vimdoc
+[flexoki-moon-nvim] checkout | Running task checkout
+[flexoki-moon-nvim] checkout | Finished task checkout in 0ms
+[codecompanion.nvim] fetch | Finished task fetch in 483ms
+[copilot.lua]  checkout | Finished task checkout in 18ms
+[inc-rename.nvim] checkout | Finished task checkout in 13ms
+[cinnamon.nvim] checkout | Finished task checkout in 28ms
+[codecompanion.nvim] status | Running task status
+[kanagawa.nvim]   fetch | Finished task fetch in 478ms
+[luvit-meta]      fetch | Finished task fetch in 477ms
+[rose-pine]       fetch | Finished task fetch in 470ms
+[snipe.nvim]      fetch | Finished task fetch in 470ms
+[kanagawa.nvim]  status | Running task status
+[luvit-meta]     status | Running task status
+[rose-pine]      status | Running task status
+[snipe.nvim]     status | Running task status
+[markdown-toc.nvim] status | Finished task status in 17ms
+[markdown-toc.nvim] checkout | Running task checkout
+[markdown-toc.nvim] checkout | Finished task checkout in 1ms
+[gitsigns.nvim]   fetch | Finished task fetch in 497ms
+[render-markdown.nvim] fetch | Finished task fetch in 488ms
+[gitsigns.nvim]  status | Running task status
+[render-markdown.nvim] status | Running task status
+[oceanic-next]    fetch | Finished task fetch in 489ms
+[codecompanion.nvim] status | Finished task status in 19ms
+[rose-pine]      status | Finished task status in 12ms
+[codecompanion.nvim] checkout | Running task checkout
+[oceanic-next]   status | Running task status
+[rose-pine]    checkout | Running task checkout
+[image.nvim]      fetch | Finished task fetch in 510ms
+[nui.nvim]        fetch | Finished task fetch in 505ms
+[codecompanion.nvim] checkout | HEAD is now at 8ad65ee chore: warn about breaking changes (#2451)
+[image.nvim]     status | Running task status
+[nui.nvim]       status | Running task status
+[fidget.nvim]     fetch | Finished task fetch in 526ms
+[github-theme]    fetch | Finished task fetch in 525ms
+[nvim-nio]        fetch | Finished task fetch in 516ms
+[snipe.nvim]     status | Finished task status in 37ms
+[gitsigns.nvim]  status | Finished task status in 26ms
+[render-markdown.nvim] status | Finished task status in 26ms
+[diffview.nvim]   fetch | Finished task fetch in 532ms
+[dressing.nvim]   fetch | Finished task fetch in 531ms
+[gruvbox.nvim]    fetch | Finished task fetch in 529ms
+[lazydev.nvim]    fetch | Finished task fetch in 526ms
+[lualine.nvim]    fetch | Finished task fetch in 526ms
+[nvim-cmp]        fetch | Finished task fetch in 523ms
+[nvim-dap]        fetch | Finished task fetch in 523ms
+[nvim-dap-go]     fetch | Finished task fetch in 523ms
+[nvim-dap-ui]     fetch | Finished task fetch in 522ms
+[codecompanion.nvim] checkout | Finished task checkout in 21ms
+[rose-pine]    checkout | HEAD is now at cf2a288 feat: respect transparency for `PmenuExtra` (#378)
+[diffview.nvim]  status | Running task status
+[dressing.nvim]  status | Running task status
+[fidget.nvim]    status | Running task status
+[github-theme]   status | Running task status
+[gitsigns.nvim] checkout | Running task checkout
+[gruvbox.nvim]   status | Running task status
+[lazydev.nvim]   status | Running task status
+[lualine.nvim]   status | Running task status
+[nvim-cmp]       status | Running task status
+[nvim-dap]       status | Running task status
+[nvim-dap-go]    status | Running task status
+[nvim-dap-ui]    status | Running task status
+[nvim-nio]       status | Running task status
+[render-markdown.nvim] checkout | Running task checkout
+[snipe.nvim]   checkout | Running task checkout
+[snipe.nvim]   checkout | Finished task checkout in 2ms
+[hererocks]       fetch | remote: Enumerating objects: 2, done.
+[hererocks]       fetch | remote: Counting objects: 100% (2/2), done.
+[hererocks]       fetch | remote: Total 2 (delta 1), reused 2 (delta 1), pack-reused 0 (from 0)
+[hererocks]       fetch | Receiving objects: 100% (2/2), 312 bytes | 312.00 KiB/s, done.
+[hererocks]       fetch | Resolving deltas: 100% (1/1), completed with 1 local object.
+[nvim-autopairs]  fetch | remote: Enumerating objects: 5, done.
+[nvim-autopairs]  fetch | remote: Counting objects: 100% (5/5), done.
+[nvim-autopairs]  fetch | remote: Compressing objects: 100% (2/2), done.
+[nvim-autopairs]  fetch | remote: Total 5 (delta 3), reused 4 (delta 3), pack-reused 0 (from 0)
+[nvim-autopairs]  fetch | Receiving objects: 100% (5/5), 1.19 KiB | 1.19 MiB/s, done.
+[nvim-autopairs]  fetch | Resolving deltas: 100% (3/3), completed with 3 local objects.
+[gitsigns.nvim] checkout | HEAD is now at 5813e48 feat(cache): add support for fetching line ranges (#1414)
+[molten-nvim]     fetch | Finished task fetch in 569ms
+[molten-nvim]    status | Running task status
+[friendly-snippets] fetch | Finished task fetch in 576ms
+[lazygit.nvim]    fetch | Finished task fetch in 572ms
+[nvim-dap-python] fetch | Finished task fetch in 568ms
+[nvim-treesitter-textobjects] fetch | Finished task fetch in 566ms
+[nvim-web-devicons] fetch | Finished task fetch in 566ms
+[oil.nvim]        fetch | Finished task fetch in 565ms
+[sidekick.nvim]   fetch | Finished task fetch in 564ms
+[vim-visual-multi] fetch | Finished task fetch in 561ms
+[plenary.nvim]   status | Finished task status in 104ms
+[kanagawa.nvim]  status | Finished task status in 88ms
+[rose-pine]    checkout | Finished task checkout in 67ms
+[fidget.nvim]    status | Finished task status in 45ms
+[gitsigns.nvim] checkout | Finished task checkout in 45ms
+[lazydev.nvim]   status | Finished task status in 45ms
+[gx.nvim]         fetch | Finished task fetch in 578ms
+[solarized-osaka.nvim] fetch | Finished task fetch in 567ms
+[vim-maximizer]   fetch | Finished task fetch in 566ms
+[winresize.nvim]  fetch | Finished task fetch in 565ms
+[luvit-meta]     status | Finished task status in 92ms
+[oceanic-next]   status | Finished task status in 71ms
+[nui.nvim]       status | Finished task status in 55ms
+[dressing.nvim]  status | Finished task status in 49ms
+[gruvbox.nvim]   status | Finished task status in 49ms
+[lualine.nvim]   status | Finished task status in 49ms
+[nvim-cmp]       status | Finished task status in 49ms
+[nvim-dap]       status | Finished task status in 49ms
+[hererocks]       fetch | From https://github.com/luarocks/hererocks
+[hererocks]       fetch |    f540b58..6265dd3  master     -> origin/master
+[nvim-autopairs]  fetch | From https://github.com/windwp/nvim-autopairs
+[nvim-autopairs]  fetch |    7a2c97c..d9e44e5  master     -> origin/master
+[dressing.nvim] checkout | Running task checkout
+[dressing.nvim] checkout | Finished task checkout in 1ms
+[fidget.nvim]  checkout | Running task checkout
+[friendly-snippets] status | Running task status
+[gruvbox.nvim] checkout | Running task checkout
+[gruvbox.nvim] checkout | Finished task checkout in 2ms
+[gx.nvim]        status | Running task status
+[kanagawa.nvim] checkout | Running task checkout
+[kanagawa.nvim] checkout | Finished task checkout in 2ms
+[lazydev.nvim] checkout | Running task checkout
+[lazygit.nvim]   status | Running task status
+[lualine.nvim] checkout | Running task checkout
+[luvit-meta]   checkout | Running task checkout
+[luvit-meta]   checkout | Finished task checkout in 2ms
+[nui.nvim]     checkout | Running task checkout
+[nui.nvim]     checkout | Finished task checkout in 2ms
+[nvim-cmp]     checkout | Running task checkout
+[nvim-dap]     checkout | Running task checkout
+[nvim-dap-python] status | Running task status
+[nvim-treesitter-textobjects] status | Running task status
+[nvim-web-devicons] status | Running task status
+[oceanic-next] checkout | Running task checkout
+[oceanic-next] checkout | Finished task checkout in 2ms
+[oil.nvim]       status | Running task status
+[plenary.nvim] checkout | Running task checkout
+[plenary.nvim] checkout | Finished task checkout in 2ms
+[sidekick.nvim]  status | Running task status
+[solarized-osaka.nvim] status | Running task status
+[vim-maximizer]  status | Running task status
+[vim-visual-multi] status | Running task status
+[winresize.nvim] status | Running task status
+[telescope-fzf-native.nvim] fetch | Finished task fetch in 570ms
+[nvim-treesitter] fetch | remote: Enumerating objects: 27, done.
+[nvim-treesitter] fetch | remote: Counting objects: 100% (27/27), done.
+[nvim-treesitter] fetch | remote: Compressing objects: 100% (8/8), done.
+[nvim-treesitter] fetch | remote: Total 19 (delta 11), reused 11 (delta 7), pack-reused 0 (from 0)
+[nvim-treesitter] fetch | Receiving objects: 100% (19/19), 2.60 KiB | 2.60 MiB/s, done.
+[octo.nvim]       fetch | remote: Enumerating objects: 10, done.
+[octo.nvim]       fetch | remote: Counting objects: 100% (10/10), done.
+[octo.nvim]       fetch | remote: Compressing objects: 100% (4/4), done.
+[octo.nvim]       fetch | remote: Total 10 (delta 6), reused 8 (delta 6), pack-reused 0 (from 0)
+[fidget.nvim]  checkout | HEAD is now at e32b672 doc: use version instead of tag in eg setup
+[lazydev.nvim] checkout | HEAD is now at 5231c62 fix(lsp): if the workspace root matches the client root, return client's non-normalized root instead. Closes #128
+[nvim-treesitter] fetch | Resolving deltas: 100% (11/11), completed with 6 local objects.
+[octo.nvim]       fetch | Receiving objects: 100% (10/10), 2.31 KiB | 2.31 MiB/s, done.
+[octo.nvim]       fetch | Resolving deltas: 100% (6/6), completed with 4 local objects.
+[lualine.nvim] checkout | HEAD is now at 47f91c4 chore: autogen (vimdocs+formating)
+[nvim-cmp]     checkout | HEAD is now at d97d85e Format with stylua
+[nvim-dap]     checkout | HEAD is now at 5860c7c Fix external terminal cwd handling for cwd == ""
+[nvim-treesitter] fetch | From https://github.com/nvim-treesitter/nvim-treesitter
+[nvim-treesitter] fetch |    f47f549f..b6271b67  main       -> origin/main
+[octo.nvim]       fetch | From https://github.com/pwntester/octo.nvim
+[octo.nvim]       fetch |    6f8a278..5223512  master     -> origin/master
+[telescope-fzf-native.nvim] status | Running task status
+[hererocks]       fetch | Finished task fetch in 620ms
+[nvim-autopairs]  fetch | Finished task fetch in 615ms
+[telescope-ui-select.nvim] fetch | Finished task fetch in 609ms
+[telescope.nvim]  fetch | Finished task fetch in 608ms
+[todo-comments.nvim] fetch | Finished task fetch in 608ms
+[trouble.nvim]    fetch | Finished task fetch in 608ms
+[vim-tmux-navigator] fetch | Finished task fetch in 608ms
+[which-key.nvim]  fetch | Finished task fetch in 607ms
+[zen-mode.nvim]   fetch | Finished task fetch in 606ms
+[zk-nvim]         fetch | Finished task fetch in 606ms
+[nightfox.nvim]  status | Finished task status in 191ms
+[image.nvim]     status | Finished task status in 97ms
+[diffview.nvim]  status | Finished task status in 92ms
+[nvim-dap-go]    status | Finished task status in 91ms
+[nvim-dap-ui]    status | Finished task status in 91ms
+[nvim-nio]       status | Finished task status in 91ms
+[render-markdown.nvim] checkout | Finished task checkout in 91ms
+[molten-nvim]    status | Finished task status in 47ms
+[fidget.nvim]  checkout | Finished task checkout in 42ms
+[gx.nvim]        status | Finished task status in 42ms
+[lazydev.nvim] checkout | Finished task checkout in 42ms
+[lazygit.nvim]   status | Finished task status in 42ms
+[lualine.nvim] checkout | Finished task checkout in 42ms
+[nvim-cmp]     checkout | Finished task checkout in 42ms
+[nvim-dap]     checkout | Finished task checkout in 42ms
+[nvim-treesitter-textobjects] status | Finished task status in 42ms
+[nvim-web-devicons] status | Finished task status in 42ms
+[nvim-treesitter] fetch | Finished task fetch in 615ms
+[octo.nvim]       fetch | Finished task fetch in 614ms
+[github-theme]   status | Finished task status in 94ms
+[nvim-dap-python] status | Finished task status in 44ms
+[oil.nvim]       status | Finished task status in 44ms
+[vim-maximizer]  status | Finished task status in 44ms
+[diffview.nvim] checkout | Running task checkout
+[diffview.nvim] checkout | Finished task checkout in 1ms
+[github-theme] checkout | Running task checkout
+[github-theme] checkout | Finished task checkout in 1ms
+[gx.nvim]      checkout | Running task checkout
+[gx.nvim]      checkout | Finished task checkout in 1ms
+[hererocks]      status | Running task status
+[image.nvim]   checkout | Running task checkout
+[image.nvim]   checkout | Finished task checkout in 1ms
+[lazygit.nvim] checkout | Running task checkout
+[lazygit.nvim] checkout | Finished task checkout in 2ms
+[molten-nvim]  checkout | Running task checkout
+[nightfox.nvim] checkout | Running task checkout
+[nightfox.nvim] checkout | Finished task checkout in 2ms
+[nvim-autopairs] status | Running task status
+[nvim-dap-go]  checkout | Running task checkout
+[nvim-dap-go]  checkout | Finished task checkout in 2ms
+[nvim-dap-python] checkout | Running task checkout
+[nvim-dap-python] checkout | Finished task checkout in 2ms
+[nvim-dap-ui]  checkout | Running task checkout
+[nvim-dap-ui]  checkout | Finished task checkout in 2ms
+[nvim-nio]     checkout | Running task checkout
+[nvim-nio]     checkout | Finished task checkout in 2ms
+[nvim-treesitter] status | Running task status
+[nvim-treesitter-textobjects] checkout | Running task checkout
+[nvim-web-devicons] checkout | Running task checkout
+[octo.nvim]      status | Running task status
+[oil.nvim]     checkout | Running task checkout
+[telescope-ui-select.nvim] status | Running task status
+[telescope.nvim] status | Running task status
+[todo-comments.nvim] status | Running task status
+[trouble.nvim]   status | Running task status
+[vim-maximizer] checkout | Running task checkout
+[vim-maximizer] checkout | Finished task checkout in 2ms
+[vim-tmux-navigator] status | Running task status
+[which-key.nvim] status | Running task status
+[zen-mode.nvim]  status | Running task status
+[zk-nvim]        status | Running task status
+[nvim-treesitter-textobjects] checkout | HEAD is now at 5ca4aaa docs: master is frozen
+[nvim-web-devicons] checkout | HEAD is now at 8dcb311 fix: update luacheckrc name (#612)
+[oil.nvim]     checkout | HEAD is now at cbcb3f9 fix: command modifiers for :Oil (#691)
+[winresize.nvim] status | Finished task status in 75ms
+[winresize.nvim] checkout | Running task checkout
+[winresize.nvim] checkout | Finished task checkout in 0ms
+[sidekick.nvim]  status | Finished task status in 75ms
+[telescope-fzf-native.nvim] status | Finished task status in 36ms
+[hererocks]      status | Finished task status in 31ms
+[nvim-treesitter-textobjects] checkout | Finished task checkout in 31ms
+[nvim-web-devicons] checkout | Finished task checkout in 31ms
+[friendly-snippets] status | Finished task status in 78ms
+[vim-visual-multi] status | Finished task status in 78ms
+[nvim-autopairs] status | Finished task status in 34ms
+[octo.nvim]      status | Finished task status in 34ms
+[oil.nvim]     checkout | Finished task checkout in 34ms
+[telescope-ui-select.nvim] status | Finished task status in 34ms
+[todo-comments.nvim] status | Finished task status in 34ms
+[trouble.nvim]   status | Finished task status in 34ms
+[yazi.nvim]       fetch | remote: Enumerating objects: 22, done.
+[yazi.nvim]       fetch | remote: Counting objects: 100% (8/8), done.
+[yazi.nvim]       fetch | remote: Compressing objects: 100% (6/6), done.
+[friendly-snippets] checkout | Running task checkout
+[friendly-snippets] checkout | Finished task checkout in 0ms
+[hererocks]    checkout | Running task checkout
+[nvim-autopairs] checkout | Running task checkout
+[octo.nvim]    checkout | Running task checkout
+[sidekick.nvim] checkout | Running task checkout
+[sidekick.nvim] checkout | Finished task checkout in 1ms
+[telescope-fzf-native.nvim] checkout | Running task checkout
+[telescope-ui-select.nvim] checkout | Running task checkout
+[telescope-ui-select.nvim] checkout | Finished task checkout in 1ms
+[todo-comments.nvim] checkout | Running task checkout
+[trouble.nvim] checkout | Running task checkout
+[vim-visual-multi] checkout | Running task checkout
+[vim-visual-multi] checkout | Finished task checkout in 1ms
+[vim-tmux-navigator] status | Finished task status in 35ms
+[which-key.nvim] status | Finished task status in 35ms
+[zen-mode.nvim]  status | Finished task status in 35ms
+[yazi.nvim]       fetch | remote: Total 22 (delta 2), reused 1 (delta 1), pack-reused 14 (from 1)
+[yazi.nvim]       fetch | Receiving objects: 100% (22/22), 7.75 KiB | 7.75 MiB/s, done.
+[yazi.nvim]       fetch | Resolving deltas: 100% (7/7), completed with 1 local object.
+[molten-nvim]  checkout | HEAD is now at a286aa9 chore(main): release 1.9.2 (#273)
+[telescope-fzf-native.nvim] checkout | HEAD is now at 6fea601 docs(readme): cmake needs `--target install`
+[todo-comments.nvim] checkout | HEAD is now at 31e3c38 chore(main): release 1.5.0 (#345)
+[vim-tmux-navigator] checkout | Running task checkout
+[vim-tmux-navigator] checkout | Finished task checkout in 1ms
+[which-key.nvim] checkout | Running task checkout
+[zen-mode.nvim] checkout | Running task checkout
+[zk-nvim]        status | Finished task status in 52ms
+[yazi.nvim]       fetch | From https://github.com/mikavilpas/yazi.nvim
+[yazi.nvim]       fetch |    5fbb23f..bd87afc  main       -> origin/main
+[molten-nvim]  checkout | Finished task checkout in 56ms
+[telescope-fzf-native.nvim] checkout | Finished task checkout in 22ms
+[yazi.nvim]       fetch |  + 9b6e4dd...70ebb53 release-please--branches--main -> origin/release-please--branches--main  (forced update)
+[yazi.nvim]       fetch |  + 9273b4d...6937900 renovate/https-github.com-ibhagwan-fzf-lua-digest -> origin/renovate/https-github.com-ibhagwan-fzf-lua-digest  (forced update)
+[trouble.nvim] checkout | HEAD is now at bd67efe fix(lsp): better vim.str_byteindex usage. Closes #670
+[which-key.nvim] checkout | HEAD is now at 3aab214 chore(build): auto-generated vimdocs
+[zk-nvim]      checkout | Running task checkout
+[solarized-osaka.nvim] status | Finished task status in 101ms
+[todo-comments.nvim] checkout | Finished task checkout in 23ms
+[zen-mode.nvim] checkout | HEAD is now at 8564ce6 chore(main): release 1.4.1 (#164)
+[solarized-osaka.nvim] checkout | Running task checkout
+[solarized-osaka.nvim] checkout | Finished task checkout in 0ms
+[yazi.nvim]       fetch | Finished task fetch in 671ms
+[trouble.nvim] checkout | Finished task checkout in 27ms
+[which-key.nvim] checkout | Finished task checkout in 10ms
+[zk-nvim]      checkout | HEAD is now at 8df80d0 fix broken ZkInsertLink (only source character range if selection is true) (#274)
+[yazi.nvim]      status | Running task status
+[zen-mode.nvim] checkout | Finished task checkout in 11ms
+[zk-nvim]      checkout | Finished task checkout in 8ms
+[telescope.nvim] status | Finished task status in 65ms
+[telescope.nvim] checkout | Running task checkout
+[telescope.nvim] checkout | Finished task checkout in 0ms
+[yazi.nvim]      status | Finished task status in 15ms
+[yazi.nvim]    checkout | Running task checkout
+[yazi.nvim]    checkout | HEAD is now at d666962 chore(main): release 13.1.0 (#1226)
+[yazi.nvim]    checkout | Finished task checkout in 30ms
+[nvim-autopairs] checkout | Note: switching to 'd9e44e54384e5b0f3536339c65484f2e41b528e3'.
+[nvim-autopairs] checkout |
+You are in 'detached HEAD' state. You can look around, make experimental
+[nvim-autopairs] checkout | changes and commit them, and you can discard any commits you make in this
+[nvim-autopairs] checkout | state without impacting any branches by switching back to a branch.
+[nvim-autopairs] checkout |
+If you want to create a new branch to retain commits you create, you may
+[nvim-autopairs] checkout | do so (now or later) by using -c with the switch command. Example:
+[nvim-autopairs] checkout |
+  git switch -c <new-branch-name>
+[nvim-autopairs] checkout |
+Or undo this operation with:
+[nvim-autopairs] checkout |
+  git switch -
+[nvim-autopairs] checkout |
+Turn off this advice by setting config variable advice.detachedHead to false
+[nvim-autopairs] checkout |
+[nvim-autopairs] checkout | HEAD is now at d9e44e5 fix: add error checking for `vim.treesitter.get_parser()` (#525)
+[nvim-autopairs] checkout | Finished task checkout in 234ms
+[octo.nvim]    checkout | Previous HEAD position was 6f8a278 feat: add CommentIssue databaseId (#1390)
+[octo.nvim]    checkout | HEAD is now at 5223512 feat(cursor preview): add support for markdown urls (#1392)
+[nvim-autopairs]   docs | Running task docs
+[nvim-autopairs]   docs |
+[nvim-autopairs]   docs | Finished task docs in 1ms
+[octo.nvim]    checkout | Finished task checkout in 241ms
+[octo.nvim]        docs | Running task docs
+[octo.nvim]        docs |
+[octo.nvim]        docs | Finished task docs in 2ms
+[hererocks]    checkout | Note: switching to '6265dd3bcad7bddce33a36d085b3913687007735'.
+[hererocks]    checkout |
+You are in 'detached HEAD' state. You can look around, make experimental
+[hererocks]    checkout | changes and commit them, and you can discard any commits you make in this
+[hererocks]    checkout | state without impacting any branches by switching back to a branch.
+[hererocks]    checkout |
+If you want to create a new branch to retain commits you create, you may
+[hererocks]    checkout | do so (now or later) by using -c with the switch command. Example:
+[hererocks]    checkout |
+  git switch -c <new-branch-name>
+[hererocks]    checkout |
+Or undo this operation with:
+[hererocks]    checkout |
+  git switch -
+[hererocks]    checkout |
+Turn off this advice by setting config variable advice.detachedHead to false
+[hererocks]    checkout |
+HEAD is now at 6265dd3 Add support for Lua 5.5.0-rc3
+[hererocks]    checkout | Finished task checkout in 259ms
+[hererocks]        docs | Running task docs
+[hererocks]        docs | Finished task docs in 10ms
+[nvim-treesitter] status | Finished task status in 376ms
+[nvim-treesitter] checkout | Running task checkout
+[nvim-treesitter] checkout | Finished task checkout in 7ms
+[indent-blankline.nvim] fetch | Finished task fetch in 1432ms
+[indent-blankline.nvim] status | Running task status
+[noice.nvim]      fetch | Finished task fetch in 1433ms
+[noice.nvim]     status | Running task status
+[nordic.nvim]     fetch | Finished task fetch in 1441ms
+[nordic.nvim]    status | Running task status
+[lazy.nvim]       fetch | Finished task fetch in 1452ms
+[mini.nvim]       fetch | Finished task fetch in 1451ms
+[lazy.nvim]      status | Running task status
+[mini.nvim]      status | Running task status
+[indent-blankline.nvim] status | Finished task status in 24ms
+[indent-blankline.nvim] checkout | Running task checkout
+[indent-blankline.nvim] checkout | Finished task checkout in 0ms
+[lazy.nvim]      status | Finished task status in 14ms
+[lazy.nvim]    checkout | Running task checkout
+[mini.nvim]      status | Finished task status in 15ms
+[mini.nvim]    checkout | Running task checkout
+[nordic.nvim]    status | Finished task status in 30ms
+[lazy.nvim]    checkout | HEAD is now at 85c7ff3 chore(main): release 11.17.5 (#2087)
+[nordic.nvim]  checkout | Running task checkout
+[nordic.nvim]  checkout | Finished task checkout in 0ms
+[noice.nvim]     status | Finished task status in 38ms
+[noice.nvim]   checkout | Running task checkout
+[noice.nvim]   checkout | Finished task checkout in 0ms
+[lazy.nvim]    checkout | Finished task checkout in 12ms
+[mini.nvim]    checkout | HEAD is now at 6f11e41 docs(cmdline): update README to mention mandatory `setup()` call
+[mini.nvim]    checkout | Finished task checkout in 16ms
+[neovim-tips]     fetch | remote: Enumerating objects: 47, done.
+[neovim-tips]     fetch | remote: Counting objects: 100% (47/47), done.
+[neovim-tips]     fetch | remote: Compressing objects: 100% (24/24), done.
+[neovim-tips]     fetch | remote: Total 39 (delta 21), reused 30 (delta 12), pack-reused 0 (from 0)
+[neovim-tips]     fetch | Receiving objects: 100% (39/39), 4.39 KiB | 4.39 MiB/s, done.
+[neovim-tips]     fetch | Resolving deltas: 100% (21/21), completed with 4 local objects.
+[neovim-tips]     fetch | From https://github.com/saxon1964/neovim-tips
+[neovim-tips]     fetch |  + 241eaad...a1dcf73 dev        -> origin/dev  (forced update)
+[neovim-tips]     fetch |    b2cb106..7ab9c2e  master     -> origin/master
+[neovim-tips]     fetch |  * [new tag]         v0.8.0     -> v0.8.0
+[neovim-tips]     fetch |  * [new tag]         v0.8.1     -> v0.8.1
+[neovim-tips]     fetch | Finished task fetch in 1540ms
+[neovim-tips]    status | Running task status
+[neovim-tips]    status | Finished task status in 19ms
+[neovim-tips]  checkout | Running task checkout
+[neovim-tips]  checkout | Updating files: 100% (86/86), done.
+[neovim-tips]  checkout | Previous HEAD position was 26c8c86 (fix) Remove ligatures from lua/vimscript code in PDF book
+[neovim-tips]  checkout | HEAD is now at 7ab9c2e chore(docs): Update README with the current number of tips (2,700)
+[neovim-tips]  checkout | Finished task checkout in 1486ms
+[neovim-tips]      docs | Running task docs
+[neovim-tips]      docs |
+[neovim-tips]      docs | Finished task docs in 9ms
+[hererocks]       build | Running task build
+[neovim-tips]       log | Running task log
+[nvim-autopairs]    log | Running task log
+[octo.nvim]         log | Running task log
+[neovim-tips]       log | 7ab9c2e chore(docs): Update README with the current number of tips (2,700) (17 hours ago)
+[neovim-tips]       log | 77da568 fix(pdf): Remove duplicate 'Example' word in code block labels (18 hours ago)
+[neovim-tips]       log | cdee3e1 chore(docs): Add release notes for v0.8.0 (18 hours ago)
+[neovim-tips]       log | 678a29e chore(pdf): Change link color from red to blue (20 hours ago)
+[neovim-tips]       log | fd86ab5 chore(pdf): Improve introduction (20 hours ago)
+[neovim-tips]       log | f506e99 feat(tips): Add one more file operation tip (20 hours ago)
+[neovim-tips]       log | 0f96638 feat(pdf): Add language labels to code examples (20 hours ago)
+[neovim-tips]       log | 61e862c chore(pdf): Change book cover (21 hours ago)
+[neovim-tips]       log | 8cf870d fix(pdf): Fix small errors that prevent PDF book creation (21 hours ago)
+[neovim-tips]       log | 7498224 chore(scripts): Save requirements for various python scripts (2 days ago)
+[neovim-tips]       log | 3d9c5ce fix(git): Add log files to .gitignore (2 days ago)
+[neovim-tips]       log | 0c13a90 fix(tips): Clean up community contributed source formatting (2 days ago)
+[neovim-tips]       log | 8e0875f fix(tips): Format source links as proper markdown (2 days ago)
+[neovim-tips]       log | 3efa5f3 fix(tips): Remove 75 duplicate titles across files (2 days ago)
+[neovim-tips]       log | 010ee2e feat(tips): Add 2,000+ new tips from vim.fandom.com with hybrid AI deduplication (2 days ago)
+[neovim-tips]       log | f227a12 Implement support for bolds, italics and links in PDF book (2 days ago)
+[neovim-tips]       log | a6d85a0 Ignore __pycache__ folder (2 days ago)
+[neovim-tips]       log | b2cb106 fix(tips): Add lua snippets where only vimscript code is given (9 days ago)
+[neovim-tips]       log | 7eeb060 Merge branch 'master' into dev (9 days ago)
+[neovim-tips]       log | 7318eb4 feat(tip): Add tip from Julian Frenzel (#29) (9 days ago)
+[neovim-tips]       log | d499215 feat(tips): Add tips about bulk buffer closing (9 days ago)
+[neovim-tips]       log | bedbc45 fix(tip): Improve tip about yank+delete+clipboard interaction (9 days ago)
+[neovim-tips]       log | 347c45b fix(tips): Fix duplicate title (4 weeks ago)
+[neovim-tips]       log | 061a468 fix(tips): Fix duplicate title (4 weeks ago)
+[neovim-tips]       log | 30793dd Merge branch 'master' into dev (4 weeks ago)
+[neovim-tips]       log | ca9c36a Fix docs: added missing lua examples in builtin_functions.md (4 weeks ago)
+[neovim-tips]       log | 88ac590 Fix docs: added missing lua examples in autocommands.md (4 weeks ago)
+[neovim-tips]       log | bc39863 Merge branch 'master' into dev (4 weeks ago)
+[neovim-tips]       log | eafcb3c Merge pull request #26 from qiine/typo-ui-chapter (4 weeks ago)
+[neovim-tips]       log | 81b6173 chore: fix typos in ui chapter (4 weeks ago)
+[neovim-tips]       log | a41044f chore(pdf): Remove dead code from text template (4 weeks ago)
+[neovim-tips]       log | 844f98c Merge branch 'master' into dev (4 weeks ago)
+[neovim-tips]       log | 70157bb feat(tips): Add more tips (ui, exit, marks) (4 weeks ago)
+[neovim-tips]       log | 84d044b docs(readme): Explain potential conflict between lazy loading and daily tip configuration (4 weeks ago)
+[neovim-tips]       log | 08e8a03 (fix) Remove ligatures from lua/vimscript code in PDF book (4 weeks ago)
+[neovim-tips]       log | 001de6b (docs) Add remark that you need emtpy opts section even if you don't want to customize anything (5 weeks ago)
+[neovim-tips]       log | 2802088 Style: fixed typo (5 weeks ago)
+[neovim-tips]       log | c10f6b6 Fix docs: added missing lua examples in advanced_options.md (5 weeks ago)
+[neovim-tips]       log | 63aa4f9 fix: extmark conceal property only support one char (5 weeks ago)
+[neovim-tips]       log | 2383b5a Fix errors in extmarks tips reported by qline@github (5 weeks ago)
+[neovim-tips]       log | 12d8228 Fix docs: added missing lua examples in advanced_mappings.md (5 weeks ago)
+[neovim-tips]       log | 118af52 Add option to remove footer from daily tip (5 weeks ago)
+[neovim-tips]       log | a60ba91 Update documentation: Recommend lazy loading on key bindings (5 weeks ago)
+[neovim-tips]       log | 655408a Fix Issue#20: With lazy loading :NeovimTipsRandom works only after :NeovimTips (5 weeks ago)
+[neovim-tips]       log | 2e84efa Fix docs: `vim.keymap.set` is `noremap` by default (5 weeks ago)[nvim-autopairs]    log | d9e44e5 fix: add error checking for `vim.treesitter.get_parser()` (#525) (14 hours ago)[octo.nvim]         log | 5223512 feat(cursor preview): add support for markdown urls (#1392) (2 hours ago)
+[octo.nvim]         log | dae8db9 feat: navigate to comment based on id (#1391) (14 hours ago)[neovim-tips]       log | Finished task log in 10ms
+[nvim-autopairs]    log | Finished task log in 10ms
+[octo.nvim]         log | Finished task log in 22ms
+[hererocks]       build | Lua 5.1.5 already installed
+[hererocks]       build | LuaRocks 3.12.2 already installed
+[hererocks]       build | Done.
+[hererocks]       build | Finished task build in 198ms
+[hererocks]         log | Running task log
+[hererocks]         log | 6265dd3 Add support for Lua 5.5.0-rc3 (20 hours ago)[hererocks]         log | Finished task log in 23ms
+[INFO] ✓ Neovim plugins installed
+[INFO] ✓ nvim-plugins installed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Installation Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[WARNING] ▲ 20 installation(s) failed
+========================================
+JetBrainsMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/jetbrains.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:43-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf JetBrainsMono.tar.xz
+Move to: /tmp/fonts-JetBrainsMonoNerdFont
+
+---
+
+========================================
+CascadiaCode - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/cascadia.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:43-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf CascadiaCode.tar.xz
+Move to: /tmp/fonts-CascadiaCodeNerdFont
+
+---
+
+========================================
+Meslo - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/meslo.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:43-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Meslo.tar.xz
+Move to: /tmp/fonts-MesloNerdFont
+
+---
+
+========================================
+Monaspace - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/monaspace.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:44-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Monaspace.tar.xz
+Move to: /tmp/fonts-MonaspaceNerdFont
+
+---
+
+========================================
+Iosevka - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/iosevka.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:44-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Iosevka.tar.xz
+Move to: /tmp/fonts-IosevkaNerdFont
+
+---
+
+========================================
+DroidSansMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/droid.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:45-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf DroidSansMono.tar.xz
+Move to: /tmp/fonts-DroidSansMonoNerdFont
+
+---
+
+========================================
+ComicShannsMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/seriousshanns.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:45-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf ComicShannsMono.tar.xz
+Move to: /tmp/fonts-SeriousShannsNerdFont
+
+---
+
+========================================
+SourceCodePro - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/sourcecode.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:46-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf SourceCodePro.tar.xz
+Move to: /tmp/fonts-SourceCodeProNerdFont
+
+---
+
+========================================
+Terminus - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/terminess.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:46-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Terminus.tar.xz
+Move to: /tmp/fonts-TerminessNerdFont
+
+---
+
+========================================
+Hack - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/hack.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:46-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf Hack.tar.xz
+Move to: /tmp/fonts-HackNerdFont
+
+---
+
+========================================
+3270 - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/3270.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:47-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf 3270.tar.xz
+Move to: /tmp/fonts-3270NerdFont
+
+---
+
+========================================
+RobotoMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/robotomono.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:47-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf RobotoMono.tar.xz
+Move to: /tmp/fonts-RobotoMonoNerdFont
+
+---
+
+========================================
+SpaceMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/spacemono.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:48-05:00
+Download URL: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
+Extract: tar -xf SpaceMono.tar.xz
+Move to: /tmp/fonts-SpaceMonoNerdFont
+
+---
+
+========================================
+FiraCode - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/firacode.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:48-05:00
+Download URL: https://github.com/tonsky/FiraCode/releases/latest
+Version: 6.2
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually from GitHub:
+   https://github.com/tonsky/FiraCode/releases/latest
+
+Extract and install:
+   unzip Fira_Code_v6.2.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   cp ttf/*.ttf /mnt/c/Windows/Fonts/
+
+---
+
+========================================
+CommitMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/commitmono.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:49-05:00
+Download URL: https://github.com/eigilnikolajsen/commit-mono/releases/download/v1.143/CommitMono-1.143.zip
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually from:
+   https://github.com/eigilnikolajsen/commit-mono/releases/download/v1.143/CommitMono-1.143.zip
+
+Extract and install:
+   unzip CommitMono.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   cp *.otf /mnt/c/Windows/Fonts/
+
+---
+
+========================================
+IntelOneMono - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/intelone.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:49-05:00
+Download URL: https://github.com/intel/intel-one-mono/releases/download/V1.4.0/ttf.zip
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually from:
+   https://github.com/intel/intel-one-mono/releases/download/V1.4.0/ttf.zip
+
+Extract and install:
+   unzip IntelOneMono.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   cp ttf/*.ttf /mnt/c/Windows/Fonts/
+
+---
+
+========================================
+SGr-Iosevka - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/sgr-iosevka.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:50-05:00
+Download URL: https://github.com/be5invis/Iosevka/releases/download/v33.3.6/SuperTTC-SGr-Iosevka-33.3.6.zip
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download failed
+
+---
+
+========================================
+IosevkaBase - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/iosevka-base.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:51-05:00
+Download URL: https://github.com/be5invis/Iosevka/releases/download/v33.3.6/PkgTTC-Iosevka-33.3.6.zip
+Version: latest
+Reason: Download failed
+
+Manual Installation Steps:
+Download manually from:
+   https://github.com/be5invis/Iosevka/releases/download/v33.3.6/PkgTTC-Iosevka-33.3.6.zip
+
+Extract and install:
+   unzip Iosevka-base.zip
+   mkdir -p /mnt/c/Windows/Fonts
+   mv *.ttc /mnt/c/Windows/Fonts/
+
+---
+
+========================================
+FiraCodeiScript - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/fonts/firacodescript.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:22:51-05:00
+Download URL: https://github.com/kencrocken/FiraCodeiScript/raw/master/FiraCodeiScript-Regular.ttf
+Version: latest
+Reason: Download failed for FiraCodeiScript-Regular.ttf
+
+Manual Installation Steps:
+Download manually from GitHub:
+   https://github.com/kencrocken/FiraCodeiScript/raw/master/FiraCodeiScript-Regular.ttf
+
+Or browse the repository:
+   https://github.com/kencrocken/FiraCodeiScript
+
+Save files to:
+   /mnt/c/Windows/Fonts/
+
+---
+
+========================================
+tenv - Installation Failed
+========================================
+Script: /home/chris/dotfiles/management/common/install/github-releases/tenv.sh
+Exit Code: 1
+Timestamp: 2025-12-09T09:23:44-05:00
+
+
+
+
+
+---
+
+[INFO] ● Full report saved to: /tmp/dotfiles-install-failures-20251209-092234.txt
+
+
+Configuring ZSH as default shell
+───────────────────────────────────────────────
+[INFO] ✓ ZSHDOTDIR already configured
+[INFO] ✓ Default shell is already zsh
+
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                                                                              ✅ Dotfiles Installation - wsl COMPLETE (79)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
