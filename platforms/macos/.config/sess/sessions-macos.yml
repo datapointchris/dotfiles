@@ -14,28 +14,5 @@ defaults:
         panes:
           - git status
 
-  - name: ichrisbirch-dev
-    directory: ~/code/ichrisbirch
-    description: Main project development environment
-    tmuxinator_project: ichrisbirch-development
-    # When tmuxinator_project is set, it takes precedence over windows
-
-  - name: ichrisbirch-monitoring
-    directory: ~/code/ichrisbirch
-    description: Production monitoring dashboard
-    tmuxinator_project: ichrisbirch-prod-monitoring
-
-  - name: notes
-    directory: ~/Documents/notes
-    description: Note-taking and knowledge management
-    tmuxinator_project: null
-    windows:
-      - name: edit
-        panes:
-          - nvim
-      - name: browse
-        panes:
-          - yazi
-
 # You can add more default sessions here
 # sess will offer to create these if they don't exist
