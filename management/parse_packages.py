@@ -72,11 +72,15 @@ def get_system_packages(data, manager):
     return packages
 
 
-def get_cargo_packages(data):
-    """Extract cargo package names."""
+def get_cargo_packages(data, output_format='names'):
+    """Extract cargo package information."""
     if 'cargo_packages' not in data:
         return []
-    return [pkg['name'] for pkg in data['cargo_packages']]
+
+    if output_format == 'name_command':
+        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in data['cargo_packages']]
+    else:
+        return [pkg['name'] for pkg in data['cargo_packages']]
 
 
 def get_npm_packages(data):
@@ -180,8 +184,8 @@ def main():
                         help='Get macOS Homebrew taps')
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
-    parser.add_argument('--format', choices=['names', 'name_repo'], default='names',
-                        help='Output format for shell-plugins (names or name|repo pairs)')
+    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command'], default='names',
+                        help='Output format: names, name|repo pairs (shell-plugins), or name|command pairs (cargo)')
 
     args = parser.parse_args()
 
@@ -222,7 +226,7 @@ def main():
             sys.exit(1)
         packages = get_system_packages(data, args.manager)
     elif args.type == 'cargo':
-        packages = get_cargo_packages(data)
+        packages = get_cargo_packages(data, args.format if hasattr(args, 'format') and args.format else 'names')
     elif args.type == 'npm':
         packages = get_npm_packages(data)
     elif args.type == 'uv':

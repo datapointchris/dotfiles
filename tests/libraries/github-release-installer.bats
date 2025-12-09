@@ -102,6 +102,139 @@ setup() {
   [[ "$output" =~ "Already at latest version"|"Update available"|"Could not determine" ]]
 }
 
+# check_local_cache_for_version tests
+
+@test "check_local_cache_for_version creates cache directory if missing" {
+  local test_cache="/tmp/test-cache-$$"
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+
+  [[ -d "$test_cache/.cache/dotfiles" ]]
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version returns 1 when no cache exists" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+  assert_failure
+  assert_equal "$status" 1
+  assert_output ""
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version finds exact version match with v prefix" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/lazygit_0.40.2_Linux_x86_64.tar.gz"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+  assert_success
+  assert_output "$test_cache/.cache/dotfiles/lazygit_0.40.2_Linux_x86_64.tar.gz"
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version finds exact version match without v prefix" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/lazygit_0.40.2_Linux_x86_64.tar.gz"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "0.40.2" "tar.gz"
+  assert_success
+  assert_output "$test_cache/.cache/dotfiles/lazygit_0.40.2_Linux_x86_64.tar.gz"
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version matches various GitHub filename patterns" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+
+  # Test various real-world filename patterns from GitHub releases
+  local patterns=(
+    "lazygit_0.40.2_Linux_x86_64.tar.gz"
+    "lazygit-v0.40.2-linux-amd64.tar.gz"
+    "lazygit-0.40.2.linux-x86_64.tar.gz"
+  )
+
+  for pattern in "${patterns[@]}"; do
+    touch "$test_cache/.cache/dotfiles/$pattern"
+
+    HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+    assert_success
+    assert_output --regexp "lazygit.*0\.40\.2.*\.tar\.gz"
+
+    rm "$test_cache/.cache/dotfiles/$pattern"
+  done
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version does not match wrong version" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/lazygit_0.39.0_Linux_x86_64.tar.gz"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+  assert_failure
+  assert_equal "$status" 1
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version does not match wrong extension" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/lazygit_0.40.2_Linux_x86_64.zip"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+  assert_failure
+  assert_equal "$status" 1
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version works with zip extension" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/yazi_0.2.0_Darwin_arm64.zip"
+
+  HOME="$test_cache" run check_local_cache_for_version "yazi" "v0.2.0" "zip"
+  assert_success
+  assert_output "$test_cache/.cache/dotfiles/yazi_0.2.0_Darwin_arm64.zip"
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version returns first match when multiple files exist" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/lazygit_0.40.2_Linux_x86_64.tar.gz"
+  touch "$test_cache/.cache/dotfiles/lazygit-v0.40.2-linux-amd64.tar.gz"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+  assert_success
+  # Should return one of the matching files
+  assert_output --regexp "lazygit.*0\.40\.2.*\.tar\.gz"
+
+  rm -rf "$test_cache"
+}
+
+@test "check_local_cache_for_version does not match different binary" {
+  local test_cache="/tmp/test-cache-$$"
+  mkdir -p "$test_cache/.cache/dotfiles"
+  touch "$test_cache/.cache/dotfiles/duf_0.8.0_Linux_x86_64.tar.gz"
+
+  HOME="$test_cache" run check_local_cache_for_version "lazygit" "v0.40.2" "tar.gz"
+  assert_failure
+  assert_equal "$status" 1
+
+  rm -rf "$test_cache"
+}
+
 # Helper functions
 
 skip_if_not_macos() {

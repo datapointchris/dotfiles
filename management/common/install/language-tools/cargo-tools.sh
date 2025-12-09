@@ -14,7 +14,12 @@ print_banner "Installing Rust CLI Tools"
 log_info "Reading packages from packages.yml..."
 
 FAILURE_COUNT=0
-while read -r package; do
+while IFS='|' read -r package binary_name; do
+  if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v "$binary_name" >/dev/null 2>&1; then
+    log_success "$package already installed, skipping"
+    continue
+  fi
+
   log_info "Installing $package..."
   if cargo binstall -y "$package"; then
     log_success "$package installed"
@@ -29,7 +34,7 @@ Or try cargo-binstall directly:
     log_warning "$package installation failed (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo)
+done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=name_command)
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT package(s) failed to install"

@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-# This library requires error-handling.sh (for structured logging)
-# and failure-logging.sh (for failure reporting)
-# They should already be sourced by the calling script
+# This library requires the following to be sourced by calling script:
+#   - error-handling.sh (for structured logging)
+#   - failure-logging.sh (for failure reporting)
 #
-# For update support, also source version-helpers.sh:
-#   source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+# This library sources:
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/version-helpers.sh"
+source "$SCRIPT_DIR/cache-manager.sh"
 
 # Get platform_arch string with customizable capitalization
 # Usage: get_platform_arch <darwin_x86> <darwin_arm> <linux_x86>
@@ -31,18 +33,14 @@ get_platform_arch() {
 }
 
 # Get latest GitHub release version
+# Wrapper for fetch_github_latest_version() from version-helpers.sh
 # Usage: get_latest_version <repo>
 # Example: get_latest_version "jesseduffield/lazygit"
 get_latest_version() {
   local repo="$1"
-
   local version
-  version=$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
-    | grep '"tag_name":' \
-    | head -1 \
-    | sed -E 's/.*"([^"]+)".*/\1/')
 
-  if [[ -z "$version" ]]; then
+  if ! version=$(fetch_github_latest_version "$repo"); then
     log_error "Failed to fetch latest version from GitHub API" "${BASH_SOURCE[0]}" "$LINENO"
     return 1
   fi
@@ -123,31 +121,51 @@ install_from_tarball() {
   local binary_path_in_tarball="$3"
   local version="${4:-latest}"
 
-  local temp_tarball="/tmp/${binary_name}.tar.gz"
-  local target_bin="$HOME/.local/bin/$binary_name"
+  local tarball_path
+  local using_cache=false
 
-  log_info "Downloading $binary_name..."
-  if ! curl -fsSL "$download_url" -o "$temp_tarball"; then
-    local manual_steps="1. Download in your browser (bypasses firewall):
+  # Check cache first if version is specified
+  if [[ "$version" != "latest" ]]; then
+    local cached_file
+    if cached_file=$(check_local_cache_for_version "$binary_name" "$version" "tar.gz"); then
+      log_info "Using cached archive: $cached_file"
+      tarball_path="$cached_file"
+      using_cache=true
+    fi
+  fi
+
+  # Download if not in cache
+  if [[ "$using_cache" == "false" ]]; then
+    tarball_path="/tmp/${binary_name}.tar.gz"
+    log_info "Downloading $binary_name..."
+    if ! curl -fsSL "$download_url" -o "$tarball_path"; then
+      local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
-2. After downloading, extract and install:
-   tar -xzf ~/Downloads/${binary_name}.tar.gz
+2. Move to cache directory:
+   mv ~/Downloads/${binary_name}*.tar.gz ~/.cache/dotfiles/
+
+3. Re-run this installer
+
+Or install manually:
+   tar -xzf ~/Downloads/${binary_name}*.tar.gz
    mv ${binary_path_in_tarball} ~/.local/bin/
    chmod +x ~/.local/bin/${binary_name}
 
-3. Verify installation:
+Verify installation:
    ${binary_name} --version"
 
-    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
-    log_error "Failed to download from $download_url"
-    return 1
+      output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+      log_error "Failed to download from $download_url"
+      return 1
+    fi
   fi
 
   log_info "Extracting..."
-  tar -xzf "$temp_tarball" -C /tmp
+  tar -xzf "$tarball_path" -C /tmp
 
   log_info "Installing to ~/.local/bin..."
+  local target_bin="$HOME/.local/bin/$binary_name"
   mkdir -p "$HOME/.local/bin"
 
   if [[ "$binary_path_in_tarball" == *"*"* ]]; then
@@ -188,33 +206,53 @@ install_from_zip() {
   local binary_path_in_zip="$3"
   local version="${4:-latest}"
 
-  local temp_zip="/tmp/${binary_name}.zip"
-  local extract_dir="/tmp/${binary_name}-extract"
-  local target_bin="$HOME/.local/bin/$binary_name"
+  local zip_path
+  local using_cache=false
 
-  log_info "Downloading $binary_name..."
-  if ! curl -fsSL "$download_url" -o "$temp_zip"; then
-    local manual_steps="1. Download in your browser (bypasses firewall):
+  # Check cache first if version is specified
+  if [[ "$version" != "latest" ]]; then
+    local cached_file
+    if cached_file=$(check_local_cache_for_version "$binary_name" "$version" "zip"); then
+      log_info "Using cached archive: $cached_file"
+      zip_path="$cached_file"
+      using_cache=true
+    fi
+  fi
+
+  # Download if not in cache
+  if [[ "$using_cache" == "false" ]]; then
+    zip_path="/tmp/${binary_name}.zip"
+    log_info "Downloading $binary_name..."
+    if ! curl -fsSL "$download_url" -o "$zip_path"; then
+      local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
-2. After downloading, extract and install:
-   unzip ~/Downloads/${binary_name}.zip
+2. Move to cache directory:
+   mv ~/Downloads/${binary_name}*.zip ~/.cache/dotfiles/
+
+3. Re-run this installer
+
+Or install manually:
+   unzip ~/Downloads/${binary_name}*.zip
    mv ${binary_path_in_zip} ~/.local/bin/
    chmod +x ~/.local/bin/${binary_name}
 
-3. Verify installation:
+Verify installation:
    ${binary_name} --version"
 
-    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
-    log_error "Failed to download from $download_url"
-    return 1
+      output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+      log_error "Failed to download from $download_url"
+      return 1
+    fi
   fi
 
   log_info "Extracting..."
+  local extract_dir="/tmp/${binary_name}-extract"
   mkdir -p "$extract_dir"
-  unzip -q "$temp_zip" -d "$extract_dir"
+  unzip -q "$zip_path" -d "$extract_dir"
 
   log_info "Installing to ~/.local/bin..."
+  local target_bin="$HOME/.local/bin/$binary_name"
   mkdir -p "$HOME/.local/bin"
   mv "$extract_dir/$binary_path_in_zip" "$target_bin"
   chmod +x "$target_bin"
