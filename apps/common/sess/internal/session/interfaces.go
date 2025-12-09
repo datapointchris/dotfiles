@@ -31,6 +31,12 @@ type TmuxClient interface {
 
 	// SwitchToLastSession switches to the previously active session
 	SwitchToLastSession() error
+
+	// DeleteSession deletes a tmux session
+	DeleteSession(name string) error
+
+	// ReloadConfig reloads tmux configuration in all sessions
+	ReloadConfig() error
 }
 
 // TmuxinatorClient defines operations for interacting with tmuxinator

@@ -188,6 +188,24 @@ func (c *Client) SwitchToLastSession() error {
 	return cmd.Run()
 }
 
+// DeleteSession deletes a tmux session
+func (c *Client) DeleteSession(name string) error {
+	exists, err := c.SessionExists(name)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("session '%s' does not exist", name)
+	}
+
+	cmd := exec.Command("tmux", "kill-session", "-t", name)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+
+	return nil
+}
+
 // ReloadConfig reloads tmux configuration in all active sessions
 func (c *Client) ReloadConfig() error {
 	// Get all active sessions

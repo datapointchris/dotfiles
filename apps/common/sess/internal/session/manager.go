@@ -163,6 +163,53 @@ func (m *Manager) SwitchToLast() error {
 	return m.tmuxClient.SwitchToLastSession()
 }
 
+// SessionExists checks if a session exists in any source (tmux, tmuxinator, or default config)
+func (m *Manager) SessionExists(name string) (bool, error) {
+	// Check if it's an active tmux session
+	exists, err := m.tmuxClient.SessionExists(name)
+	if err != nil {
+		return false, err
+	}
+	if exists {
+		return true, nil
+	}
+
+	// Check if it's a tmuxinator project
+	if m.tmuxinatorClient.IsInstalled() {
+		isProject, err := m.tmuxinatorClient.ProjectExists(name)
+		if err == nil && isProject {
+			return true, nil
+		}
+	}
+
+	// Check if it's a default session from config
+	_, err = m.configLoader.GetSessionConfig(name, m.platform)
+	if err == nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// GoToSession opens a session if it exists, returns error if it doesn't
+// This is different from CreateOrSwitch which creates a new session if not found
+func (m *Manager) GoToSession(name string) error {
+	exists, err := m.SessionExists(name)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("session '%s' not found", name)
+	}
+
+	return m.CreateOrSwitch(name)
+}
+
+// DeleteSession deletes an active tmux session
+func (m *Manager) DeleteSession(name string) error {
+	return m.tmuxClient.DeleteSession(name)
+}
+
 // GetSessionInfo returns detailed information about a session
 // This is useful for displaying additional context in the UI
 func (m *Manager) GetSessionInfo(name string) (string, error) {

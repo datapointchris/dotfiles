@@ -55,12 +55,27 @@ func main() {
 	// Cobra organizes commands in a tree structure
 	// The root command is the base command (just "session")
 	rootCmd := &cobra.Command{
-		Use:   "session",
+		Use:   "session [session-name]",
 		Short: "Tmux session manager",
 		Long: `A fast and lightweight tmux session manager.
 
-Manages tmux sessions, tmuxinator projects, and default sessions from YAML configuration.
-Built with Go, gum, and Cobra.`,
+USAGE:
+  session                    Show interactive picker
+  session <name>             Create or switch to session <name>
+  session go <name>          Open session if it exists, otherwise show picker
+  session delete <name>      Delete an active session
+  session list               List all available sessions
+  session last               Switch to last active session
+  session reload             Reload tmux config in all sessions
+
+SESSIONS:
+  • Active tmux sessions (●)
+  • Tmuxinator projects (⚙)
+  • Default sessions from config (○)
+
+CONFIG:
+  Default sessions: ~/.config/sess/sessions-<platform>.yml
+  Platform detected automatically (macos, wsl, etc.)`,
 		Version: fmt.Sprintf("%s (%s)", Version, Commit),
 		// Run is called when the user runs "session" with no subcommands
 		Run: func(cmd *cobra.Command, args []string) {
@@ -84,6 +99,8 @@ Built with Go, gum, and Cobra.`,
 	rootCmd.AddCommand(listCmd())
 	rootCmd.AddCommand(lastCmd())
 	rootCmd.AddCommand(reloadCmd())
+	rootCmd.AddCommand(goCmd())
+	rootCmd.AddCommand(deleteCmd())
 
 	// Execute the root command
 	// This parses command-line arguments and runs the appropriate command
@@ -189,7 +206,15 @@ func listCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List all sessions",
-		Long:  "List all available sessions with details (active, tmuxinator, default)",
+		Long: `List all available sessions with details.
+
+Shows:
+  ● Active tmux sessions (with window count)
+  ⚙ Tmuxinator projects (not yet started)
+  ○ Default sessions from config (not yet started)
+
+Example:
+  sess list`,
 		Run: func(cmd *cobra.Command, args []string) {
 			manager := createSessionManager()
 			sessions, err := manager.ListAll()
@@ -216,7 +241,13 @@ func lastCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "last",
 		Short: "Switch to last session",
-		Long:  "Switch to the previously active tmux session",
+		Long: `Switch to the previously active tmux session.
+
+Useful for quickly toggling between two sessions.
+Must be run from inside tmux.
+
+Example:
+  sess last`,
 		Run: func(cmd *cobra.Command, args []string) {
 			manager := createSessionManager()
 			if err := manager.SwitchToLast(); err != nil {
@@ -232,13 +263,82 @@ func reloadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "reload",
 		Short: "Reload tmux config in all sessions",
-		Long:  "Reload tmux configuration file in all active sessions (useful after theme changes)",
+		Long: `Reload tmux configuration file in all active sessions.
+
+Useful after:
+  • Changing tmux theme
+  • Modifying tmux.conf
+  • Updating keybindings
+
+Example:
+  sess reload`,
 		Run: func(cmd *cobra.Command, args []string) {
 			tmuxClient := tmux.NewClient()
 			if err := tmuxClient.ReloadConfig(); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
+		},
+	}
+}
+
+// goCmd creates the "session go" subcommand
+func goCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "go [session-name]",
+		Short: "Go to session if it exists, otherwise show picker",
+		Long: `Open a session if it exists, otherwise show the interactive picker.
+
+Different from 'session <name>' which creates a new session if not found.
+This command will fall back to the picker instead of creating.
+
+Examples:
+  sess go dotfiles        # Open dotfiles if it exists, otherwise show picker
+  sess go                 # Show picker (same as just 'sess')`,
+		Args:  cobra.MaximumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 0 {
+				showInteractiveList()
+				return
+			}
+
+			sessionName := args[0]
+			manager := createSessionManager()
+
+			err := manager.GoToSession(sessionName)
+			if err != nil {
+				// Session doesn't exist, show the picker
+				showInteractiveList()
+				return
+			}
+		},
+	}
+}
+
+// deleteCmd creates the "session delete" subcommand
+func deleteCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete <session-name>",
+		Short: "Delete a tmux session",
+		Long: `Delete an active tmux session.
+
+Only works for active tmux sessions (●).
+Cannot delete tmuxinator projects or default sessions.
+
+Examples:
+  sess delete old-project     # Delete the 'old-project' session
+  sess delete test            # Delete the 'test' session`,
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			sessionName := args[0]
+			manager := createSessionManager()
+
+			if err := manager.DeleteSession(sessionName); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("Session '%s' deleted successfully\n", sessionName)
 		},
 	}
 }
