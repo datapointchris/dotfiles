@@ -22,16 +22,18 @@ vim.api.nvim_create_autocmd('LspAttach', {
 })
 
 vim.api.nvim_create_autocmd('BufWritePre', {
-  desc = 'Run linter and formatter on save',
-  group = vim.api.nvim_create_augroup('FormatAndFixAllOnSave', { clear = true }),
+  desc = 'Run linter on save (except Python to preserve imports while experimenting)',
+  group = vim.api.nvim_create_augroup('FixAllOnSave', { clear = true }),
   pattern = '*',
   callback = function()
-    vim.lsp.buf.code_action({
-      context = { only = { 'source.fixAll' }, diagnostics = {} },
-      apply = true,
-    })
-    -- Use the same formatter logic as manual formatting
-    require('utils.formatter').format_buffer({ async = false, show_notifications = false, timeout_ms = 1000 })
+    -- Skip auto-fixing for Python (preserves unused imports during experimentation)
+    -- Python users can manually run <leader>fmi when ready to clean up
+    if vim.bo.filetype ~= 'python' then
+      vim.lsp.buf.code_action({
+        context = { only = { 'source.fixAll' }, diagnostics = {} },
+        apply = true,
+      })
+    end
   end,
 })
 

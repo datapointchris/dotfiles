@@ -259,7 +259,7 @@ end
 -- VSCode handles formatting natively, these conflict with VSCode formatting keybindings
 if not vim.g.vscode then
   vim.keymap.set('n', '<leader>fmt', function()
-    require('utils.formatter').format_buffer({ async = true, show_notifications = true })
+    require('conform').format({ async = true, lsp_fallback = true })
   end, { desc = '[F]ormat buffer' })
   vim.keymap.set('n', '<leader>fmi', function()
     vim.lsp.buf.code_action({
