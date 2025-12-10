@@ -13,12 +13,6 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for updates..."
-else
-  log_info "Installing..."
-fi
-
 # Fetch latest stable version from Claude Code distribution
 GCS_BUCKET="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
 LATEST_VERSION=$(curl -fsSL "$GCS_BUCKET/stable" 2>/dev/null || echo "")

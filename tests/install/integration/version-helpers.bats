@@ -146,12 +146,14 @@ Extra: 7.8.9"
 # fetch_github_latest_version tests
 
 @test "fetch_github_latest_version: fetches neovim latest version" {
+  skip "Requires network access to GitHub API"
   run fetch_github_latest_version "neovim/neovim"
   assert_success
   assert_output --regexp '^v[0-9]+\.[0-9]+\.[0-9]+$'
 }
 
 @test "fetch_github_latest_version: fetches lazygit latest version" {
+  skip "Requires network access to GitHub API"
   run fetch_github_latest_version "jesseduffield/lazygit"
   assert_success
   assert_output --regexp '^v[0-9]+\.[0-9]+(\.[0-9]+)?$'
@@ -175,6 +177,7 @@ Extra: 7.8.9"
 # Integration tests (combining functions)
 
 @test "integration: check if neovim update available" {
+  skip "Requires network access to GitHub API"
   # Fetch latest version
   latest=$(fetch_github_latest_version "neovim/neovim")
 
@@ -199,6 +202,7 @@ Extra: 7.8.9"
 }
 
 @test "integration: detect already at latest" {
+  skip "Requires network access to GitHub API"
   # Fetch real latest version
   latest=$(fetch_github_latest_version "neovim/neovim")
 

@@ -18,7 +18,6 @@ run_installer() {
 
   if [[ $exit_code -eq 0 ]]; then
     rm -f "$stderr_file"
-    log_success "$tool_name installed"
     return 0
   else
     log_warning "$tool_name installation failed (see $FAILURES_LOG)"

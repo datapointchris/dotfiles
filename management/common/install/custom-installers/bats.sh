@@ -12,12 +12,6 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for updates..."
-else
-  log_info "Installing..."
-fi
-
 # Installation configuration
 INSTALL_PREFIX="$HOME/.local"
 BATS_LIB_DIR="$INSTALL_PREFIX/lib"

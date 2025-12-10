@@ -74,7 +74,7 @@ Extract and install:
 print_section "Installing $font_name"
 
 if is_font_installed "$system_font_dir" "Iosevka-*.$font_extension"; then
-  log_success "$font_name already installed"
+  log_success "$font_name already installed: $system_font_dir"
   exit 0
 fi
 
@@ -92,3 +92,5 @@ install_font_files "$download_dir" "$system_font_dir" "$platform"
 
 log_info "Refreshing font cache..."
 refresh_font_cache "$platform" "$system_font_dir"
+
+log_success "$font_name installed: $system_font_dir"

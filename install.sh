@@ -29,12 +29,7 @@ fi
 show_failures_summary() {
   [[ ! -f "$FAILURES_LOG" || ! -s "$FAILURES_LOG" ]] && return 0
 
-  local failure_count
-  failure_count=$(grep -c "^---$" "$FAILURES_LOG" 2>/dev/null || echo 0)
-  [[ $failure_count -eq 0 ]] && return 0
-
   print_header_error "Installation Failures"
-  log_warning "$failure_count installation(s) failed"
   cat "$FAILURES_LOG"
   log_info "Full report saved to: $FAILURES_LOG"
 }

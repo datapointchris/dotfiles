@@ -28,9 +28,9 @@ GOBIN="$HOME/go/bin"
 
 FAILURE_COUNT=0
 while read -r tool; do
-  print_section "  Installing $tool..."
+  print_section "$tool"
   if go install "$tool@latest"; then
-    log_success "$tool installed"
+    log_success "$tool installed: $GOBIN"
   else
     manual_steps="Install manually with go:
    go install $tool@latest
@@ -48,5 +48,5 @@ if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT tool(s) failed to install"
   exit 1
 else
-  log_success "All Go tools installed successfully to $GOBIN"
+  log_success "All Go tools installed: $GOBIN"
 fi

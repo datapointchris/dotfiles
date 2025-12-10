@@ -14,13 +14,13 @@ setup() {
 @test "go: accepts --update flag" {
   run bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update
   assert_success
-  assert_output --partial "Checking Go for updates"
+  assert_output --partial "Checking for updates..."
 }
 
 @test "go: normal install mode works" {
   run bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh"
   assert_success
-  assert_output --partial "Installing Go"
+  assert_output --partial "Latest version:"
 }
 
 @test "go: shows already at latest version when current" {
@@ -33,13 +33,13 @@ setup() {
 @test "nvm: accepts --update flag" {
   run bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update
   assert_success
-  assert_output --partial "Checking nvm and Node.js for updates"
+  assert_output --partial "Checking for updates..."
 }
 
 @test "nvm: normal install mode works" {
   run bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh"
   assert_success
-  assert_output --partial "Installing nvm and Node.js"
+  assert_output --partial "Installing..."
 }
 
 @test "nvm: shows already at target version when current" {

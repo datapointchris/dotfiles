@@ -34,16 +34,7 @@ setup_file() {
       return 0
     fi
 
-    local failure_count
-    # grep -c outputs "0" when no matches (doesn't fail), so no need for || echo "0"
-    failure_count=$(grep -c "^---$" "$FAILURES_LOG" 2>/dev/null)
-
-    if [[ "$failure_count" -eq 0 ]]; then
-      return 0
-    fi
-
-    echo "Installation Summary"
-    echo "$failure_count installation(s) failed"
+    echo "Installation Failures"
     cat "$FAILURES_LOG"
     echo "Full report saved to: $FAILURES_LOG"
   }
@@ -119,35 +110,24 @@ setup() {
   run_installer "$TEMP_DIR/failure.sh" "mock-tool" >/dev/null 2>&1 || true
 
   run cat "$FAILURES_LOG"
-  assert_output --partial "mock-tool - Installation Failed"
+  assert_output --partial "Installer: failure.sh"
   assert_output --partial "Download URL: https://example.com/mock-tool.tar.gz"
   assert_output --partial "Version: v1.0.0"
-  assert_output --partial "Reason: Download failed - test error"
-  assert_output --partial "Manual Installation Steps:"
+  assert_output --partial "Error: Download failed - test error"
+  assert_output --partial "How to Install Manually:"
 }
 
 # ================================================================
 # Test: Multiple failures accumulate in single log
 # ================================================================
 
-@test "orchestration: multiple failures accumulate in log" {
-  # Run three failures
-  run_installer "$TEMP_DIR/failure.sh" "tool-1" >/dev/null 2>&1 || true
-  run_installer "$TEMP_DIR/failure.sh" "tool-2" >/dev/null 2>&1 || true
-  run_installer "$TEMP_DIR/failure.sh" "tool-3" >/dev/null 2>&1 || true
-
-  # Count separator lines (each failure ends with ---)
-  failure_count=$(grep -c "^---$" "$FAILURES_LOG")
-  [[ "$failure_count" == "3" ]]
-}
-
 @test "orchestration: each failure has separate entry in log" {
   MOCK_TOOL_NAME="tool-1" run_installer "$TEMP_DIR/failure.sh" "tool-1" >/dev/null 2>&1 || true
   MOCK_TOOL_NAME="tool-2" run_installer "$TEMP_DIR/failure.sh" "tool-2" >/dev/null 2>&1 || true
 
   run cat "$FAILURES_LOG"
-  assert_output --partial "tool-1 - Installation Failed"
-  assert_output --partial "tool-2 - Installation Failed"
+  assert_output --partial "tool-1.tar.gz"
+  assert_output --partial "tool-2.tar.gz"
 }
 
 # ================================================================
@@ -162,19 +142,22 @@ setup() {
   # Log should still exist with failure entry
   [[ -f "$FAILURES_LOG" ]]
   run cat "$FAILURES_LOG"
-  assert_output --partial "fail-tool - Installation Failed"
+  assert_output --partial "fail-tool.tar.gz"
 }
 
 @test "orchestration: success does not add entry to log" {
   # Fail first to create log
   run_installer "$TEMP_DIR/failure.sh" "fail-tool" >/dev/null 2>&1 || true
 
+  # Get initial log size
+  initial_size=$(wc -l < "$FAILURES_LOG")
+
   # Succeed
   run_installer "$TEMP_DIR/success.sh" "success-tool" >/dev/null 2>&1 || true
 
-  # Log should have exactly 1 failure (not 2)
-  failure_count=$(grep -c "^---$" "$FAILURES_LOG")
-  [[ "$failure_count" == "1" ]]
+  # Log size should not have changed
+  final_size=$(wc -l < "$FAILURES_LOG")
+  [[ "$initial_size" == "$final_size" ]]
 }
 
 # ================================================================
@@ -193,16 +176,7 @@ setup() {
 
   run show_failures_summary
   assert_success
-  assert_output --partial "Installation Summary"
-}
-
-@test "orchestration: show_failures_summary shows failure count" {
-  run_installer "$TEMP_DIR/failure.sh" "tool-1" >/dev/null 2>&1 || true
-  run_installer "$TEMP_DIR/failure.sh" "tool-2" >/dev/null 2>&1 || true
-
-  run show_failures_summary
-  assert_success
-  assert_output --partial "2 installation(s) failed"
+  assert_output --partial "Installation Failures"
 }
 
 @test "orchestration: show_failures_summary displays log contents" {
@@ -210,7 +184,7 @@ setup() {
 
   run show_failures_summary
   assert_success
-  assert_output --partial "mock-tool - Installation Failed"
+  assert_output --partial "Installer: failure.sh"
   assert_output --partial "Download URL: https://example.com/mock-tool.tar.gz"
 }
 
@@ -227,16 +201,8 @@ setup() {
 # Test: Failure counting edge cases
 # ================================================================
 
-@test "orchestration: empty log file shows 0 failures" {
+@test "orchestration: empty log file returns without output" {
   touch "$FAILURES_LOG"
-
-  run show_failures_summary
-  assert_success
-  assert_output ""
-}
-
-@test "orchestration: log with content but no separators shows 0 failures" {
-  echo "Random content" > "$FAILURES_LOG"
 
   run show_failures_summary
   assert_success

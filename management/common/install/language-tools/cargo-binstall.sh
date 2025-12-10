@@ -10,9 +10,9 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$HOME/.cargo/env"
 
 if command -v cargo-binstall >/dev/null 2>&1; then
-  log_success "cargo-binstall already installed"
+  log_success "cargo-binstall already installed: $HOME/.cargo/bin/cargo-binstall"
 else
   log_info "Installing cargo-binstall..."
   cargo install cargo-binstall
-  log_success "cargo-binstall installed"
+  log_success "cargo-binstall installed: $HOME/.cargo/bin/cargo-binstall"
 fi

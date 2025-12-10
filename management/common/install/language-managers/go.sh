@@ -15,8 +15,6 @@ source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   log_info "Checking for updates..."
-else
-  log_info "Installing..."
 fi
 
 # Check if Go is already installed
@@ -102,7 +100,7 @@ else
   # Install mode - skip if already installed (unless FORCE_INSTALL)
   if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
     CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}'); CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
-    log_success "Go $CURRENT_VERSION already installed, skipping"
+    log_success "Go $CURRENT_VERSION already installed: /usr/local/go/bin/go"
     exit 0
   fi
 fi
@@ -142,7 +140,7 @@ rm "$GO_TARBALL"
 # Verify
 if /usr/local/go/bin/go version >/dev/null 2>&1; then
   INSTALLED_VERSION=$(/usr/local/go/bin/go version)
-  log_success "$INSTALLED_VERSION"
+  log_success "$INSTALLED_VERSION installed: /usr/local/go/bin/go"
 else
   manual_steps="Binary installed but not working.
 

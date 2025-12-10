@@ -12,12 +12,6 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for updates..."
-else
-  log_info "Installing..."
-fi
-
 OS=$(detect_os)
 ARCH=$(detect_arch)
 

@@ -60,7 +60,7 @@ should_skip_install() {
   fi
 
   if [[ -f "$binary_path" ]] && command -v "$binary_name" >/dev/null 2>&1; then
-    log_success "$binary_name already installed (skipping download/installation)"
+    log_success "$binary_name already installed: $binary_path"
     return 0  # Skip
   fi
 

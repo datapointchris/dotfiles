@@ -31,12 +31,6 @@ fi
 NVIM_INSTALL_DIR="$HOME/.local/${NVIM_BINARY}"
 NVIM_BIN_LINK="$HOME/.local/bin/nvim"
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for updates..."
-else
-  log_info "Installing..."
-fi
-
 NVIM_VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
 if [[ -z "$NVIM_VERSION" ]]; then
   manual_steps="Failed to fetch latest version from GitHub API.

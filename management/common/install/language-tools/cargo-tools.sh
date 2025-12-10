@@ -14,13 +14,13 @@ log_info "Reading packages from packages.yml..."
 FAILURE_COUNT=0
 while IFS='|' read -r package binary_name; do
   if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v "$binary_name" >/dev/null 2>&1; then
-    log_success "$package already installed, skipping"
+    log_success "$package already installed: $HOME/.cargo/bin/$binary_name"
     continue
   fi
 
   log_info "Installing $package..."
   if cargo binstall -y "$package"; then
-    log_success "$package installed"
+    log_success "$package installed: $HOME/.cargo/bin/$binary_name"
   else
     manual_steps="Install manually with cargo:
    cargo install $package

@@ -18,12 +18,6 @@ BINARY_NAME="duf"
 REPO="muesli/duf"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for updates..."
-else
-  log_info "Installing..."
-fi
-
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest version: $VERSION"
 

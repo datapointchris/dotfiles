@@ -81,21 +81,15 @@ EOF
       fi
 
       cat >> "$FAILURES_LOG" << LOGEOF
-========================================
 $failure_tool - Installation Failed
-========================================
-Script: $script
-Exit Code: $exit_code
-Timestamp: $(date -Iseconds)
+Installer: $(basename "$script")
+${failure_reason:+Error: $failure_reason}
 ${failure_url:+Download URL: $failure_url}
 ${failure_version:+Version: $failure_version}
-${failure_reason:+Reason: $failure_reason}
 
-${failure_manual:+Manual Installation Steps:
+${failure_manual:+How to Install Manually:
 $failure_manual
 }
----
-
 LOGEOF
       return 1
     fi
@@ -154,7 +148,7 @@ teardown_file() {
   rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
-  assert_output --partial "mock-tool - Installation Failed"
+  assert_output --partial "Installation Failed"
 }
 
 @test "github-releases: log contains parsed URL" {
@@ -175,14 +169,14 @@ teardown_file() {
   rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
-  assert_output --partial "Reason: Download failed"
+  assert_output --partial "Error: Download failed"
 }
 
 @test "github-releases: log contains manual steps" {
   rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
-  assert_output --partial "Manual Installation Steps:"
+  assert_output --partial "How to Install Manually:"
 }
 
 @test "github-releases: installer returns exit code 1 on failure" {

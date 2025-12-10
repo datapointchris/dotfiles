@@ -47,7 +47,7 @@ Check tinty status:
   output_failure_data "tinty-themes" "https://github.com/tinted-theming/tinty" "latest" "$manual_steps" "tinty install failed"
   log_warning "tinty install encountered issues (see summary)"
 else
-  log_success "Theme repositories installed"
+  log_success "Theme repositories installed: $HOME/.local/share/tinted-theming/tinty"
 fi
 
 log_info "Syncing current theme..."

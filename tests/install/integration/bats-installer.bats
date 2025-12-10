@@ -103,10 +103,10 @@ teardown_file() {
 # Test Suite 3: Installation Configuration
 # ================================================================
 
-@test "installer uses correct default version" {
+@test "installer fetches latest version dynamically" {
   run grep "BATS_VERSION=" "$BATS_INSTALLER"
   assert_success
-  assert_output --partial "v1.13.0"
+  assert_output --partial "fetch_github_latest_version"
 }
 
 @test "installer targets ~/.local prefix" {
@@ -226,16 +226,6 @@ teardown_file() {
   local log_count
   log_count=$(grep -c "log_info\|log_success\|log_error\|log_warning" "$BATS_INSTALLER")
   assert [ "$log_count" -ge 10 ]
-}
-
-@test "installer uses print_banner for headers" {
-  run grep -c "print_banner" "$BATS_INSTALLER"
-  assert_success
-}
-
-@test "installer has success banner at end" {
-  run grep -c "print_banner_success" "$BATS_INSTALLER"
-  assert_success
 }
 
 # ================================================================
