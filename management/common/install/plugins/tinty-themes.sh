@@ -74,6 +74,4 @@ Check current theme:
 
   output_failure_data "tinty-themes" "https://github.com/tinted-theming/tinty" "latest" "$manual_steps" "tinty sync failed"
   log_warning "tinty sync encountered issues (see summary)"
-else
-  log_success "Theme sync complete"
 fi

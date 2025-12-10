@@ -141,8 +141,6 @@ install_common_phases() {
 
   print_header "Neovim Plugins"
   run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
-
-  show_failures_summary
 }
 
 configure_zsh_default_shell() {
@@ -243,6 +241,8 @@ main() {
     bash "$macos_setup/preferences.sh"
 
     install_common_phases
+
+    show_failures_summary
     ;;
   wsl)
     if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
@@ -258,6 +258,8 @@ main() {
     print_header "Post-Installation Configuration"
     print_section "Configuring ZSH as default shell"
     configure_zsh_default_shell
+
+    show_failures_summary
     ;;
   arch)
     print_header "System Packages (pacman)"
@@ -268,6 +270,8 @@ main() {
     print_header "Post-Installation Configuration"
     print_section "Configuring ZSH as default shell"
     configure_zsh_default_shell
+
+    show_failures_summary
     ;;
   *)
     die "Unsupported platform: $platform"

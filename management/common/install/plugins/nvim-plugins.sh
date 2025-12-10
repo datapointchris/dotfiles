@@ -13,9 +13,7 @@ log_info "Installing Neovim plugins via Lazy.nvim..."
 # --headless: run without UI
 # +Lazy! sync: sync all plugins
 # +qa: quit all windows
-if nvim --headless "+Lazy! sync" +qa 2>&1 | grep -v "^$"; then
-  log_success "Neovim plugins installed"
-else
+if ! nvim --headless "+Lazy! sync" +qa 2>&1 | grep -v "^$"; then
   manual_steps="Install plugins manually from within Neovim:
    nvim
    :Lazy sync

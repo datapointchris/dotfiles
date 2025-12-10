@@ -25,9 +25,7 @@ if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
     fi
   done
 
-  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-    log_success "Tmux plugins installed"
-  else
+  if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     manual_steps="Run TPM installation manually:
    $TPM_DIR/bin/install_plugins
 
