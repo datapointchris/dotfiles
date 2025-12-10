@@ -39,12 +39,13 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terraforme
 
 log_info "Download URL: $DOWNLOAD_URL"
 log_info "Downloading terraformer..."
+mkdir -p "$HOME/.local/bin"
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
   manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, install:
-   mv ~/Downloads/terraformer-${PROVIDER}-${PLATFORM}-${ARCH} ~/.local/bin/terraformer
+   mv ~/Downloads/terraformer-${PROVIDER}-${OS}-${ARCH} ~/.local/bin/terraformer
    chmod +x ~/.local/bin/terraformer
 
 3. Verify installation:
