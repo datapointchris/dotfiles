@@ -22,23 +22,30 @@ download_sgriosevka() {
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || exit 1
 
-  local release_json
-  if ! release_json=$(curl -fsSL https://api.github.com/repos/be5invis/Iosevka/releases/latest); then
-    manual_steps="Download manually from GitHub:
+  local manual_steps="1. Visit GitHub releases page:
    https://github.com/be5invis/Iosevka/releases/latest
 
-Look for these 4 files:
+2. Download these 4 files:
    SuperTTC-SGr-Iosevka-*.zip
    SuperTTC-SGr-IosevkaTerm-*.zip
    SuperTTC-SGr-IosevkaSlab-*.zip
    SuperTTC-SGr-IosevkaTermSlab-*.zip
 
-Extract and install:
+3. Extract and install each variant:
    unzip SuperTTC-SGr-Iosevka-*.zip
-   mkdir -p $system_font_dir/SGr-Iosevka
-   mv *.ttc $system_font_dir/SGr-Iosevka/
-   (Repeat for each variant)"
+   mkdir -p ${system_font_dir}
+   mv *.ttc ${system_font_dir}/
 
+   (Repeat for each of the 4 variants)
+
+4. Refresh font cache (Linux only):
+   fc-cache -fv
+
+5. Verify installation:
+   fc-list | grep -i 'SGr-Iosevka'"
+
+  local release_json
+  if ! release_json=$(curl -fsSL https://api.github.com/repos/be5invis/Iosevka/releases/latest); then
     output_failure_data "SGr-Iosevka" "https://github.com/be5invis/Iosevka/releases/latest" "latest" "$manual_steps" "Failed to fetch release info"
     cd - > /dev/null
     rm -rf "$temp_dir"
@@ -63,7 +70,7 @@ Extract and install:
   mkdir -p "$download_dir/SGr-IosevkaTermSlab"
 
   if ! curl -fsSL "$sgr_iosevka_url" -o SGr-Iosevka.zip; then
-    output_failure_data "SGr-Iosevka" "$sgr_iosevka_url" "latest" "Download failed" "Download failed"
+    output_failure_data "SGr-Iosevka" "$sgr_iosevka_url" "latest" "$manual_steps" "Download failed"
     cd - > /dev/null
     rm -rf "$temp_dir"
     exit 1
@@ -72,7 +79,7 @@ Extract and install:
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-Iosevka/" \; 2>/dev/null || true
 
   if ! curl -fsSL "$sgr_term_url" -o SGr-IosevkaTerm.zip; then
-    output_failure_data "SGr-IosevkaTerm" "$sgr_term_url" "latest" "Download failed" "Download failed"
+    output_failure_data "SGr-IosevkaTerm" "$sgr_term_url" "latest" "$manual_steps" "Download failed"
     cd - > /dev/null
     rm -rf "$temp_dir"
     exit 1
@@ -81,7 +88,7 @@ Extract and install:
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaTerm/" \; 2>/dev/null || true
 
   if ! curl -fsSL "$sgr_slab_url" -o SGr-IosevkaSlab.zip; then
-    output_failure_data "SGr-IosevkaSlab" "$sgr_slab_url" "latest" "Download failed" "Download failed"
+    output_failure_data "SGr-IosevkaSlab" "$sgr_slab_url" "latest" "$manual_steps" "Download failed"
     cd - > /dev/null
     rm -rf "$temp_dir"
     exit 1
@@ -90,7 +97,7 @@ Extract and install:
   find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaSlab/" \; 2>/dev/null || true
 
   if ! curl -fsSL "$sgr_termslab_url" -o SGr-IosevkaTermSlab.zip; then
-    output_failure_data "SGr-IosevkaTermSlab" "$sgr_termslab_url" "latest" "Download failed" "Download failed"
+    output_failure_data "SGr-IosevkaTermSlab" "$sgr_termslab_url" "latest" "$manual_steps" "Download failed"
     cd - > /dev/null
     rm -rf "$temp_dir"
     exit 1

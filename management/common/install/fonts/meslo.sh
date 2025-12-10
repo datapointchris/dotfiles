@@ -26,7 +26,7 @@ if is_font_installed "$system_font_dir" "*MesloLG*NerdFont*.$font_extension"; th
 fi
 
 log_info "Downloading $font_name..."
-download_nerd_font "$nerd_font_package" "$font_extension" "$download_dir"
+download_nerd_font "$nerd_font_package" "$font_extension" "$download_dir" "$system_font_dir"
 
 log_info "Pruning unwanted variants..."
 prune_font_family "$download_dir"

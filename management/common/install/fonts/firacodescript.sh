@@ -25,14 +25,22 @@ download_firacodescript() {
 
   for file in "${files[@]}"; do
     if ! curl -fsSL "$base_url/$file" -o "$download_dir/$file"; then
-      manual_steps="Download manually from GitHub:
-   ${base_url}/${file}
+      manual_steps="1. Download font files:
+   curl -fsSL ${base_url}/FiraCodeiScript-Regular.ttf -o FiraCodeiScript-Regular.ttf
+   curl -fsSL ${base_url}/FiraCodeiScript-Bold.ttf -o FiraCodeiScript-Bold.ttf
+   curl -fsSL ${base_url}/FiraCodeiScript-Italic.ttf -o FiraCodeiScript-Italic.ttf
 
-Or browse the repository:
-   https://github.com/kencrocken/FiraCodeiScript
+   Or download in browser:
+   https://github.com/kencrocken/FiraCodeiScript/tree/master
 
-Save files to:
-   $system_font_dir/"
+2. Install to system fonts:
+   cp FiraCodeiScript-*.ttf ${system_font_dir}/
+
+3. Refresh font cache (Linux only):
+   fc-cache -fv
+
+4. Verify installation:
+   fc-list | grep -i 'FiraCodeiScript'"
 
       output_failure_data "FiraCodeiScript" "${base_url}/${file}" "latest" "$manual_steps" "Download failed for $file"
       exit 1

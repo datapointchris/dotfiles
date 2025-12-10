@@ -39,6 +39,7 @@ download_nerd_font() {
   local package="$1"
   local extension="$2"
   local download_dir="$3"
+  local system_font_dir="$4"
 
   local temp_dir
   temp_dir=$(mktemp -d)
@@ -48,9 +49,20 @@ download_nerd_font() {
   log_info "Downloading from: $url"
 
   if ! curl -fsSL "$url" -o "${package}.tar.xz"; then
-    manual_steps="Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
-Extract: tar -xf ${package}.tar.xz
-Move to: $download_dir"
+    manual_steps="1. Download manually:
+   ${url}
+
+2. Extract the archive:
+   tar -xf ${package}.tar.xz
+
+3. Copy font files to system font directory:
+   cp *NerdFont*.${extension} ${system_font_dir}/
+
+4. Refresh font cache (Linux only):
+   fc-cache -fv
+
+5. Verify installation:
+   fc-list | grep -i ${package}"
     output_failure_data "$package" "https://github.com/ryanoasis/nerd-fonts/releases/latest" "latest" "$manual_steps" "Download failed"
     cd - > /dev/null || return 1
     rm -rf "$temp_dir"
