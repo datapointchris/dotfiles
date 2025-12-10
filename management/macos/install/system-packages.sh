@@ -7,7 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
-print_section "Installing macOS packages" "cyan"
+print_section "Installing macOS packages"
 
 # Step 1: Install PyYAML for system Python (bootstrap dependency)
 if /usr/bin/python3 -c "import yaml" &>/dev/null; then

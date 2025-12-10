@@ -18,7 +18,7 @@ system_font_dir=$(get_system_font_dir)
 download_dir="/tmp/fonts-${font_name// /}"
 trap 'rm -rf "$download_dir"' EXIT
 
-print_section "Installing $font_name" "yellow"
+print_section "Installing $font_name"
 
 if is_font_installed "$system_font_dir" "*IosevkaNerdFont*.$font_extension"; then
   log_success "$font_name already installed"

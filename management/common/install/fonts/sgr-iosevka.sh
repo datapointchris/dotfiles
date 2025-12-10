@@ -107,7 +107,7 @@ Extract and install:
   log_success "Downloaded $count files (4 TTC collections)"
 }
 
-print_section "Installing $font_name" "yellow"
+print_section "Installing $font_name"
 
 # Check if any variant is already installed
 if is_font_installed "$system_font_dir" "*SGr-Iosevka*.$font_extension"; then

@@ -159,6 +159,7 @@ print_cyan() { print_color "$COLOR_CYAN" "$1"; }
 # Main header with thick borders and optional color
 # Usage: print_header "Header Text" "color"
 #        print_header "Header Text"  (no color, just text)
+# Priority: inline color parameter > HEADER_COLOR env var > no color
 print_header() {
   local text="$1"
   local color="${2:-}"  # Optional color parameter
@@ -166,6 +167,8 @@ print_header() {
 
   if [[ -n "$color" ]]; then
     color_code=$(_get_color "$color")
+  elif [[ -n "${HEADER_COLOR:-}" ]]; then
+    color_code=$(_get_color "$HEADER_COLOR")
   fi
 
   echo ""
@@ -178,7 +181,6 @@ print_header() {
     echo " ${text}"
     _separator "$BOX_THICK"
   fi
-  echo ""
 }
 
 # Success header with thick borders (green + emoji)
@@ -224,6 +226,7 @@ print_header_info() {
 # Section header with thin underline (extends 10 chars past text)
 # Usage: print_section "Section Name" "color"
 #        print_section "Section Name"  (no color, just text)
+# Priority: inline color parameter > SECTION_COLOR env var > no color
 SECTION_UNDERLINE_PADDING=15
 print_section() {
   local text="$1"
@@ -232,8 +235,9 @@ print_section() {
   local underline_length=$((${#text} + SECTION_UNDERLINE_PADDING))
   if [[ -n "$color" ]]; then
     color_code=$(_get_color "$color")
+  elif [[ -n "${SECTION_COLOR:-}" ]]; then
+    color_code=$(_get_color "$SECTION_COLOR")
   fi
-  echo ""
   echo ""
   echo "$text"
   if [[ -n "$color_code" ]]; then
@@ -291,6 +295,7 @@ print_section_info() {
 # Uses full terminal width with 5-space padding on each side
 # Usage: print_title "Title Text" "color"
 #        print_title "Title Text"  (no color, just text)
+# Priority: inline color parameter > TITLE_COLOR env var > no color
 print_title() {
   local text="$1"
   local color="${2:-}"  # Optional color parameter
@@ -298,6 +303,8 @@ print_title() {
 
   if [[ -n "$color" ]]; then
     color_code=$(_get_color "$color")
+  elif [[ -n "${TITLE_COLOR:-}" ]]; then
+    color_code=$(_get_color "$TITLE_COLOR")
   fi
 
   local term_width=$(tput cols 2>/dev/null || echo 80)
@@ -372,6 +379,7 @@ print_title_info() {
 # Banner with optional colored double bars (═)
 # Usage: print_banner "Tool Name" "orange"
 #        print_banner "Tool Name"  (no color, just text)
+# Priority: inline color parameter > BANNER_COLOR env var > no color
 print_banner() {
   local text="$1"
   local color="${2:-}"  # Optional color parameter
@@ -379,6 +387,8 @@ print_banner() {
 
   if [[ -n "$color" ]]; then
     color_code=$(_get_color "$color")
+  elif [[ -n "${BANNER_COLOR:-}" ]]; then
+    color_code=$(_get_color "$BANNER_COLOR")
   fi
 
   local bar_width=43

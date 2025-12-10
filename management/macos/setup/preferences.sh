@@ -29,7 +29,7 @@ osascript -e 'tell application "System Preferences" to quit' 2>/dev/null || true
 # FINDER - File Management and Display
 # ================================================================
 
-print_section "Configuring Finder" "orange"
+print_section "Configuring Finder"
 
 # File Extensions and Hidden Files
 log_info "  Show all file extensions"
@@ -78,7 +78,7 @@ xattr -d com.apple.FinderInfo ~/Library 2>/dev/null || true
 # DOCK - Layout and Behavior
 # ================================================================
 
-print_section "Configuring Dock" "orange"
+print_section "Configuring Dock"
 
 # Position and Size (current preferences)
 log_info "  Set dock position to bottom"
@@ -111,7 +111,7 @@ defaults write com.apple.dock mru-spaces -bool false
 # SAFARI - Privacy and Developer Features
 # ================================================================
 
-print_section "Configuring Safari" "orange"
+print_section "Configuring Safari"
 
 # Privacy
 log_info "  Show full URL in address bar"
@@ -145,7 +145,7 @@ defaults write com.apple.Safari InstallExtensionUpdatesAutomatically -bool true
 # MAIL - Threading and Formatting
 # ================================================================
 
-print_section "Configuring Mail" "orange"
+print_section "Configuring Mail"
 
 log_info "  Display messages in threaded mode"
 defaults write com.apple.mail DraftsViewerAttributes -dict-add "DisplayInThreadedMode" -string "yes"
@@ -158,7 +158,7 @@ defaults write com.apple.mail DraftsViewerAttributes -dict-add "SortedDescending
 # SYSTEM - Global Preferences
 # ================================================================
 
-print_section "Configuring System Preferences" "orange"
+print_section "Configuring System Preferences"
 
 # Keyboard
 log_info "  Disable automatic capitalization"
@@ -192,7 +192,7 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 15
 # SCREENSHOTS - Location and Format
 # ================================================================
 
-print_section "Configuring Screenshots" "orange"
+print_section "Configuring Screenshots"
 
 log_info "  Save screenshots to ~/Desktop/screenshots"
 mkdir -p "$HOME/Desktop/screenshots"
@@ -208,7 +208,7 @@ defaults write com.apple.screencapture disable-shadow -bool true
 # MAC APP STORE - Updates and Development
 # ================================================================
 
-print_section "Configuring Mac App Store" "orange"
+print_section "Configuring Mac App Store"
 
 log_info "  Enable automatic update checks"
 defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
@@ -229,7 +229,7 @@ defaults write com.apple.appstore WebKitDeveloperExtras -bool true
 # PHOTOS - Auto-Import Behavior
 # ================================================================
 
-print_section "Configuring Photos" "orange"
+print_section "Configuring Photos"
 
 log_info "  Prevent Photos from opening when devices are connected"
 defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
@@ -238,7 +238,7 @@ defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
 # MESSAGES - Text Substitution
 # ================================================================
 
-print_section "Configuring Messages" "orange"
+print_section "Configuring Messages"
 
 log_info "  Disable automatic emoji substitution"
 defaults write com.apple.messageshelper.MessageController SOInputLineSettings -dict-add "automaticEmojiSubstitutionEnablediMessage" -bool false
@@ -250,7 +250,7 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 # SECURITY AND PRIVACY
 # ================================================================
 
-print_section "Configuring Security and Privacy" "orange"
+print_section "Configuring Security and Privacy"
 
 log_info "  Disable Siri suggestions in Spotlight"
 defaults write com.apple.lookup.shared LookupSuggestionsDisabled -bool true
@@ -259,7 +259,7 @@ defaults write com.apple.lookup.shared LookupSuggestionsDisabled -bool true
 # TEXT EDIT
 # ================================================================
 
-print_section "Configuring TextEdit" "orange"
+print_section "Configuring TextEdit"
 
 log_info "  Use plain text mode by default"
 defaults write com.apple.TextEdit RichText -int 0

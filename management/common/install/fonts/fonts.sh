@@ -126,7 +126,7 @@ EOF
 }
 
 list_families() {
-  print_header "Available Font Families" "cyan"
+  print_header "Available Font Families"
   echo "  jetbrains       - JetBrains Mono Nerd Font"
   echo "  cascadia        - Cascadia Code Nerd Font"
   echo "  meslo           - Meslo Nerd Font"
@@ -249,7 +249,7 @@ log_verbose() {
 download_progress() {
   local name="$1"
   CURRENT=$((CURRENT + 1))
-  print_section "[$CURRENT/$TOTAL] $name" "blue"
+  print_section "[$CURRENT/$TOTAL] $name"
 }
 
 count_font_files() {
@@ -612,7 +612,7 @@ prune_font_family() {
     return 0
   fi
 
-  print_section "Pruning $family_name" "blue"
+  print_section "Pruning $family_name"
   log_verbose "Files before pruning: $before_count"
 
   # Step 1: Remove unwanted weight variants
@@ -700,7 +700,7 @@ prune_all_fonts() {
     return 1
   fi
 
-  print_header "Pruning Font Families" "cyan"
+  print_header "Pruning Font Families"
   echo ""
 
   local families=()
@@ -743,7 +743,7 @@ standardize_font_family() {
     return 0
   fi
 
-  print_section "Standardizing $family_name" "blue"
+  print_section "Standardizing $family_name"
   log_verbose "Files with spaces: $files_with_spaces"
 
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -774,7 +774,7 @@ standardize_all_fonts() {
     return 1
   fi
 
-  print_header "Standardizing Font Names" "cyan"
+  print_header "Standardizing Font Names"
   echo ""
 
   local families=()
@@ -949,7 +949,7 @@ run_download_phase() {
     local family_count
     existing_count=$(count_font_files "$FONTS_DIR")
     family_count=$(find "$FONTS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
-    print_header "Fonts Already Downloaded" "cyan"
+    print_header_info "Fonts Already Downloaded"
     echo "  Families: $family_count"
     echo "  Files: $existing_count"
     echo "  Location: $FONTS_DIR"
@@ -964,10 +964,10 @@ run_download_phase() {
 
   # Print header
   if [[ -n "$DOWNLOAD_FAMILY" ]]; then
-    print_header "Font Download: $DOWNLOAD_FAMILY" "cyan"
+    print_section "Font Download: $DOWNLOAD_FAMILY"
     TOTAL=1
   else
-    print_header "Font Download (22 families)" "cyan"
+    print_section "Font Download (22 families)"
   fi
 
   echo "Target directory: $FONTS_DIR"
@@ -991,9 +991,9 @@ run_download_phase() {
 
 run_prune_phase() {
   if [[ "$DRY_RUN" == "true" ]]; then
-    print_header "Font Pruning (DRY RUN)" "cyan"
+    print_section "Font Pruning (DRY RUN)"
   else
-    print_header "Font Pruning" "cyan"
+    print_section "Font Pruning"
   fi
   echo "Target directory: $FONTS_DIR"
   echo ""
@@ -1019,9 +1019,9 @@ run_prune_phase() {
 
 run_standardize_phase() {
   if [[ "$DRY_RUN" == "true" ]]; then
-    print_header "Font Name Standardization (DRY RUN)" "cyan"
+    print_section "Font Name Standardization (DRY RUN)"
   else
-    print_header "Font Name Standardization" "cyan"
+    print_section "Font Name Standardization"
   fi
   echo "Target directory: $FONTS_DIR"
   echo ""
@@ -1049,7 +1049,7 @@ run_install_phase() {
   target_dir=$(get_font_target_dir "$platform")
 
   # Print header
-  print_header "Font Installation" "cyan"
+  print_section "Font Installation"
   echo ""
 
   # Verify source directory

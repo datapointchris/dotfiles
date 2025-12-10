@@ -86,7 +86,7 @@ Extract and install:
   fi
 }
 
-print_section "Installing $font_name" "yellow"
+print_section "Installing $font_name"
 
 if is_font_installed "$system_font_dir" "*VictorMono*.$font_extension"; then
   log_success "$font_name already installed"

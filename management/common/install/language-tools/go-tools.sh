@@ -21,14 +21,14 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   exit 1
 fi
 
-print_section "Installing Go tools" "cyan"
+print_section "Installing Go tools"
 
 # Get Go tools from packages.yml via Python parser
 GOBIN="$HOME/go/bin"
 
 FAILURE_COUNT=0
 while read -r tool; do
-  print_section "  Installing $tool..." "yellow"
+  print_section "  Installing $tool..."
   if go install "$tool@latest"; then
     log_success "$tool installed"
   else

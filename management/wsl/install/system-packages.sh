@@ -7,7 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
-print_section "Installing WSL Ubuntu packages" "cyan"
+print_section "Installing WSL Ubuntu packages"
 
 log_info "Updating package lists..."
 sudo apt update

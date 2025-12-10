@@ -71,7 +71,7 @@ Extract and install:
   log_success "Downloaded $count files"
 }
 
-print_section "Installing $font_name" "yellow"
+print_section "Installing $font_name"
 
 if is_font_installed "$system_font_dir" "Iosevka-*.$font_extension"; then
   log_success "$font_name already installed"

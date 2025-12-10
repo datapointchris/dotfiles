@@ -33,7 +33,7 @@ show_failures_summary() {
   failure_count=$(grep -c "^---$" "$FAILURES_LOG" 2>/dev/null || echo 0)
   [[ $failure_count -eq 0 ]] && return 0
 
-  print_header "⚠️  Installation Failures" "red"
+  print_header_error "Installation Failures"
   log_warning "$failure_count installation(s) failed"
   cat "$FAILURES_LOG"
   log_info "Full report saved to: $FAILURES_LOG"
@@ -80,17 +80,17 @@ install_common_phases() {
   local plugins="$common_install/plugins"
 
   if [[ "${SKIP_FONTS:-}" != "1" ]]; then
-    print_header "Coding Fonts" $header_color
+    print_header "Coding Fonts"
     install_fonts
   else
     log_info "Skipping font installation (SKIP_FONTS=1)"
   fi
 
-  print_header "Go Toolchain" $header_color
+  print_header "Go Toolchain"
   run_installer "$lang_managers/go.sh" "go"
   PATH="/usr/local/go/bin:$PATH" run_installer "$lang_tools/go-tools.sh" "go-tools"
 
-  print_header "GitHub Release Tools" $header_color
+  print_header "GitHub Release Tools"
   run_installer "$github_releases/fzf.sh" "fzf"
   run_installer "$github_releases/neovim.sh" "neovim"
   run_installer "$github_releases/lazygit.sh" "lazygit"
@@ -103,43 +103,43 @@ install_common_phases() {
   run_installer "$github_releases/trivy.sh" "trivy"
   run_installer "$github_releases/zk.sh" "zk"
 
-  print_header "Custom Distribution Tools" $header_color
+  print_header "Custom Distribution Tools"
   run_installer "$custom_installers/bats.sh" "bats"
   run_installer "$custom_installers/awscli.sh" "awscli"
   run_installer "$custom_installers/claude-code.sh" "claude-code"
   run_installer "$custom_installers/terraform-ls.sh" "terraform-ls"
 
-  print_header "Rust/Cargo Tools" $header_color
+  print_header "Rust/Cargo Tools"
   run_installer "$lang_managers/rust.sh" "rust"
   run_installer "$lang_tools/cargo-binstall.sh" "cargo-binstall"
   run_installer "$lang_tools/cargo-tools.sh" "cargo-tools"
 
-  print_header "Language Package Managers" $header_color
+  print_header "Language Package Managers"
   run_installer "$lang_managers/nvm.sh" "nvm"
   run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
   run_installer "$lang_managers/uv.sh" "uv"
   run_installer "$lang_tools/uv-tools.sh" "uv-tools"
   run_installer "$github_releases/tenv.sh" "tenv"
 
-  print_header "Shell Plugins" $header_color
+  print_header "Shell Plugins"
   run_installer "$plugins/shell-plugins.sh" "shell-plugins"
 
-  print_header "Custom Go Applications" $header_color
+  print_header "Custom Go Applications"
   cd "$DOTFILES_DIR/apps/common/sess" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
   cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
 
-  print_header "Symlinking Dotfiles" $header_color
+  print_header "Symlinking Dotfiles"
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
 
-  print_header "Theme System" $header_color
+  print_header "Theme System"
   source "$HOME/.cargo/env" && tinty install
   source "$HOME/.cargo/env" && tinty sync
 
-  print_header "Tmux Plugins" $header_color
+  print_header "Tmux Plugins"
   run_installer "$plugins/tpm.sh" "tpm"
   run_installer "$plugins/tmux-plugins.sh" "tmux-plugins"
 
-  print_header "Neovim Plugins" $header_color
+  print_header "Neovim Plugins"
   run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
 
   show_failures_summary
@@ -216,14 +216,15 @@ main() {
   local start_time
   local end_time
   local total_duration
-  local title_color="blue"
-  local header_color="magenta"
-  local section_color="yellow"
+
+  export TITLE_COLOR="blue"
+  export HEADER_COLOR="brightblue"
+  export SECTION_COLOR="orange"
 
   platform=$(detect_platform)
   start_time=$(date +%s)
 
-  print_title "Dotfiles Installation - $platform" $title_color
+  print_title "Dotfiles Installation - $platform"
 
   cd "$DOTFILES_DIR" || die "Could not change to dotfiles directory"
 
@@ -232,13 +233,13 @@ main() {
     local macos_install="$DOTFILES_DIR/management/macos/install"
     local macos_setup="$DOTFILES_DIR/management/macos/setup"
 
-    print_header "System Tools (Homebrew)" $header_color
+    print_header "System Tools (Homebrew)"
     bash "$macos_install/homebrew.sh"
     bash "$macos_install/system-packages.sh"
     bash "$macos_install/mas-apps.sh"
     bash "$macos_setup/xcode.sh"
 
-    print_header "System Preferences" $header_color
+    print_header "System Preferences"
     bash "$macos_setup/preferences.sh"
 
     install_common_phases
@@ -249,23 +250,23 @@ main() {
       log_warning "Continuing anyway..."
     fi
 
-    print_header "System Packages (apt)" $header_color
+    print_header "System Packages (apt)"
     bash "$DOTFILES_DIR/management/wsl/install/system-packages.sh"
 
     install_common_phases
 
-    print_header "Post-Installation Configuration" $header_color
-    print_section "Configuring ZSH as default shell" $section_color
+    print_header "Post-Installation Configuration"
+    print_section "Configuring ZSH as default shell"
     configure_zsh_default_shell
     ;;
   arch)
-    print_header "System Packages (pacman)" $header_color
+    print_header "System Packages (pacman)"
     bash "$DOTFILES_DIR/management/arch/install/system-packages.sh"
 
     install_common_phases
 
-    print_header "Post-Installation Configuration" $header_color
-    print_section "Configuring ZSH as default shell" $section_color
+    print_header "Post-Installation Configuration"
+    print_section "Configuring ZSH as default shell"
     configure_zsh_default_shell
     ;;
   *)
@@ -276,7 +277,7 @@ main() {
   end_time=$(date +%s)
   local total_duration=$((end_time - start_time))
 
-  print_title_success "Dotfiles Installation - $platform COMPLETE (${total_duration})" $title_color
+  print_title_success "Dotfiles Installation - $platform COMPLETE (${total_duration})"
 }
 
 parse_args "$@"

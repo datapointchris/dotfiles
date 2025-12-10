@@ -13,7 +13,7 @@ if command -v brew >/dev/null 2>&1; then
   exit 0
 fi
 
-print_section "Installing Homebrew" "cyan"
+print_section "Installing Homebrew"
 
 if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
   log_success "Homebrew installed"

@@ -33,56 +33,56 @@ update_shell_plugins() {
 }
 
 update_common_tools() {
-  print_section "Updating Go toolchain via $(print_green "go.sh --update")" $section_color
+  print_section "Updating Go toolchain via $(print_green "go.sh --update")"
   if bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update; then
     log_success "Go updated"
   else
     log_warning "Go update failed"
   fi
 
-  print_section "Updating Rust toolchain via $(print_green "rustup update")" $section_color
+  print_section "Updating Rust toolchain via $(print_green "rustup update")"
   if rustup update; then
     log_success "Rust toolchain updated"
   else
     log_warning "Rust toolchain update failed"
   fi
 
-  print_section "Updating Rust packages via $(print_green "cargo install-update -a")" $section_color
+  print_section "Updating Rust packages via $(print_green "cargo install-update -a")"
   if cargo install-update -a; then
     log_success "Rust packages updated"
   else
     log_warning "Rust packages update failed"
   fi
 
-  print_section "Updating uv package manager via $(print_green "uv self update")" $section_color
+  print_section "Updating uv package manager via $(print_green "uv self update")"
   if uv self update; then
     log_success "uv updated"
   else
     log_warning "uv update failed"
   fi
 
-  print_section "Updating Python tools via $(print_green "uv tool upgrade --all")" $section_color
+  print_section "Updating Python tools via $(print_green "uv tool upgrade --all")"
   if uv tool upgrade --all; then
     log_success "Python tools updated"
   else
     log_warning "Python tools update failed"
   fi
 
-  print_section "Updating nvm and Node.js via $(print_green "nvm.sh --update")" $section_color
+  print_section "Updating nvm and Node.js via $(print_green "nvm.sh --update")"
   if bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update; then
     log_success "nvm and Node.js updated"
   else
     log_warning "nvm and Node.js update failed"
   fi
 
-  print_section "Updating npm global packages via $(print_green "npm update -g")" $section_color
+  print_section "Updating npm global packages via $(print_green "npm update -g")"
   if npm update -g 2>&1 | grep -v "npm warn"; then
     log_success "npm global packages updated (warnings suppressed)"
   else
     log_warning "npm global packages update failed"
   fi
 
-  print_section "Updating tenv and Terraform via $(print_green "tenv.sh --update")" $section_color
+  print_section "Updating tenv and Terraform via $(print_green "tenv.sh --update")"
   if bash "$DOTFILES_DIR/management/common/install/github-releases/tenv.sh" --update; then
     log_success "tenv and Terraform updated"
   else
@@ -96,14 +96,14 @@ update_common_tools() {
     log_warning "Shell plugins update failed"
   fi
 
-  print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")" $section_color
+  print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")"
   if "$HOME/.config/tmux/plugins/tpm/bin/update_plugins" all; then
     log_success "tmux plugins updated"
   else
     log_warning "tmux plugins update failed"
   fi
 
-  print_section "Updating Neovim plugins via $(print_green ":Lazy update")" $section_color
+  print_section "Updating Neovim plugins via $(print_green ":Lazy update")"
   if nvim --headless +Lazy! update +qa 2>&1; then
     log_success "Neovim plugins updated"
   else
@@ -112,24 +112,25 @@ update_common_tools() {
 }
 
 main() {
-  local platform start_time end_time total_duration title_color section_color
+  local platform start_time end_time total_duration
   platform=$(detect_platform)
   start_time=$(date +%s)
-  title_color="blue"
-  section_color="yellow"
 
-  print_title "System Update - $platform" $title_color
+  export TITLE_COLOR="blue"
+  export SECTION_COLOR="yellow"
+
+  print_title "System Update - $platform"
 
   case "$platform" in
     macos)
-      print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")" $section_color
+      print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")"
       if brew update && brew upgrade && brew upgrade --cask --greedy; then
         log_success "Homebrew packages updated"
       else
         log_warning "Homebrew packages update failed"
       fi
 
-      print_section "Updating Mac App Store apps via $(print_green "mas upgrade")" $section_color
+      print_section "Updating Mac App Store apps via $(print_green "mas upgrade")"
       if mas upgrade; then
         log_success "Mac App Store apps updated"
       else
@@ -140,7 +141,7 @@ main() {
       ;;
 
     wsl)
-      print_section "Updating system packages via $(print_green "apt update && apt upgrade")" $section_color
+      print_section "Updating system packages via $(print_green "apt update && apt upgrade")"
       if sudo apt update && sudo apt upgrade -y; then
         log_success "system packages updated"
       else
@@ -151,14 +152,14 @@ main() {
       ;;
 
     arch)
-      print_section "Updating system packages via $(print_green "pacman -Syu")" $section_color
+      print_section "Updating system packages via $(print_green "pacman -Syu")"
       if sudo pacman -Syu --noconfirm; then
         log_success "system packages updated"
       else
         log_warning "system packages update failed"
       fi
 
-      print_section "Updating AUR packages via $(print_green "yay -Syu")" $section_color
+      print_section "Updating AUR packages via $(print_green "yay -Syu")"
       if yay -Syu --noconfirm; then
         log_success "AUR packages updated"
       else
