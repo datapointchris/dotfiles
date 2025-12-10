@@ -21,13 +21,14 @@ if [[ $# -lt 1 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo "  INSTALLER_SCRIPT   Path to installer script (relative to dotfiles root)"
   echo ""
   echo "Options:"
-  echo "  --keep            Keep container after test (for debugging)"
-  echo "  -h, --help        Show this help message"
+  echo "  --validate BINARY  Validate that BINARY was installed correctly"
+  echo "  --keep             Keep container after test (for debugging)"
+  echo "  -h, --help         Show this help message"
   echo ""
   echo "Examples:"
   echo "  $(basename "$0") management/wsl/install/system-packages.sh"
-  echo "  $(basename "$0") management/common/install/github-releases/lazygit.sh"
-  echo "  $(basename "$0") management/common/install/github-releases/lazygit.sh --keep"
+  echo "  $(basename "$0") management/common/install/github-releases/lazygit.sh --validate lazygit"
+  echo "  $(basename "$0") management/common/install/github-releases/lazygit.sh --validate lazygit --keep"
   exit 0
 fi
 
@@ -35,8 +36,17 @@ INSTALLER_SCRIPT="$1"
 shift
 
 KEEP_CONTAINER=false
+VALIDATE_BINARY=""
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --validate)
+      VALIDATE_BINARY="${2:-}"
+      if [[ -z "$VALIDATE_BINARY" ]]; then
+        echo "Error: --validate requires a binary name"
+        exit 1
+      fi
+      shift 2
+      ;;
     --keep)
       KEEP_CONTAINER=true
       shift
@@ -106,15 +116,50 @@ if docker exec \
   --user testuser \
   --workdir /home/testuser/dotfiles \
   -e DOTFILES_DOCKER_TEST=true \
+  -e PATH=/home/testuser/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   "$CONTAINER_NAME" \
   bash "$INSTALLER_SCRIPT"; then
+
+  echo "────────────────────────────────────────────────────────────────"
+  echo ""
+
+  # Run validation if requested
+  if [[ -n "$VALIDATE_BINARY" ]]; then
+    log_info "Running validation for: $VALIDATE_BINARY"
+    echo ""
+
+    if docker exec \
+      --user testuser \
+      --workdir /home/testuser/dotfiles \
+      -e PATH=/home/testuser/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+      "$CONTAINER_NAME" \
+      bash tests/install/docker/validate-installation.sh "$VALIDATE_BINARY"; then
+
+      VALIDATION_STATUS="passed"
+    else
+      log_error "Validation failed for: $VALIDATE_BINARY"
+      VALIDATION_STATUS="failed"
+
+      END_TIME=$(date +%s)
+      DURATION=$((END_TIME - START_TIME))
+      log_info "Duration: ${DURATION}s"
+
+      if [[ "$KEEP_CONTAINER" == "false" ]]; then
+        log_info "Tip: Run with --keep to inspect the container"
+      fi
+
+      exit 1
+    fi
+  fi
 
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))
 
-  echo "────────────────────────────────────────────────────────────────"
   echo ""
   log_success "Installer test completed"
+  if [[ -n "$VALIDATE_BINARY" ]]; then
+    log_success "Validation $VALIDATION_STATUS: $VALIDATE_BINARY"
+  fi
   log_info "Duration: ${DURATION}s"
 
   exit 0

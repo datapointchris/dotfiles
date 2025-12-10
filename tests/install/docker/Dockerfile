@@ -22,6 +22,8 @@ RUN apt-get update && \
     curl \
     wget \
     ca-certificates \
+    file \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root test user with sudo access
@@ -30,6 +32,9 @@ RUN useradd -m -s /bin/bash -G sudo testuser && \
 
 USER testuser
 WORKDIR /home/testuser
+
+# Create standard user directories for installers
+RUN mkdir -p /home/testuser/.local/bin
 
 # ================================================================
 # Stage 2: System packages (our reusable base image)
