@@ -54,6 +54,7 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VER
 
 # Download and extract
 TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
+log_info "Download URL: $DOWNLOAD_URL"
 log_info "Downloading tenv..."
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
   manual_steps="1. Download in your browser (bypasses firewall):

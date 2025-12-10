@@ -37,14 +37,13 @@ else
     exit 0
   fi
 fi
-log_info "Latest version: $VERSION"
-
 # Detect platform (lowercase)
 OS=$(detect_os)
 ARCH=$(detect_arch)
 
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terraformer-${PROVIDER}-${OS}-${ARCH}"
 
+log_info "Download URL: $DOWNLOAD_URL"
 log_info "Downloading terraformer..."
 if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
   manual_steps="1. Download in your browser (bypasses firewall):
@@ -65,9 +64,7 @@ fi
 chmod +x "$TARGET_BIN"
 
 # Verify
-if command -v terraformer >/dev/null 2>&1; then
-  log_success "terraformer installed successfully"
-else
+if ! command -v terraformer >/dev/null 2>&1; then
   manual_steps="Binary installed but not found in PATH.
 
 Check that ~/.local/bin is in your PATH:

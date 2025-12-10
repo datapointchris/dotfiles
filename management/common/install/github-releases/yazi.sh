@@ -43,8 +43,6 @@ else
 fi
 
 if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
-  log_info "Latest version: $VERSION"
-
   OS=$(detect_os)
   RAW_ARCH=$(uname -m)
 
@@ -59,6 +57,7 @@ if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
   TEMP_ZIP="/tmp/${BINARY_NAME}.zip"
   EXTRACT_DIR="/tmp/yazi-extract"
 
+  log_info "Download URL: $DOWNLOAD_URL"
   log_info "Downloading yazi..."
   if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_ZIP"; then
     manual_steps="1. Download in your browser (bypasses firewall):

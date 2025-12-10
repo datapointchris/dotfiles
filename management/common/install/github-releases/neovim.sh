@@ -86,6 +86,7 @@ fi
 NVIM_URL="https://github.com/${REPO}/releases/download/${NVIM_VERSION}/${NVIM_BINARY}.tar.gz"
 NVIM_TARBALL="/tmp/${NVIM_BINARY}.tar.gz"
 
+log_info "Download URL: $NVIM_URL"
 log_info "Downloading Neovim..."
 if ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
   manual_steps="1. Download in your browser (bypasses firewall):
