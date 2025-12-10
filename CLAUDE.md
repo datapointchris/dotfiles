@@ -22,6 +22,11 @@
 - Exceptions: README.md and CLAUDE.md (standard conventions)
 - ALWAYS add new documentation to `mkdocs.yml` navigation
 
+**Shell Script Patterns**:
+
+- ALWAYS use `DOTFILES_DIR="$(git rev-parse --show-toplevel)"` to get repo root
+- NEVER use relative path navigation like `$(cd "$(dirname ...)/../.." && pwd)`
+
 **App Installation Patterns** (⚠️ CRITICAL - Read this carefully, mistakes here are costly):
 
 **This has caused issues 3+ times. Follow these rules exactly:**
