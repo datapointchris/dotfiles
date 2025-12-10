@@ -75,6 +75,7 @@ install_common_phases() {
   local common_install="$DOTFILES_DIR/management/common/install"
   local github_releases="$common_install/github-releases"
   local custom_installers="$common_install/custom-installers"
+  local custom_apps="$common_install/custom-apps"
   local lang_managers="$common_install/language-managers"
   local lang_tools="$common_install/language-tools"
   local plugins="$common_install/plugins"
@@ -125,8 +126,8 @@ install_common_phases() {
   run_installer "$plugins/shell-plugins.sh" "shell-plugins"
 
   print_header "Custom Go Applications"
-  cd "$DOTFILES_DIR/apps/common/sess" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
-  cd "$DOTFILES_DIR/apps/common/toolbox" && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task clean && PATH="$HOME/go/bin:/usr/local/go/bin:$PATH" task install
+  run_installer "$custom_apps/sess.sh" "sess"
+  run_installer "$custom_apps/toolbox.sh" "toolbox"
 
   print_header "Symlinking Dotfiles"
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
