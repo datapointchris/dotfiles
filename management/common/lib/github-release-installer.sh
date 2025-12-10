@@ -60,7 +60,7 @@ should_skip_install() {
   fi
 
   if [[ -f "$binary_path" ]] && command -v "$binary_name" >/dev/null 2>&1; then
-    log_success "$binary_name already installed, skipping"
+    log_success "$binary_name already installed (skipping download/installation)"
     return 0  # Skip
   fi
 
@@ -137,6 +137,7 @@ install_from_tarball() {
   # Download if not in cache
   if [[ "$using_cache" == "false" ]]; then
     tarball_path="/tmp/${binary_name}.tar.gz"
+    log_info "Download URL: $download_url"
     log_info "Downloading $binary_name..."
     if ! curl -fsSL "$download_url" -o "$tarball_path"; then
       local manual_steps="1. Download in your browser (bypasses firewall):
@@ -161,11 +162,13 @@ Verify installation:
     fi
   fi
 
+  log_info "Extraction directory: /tmp"
   log_info "Extracting..."
   tar -xzf "$tarball_path" -C /tmp
 
-  log_info "Installing to ~/.local/bin..."
   local target_bin="$HOME/.local/bin/$binary_name"
+  log_info "Installation target: $target_bin"
+  log_info "Installing to ~/.local/bin..."
   mkdir -p "$HOME/.local/bin"
 
   if [[ "$binary_path_in_tarball" == *"*"* ]]; then
@@ -178,7 +181,7 @@ Verify installation:
   chmod +x "$target_bin"
 
   if command -v "$binary_name" >/dev/null 2>&1; then
-    log_success "$binary_name installed successfully"
+    log_success "$binary_name installed to: $target_bin"
   else
     local manual_steps="Binary installed but not found in PATH.
 
@@ -222,6 +225,7 @@ install_from_zip() {
   # Download if not in cache
   if [[ "$using_cache" == "false" ]]; then
     zip_path="/tmp/${binary_name}.zip"
+    log_info "Download URL: $download_url"
     log_info "Downloading $binary_name..."
     if ! curl -fsSL "$download_url" -o "$zip_path"; then
       local manual_steps="1. Download in your browser (bypasses firewall):
@@ -246,19 +250,21 @@ Verify installation:
     fi
   fi
 
-  log_info "Extracting..."
   local extract_dir="/tmp/${binary_name}-extract"
+  log_info "Extraction directory: $extract_dir"
+  log_info "Extracting..."
   mkdir -p "$extract_dir"
   unzip -q "$zip_path" -d "$extract_dir"
 
-  log_info "Installing to ~/.local/bin..."
   local target_bin="$HOME/.local/bin/$binary_name"
+  log_info "Installation target: $target_bin"
+  log_info "Installing to ~/.local/bin..."
   mkdir -p "$HOME/.local/bin"
   mv "$extract_dir/$binary_path_in_zip" "$target_bin"
   chmod +x "$target_bin"
 
   if command -v "$binary_name" >/dev/null 2>&1; then
-    log_success "$binary_name installed successfully"
+    log_success "$binary_name installed to: $target_bin"
   else
     local manual_steps="Binary installed but not found in PATH.
 

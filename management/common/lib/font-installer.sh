@@ -44,7 +44,10 @@ download_nerd_font() {
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || return 1
 
-  if ! curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${package}.tar.xz" -o "${package}.tar.xz"; then
+  local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${package}.tar.xz"
+  log_info "Downloading from: $url"
+
+  if ! curl -fsSL "$url" -o "${package}.tar.xz"; then
     manual_steps="Download manually: https://github.com/ryanoasis/nerd-fonts/releases/latest
 Extract: tar -xf ${package}.tar.xz
 Move to: $download_dir"
@@ -75,6 +78,8 @@ prune_font_family() {
   before=$(count_font_files "$font_dir")
   [[ $before -eq 0 ]] && return 0
 
+  log_info "Pruning unwanted variants: ExtraLight, Light, Thin, Medium, SemiBold, ExtraBold, Black, Retina, Propo"
+
   find "$font_dir" -type f \( \
     -iname "*ExtraLight*" -o -iname "*Light*" -o -iname "*Thin*" -o \
     -iname "*Medium*" -o -iname "*SemiBold*" -o -iname "*ExtraBold*" -o \
@@ -86,7 +91,12 @@ prune_font_family() {
   local after
   after=$(count_font_files "$font_dir")
   local pruned=$((before - after))
-  log_success "Pruned $pruned files (kept $after)"
+
+  if [[ $pruned -gt 0 ]]; then
+    log_success "Pruned $pruned files (kept $after)"
+  else
+    log_info "No pruning needed (kept $after files)"
+  fi
 }
 
 standardize_font_family() {
@@ -95,13 +105,20 @@ standardize_font_family() {
 
   local files_with_spaces
   files_with_spaces=$(find "$font_dir" -type f -name "* *" 2>/dev/null | wc -l | tr -d ' ')
-  [[ $files_with_spaces -eq 0 ]] && return 0
+
+  if [[ $files_with_spaces -eq 0 ]]; then
+    log_info "No filename standardization needed"
+    return 0
+  fi
+
+  log_info "Standardizing filenames (replacing spaces with hyphens)"
 
   find "$font_dir" -type f -name "* *" 2>/dev/null | while read -r file; do
     local dir base new_name
     dir=$(dirname "$file")
     base=$(basename "$file")
     new_name="${base// /-}"
+    log_info "  $(basename "$file") → $new_name"
     mv "$file" "$dir/$new_name" 2>/dev/null || true
   done
 
@@ -113,6 +130,7 @@ install_font_files() {
   local target_dir="$2"
   local platform="$3"
 
+  log_info "Installing to: $target_dir"
   mkdir -p "$target_dir"
 
   local installed=0 skipped=0
@@ -137,12 +155,17 @@ install_font_files() {
     fi
   done < <(find_font_files "$source_dir" -print0)
 
+  if [[ $installed -eq 0 ]] && [[ $skipped -eq 0 ]]; then
+    log_error "Copy failed - no files found in $target_dir"
+    return 1
+  fi
+
   if [[ $installed -gt 0 ]] && [[ $skipped -gt 0 ]]; then
-    log_success "Installed $installed new fonts ($skipped already present)"
+    log_success "Installed $installed new fonts to $target_dir ($skipped already present)"
   elif [[ $installed -gt 0 ]]; then
-    log_success "Installed $installed fonts"
+    log_success "Installed $installed fonts to $target_dir"
   elif [[ $skipped -gt 0 ]]; then
-    log_success "All $skipped fonts already installed"
+    log_success "All $skipped fonts already installed in $target_dir"
   fi
 }
 
@@ -153,10 +176,19 @@ refresh_font_cache() {
   case "$platform" in
     linux|arch)
       if command -v fc-cache &> /dev/null; then
-        fc-cache -f "$target_dir" 2>/dev/null || true
+        log_info "Refreshing font cache: fc-cache -f $target_dir"
+        if fc-cache -f "$target_dir" 2>&1 | grep -q "succeeded\|fc-cache"; then
+          log_success "Font cache refreshed successfully"
+        fi
+      else
+        log_info "fc-cache not available, skipping font cache refresh"
       fi
       ;;
-    macos|wsl)
+    macos)
+      log_info "Font cache refresh not needed on macOS (automatic)"
+      ;;
+    wsl)
+      log_info "Font cache managed by Windows (restart applications to see new fonts)"
       ;;
   esac
 }

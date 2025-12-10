@@ -1,5 +1,10 @@
 # shellcheck shell=bash
 
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+
 run_installer() {
   local script="$1"
   local tool_name="$2"
@@ -43,23 +48,26 @@ run_installer() {
     if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
       failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
     fi
-    cat >> "$FAILURES_LOG" << EOF
-========================================
-$failure_tool - Installation Failed
-========================================
-Script: $script
-Exit Code: $exit_code
-Timestamp: $(date -Iseconds)
-${failure_url:+Download URL: $failure_url}
-${failure_version:+Version: $failure_version}
-${failure_reason:+Reason: $failure_reason}
+    # Build version line only if not "latest"
+    local version_line=""
+    if [[ -n "$failure_version" ]] && [[ "$failure_version" != "latest" ]]; then
+      version_line="Version: $failure_version"
+    fi
 
-${failure_manual:+Manual Installation Steps:
-$failure_manual
-}
----
-
-EOF
+    # Use print_section_error for consistent formatting with error styling
+    {
+      print_section_error "$failure_tool - Installation Failed"
+      echo "Installer: $(basename "$script")"
+      [[ -n "$failure_reason" ]] && echo "Error: $failure_reason"
+      [[ -n "$failure_url" ]] && echo "Download URL: $failure_url"
+      [[ -n "$version_line" ]] && echo "$version_line"
+      echo ""
+      if [[ -n "$failure_manual" ]]; then
+        echo "How to Install Manually:"
+        echo "$failure_manual"
+        echo ""
+      fi
+    } >> "$FAILURES_LOG"
     return 1
   fi
 }
