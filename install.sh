@@ -132,8 +132,7 @@ install_common_phases() {
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
 
   print_header "Theme System"
-  source "$HOME/.cargo/env" && tinty install
-  source "$HOME/.cargo/env" && tinty sync
+  run_installer "$plugins/tinty-themes.sh" "tinty-themes"
 
   print_header "Tmux Plugins"
   run_installer "$plugins/tpm.sh" "tpm"

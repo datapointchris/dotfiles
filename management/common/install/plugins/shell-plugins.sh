@@ -26,11 +26,12 @@ while IFS='|' read -r name repo; do
   PLUGIN_DIR="$PLUGINS_DIR/$name"
 
   if [[ -d "$PLUGIN_DIR" ]]; then
-    log_info "$name already installed"
+    log_success "$name already installed: $PLUGIN_DIR"
   else
-    log_info "Installing $name..."
+    log_info "Installing $name to: $PLUGIN_DIR"
+    log_info "Repository: $repo"
     if git clone "$repo" "$PLUGIN_DIR" --quiet; then
-      log_success "$name installed"
+      log_success "$name installed: $PLUGIN_DIR"
     else
       manual_steps="Clone manually with git:
    git clone $repo $PLUGIN_DIR
@@ -44,5 +45,3 @@ Or install manually:
     fi
   fi
 done <<< "$PLUGINS"
-
-log_success "Shell plugins installed to $PLUGINS_DIR"

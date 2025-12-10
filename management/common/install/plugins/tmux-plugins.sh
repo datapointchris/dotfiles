@@ -7,12 +7,25 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-log_info "Installing tmux plugins..."
+TMUX_PLUGINS_DIR="$HOME/.config/tmux/plugins"
+TPM_DIR="$TMUX_PLUGINS_DIR/tpm"
 
-TPM_DIR="$HOME/.config/tmux/plugins/tpm"
+log_info "Installing tmux plugins to: $TMUX_PLUGINS_DIR"
 
 if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
-  if "$TPM_DIR/bin/install_plugins"; then
+  "$TPM_DIR/bin/install_plugins" 2>&1 | while IFS= read -r line; do
+    if [[ "$line" =~ "Already installed"[[:space:]]+\"(.+)\" ]]; then
+      plugin_name="${BASH_REMATCH[1]}"
+      log_success "$plugin_name already installed: $TMUX_PLUGINS_DIR/$plugin_name"
+    elif [[ "$line" =~ "Installing"[[:space:]]+\"(.+)\" ]]; then
+      plugin_name="${BASH_REMATCH[1]}"
+      log_info "Installing $plugin_name..."
+    elif [[ -n "$line" ]]; then
+      log_info "$line"
+    fi
+  done
+
+  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
     log_success "Tmux plugins installed"
   else
     manual_steps="Run TPM installation manually:
