@@ -5,7 +5,7 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
-print_banner "Setting up Xcode"
+print_section "Setting up Xcode"
 
 # Check if xcodebuild exists
 if ! command -v xcodebuild &>/dev/null; then
@@ -38,5 +38,3 @@ if xcodebuild -runFirstLaunch 2>/dev/null; then
 else
   log_warning "First launch setup failed (may already be complete)"
 fi
-
-print_banner_success "Xcode Setup Complete"

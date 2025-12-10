@@ -5,7 +5,7 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
-print_banner "Installing Mac App Store Apps"
+print_section "Installing Mac App Store Apps"
 
 # Check if mas is installed
 if ! command -v mas >/dev/null 2>&1; then
@@ -56,5 +56,3 @@ fi
 if [ $FAILED -gt 0 ]; then
   log_warning "$FAILED app(s) failed to install"
 fi
-
-print_banner_success "Mac App Store Installation Complete"

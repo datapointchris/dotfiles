@@ -14,9 +14,9 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Go for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Go"
+  log_info "Installing..."
 fi
 
 # Check if Go is already installed
@@ -93,9 +93,6 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
 
     if [[ "$CURRENT_VERSION" == "$LATEST_VERSION" ]]; then
       log_success "Already at latest version ($LATEST_VERSION)"
-      if [[ "$UPDATE_MODE" == "true" ]]; then
-        print_banner_success "Go is up to date"
-      fi
       exit 0
     fi
 
@@ -160,10 +157,4 @@ Verify in PATH:
   output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Installation verification failed"
   log_error "Installation verification failed"
   exit 1
-fi
-
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner_success "Go update complete"
-else
-  print_banner_success "Go installation complete"
 fi

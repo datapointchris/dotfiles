@@ -19,9 +19,9 @@ REPO="tenable/terrascan"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Terrascan for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Terrascan"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")

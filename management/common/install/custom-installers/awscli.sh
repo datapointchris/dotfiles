@@ -13,9 +13,9 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking AWS CLI for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing AWS CLI v2"
+  log_info "Installing..."
 fi
 
 OS=$(detect_os)
@@ -153,10 +153,4 @@ Re-run verification:
   output_failure_data "aws" "unknown" "latest" "$manual_steps" "Installation verification failed"
   log_warning "AWS CLI installation verification failed (see summary)"
   exit 1
-fi
-
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner_success "AWS CLI update check complete"
-else
-  print_banner_success "AWS CLI v2 installation complete"
 fi

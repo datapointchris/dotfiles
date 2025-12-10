@@ -19,9 +19,9 @@ REPO="muesli/duf"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Duf for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Duf"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")

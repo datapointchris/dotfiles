@@ -20,9 +20,9 @@ REPO="tofuutils/tenv"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking tenv for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing tenv"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")
@@ -107,11 +107,6 @@ fi
 # Check if packages.yml exists for Terraform installation
 if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   log_warning "packages.yml not found, skipping Terraform installation"
-  if [[ "$UPDATE_MODE" == "true" ]]; then
-    print_banner_success "tenv update complete"
-  else
-    print_banner_success "tenv installation complete"
-  fi
   exit 0
 fi
 
@@ -150,9 +145,3 @@ Verify:
 fi
 
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
-
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner_success "tenv and Terraform update complete"
-else
-  print_banner_success "tenv and Terraform installation complete"
-fi

@@ -19,7 +19,7 @@ fi
 
 # No sudo required - all preferences are user-level
 
-print_banner "Configuring macOS Preferences"
+print_section "Configuring macOS Preferences"
 
 # Close System Preferences to prevent conflicts
 osascript -e 'tell application "System Settings" to quit' 2>/dev/null || true
@@ -274,9 +274,5 @@ defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
 # Completion
 # ================================================================
 
-echo ""
-print_banner_success "macOS Preferences Applied Successfully"
-
-echo ""
 log_success "All preferences have been configured"
 log_info "Changes will take effect on next login or reboot"

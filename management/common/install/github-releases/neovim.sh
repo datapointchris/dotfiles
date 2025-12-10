@@ -32,9 +32,9 @@ NVIM_INSTALL_DIR="$HOME/.local/${NVIM_BINARY}"
 NVIM_BIN_LINK="$HOME/.local/bin/nvim"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Neovim for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Neovim"
+  log_info "Installing..."
 fi
 
 NVIM_VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')

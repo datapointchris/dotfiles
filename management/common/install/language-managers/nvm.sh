@@ -17,9 +17,9 @@ NVM_DIR="$HOME/.config/nvm"
 NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking nvm and Node.js for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing nvm and Node.js"
+  log_info "Installing..."
 fi
 
 # Check if packages.yml exists
@@ -92,7 +92,6 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
 
     if [[ "$CURRENT_NODE" == "$TARGET_NODE" ]]; then
       log_success "Already at target Node.js version ($TARGET_NODE)"
-      print_banner_success "nvm and Node.js are up to date"
       exit 0
     fi
 
@@ -119,9 +118,3 @@ if ! NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/management/common/install/language-t
 fi
 
 log_success "Node.js ${NODE_VERSION} installed and set as default"
-
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner_success "nvm and Node.js update complete"
-else
-  print_banner_success "nvm and Node.js installation complete"
-fi

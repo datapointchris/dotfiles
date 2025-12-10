@@ -20,9 +20,9 @@ REPO="hashicorp/terraform-ls"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Terraform Language Server for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Terraform Language Server"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")
@@ -44,5 +44,3 @@ ARCH=$(detect_arch)
 DOWNLOAD_URL="https://releases.hashicorp.com/terraform-ls/${VERSION#v}/terraform-ls_${VERSION#v}_${OS}_${ARCH}.zip"
 
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "terraform-ls" "$VERSION"
-
-print_banner_success "Terraform Language Server installation complete"

@@ -6,7 +6,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
-print_banner "Setting up Docker Official Repository (Ubuntu)"
+print_section "Setting up Docker Official Repository (Ubuntu)"
 
 # Check if already set up
 if [ -f /etc/apt/sources.list.d/docker.list ]; then
@@ -59,6 +59,5 @@ echo \
 log_info "Updating package cache..."
 sudo apt-get update
 
-print_banner_success "Docker Official Repository Setup Complete"
 log_info "You can now install Docker with:"
 log_info "  sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"

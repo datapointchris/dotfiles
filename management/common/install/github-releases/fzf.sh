@@ -20,9 +20,9 @@ REPO="junegunn/fzf"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking fzf for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing fzf (Fuzzy Finder)"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")

@@ -19,9 +19,9 @@ REPO="jesseduffield/lazygit"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking LazyGit for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing LazyGit"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")

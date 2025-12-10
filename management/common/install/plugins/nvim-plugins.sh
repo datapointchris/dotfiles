@@ -7,8 +7,6 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-print_banner "Installing Neovim Plugins"
-
 log_info "Installing Neovim plugins via Lazy.nvim..."
 
 # Run nvim headless to install all plugins

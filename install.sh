@@ -33,7 +33,7 @@ show_failures_summary() {
   failure_count=$(grep -c "^---$" "$FAILURES_LOG" 2>/dev/null || echo 0)
   [[ $failure_count -eq 0 ]] && return 0
 
-  print_header "Installation Summary" "$header_color"
+  print_header "⚠️  Installation Failures" "red"
   log_warning "$failure_count installation(s) failed"
   cat "$FAILURES_LOG"
   log_info "Full report saved to: $FAILURES_LOG"
@@ -254,6 +254,7 @@ main() {
 
     install_common_phases
 
+    print_header "Post-Installation Configuration" $header_color
     print_section "Configuring ZSH as default shell" $section_color
     configure_zsh_default_shell
     ;;
@@ -263,6 +264,7 @@ main() {
 
     install_common_phases
 
+    print_header "Post-Installation Configuration" $header_color
     print_section "Configuring ZSH as default shell" $section_color
     configure_zsh_default_shell
     ;;

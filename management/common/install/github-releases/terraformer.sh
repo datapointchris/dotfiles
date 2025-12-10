@@ -20,9 +20,9 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 PROVIDER="all"  # Install all-provider version
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Terraformer for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Terraformer"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")

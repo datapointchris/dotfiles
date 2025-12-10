@@ -9,8 +9,6 @@ source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 source "$HOME/.cargo/env"
 
-print_banner "Installing Rust CLI Tools"
-
 log_info "Reading packages from packages.yml..."
 
 FAILURE_COUNT=0

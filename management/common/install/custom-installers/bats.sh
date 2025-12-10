@@ -13,9 +13,9 @@ source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking BATS for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing BATS Testing Framework"
+  log_info "Installing..."
 fi
 
 # Installation configuration
@@ -202,10 +202,4 @@ if [[ "$HELPERS_INSTALLED" == "true" ]]; then
   log_info "Load in tests with:"
   log_info "  load \"\$HOME/.local/lib/bats-support/load.bash\""
   log_info "  load \"\$HOME/.local/lib/bats-assert/load.bash\""
-fi
-
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner_success "BATS update complete"
-else
-  print_banner_success "BATS installation complete"
 fi

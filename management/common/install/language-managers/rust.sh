@@ -7,8 +7,6 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-print_banner "Installing Rust"
-
 if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v cargo >/dev/null 2>&1; then
   log_success "Rust already installed: $(rustc --version)"
   exit 0

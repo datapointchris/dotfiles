@@ -14,9 +14,9 @@ source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Claude Code for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Claude Code"
+  log_info "Installing..."
 fi
 
 # Fetch latest stable version from Claude Code distribution
@@ -129,10 +129,4 @@ Try closing and reopening your terminal, then verify:
   output_failure_data "claude-code" "unknown" "latest" "$manual_steps" "Installation verification failed"
   log_warning "Claude Code installation verification failed (see summary)"
   exit 1
-fi
-
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner_success "Claude Code update complete"
-else
-  print_banner_success "Claude Code installation complete"
 fi

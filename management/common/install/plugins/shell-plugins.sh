@@ -16,8 +16,6 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   exit 1
 fi
 
-print_section "Installing shell plugins" "cyan"
-
 # Create plugins directory if it doesn't exist
 mkdir -p "$PLUGINS_DIR"
 

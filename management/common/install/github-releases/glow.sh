@@ -19,9 +19,9 @@ REPO="charmbracelet/glow"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  print_banner "Checking Glow for updates"
+  log_info "Checking for updates..."
 else
-  print_banner "Installing Glow"
+  log_info "Installing..."
 fi
 
 VERSION=$(get_latest_version "$REPO")
