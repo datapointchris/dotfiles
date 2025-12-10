@@ -43,7 +43,7 @@ return {
   -- Image rendering support (optional but nice for data visualization)
   {
     '3rd/image.nvim',
-    cond = not vim.g.vscode,
+    cond = not vim.g.vscode and #vim.api.nvim_list_uis() > 0,
     opts = {
       backend = 'kitty', -- or 'ueberzug' if not using Kitty terminal
       integrations = {

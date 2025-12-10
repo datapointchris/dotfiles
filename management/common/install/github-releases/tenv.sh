@@ -61,7 +61,7 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
    $DOWNLOAD_URL
 
 2. After downloading, extract and install:
-   tar -xzf ~/Downloads/tenv_${VERSION}_${PLATFORM}_${ARCH}.tar.gz
+   tar -xzf ~/Downloads/tenv_${VERSION}_${PLATFORM}_${RAW_ARCH}.tar.gz
    mv tenv terraform tofu terragrunt terramate atmos tf ~/.local/bin/ 2>/dev/null || true
    chmod +x ~/.local/bin/{tenv,terraform,tofu,terragrunt,terramate,atmos,tf} 2>/dev/null || true
 
