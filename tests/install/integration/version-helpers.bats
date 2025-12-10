@@ -2,12 +2,34 @@
 #
 # Integration tests for version-helpers.sh library
 
+setup_file() {
+  load "$HOME/.local/lib/bats-support/load.bash"
+  load "$HOME/.local/lib/bats-assert/load.bash"
+
+  export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
+
+  # Source Docker helpers and verify environment
+  source "$DOTFILES_DIR/tests/install/integration/docker-helpers.sh"
+  docker_test_setup
+}
+
 setup() {
   load "$HOME/.local/lib/bats-support/load.bash"
   load "$HOME/.local/lib/bats-assert/load.bash"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
   source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+
+  # Source Docker helpers for network-dependent tests
+  source "$DOTFILES_DIR/tests/install/integration/docker-helpers.sh"
+
+  # Start fresh container for each test
+  BATS_TEST_CONTAINER=$(start_test_container)
+}
+
+teardown() {
+  # Clean up container after each test
+  docker_test_teardown
 }
 
 # version_compare tests
@@ -146,15 +168,15 @@ Extra: 7.8.9"
 # fetch_github_latest_version tests
 
 @test "fetch_github_latest_version: fetches neovim latest version" {
-  skip "Requires network access to GitHub API"
-  run fetch_github_latest_version "neovim/neovim"
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'neovim/neovim'"
   assert_success
   assert_output --regexp '^v[0-9]+\.[0-9]+\.[0-9]+$'
 }
 
 @test "fetch_github_latest_version: fetches lazygit latest version" {
-  skip "Requires network access to GitHub API"
-  run fetch_github_latest_version "jesseduffield/lazygit"
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'jesseduffield/lazygit'"
   assert_success
   assert_output --regexp '^v[0-9]+\.[0-9]+(\.[0-9]+)?$'
 }
@@ -177,14 +199,15 @@ Extra: 7.8.9"
 # Integration tests (combining functions)
 
 @test "integration: check if neovim update available" {
-  skip "Requires network access to GitHub API"
-  # Fetch latest version
-  latest=$(fetch_github_latest_version "neovim/neovim")
+  # Fetch latest version from GitHub
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'neovim/neovim'"
+  assert_success
+  latest="$output"
 
-  # Simulate current version (older)
-  current="v0.9.0"
-
-  run version_compare "$current" "$latest"
+  # Compare older version with latest
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "source management/common/lib/version-helpers.sh && version_compare 'v0.9.0' '$latest'"
 
   # Should indicate update available (return 1)
   assert_failure
@@ -202,11 +225,14 @@ Extra: 7.8.9"
 }
 
 @test "integration: detect already at latest" {
-  skip "Requires network access to GitHub API"
-  # Fetch real latest version
-  latest=$(fetch_github_latest_version "neovim/neovim")
+  # Fetch real latest version from GitHub
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'neovim/neovim'"
+  assert_success
+  latest="$output"
 
   # Compare with itself
-  run version_compare "$latest" "$latest"
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "source management/common/lib/version-helpers.sh && version_compare '$latest' '$latest'"
   assert_success
 }

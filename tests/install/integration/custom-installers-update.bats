@@ -2,25 +2,49 @@
 #
 # Integration tests for custom installer --update flag
 
+setup_file() {
+  load "$HOME/.local/lib/bats-support/load.bash"
+  load "$HOME/.local/lib/bats-assert/load.bash"
+
+  export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
+
+  # Source Docker helpers and verify environment
+  source "$DOTFILES_DIR/tests/install/integration/docker-helpers.sh"
+  docker_test_setup
+}
+
 setup() {
   load "$HOME/.local/lib/bats-support/load.bash"
   load "$HOME/.local/lib/bats-assert/load.bash"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
+
+  # Source Docker helpers for this test
+  source "$DOTFILES_DIR/tests/install/integration/docker-helpers.sh"
+
+  # Start fresh container for each test
+  BATS_TEST_CONTAINER=$(start_test_container)
+}
+
+teardown() {
+  # Clean up container after each test
+  docker_test_teardown
 }
 
 # Test that custom installers recognize --update flag
 
 @test "terraform-ls: accepts --update flag" {
-  skip "Requires network access to GitHub API"
-  run bash "$DOTFILES_DIR/management/common/install/custom-installers/terraform-ls.sh" --update
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/terraform-ls.sh --update"
   assert_success
+  assert_output --regexp "Latest version: v[0-9]+"
 }
 
 @test "terraform-ls: normal install mode works" {
-  skip "Requires network access to GitHub API"
-  run bash "$DOTFILES_DIR/management/common/install/custom-installers/terraform-ls.sh"
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/terraform-ls.sh"
   assert_success
+  assert_output --regexp "Latest version: v[0-9]+"
 }
 
 @test "awscli: accepts --update flag" {
@@ -36,8 +60,14 @@ setup() {
 # Test version checking behavior
 
 @test "terraform-ls: shows already at latest version when current" {
-  skip "Requires terraform-ls to be installed and up to date"
-  run bash "$DOTFILES_DIR/management/common/install/custom-installers/terraform-ls.sh" --update
+  # First install to latest version
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/terraform-ls.sh"
+  assert_success
+
+  # Then run update - should show already at latest
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/terraform-ls.sh --update"
   assert_success
   assert_output --partial "Already at latest version"
 }
@@ -52,21 +82,30 @@ setup() {
 }
 
 @test "bats: accepts --update flag" {
-  skip "Requires network access to GitHub API"
-  run bash "$DOTFILES_DIR/management/common/install/custom-installers/bats.sh" --update
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/bats.sh --update"
   assert_success
+  assert_output --partial "Installing BATS"
 }
 
 @test "bats: normal install mode works" {
-  skip "Requires network access to GitHub API"
-  run bash "$DOTFILES_DIR/management/common/install/custom-installers/bats.sh"
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/bats.sh"
   assert_success
+  assert_output --partial "Installing BATS"
 }
 
 @test "bats: shows already at latest version when current" {
-  skip "Requires bats to be installed and at latest version"
-  run bash "$DOTFILES_DIR/management/common/install/custom-installers/bats.sh" --update
+  # First install to latest version
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/bats.sh"
   assert_success
+
+  # Then run update - should show already at latest
+  run docker_exec "$BATS_TEST_CONTAINER" \
+    "bash management/common/install/custom-installers/bats.sh --update"
+  assert_success
+  assert_output --partial "Already at latest"
 }
 
 @test "claude-code: accepts --update flag" {
