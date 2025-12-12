@@ -31,6 +31,7 @@ backup-dirs <dir1> [dir2] [dir3...]
 
 **Common Options**:
 
+- `-n, --name <name>` - Custom backup name (default: backup-dirs)
 - `-d, --dest <path>` - Destination directory (default: ~/Documents)
 - `-a, --analyze` - Run analysis phase for percentage (slower, shows progress)
 - `--no-analyze` - Skip analysis (default, faster)
@@ -53,13 +54,21 @@ Archives use timestamped naming:
 
 ```text
 backup-dirs_2025-11-25_143022.tar.zst
+learning-docs_2025-11-25_143022.tar.zst    # Custom name
 ```
 
-Format: `backup-dirs_YYYY-MM-DD_HHMMSS.tar.{zst|gz|xz}`
+Format: `<name>_YYYY-MM-DD_HHMMSS.tar.{zst|gz|xz}`
 
 Default location: `~/Documents/` (iCloud synced on macOS)
 
 Each backup gets unique timestamp - never overwrites existing archives.
+
+Use `--name` to create descriptive backups:
+
+```bash
+backup-dirs --name learning-docs learning
+backup-dirs --name dotfiles-snapshot dotfiles .config
+```
 
 ## Smart Exclusions
 
