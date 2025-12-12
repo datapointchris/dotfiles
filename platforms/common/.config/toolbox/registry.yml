@@ -1988,17 +1988,40 @@ tools:
     description: "Create compressed backup archive of specified directories with progress tracking"
     installed_via: dotfiles
     usage: "backup-dirs [OPTIONS] <dir1> [dir2...]"
-    why_use: "Generic backup tool with smart exclusions (.venv, node_modules), rainbow progress indicators, and comprehensive statistics"
+    why_use: "One-off compressed backups with smart exclusions, rainbow progress, and comprehensive statistics"
     examples:
       - cmd: "backup-dirs .claude notes learning"
         desc: "Backup directories to ~/Documents"
+      - cmd: "backup-dirs --name learning-docs learning"
+        desc: "Create named backup"
       - cmd: "backup-dirs --dest ~/Backups .config dotfiles"
         desc: "Backup to custom destination"
-      - cmd: "backup-dirs --help"
-        desc: "Show all options and usage"
-    see_also: [tar, fd, backup-important]
-    tags: [backup, compression, progress, universal]
-    notes: "Excludes common bloat but keeps .git. Uses fd for fast scanning. Archive name: backup-dirs_YYYY-MM-DD_HHMMSS.tar.gz"
+      - cmd: "backup-dirs --analyze learning"
+        desc: "Show percentage progress during backup"
+    see_also: [backup-incremental, tar, fd]
+    tags: [backup, compression, progress, one-off]
+    notes: "Excludes .venv, node_modules, caches but keeps .git. Uses multi-threaded zstd compression by default."
+    docs_url: "docs/apps/backup-dirs.md"
+
+  backup-incremental:
+    category: custom-tools
+    description: "Space-efficient incremental backups using rsync hard links - unchanged files consume zero additional space"
+    installed_via: dotfiles
+    usage: "backup-incremental --name <backup-name> <source-dir>"
+    why_use: "Frequent backups with automatic deduplication via hard links. Books/static content stored once across all backups."
+    examples:
+      - cmd: "backup-incremental --name learning ~/learning"
+        desc: "Create incremental backup (unchanged files auto-linked)"
+      - cmd: "backup-incremental --name learning ~/learning"
+        desc: "Second backup only stores changes (books hard-linked)"
+      - cmd: "backup-incremental --name learning --exclude books ~/learning"
+        desc: "Optionally exclude specific directories"
+      - cmd: "backup-incremental --name learning --network homelab:/backups ~/learning"
+        desc: "Backup to network storage via SSH"
+    see_also: [backup-dirs, rsync]
+    tags: [backup, incremental, hard-links, deduplication, homelab]
+    notes: "Each backup appears as complete snapshot but uses hard links for unchanged files. Network-ready for homelab backups."
+    docs_url: "docs/apps/backup-incremental.md"
 
 backup-important:
     category: custom-tools

@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+#
+# backup-incremental - Create space-efficient incremental backups using rsync hard links
+#
+# Usage: backup-incremental [OPTIONS] <source_dir>
+#
+# Creates incremental backups where unchanged files are hard-linked to previous backups.
+# Each backup appears as a complete snapshot but only changed files consume disk space.
+#
+# Options:
+#   -n, --name <name>       Backup name (required, e.g., "learning")
+#   -d, --dest <path>       Backup destination (default: ~/Documents/backups)
+#   --exclude <pattern>     Exclude pattern (can be used multiple times)
+#   --network <host:path>   Network destination (e.g., homelab.local:/mnt/backups)
+#   -v, --verbose           Show detailed rsync output
+#   -h, --help              Show this help message
+#
+# Examples:
+#   backup-incremental --name learning ~/learning
+#   backup-incremental --name learning --exclude books ~/learning
+#   backup-incremental --name learning --exclude books --exclude temp ~/learning
+#   backup-incremental --name learning --network homelab:/backups ~/learning
+#
+# How it works:
+# 1. First backup: Full copy of source directory
+# 2. Subsequent backups: Only copy changed files, hard-link unchanged files from previous backup
+# 3. Result: Each backup is a complete browsable snapshot, but unchanged files only stored once
+#
+# Storage example:
+#   Backup 1: 5GB (3GB books + 2GB docs)
+#   Backup 2: 100MB (only changed docs, books are hard-linked to Backup 1)
+#   Backup 3: 50MB (only changed docs, books still hard-linked to Backup 1)
+#
+# Network storage:
+#   Works with any SSH-accessible host. Just use --network host:/path
+#   rsync will use SSH to copy files efficiently over the network.
+#
+# Future homelab setup:
+#   1. Mount NFS/SMB share: mount homelab:/backups ~/mnt/backups
+#   2. Use local path: backup-incremental --dest ~/mnt/backups --name learning ~/learning
+#   Or use SSH directly: backup-incremental --network homelab:/mnt/backups --name learning ~/learning
+
+set -euo pipefail
+
+# Source required shell libraries
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/colors.sh"
+
+# Default configuration
+BACKUP_NAME=""
+SOURCE_DIR=""
+DEST_BASE="$HOME/Documents/backups"
+NETWORK_DEST=""
+VERBOSE=false
+EXCLUDE_PATTERNS=()
+
+usage() {
+  echo ""
+  print_banner "backup-incremental" "cyan"
+  echo ""
+  echo "  $(color_bright_white "Space-efficient incremental backups using rsync hard links")"
+  echo ""
+
+  print_section "Usage" "brightcyan"
+  echo ""
+  echo "  $(color_bright_yellow "backup-incremental") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<source_dir>")"
+  echo ""
+
+  print_section "Options" "brightcyan"
+  echo ""
+  echo "  $(color_bright_magenta "-n, --name") $(color_cyan "<name>")        Backup name $(color_bright_black "(required, e.g., \"learning\")")"
+  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")        Backup destination $(color_bright_black "(default: ~/Documents/backups)")"
+  echo "  $(color_bright_magenta "--exclude") $(color_cyan "<pattern>")      Exclude pattern $(color_bright_black "(can be used multiple times)")"
+  echo "  $(color_bright_magenta "--network") $(color_cyan "<host:path>")    Network destination $(color_bright_black "(e.g., homelab:/mnt/backups)")"
+  echo "  $(color_bright_magenta "-v, --verbose")             Show detailed rsync output"
+  echo "  $(color_bright_magenta "-h, --help")                Show this help message"
+  echo ""
+
+  print_section "Arguments" "brightcyan"
+  echo ""
+  echo "  $(color_bright_green "<source_dir>")    Directory to backup $(color_bright_black "(absolute or relative to HOME)")"
+  echo ""
+
+  print_section "Examples" "brightcyan"
+  echo ""
+  echo "  $(color_bright_black "# Basic incremental backup")"
+  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning") $(color_green "~/learning")"
+  echo ""
+  echo "  $(color_bright_black "# Exclude large static content")"
+  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --exclude books") $(color_green "~/learning")"
+  echo ""
+  echo "  $(color_bright_black "# Multiple exclusions")"
+  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --exclude books --exclude temp") $(color_green "~/learning")"
+  echo ""
+  echo "  $(color_bright_black "# Backup to network storage via SSH")"
+  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --network homelab:/backups") $(color_green "~/learning")"
+  echo ""
+  echo "  $(color_bright_black "# Backup to mounted network share")"
+  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--dest ~/mnt/homelab/backups --name learning") $(color_green "~/learning")"
+  echo ""
+
+  print_section "How It Works" "brightcyan"
+  echo ""
+  echo "  $(color_cyan "•") First backup: Full copy of all files"
+  echo "  $(color_cyan "•") Later backups: Only copy changed files"
+  echo "  $(color_cyan "•") Unchanged files: Hard-linked to previous backup $(color_bright_black "(zero extra space)")"
+  echo "  $(color_cyan "•") Each backup: Complete browsable snapshot"
+  echo "  $(color_cyan "•") Storage used: Only actual changes between backups"
+  echo ""
+
+  print_section "Storage Example" "brightcyan"
+  echo ""
+  echo "  Backup 1: $(color_bright_yellow "5.0 GB")  $(color_bright_black "(3GB books + 2GB docs)")"
+  echo "  Backup 2: $(color_bright_green "100 MB")  $(color_bright_black "(changed docs, books hard-linked)")"
+  echo "  Backup 3: $(color_bright_green "50 MB")   $(color_bright_black "(changed docs, books still linked)")"
+  echo "  $(color_bright_black "─────────────────────────────────────")"
+  echo "  Total:    $(color_bright_cyan "5.15 GB") $(color_bright_black "stored, appears as 15GB of backups")"
+  echo ""
+
+  print_section "Network Storage" "brightcyan"
+  echo ""
+  echo "  $(color_cyan "SSH method:")    $(color_bright_white "--network homelab:/mnt/backups") $(color_bright_black "(rsync over SSH)")"
+  echo "  $(color_cyan "Mount method:")  $(color_bright_white "--dest ~/mnt/backups") $(color_bright_black "(mount NFS/SMB first)")"
+  echo ""
+}
+
+parse_arguments() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -n|--name)
+        if [[ -z "${2:-}" ]]; then
+          color_red "Error: --name requires a name"
+          exit 1
+        fi
+        BACKUP_NAME="$2"
+        shift 2
+        ;;
+      -d|--dest)
+        if [[ -z "${2:-}" ]]; then
+          color_red "Error: --dest requires a directory path"
+          exit 1
+        fi
+        DEST_BASE="$2"
+        shift 2
+        ;;
+      --exclude)
+        if [[ -z "${2:-}" ]]; then
+          color_red "Error: --exclude requires a pattern"
+          exit 1
+        fi
+        EXCLUDE_PATTERNS+=("$2")
+        shift 2
+        ;;
+      --network)
+        if [[ -z "${2:-}" ]]; then
+          color_red "Error: --network requires a host:path"
+          exit 1
+        fi
+        NETWORK_DEST="$2"
+        shift 2
+        ;;
+      -v|--verbose)
+        VERBOSE=true
+        shift
+        ;;
+      -*)
+        color_red "Error: Unknown option: $1"
+        usage
+        exit 1
+        ;;
+      *)
+        SOURCE_DIR="$1"
+        shift
+        ;;
+    esac
+  done
+
+  # Validate required arguments
+  if [[ -z "$BACKUP_NAME" ]]; then
+    color_red "Error: --name is required"
+    echo ""
+    usage
+    exit 1
+  fi
+
+  if [[ -z "$SOURCE_DIR" ]]; then
+    color_red "Error: Source directory is required"
+    echo ""
+    usage
+    exit 1
+  fi
+
+  # Normalize source path
+  if [[ "$SOURCE_DIR" != /* ]]; then
+    SOURCE_DIR="$HOME/$SOURCE_DIR"
+  fi
+
+  # Validate source exists
+  if [[ ! -d "$SOURCE_DIR" ]]; then
+    color_red "Error: Source directory not found: $SOURCE_DIR"
+    exit 1
+  fi
+}
+
+create_incremental_backup() {
+  local start_time=$(date +%s)
+  local date_stamp=$(date '+%Y-%m-%d_%H%M%S')
+
+  # Determine backup destination
+  local dest_base
+  if [[ -n "$NETWORK_DEST" ]]; then
+    dest_base="$NETWORK_DEST"
+  else
+    dest_base="$DEST_BASE"
+    mkdir -p "$dest_base"
+  fi
+
+  local backup_root="$dest_base/$BACKUP_NAME"
+  local new_backup="$backup_root/${BACKUP_NAME}_$date_stamp"
+  local latest_link="$backup_root/latest"
+
+  echo ""
+  print_banner "Incremental Backup" "orange"
+  echo ""
+  echo "  Source:      $(color_bright_green "$SOURCE_DIR")"
+  echo "  Destination: $(color_bright_blue "$new_backup")"
+  if [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
+    echo "  Excludes:    $(color_bright_yellow "${EXCLUDE_PATTERNS[0]}")"
+    for ((i=1; i<${#EXCLUDE_PATTERNS[@]}; i++)); do
+      echo "               $(color_bright_yellow "${EXCLUDE_PATTERNS[$i]}")"
+    done
+  fi
+  echo ""
+
+  # Build rsync command
+  local rsync_opts=(
+    -a                    # Archive mode (recursive, preserves permissions, times, etc.)
+    --delete              # Delete files in dest that don't exist in source
+    --human-readable      # Human-readable numbers
+    --stats               # Show transfer statistics
+  )
+
+  # Add verbose flag if requested
+  if [[ "$VERBOSE" == true ]]; then
+    rsync_opts+=(--verbose --progress)
+  fi
+
+  # Add exclusions
+  for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+    rsync_opts+=(--exclude "$pattern")
+  done
+
+  # Add hard link reference to previous backup if it exists
+  if [[ -d "$latest_link" ]]; then
+    rsync_opts+=(--link-dest="$latest_link")
+    print_info "Creating incremental backup (linking to previous backup)..."
+  else
+    print_info "Creating first full backup..."
+  fi
+
+  echo ""
+
+  # Run rsync
+  if rsync "${rsync_opts[@]}" "$SOURCE_DIR/" "$new_backup/"; then
+    # Update 'latest' symlink
+    if [[ -n "$NETWORK_DEST" ]]; then
+      # For network destinations, create symlink via SSH
+      local host="${NETWORK_DEST%%:*}"
+      ssh "$host" "ln -snf '$new_backup' '$latest_link'"
+    else
+      # Local destination
+      ln -snf "$new_backup" "$latest_link"
+    fi
+
+    # Calculate elapsed time
+    local end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    local time_str=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
+
+    # Get backup size
+    echo ""
+    print_section "Backup Statistics" "brightcyan"
+    echo ""
+
+    if [[ -n "$NETWORK_DEST" ]]; then
+      local host="${NETWORK_DEST%%:*}"
+      local size_kb=$(ssh "$host" "du -sk '$new_backup' | cut -f1")
+      local size_mb=$((size_kb / 1024))
+      echo "  Backup size: $(color_bright_green "${size_mb} MB")"
+    else
+      local backup_size=$(du -sh "$new_backup" | cut -f1)
+      echo "  Backup size: $(color_bright_green "$backup_size")"
+    fi
+
+    echo "  Time:        $(color_bright_cyan "$time_str")"
+    echo "  Location:    $(color_bright_blue "$new_backup")"
+    echo ""
+
+    echo ""
+    print_success "Backup completed successfully!"
+    echo ""
+
+    # Show helpful tips
+    print_section "Next Steps" "brightyellow"
+    echo ""
+    echo "  View backup:     $(color_cyan "ls -lh $new_backup")"
+    if [[ -n "$NETWORK_DEST" ]]; then
+      local host="${NETWORK_DEST%%:*}"
+      echo "  List backups:    $(color_cyan "ssh $host ls -lh $backup_root")"
+    else
+      echo "  List backups:    $(color_cyan "ls -lh $backup_root")"
+    fi
+    echo "  Restore file:    $(color_cyan "cp $new_backup/path/to/file ~/destination")"
+    echo ""
+
+  else
+    echo ""
+    color_red "✗ Backup failed"
+    exit 1
+  fi
+}
+
+main() {
+  parse_arguments "$@"
+  create_incremental_backup
+}
+
+# Run main if executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

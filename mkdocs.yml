@@ -142,6 +142,7 @@ nav:
       - Toolbox: apps/toolbox.md
       - Refcheck: apps/refcheck.md
       - Backup Dirs: apps/backup-dirs.md
+      - Backup Incremental: apps/backup-incremental.md
       - Ghostty Theme: apps/ghostty-theme.md
   - Architecture:
       - architecture/index.md
