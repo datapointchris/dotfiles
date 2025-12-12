@@ -7,6 +7,7 @@ DATA_FILE="$DATA_DIR/entries.jsonl"
 
 if [[ $# -eq 0 ]]; then
     echo "Usage: patterns <message>" >&2
+    echo "Entries stored in: ${XDG_DATA_HOME:-$HOME/.local/share}/patterns/entries.jsonl" >&2
     exit 1
 fi
 
