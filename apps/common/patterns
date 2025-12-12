@@ -24,6 +24,7 @@ show_help() {
   echo "  patterns 'message'       Log a timestamped entry (quotes required)"
   echo "  patterns list            View all entries in log format"
   echo "  patterns search 'term'   Search entries for matching text"
+  echo "  patterns delete          Delete entries (interactive selection)"
   echo "  patterns help            Show this help message"
   echo ""
 
@@ -32,6 +33,7 @@ show_help() {
   echo "  $(print_cyan "patterns 'feeling slight heartburn'")"
   echo "  $(print_cyan "patterns list")"
   echo "  $(print_cyan "patterns search coffee")"
+  echo "  $(print_cyan "patterns delete")"
   echo ""
 
   print_section "Data File" "brightgreen"
@@ -65,7 +67,7 @@ log_entry() {
   fi
 
   local entry
-  entry=$(jq -n \
+  entry=$(jq --null-input \
     --arg timestamp "$timestamp" \
     --arg message "$message" \
     '{timestamp: $timestamp, message: $message}')
@@ -82,9 +84,9 @@ list_entries() {
   fi
 
   if ! command -v bat &> /dev/null; then
-    jq -r '"\(.timestamp) | \(.message)"' "$DATA_FILE"
+    jq --raw-output '"\(.timestamp) | \(.message)"' "$DATA_FILE"
   else
-    jq -r '"\(.timestamp) | \(.message)"' "$DATA_FILE" | bat --plain --language log
+    jq --raw-output '"\(.timestamp) | \(.message)"' "$DATA_FILE" | bat --plain --language log
   fi
 }
 
@@ -104,7 +106,7 @@ search_entries() {
   fi
 
   local results
-  results=$(jq -r --arg term "$search_term" \
+  results=$(jq --raw-output --arg term "$search_term" \
     'select(.message | test($term; "i")) | "\(.timestamp) | \(.message)"' \
     "$DATA_FILE")
 
@@ -120,6 +122,68 @@ search_entries() {
   fi
 }
 
+delete_entries() {
+  if [[ ! -f "$DATA_FILE" ]]; then
+    print_warning "No entries found"
+    echo "File: $DATA_FILE"
+    exit 0
+  fi
+
+  if ! command -v fzf &> /dev/null; then
+    print_error "fzf is required but not installed"
+    exit 1
+  fi
+
+  print_info "Select entries to delete (TAB to select, ENTER to confirm)"
+  echo ""
+
+  local selected
+  selected=$(jq --raw-output '"\(.timestamp) | \(.message)"' "$DATA_FILE" | \
+    fzf --multi \
+        --height=80% \
+        --border=rounded \
+        --prompt="Delete entries > " \
+        --header="TAB: select/deselect | ENTER: confirm deletion | ESC: cancel" \
+        --bind="ctrl-a:select-all" \
+        --bind="ctrl-d:deselect-all")
+
+  if [[ -z "$selected" ]]; then
+    print_info "No entries selected, nothing deleted"
+    exit 0
+  fi
+
+  local count
+  count=$(echo "$selected" | wc --lines | tr --delete ' ')
+
+  echo ""
+  print_warning "You are about to delete $count $([ "$count" -eq 1 ] && echo "entry" || echo "entries"):"
+  echo ""
+  echo "$selected" | while IFS= read -r line; do echo "  $line"; done
+  echo ""
+  read -p "Are you sure? (y/N): " -n 1 -r
+  echo ""
+
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Deletion cancelled"
+    exit 0
+  fi
+
+  local timestamps_to_delete
+  local timestamps_to_delete
+  # shellcheck disable=SC2001  # sed is cleanest for trimming trailing spaces in pipeline
+  timestamps_to_delete=$(echo "$selected" | cut --delimiter='|' --fields=1 | sed 's/ *$//' | jq --raw-input --slurp 'split("\n") | map(select(length > 0))')
+  local temp_file
+  temp_file=$(mktemp)
+
+  jq --argjson timestamps "$timestamps_to_delete" \
+    'select([.timestamp] | inside($timestamps) | not)' \
+    "$DATA_FILE" > "$temp_file"
+
+  mv "$temp_file" "$DATA_FILE"
+
+  print_success "Deleted $count $([ "$count" -eq 1 ] && echo "entry" || echo "entries")"
+}
+
 # ================================================================
 # MAIN
 # ================================================================
@@ -130,6 +194,9 @@ case "${1:-help}" in
     ;;
   search)
     search_entries "${2:-}"
+    ;;
+  delete)
+    delete_entries
     ;;
   help|--help|-h)
     show_help

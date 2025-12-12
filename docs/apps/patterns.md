@@ -15,6 +15,7 @@ patterns 'slept well, 8 hours'
 
 patterns list                    # View all entries
 patterns search coffee           # Search for entries
+patterns delete                  # Delete entries interactively
 ```
 
 Each entry is timestamped and appended to `~/.local/share/patterns/entries.jsonl`.
@@ -52,6 +53,22 @@ patterns search heartburn
 ```
 
 Search entries for matching text (case-insensitive). Results displayed with syntax highlighting.
+
+### Delete Entries
+
+```bash
+patterns delete
+```
+
+Interactively delete entries using fzf multi-select:
+
+- **TAB** - Select/deselect entries
+- **Ctrl+A** - Select all
+- **Ctrl+D** - Deselect all
+- **ENTER** - Confirm selection
+- **ESC** - Cancel
+
+Shows confirmation prompt before deleting. Displays count of entries to be deleted.
 
 ### Help
 
@@ -205,8 +222,9 @@ Consider backing up this file periodically if you accumulate valuable data.
 
 ## Dependencies
 
-- **jq** - Required for logging and built-in commands
+- **jq** - Required for logging and all commands
 - **bat** - Optional, used for syntax highlighting in list/search (falls back to plain text)
+- **fzf** - Required for delete command (interactive selection)
 
 ## Tips
 

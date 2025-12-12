@@ -964,9 +964,11 @@ tools:
         desc: "View all entries in log format with bat"
       - cmd: "patterns search coffee"
         desc: "Search entries for matching text"
+      - cmd: "patterns delete"
+        desc: "Delete entries interactively with fzf multi-select"
       - cmd: "patterns help"
         desc: "Show help and usage examples"
-    see_also: [notes, jq, bat]
+    see_also: [notes, jq, bat, fzf]
     tags: [dotfiles, logging, jsonl, tracking, health]
     docs_url: "docs/apps/patterns.md"
 
