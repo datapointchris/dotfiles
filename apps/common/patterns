@@ -1,29 +1,157 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Source shell libraries
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
+
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 DATA_DIR="$XDG_DATA_HOME/patterns"
 DATA_FILE="$DATA_DIR/entries.jsonl"
 
-if [[ $# -eq 0 ]]; then
-    echo "Usage: patterns <message>" >&2
-    echo "Entries stored in: ${XDG_DATA_HOME:-$HOME/.local/share}/patterns/entries.jsonl" >&2
+# ================================================================
+# FUNCTIONS
+# ================================================================
+
+show_help() {
+  print_header "Patterns - Timestamped Note Logging" "brightcyan"
+  echo ""
+  echo "Capture brief observations throughout the day to identify patterns"
+  echo "in health, mood, habits, and daily activities."
+  echo ""
+
+  print_section "Commands" "brightcyan"
+  echo "  patterns 'message'       Log a timestamped entry (quotes required)"
+  echo "  patterns list            View all entries in log format"
+  echo "  patterns search 'term'   Search entries for matching text"
+  echo "  patterns help            Show this help message"
+  echo ""
+
+  print_section "Examples" "brightyellow"
+  echo "  $(print_cyan "patterns 'had coffee around 3pm'")"
+  echo "  $(print_cyan "patterns 'feeling slight heartburn'")"
+  echo "  $(print_cyan "patterns list")"
+  echo "  $(print_cyan "patterns search coffee")"
+  echo ""
+
+  print_section "Data File" "brightgreen"
+  echo "  Location: $DATA_FILE"
+  echo "  Format: JSONL (one JSON object per line)"
+  echo ""
+
+  print_info "Use jq for advanced analysis: jq '.' $DATA_FILE"
+}
+
+log_entry() {
+  local message="$*"
+
+  if [[ -z "$message" ]]; then
+    print_error "Message cannot be empty"
+    echo ""
+    echo "Usage: patterns 'your message here'"
+    echo ""
+    print_info "Note: Message must be quoted to distinguish from commands"
     exit 1
-fi
+  fi
 
-mkdir -p "$DATA_DIR"
+  mkdir -p "$DATA_DIR"
 
-MESSAGE="$*"
-TIMESTAMP=$(date +"%Y-%m-%dT%H:%M:%S%z")
+  local timestamp
+  timestamp=$(date +"%Y-%m-%dT%H:%M:%S%z")
 
-if ! command -v jq &> /dev/null; then
-    echo "Error: jq is required but not installed" >&2
+  if ! command -v jq &> /dev/null; then
+    print_error "jq is required but not installed"
     exit 1
-fi
+  fi
 
-ENTRY=$(jq -n \
-    --arg timestamp "$TIMESTAMP" \
-    --arg message "$MESSAGE" \
+  local entry
+  entry=$(jq -n \
+    --arg timestamp "$timestamp" \
+    --arg message "$message" \
     '{timestamp: $timestamp, message: $message}')
 
-echo "$ENTRY" >> "$DATA_FILE"
+  echo "$entry" >> "$DATA_FILE"
+  print_success "Logged"
+}
+
+list_entries() {
+  if [[ ! -f "$DATA_FILE" ]]; then
+    print_warning "No entries found"
+    echo "File: $DATA_FILE"
+    exit 0
+  fi
+
+  if ! command -v bat &> /dev/null; then
+    jq -r '"\(.timestamp) | \(.message)"' "$DATA_FILE"
+  else
+    jq -r '"\(.timestamp) | \(.message)"' "$DATA_FILE" | bat --plain --language log
+  fi
+}
+
+search_entries() {
+  local search_term="$1"
+
+  if [[ -z "$search_term" ]]; then
+    print_error "Search term required"
+    echo "Usage: patterns search 'term'"
+    exit 1
+  fi
+
+  if [[ ! -f "$DATA_FILE" ]]; then
+    print_warning "No entries found"
+    echo "File: $DATA_FILE"
+    exit 0
+  fi
+
+  local results
+  results=$(jq -r --arg term "$search_term" \
+    'select(.message | test($term; "i")) | "\(.timestamp) | \(.message)"' \
+    "$DATA_FILE")
+
+  if [[ -z "$results" ]]; then
+    print_warning "No matches found for: $search_term"
+    exit 0
+  fi
+
+  if ! command -v bat &> /dev/null; then
+    echo "$results"
+  else
+    echo "$results" | bat --plain --language log
+  fi
+}
+
+# ================================================================
+# MAIN
+# ================================================================
+
+case "${1:-help}" in
+  list)
+    list_entries
+    ;;
+  search)
+    search_entries "${2:-}"
+    ;;
+  help|--help|-h)
+    show_help
+    ;;
+  -*)
+    print_error "Unknown option: $1"
+    echo ""
+    show_help
+    exit 1
+    ;;
+  *)
+    # If first argument doesn't look like a command, treat as message to log
+    # But require it to be properly quoted (user should use 'message' or "message")
+    if [[ $# -eq 1 && "$1" != *" "* ]]; then
+      # Single unquoted word - probably a mistake or unknown command
+      print_error "Unknown command: $1"
+      echo ""
+      print_info "To log a message, use quotes: patterns 'your message here'"
+      echo ""
+      show_help
+      exit 1
+    fi
+    log_entry "$@"
+    ;;
+esac

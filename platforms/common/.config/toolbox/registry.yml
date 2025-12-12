@@ -953,19 +953,22 @@ tools:
     category: custom-tools
     description: "Quick timestamped note logging for pattern analysis and tracking"
     installed_via: dotfiles
-    usage: "patterns <message>"
+    usage: "patterns 'message' | patterns <command>"
     why_use: "Capture brief observations throughout the day to identify patterns in health, mood, habits, etc."
     examples:
       - cmd: "patterns 'had coffee around 3pm'"
-        desc: "Log a timestamped entry"
-      - cmd: "patterns 'feeling slight heartburn, maybe the coffee?'"
-        desc: "Log observations for later analysis"
-      - cmd: "cat ~/.local/share/patterns/entries.jsonl | jq '.'"
-        desc: "View all entries in readable format"
-      - cmd: "jq 'select(.timestamp | startswith(\"2025-12-11\"))' ~/.local/share/patterns/entries.jsonl"
-        desc: "Filter entries by date"
-    see_also: [notes, jq]
+        desc: "Log a timestamped entry (quotes required)"
+      - cmd: "patterns 'feeling slight heartburn'"
+        desc: "Log observation for later analysis"
+      - cmd: "patterns list"
+        desc: "View all entries in log format with bat"
+      - cmd: "patterns search coffee"
+        desc: "Search entries for matching text"
+      - cmd: "patterns help"
+        desc: "Show help and usage examples"
+    see_also: [notes, jq, bat]
     tags: [dotfiles, logging, jsonl, tracking, health]
+    docs_url: "docs/apps/patterns.md"
 
   # SHELL UTILITY FUNCTIONS
   # =================================================================
