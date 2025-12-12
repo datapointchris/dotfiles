@@ -949,6 +949,24 @@ tools:
     see_also: [zk, gum, menu]
     tags: [dotfiles, notes, zk, productivity]
 
+  patterns:
+    category: custom-tools
+    description: "Quick timestamped note logging for pattern analysis and tracking"
+    installed_via: dotfiles
+    usage: "patterns <message>"
+    why_use: "Capture brief observations throughout the day to identify patterns in health, mood, habits, etc."
+    examples:
+      - cmd: "patterns 'had coffee around 3pm'"
+        desc: "Log a timestamped entry"
+      - cmd: "patterns 'feeling slight heartburn, maybe the coffee?'"
+        desc: "Log observations for later analysis"
+      - cmd: "cat ~/.local/share/patterns/entries.jsonl | jq '.'"
+        desc: "View all entries in readable format"
+      - cmd: "jq 'select(.timestamp | startswith(\"2025-12-11\"))' ~/.local/share/patterns/entries.jsonl"
+        desc: "Filter entries by date"
+    see_also: [notes, jq]
+    tags: [dotfiles, logging, jsonl, tracking, health]
+
   # SHELL UTILITY FUNCTIONS
   # =================================================================
 

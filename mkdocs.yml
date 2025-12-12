@@ -137,6 +137,7 @@ nav:
       - Font: apps/font.md
       - Theme Sync: apps/theme-sync.md
       - Notes: apps/notes.md
+      - Patterns: apps/patterns.md
       - Session Manager: apps/sess.md
       - Menu: apps/menu.md
       - Toolbox: apps/toolbox.md
