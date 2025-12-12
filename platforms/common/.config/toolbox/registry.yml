@@ -2023,6 +2023,28 @@ tools:
     notes: "Each backup appears as complete snapshot but uses hard links for unchanged files. Network-ready for homelab backups."
     docs_url: "docs/apps/backup-incremental.md"
 
+  refcheck:
+    category: custom-tools
+    description: "Find broken file references, validate variable paths, and detect fragile path patterns"
+    installed_via: dotfiles
+    usage: "refcheck [OPTIONS] [path]"
+    why_use: "Proactive error detection before running tests - catches broken paths in seconds vs minutes of test failures"
+    examples:
+      - cmd: "refcheck"
+        desc: "Validate all file references in current directory"
+      - cmd: "refcheck management/"
+        desc: "Check specific directory for broken references"
+      - cmd: "refcheck --pattern 'old/path/' --desc 'Now new/path/'"
+        desc: "Find old pattern after refactoring"
+      - cmd: "refcheck --type sh --skip-docs"
+        desc: "Check only shell scripts, skip documentation"
+      - cmd: "refcheck --strict"
+        desc: "Treat warnings as errors (strict mode for CI)"
+    see_also: [grep, fd]
+    tags: [validation, testing, refactoring, ci]
+    notes: "Resolves variable paths ($SCRIPT_DIR, $DOTFILES_DIR). Detects fragile patterns (CWD-dependent, ../ traversal)."
+    docs_url: "docs/apps/refcheck.md"
+
 backup-important:
     category: custom-tools
     description: "Backup critical home directories to Documents (iCloud synced) - alias for backup-dirs"
