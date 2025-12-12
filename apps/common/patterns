@@ -139,7 +139,9 @@ delete_entries() {
 
   local selected
   selected=$(jq --raw-output '"\(.timestamp) | \(.message)"' "$DATA_FILE" | \
+    tac | \
     fzf --multi \
+        --layout=reverse \
         --height=80% \
         --border=rounded \
         --prompt="Delete entries > " \
