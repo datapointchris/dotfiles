@@ -234,17 +234,17 @@ Added bash CLI command for the tool discovery system (Phase 5), providing comman
 
 **Commands:**
 
-- `tools list` - List all tools with categories
-- `tools show <name>` - Show detailed info and examples
-- `tools search <query>` - Search by description or tags
-- `tools categories` - List tool categories
-- `tools count` - Detailed breakdown by category
-- `tools random` - Discover a random tool
-- `tools installed` - Check installation status
+- `toolbox list` - List all tools with categories
+- `toolbox show <name>` - Show detailed info and examples
+- `toolbox search <query>` - Search by description or tags
+- `toolbox categories` - List tool categories
+- `toolbox count` - Detailed breakdown by category
+- `toolbox random` - Discover a random tool
+- `toolbox installed` - Check installation status
 
 **Files Changed:**
 
-- Created: `common/.local/bin/tools` (327 lines, bash script)
+- Created: `common/.local/bin/toolbox` (327 lines, bash script)
 
 Documentation already exists in Phase 5 changelog and docs/reference/tools.md.
 
@@ -317,7 +317,7 @@ Comprehensive refactoring to reduce complexity and eliminate unnecessary abstrac
 - Fixed critical error in platforms.md about ZSHDOTDIR configuration
 - Updated mkdocs.yml navigation to match reality (removed all dead file references)
 - Archived planning documents
-- **Fixed tools command availability** - moved from macos/ to common/ so WSL and Arch get it too
+- **Fixed toolbox command availability** - moved from macos/ to common/ so WSL and Arch get it too
 - **Fixed critical symlinks.sh bug** - broken link detection failed on macOS due to BSD vs GNU realpath differences
 
 **Philosophy Change:**
@@ -363,11 +363,11 @@ See repository history for full implementation details, testing strategies, and 
 
 ### Phase 5 Complete - Tool Discovery System
 
-Implemented command-line tool discovery system with `tools` command to help learn about and remember the 31 installed tools. Focuses on discovery over tracking, keeping configs clean while providing helpful tool information.
+Implemented command-line tool discovery system with `toolbox` command to help learn about and remember the 31 installed tools. Focuses on discovery over tracking, keeping configs clean while providing helpful tool information.
 
 **Key Changes:**
 
-- Created tools command (350 lines) with 8 subcommands
+- Created toolbox command (350 lines) with 8 subcommands
 - Installed yq for YAML processing (added to Brewfile)
 - Leveraged existing Phase 2 registry (31 tools, 15 categories)
 - Commands: list, show, search, categories, count, random, installed, help

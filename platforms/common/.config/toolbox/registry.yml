@@ -1955,7 +1955,7 @@ tools:
     examples:
       - cmd: "shelldocsparser ~/.local/shell/functions.sh"
         desc: "Parse functions.sh for documentation"
-    see_also: [tools]
+    see_also: [toolbox]
     tags: [dotfiles, documentation, shell]
     notes: "Uses #@function and #--> comment syntax for documentation"
 

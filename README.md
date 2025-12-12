@@ -199,4 +199,4 @@ MIT - do whatever you want with it
 
 ---
 
-**Tip**: Running `tools random` occasionally is a good way to rediscover tools you installed and immediately forgot about.
+**Tip**: Running `toolbox random` occasionally is a good way to rediscover tools you installed and immediately forgot about.
