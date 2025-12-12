@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/apps/theme-sync/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/apps/backup-incremental/">
       
       
-        <link rel="prev" href="../font/">
+        <link rel="prev" href="../backup-dirs/">
       
       
-        <link rel="next" href="../notes/">
+        <link rel="next" href="../ghostty-theme/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Theme Sync - Dotfiles</title>
+        <title>Backup Incremental - Dotfiles</title>
       
     
     
@@ -176,7 +176,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Theme Sync
+              Backup Incremental
             
           </span>
         </div>
@@ -721,17 +721,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../theme-sync/" class="md-nav__link">
         
   
   
@@ -749,7 +742,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -967,10 +959,17 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../backup-incremental/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -988,6 +987,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -4464,117 +4464,290 @@
   
 
 
-<h1 id="theme-sync">Theme Sync<a class="headerlink" href="#theme-sync" title="Permanent link">&para;</a></h1>
-<p>Base16 theme management across tmux, bat, fzf, eza, and shell via tinty. Change your theme once and watch it propagate everywhere simultaneously.</p>
+<h1 id="backup-incremental">Backup Incremental<a class="headerlink" href="#backup-incremental" title="Permanent link">&para;</a></h1>
+<p>Create space-efficient incremental backups using rsync hard links. Each backup appears as a complete snapshot, but unchanged files are hard-linked to previous backups, consuming zero additional disk space.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme-sync<span class="w"> </span>current<span class="w">           </span><span class="c1"># Show current theme</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme-sync<span class="w"> </span>favorites<span class="w">         </span><span class="c1"># List 12 favorite themes</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme-sync<span class="w"> </span>random<span class="w">            </span><span class="c1"># Apply random favorite</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>theme-sync<span class="w"> </span>verify<span class="w">            </span><span class="c1"># Check system status</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Basic incremental backup - just backup everything</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>~/learning
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Run it again - unchanged files (like books) are automatically hard-linked</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>~/learning
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Backup to network storage (when you have homelab)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--network<span class="w"> </span>homelab:/mnt/backups<span class="w"> </span>~/learning
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Optional: Exclude specific directories if you want</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--exclude<span class="w"> </span>books<span class="w"> </span>~/learning
 </span></code></pre></div>
+<p><strong>Key point</strong>: You don't need to exclude anything. Unchanged files (like your books) are automatically hard-linked and consume zero additional space.</p>
+<h2 id="why-use-this-instead-of-backup-dirs">Why Use This Instead of backup-dirs?<a class="headerlink" href="#why-use-this-instead-of-backup-dirs" title="Permanent link">&para;</a></h2>
+<p><strong>backup-dirs</strong> creates full compressed archives every time - great for one-off backups:</p>
+<ul>
+<li>5GB backup → 5GB archive</li>
+<li>Another 5GB backup → another 5GB archive</li>
+<li>Total: 10GB stored</li>
+</ul>
+<p><strong>backup-incremental</strong> uses hard links for unchanged files:</p>
+<ul>
+<li>First backup: 5GB (full copy)</li>
+<li>Second backup: 100MB (only changes, rest is hard-linked)</li>
+<li>Third backup: 50MB (only changes)</li>
+<li>Total: 5.15GB stored, appears as 15GB of browsable snapshots</li>
+</ul>
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
-<h3 id="viewing">Viewing<a class="headerlink" href="#viewing" title="Permanent link">&para;</a></h3>
+<p><strong>Basic Usage</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>&lt;backup-name&gt;<span class="w"> </span>&lt;source-dir&gt;
+</span></code></pre></div>
+<p><strong>Options</strong>:</p>
 <ul>
-<li><code>theme-sync current</code> - Show currently active theme</li>
-<li><code>theme-sync list</code> - List all available Base16 themes (hundreds)</li>
-<li><code>theme-sync favorites</code> - Show curated list of 12 favorite themes</li>
-<li><code>theme-sync info &lt;theme&gt;</code> - Display color palette for a theme</li>
+<li><code>-n, --name &lt;name&gt;</code> - Backup name (required, e.g., "learning")</li>
+<li><code>-d, --dest &lt;path&gt;</code> - Backup destination (default: ~/Documents/backups)</li>
+<li><code>--exclude &lt;pattern&gt;</code> - Exclude pattern (can be used multiple times)</li>
+<li><code>--network &lt;host:path&gt;</code> - Network destination via SSH (e.g., homelab:/mnt/backups)</li>
+<li><code>-v, --verbose</code> - Show detailed rsync output</li>
+<li><code>-h, --help</code> - Show help message</li>
 </ul>
-<h3 id="applying-themes">Applying Themes<a class="headerlink" href="#applying-themes" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>theme-sync apply &lt;theme&gt;</code> - Switch to a specific Base16 theme</li>
-<li><code>theme-sync random</code> - Apply random theme from favorites</li>
-<li><code>theme-sync reload</code> - Reload theme in running applications</li>
-</ul>
-<p>Applying a theme triggers tinty to generate new config files, then automatically reloads tmux config and rebuilds bat cache. Changes appear immediately without manual intervention.</p>
-<h3 id="system">System<a class="headerlink" href="#system" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>theme-sync verify</code> - Check that tinty is installed, configs exist, and theme files are present</li>
-</ul>
-<h2 id="favorite-themes">Favorite Themes<a class="headerlink" href="#favorite-themes" title="Permanent link">&para;</a></h2>
-<p>The 12 curated favorites balance variety with quality:</p>
-<p><strong>Rose Pine family</strong> - Warm, low-contrast:</p>
-<ul>
-<li>base16-rose-pine</li>
-<li>base16-rose-pine-moon</li>
-</ul>
-<p><strong>Gruvbox family</strong> - High-contrast retro:</p>
-<ul>
-<li>base16-gruvbox-dark-hard</li>
-<li>base16-gruvbox-dark-medium</li>
-</ul>
-<p><strong>Modern themes</strong>:</p>
-<ul>
-<li>base16-kanagawa (warm, earthy)</li>
-<li>base16-oceanicnext (cool blues)</li>
-<li>base16-github-dark (familiar GitHub colors)</li>
-<li>base16-nord (arctic blues)</li>
-</ul>
-<p><strong>Specialized</strong>:</p>
-<ul>
-<li>base16-selenized-dark (balanced contrast)</li>
-<li>base16-everforest-dark-hard (forest greens)</li>
-<li>base16-tomorrow-night (classic neutral)</li>
-<li>base16-tomorrow-night-eighties (nostalgic pastels)</li>
-</ul>
-<p>These themes match the themes configured in Neovim and Ghostty for consistency across tools.</p>
+<p><strong>Examples</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Basic incremental backup</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>~/learning
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Exclude multiple patterns</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--exclude<span class="w"> </span>books<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--exclude<span class="w"> </span>temp<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--exclude<span class="w"> </span>.cache<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>~/learning
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># Custom destination</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>dotfiles<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span>--dest<span class="w"> </span>~/Backups<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span>~/dotfiles
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># Network storage via SSH</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span>--network<span class="w"> </span>homelab:/mnt/backups<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span>~/learning
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="c1"># Mounted network share</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">  </span>--dest<span class="w"> </span>~/mnt/homelab/backups<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">  </span>~/learning
+</span></code></pre></div>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>Theme-sync wraps tinty, which applies Base16 themes by generating application-specific config files. When you apply a theme, tinty writes new configs and theme-sync handles reloading affected applications.</p>
-<h3 id="application-integration">Application Integration<a class="headerlink" href="#application-integration" title="Permanent link">&para;</a></h3>
-<p><strong>Tmux</strong> sources <code>~/.config/tmux/themes/current.conf</code> generated by tinty. Theme-sync automatically reloads tmux config after applying themes.</p>
-<p><strong>Bat</strong> uses themes from its themes directory. Theme-sync rebuilds bat cache after applying themes so syntax highlighting updates immediately.</p>
-<p><strong>Fzf</strong> sources theme variables from shell environment. New shells pick up theme changes automatically.</p>
-<p><strong>Eza</strong> uses LS_COLORS updated by tinty.</p>
-<p><strong>Shell</strong> sources theme variables exported by tinty for prompt and other colors.</p>
-<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<p>Tinty reads <code>~/.config/tinty/config.toml</code> which defines Base16 scheme repositories. Theme-sync doesn't modify tinty config - it uses tinty as-is.</p>
-<p>Favorite themes are hardcoded in <code>apps/common/theme-sync</code>. Edit the FAVORITES array directly:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>nvim<span class="w"> </span>~/dotfiles/apps/common/theme-sync
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Edit FAVORITES array</span>
+<p><strong>First Backup</strong> (Full):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>~/Documents/backups/learning/
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>└── learning_2025-12-11_100000/     (5.0 GB)
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    ├── books/                       (3.0 GB)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    ├── docs/                        (2.0 GB)
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    └── latest → learning_2025-12-11_100000
 </span></code></pre></div>
-<p>Changes apply immediately since shell scripts run directly.</p>
-<h2 id="integration-with-ghostty">Integration with Ghostty<a class="headerlink" href="#integration-with-ghostty" title="Permanent link">&para;</a></h2>
-<p>Theme-sync works alongside the separate ghostty-theme system. Ghostty uses its own theme format and manages 60+ built-in themes independently from Base16. This separation provides flexibility - you can keep them synchronized or intentionally separate for visual distinction.</p>
-<p>Check both systems:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ghostty-theme<span class="w"> </span>current<span class="w">          </span><span class="c1"># Check Ghostty theme</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>theme-sync<span class="w"> </span>current<span class="w">             </span><span class="c1"># Check Base16 theme</span>
+<p><strong>Second Backup</strong> (Incremental):</p>
+<p>You modify some documents but books are unchanged.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>~/Documents/backups/learning/
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── learning_2025-12-11_100000/     (5.0 GB)
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── books/                       (3.0 GB)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   └── docs/                        (2.0 GB)
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>├── learning_2025-12-11_140000/     (100 MB new data)
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   ├── books/                       (hard links to previous backup)
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>│   └── docs/                        (modified files + hard links to unchanged)
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>└── latest → learning_2025-12-11_140000
 </span></code></pre></div>
-<p>Keep them synchronized:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ghostty-theme<span class="w"> </span>apply<span class="w"> </span>rose-pine
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
+<p><strong>Actual disk usage</strong>: 5.1 GB
+<strong>Apparent size</strong>: 10 GB (two complete snapshots)</p>
+<p>The <code>books/</code> directory in the second backup doesn't consume any extra space - the files are hard-linked to the first backup's books directory.</p>
+<h2 id="storage-example">Storage Example<a class="headerlink" href="#storage-example" title="Permanent link">&para;</a></h2>
+<p>Real-world scenario for <code>~/learning</code> with large static books:</p>
+<table>
+<thead>
+<tr>
+<th>Backup</th>
+<th>Changes</th>
+<th>New Data</th>
+<th>Disk Used</th>
+<th>Appears As</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>#1</td>
+<td>Full backup</td>
+<td>5.0 GB</td>
+<td>5.0 GB</td>
+<td>5.0 GB</td>
+</tr>
+<tr>
+<td>#2</td>
+<td>Modified 100MB of docs</td>
+<td>100 MB</td>
+<td>5.1 GB</td>
+<td>10 GB</td>
+</tr>
+<tr>
+<td>#3</td>
+<td>Modified 50MB of docs</td>
+<td>50 MB</td>
+<td>5.15 GB</td>
+<td>15 GB</td>
+</tr>
+<tr>
+<td>#4</td>
+<td>Modified 200MB of docs</td>
+<td>200 MB</td>
+<td>5.35 GB</td>
+<td>20 GB</td>
+</tr>
+</tbody>
+</table>
+<p>After 4 backups: <strong>5.35 GB actual storage</strong>, <strong>20 GB browsable snapshots</strong></p>
+<h2 id="network-storage-setup">Network Storage Setup<a class="headerlink" href="#network-storage-setup" title="Permanent link">&para;</a></h2>
+<h3 id="option-1-ssh-direct-easiest">Option 1: SSH Direct (Easiest)<a class="headerlink" href="#option-1-ssh-direct-easiest" title="Permanent link">&para;</a></h3>
+<p>No mounting required - rsync uses SSH to transfer files directly:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># One-time setup: Configure SSH key auth to your homelab</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>ssh-copy-id<span class="w"> </span>homelab
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Backup to homelab over network</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--network<span class="w"> </span>homelab:/mnt/backups<span class="w"> </span>~/learning
+</span></code></pre></div>
+<p><strong>Pros</strong>: No mounting, works anywhere with SSH access
+<strong>Cons</strong>: Slower than local/mounted storage</p>
+<h3 id="option-2-mount-network-share">Option 2: Mount Network Share<a class="headerlink" href="#option-2-mount-network-share" title="Permanent link">&para;</a></h3>
+<p>Mount homelab storage locally, then use as local destination:</p>
+<p><strong>NFS Mount</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># One-time setup: Mount homelab NFS share</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/mnt/homelab
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>nfs<span class="w"> </span>homelab:/mnt/backups<span class="w"> </span>~/mnt/homelab
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Or add to /etc/fstab for automatic mounting</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;homelab:/mnt/backups /Users/chris/mnt/homelab nfs rw,soft,intr 0 0&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/fstab
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Backup to mounted share</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--dest<span class="w"> </span>~/mnt/homelab<span class="w"> </span>~/learning
+</span></code></pre></div>
+<p><strong>SMB/CIFS Mount</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># One-time setup: Mount homelab SMB share</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/mnt/homelab
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>smbfs<span class="w"> </span>//homelab/backups<span class="w"> </span>~/mnt/homelab
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Backup to mounted share</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--dest<span class="w"> </span>~/mnt/homelab<span class="w"> </span>~/learning
+</span></code></pre></div>
+<p><strong>Pros</strong>: Fast as local storage, works offline if cached
+<strong>Cons</strong>: Requires mounting, may disconnect</p>
+<h3 id="homelab-recommendations">Homelab Recommendations<a class="headerlink" href="#homelab-recommendations" title="Permanent link">&para;</a></h3>
+<p>For a dedicated backup server/homelab:</p>
+<ol>
+<li><strong>Dedicated disk for backups</strong>: Separate physical disk reduces failure risk</li>
+<li><strong>RAID 1 or ZFS mirror</strong>: Protect against single disk failure</li>
+<li><strong>Regular disk checks</strong>: Set up SMART monitoring</li>
+<li><strong>Offsite copy</strong>: Periodically copy critical backups to cloud/external drive</li>
+</ol>
+<p><strong>Example homelab setup</strong>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Homelab server:
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>├── /dev/sda (OS disk)
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>│   └── Main system
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>└── /dev/sdb (Backup disk - dedicated)
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    └── /mnt/backups
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        ├── learning/
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        ├── dotfiles/
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        └── projects/
 </span></code></pre></div>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
-<p>Switch themes based on mood or time of day:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine-moon<span class="w">    </span><span class="c1"># Evening</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark<span class="w">       </span><span class="c1"># Daytime</span>
+<p><strong>Daily/frequent backups</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Just backup everything - unchanged files are automatically hard-linked</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>~/learning
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Optional: Exclude specific directories if you want</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--exclude<span class="w"> </span>books<span class="w"> </span>~/learning
 </span></code></pre></div>
-<p>Break out of visual monotony with random selection:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Work for a bit, see how it feels</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>theme-sync<span class="w"> </span>random
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Try another</span>
+<p><strong>Weekly/monthly backups of static content</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Full backup including books (less frequent)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning-full<span class="w"> </span>~/learning
 </span></code></pre></div>
-<p>Combine with fzf for interactive selection:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;theme-sync info {}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
+<p><strong>When setting up homelab</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Test connection</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ssh<span class="w"> </span>homelab
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Create backup directory on homelab</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>ssh<span class="w"> </span>homelab<span class="w"> </span><span class="s2">&quot;mkdir -p /mnt/backups&quot;</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Run backup to homelab via SSH</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--network<span class="w"> </span>homelab:/mnt/backups<span class="w"> </span>~/learning
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># Or mount homelab storage and use as local destination</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/mnt/homelab
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>nfs<span class="w"> </span>homelab:/mnt/backups<span class="w"> </span>~/mnt/homelab
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--dest<span class="w"> </span>~/mnt/homelab<span class="w"> </span>~/learning
 </span></code></pre></div>
-<p>Automate theme changes based on time:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">else</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">fi</span>
+<p><strong>Browse previous backups</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># List all learning backups</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ls<span class="w"> </span>-lh<span class="w"> </span>~/Documents/backups/learning/
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Browse a specific backup</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nb">cd</span><span class="w"> </span>~/Documents/backups/learning/learning_2025-12-11_140000
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>ls<span class="w"> </span>-lh
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># Restore a specific file</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>cp<span class="w"> </span>~/Documents/backups/learning/learning_2025-12-11_140000/docs/important.md<span class="w"> </span>~/learning/docs/
 </span></code></pre></div>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Theme not applying</strong>: Run <code>theme-sync verify</code> to check system status. Verify tinty is installed and theme repositories are downloaded with <code>tinty list</code>.</p>
-<p><strong>Tmux not updating</strong>: Check theme file exists at <code>~/.config/tmux/themes/current.conf</code>. Manually reload with <code>tmux source-file ~/.config/tmux/tmux.conf</code>.</p>
-<p><strong>Bat not updating</strong>: Rebuild cache manually with <code>bat cache --build</code>.</p>
-<p><strong>Theme doesn't exist</strong>: Run <code>theme-sync list</code> to see available themes. Update tinty schemes with <code>tinty update</code>.</p>
+<h2 id="comparison-with-backup-dirs">Comparison with backup-dirs<a class="headerlink" href="#comparison-with-backup-dirs" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>backup-dirs</th>
+<th>backup-incremental</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Storage</strong></td>
+<td>Full compressed archive each time</td>
+<td>Only stores changes</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>Slower (compression)</td>
+<td>Faster (rsync)</td>
+</tr>
+<tr>
+<td><strong>Portability</strong></td>
+<td>Single file, easy to move</td>
+<td>Directory structure</td>
+</tr>
+<tr>
+<td><strong>Browse</strong></td>
+<td>Must extract first</td>
+<td>Instantly browsable</td>
+</tr>
+<tr>
+<td><strong>Network</strong></td>
+<td>Manual copy after creation</td>
+<td>Built-in SSH support</td>
+</tr>
+<tr>
+<td><strong>Best for</strong></td>
+<td>One-off backups, archival</td>
+<td>Frequent backups, large datasets</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Use backup-dirs when</strong>:</p>
+<ul>
+<li>Creating archives to share or move</li>
+<li>One-off backups before risky operations</li>
+<li>Archival storage (compressed)</li>
+</ul>
+<p><strong>Use backup-incremental when</strong>:</p>
+<ul>
+<li>Backing up frequently (daily/weekly)</li>
+<li>Large directories with small changes</li>
+<li>Network backup to homelab</li>
+<li>Need to browse/restore without extracting</li>
+</ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../font/">Font Tool</a> - Similar workflow for font management</li>
-<li><a href="../menu/">Menu System</a> - Quick access to workflow tools</li>
+<li><a href="../backup-dirs/">backup-dirs</a> - Compressed full backups</li>
+<li><a href="../../architecture/tool-composition/">Tool Composition</a> - How tools work together</li>
 </ul>
 
 

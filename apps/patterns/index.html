@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/apps/theme-sync/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/apps/patterns/">
       
       
-        <link rel="prev" href="../font/">
+        <link rel="prev" href="../notes/">
       
       
-        <link rel="next" href="../notes/">
+        <link rel="next" href="../sess/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Theme Sync - Dotfiles</title>
+        <title>Patterns - Dotfiles</title>
       
     
     
@@ -176,7 +176,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Theme Sync
+              Patterns
             
           </span>
         </div>
@@ -721,17 +721,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../theme-sync/" class="md-nav__link">
         
   
   
@@ -749,7 +742,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -789,10 +781,17 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../patterns/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -810,6 +809,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -4464,118 +4464,149 @@
   
 
 
-<h1 id="theme-sync">Theme Sync<a class="headerlink" href="#theme-sync" title="Permanent link">&para;</a></h1>
-<p>Base16 theme management across tmux, bat, fzf, eza, and shell via tinty. Change your theme once and watch it propagate everywhere simultaneously.</p>
+<h1 id="patterns">Patterns<a class="headerlink" href="#patterns" title="Permanent link">&para;</a></h1>
+<p>Quick timestamped note logging for tracking patterns in health, mood, habits, and daily observations. Stores entries in JSONL format for easy analysis.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme-sync<span class="w"> </span>current<span class="w">           </span><span class="c1"># Show current theme</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme-sync<span class="w"> </span>favorites<span class="w">         </span><span class="c1"># List 12 favorite themes</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme-sync<span class="w"> </span>random<span class="w">            </span><span class="c1"># Apply random favorite</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>theme-sync<span class="w"> </span>verify<span class="w">            </span><span class="c1"># Check system status</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>patterns<span class="w"> </span><span class="s1">&#39;had coffee around 3pm&#39;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>patterns<span class="w"> </span><span class="s1">&#39;feeling slight heartburn&#39;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>patterns<span class="w"> </span><span class="s1">&#39;slept well, 8 hours&#39;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>patterns<span class="w"> </span>list<span class="w">                    </span><span class="c1"># View all entries</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>patterns<span class="w"> </span>search<span class="w"> </span>coffee<span class="w">           </span><span class="c1"># Search for entries</span>
 </span></code></pre></div>
+<p>Each entry is timestamped and appended to <code>~/.local/share/patterns/entries.jsonl</code>.</p>
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
-<h3 id="viewing">Viewing<a class="headerlink" href="#viewing" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>theme-sync current</code> - Show currently active theme</li>
-<li><code>theme-sync list</code> - List all available Base16 themes (hundreds)</li>
-<li><code>theme-sync favorites</code> - Show curated list of 12 favorite themes</li>
-<li><code>theme-sync info &lt;theme&gt;</code> - Display color palette for a theme</li>
-</ul>
-<h3 id="applying-themes">Applying Themes<a class="headerlink" href="#applying-themes" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>theme-sync apply &lt;theme&gt;</code> - Switch to a specific Base16 theme</li>
-<li><code>theme-sync random</code> - Apply random theme from favorites</li>
-<li><code>theme-sync reload</code> - Reload theme in running applications</li>
-</ul>
-<p>Applying a theme triggers tinty to generate new config files, then automatically reloads tmux config and rebuilds bat cache. Changes appear immediately without manual intervention.</p>
-<h3 id="system">System<a class="headerlink" href="#system" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>theme-sync verify</code> - Check that tinty is installed, configs exist, and theme files are present</li>
-</ul>
-<h2 id="favorite-themes">Favorite Themes<a class="headerlink" href="#favorite-themes" title="Permanent link">&para;</a></h2>
-<p>The 12 curated favorites balance variety with quality:</p>
-<p><strong>Rose Pine family</strong> - Warm, low-contrast:</p>
-<ul>
-<li>base16-rose-pine</li>
-<li>base16-rose-pine-moon</li>
-</ul>
-<p><strong>Gruvbox family</strong> - High-contrast retro:</p>
-<ul>
-<li>base16-gruvbox-dark-hard</li>
-<li>base16-gruvbox-dark-medium</li>
-</ul>
-<p><strong>Modern themes</strong>:</p>
-<ul>
-<li>base16-kanagawa (warm, earthy)</li>
-<li>base16-oceanicnext (cool blues)</li>
-<li>base16-github-dark (familiar GitHub colors)</li>
-<li>base16-nord (arctic blues)</li>
-</ul>
-<p><strong>Specialized</strong>:</p>
-<ul>
-<li>base16-selenized-dark (balanced contrast)</li>
-<li>base16-everforest-dark-hard (forest greens)</li>
-<li>base16-tomorrow-night (classic neutral)</li>
-<li>base16-tomorrow-night-eighties (nostalgic pastels)</li>
-</ul>
-<p>These themes match the themes configured in Neovim and Ghostty for consistency across tools.</p>
-<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>Theme-sync wraps tinty, which applies Base16 themes by generating application-specific config files. When you apply a theme, tinty writes new configs and theme-sync handles reloading affected applications.</p>
-<h3 id="application-integration">Application Integration<a class="headerlink" href="#application-integration" title="Permanent link">&para;</a></h3>
-<p><strong>Tmux</strong> sources <code>~/.config/tmux/themes/current.conf</code> generated by tinty. Theme-sync automatically reloads tmux config after applying themes.</p>
-<p><strong>Bat</strong> uses themes from its themes directory. Theme-sync rebuilds bat cache after applying themes so syntax highlighting updates immediately.</p>
-<p><strong>Fzf</strong> sources theme variables from shell environment. New shells pick up theme changes automatically.</p>
-<p><strong>Eza</strong> uses LS_COLORS updated by tinty.</p>
-<p><strong>Shell</strong> sources theme variables exported by tinty for prompt and other colors.</p>
-<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<p>Tinty reads <code>~/.config/tinty/config.toml</code> which defines Base16 scheme repositories. Theme-sync doesn't modify tinty config - it uses tinty as-is.</p>
-<p>Favorite themes are hardcoded in <code>apps/common/theme-sync</code>. Edit the FAVORITES array directly:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>nvim<span class="w"> </span>~/dotfiles/apps/common/theme-sync
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Edit FAVORITES array</span>
+<h3 id="log-entry">Log Entry<a class="headerlink" href="#log-entry" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>patterns<span class="w"> </span><span class="s1">&#39;your message here&#39;</span>
 </span></code></pre></div>
-<p>Changes apply immediately since shell scripts run directly.</p>
-<h2 id="integration-with-ghostty">Integration with Ghostty<a class="headerlink" href="#integration-with-ghostty" title="Permanent link">&para;</a></h2>
-<p>Theme-sync works alongside the separate ghostty-theme system. Ghostty uses its own theme format and manages 60+ built-in themes independently from Base16. This separation provides flexibility - you can keep them synchronized or intentionally separate for visual distinction.</p>
-<p>Check both systems:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ghostty-theme<span class="w"> </span>current<span class="w">          </span><span class="c1"># Check Ghostty theme</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>theme-sync<span class="w"> </span>current<span class="w">             </span><span class="c1"># Check Base16 theme</span>
+<p>Log a timestamped observation. <strong>Quotes are required</strong> to distinguish messages from commands.</p>
+<h3 id="list-entries">List Entries<a class="headerlink" href="#list-entries" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>patterns<span class="w"> </span>list
 </span></code></pre></div>
-<p>Keep them synchronized:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ghostty-theme<span class="w"> </span>apply<span class="w"> </span>rose-pine
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
+<p>View all entries in log format with syntax highlighting (via bat):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="l l-Scalar l-Scalar-Plain">2025-12-11T15:30:45-0500 | had coffee around 3pm</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="l l-Scalar l-Scalar-Plain">2025-12-11T18:22:10-0500 | feeling slight heartburn</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="l l-Scalar l-Scalar-Plain">2025-12-11T22:15:00-0500 | slept well, 8 hours</span>
 </span></code></pre></div>
-<h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
-<p>Switch themes based on mood or time of day:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine-moon<span class="w">    </span><span class="c1"># Evening</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark<span class="w">       </span><span class="c1"># Daytime</span>
+<h3 id="search-entries">Search Entries<a class="headerlink" href="#search-entries" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>patterns<span class="w"> </span>search<span class="w"> </span><span class="s1">&#39;term&#39;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>patterns<span class="w"> </span>search<span class="w"> </span>coffee
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>patterns<span class="w"> </span>search<span class="w"> </span>heartburn
 </span></code></pre></div>
-<p>Break out of visual monotony with random selection:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Work for a bit, see how it feels</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>theme-sync<span class="w"> </span>random
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Try another</span>
+<p>Search entries for matching text (case-insensitive). Results displayed with syntax highlighting.</p>
+<h3 id="help">Help<a class="headerlink" href="#help" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>patterns<span class="w"> </span><span class="nb">help</span>
 </span></code></pre></div>
-<p>Combine with fzf for interactive selection:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;theme-sync info {}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
+<p>Show usage information and examples.</p>
+<h2 id="data-format">Data Format<a class="headerlink" href="#data-format" title="Permanent link">&para;</a></h2>
+<p>Entries are stored as JSON Lines (JSONL) in <code>~/.local/share/patterns/entries.jsonl</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-11T15:30:45-0500&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;had coffee around 3pm&quot;</span><span class="p">}</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">{</span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-12-11T18:22:10-0500&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;feeling slight heartburn&quot;</span><span class="p">}</span>
 </span></code></pre></div>
-<p>Automate theme changes based on time:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">else</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">fi</span>
-</span></code></pre></div>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Theme not applying</strong>: Run <code>theme-sync verify</code> to check system status. Verify tinty is installed and theme repositories are downloaded with <code>tinty list</code>.</p>
-<p><strong>Tmux not updating</strong>: Check theme file exists at <code>~/.config/tmux/themes/current.conf</code>. Manually reload with <code>tmux source-file ~/.config/tmux/tmux.conf</code>.</p>
-<p><strong>Bat not updating</strong>: Rebuild cache manually with <code>bat cache --build</code>.</p>
-<p><strong>Theme doesn't exist</strong>: Run <code>theme-sync list</code> to see available themes. Update tinty schemes with <code>tinty update</code>.</p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<p>Each line is a complete JSON object with:</p>
 <ul>
-<li><a href="../font/">Font Tool</a> - Similar workflow for font management</li>
-<li><a href="../menu/">Menu System</a> - Quick access to workflow tools</li>
+<li><code>timestamp</code> - ISO 8601 format with local timezone offset</li>
+<li><code>message</code> - Your note text</li>
 </ul>
+<h2 id="advanced-analysis">Advanced Analysis<a class="headerlink" href="#advanced-analysis" title="Permanent link">&para;</a></h2>
+<p>The JSONL format works seamlessly with command-line tools:</p>
+<h3 id="using-jq">Using jq<a class="headerlink" href="#using-jq" title="Permanent link">&para;</a></h3>
+<p>View all entries as JSON:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>jq<span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span>~/.local/share/patterns/entries.jsonl
+</span></code></pre></div>
+<p>Extract just messages:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.message&#39;</span><span class="w"> </span>~/.local/share/patterns/entries.jsonl
+</span></code></pre></div>
+<p>Filter by date:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>jq<span class="w"> </span><span class="s1">&#39;select(.timestamp | startswith(&quot;2025-12-11&quot;))&#39;</span><span class="w"> </span>~/.local/share/patterns/entries.jsonl
+</span></code></pre></div>
+<p>Format for reading:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;&quot;\(.timestamp) | \(.message)&quot;&#39;</span><span class="w"> </span>~/.local/share/patterns/entries.jsonl
+</span></code></pre></div>
+<p>Group by date:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.timestamp[:10] + &quot; | &quot; + .message&#39;</span><span class="w"> </span>~/.local/share/patterns/entries.jsonl<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort
+</span></code></pre></div>
+<h3 id="using-grep">Using grep<a class="headerlink" href="#using-grep" title="Permanent link">&para;</a></h3>
+<p>Quick text search without JSON parsing:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>grep<span class="w"> </span>-i<span class="w"> </span>coffee<span class="w"> </span>~/.local/share/patterns/entries.jsonl
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>grep<span class="w"> </span><span class="s2">&quot;2025-12-11&quot;</span><span class="w"> </span>~/.local/share/patterns/entries.jsonl
+</span></code></pre></div>
+<h3 id="python-analysis">Python Analysis<a class="headerlink" href="#python-analysis" title="Permanent link">&para;</a></h3>
+<p>Import and analyze with Python:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Load all entries</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;~/.local/share/patterns/entries.jsonl&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="c1"># Find all entries with &#39;coffee&#39;</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="n">coffee_entries</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="s1">&#39;coffee&#39;</span> <span class="ow">in</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;message&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Coffee mentioned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coffee_entries</span><span class="p">)</span><span class="si">}</span><span class="s2"> times&quot;</span><span class="p">)</span>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="c1"># Group by date</span>
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="n">by_date</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>    <span class="n">date</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">][:</span><span class="mi">10</span><span class="p">]</span>
+</span><span id="__span-13-19"><a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>    <span class="n">by_date</span><span class="p">[</span><span class="n">date</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;message&#39;</span><span class="p">])</span>
+</span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>
+</span><span id="__span-13-21"><a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="c1"># Find correlations</span>
+</span><span id="__span-13-22"><a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="k">for</span> <span class="n">date</span><span class="p">,</span> <span class="n">messages</span> <span class="ow">in</span> <span class="n">by_date</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="__span-13-23"><a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a>    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="s1">&#39;coffee&#39;</span> <span class="ow">in</span> <span class="n">m</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span><span class="p">)</span> <span class="ow">and</span> \
+</span><span id="__span-13-24"><a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>       <span class="nb">any</span><span class="p">(</span><span class="s1">&#39;heartburn&#39;</span> <span class="ow">in</span> <span class="n">m</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span><span class="p">):</span>
+</span><span id="__span-13-25"><a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s2">: Coffee AND heartburn&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="use-cases">Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h2>
+<p>Track patterns over time by logging brief observations:</p>
+<ul>
+<li><strong>Health tracking</strong> - Food intake, symptoms, energy levels, sleep quality</li>
+<li><strong>Mood monitoring</strong> - Emotional states, triggers, stress levels</li>
+<li><strong>Habit formation</strong> - Activities, exercise, meditation, reading</li>
+<li><strong>Work patterns</strong> - Productivity, focus times, distractions</li>
+<li><strong>Symptom correlation</strong> - Find connections between activities and outcomes (e.g., coffee → heartburn)</li>
+</ul>
+<p>The goal is to capture many small data points throughout the day for later pattern analysis.</p>
+<h2 id="example-workflow">Example Workflow<a class="headerlink" href="#example-workflow" title="Permanent link">&para;</a></h2>
+<p>Morning:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>patterns<span class="w"> </span><span class="s1">&#39;woke up at 6:30, felt rested&#39;</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>patterns<span class="w"> </span><span class="s1">&#39;had coffee and toast for breakfast&#39;</span>
+</span></code></pre></div>
+<p>Afternoon:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>patterns<span class="w"> </span><span class="s1">&#39;slight headache around 2pm&#39;</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>patterns<span class="w"> </span><span class="s1">&#39;had second coffee at 3pm&#39;</span>
+</span></code></pre></div>
+<p>Evening:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>patterns<span class="w"> </span><span class="s1">&#39;headache gone after water&#39;</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>patterns<span class="w"> </span><span class="s1">&#39;feeling tired, going to bed early&#39;</span>
+</span></code></pre></div>
+<p>Later analysis:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>patterns<span class="w"> </span>search<span class="w"> </span>headache
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>patterns<span class="w"> </span>search<span class="w"> </span>coffee
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="c1"># Notice pattern: coffee → headache correlation</span>
+</span></code></pre></div>
+<h2 id="data-location">Data Location<a class="headerlink" href="#data-location" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Data file</strong>: <code>~/.local/share/patterns/entries.jsonl</code></li>
+<li><strong>Format</strong>: JSON Lines (one JSON object per line)</li>
+<li><strong>Backup</strong>: Not tracked in dotfiles (personal data)</li>
+</ul>
+<p>Consider backing up this file periodically if you accumulate valuable data.</p>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>jq</strong> - Required for logging and built-in commands</li>
+<li><strong>bat</strong> - Optional, used for syntax highlighting in list/search (falls back to plain text)</li>
+</ul>
+<h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Be consistent</strong> - Log regularly throughout the day for better pattern detection</li>
+<li><strong>Be brief</strong> - Short observations are easier to analyze than long entries</li>
+<li><strong>Be specific</strong> - Include times and quantities when relevant</li>
+<li><strong>Review regularly</strong> - Use <code>patterns search</code> to look for correlations</li>
+<li><strong>Backup data</strong> - Your patterns are personal data worth preserving</li>
+</ol>
 
 
 
