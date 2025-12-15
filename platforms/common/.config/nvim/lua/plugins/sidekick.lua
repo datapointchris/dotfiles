@@ -10,6 +10,7 @@ return {
   'folke/sidekick.nvim',
   event = 'VeryLazy',
   dependencies = { 'zbirenbaum/copilot.lua' },
+  enabled = vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode,
   opts = {
     -- Next Edit Suggestions - Copilot multi-line completions
     nes = {
