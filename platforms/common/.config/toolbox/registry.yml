@@ -816,6 +816,27 @@ tools:
     tags: [devops, infrastructure, iac]
     docs_url: "https://www.terraform.io/"
 
+  goose:
+    category: infrastructure
+    description: "Database migration tool with support for SQL and Go migrations"
+    installed_via: dotfiles
+    usage: "goose [command] [options]"
+    why_use: "Simple, fast database migrations with multiple database support (PostgreSQL, MySQL, SQLite, etc.)"
+    examples:
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' up"
+        desc: "Run all pending migrations"
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' down"
+        desc: "Rollback last migration"
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' status"
+        desc: "Show migration status"
+      - cmd: "goose create add_users_table sql"
+        desc: "Create new SQL migration file"
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' version"
+        desc: "Show current migration version"
+    see_also: [docker, lazydocker]
+    tags: [database, migrations, devops, sql]
+    docs_url: "https://github.com/pressly/goose"
+
   # =================================================================
   # TASK AUTOMATION
   # =================================================================

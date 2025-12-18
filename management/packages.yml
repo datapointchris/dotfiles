@@ -13,6 +13,7 @@
 
 macos_taps:
   - docker/docker # Docker official tap for latest versions
+  - FelixKratz/formulae # JankyBorders
 
 # ================================================================
 # SYSTEM PACKAGES
@@ -324,6 +325,10 @@ system_packages:
     brew: terminal-notifier
     description: macOS notifications from terminal (macOS only)
 
+  - name: borders
+    brew: borders
+    description: macOS colored window borders
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================
@@ -634,6 +639,10 @@ go_tools:
   - name: actionlint
     package: github.com/rhysd/actionlint/cmd/actionlint
     description: GitHub Actions workflow linter
+
+  - name: goose
+    package: github.com/pressly/goose/v3/cmd/goose
+    description: Database migration tool
 
 # ================================================================
 # SHELL PLUGINS
