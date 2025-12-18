@@ -24,7 +24,3 @@ alias copytoclip="tr -d '\n' | win32yank.exe -i"
 
 # Copy shrug to clipboard
 alias shrug="echo '¯\_(ツ)_/¯' | win32yank.exe -i"
-
-# ---------- AWS ---------- #
-
-alias aws-login="/mnt/c/Users/600002371/GenerateCredentials.bat"
