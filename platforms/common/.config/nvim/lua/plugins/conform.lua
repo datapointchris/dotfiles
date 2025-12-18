@@ -22,7 +22,7 @@ return {
         html = { 'prettier' },
         sh = { 'shfmt' },
         bash = { 'shfmt' },
-        go = { 'gofmt' },
+        go = { 'gofumpt' },
         rust = { 'rustfmt' },
         terraform = { 'terraform_fmt' },
       },

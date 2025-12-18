@@ -644,6 +644,10 @@ go_tools:
     package: github.com/pressly/goose/v3/cmd/goose
     description: Database migration tool
 
+  - name: gofumpt
+    package: mvdan.cc/gofumpt
+    description: Stricter gofmt formatter for Go code
+
 # ================================================================
 # SHELL PLUGINS
 # ================================================================

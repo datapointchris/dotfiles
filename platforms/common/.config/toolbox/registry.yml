@@ -837,6 +837,25 @@ tools:
     tags: [database, migrations, devops, sql]
     docs_url: "https://github.com/pressly/goose"
 
+  gofumpt:
+    category: linter-formatter
+    description: "Stricter gofmt formatter enforcing additional style rules"
+    installed_via: dotfiles
+    usage: "gofumpt [flags] [path ...]"
+    why_use: "Stricter than gofmt with extra formatting rules for cleaner, more consistent Go code"
+    examples:
+      - cmd: "gofumpt -w ."
+        desc: "Format all Go files in current directory"
+      - cmd: "gofumpt -l ."
+        desc: "List files that need formatting"
+      - cmd: "gofumpt -d file.go"
+        desc: "Show diff of formatting changes"
+      - cmd: "gofumpt -extra -w ."
+        desc: "Apply extra formatting rules"
+    see_also: [shfmt, prettier, ruff]
+    tags: [go, formatter, linter, development]
+    docs_url: "https://github.com/mvdan/gofumpt"
+
   # =================================================================
   # TASK AUTOMATION
   # =================================================================
