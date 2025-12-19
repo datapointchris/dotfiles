@@ -7,10 +7,12 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
+print_section "npm Global Packages"
+
 # Source nvm to get npm in PATH
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
 if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
-  echo "Error: nvm not found at $NVM_DIR"
+  log_error "nvm not found at $NVM_DIR"
   exit 1
 fi
 
@@ -19,11 +21,11 @@ source "$NVM_DIR/nvm.sh"
 
 # Verify npm is available
 if ! command -v npm >/dev/null 2>&1; then
-  echo "Error: npm not found (Node.js may not be installed)"
+  log_error "npm not found (Node.js may not be installed)"
   exit 1
 fi
 
-echo "Installing npm global packages from packages.yml..."
+log_info "Installing npm global packages from packages.yml..."
 
 # Get npm packages from packages.yml via Python parser
 NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=npm)
@@ -31,7 +33,7 @@ NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --t
 FAILURE_COUNT=0
 for package in $NPM_PACKAGES; do
   if npm list -g "$package" --depth=0 &>/dev/null; then
-    echo "  $package already installed (skipping)"
+    log_success "$package already installed, skipping"
   else
     log_info "Installing $package..."
     if npm install -g "$package"; then
@@ -50,12 +52,11 @@ View package on npm:
   fi
 done
 
-echo ""
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT package(s) failed to install"
   npm list -g --depth=0
   exit 1
 else
-  echo "All npm global packages installed successfully"
+  log_success "All npm global packages installed successfully"
   npm list -g --depth=0
 fi

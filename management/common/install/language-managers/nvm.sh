@@ -13,13 +13,15 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
+print_section "Node.js (nvm)"
+
 NVM_DIR="$HOME/.config/nvm"
 NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for updates..."
+  log_info "Checking for nvm updates..."
 else
-  log_info "Installing..."
+  log_info "Installing nvm..."
 fi
 
 # Check if packages.yml exists
