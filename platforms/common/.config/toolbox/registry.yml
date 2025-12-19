@@ -837,6 +837,29 @@ tools:
     tags: [database, migrations, devops, sql]
     docs_url: "https://github.com/pressly/goose"
 
+  psql:
+    category: infrastructure
+    description: "PostgreSQL interactive terminal for database connections and queries"
+    installed_via: brew
+    usage: "psql [options] [dbname [username]]"
+    why_use: "Standard CLI for PostgreSQL - run queries, manage databases, import/export data"
+    examples:
+      - cmd: "psql -h localhost -U postgres -d mydb"
+        desc: "Connect to local database"
+      - cmd: "psql postgres://user:pass@host:5432/dbname"
+        desc: "Connect using connection string"
+      - cmd: "psql -c 'SELECT version();' -d mydb"
+        desc: "Run single query"
+      - cmd: "psql -f schema.sql -d mydb"
+        desc: "Execute SQL file"
+      - cmd: "pg_dump mydb > backup.sql"
+        desc: "Export database to SQL file"
+      - cmd: "pg_restore -d mydb backup.dump"
+        desc: "Restore from dump file"
+    see_also: [goose, docker, lazydocker]
+    tags: [database, postgresql, sql, devops]
+    docs_url: "https://www.postgresql.org/docs/current/app-psql.html"
+
   gofumpt:
     category: linter-formatter
     description: "Stricter gofmt formatter enforcing additional style rules"
