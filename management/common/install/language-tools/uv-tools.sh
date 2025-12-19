@@ -22,15 +22,20 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   exit 1
 fi
 
-print_section "Installing Python tools via uv"
+print_section "Python Tools (uv)"
 
 # Get uv tools from packages.yml via Python parser
 /usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=uv | while read -r tool; do
-  echo "  Installing $tool..."
-  if uv tool install "$tool"; then
-    echo "    ✓ $tool installed"
+  # Check if tool is already installed
+  if uv tool list | grep -q "^$tool "; then
+    log_success "$tool already installed, skipping"
   else
-    log_warning "Failed to install $tool"
+    log_info "Installing $tool..."
+    if uv tool install "$tool"; then
+      log_success "$tool installed"
+    else
+      log_warning "Failed to install $tool"
+    fi
   fi
 done
 
