@@ -20,7 +20,7 @@ REPO="sxyazi/yazi"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 VERSION=$(get_latest_version "$REPO")
-log_info "Latest version: $VERSION"
+log_info "Latest $BINARY_NAME version: $VERSION"
 
 SKIP_BINARY_INSTALL=false
 
