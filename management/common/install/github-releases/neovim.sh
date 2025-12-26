@@ -46,7 +46,7 @@ Manual installation:
   exit 1
 fi
 
-log_info "Latest: $NVIM_VERSION"
+log_info "Latest nvim version: $NVIM_VERSION"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! command -v nvim >/dev/null 2>&1; then

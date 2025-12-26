@@ -816,6 +816,69 @@ tools:
     tags: [devops, infrastructure, iac]
     docs_url: "https://www.terraform.io/"
 
+  goose:
+    category: infrastructure
+    description: "Database migration tool with support for SQL and Go migrations"
+    installed_via: dotfiles
+    usage: "goose [command] [options]"
+    why_use: "Simple, fast database migrations with multiple database support (PostgreSQL, MySQL, SQLite, etc.)"
+    examples:
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' up"
+        desc: "Run all pending migrations"
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' down"
+        desc: "Rollback last migration"
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' status"
+        desc: "Show migration status"
+      - cmd: "goose create add_users_table sql"
+        desc: "Create new SQL migration file"
+      - cmd: "goose -dir migrations postgres 'user=postgres dbname=mydb' version"
+        desc: "Show current migration version"
+    see_also: [docker, lazydocker]
+    tags: [database, migrations, devops, sql]
+    docs_url: "https://github.com/pressly/goose"
+
+  psql:
+    category: infrastructure
+    description: "PostgreSQL interactive terminal for database connections and queries"
+    installed_via: brew
+    usage: "psql [options] [dbname [username]]"
+    why_use: "Standard CLI for PostgreSQL - run queries, manage databases, import/export data"
+    examples:
+      - cmd: "psql -h localhost -U postgres -d mydb"
+        desc: "Connect to local database"
+      - cmd: "psql postgres://user:pass@host:5432/dbname"
+        desc: "Connect using connection string"
+      - cmd: "psql -c 'SELECT version();' -d mydb"
+        desc: "Run single query"
+      - cmd: "psql -f schema.sql -d mydb"
+        desc: "Execute SQL file"
+      - cmd: "pg_dump mydb > backup.sql"
+        desc: "Export database to SQL file"
+      - cmd: "pg_restore -d mydb backup.dump"
+        desc: "Restore from dump file"
+    see_also: [goose, docker, lazydocker]
+    tags: [database, postgresql, sql, devops]
+    docs_url: "https://www.postgresql.org/docs/current/app-psql.html"
+
+  gofumpt:
+    category: linter-formatter
+    description: "Stricter gofmt formatter enforcing additional style rules"
+    installed_via: dotfiles
+    usage: "gofumpt [flags] [path ...]"
+    why_use: "Stricter than gofmt with extra formatting rules for cleaner, more consistent Go code"
+    examples:
+      - cmd: "gofumpt -w ."
+        desc: "Format all Go files in current directory"
+      - cmd: "gofumpt -l ."
+        desc: "List files that need formatting"
+      - cmd: "gofumpt -d file.go"
+        desc: "Show diff of formatting changes"
+      - cmd: "gofumpt -extra -w ."
+        desc: "Apply extra formatting rules"
+    see_also: [shfmt, prettier, ruff]
+    tags: [go, formatter, linter, development]
+    docs_url: "https://github.com/mvdan/gofumpt"
+
   # =================================================================
   # TASK AUTOMATION
   # =================================================================

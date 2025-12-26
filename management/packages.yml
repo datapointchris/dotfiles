@@ -13,6 +13,7 @@
 
 macos_taps:
   - docker/docker # Docker official tap for latest versions
+  - FelixKratz/formulae # JankyBorders
 
 # ================================================================
 # SYSTEM PACKAGES
@@ -314,6 +315,16 @@ system_packages:
     brew: mkcert
     description: Local HTTPS certificates for development
 
+  - name: psql
+    apt: postgresql-client
+    pacman: postgresql
+    brew: libpq
+    description: PostgreSQL client (psql CLI for database connections)
+    # Notes:
+    # - macOS: requires `brew link --force libpq` after install (handled in post-install)
+    # - Arch: installs full postgresql package, but server doesn't run unless configured
+    # - All platforms: provides psql, pg_dump, pg_restore CLI tools
+
   # Notifications
   - name: libnotify
     apt: libnotify-bin
@@ -323,6 +334,10 @@ system_packages:
   - name: terminal-notifier
     brew: terminal-notifier
     description: macOS notifications from terminal (macOS only)
+
+  - name: borders
+    brew: borders
+    description: macOS colored window borders
 
 # ================================================================
 # RUNTIME VERSIONS
@@ -634,6 +649,14 @@ go_tools:
   - name: actionlint
     package: github.com/rhysd/actionlint/cmd/actionlint
     description: GitHub Actions workflow linter
+
+  - name: goose
+    package: github.com/pressly/goose/v3/cmd/goose
+    description: Database migration tool
+
+  - name: gofumpt
+    package: mvdan.cc/gofumpt
+    description: Stricter gofmt formatter for Go code
 
 # ================================================================
 # SHELL PLUGINS

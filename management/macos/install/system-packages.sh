@@ -45,4 +45,15 @@ else
   log_info "You can now use 'docker compose' (modern) instead of 'docker-compose' (legacy)"
 fi
 
+# Step 4: Link libpq to make psql available in PATH
+# libpq is keg-only (not linked by default) because it conflicts with postgresql
+if brew list libpq &>/dev/null; then
+  log_info "Linking libpq to make psql available..."
+  if brew link --force libpq 2>/dev/null; then
+    log_success "libpq linked (psql now available)"
+  else
+    log_info "libpq already linked or link not needed"
+  fi
+fi
+
 log_success "macOS packages installed"

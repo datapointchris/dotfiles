@@ -20,7 +20,7 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 PROVIDER="all"  # Install all-provider version
 
 VERSION=$(get_latest_version "$REPO")
-log_info "Latest version: $VERSION"
+log_info "Latest $BINARY_NAME version: $VERSION"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then

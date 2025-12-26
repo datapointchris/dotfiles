@@ -15,43 +15,48 @@ source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
+print_section "tenv (Terraform Version Manager)"
+
 BINARY_NAME="tenv"
 REPO="tofuutils/tenv"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 VERSION=$(get_latest_version "$REPO")
-log_info "Latest version: $VERSION"
+log_info "Latest tenv version: $VERSION"
+
+SKIP_TENV_INSTALL=false
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then
-    exit 0
+    SKIP_TENV_INSTALL=true
   fi
 else
   if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
-    exit 0
+    SKIP_TENV_INSTALL=true
   fi
 fi
 
-# Detect platform (tenv uses x86_64 and arm64 directly)
-source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
+if [[ "$SKIP_TENV_INSTALL" == "false" ]]; then
+  # Detect platform (tenv uses x86_64 and arm64 directly)
+  source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 
-OS=$(detect_os)
-RAW_ARCH=$(uname -m)
+  OS=$(detect_os)
+  RAW_ARCH=$(uname -m)
 
-if [[ "$OS" == "darwin" ]]; then
-  PLATFORM="Darwin"
-else
-  PLATFORM="Linux"
-fi
+  if [[ "$OS" == "darwin" ]]; then
+    PLATFORM="Darwin"
+  else
+    PLATFORM="Linux"
+  fi
 
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VERSION}_${PLATFORM}_${RAW_ARCH}.tar.gz"
+  DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/tenv_${VERSION}_${PLATFORM}_${RAW_ARCH}.tar.gz"
 
-# Download and extract
-TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
-log_info "Download URL: $DOWNLOAD_URL"
-log_info "Downloading tenv..."
-if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
-  manual_steps="1. Download in your browser (bypasses firewall):
+  # Download and extract
+  TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
+  log_info "Download URL: $DOWNLOAD_URL"
+  log_info "Downloading tenv..."
+  if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
+    manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, extract and install:
@@ -61,30 +66,30 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
 
 3. Verify installation:
    tenv --version"
-  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-  log_error "tenv installation failed"
-  exit 1
-fi
-
-log_info "Extracting..."
-tar -xzf "$TEMP_TARBALL" -C /tmp
-
-# Install all binaries (tenv + proxy binaries)
-log_info "Installing to ~/.local/bin..."
-mkdir -p "$HOME/.local/bin"
-
-for binary in tenv terraform tofu terragrunt terramate atmos tf; do
-  if [ -f "/tmp/$binary" ]; then
-    mv "/tmp/$binary" "$HOME/.local/bin/"
-    chmod +x "$HOME/.local/bin/$binary"
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+    log_error "tenv installation failed"
+    exit 1
   fi
-done
 
-# Verify
-if command -v tenv >/dev/null 2>&1; then
-  log_success "tenv and proxy binaries installed successfully"
-else
-  manual_steps="tenv installed but not found in PATH.
+  log_info "Extracting..."
+  tar -xzf "$TEMP_TARBALL" -C /tmp
+
+  # Install all binaries (tenv + proxy binaries)
+  log_info "Installing to ~/.local/bin..."
+  mkdir -p "$HOME/.local/bin"
+
+  for binary in tenv terraform tofu terragrunt terramate atmos tf; do
+    if [ -f "/tmp/$binary" ]; then
+      mv "/tmp/$binary" "$HOME/.local/bin/"
+      chmod +x "$HOME/.local/bin/$binary"
+    fi
+  done
+
+  # Verify
+  if command -v tenv >/dev/null 2>&1; then
+    log_success "tenv and proxy binaries installed successfully"
+  else
+    manual_steps="tenv installed but not found in PATH.
 
 Check installation:
    ls -la ~/.local/bin/tenv
@@ -94,9 +99,10 @@ Ensure ~/.local/bin is in PATH:
 
 Verify:
    tenv --version"
-  output_failure_data "$BINARY_NAME" "unknown" "$VERSION" "$manual_steps" "Installation verification failed"
-  log_error "tenv installation verification failed"
-  exit 1
+    output_failure_data "$BINARY_NAME" "unknown" "$VERSION" "$manual_steps" "Installation verification failed"
+    log_error "tenv installation verification failed"
+    exit 1
+  fi
 fi
 
 # Check if packages.yml exists for Terraform installation
@@ -108,7 +114,7 @@ fi
 # Read Terraform version from packages.yml
 TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --get=runtimes.terraform.version)
 
-print_section "Installing Terraform ${TERRAFORM_VERSION}"
+print_section "Terraform"
 
 # Install specific Terraform version
 log_info "Installing Terraform ${TERRAFORM_VERSION}..."

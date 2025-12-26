@@ -68,7 +68,6 @@ Extract and install:
   log_success "Downloaded $count files"
 }
 
-print_section "Installing $font_name"
 
 if is_font_installed "$system_font_dir" "*IntelOneMono*.$font_extension"; then
   log_success "$font_name already installed: $system_font_dir"
@@ -78,16 +77,12 @@ fi
 log_info "Downloading $font_name..."
 download_intelone
 
-log_info "Pruning unwanted variants..."
 prune_font_family "$download_dir"
 
-log_info "Standardizing filenames..."
 standardize_font_family "$download_dir"
 
-log_info "Installing to system fonts directory..."
 install_font_files "$download_dir" "$system_font_dir" "$platform"
 
-log_info "Refreshing font cache..."
 refresh_font_cache "$platform" "$system_font_dir"
 
 log_success "$font_name installed: $system_font_dir"
