@@ -428,6 +428,9 @@ system_packages:
     pacman: kitty
     description: GPU-accelerated terminal (backup for Ghostty)
 
+  # Note: Ghostty for Arch requires AUR installation:
+  #   yay -S ghostty  (or paru -S ghostty)
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================
@@ -859,6 +862,9 @@ linux_gui_apps:
 # Installed via: brew install --cask <name>
 
 macos_casks:
+  - name: ghostty
+    description: GPU-accelerated terminal emulator
+
   - name: aerospace
     description: Tiling window manager
 
