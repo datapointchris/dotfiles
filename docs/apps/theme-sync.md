@@ -4,162 +4,136 @@ icon: material/palette
 
 # Theme Sync
 
-Base16 theme management across tmux, bat, fzf, eza, and shell via tinty. Change your theme once and watch it propagate everywhere simultaneously.
+Apply Base16 color schemes to tmux, fzf, and shell via tinty. Change your theme once and it propagates to all supported applications.
 
 ## Quick Start
 
 ```bash
-theme-sync current           # Show current theme
-theme-sync apply base16-rose-pine
-theme-sync favorites         # List 12 favorite themes
-theme-sync random            # Apply random favorite
-theme-sync verify            # Check system status
+theme-sync verify                    # Check system is ready
+theme-sync apply base16-rose-pine    # Apply a theme
+theme-sync current                   # Show current theme
+theme-sync favorites                 # List favorite themes
+theme-sync random                    # Apply random favorite
 ```
 
 ## Commands
 
 ### Viewing
 
-- `theme-sync current` - Show currently active theme
-- `theme-sync list` - List all available Base16 themes (hundreds)
+- `theme-sync current` - Show currently active Base16 theme
+- `theme-sync list` - List all available Base16 themes (250+)
 - `theme-sync favorites` - Show curated list of 12 favorite themes
 - `theme-sync info <theme>` - Display color palette for a theme
 
 ### Applying Themes
 
-- `theme-sync apply <theme>` - Switch to a specific Base16 theme
+- `theme-sync apply <theme>` - Apply a Base16 theme
 - `theme-sync random` - Apply random theme from favorites
-- `theme-sync reload` - Reload theme in running applications
+- `theme-sync reload` - Reload theme in tmux
 
-Applying a theme triggers tinty to generate new config files, then automatically reloads tmux config and rebuilds bat cache. Changes appear immediately without manual intervention.
+Applying a theme triggers tinty hooks that copy theme configs and reload tmux automatically.
 
 ### System
 
-- `theme-sync verify` - Check that tinty is installed, configs exist, and theme files are present
+- `theme-sync verify` - Check tinty installation, config, and repos
+
+## What Gets Themed
+
+**Tmux** - Status bar, pane borders, and window colors via `~/.config/tmux/themes/current.conf`. Custom statusbar styling is appended by `tmux-colors-from-tinty`.
+
+**Fzf** - Color variables sourced from shell environment via tinted-shell.
+
+**Shell** - LS_COLORS for file listings via tinted-shell.
+
+**Bat** - Use `bat --theme=base16-256` with tinted-shell integration.
 
 ## Favorite Themes
 
-The 12 curated favorites balance variety with quality:
+12 curated Base16 themes in the FAVORITES array:
 
-**Rose Pine family** - Warm, low-contrast:
+| Theme | Character |
+|-------|-----------|
+| base16-rose-pine | Warm, calm, low-contrast |
+| base16-rose-pine-moon | Darker rose-pine variant |
+| base16-gruvbox-dark-hard | Retro, high-contrast |
+| base16-gruvbox-dark-medium | Softer gruvbox |
+| base16-kanagawa | Warm, earthy, Japanese |
+| base16-oceanicnext | Cool blues |
+| base16-github-dark | Familiar GitHub colors |
+| base16-nord | Arctic blues, calm |
+| base16-selenized-dark | Balanced contrast |
+| base16-everforest-dark-hard | Forest greens |
+| base16-tomorrow-night | Classic neutral |
+| base16-tomorrow-night-eighties | Nostalgic pastels |
 
-- base16-rose-pine
-- base16-rose-pine-moon
+## Configuration
 
-**Gruvbox family** - High-contrast retro:
+Tinty config lives at `~/.config/tinted-theming/tinty/config.toml` (symlinked from dotfiles).
 
-- base16-gruvbox-dark-hard
-- base16-gruvbox-dark-medium
+The config defines two items:
 
-**Modern themes**:
+- **tinted-shell** - Provides fzf colors and LS_COLORS
+- **base16-tmux** - Provides tmux theme files with custom statusbar appended
 
-- base16-kanagawa (warm, earthy)
-- base16-oceanicnext (cool blues)
-- base16-github-dark (familiar GitHub colors)
-- base16-nord (arctic blues)
+Favorite themes are hardcoded in `apps/common/theme-sync` in the FAVORITES array. A master favorites registry exists at `~/.config/themes/favorites.yml` for future unified theme management.
 
-**Specialized**:
+## Relationship with Other Tools
 
-- base16-selenized-dark (balanced contrast)
-- base16-everforest-dark-hard (forest greens)
-- base16-tomorrow-night (classic neutral)
-- base16-tomorrow-night-eighties (nostalgic pastels)
+**theme-sync** applies Base16 themes to shell/tmux only. It's limited to themes that have Base16 ports.
 
-These themes match the themes configured in Neovim and Ghostty for consistency across tools.
+**ghostty-theme** manages Ghostty terminal themes separately. Ghostty has its own built-in themes (300+) that don't overlap with Base16.
 
-## How It Works
+**Neovim colorschemes** are managed separately via the colorscheme-manager plugin with per-project persistence.
 
-Theme-sync wraps tinty, which applies Base16 themes by generating application-specific config files. When you apply a theme, tinty writes new configs and theme-sync handles reloading affected applications.
-
-### Application Integration
-
-**Tmux** sources `~/.config/tmux/themes/current.conf` generated by tinty. Theme-sync automatically reloads tmux config after applying themes.
-
-**Bat** uses themes from its themes directory. Theme-sync rebuilds bat cache after applying themes so syntax highlighting updates immediately.
-
-**Fzf** sources theme variables from shell environment. New shells pick up theme changes automatically.
-
-**Eza** uses LS_COLORS updated by tinty.
-
-**Shell** sources theme variables exported by tinty for prompt and other colors.
-
-### Configuration
-
-Tinty reads `~/.config/tinty/config.toml` which defines Base16 scheme repositories. Theme-sync doesn't modify tinty config - it uses tinty as-is.
-
-Favorite themes are hardcoded in `apps/common/theme-sync`. Edit the FAVORITES array directly:
+To keep terminal and shell in sync, apply matching themes:
 
 ```bash
-nvim ~/dotfiles/apps/common/theme-sync
-# Edit FAVORITES array
-```
-
-Changes apply immediately since shell scripts run directly.
-
-## Integration with Ghostty
-
-Theme-sync works alongside the separate ghostty-theme system. Ghostty uses its own theme format and manages 60+ built-in themes independently from Base16. This separation provides flexibility - you can keep them synchronized or intentionally separate for visual distinction.
-
-Check both systems:
-
-```bash
-ghostty-theme current          # Check Ghostty theme
-theme-sync current             # Check Base16 theme
-```
-
-Keep them synchronized:
-
-```bash
-ghostty-theme apply rose-pine
-theme-sync apply base16-rose-pine
-```
-
-## Workflow
-
-Switch themes based on mood or time of day:
-
-```bash
-theme-sync apply base16-rose-pine-moon    # Evening
-theme-sync apply base16-github-dark       # Daytime
-```
-
-Break out of visual monotony with random selection:
-
-```bash
-theme-sync random
-# Work for a bit, see how it feels
-theme-sync random
-# Try another
-```
-
-Combine with fzf for interactive selection:
-
-```bash
-theme-sync favorites | fzf --preview 'theme-sync info {}' | xargs theme-sync apply
-```
-
-Automate theme changes based on time:
-
-```bash
-hour=$(date +%H)
-if [ $hour -ge 6 ] && [ $hour -lt 18 ]; then
-  theme-sync apply base16-github-dark
-else
-  theme-sync apply base16-rose-pine
-fi
+ghostty-theme --select            # Pick terminal theme
+theme-sync apply base16-rose-pine # Match shell/tmux theme
 ```
 
 ## Troubleshooting
 
-**Theme not applying**: Run `theme-sync verify` to check system status. Verify tinty is installed and theme repositories are downloaded with `tinty list`.
+**Theme not applying**
 
-**Tmux not updating**: Check theme file exists at `~/.config/tmux/themes/current.conf`. Manually reload with `tmux source-file ~/.config/tmux/tmux.conf`.
+Run `theme-sync verify` - this will auto-install missing repos. If it still fails, check the error message.
 
-**Bat not updating**: Rebuild cache manually with `bat cache --build`.
+**Tmux colors not updating**
 
-**Theme doesn't exist**: Run `theme-sync list` to see available themes. Update tinty schemes with `tinty update`.
+The theme file exists but tmux hasn't reloaded:
+
+```bash
+tmux source-file ~/.config/tmux/tmux.conf
+# Or reload all sessions:
+sess reload
+```
+
+**tinty config not found**
+
+Check the symlink exists at `~/.config/tinted-theming/tinty/config.toml`. Run `task symlinks:link` to recreate.
+
+**Theme doesn't exist**
+
+List available themes with `tinty list` or `theme-sync list`. Update theme repos:
+
+```bash
+tinty update
+```
+
+## Technical Details
+
+### How tinty hooks work
+
+When `tinty apply <theme>` runs:
+
+1. **tinted-shell hook**: Sources the theme script, setting FZF colors and LS_COLORS in current shell
+2. **base16-tmux hook**: Copies theme to `~/.config/tmux/themes/current.conf`, appends custom statusbar via `tmux-colors-from-tinty`
+
+### Custom tmux statusbar
+
+The `tmux-colors-from-tinty` script reads the current scheme's YAML file and generates custom statusbar configuration that's appended to the tmux theme. This provides consistent styling while allowing the base theme to change.
 
 ## See Also
 
 - [Font Tool](font.md) - Similar workflow for font management
-- [Menu System](menu.md) - Quick access to workflow tools
+- [Ghostty Theme](ghostty-theme.md) - Terminal-specific theming

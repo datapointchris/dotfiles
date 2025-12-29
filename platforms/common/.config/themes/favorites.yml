@@ -1,0 +1,302 @@
+# Master Theme Favorites Registry
+# Single source of truth for all curated themes across applications
+#
+# Each theme entry maps to app-specific names (null = not available)
+# Tags help with filtering by mood/aesthetic
+
+themes:
+  # === THEMES WITH BROAD SUPPORT (available in most apps) ===
+
+  - name: Rose Pine
+    ghostty: "Rose Pine"
+    kitty: "Rosé Pine"
+    neovim: "rose-pine-main"
+    base16: "base16-rose-pine"
+    windows_terminal: "Rose Pine"
+    tags: [dark, warm, calm, favorite]
+
+  - name: Rose Pine Moon
+    ghostty: "Rose Pine Moon"
+    kitty: "Rosé Pine Moon"
+    neovim: "rose-pine-moon"
+    base16: "base16-rose-pine-moon"
+    windows_terminal: "Rose Pine Moon"
+    tags: [dark, warm, calm]
+
+  - name: Gruvbox Dark Hard
+    ghostty: "GruvboxDarkHard"
+    kitty: "gruvbox-dark-hard"
+    neovim: "gruvbox"
+    base16: "base16-gruvbox-dark-hard"
+    windows_terminal: "Gruvbox Dark"
+    tags: [dark, retro, high-contrast, favorite]
+
+  - name: Gruvbox Dark Medium
+    ghostty: "GruvboxDark"
+    kitty: "gruvbox-dark"
+    neovim: "gruvbox"
+    base16: "base16-gruvbox-dark-medium"
+    windows_terminal: "Gruvbox Dark"
+    tags: [dark, retro]
+
+  - name: Kanagawa
+    ghostty: "kanagawa"
+    kitty: "Kanagawa"
+    neovim: "kanagawa"
+    base16: "base16-kanagawa"
+    windows_terminal: "Kanagawa"
+    tags: [dark, warm, japanese, favorite]
+
+  - name: Nord
+    ghostty: "nord"
+    kitty: "Nord"
+    neovim: "nordic"
+    base16: "base16-nord"
+    windows_terminal: "Nord"
+    tags: [dark, cold, calm, favorite]
+
+  - name: Everforest Dark Hard
+    ghostty: "Everforest Dark Hard"
+    kitty: "Everforest Dark Hard"
+    neovim: null
+    base16: "base16-everforest-dark-hard"
+    windows_terminal: "Everforest Dark"
+    tags: [dark, nature, green]
+
+  - name: GitHub Dark
+    ghostty: "GitHub Dark"
+    kitty: "GitHub Dark"
+    neovim: "github_dark_default"
+    base16: "base16-github-dark"
+    windows_terminal: "GitHub Dark"
+    tags: [dark, familiar, neutral]
+
+  - name: GitHub Dark Dimmed
+    ghostty: "GitHub Dark Dimmed"
+    kitty: "GitHub Dark Dimmed"
+    neovim: "github_dark_dimmed"
+    base16: "base16-github-dark"
+    windows_terminal: "GitHub Dark Dimmed"
+    tags: [dark, familiar, low-contrast]
+
+  - name: Selenized Dark
+    ghostty: "Selenized Dark"
+    kitty: "Selenized Dark"
+    neovim: null
+    base16: "base16-selenized-dark"
+    windows_terminal: "Selenized Dark"
+    tags: [dark, balanced]
+
+  - name: Tomorrow Night Bright
+    ghostty: "Tomorrow Night Bright"
+    kitty: "Tomorrow Night Bright"
+    neovim: null
+    base16: "base16-tomorrow-night"
+    windows_terminal: "Tomorrow Night"
+    tags: [dark, classic]
+
+  - name: Spacegray Eighties
+    ghostty: "Spacegray Eighties"
+    kitty: "Spacegray Eighties"
+    neovim: null
+    base16: "base16-tomorrow-night-eighties"
+    windows_terminal: "Spacegray Eighties"
+    tags: [dark, retro, muted]
+
+  - name: OceanicNext
+    ghostty: "OceanicNext"
+    kitty: "OceanicNext"
+    neovim: "OceanicNext"
+    base16: "base16-oceanicnext"
+    windows_terminal: "OceanicNext"
+    tags: [dark, blue, cool]
+
+  # === GHOSTTY-SPECIFIC FAVORITES (no Base16 equivalent) ===
+
+  - name: Black Metal (Mayhem)
+    ghostty: "Black Metal (Mayhem)"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark, extreme, metal]
+
+  - name: Broadcast
+    ghostty: "Broadcast"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark]
+
+  - name: Material Design Colors
+    ghostty: "Material Design Colors"
+    kitty: "Material"
+    neovim: null
+    base16: null
+    windows_terminal: "Material"
+    tags: [dark, google, vibrant]
+
+  - name: Pandora
+    ghostty: "Pandora"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark]
+
+  - name: Popping and Locking
+    ghostty: "Popping and Locking"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark, vibrant]
+
+  - name: Raycast Dark
+    ghostty: "Raycast Dark"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark, modern]
+
+  - name: Retro Legends
+    ghostty: "Retro Legends"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark, retro]
+
+  - name: Shades of Purple
+    ghostty: "Shades of Purple"
+    kitty: "Shades of Purple"
+    neovim: null
+    base16: null
+    windows_terminal: "Shades of Purple"
+    tags: [dark, purple, vibrant]
+
+  - name: Smyck
+    ghostty: "Smyck"
+    kitty: "Smyck"
+    neovim: null
+    base16: null
+    windows_terminal: "Smyck"
+    tags: [dark, muted, favorite]
+
+  - name: Spacedust
+    ghostty: "Spacedust"
+    kitty: "Spacedust"
+    neovim: null
+    base16: null
+    windows_terminal: "Spacedust"
+    tags: [dark, warm]
+
+  - name: Srcery
+    ghostty: "Srcery"
+    kitty: "Srcery"
+    neovim: null
+    base16: null
+    windows_terminal: "Srcery"
+    tags: [dark, high-contrast]
+
+  - name: Treehouse
+    ghostty: "Treehouse"
+    kitty: null
+    neovim: null
+    base16: null
+    windows_terminal: null
+    tags: [dark, nature]
+
+  # === NEOVIM-SPECIFIC FAVORITES (colorscheme plugins) ===
+
+  - name: Terafox
+    ghostty: null
+    kitty: null
+    neovim: "terafox"
+    base16: null
+    windows_terminal: null
+    tags: [dark, nightfox-family]
+
+  - name: Carbonfox
+    ghostty: null
+    kitty: null
+    neovim: "carbonfox"
+    base16: null
+    windows_terminal: null
+    tags: [dark, nightfox-family]
+
+  - name: Nightfox
+    ghostty: "nightfox"
+    kitty: "Nightfox"
+    neovim: "nightfox"
+    base16: null
+    windows_terminal: null
+    tags: [dark, nightfox-family]
+
+  - name: Solarized Osaka
+    ghostty: null
+    kitty: null
+    neovim: "solarized-osaka"
+    base16: null
+    windows_terminal: null
+    tags: [dark, solarized-variant]
+
+  - name: Retrobox
+    ghostty: null
+    kitty: null
+    neovim: "retrobox"
+    base16: null
+    windows_terminal: null
+    tags: [dark, retro]
+
+  - name: Slate
+    ghostty: null
+    kitty: null
+    neovim: "slate"
+    base16: null
+    windows_terminal: null
+    tags: [dark, builtin]
+
+  # === FLEXOKI MOON VARIANTS (custom neovim plugin) ===
+
+  - name: Flexoki Moon Toddler
+    ghostty: null
+    kitty: null
+    neovim: "flexoki-moon-toddler"
+    base16: null
+    windows_terminal: null
+    tags: [dark, flexoki, custom]
+
+  - name: Flexoki Moon Red
+    ghostty: null
+    kitty: null
+    neovim: "flexoki-moon-red"
+    base16: null
+    windows_terminal: null
+    tags: [dark, flexoki, custom]
+
+  - name: Flexoki Moon Purple
+    ghostty: null
+    kitty: null
+    neovim: "flexoki-moon-purple"
+    base16: null
+    windows_terminal: null
+    tags: [dark, flexoki, custom]
+
+  - name: Flexoki Moon Green
+    ghostty: null
+    kitty: null
+    neovim: "flexoki-moon-green"
+    base16: null
+    windows_terminal: null
+    tags: [dark, flexoki, custom]
+
+  - name: Flexoki Moon Black
+    ghostty: null
+    kitty: null
+    neovim: "flexoki-moon-black"
+    base16: null
+    windows_terminal: null
+    tags: [dark, flexoki, custom]

@@ -1,14 +1,7 @@
 #!/usr/bin/env bash
-# ================================================================
 # Theme Sync - Base16 Theme Manager
-# ================================================================
-# Manages Base16 color schemes across multiple applications using tinty
-# Supports: tmux, bat, fzf, eza/ls_colors, shell
-#
-# This works in parallel with your existing ghostty-theme script
-# - Use ghostty-theme for Ghostty-specific theme management
-# - Use theme-sync for synchronized themes across other apps
-# ================================================================
+# Applies Base16 color schemes via tinty to: tmux, fzf, shell (LS_COLORS)
+# Use ghostty-theme separately for terminal themes (different theme sets)
 
 set -euo pipefail
 
@@ -17,58 +10,70 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/logging.sh"
 source "$SHELL_DIR/formatting.sh"
 
-# Your favorite Base16 themes (matching neovim and ghostty favorites)
-FAVORITES=(
-  "base16-rose-pine"
-  "base16-rose-pine-moon"
-  "base16-gruvbox-dark-hard"
-  "base16-gruvbox-dark-medium"
-  "base16-kanagawa"
-  "base16-oceanicnext"
-  "base16-github-dark"
-  "base16-nord"
-  "base16-selenized-dark"
-  "base16-everforest-dark-hard"
-  "base16-tomorrow-night"
-  "base16-tomorrow-night-eighties"
-)
+# Master favorites list
+FAVORITES_FILE="$HOME/.config/themes/favorites.yml"
+
+get_base16_favorites() {
+  if [[ ! -f "$FAVORITES_FILE" ]]; then
+    log_error "Favorites file not found: $FAVORITES_FILE"
+    log_error "Run: task symlinks:link"
+    exit 1
+  fi
+
+  yq -r '.themes[] | select(.base16 != null) | .base16' "$FAVORITES_FILE"
+}
 
 # ================================================================
 # FUNCTIONS
 # ================================================================
 
+ensure_tinty_ready() {
+  # Check tinty is installed
+  if ! command -v tinty &> /dev/null; then
+    log_fatal "tinty not installed. Install with: cargo install tinty"
+  fi
+
+  # Check config exists
+  if [[ ! -f "$HOME/.config/tinted-theming/tinty/config.toml" ]]; then
+    log_fatal "tinty config missing. Run: task symlinks:link"
+  fi
+
+  # Auto-install repos if missing
+  if [[ ! -d "$HOME/.local/share/tinted-theming/tinty/repos/tinted-shell" ]] || \
+     [[ ! -d "$HOME/.local/share/tinted-theming/tinty/repos/base16-tmux" ]]; then
+    log_info "Installing tinty theme repos..."
+    if ! tinty install 2>&1; then
+      log_fatal "Failed to install tinty repos"
+    fi
+    log_success "Tinty repos installed"
+  fi
+}
+
 show_help() {
   print_header "Theme Sync - Base16 Theme Manager" "brightmagenta"
   echo ""
-  echo "Manage Base16 color schemes across tmux, bat, fzf, and shell."
+  echo "Apply Base16 color schemes to tmux, fzf, and shell via tinty."
   echo ""
 
   print_section "Commands" "brightcyan"
-  echo "  apply <theme>     Apply a Base16 theme"
+  echo "  apply <theme>     Apply a theme from your favorites"
   echo "  current           Show currently applied theme"
-  echo "  list              List all available Base16 themes"
-  echo "  favorites         List your favorite themes"
+  echo "  list              List available themes (from favorites.yml)"
   echo "  info <theme>      Show color palette for a theme"
   echo "  random            Apply a random favorite theme"
-  echo "  reload            Reload theme in running applications"
+  echo "  reload            Reload theme in tmux"
   echo "  verify            Verify theme system is working"
   echo ""
 
   print_section "Examples" "brightyellow"
+  echo "  $(print_cyan "theme-sync list")"
   echo "  $(print_cyan "theme-sync apply base16-rose-pine")"
-  echo "  $(print_cyan "theme-sync current")"
-  echo "  $(print_cyan "theme-sync favorites")"
   echo "  $(print_cyan "theme-sync random")"
   echo ""
 
-  print_section "Quick Theme Shortcuts" "brightgreen"
-  echo "  • theme-sync apply base16-rose-pine"
-  echo "  • theme-sync apply base16-gruvbox-dark-hard"
-  echo "  • theme-sync apply base16-kanagawa"
-  echo "  • theme-sync apply base16-nord"
-  echo ""
-
-  print_info "This works alongside ghostty-theme for terminal-specific themes"
+  print_section "Configuration" "brightgreen"
+  echo "  Themes: ~/.config/themes/favorites.yml"
+  echo "  Terminal themes: use ghostty-theme (separate system)"
 }
 
 apply_theme() {
@@ -80,25 +85,21 @@ apply_theme() {
     exit 1
   fi
 
+  ensure_tinty_ready
+
   log_info "Applying theme: $theme"
 
-  # Apply theme via tinty
+  # Apply theme via tinty (runs hooks for tinted-shell and base16-tmux)
   if ! tinty apply "$theme" 2>&1; then
     log_error "Failed to apply theme"
     echo "Check if theme exists with: theme-sync list"
     exit 1
   fi
 
-  # Reload tmux if running
+  # Reload tmux if running (tinty hook does this too, but ensure it happens)
   if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
     tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null || true
     log_success "Tmux reloaded"
-  fi
-
-  # Rebuild bat cache
-  if command -v bat &> /dev/null; then
-    bat cache --build &>/dev/null || true
-    log_success "Bat cache rebuilt"
   fi
 
   log_success "Theme applied: $theme"
@@ -118,17 +119,24 @@ show_current() {
 list_themes() {
   print_blue "Available Base16 Themes:"
   echo ""
-  tinty list
-}
 
-list_favorites() {
-  print_blue "Your Favorite Base16 Themes:"
+  local current_file="$HOME/.local/share/tinted-theming/tinty/artifacts/current_scheme"
+  local current=""
+  if [[ -f "$current_file" ]]; then
+    current=$(cat "$current_file")
+  fi
+
+  # Use sort -u to deduplicate (some themes map to same base16)
+  while IFS= read -r theme; do
+    if [[ "$theme" == "$current" ]]; then
+      echo "  $(print_green "●") $theme (current)"
+    else
+      echo "    $theme"
+    fi
+  done < <(get_base16_favorites | sort -u)
+
   echo ""
-  for theme in "${FAVORITES[@]}"; do
-    echo "  $theme"
-  done
-  echo ""
-  echo "Apply with: $(print_yellow "theme-sync apply <theme-name>")"
+  echo "Apply with: $(print_cyan "theme-sync apply <theme>")"
 }
 
 show_info() {
@@ -140,53 +148,51 @@ show_info() {
     exit 1
   fi
 
+  ensure_tinty_ready
   tinty info "$theme"
 }
 
 apply_random() {
-  local random_theme="${FAVORITES[$RANDOM % ${#FAVORITES[@]}]}"
+  local themes
+  mapfile -t themes < <(get_base16_favorites)
+
+  if [[ ${#themes[@]} -eq 0 ]]; then
+    log_error "No Base16 themes found in favorites.yml"
+    exit 1
+  fi
+
+  local random_theme="${themes[$RANDOM % ${#themes[@]}]}"
   echo "$(print_blue "Randomly selected:") $random_theme"
   apply_theme "$random_theme"
 }
 
 reload_apps() {
-  print_blue "Reloading theme in running applications..."
+  print_blue "Reloading theme in tmux..."
 
-  # Reload tmux
   if command -v tmux &> /dev/null && tmux list-sessions &> /dev/null 2>&1; then
     if command -v sess &> /dev/null; then
       sess reload
+      echo "$(print_green "✓") Tmux reloaded (all sessions via sess)"
     else
       tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null && echo "$(print_green "✓") Tmux reloaded (current session only)"
       echo "$(print_yellow "  Tip:") Run 'sess reload' to reload all sessions"
     fi
+  else
+    echo "$(print_yellow "⚠") No tmux sessions running"
   fi
-
-  # Rebuild bat cache
-  if command -v bat &> /dev/null; then
-    bat cache --build &>/dev/null && echo "$(print_green "✓") Bat cache rebuilt"
-  fi
-
-  echo "$(print_green "✓") Theme reloaded"
 }
 
 verify_system() {
   print_blue "Verifying theme system..."
   echo ""
 
-  # Check tinty installation
-  if command -v tinty &> /dev/null; then
-    echo "$(print_green "✓") tinty installed"
-  else
-    echo "$(print_red "✗") tinty not installed"
-  fi
+  # This will auto-install repos if missing, or fatal on real errors
+  ensure_tinty_ready
 
-  # Check config file
-  if [[ -f "$HOME/.config/tinty/config.toml" ]]; then
-    echo "$(print_green "✓") tinty config exists"
-  else
-    echo "$(print_red "✗") tinty config missing"
-  fi
+  echo "$(print_green "✓") tinty installed ($(tinty --version 2>/dev/null | head -1))"
+  echo "$(print_green "✓") tinty config exists"
+  echo "$(print_green "✓") tinted-shell repo installed"
+  echo "$(print_green "✓") base16-tmux repo installed"
 
   # Check current theme
   local current_file="$HOME/.local/share/tinted-theming/tinty/artifacts/current_scheme"
@@ -194,22 +200,19 @@ verify_system() {
     local current=$(cat "$current_file")
     echo "$(print_green "✓") Current theme: $current"
   else
-    echo "$(print_yellow "⚠") No theme applied"
+    echo "$(print_yellow "⚠") No theme applied yet"
   fi
 
   # Check tmux theme file
   if [[ -f "$HOME/.config/tmux/themes/current.conf" ]]; then
-    echo "$(print_green "✓") Tmux theme file exists"
+    local tmux_theme=$(head -1 "$HOME/.config/tmux/themes/current.conf" | sed 's/# //')
+    echo "$(print_green "✓") Tmux theme file exists ($tmux_theme)"
   else
-    echo "$(print_red "✗") Tmux theme file missing"
+    echo "$(print_yellow "⚠") Tmux theme file missing (created on first apply)"
   fi
 
-  # Check bat themes
-  if [[ -d "$(bat --config-dir)/themes" ]]; then
-    echo "$(print_green "✓") Bat themes directory exists"
-  else
-    echo "$(print_yellow "⚠") Bat themes directory missing"
-  fi
+  echo ""
+  print_green "System ready!"
 }
 
 # ================================================================
@@ -223,11 +226,8 @@ case "${1:-help}" in
   current)
     show_current
     ;;
-  list)
+  list|ls)
     list_themes
-    ;;
-  favorites|favs)
-    list_favorites
     ;;
   info)
     show_info "${2:-}"

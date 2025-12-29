@@ -1,0 +1,38 @@
+# Tinty applies Base16 color schemes across applications.
+# Note: Use hyphens not underscores (default-scheme not default_scheme)
+
+default-scheme = "base16-rose-pine"
+
+# Shell (fzf, ls colors via tinted-shell)
+[[items]]
+path = "https://github.com/tinted-theming/tinted-shell"
+name = "tinted-shell"
+themes-dir = "scripts"
+hook = ". %f"
+supported-systems = ["base16"]
+
+# Tmux theme + custom statusbar colors (tmux-colors-from-tinty appends custom styling)
+[[items]]
+path = "https://github.com/tinted-theming/base16-tmux"
+name = "base16-tmux"
+themes-dir = "colors"
+hook = "mkdir -p $HOME/.config/tmux/themes && cp %f $HOME/.config/tmux/themes/current.conf && $HOME/.local/bin/tmux-colors-from-tinty >> $HOME/.config/tmux/themes/current.conf"
+supported-systems = ["base16"]
+
+# Bat: use `bat --theme=base16-256` with tinted-shell (no separate repo needed)
+
+[favorites]
+schemes = [
+  "base16-rose-pine",
+  "base16-rose-pine-moon",
+  "base16-gruvbox-dark-hard",
+  "base16-gruvbox-dark-medium",
+  "base16-kanagawa",
+  "base16-oceanicnext",
+  "base16-github-dark",
+  "base16-nord",
+  "base16-selenized-dark",
+  "base16-everforest-dark-hard",
+  "base16-tomorrow-night",
+  "base16-tomorrow-night-eighties",
+]
