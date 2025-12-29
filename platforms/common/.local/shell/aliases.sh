@@ -7,8 +7,11 @@
 # Remove all previous aliases, some from oh-my-zsh and unnecessary git shit
 # unalias -a
 
-# Enable aliases to be sudo’ed
+# Enable aliases to be sudo'ed
 alias sudo='sudo '
+
+# Run claude with open permissions
+alias risky="claude --dangerously-skip-permissions"
 
 # Repeat the last command with sudo prefixed
 alias please='sudo $(fc -ln -1)'

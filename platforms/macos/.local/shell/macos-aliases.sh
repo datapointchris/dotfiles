@@ -7,9 +7,6 @@
 # Copy the last command to the OS clipboard
 alias copycommand='fc -ln -1 | pbcopy'
 
-# Run claude with open permissions fuck yeah
-alias risky="claude --dangerously-skip-permissions"
-
 # Terraform force-unlock with ID from plan
 alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&1 | grep "ID: " | awk "{print \$NF}")'
 
