@@ -417,7 +417,7 @@ system_packages:
     description: PipeWire PulseAudio replacement
 
   - name: wlogout
-    pacman: wlogout
+    aur: wlogout
     description: Logout menu for Wayland
 
   - name: firefox
@@ -428,8 +428,9 @@ system_packages:
     pacman: kitty
     description: GPU-accelerated terminal (backup for Ghostty)
 
-  # Note: Ghostty for Arch requires AUR installation:
-  #   yay -S ghostty  (or paru -S ghostty)
+  - name: ghostty
+    aur: ghostty
+    description: GPU-accelerated terminal emulator
 
 # ================================================================
 # RUNTIME VERSIONS

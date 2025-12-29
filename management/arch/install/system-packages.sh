@@ -44,4 +44,15 @@ else
   log_success "yay installed"
 fi
 
+# Install AUR packages
+log_info "Installing AUR packages from packages.yml..."
+AUR_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=aur | tr '\n' ' ')
+if [[ -n "$AUR_PACKAGES" ]]; then
+  # shellcheck disable=SC2086
+  yay -S --needed --noconfirm $AUR_PACKAGES
+  log_success "AUR packages installed"
+else
+  log_info "No AUR packages to install"
+fi
+
 log_success "Arch packages installed"

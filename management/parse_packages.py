@@ -177,7 +177,7 @@ def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
     parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks'],
                         help='Type of packages to extract')
-    parser.add_argument('--manager', choices=['apt', 'pacman', 'brew'],
+    parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
     parser.add_argument('--get', help='Get a specific value using dot notation (e.g., runtimes.node.version)')
     parser.add_argument('--taps', action='store_true',
