@@ -57,6 +57,3 @@ special:
   cursor_text: "#191919"
   selection_bg: "#786b53"
   selection_fg: "#fac800"
-
-builtin:
-  ghostty: "Treehouse"

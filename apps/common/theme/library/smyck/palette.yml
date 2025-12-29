@@ -57,6 +57,3 @@ special:
   cursor_text: "#ffffff"
   selection_bg: "#207483"
   selection_fg: "#f7f7f7"
-
-builtin:
-  ghostty: "Smyck"

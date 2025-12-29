@@ -57,6 +57,3 @@ special:
   cursor_text: "#192330"
   selection_bg: "#2b3b51"
   selection_fg: "#cdcecf"
-
-builtin:
-  ghostty: "Nightfox"

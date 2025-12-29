@@ -58,7 +58,3 @@ special:
   cursor_text: "#2E3440"
   selection_bg: "#434C5E"
   selection_fg: "#D8DEE9"
-
-# Built-in theme references (for apps that have this theme built-in)
-builtin:
-  ghostty: "Nord"

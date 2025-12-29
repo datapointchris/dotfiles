@@ -57,6 +57,3 @@ special:
   cursor_text: "#1c1b19"
   selection_bg: "#fce8c3"
   selection_fg: "#1c1b19"
-
-builtin:
-  ghostty: "Srcery"

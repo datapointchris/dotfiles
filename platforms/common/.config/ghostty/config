@@ -1,5 +1,5 @@
-# Theme (only one theme line should be set)
-theme = Smyck
+# Theme colors (imported from themes/current.conf)
+config-file = themes/current.conf
 
 macos-titlebar-style = hidden
 

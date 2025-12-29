@@ -57,6 +57,3 @@ special:
   cursor_text: "#1b2b34"
   selection_bg: "#4f5b66"
   selection_fg: "#c0c5ce"
-
-builtin:
-  ghostty: "Oceanic Next"

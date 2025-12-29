@@ -57,6 +57,3 @@ special:
   cursor_text: "#000000"
   selection_bg: "#424242"
   selection_fg: "#eaeaea"
-
-builtin:
-  ghostty: "Tomorrow Night Bright"

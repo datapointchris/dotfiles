@@ -57,6 +57,3 @@ special:
   cursor_text: "#ffffff"
   selection_bg: "#333333"
   selection_fg: "#595959"
-
-builtin:
-  ghostty: "Raycast Dark"

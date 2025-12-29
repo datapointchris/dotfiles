@@ -57,6 +57,3 @@ special:
   cursor_text: "#002831"
   selection_bg: "#0a385c"
   selection_fg: "#ffffff"
-
-builtin:
-  ghostty: "Spacedust"

@@ -57,6 +57,3 @@ special:
   cursor_text: "#c1c1c1"
   selection_bg: "#c1c1c1"
   selection_fg: "#000000"
-
-builtin:
-  ghostty: "Black Metal (Mayhem)"

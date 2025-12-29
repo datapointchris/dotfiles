@@ -57,6 +57,3 @@ special:
   cursor_text: "#adbcbc"
   selection_bg: "#184956"
   selection_fg: "#53d6c7"
-
-builtin:
-  ghostty: "Selenized Dark"

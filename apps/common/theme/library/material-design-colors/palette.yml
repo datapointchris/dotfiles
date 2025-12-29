@@ -57,6 +57,3 @@ special:
   cursor_text: "#000000"
   selection_bg: "#4e6a78"
   selection_fg: "#e7ebed"
-
-builtin:
-  ghostty: "Material Design Colors"

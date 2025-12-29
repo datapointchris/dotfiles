@@ -57,6 +57,3 @@ special:
   cursor_text: "#ffffff"
   selection_bg: "#ebdbb2"
   selection_fg: "#928374"
-
-builtin:
-  ghostty: "Popping and Locking"

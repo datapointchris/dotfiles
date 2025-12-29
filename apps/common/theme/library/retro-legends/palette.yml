@@ -57,6 +57,3 @@ special:
   cursor_text: "#0d0d0d"
   selection_bg: "#336633"
   selection_fg: "#f2fff2"
-
-builtin:
-  ghostty: "Retro Legends"

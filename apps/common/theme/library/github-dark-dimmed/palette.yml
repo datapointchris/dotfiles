@@ -57,6 +57,3 @@ special:
   cursor_text: "#539bf5"
   selection_bg: "#adbac7"
   selection_fg: "#22272e"
-
-builtin:
-  ghostty: "GitHub Dark Dimmed"

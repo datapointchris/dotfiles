@@ -57,6 +57,3 @@ special:
   cursor_text: "#232136"
   selection_bg: "#44415a"
   selection_fg: "#e0def4"
-
-builtin:
-  ghostty: "Rose Pine Moon"

@@ -57,6 +57,3 @@ special:
   cursor_text: "#ffffff"
   selection_bg: "#272e35"
   selection_fg: "#ffffff"
-
-builtin:
-  ghostty: "Spacegray Eighties"

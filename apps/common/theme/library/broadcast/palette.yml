@@ -57,6 +57,3 @@ special:
   cursor_text: "#e6e1dc"
   selection_bg: "#5a647e"
   selection_fg: "#e6e1dc"
-
-builtin:
-  ghostty: "Broadcast"

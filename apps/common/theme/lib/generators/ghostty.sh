@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Generate Ghostty config from palette.yml
+# Generate Ghostty color config from palette.yml
 # Usage: ghostty.sh <palette.yml> [output-file]
 #
-# If palette has builtin.ghostty, outputs a theme reference.
-# Otherwise, outputs full color definitions.
+# Always outputs full color definitions for consistency.
+# Applied via: config-file = themes/current.conf
 
 set -euo pipefail
 
@@ -18,25 +18,13 @@ fi
 palette_file="$1"
 output_file="${2:-}"
 
-# Check for built-in theme reference
-builtin_theme=$(yq -r '.builtin.ghostty // ""' "$palette_file")
-
 # Load palette into variables
 eval "$(load_palette "$palette_file")"
 
-generate_reference() {
+generate() {
   cat << EOF
-# ${THEME_NAME} - Ghostty theme
-# Uses Ghostty built-in theme
-theme = ${builtin_theme}
-EOF
-}
-
-generate_full() {
-  cat << EOF
-# ${THEME_NAME} - Ghostty theme
+# ${THEME_NAME} - Ghostty colors
 # Generated from palette.yml
-# Author: ${THEME_AUTHOR}
 
 background = ${SPECIAL_BG}
 foreground = ${SPECIAL_FG}
@@ -63,14 +51,6 @@ palette = 13=${ANSI_BRIGHT_MAGENTA}
 palette = 14=${ANSI_BRIGHT_CYAN}
 palette = 15=${ANSI_BRIGHT_WHITE}
 EOF
-}
-
-generate() {
-  if [[ -n "$builtin_theme" ]]; then
-    generate_reference
-  else
-    generate_full
-  fi
 }
 
 if [[ -n "$output_file" ]]; then

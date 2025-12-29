@@ -57,6 +57,3 @@ special:
   cursor_text: "#ffffff"
   selection_bg: "#2d37ff"
   selection_fg: "#82e0ff"
-
-builtin:
-  ghostty: "Pandora"

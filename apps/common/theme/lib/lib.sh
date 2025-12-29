@@ -173,38 +173,22 @@ get_library_path() {
 }
 
 # Apply Ghostty theme
+# Copies color config to themes/current.conf (imported via config-file directive)
 apply_ghostty() {
   local theme="$1"
-  local config_file="$HOME/.config/ghostty/config"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
 
-  if [[ ! -f "$config_file" ]] && [[ ! -L "$config_file" ]]; then
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/ghostty.conf" ]]; then
     return 1
   fi
 
-  # Resolve symlink
-  local target="$config_file"
-  if [[ -L "$config_file" ]]; then
-    target="$(readlink -f "$config_file")"
-  fi
+  local ghostty_theme_dir="$HOME/.config/ghostty/themes"
+  mkdir -p "$ghostty_theme_dir"
 
-  # Get ghostty theme name from favorites or library
-  local ghostty_name
-  ghostty_name=$(get_theme_mapping "$theme" "ghostty" 2>/dev/null || echo "")
+  # Copy theme colors to current.conf
+  cp "$lib_path/ghostty.conf" "$ghostty_theme_dir/current.conf"
 
-  if [[ -z "$ghostty_name" ]]; then
-    # Try to read from library
-    local lib_path
-    lib_path=$(get_library_path "$theme")
-    if [[ -n "$lib_path" ]] && [[ -f "$lib_path/ghostty.conf" ]]; then
-      ghostty_name=$(grep "^theme = " "$lib_path/ghostty.conf" | cut -d= -f2 | xargs)
-    fi
-  fi
-
-  if [[ -z "$ghostty_name" ]]; then
-    return 1
-  fi
-
-  sed -i "s|^theme = .*|theme = ${ghostty_name}|" "$target"
   return 0
 }
 

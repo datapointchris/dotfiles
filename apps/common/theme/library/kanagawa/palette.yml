@@ -57,6 +57,3 @@ special:
   cursor_text: "#1d202f"
   selection_bg: "#2d4f67"
   selection_fg: "#c8c093"
-
-builtin:
-  ghostty: "Kanagawa Wave"

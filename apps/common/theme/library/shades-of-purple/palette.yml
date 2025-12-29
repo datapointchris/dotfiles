@@ -57,6 +57,3 @@ special:
   cursor_text: "#fefff4"
   selection_bg: "#b362ff"
   selection_fg: "#c2c2c2"
-
-builtin:
-  ghostty: "Shades of Purple"

@@ -57,6 +57,3 @@ special:
   cursor_text: "#282828"
   selection_bg: "#665c54"
   selection_fg: "#ebdbb2"
-
-builtin:
-  ghostty: "Gruvbox Dark"
