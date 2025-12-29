@@ -339,6 +339,95 @@ system_packages:
     brew: borders
     description: macOS colored window borders
 
+  # Hyprland Desktop Environment (Arch Linux only)
+  - name: waybar
+    pacman: waybar
+    description: Wayland status bar
+
+  - name: rofi-wayland
+    pacman: rofi-wayland
+    description: Application launcher (Wayland fork)
+
+  - name: dunst
+    pacman: dunst
+    description: Notification daemon
+
+  - name: wl-clipboard
+    pacman: wl-clipboard
+    description: Wayland clipboard utilities
+
+  - name: cliphist
+    pacman: cliphist
+    description: Clipboard history manager
+
+  - name: grim
+    pacman: grim
+    description: Screenshot tool for Wayland
+
+  - name: slurp
+    pacman: slurp
+    description: Region selector for Wayland
+
+  - name: brightnessctl
+    pacman: brightnessctl
+    description: Brightness control
+
+  - name: playerctl
+    pacman: playerctl
+    description: Media player control
+
+  - name: polkit-kde-agent
+    pacman: polkit-kde-agent
+    description: Authentication agent for privilege escalation
+
+  - name: xdg-desktop-portal-hyprland
+    pacman: xdg-desktop-portal-hyprland
+    description: XDG portal backend for Hyprland
+
+  - name: hyprpaper
+    pacman: hyprpaper
+    description: Wallpaper utility for Hyprland
+
+  - name: hyprlock
+    pacman: hyprlock
+    description: Screen locker for Hyprland
+
+  - name: hypridle
+    pacman: hypridle
+    description: Idle daemon for Hyprland
+
+  - name: qt5-wayland
+    pacman: qt5-wayland
+    description: Qt5 Wayland support
+
+  - name: qt6-wayland
+    pacman: qt6-wayland
+    description: Qt6 Wayland support
+
+  - name: pipewire
+    pacman: pipewire
+    description: Multimedia framework
+
+  - name: wireplumber
+    pacman: wireplumber
+    description: PipeWire session manager
+
+  - name: pipewire-pulse
+    pacman: pipewire-pulse
+    description: PipeWire PulseAudio replacement
+
+  - name: wlogout
+    pacman: wlogout
+    description: Logout menu for Wayland
+
+  - name: firefox
+    pacman: firefox
+    description: Web browser (Wayland native)
+
+  - name: kitty
+    pacman: kitty
+    description: GPU-accelerated terminal (backup for Ghostty)
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================

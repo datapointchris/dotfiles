@@ -1,0 +1,123 @@
+/* Waybar Styling */
+/* Kanagawa color theme */
+
+@define-color bg #1f1f28;
+@define-color bg-dark #16161d;
+@define-color bg-highlight #2a2a37;
+@define-color fg #dcd7ba;
+@define-color fg-dark #c8c093;
+@define-color blue #7e9cd8;
+@define-color cyan #7aa89f;
+@define-color green #98bb6c;
+@define-color magenta #957fb8;
+@define-color red #c34043;
+@define-color yellow #e6c384;
+@define-color orange #ffa066;
+
+* {
+    font-family: "JetBrainsMono Nerd Font", "Font Awesome 6 Free", monospace;
+    font-size: 13px;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+}
+
+window#waybar {
+    background: @bg;
+    color: @fg;
+}
+
+/* Workspaces */
+#workspaces {
+    margin: 4px 4px;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    margin: 0 2px;
+    color: @fg-dark;
+    background: transparent;
+    border-radius: 4px;
+}
+
+#workspaces button:hover {
+    background: @bg-highlight;
+}
+
+#workspaces button.active {
+    background: @bg-highlight;
+    color: @blue;
+}
+
+#workspaces button.urgent {
+    background: @red;
+    color: @bg;
+}
+
+/* Submap indicator */
+#submap {
+    padding: 0 10px;
+    margin: 4px 4px;
+    background: @magenta;
+    color: @bg;
+    border-radius: 4px;
+}
+
+/* Window title */
+#window {
+    padding: 0 10px;
+    color: @fg-dark;
+}
+
+/* Right side modules */
+#clock,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#tray {
+    padding: 0 10px;
+    margin: 4px 2px;
+    background: @bg-highlight;
+    border-radius: 4px;
+}
+
+#clock {
+    color: @blue;
+}
+
+#cpu {
+    color: @green;
+}
+
+#memory {
+    color: @cyan;
+}
+
+#network {
+    color: @magenta;
+}
+
+#network.disconnected {
+    color: @red;
+}
+
+#pulseaudio {
+    color: @yellow;
+}
+
+#pulseaudio.muted {
+    color: @fg-dark;
+}
+
+#tray {
+    background: transparent;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}

@@ -1,0 +1,72 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "spacing": 4,
+
+    "modules-left": ["hyprland/workspaces", "hyprland/submap", "hyprland/window"],
+    "modules-center": [],
+    "modules-right": ["pulseaudio", "cpu", "memory", "network", "tray", "clock"],
+
+    "hyprland/workspaces": {
+        "format": "{name}",
+        "on-click": "activate",
+        "sort-by-number": false,
+        "persistent-workspaces": {
+            "A": [],
+            "B": [],
+            "D": [],
+            "E": [],
+            "M": [],
+            "S": [],
+            "X": [],
+            "Z": []
+        }
+    },
+
+    "hyprland/submap": {
+        "format": "  {}",
+        "tooltip": false
+    },
+
+    "hyprland/window": {
+        "max-length": 50,
+        "separate-outputs": true
+    },
+
+    "clock": {
+        "format": "{:%H:%M}",
+        "format-alt": "{:%Y-%m-%d %H:%M}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+
+    "cpu": {
+        "format": "{usage}% ",
+        "tooltip": true
+    },
+
+    "memory": {
+        "format": "{}% "
+    },
+
+    "network": {
+        "format-wifi": "{essid} ",
+        "format-ethernet": "{ipaddr} ",
+        "format-disconnected": "Disconnected ",
+        "tooltip-format": "{ifname}: {ipaddr}/{cidr}",
+        "on-click": "ghostty -e nmtui"
+    },
+
+    "pulseaudio": {
+        "format": "{volume}% {icon}",
+        "format-muted": " Muted",
+        "format-icons": {
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+
+    "tray": {
+        "spacing": 8
+    }
+}

@@ -1,0 +1,99 @@
+/* Rofi Configuration */
+/* Kanagawa color theme */
+
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Windows";
+    drun-display-format: "{name}";
+    window-format: "{w} · {c} · {t}";
+    font: "JetBrainsMono Nerd Font 12";
+    terminal: "ghostty";
+}
+
+/* Kanagawa colors */
+* {
+    bg: #1f1f28;
+    bg-alt: #2a2a37;
+    bg-selected: #2d4f67;
+    fg: #dcd7ba;
+    fg-alt: #c8c093;
+    blue: #7e9cd8;
+    magenta: #957fb8;
+
+    background-color: @bg;
+    text-color: @fg;
+    margin: 0;
+    padding: 0;
+    spacing: 0;
+}
+
+window {
+    width: 600px;
+    background-color: @bg;
+    border: 2px solid;
+    border-color: @blue;
+    border-radius: 10px;
+}
+
+mainbox {
+    children: [inputbar, listview];
+}
+
+inputbar {
+    background-color: @bg-alt;
+    padding: 12px;
+    spacing: 12px;
+    children: [prompt, entry];
+}
+
+prompt {
+    background-color: @blue;
+    text-color: @bg;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+entry {
+    padding: 6px;
+    background-color: transparent;
+    text-color: @fg;
+    placeholder: "Search...";
+    placeholder-color: @fg-alt;
+}
+
+listview {
+    background-color: transparent;
+    padding: 8px;
+    columns: 1;
+    lines: 8;
+    fixed-height: true;
+}
+
+element {
+    padding: 10px;
+    spacing: 10px;
+    border-radius: 6px;
+}
+
+element normal.normal,
+element alternate.normal {
+    background-color: transparent;
+    text-color: @fg;
+}
+
+element selected.normal {
+    background-color: @bg-selected;
+    text-color: @fg;
+}
+
+element-icon {
+    size: 24px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    vertical-align: 0.5;
+}
