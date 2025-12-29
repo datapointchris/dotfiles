@@ -1,5 +1,6 @@
-# GitHub Dark btop theme
-# Generated from Ghostty theme
+# GitHub Dark - btop theme
+# Generated from palette.yml
+# Author: Ghostty
 
 # Main background, empty for terminal default
 theme[main_bg]="#101216"
@@ -8,39 +9,37 @@ theme[main_bg]="#101216"
 theme[main_fg]="#8B949E"
 
 # Title color for boxes
+# base0C = cyan for titles
 theme[title]="#2B7489"
 
 # Highlight color for keyboard shortcuts
+# base0D = blue for highlights
 theme[hi_fg]="#6CA4F8"
 
 # Background color of selected item in processes box
-theme[selected_bg]="#4D4D4D"
+# base02 = selection background
+theme[selected_bg]="#3B5070"
 
 # Foreground color of selected item in processes box
+# base06 = light foreground
 theme[selected_fg]="#FFFFFF"
 
 # Color of inactive/disabled text
+# base03 = comments/muted
 theme[inactive_fg]="#4D4D4D"
 
-# Misc colors for processes box including mini cpu graphs, details memory graph and details status text
+# Misc colors for processes box
 theme[proc_misc]="#6CA4F8"
 
-# Cpu box outline color
+# Box outline colors
+# base01 = lighter background for subtle borders
 theme[cpu_box]="#4D4D4D"
-
-# Memory/disks box outline color
 theme[mem_box]="#4D4D4D"
-
-# Net up/down box outline color
 theme[net_box]="#4D4D4D"
-
-# Processes box outline color
 theme[proc_box]="#4D4D4D"
-
-# Box divider line and small boxes line color
 theme[div_line]="#4D4D4D"
 
-# Temperature graph colors
+# Temperature graph colors (gradient: blue -> cyan -> white)
 theme[temp_start]="#6CA4F8"
 theme[temp_mid]="#2B7489"
 theme[temp_end]="#FFFFFF"
@@ -50,32 +49,32 @@ theme[cpu_start]="#6CA4F8"
 theme[cpu_mid]="#2B7489"
 theme[cpu_end]="#FFFFFF"
 
-# Mem/Disk free meter
-theme[free_start]="#6CA4F8"
+# Memory free meter
+theme[free_start]="#56D364"
 theme[free_mid]="#2B7489"
 theme[free_end]="#FFFFFF"
 
-# Mem/Disk cached meter
-theme[cached_start]="#6CA4F8"
-theme[cached_mid]="#2B7489"
+# Memory cached meter
+theme[cached_start]="#E3B341"
+theme[cached_mid]="#F78166"
 theme[cached_end]="#FFFFFF"
 
-# Mem/Disk available meter
+# Memory available meter
 theme[available_start]="#6CA4F8"
 theme[available_mid]="#2B7489"
 theme[available_end]="#FFFFFF"
 
-# Mem/Disk used meter
-theme[used_start]="#6CA4F8"
-theme[used_mid]="#2B7489"
-theme[used_end]="#FFFFFF"
+# Memory used meter
+theme[used_start]="#F78166"
+theme[used_mid]="#F78166"
+theme[used_end]="#E3B341"
 
 # Download graph colors
-theme[download_start]="#6CA4F8"
+theme[download_start]="#56D364"
 theme[download_mid]="#2B7489"
 theme[download_end]="#FFFFFF"
 
 # Upload graph colors
-theme[upload_start]="#6CA4F8"
-theme[upload_mid]="#2B7489"
+theme[upload_start]="#DB61A2"
+theme[upload_mid]="#6CA4F8"
 theme[upload_end]="#FFFFFF"

@@ -1,0 +1,23 @@
+/* OceanicNext - waybar theme */
+/* Generated from palette.yml */
+/* Author: Ghostty */
+
+/* Base colors */
+@define-color background #162c35;
+@define-color background-alt #65737e;
+@define-color foreground #c0c5ce;
+@define-color foreground-alt #ffffff;
+
+/* Selection and highlighting */
+@define-color selection #4f5b66;
+@define-color comment #65737e;
+
+/* Accent colors */
+@define-color red #ec5f67;
+@define-color orange #ec5f67;
+@define-color yellow #fac863;
+@define-color green #99c794;
+@define-color cyan #5fb3b3;
+@define-color blue #6699cc;
+@define-color purple #c594c5;
+@define-color brown #c594c5;

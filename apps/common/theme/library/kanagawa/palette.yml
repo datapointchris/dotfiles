@@ -1,0 +1,62 @@
+# Kanagawa Theme Palette
+# Converted from Ghostty theme: Kanagawa Wave
+
+name: "Kanagawa"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#1f1f28"  # Default background
+  base01: "#727169"  # Lighter background (status bars, line numbers)
+  base02: "#2d4f67"  # Selection background
+  base03: "#727169"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#c8c093"  # Dark foreground (status bars)
+  base05: "#dcd7ba"  # Default foreground
+  base06: "#dcd7ba"  # Light foreground
+  base07: "#dcd7ba"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#c34043"  # Red - errors, deletion
+  base09: "#e82424"  # Orange - warnings, constants
+  base0A: "#c0a36e"  # Yellow - classes, search highlight
+  base0B: "#76946a"  # Green - strings, success
+  base0C: "#6a9589"  # Cyan - regex, escape chars
+  base0D: "#7e9cd8"  # Blue - functions, info
+  base0E: "#957fb8"  # Purple - keywords
+  base0F: "#957fb8"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#090618"
+  red: "#c34043"
+  green: "#76946a"
+  yellow: "#c0a36e"
+  blue: "#7e9cd8"
+  magenta: "#957fb8"
+  cyan: "#6a9589"
+  white: "#c8c093"
+
+  # Bright colors
+  bright_black: "#727169"
+  bright_red: "#e82424"
+  bright_green: "#98bb6c"
+  bright_yellow: "#e6c384"
+  bright_blue: "#7fb4ca"
+  bright_magenta: "#938aa9"
+  bright_cyan: "#7aa89f"
+  bright_white: "#dcd7ba"
+
+special:
+  background: "#1f1f28"
+  foreground: "#dcd7ba"
+  cursor: "#c8c093"
+  cursor_text: "#1d202f"
+  selection_bg: "#2d4f67"
+  selection_fg: "#c8c093"
+
+builtin:
+  ghostty: "Kanagawa Wave"

@@ -1,2 +1,23 @@
-@define-color foreground #d8dee9;
-@define-color background #2e3440;
+/* Nord - waybar theme */
+/* Generated from palette.yml */
+/* Author: arcticicestudio */
+
+/* Base colors */
+@define-color background #2E3440;
+@define-color background-alt #3B4252;
+@define-color foreground #E5E9F0;
+@define-color foreground-alt #D8DEE9;
+
+/* Selection and highlighting */
+@define-color selection #434C5E;
+@define-color comment #4C566A;
+
+/* Accent colors */
+@define-color red #BF616A;
+@define-color orange #D08770;
+@define-color yellow #EBCB8B;
+@define-color green #A3BE8C;
+@define-color cyan #88C0D0;
+@define-color blue #81A1C1;
+@define-color purple #B48EAD;
+@define-color brown #5E81AC;

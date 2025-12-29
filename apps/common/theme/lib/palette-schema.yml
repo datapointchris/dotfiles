@@ -1,0 +1,89 @@
+# Palette Schema Reference
+# This documents the palette.yml format used by theme generators
+#
+# Each theme's palette.yml follows this structure.
+# Generators read these values to create app-specific configs.
+
+# =============================================================================
+# METADATA
+# =============================================================================
+name: "Theme Name"           # Display name (e.g., "Nord", "Rose Pine")
+author: "Author Name"        # Original author
+variant: "dark"              # "dark" or "light"
+source: "url or description" # Where this palette came from
+
+# =============================================================================
+# BASE16 PALETTE
+# =============================================================================
+# Standard 16-color palette with semantic meanings.
+# This is the core of the theme - all app configs derive from these.
+#
+# Shades (backgrounds and foregrounds):
+#   base00-base07 form a gradient from darkest to lightest
+#   For dark themes: base00=darkest bg, base07=lightest fg
+#   For light themes: base00=lightest bg, base07=darkest fg
+#
+# Accent colors (base08-base0F):
+#   These provide semantic meaning for syntax highlighting and UI elements
+
+palette:
+  # --- Backgrounds & Foregrounds ---
+  base00: "#000000"  # Default background
+  base01: "#111111"  # Lighter background (status bars, line numbers, folds)
+  base02: "#222222"  # Selection background, UI secondary
+  base03: "#333333"  # Comments, invisibles, line highlighting
+  base04: "#444444"  # Dark foreground (status bars, reserved)
+  base05: "#555555"  # Default foreground, caret, delimiters
+  base06: "#666666"  # Light foreground (not often used)
+  base07: "#777777"  # Lightest foreground (not often used)
+
+  # --- Accent Colors ---
+  base08: "#ff0000"  # Red - variables, tags, diff deleted, errors
+  base09: "#ff8800"  # Orange - integers, booleans, constants, warnings
+  base0A: "#ffff00"  # Yellow - classes, search highlight, bold
+  base0B: "#00ff00"  # Green - strings, diff inserted, success
+  base0C: "#00ffff"  # Cyan - regex, escape chars, quotes
+  base0D: "#0088ff"  # Blue - functions, methods, headings, info
+  base0E: "#ff00ff"  # Purple - keywords, storage, italic
+  base0F: "#884400"  # Brown - deprecated, embedded tags
+
+# =============================================================================
+# ANSI TERMINAL COLORS (Optional - derived from base16 if not specified)
+# =============================================================================
+# Standard terminal 16-color palette (colors 0-15)
+# If not specified, generators will derive these from base16 palette
+
+ansi:
+  # Normal colors
+  black: "#000000"          # color0
+  red: "#ff0000"            # color1
+  green: "#00ff00"          # color2
+  yellow: "#ffff00"         # color3
+  blue: "#0088ff"           # color4
+  magenta: "#ff00ff"        # color5
+  cyan: "#00ffff"           # color6
+  white: "#aaaaaa"          # color7
+
+  # Bright colors
+  bright_black: "#555555"   # color8
+  bright_red: "#ff5555"     # color9
+  bright_green: "#55ff55"   # color10
+  bright_yellow: "#ffff55"  # color11
+  bright_blue: "#55aaff"    # color12
+  bright_magenta: "#ff55ff" # color13
+  bright_cyan: "#55ffff"    # color14
+  bright_white: "#ffffff"   # color15
+
+# =============================================================================
+# SPECIAL COLORS (Optional - derived if not specified)
+# =============================================================================
+# Override specific UI elements if the defaults don't look right
+
+special:
+  background: "#000000"     # Terminal/editor background (default: base00)
+  foreground: "#ffffff"     # Terminal/editor foreground (default: base05)
+  cursor: "#ffffff"         # Cursor color (default: base05)
+  cursor_text: "#000000"    # Text under cursor (default: base00)
+  selection_bg: "#333333"   # Selection background (default: base02)
+  selection_fg: "#ffffff"   # Selection foreground (default: base05)
+  url: "#0088ff"            # URL/link color (default: base0D)

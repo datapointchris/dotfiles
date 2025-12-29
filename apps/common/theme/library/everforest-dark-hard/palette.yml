@@ -1,0 +1,62 @@
+# Everforest Dark Hard Theme Palette
+# Converted from Ghostty theme: Everforest Dark Hard
+
+name: "Everforest Dark Hard"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#1e2326"  # Default background
+  base01: "#a6b0a0"  # Lighter background (status bars, line numbers)
+  base02: "#4c3743"  # Selection background
+  base03: "#a6b0a0"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#f2efdf"  # Dark foreground (status bars)
+  base05: "#d3c6aa"  # Default foreground
+  base06: "#fffbef"  # Light foreground
+  base07: "#fffbef"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#e67e80"  # Red - errors, deletion
+  base09: "#f85552"  # Orange - warnings, constants
+  base0A: "#dbbc7f"  # Yellow - classes, search highlight
+  base0B: "#a7c080"  # Green - strings, success
+  base0C: "#83c092"  # Cyan - regex, escape chars
+  base0D: "#7fbbb3"  # Blue - functions, info
+  base0E: "#d699b6"  # Purple - keywords
+  base0F: "#d699b6"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#7a8478"
+  red: "#e67e80"
+  green: "#a7c080"
+  yellow: "#dbbc7f"
+  blue: "#7fbbb3"
+  magenta: "#d699b6"
+  cyan: "#83c092"
+  white: "#f2efdf"
+
+  # Bright colors
+  bright_black: "#a6b0a0"
+  bright_red: "#f85552"
+  bright_green: "#8da101"
+  bright_yellow: "#dfa000"
+  bright_blue: "#3a94c5"
+  bright_magenta: "#df69ba"
+  bright_cyan: "#35a77c"
+  bright_white: "#fffbef"
+
+special:
+  background: "#1e2326"
+  foreground: "#d3c6aa"
+  cursor: "#e69875"
+  cursor_text: "#4c3743"
+  selection_bg: "#4c3743"
+  selection_fg: "#d3c6aa"
+
+builtin:
+  ghostty: "Everforest Dark Hard"

@@ -1,0 +1,62 @@
+# Selenized Dark Theme Palette
+# Converted from Ghostty theme: Selenized Dark
+
+name: "Selenized Dark"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#103c48"  # Default background
+  base01: "#396775"  # Lighter background (status bars, line numbers)
+  base02: "#184956"  # Selection background
+  base03: "#396775"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#72898f"  # Dark foreground (status bars)
+  base05: "#adbcbc"  # Default foreground
+  base06: "#cad8d9"  # Light foreground
+  base07: "#cad8d9"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#fa5750"  # Red - errors, deletion
+  base09: "#ff665c"  # Orange - warnings, constants
+  base0A: "#dbb32d"  # Yellow - classes, search highlight
+  base0B: "#75b938"  # Green - strings, success
+  base0C: "#41c7b9"  # Cyan - regex, escape chars
+  base0D: "#4695f7"  # Blue - functions, info
+  base0E: "#f275be"  # Purple - keywords
+  base0F: "#f275be"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#184956"
+  red: "#fa5750"
+  green: "#75b938"
+  yellow: "#dbb32d"
+  blue: "#4695f7"
+  magenta: "#f275be"
+  cyan: "#41c7b9"
+  white: "#72898f"
+
+  # Bright colors
+  bright_black: "#396775"
+  bright_red: "#ff665c"
+  bright_green: "#84c747"
+  bright_yellow: "#ebc13d"
+  bright_blue: "#58a3ff"
+  bright_magenta: "#ff84cd"
+  bright_cyan: "#53d6c7"
+  bright_white: "#cad8d9"
+
+special:
+  background: "#103c48"
+  foreground: "#adbcbc"
+  cursor: "#adbcbc"
+  cursor_text: "#adbcbc"
+  selection_bg: "#184956"
+  selection_fg: "#53d6c7"
+
+builtin:
+  ghostty: "Selenized Dark"

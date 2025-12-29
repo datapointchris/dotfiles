@@ -1,0 +1,62 @@
+# OceanicNext Theme Palette
+# Converted from Ghostty theme: Oceanic Next
+
+name: "OceanicNext"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#162c35"  # Default background
+  base01: "#65737e"  # Lighter background (status bars, line numbers)
+  base02: "#4f5b66"  # Selection background
+  base03: "#65737e"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#ffffff"  # Dark foreground (status bars)
+  base05: "#c0c5ce"  # Default foreground
+  base06: "#ffffff"  # Light foreground
+  base07: "#ffffff"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#ec5f67"  # Red - errors, deletion
+  base09: "#ec5f67"  # Orange - warnings, constants
+  base0A: "#fac863"  # Yellow - classes, search highlight
+  base0B: "#99c794"  # Green - strings, success
+  base0C: "#5fb3b3"  # Cyan - regex, escape chars
+  base0D: "#6699cc"  # Blue - functions, info
+  base0E: "#c594c5"  # Purple - keywords
+  base0F: "#c594c5"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#162c35"
+  red: "#ec5f67"
+  green: "#99c794"
+  yellow: "#fac863"
+  blue: "#6699cc"
+  magenta: "#c594c5"
+  cyan: "#5fb3b3"
+  white: "#ffffff"
+
+  # Bright colors
+  bright_black: "#65737e"
+  bright_red: "#ec5f67"
+  bright_green: "#99c794"
+  bright_yellow: "#fac863"
+  bright_blue: "#6699cc"
+  bright_magenta: "#c594c5"
+  bright_cyan: "#5fb3b3"
+  bright_white: "#ffffff"
+
+special:
+  background: "#162c35"
+  foreground: "#c0c5ce"
+  cursor: "#c0c5ce"
+  cursor_text: "#1b2b34"
+  selection_bg: "#4f5b66"
+  selection_fg: "#c0c5ce"
+
+builtin:
+  ghostty: "Oceanic Next"

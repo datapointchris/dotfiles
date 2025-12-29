@@ -1,0 +1,23 @@
+/* Spacegray Eighties - waybar theme */
+/* Generated from palette.yml */
+/* Author: Ghostty */
+
+/* Base colors */
+@define-color background #222222;
+@define-color background-alt #555555;
+@define-color foreground #bdbaae;
+@define-color foreground-alt #efece7;
+
+/* Selection and highlighting */
+@define-color selection #272e35;
+@define-color comment #555555;
+
+/* Accent colors */
+@define-color red #ec5f67;
+@define-color orange #ff6973;
+@define-color yellow #fec254;
+@define-color green #81a764;
+@define-color cyan #57c2c1;
+@define-color blue #5486c0;
+@define-color purple #bf83c1;
+@define-color brown #bf83c1;

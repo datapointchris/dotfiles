@@ -1,0 +1,62 @@
+# Smyck Theme Palette
+# Converted from Ghostty theme: Smyck
+
+name: "Smyck"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#1b1b1b"  # Default background
+  base01: "#7a7a7a"  # Lighter background (status bars, line numbers)
+  base02: "#207483"  # Selection background
+  base03: "#7a7a7a"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#a1a1a1"  # Dark foreground (status bars)
+  base05: "#f7f7f7"  # Default foreground
+  base06: "#f7f7f7"  # Light foreground
+  base07: "#f7f7f7"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#b84131"  # Red - errors, deletion
+  base09: "#d6837c"  # Orange - warnings, constants
+  base0A: "#c4a500"  # Yellow - classes, search highlight
+  base0B: "#7da900"  # Green - strings, success
+  base0C: "#207383"  # Cyan - regex, escape chars
+  base0D: "#62a3c4"  # Blue - functions, info
+  base0E: "#ba8acc"  # Purple - keywords
+  base0F: "#ba8acc"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#000000"
+  red: "#b84131"
+  green: "#7da900"
+  yellow: "#c4a500"
+  blue: "#62a3c4"
+  magenta: "#ba8acc"
+  cyan: "#207383"
+  white: "#a1a1a1"
+
+  # Bright colors
+  bright_black: "#7a7a7a"
+  bright_red: "#d6837c"
+  bright_green: "#c4f137"
+  bright_yellow: "#fee14d"
+  bright_blue: "#8dcff0"
+  bright_magenta: "#f79aff"
+  bright_cyan: "#6ad9cf"
+  bright_white: "#f7f7f7"
+
+special:
+  background: "#1b1b1b"
+  foreground: "#f7f7f7"
+  cursor: "#bbbbbb"
+  cursor_text: "#ffffff"
+  selection_bg: "#207483"
+  selection_fg: "#f7f7f7"
+
+builtin:
+  ghostty: "Smyck"

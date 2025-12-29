@@ -1,0 +1,62 @@
+# Black Metal (Mayhem) Theme Palette
+# Converted from Ghostty theme: Black Metal (Mayhem)
+
+name: "Black Metal (Mayhem)"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#000000"  # Default background
+  base01: "#3f3f3f"  # Lighter background (status bars, line numbers)
+  base02: "#c1c1c1"  # Selection background
+  base03: "#3f3f3f"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#c1c1c1"  # Dark foreground (status bars)
+  base05: "#c1c1c1"  # Default foreground
+  base06: "#c1c1c1"  # Light foreground
+  base07: "#c1c1c1"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#5f8787"  # Red - errors, deletion
+  base09: "#5f8787"  # Orange - warnings, constants
+  base0A: "#eecc6c"  # Yellow - classes, search highlight
+  base0B: "#f3ecd4"  # Green - strings, success
+  base0C: "#aaaaaa"  # Cyan - regex, escape chars
+  base0D: "#888888"  # Blue - functions, info
+  base0E: "#999999"  # Purple - keywords
+  base0F: "#999999"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#000000"
+  red: "#5f8787"
+  green: "#f3ecd4"
+  yellow: "#eecc6c"
+  blue: "#888888"
+  magenta: "#999999"
+  cyan: "#aaaaaa"
+  white: "#c1c1c1"
+
+  # Bright colors
+  bright_black: "#3f3f3f"
+  bright_red: "#5f8787"
+  bright_green: "#f3ecd4"
+  bright_yellow: "#eecc6c"
+  bright_blue: "#888888"
+  bright_magenta: "#999999"
+  bright_cyan: "#aaaaaa"
+  bright_white: "#c1c1c1"
+
+special:
+  background: "#000000"
+  foreground: "#c1c1c1"
+  cursor: "#c1c1c1"
+  cursor_text: "#c1c1c1"
+  selection_bg: "#c1c1c1"
+  selection_fg: "#000000"
+
+builtin:
+  ghostty: "Black Metal (Mayhem)"

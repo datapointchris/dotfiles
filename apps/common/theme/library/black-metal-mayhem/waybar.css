@@ -1,0 +1,23 @@
+/* Black Metal (Mayhem) - waybar theme */
+/* Generated from palette.yml */
+/* Author: Ghostty */
+
+/* Base colors */
+@define-color background #000000;
+@define-color background-alt #3f3f3f;
+@define-color foreground #c1c1c1;
+@define-color foreground-alt #c1c1c1;
+
+/* Selection and highlighting */
+@define-color selection #c1c1c1;
+@define-color comment #3f3f3f;
+
+/* Accent colors */
+@define-color red #5f8787;
+@define-color orange #5f8787;
+@define-color yellow #eecc6c;
+@define-color green #f3ecd4;
+@define-color cyan #aaaaaa;
+@define-color blue #888888;
+@define-color purple #999999;
+@define-color brown #999999;

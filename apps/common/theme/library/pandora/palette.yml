@@ -1,0 +1,62 @@
+# Pandora Theme Palette
+# Converted from Ghostty theme: Pandora
+
+name: "Pandora"
+author: "Ghostty"
+variant: "dark"
+source: "Ghostty built-in theme"
+
+palette:
+  # --- Backgrounds ---
+  base00: "#141e43"  # Default background
+  base01: "#3f5648"  # Lighter background (status bars, line numbers)
+  base02: "#2d37ff"  # Selection background
+  base03: "#3f5648"  # Comments, invisibles, line highlighting
+
+  # --- Foregrounds ---
+  base04: "#e2e2e2"  # Dark foreground (status bars)
+  base05: "#e1e1e1"  # Default foreground
+  base06: "#ffffff"  # Light foreground
+  base07: "#ffffff"  # Lightest foreground
+
+  # --- Accent Colors ---
+  base08: "#ff4242"  # Red - errors, deletion
+  base09: "#ff3242"  # Orange - warnings, constants
+  base0A: "#ffad29"  # Yellow - classes, search highlight
+  base0B: "#74af68"  # Green - strings, success
+  base0C: "#23d7d7"  # Cyan - regex, escape chars
+  base0D: "#338f86"  # Blue - functions, info
+  base0E: "#9414e6"  # Purple - keywords
+  base0F: "#9414e6"  # Brown/accent - deprecated
+
+ansi:
+  # Normal colors
+  black: "#000000"
+  red: "#ff4242"
+  green: "#74af68"
+  yellow: "#ffad29"
+  blue: "#338f86"
+  magenta: "#9414e6"
+  cyan: "#23d7d7"
+  white: "#e2e2e2"
+
+  # Bright colors
+  bright_black: "#3f5648"
+  bright_red: "#ff3242"
+  bright_green: "#74cd68"
+  bright_yellow: "#ffb929"
+  bright_blue: "#23d7d7"
+  bright_magenta: "#ff37ff"
+  bright_cyan: "#00ede1"
+  bright_white: "#ffffff"
+
+special:
+  background: "#141e43"
+  foreground: "#e1e1e1"
+  cursor: "#43d58e"
+  cursor_text: "#ffffff"
+  selection_bg: "#2d37ff"
+  selection_fg: "#82e0ff"
+
+builtin:
+  ghostty: "Pandora"
