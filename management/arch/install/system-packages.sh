@@ -56,3 +56,25 @@ else
 fi
 
 log_success "Arch packages installed"
+
+# Configure TTY1 auto-login for Hyprland
+print_section "Configuring TTY auto-login"
+
+# Disable GDM if enabled (has issues with Hyprland)
+if systemctl is-enabled gdm &>/dev/null; then
+  log_info "Disabling GDM (using TTY auto-login instead)..."
+  sudo systemctl disable gdm
+  log_success "GDM disabled"
+fi
+
+# Enable auto-login on TTY1
+log_info "Configuring auto-login on TTY1..."
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null << 'EOF'
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin chris %I $TERM
+EOF
+log_success "TTY1 auto-login configured"
+
+log_success "Arch system configuration complete"
