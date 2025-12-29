@@ -43,6 +43,7 @@ run_installer() {
     failure_url=$(parse_failure_field "URL")
     failure_version=$(parse_failure_field "VERSION")
     failure_reason=$(parse_failure_field "REASON")
+    failure_manual=""
 
     if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
       failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')

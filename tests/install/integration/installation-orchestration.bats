@@ -208,3 +208,29 @@ setup() {
   assert_success
   assert_output ""
 }
+
+# ================================================================
+# Test: Failure without manual steps (regression test)
+# ================================================================
+
+@test "orchestration: failure without manual steps does not cause unbound variable" {
+  # Create a simple failing installer WITHOUT FAILURE_MANUAL_START block
+  cat > "$TEMP_DIR/simple-failure.sh" << 'EOF'
+#!/usr/bin/env bash
+echo "FAILURE_TOOL='simple-tool'" >&2
+echo "FAILURE_REASON='Simple failure without manual steps'" >&2
+exit 1
+EOF
+  chmod +x "$TEMP_DIR/simple-failure.sh"
+
+  # This should not fail with "unbound variable" error
+  run run_installer "$TEMP_DIR/simple-failure.sh" "simple-tool"
+  assert_failure
+
+  # Log should exist and contain the error
+  [[ -f "$FAILURES_LOG" ]]
+  run cat "$FAILURES_LOG"
+  assert_output --partial "Simple failure without manual steps"
+  # Should NOT contain "How to Install Manually" section
+  refute_output --partial "How to Install Manually:"
+}
