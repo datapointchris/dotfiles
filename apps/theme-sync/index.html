@@ -4465,116 +4465,142 @@
 
 
 <h1 id="theme-sync">Theme Sync<a class="headerlink" href="#theme-sync" title="Permanent link">&para;</a></h1>
-<p>Base16 theme management across tmux, bat, fzf, eza, and shell via tinty. Change your theme once and watch it propagate everywhere simultaneously.</p>
+<p>Apply Base16 color schemes to tmux, fzf, and shell via tinty. Change your theme once and it propagates to all supported applications.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme-sync<span class="w"> </span>current<span class="w">           </span><span class="c1"># Show current theme</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme-sync<span class="w"> </span>favorites<span class="w">         </span><span class="c1"># List 12 favorite themes</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme-sync<span class="w"> </span>random<span class="w">            </span><span class="c1"># Apply random favorite</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>theme-sync<span class="w"> </span>verify<span class="w">            </span><span class="c1"># Check system status</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme-sync<span class="w"> </span>verify<span class="w">                    </span><span class="c1"># Check system is ready</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine<span class="w">    </span><span class="c1"># Apply a theme</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme-sync<span class="w"> </span>current<span class="w">                   </span><span class="c1"># Show current theme</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme-sync<span class="w"> </span>favorites<span class="w">                 </span><span class="c1"># List favorite themes</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>theme-sync<span class="w"> </span>random<span class="w">                    </span><span class="c1"># Apply random favorite</span>
 </span></code></pre></div>
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
 <h3 id="viewing">Viewing<a class="headerlink" href="#viewing" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>theme-sync current</code> - Show currently active theme</li>
-<li><code>theme-sync list</code> - List all available Base16 themes (hundreds)</li>
+<li><code>theme-sync current</code> - Show currently active Base16 theme</li>
+<li><code>theme-sync list</code> - List all available Base16 themes (250+)</li>
 <li><code>theme-sync favorites</code> - Show curated list of 12 favorite themes</li>
 <li><code>theme-sync info &lt;theme&gt;</code> - Display color palette for a theme</li>
 </ul>
 <h3 id="applying-themes">Applying Themes<a class="headerlink" href="#applying-themes" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>theme-sync apply &lt;theme&gt;</code> - Switch to a specific Base16 theme</li>
+<li><code>theme-sync apply &lt;theme&gt;</code> - Apply a Base16 theme</li>
 <li><code>theme-sync random</code> - Apply random theme from favorites</li>
-<li><code>theme-sync reload</code> - Reload theme in running applications</li>
+<li><code>theme-sync reload</code> - Reload theme in tmux</li>
 </ul>
-<p>Applying a theme triggers tinty to generate new config files, then automatically reloads tmux config and rebuilds bat cache. Changes appear immediately without manual intervention.</p>
+<p>Applying a theme triggers tinty hooks that copy theme configs and reload tmux automatically.</p>
 <h3 id="system">System<a class="headerlink" href="#system" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>theme-sync verify</code> - Check that tinty is installed, configs exist, and theme files are present</li>
+<li><code>theme-sync verify</code> - Check tinty installation, config, and repos</li>
 </ul>
+<h2 id="what-gets-themed">What Gets Themed<a class="headerlink" href="#what-gets-themed" title="Permanent link">&para;</a></h2>
+<p><strong>Tmux</strong> - Status bar, pane borders, and window colors via <code>~/.config/tmux/themes/current.conf</code>. Custom statusbar styling is appended by <code>tmux-colors-from-tinty</code>.</p>
+<p><strong>Fzf</strong> - Color variables sourced from shell environment via tinted-shell.</p>
+<p><strong>Shell</strong> - LS_COLORS for file listings via tinted-shell.</p>
+<p><strong>Bat</strong> - Use <code>bat --theme=base16-256</code> with tinted-shell integration.</p>
 <h2 id="favorite-themes">Favorite Themes<a class="headerlink" href="#favorite-themes" title="Permanent link">&para;</a></h2>
-<p>The 12 curated favorites balance variety with quality:</p>
-<p><strong>Rose Pine family</strong> - Warm, low-contrast:</p>
+<p>12 curated Base16 themes in the FAVORITES array:</p>
+<table>
+<thead>
+<tr>
+<th>Theme</th>
+<th>Character</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>base16-rose-pine</td>
+<td>Warm, calm, low-contrast</td>
+</tr>
+<tr>
+<td>base16-rose-pine-moon</td>
+<td>Darker rose-pine variant</td>
+</tr>
+<tr>
+<td>base16-gruvbox-dark-hard</td>
+<td>Retro, high-contrast</td>
+</tr>
+<tr>
+<td>base16-gruvbox-dark-medium</td>
+<td>Softer gruvbox</td>
+</tr>
+<tr>
+<td>base16-kanagawa</td>
+<td>Warm, earthy, Japanese</td>
+</tr>
+<tr>
+<td>base16-oceanicnext</td>
+<td>Cool blues</td>
+</tr>
+<tr>
+<td>base16-github-dark</td>
+<td>Familiar GitHub colors</td>
+</tr>
+<tr>
+<td>base16-nord</td>
+<td>Arctic blues, calm</td>
+</tr>
+<tr>
+<td>base16-selenized-dark</td>
+<td>Balanced contrast</td>
+</tr>
+<tr>
+<td>base16-everforest-dark-hard</td>
+<td>Forest greens</td>
+</tr>
+<tr>
+<td>base16-tomorrow-night</td>
+<td>Classic neutral</td>
+</tr>
+<tr>
+<td>base16-tomorrow-night-eighties</td>
+<td>Nostalgic pastels</td>
+</tr>
+</tbody>
+</table>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Tinty config lives at <code>~/.config/tinted-theming/tinty/config.toml</code> (symlinked from dotfiles).</p>
+<p>The config defines two items:</p>
 <ul>
-<li>base16-rose-pine</li>
-<li>base16-rose-pine-moon</li>
+<li><strong>tinted-shell</strong> - Provides fzf colors and LS_COLORS</li>
+<li><strong>base16-tmux</strong> - Provides tmux theme files with custom statusbar appended</li>
 </ul>
-<p><strong>Gruvbox family</strong> - High-contrast retro:</p>
-<ul>
-<li>base16-gruvbox-dark-hard</li>
-<li>base16-gruvbox-dark-medium</li>
-</ul>
-<p><strong>Modern themes</strong>:</p>
-<ul>
-<li>base16-kanagawa (warm, earthy)</li>
-<li>base16-oceanicnext (cool blues)</li>
-<li>base16-github-dark (familiar GitHub colors)</li>
-<li>base16-nord (arctic blues)</li>
-</ul>
-<p><strong>Specialized</strong>:</p>
-<ul>
-<li>base16-selenized-dark (balanced contrast)</li>
-<li>base16-everforest-dark-hard (forest greens)</li>
-<li>base16-tomorrow-night (classic neutral)</li>
-<li>base16-tomorrow-night-eighties (nostalgic pastels)</li>
-</ul>
-<p>These themes match the themes configured in Neovim and Ghostty for consistency across tools.</p>
-<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>Theme-sync wraps tinty, which applies Base16 themes by generating application-specific config files. When you apply a theme, tinty writes new configs and theme-sync handles reloading affected applications.</p>
-<h3 id="application-integration">Application Integration<a class="headerlink" href="#application-integration" title="Permanent link">&para;</a></h3>
-<p><strong>Tmux</strong> sources <code>~/.config/tmux/themes/current.conf</code> generated by tinty. Theme-sync automatically reloads tmux config after applying themes.</p>
-<p><strong>Bat</strong> uses themes from its themes directory. Theme-sync rebuilds bat cache after applying themes so syntax highlighting updates immediately.</p>
-<p><strong>Fzf</strong> sources theme variables from shell environment. New shells pick up theme changes automatically.</p>
-<p><strong>Eza</strong> uses LS_COLORS updated by tinty.</p>
-<p><strong>Shell</strong> sources theme variables exported by tinty for prompt and other colors.</p>
-<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<p>Tinty reads <code>~/.config/tinty/config.toml</code> which defines Base16 scheme repositories. Theme-sync doesn't modify tinty config - it uses tinty as-is.</p>
-<p>Favorite themes are hardcoded in <code>apps/common/theme-sync</code>. Edit the FAVORITES array directly:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>nvim<span class="w"> </span>~/dotfiles/apps/common/theme-sync
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Edit FAVORITES array</span>
-</span></code></pre></div>
-<p>Changes apply immediately since shell scripts run directly.</p>
-<h2 id="integration-with-ghostty">Integration with Ghostty<a class="headerlink" href="#integration-with-ghostty" title="Permanent link">&para;</a></h2>
-<p>Theme-sync works alongside the separate ghostty-theme system. Ghostty uses its own theme format and manages 60+ built-in themes independently from Base16. This separation provides flexibility - you can keep them synchronized or intentionally separate for visual distinction.</p>
-<p>Check both systems:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ghostty-theme<span class="w"> </span>current<span class="w">          </span><span class="c1"># Check Ghostty theme</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>theme-sync<span class="w"> </span>current<span class="w">             </span><span class="c1"># Check Base16 theme</span>
-</span></code></pre></div>
-<p>Keep them synchronized:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ghostty-theme<span class="w"> </span>apply<span class="w"> </span>rose-pine
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span></code></pre></div>
-<h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
-<p>Switch themes based on mood or time of day:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine-moon<span class="w">    </span><span class="c1"># Evening</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark<span class="w">       </span><span class="c1"># Daytime</span>
-</span></code></pre></div>
-<p>Break out of visual monotony with random selection:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>theme-sync<span class="w"> </span>random
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Work for a bit, see how it feels</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>theme-sync<span class="w"> </span>random
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Try another</span>
-</span></code></pre></div>
-<p>Combine with fzf for interactive selection:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>theme-sync<span class="w"> </span>favorites<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="w"> </span><span class="s1">&#39;theme-sync info {}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>theme-sync<span class="w"> </span>apply
-</span></code></pre></div>
-<p>Automate theme changes based on time:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$hour</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-github-dark
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">else</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">fi</span>
+<p>Favorite themes are hardcoded in <code>apps/common/theme-sync</code> in the FAVORITES array. A master favorites registry exists at <code>~/.config/themes/favorites.yml</code> for future unified theme management.</p>
+<h2 id="relationship-with-other-tools">Relationship with Other Tools<a class="headerlink" href="#relationship-with-other-tools" title="Permanent link">&para;</a></h2>
+<p><strong>theme-sync</strong> applies Base16 themes to shell/tmux only. It's limited to themes that have Base16 ports.</p>
+<p><strong>ghostty-theme</strong> manages Ghostty terminal themes separately. Ghostty has its own built-in themes (300+) that don't overlap with Base16.</p>
+<p><strong>Neovim colorschemes</strong> are managed separately via the colorscheme-manager plugin with per-project persistence.</p>
+<p>To keep terminal and shell in sync, apply matching themes:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ghostty-theme<span class="w"> </span>--select<span class="w">            </span><span class="c1"># Pick terminal theme</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>theme-sync<span class="w"> </span>apply<span class="w"> </span>base16-rose-pine<span class="w"> </span><span class="c1"># Match shell/tmux theme</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Theme not applying</strong>: Run <code>theme-sync verify</code> to check system status. Verify tinty is installed and theme repositories are downloaded with <code>tinty list</code>.</p>
-<p><strong>Tmux not updating</strong>: Check theme file exists at <code>~/.config/tmux/themes/current.conf</code>. Manually reload with <code>tmux source-file ~/.config/tmux/tmux.conf</code>.</p>
-<p><strong>Bat not updating</strong>: Rebuild cache manually with <code>bat cache --build</code>.</p>
-<p><strong>Theme doesn't exist</strong>: Run <code>theme-sync list</code> to see available themes. Update tinty schemes with <code>tinty update</code>.</p>
+<p><strong>Theme not applying</strong></p>
+<p>Run <code>theme-sync verify</code> - this will auto-install missing repos. If it still fails, check the error message.</p>
+<p><strong>Tmux colors not updating</strong></p>
+<p>The theme file exists but tmux hasn't reloaded:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>tmux<span class="w"> </span>source-file<span class="w"> </span>~/.config/tmux/tmux.conf
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Or reload all sessions:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>sess<span class="w"> </span>reload
+</span></code></pre></div>
+<p><strong>tinty config not found</strong></p>
+<p>Check the symlink exists at <code>~/.config/tinted-theming/tinty/config.toml</code>. Run <code>task symlinks:link</code> to recreate.</p>
+<p><strong>Theme doesn't exist</strong></p>
+<p>List available themes with <code>tinty list</code> or <code>theme-sync list</code>. Update theme repos:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>tinty<span class="w"> </span>update
+</span></code></pre></div>
+<h2 id="technical-details">Technical Details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="how-tinty-hooks-work">How tinty hooks work<a class="headerlink" href="#how-tinty-hooks-work" title="Permanent link">&para;</a></h3>
+<p>When <code>tinty apply &lt;theme&gt;</code> runs:</p>
+<ol>
+<li><strong>tinted-shell hook</strong>: Sources the theme script, setting FZF colors and LS_COLORS in current shell</li>
+<li><strong>base16-tmux hook</strong>: Copies theme to <code>~/.config/tmux/themes/current.conf</code>, appends custom statusbar via <code>tmux-colors-from-tinty</code></li>
+</ol>
+<h3 id="custom-tmux-statusbar">Custom tmux statusbar<a class="headerlink" href="#custom-tmux-statusbar" title="Permanent link">&para;</a></h3>
+<p>The <code>tmux-colors-from-tinty</code> script reads the current scheme's YAML file and generates custom statusbar configuration that's appended to the tmux theme. This provides consistent styling while allowing the base theme to change.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../font/">Font Tool</a> - Similar workflow for font management</li>
-<li><a href="../menu/">Menu System</a> - Quick access to workflow tools</li>
+<li><a href="../ghostty-theme/">Ghostty Theme</a> - Terminal-specific theming</li>
 </ul>
 
 
