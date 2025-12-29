@@ -921,6 +921,23 @@ tools:
     tags: [system, monitoring, tui]
     docs_url: "https://htop.dev/"
 
+  btop:
+    category: system-monitoring
+    description: "Resource monitor with CPU, memory, disks, network, and process views"
+    installed_via: brew
+    usage: "btop [options]"
+    why_use: "Beautiful UI, themeable colors, more metrics than htop, GPU monitoring"
+    examples:
+      - cmd: "btop"
+        desc: "Launch resource monitor"
+      - cmd: "btop --utf-force"
+        desc: "Force UTF-8 mode"
+      - cmd: "btop -t"
+        desc: "Start with tree view for processes"
+    see_also: [htop, top, glances]
+    tags: [system, monitoring, tui, themeable]
+    docs_url: "https://github.com/aristocratos/btop"
+
   # =================================================================
   # SHELL & FORMATTING
   # =================================================================

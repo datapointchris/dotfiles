@@ -123,6 +123,12 @@ system_packages:
     brew: htop
     description: Interactive process viewer
 
+  - name: btop
+    apt: btop
+    pacman: btop
+    brew: btop
+    description: Resource monitor with themeable UI
+
   # Shell
   - name: zsh
     apt: zsh
