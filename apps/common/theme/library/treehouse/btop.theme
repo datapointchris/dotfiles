@@ -1,0 +1,81 @@
+# Treehouse btop theme
+# Generated from Ghostty theme
+
+# Main background, empty for terminal default
+theme[main_bg]="#191919"
+
+# Main text color
+theme[main_fg]="#786B53"
+
+# Title color for boxes
+theme[title]="#B25A1E"
+
+# Highlight color for keyboard shortcuts
+theme[hi_fg]="#58859A"
+
+# Background color of selected item in processes box
+theme[selected_bg]="#504332"
+
+# Foreground color of selected item in processes box
+theme[selected_fg]="#FFC800"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="#504332"
+
+# Misc colors for processes box including mini cpu graphs, details memory graph and details status text
+theme[proc_misc]="#58859A"
+
+# Cpu box outline color
+theme[cpu_box]="#504332"
+
+# Memory/disks box outline color
+theme[mem_box]="#504332"
+
+# Net up/down box outline color
+theme[net_box]="#504332"
+
+# Processes box outline color
+theme[proc_box]="#504332"
+
+# Box divider line and small boxes line color
+theme[div_line]="#504332"
+
+# Temperature graph colors
+theme[temp_start]="#58859A"
+theme[temp_mid]="#B25A1E"
+theme[temp_end]="#FFC800"
+
+# CPU graph colors
+theme[cpu_start]="#58859A"
+theme[cpu_mid]="#B25A1E"
+theme[cpu_end]="#FFC800"
+
+# Mem/Disk free meter
+theme[free_start]="#58859A"
+theme[free_mid]="#B25A1E"
+theme[free_end]="#FFC800"
+
+# Mem/Disk cached meter
+theme[cached_start]="#58859A"
+theme[cached_mid]="#B25A1E"
+theme[cached_end]="#FFC800"
+
+# Mem/Disk available meter
+theme[available_start]="#58859A"
+theme[available_mid]="#B25A1E"
+theme[available_end]="#FFC800"
+
+# Mem/Disk used meter
+theme[used_start]="#58859A"
+theme[used_mid]="#B25A1E"
+theme[used_end]="#FFC800"
+
+# Download graph colors
+theme[download_start]="#58859A"
+theme[download_mid]="#B25A1E"
+theme[download_end]="#FFC800"
+
+# Upload graph colors
+theme[upload_start]="#58859A"
+theme[upload_mid]="#B25A1E"
+theme[upload_end]="#FFC800"

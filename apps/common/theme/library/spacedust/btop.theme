@@ -1,0 +1,81 @@
+# Spacedust btop theme
+# Generated from Ghostty theme
+
+# Main background, empty for terminal default
+theme[main_bg]="#0A1E24"
+
+# Main text color
+theme[main_fg]="#ECF0C1"
+
+# Title color for boxes
+theme[title]="#06AFC7"
+
+# Highlight color for keyboard shortcuts
+theme[hi_fg]="#0F548B"
+
+# Background color of selected item in processes box
+theme[selected_bg]="#684C31"
+
+# Foreground color of selected item in processes box
+theme[selected_fg]="#FEFFF1"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="#684C31"
+
+# Misc colors for processes box including mini cpu graphs, details memory graph and details status text
+theme[proc_misc]="#0F548B"
+
+# Cpu box outline color
+theme[cpu_box]="#684C31"
+
+# Memory/disks box outline color
+theme[mem_box]="#684C31"
+
+# Net up/down box outline color
+theme[net_box]="#684C31"
+
+# Processes box outline color
+theme[proc_box]="#684C31"
+
+# Box divider line and small boxes line color
+theme[div_line]="#684C31"
+
+# Temperature graph colors
+theme[temp_start]="#0F548B"
+theme[temp_mid]="#06AFC7"
+theme[temp_end]="#FEFFF1"
+
+# CPU graph colors
+theme[cpu_start]="#0F548B"
+theme[cpu_mid]="#06AFC7"
+theme[cpu_end]="#FEFFF1"
+
+# Mem/Disk free meter
+theme[free_start]="#0F548B"
+theme[free_mid]="#06AFC7"
+theme[free_end]="#FEFFF1"
+
+# Mem/Disk cached meter
+theme[cached_start]="#0F548B"
+theme[cached_mid]="#06AFC7"
+theme[cached_end]="#FEFFF1"
+
+# Mem/Disk available meter
+theme[available_start]="#0F548B"
+theme[available_mid]="#06AFC7"
+theme[available_end]="#FEFFF1"
+
+# Mem/Disk used meter
+theme[used_start]="#0F548B"
+theme[used_mid]="#06AFC7"
+theme[used_end]="#FEFFF1"
+
+# Download graph colors
+theme[download_start]="#0F548B"
+theme[download_mid]="#06AFC7"
+theme[download_end]="#FEFFF1"
+
+# Upload graph colors
+theme[upload_start]="#0F548B"
+theme[upload_mid]="#06AFC7"
+theme[upload_end]="#FEFFF1"

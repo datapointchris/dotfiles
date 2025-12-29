@@ -16,40 +16,33 @@ These themes have configs for most apps (ghostty, kitty, tmux, btop, hyprland, w
 | nord | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | everforest-dark-hard | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### Partial Support (ghostty + tmux only)
+### Partial Support (ghostty + tmux + btop)
 
-These themes have base16 support but need additional app configs created:
-
-| Theme | ghostty | kitty | tmux | btop | hyprland | waybar |
-|-------|---------|-------|------|------|----------|--------|
-| rose-pine-moon | ✓ | - | ✓ | - | - | - |
-| gruvbox-dark-medium | ✓ | - | ✓ | - | - | - |
-| github-dark | ✓ | - | ✓ | - | - | - |
-| selenized-dark | ✓ | - | ✓ | - | - | - |
-| tomorrow-night-bright | ✓ | - | ✓ | - | - | - |
-| spacegray-eighties | ✓ | - | ✓ | - | - | - |
-| oceanicnext | ✓ | - | ✓ | - | - | - |
-
-### Ghostty + Tmux (generated)
-
-These favorites have Ghostty themes with auto-generated tmux configs (via `lib/generate-tmux.sh`):
+These themes have configs generated from Ghostty colors (via `lib/generate-tmux.sh` and `lib/generate-btop.sh`):
 
 | Theme | ghostty | kitty | tmux | btop | hyprland | waybar |
 |-------|---------|-------|------|------|----------|--------|
-| black-metal-mayhem | ✓ | - | ✓ | - | - | - |
-| broadcast | ✓ | - | ✓ | - | - | - |
-| github-dark-dimmed | ✓ | - | ✓ | - | - | - |
-| material-design-colors | ✓ | - | ✓ | - | - | - |
-| nightfox | ✓ | - | ✓ | - | - | - |
-| pandora | ✓ | - | ✓ | - | - | - |
-| popping-and-locking | ✓ | - | ✓ | - | - | - |
-| raycast-dark | ✓ | - | ✓ | - | - | - |
-| retro-legends | ✓ | - | ✓ | - | - | - |
-| shades-of-purple | ✓ | - | ✓ | - | - | - |
-| smyck | ✓ | - | ✓ | - | - | - |
-| spacedust | ✓ | - | ✓ | - | - | - |
-| srcery | ✓ | - | ✓ | - | - | - |
-| treehouse | ✓ | - | ✓ | - | - | - |
+| rose-pine-moon | ✓ | - | ✓ | ✓ | - | - |
+| gruvbox-dark-medium | ✓ | - | ✓ | ✓ | - | - |
+| github-dark | ✓ | - | ✓ | ✓ | - | - |
+| github-dark-dimmed | ✓ | - | ✓ | ✓ | - | - |
+| selenized-dark | ✓ | - | ✓ | ✓ | - | - |
+| tomorrow-night-bright | ✓ | - | ✓ | ✓ | - | - |
+| spacegray-eighties | ✓ | - | ✓ | ✓ | - | - |
+| oceanicnext | ✓ | - | ✓ | ✓ | - | - |
+| black-metal-mayhem | ✓ | - | ✓ | ✓ | - | - |
+| broadcast | ✓ | - | ✓ | ✓ | - | - |
+| material-design-colors | ✓ | - | ✓ | ✓ | - | - |
+| nightfox | ✓ | - | ✓ | ✓ | - | - |
+| pandora | ✓ | - | ✓ | ✓ | - | - |
+| popping-and-locking | ✓ | - | ✓ | ✓ | - | - |
+| raycast-dark | ✓ | - | ✓ | ✓ | - | - |
+| retro-legends | ✓ | - | ✓ | ✓ | - | - |
+| shades-of-purple | ✓ | - | ✓ | ✓ | - | - |
+| smyck | ✓ | - | ✓ | ✓ | - | - |
+| spacedust | ✓ | - | ✓ | ✓ | - | - |
+| srcery | ✓ | - | ✓ | ✓ | - | - |
+| treehouse | ✓ | - | ✓ | ✓ | - | - |
 
 ### Neovim-Only (no terminal support)
 
