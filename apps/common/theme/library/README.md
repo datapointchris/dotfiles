@@ -30,26 +30,26 @@ These themes have base16 support but need additional app configs created:
 | spacegray-eighties | ✓ | - | ✓ | - | - | - |
 | oceanicnext | ✓ | - | ✓ | - | - | - |
 
-### Ghostty-Only
+### Ghostty + Tmux (generated)
 
-These favorites have Ghostty themes but no Base16 equivalent. They work for terminal theming but need custom tmux/btop configs for full multi-app support:
+These favorites have Ghostty themes with auto-generated tmux configs (via `lib/generate-tmux.sh`):
 
 | Theme | ghostty | kitty | tmux | btop | hyprland | waybar |
 |-------|---------|-------|------|------|----------|--------|
-| black-metal-mayhem | ✓ | - | - | - | - | - |
-| broadcast | ✓ | - | - | - | - | - |
-| github-dark-dimmed | ✓ | - | - | - | - | - |
-| material-design-colors | ✓ | - | - | - | - | - |
-| nightfox | ✓ | - | - | - | - | - |
-| pandora | ✓ | - | - | - | - | - |
-| popping-and-locking | ✓ | - | - | - | - | - |
-| raycast-dark | ✓ | - | - | - | - | - |
-| retro-legends | ✓ | - | - | - | - | - |
-| shades-of-purple | ✓ | - | - | - | - | - |
-| smyck | ✓ | - | - | - | - | - |
-| spacedust | ✓ | - | - | - | - | - |
-| srcery | ✓ | - | - | - | - | - |
-| treehouse | ✓ | - | - | - | - | - |
+| black-metal-mayhem | ✓ | - | ✓ | - | - | - |
+| broadcast | ✓ | - | ✓ | - | - | - |
+| github-dark-dimmed | ✓ | - | ✓ | - | - | - |
+| material-design-colors | ✓ | - | ✓ | - | - | - |
+| nightfox | ✓ | - | ✓ | - | - | - |
+| pandora | ✓ | - | ✓ | - | - | - |
+| popping-and-locking | ✓ | - | ✓ | - | - | - |
+| raycast-dark | ✓ | - | ✓ | - | - | - |
+| retro-legends | ✓ | - | ✓ | - | - | - |
+| shades-of-purple | ✓ | - | ✓ | - | - | - |
+| smyck | ✓ | - | ✓ | - | - | - |
+| spacedust | ✓ | - | ✓ | - | - | - |
+| srcery | ✓ | - | ✓ | - | - | - |
+| treehouse | ✓ | - | ✓ | - | - | - |
 
 ### Neovim-Only (no terminal support)
 
@@ -85,9 +85,10 @@ To add a theme with full support:
 
 1. Create directory: `library/theme-name/`
 2. Add `ghostty.conf` with theme name reference
-3. Copy tmux.conf from base16-tmux if available
-4. Create btop.theme, kitty.conf, etc. as needed
-5. For Arch: add hyprland.conf, waybar.css
+3. Generate tmux.conf: `./lib/generate-tmux.sh "Theme Name" library/theme-name/tmux.conf`
+4. Or copy tmux.conf from base16-tmux if available
+5. Create btop.theme, kitty.conf, etc. as needed
+6. For Arch: add hyprland.conf, waybar.css
 
 ## Sources
 
