@@ -429,7 +429,7 @@ system_packages:
     description: GPU-accelerated terminal (backup for Ghostty)
 
   - name: ghostty
-    aur: ghostty
+    pacman: ghostty
     description: GPU-accelerated terminal emulator
 
 # ================================================================
