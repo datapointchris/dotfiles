@@ -30,23 +30,26 @@ These themes have base16 support but need additional app configs created:
 | spacegray-eighties | ✓ | - | ✓ | - | - | - |
 | oceanicnext | ✓ | - | ✓ | - | - | - |
 
-### Ghostty-Only (need custom configs)
+### Ghostty-Only
 
-These favorites have Ghostty themes but no Base16 equivalent. They need custom tmux/btop/etc configs created from scratch:
+These favorites have Ghostty themes but no Base16 equivalent. They work for terminal theming but need custom tmux/btop configs for full multi-app support:
 
-- Black Metal (Mayhem)
-- Broadcast
-- Material Design Colors
-- Pandora
-- Popping and Locking
-- Raycast Dark
-- Retro Legends
-- Shades of Purple
-- Smyck
-- Spacedust
-- Srcery
-- Treehouse
-- Nightfox
+| Theme | ghostty | kitty | tmux | btop | hyprland | waybar |
+|-------|---------|-------|------|------|----------|--------|
+| black-metal-mayhem | ✓ | - | - | - | - | - |
+| broadcast | ✓ | - | - | - | - | - |
+| github-dark-dimmed | ✓ | - | - | - | - | - |
+| material-design-colors | ✓ | - | - | - | - | - |
+| nightfox | ✓ | - | - | - | - | - |
+| pandora | ✓ | - | - | - | - | - |
+| popping-and-locking | ✓ | - | - | - | - | - |
+| raycast-dark | ✓ | - | - | - | - | - |
+| retro-legends | ✓ | - | - | - | - | - |
+| shades-of-purple | ✓ | - | - | - | - | - |
+| smyck | ✓ | - | - | - | - | - |
+| spacedust | ✓ | - | - | - | - | - |
+| srcery | ✓ | - | - | - | - | - |
+| treehouse | ✓ | - | - | - | - | - |
 
 ### Neovim-Only (no terminal support)
 
