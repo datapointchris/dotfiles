@@ -28,6 +28,7 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=1000']
         stages: [pre-commit]
+        exclude: "apps/common/theme/library/.*/backgrounds/"
       - id: check-merge-conflict
         stages: [pre-commit]
       - id: mixed-line-ending

@@ -24,7 +24,7 @@ themes:
     tags: [dark, warm, calm]
 
   - name: Gruvbox Dark Hard
-    ghostty: "GruvboxDarkHard"
+    ghostty: "Gruvbox Dark Hard"
     kitty: "gruvbox-dark-hard"
     neovim: "gruvbox"
     base16: "base16-gruvbox-dark-hard"
@@ -32,7 +32,7 @@ themes:
     tags: [dark, retro, high-contrast, favorite]
 
   - name: Gruvbox Dark Medium
-    ghostty: "GruvboxDark"
+    ghostty: "Gruvbox Dark"
     kitty: "gruvbox-dark"
     neovim: "gruvbox"
     base16: "base16-gruvbox-dark-medium"
@@ -40,7 +40,7 @@ themes:
     tags: [dark, retro]
 
   - name: Kanagawa
-    ghostty: "kanagawa"
+    ghostty: "Kanagawa Wave"
     kitty: "Kanagawa"
     neovim: "kanagawa"
     base16: "base16-kanagawa"
@@ -48,7 +48,7 @@ themes:
     tags: [dark, warm, japanese, favorite]
 
   - name: Nord
-    ghostty: "nord"
+    ghostty: "Nord"
     kitty: "Nord"
     neovim: "nordic"
     base16: "base16-nord"
@@ -104,7 +104,7 @@ themes:
     tags: [dark, retro, muted]
 
   - name: OceanicNext
-    ghostty: "OceanicNext"
+    ghostty: "Oceanic Next"
     kitty: "OceanicNext"
     neovim: "OceanicNext"
     base16: "base16-oceanicnext"
@@ -228,7 +228,7 @@ themes:
     tags: [dark, nightfox-family]
 
   - name: Nightfox
-    ghostty: "nightfox"
+    ghostty: "Nightfox"
     kitty: "Nightfox"
     neovim: "nightfox"
     base16: null

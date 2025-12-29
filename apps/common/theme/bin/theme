@@ -1,0 +1,533 @@
+#!/usr/bin/env bash
+# Theme management - unified cross-platform theming
+# Applies themes to terminal, tmux, fzf, shell, and more
+
+set -euo pipefail
+
+# Source the library (handle symlinks)
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+if [[ -L "$SCRIPT_PATH" ]]; then
+  SCRIPT_PATH="$(python3 -c "import os; print(os.path.realpath('$SCRIPT_PATH'))")"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+THEME_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source formatting library for colorized help
+if [[ -f "$HOME/.local/shell/formatting.sh" ]]; then
+  source "$HOME/.local/shell/formatting.sh"
+elif [[ -f "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh" ]]; then
+  source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
+fi
+
+source "$THEME_APP_DIR/lib/lib.sh"
+source "$THEME_APP_DIR/lib/storage.sh"
+
+#==============================================================================
+# HELP
+#==============================================================================
+
+usage() {
+  if command -v print_header &>/dev/null; then
+    print_section "Theme Management" "yellow"
+
+    print_section "Commands" "blue"
+    cat <<'EOF'
+  current              Show currently active theme
+  list                 List available themes from favorites
+  apply <theme>        Apply theme across all platform apps
+  random               Apply random favorite theme
+  like [message]       Like current theme with optional reason
+  dislike [message]    Dislike current theme with optional reason
+  note <message>       Add note to current theme (message required)
+  rank                 Show themes ranked by likes/usage
+  log                  View complete history
+  info <theme>         Show theme details and app mappings
+  verify               Check theme system is working
+EOF
+
+    print_section "Examples" "yellow"
+    if command -v print_cyan &>/dev/null; then
+      echo "  $(print_cyan "theme list")                         # See available themes"
+      echo "  $(print_cyan "theme apply \"Rose Pine\"")            # Apply a theme"
+      echo "  $(print_cyan "theme like \"Great for night coding\"") # Like with reason"
+      echo "  $(print_cyan "theme random")                       # Try something new"
+      echo "  $(print_cyan "theme rank")                         # See rankings"
+    else
+      cat <<'EOF'
+  theme list                         # See available themes
+  theme apply "Rose Pine"            # Apply a theme
+  theme like "Great for night coding" # Like with reason
+  theme random                       # Try something new
+  theme rank                         # See rankings
+EOF
+    fi
+
+    print_section "Data Storage" "green"
+    cat <<'EOF'
+  Location: apps/common/theme/data/history-{platform}.jsonl
+
+  Per-platform files eliminate git merge conflicts
+  Automatically tracked in dotfiles repo
+EOF
+
+  else
+    cat <<'EOF'
+Theme Management
+================
+
+Commands
+--------
+  current              Show currently active theme
+  list                 List available themes from favorites
+  apply <theme>        Apply theme across all platform apps
+  random               Apply random favorite theme
+  like [message]       Like current theme with optional reason
+  dislike [message]    Dislike current theme with optional reason
+  note <message>       Add note to current theme (message required)
+  rank                 Show themes ranked by likes/usage
+  log                  View complete history
+  info <theme>         Show theme details and app mappings
+  verify               Check theme system is working
+
+Examples
+--------
+  theme list
+  theme apply "Rose Pine"
+  theme like "Great for night coding"
+  theme random
+  theme rank
+EOF
+  fi
+}
+
+#==============================================================================
+# THEME OPERATIONS
+#==============================================================================
+
+show_current() {
+  local current
+  current=$(get_current_theme)
+
+  if [[ -z "$current" ]]; then
+    echo "No theme currently applied"
+    return
+  fi
+
+  echo ""
+  echo "Current Theme: $current"
+  echo ""
+
+  local stats
+  stats=$(get_theme_stats "$current" 2>/dev/null || echo "{}")
+
+  if [[ -n "$stats" ]] && [[ "$stats" != "{}" ]] && [[ "$stats" != "null" ]]; then
+    local score=$(echo "$stats" | jq -r '.score // 0')
+    local likes=$(echo "$stats" | jq -r '.likes // 0')
+    local dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+    local notes=$(echo "$stats" | jq -r '.notes // 0')
+    local applies=$(echo "$stats" | jq -r '.applies // 0')
+
+    printf "Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "Notes: %d | Times applied: %d\n" "$notes" "$applies"
+  fi
+
+  local base16
+  base16=$(get_theme_mapping "$current" "base16" 2>/dev/null || echo "")
+  local ghostty
+  ghostty=$(get_theme_mapping "$current" "ghostty" 2>/dev/null || echo "")
+
+  echo ""
+  echo "App mappings:"
+  [[ -n "$base16" ]] && echo "  Base16: $base16"
+  [[ -n "$ghostty" ]] && echo "  Ghostty: $ghostty"
+}
+
+show_list() {
+  local platform
+  platform=$(detect_platform)
+
+  if command -v print_blue &>/dev/null; then
+    print_blue "Available Themes ($(count_themes) favorites)"
+  else
+    echo "Available Themes ($(count_themes) favorites)"
+  fi
+  echo ""
+
+  list_themes_with_status
+
+  echo ""
+  echo "Apply with: theme apply <name>"
+}
+
+apply_theme() {
+  local theme_input="$1"
+
+  if [[ -z "$theme_input" ]]; then
+    echo "Error: Theme name required"
+    echo "Usage: theme apply <theme-name>"
+    echo ""
+    echo "Available themes:"
+    list_themes | head -10
+    exit 1
+  fi
+
+  local canonical
+  canonical=$(theme_name_to_canonical "$theme_input")
+
+  # Check if theme is in library
+  local lib_path
+  lib_path=$(get_library_path "$canonical")
+
+  echo "Applying theme: $canonical"
+  if [[ -z "$lib_path" ]]; then
+    echo "  (not in library - limited app support)"
+  fi
+  echo ""
+
+  # Apply to all apps
+  local result
+  result=$(apply_theme_to_apps "$canonical")
+
+  local applied
+  applied=$(echo "$result" | grep "^APPLIED:" | cut -d: -f2)
+  local skipped
+  skipped=$(echo "$result" | grep "^SKIPPED:" | cut -d: -f2)
+
+  # Reload tmux if it was applied
+  if [[ "$applied" == *"tmux"* ]]; then
+    if reload_tmux; then
+      echo "  Reloaded tmux"
+    fi
+  fi
+
+  # Log the action
+  log_action "apply" "$canonical"
+
+  echo ""
+  if [[ -n "$applied" ]] && [[ "$applied" != "none" ]]; then
+    echo "Applied to: $applied"
+  fi
+  if [[ -n "$skipped" ]] && [[ "$skipped" != "none" ]]; then
+    echo "Skipped (no config): $skipped"
+  fi
+  echo ""
+  echo "Theme applied! Restart terminal to see all changes."
+}
+
+apply_random() {
+  local themes
+  mapfile -t themes < <(list_themes)
+
+  if [[ ${#themes[@]} -eq 0 ]]; then
+    echo "Error: No themes found in favorites"
+    exit 1
+  fi
+
+  local random_theme="${themes[$RANDOM % ${#themes[@]}]}"
+  echo "Randomly selected: $random_theme"
+  echo ""
+  apply_theme "$random_theme"
+}
+
+mark_liked() {
+  local message="$*"
+  local theme
+  theme=$(get_current_theme)
+
+  if [[ -z "$theme" ]]; then
+    echo "Error: No theme currently applied"
+    exit 1
+  fi
+
+  log_action "like" "$theme" "$message"
+  echo "Liked: $theme"
+  [[ -n "$message" ]] && echo "  Reason: $message"
+}
+
+mark_disliked() {
+  local message="$*"
+  local theme
+  theme=$(get_current_theme)
+
+  if [[ -z "$theme" ]]; then
+    echo "Error: No theme currently applied"
+    exit 1
+  fi
+
+  log_action "dislike" "$theme" "$message"
+  echo "Disliked: $theme"
+  [[ -n "$message" ]] && echo "  Reason: $message"
+}
+
+add_note() {
+  local message="$*"
+  local theme
+  theme=$(get_current_theme)
+
+  if [[ -z "$theme" ]]; then
+    echo "Error: No theme currently applied"
+    exit 1
+  fi
+
+  if [[ -z "$message" ]]; then
+    echo "Error: Note message required"
+    echo "Usage: theme note <message>"
+    exit 1
+  fi
+
+  log_action "note" "$theme" "$message"
+  echo "Added note to: $theme"
+  echo "  Note: $message"
+}
+
+show_rankings() {
+  local rankings
+  rankings=$(get_rankings)
+
+  if [[ -z "$rankings" ]] || [[ "$rankings" == "null" ]]; then
+    echo "No theme data yet. Start using themes!"
+    return
+  fi
+
+  echo ""
+  echo "Theme Rankings (by score and usage)"
+  echo ""
+
+  local rank=0
+  while IFS= read -r line; do
+    rank=$((rank + 1))
+    local theme=$(echo "$line" | jq -r '.theme')
+    local score=$(echo "$line" | jq -r '.score')
+    local likes=$(echo "$line" | jq -r '.likes')
+    local dislikes=$(echo "$line" | jq -r '.dislikes')
+    local last_used=$(echo "$line" | jq -r '.last_used')
+    local platforms=$(echo "$line" | jq -r '.platforms')
+    local usage_seconds=$(echo "$line" | jq -r '.usage_seconds // 0')
+
+    if [[ "$last_used" == "never" ]]; then
+      last_used="never used"
+    else
+      last_used=$(date -d "$last_used" "+%b %d, %Y" 2>/dev/null || echo "$last_used")
+    fi
+
+    local usage_time="not used"
+    if [[ "$usage_seconds" -gt 0 ]]; then
+      usage_time=$(format_duration "$usage_seconds")
+    fi
+
+    printf "%2d. %s\n" "$rank" "$theme"
+    printf "    Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "    Usage time: %s\n" "$usage_time"
+    printf "    Last used: %s\n" "$last_used"
+    [[ -n "$platforms" ]] && printf "    Platforms: %s\n" "$platforms"
+    echo ""
+  done <<< "$rankings"
+}
+
+show_log() {
+  local history
+  history=$(get_history_raw)
+
+  if [[ -z "$history" ]]; then
+    echo "No history yet. Start using themes!"
+    return
+  fi
+
+  echo ""
+  echo "Theme History Log"
+  echo ""
+
+  echo "Log files:"
+  for file in "$THEME_DATA_DIR"/history-*.jsonl; do
+    if [[ -f "$file" ]]; then
+      local platform=$(basename "$file" .jsonl | sed 's/history-//')
+      local count=$(wc -l < "$file" | xargs)
+      printf "  %s: %s (%d entries)\n" "$platform" "$file" "$count"
+    fi
+  done
+  echo ""
+
+  if command -v bat &>/dev/null; then
+    echo "$history" | jq -r '
+      "\(.ts) | \(.platform) | \(.action) | \(.theme)" +
+      (if .message then " | \(.message)" else "" end)
+    ' | bat --plain --language=log --theme=base16
+  else
+    echo "$history" | jq -r '
+      "\(.ts) | \(.platform) | \(.action) | \(.theme)" +
+      (if .message then " | \(.message)" else "" end)
+    '
+  fi
+}
+
+show_info() {
+  local theme_input="$1"
+
+  if [[ -z "$theme_input" ]]; then
+    echo "Error: Theme name required"
+    echo "Usage: theme info <theme-name>"
+    exit 1
+  fi
+
+  local canonical
+  canonical=$(theme_name_to_canonical "$theme_input")
+
+  local theme_data
+  theme_data=$(get_theme_by_name "$canonical")
+
+  if [[ -z "$theme_data" ]] || [[ "$theme_data" == "null" ]]; then
+    echo "Theme not found: $theme_input"
+    echo ""
+    echo "Available themes:"
+    list_themes | head -10
+    exit 1
+  fi
+
+  echo ""
+  echo "Theme: $canonical"
+  echo ""
+
+  echo "App Mappings:"
+  local ghostty=$(echo "$theme_data" | yq -r '.ghostty // "not available"')
+  local kitty=$(echo "$theme_data" | yq -r '.kitty // "not available"')
+  local neovim=$(echo "$theme_data" | yq -r '.neovim // "not available"')
+  local base16=$(echo "$theme_data" | yq -r '.base16 // "not available"')
+  local windows=$(echo "$theme_data" | yq -r '.windows_terminal // "not available"')
+
+  echo "  Ghostty: $ghostty"
+  echo "  Kitty: $kitty"
+  echo "  Neovim: $neovim"
+  echo "  Base16: $base16"
+  echo "  Windows Terminal: $windows"
+
+  local tags=$(echo "$theme_data" | yq -r '.tags | join(", ") // "none"')
+  echo ""
+  echo "Tags: $tags"
+
+  local stats
+  stats=$(get_theme_stats "$canonical" 2>/dev/null || echo "{}")
+
+  if [[ -n "$stats" ]] && [[ "$stats" != "{}" ]] && [[ "$stats" != "null" ]]; then
+    local score=$(echo "$stats" | jq -r '.score // 0')
+    local likes=$(echo "$stats" | jq -r '.likes // 0')
+    local dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+    local applies=$(echo "$stats" | jq -r '.applies // 0')
+
+    echo ""
+    echo "Your Stats:"
+    printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "  Times applied: %d\n" "$applies"
+  fi
+}
+
+verify_system() {
+  echo "Verifying theme system..."
+  echo ""
+
+  local errors=0
+
+  # Check favorites file
+  if [[ -f "$FAVORITES_FILE" ]]; then
+    local count
+    count=$(count_themes)
+    echo "  Favorites file: $count themes"
+  else
+    echo "  ERROR: Favorites file not found: $FAVORITES_FILE"
+    errors=$((errors + 1))
+  fi
+
+  # Check yq
+  if command -v yq &> /dev/null; then
+    echo "  yq: installed"
+  else
+    echo "  ERROR: yq not installed"
+    errors=$((errors + 1))
+  fi
+
+  # Check theme library
+  if [[ -d "$THEME_LIBRARY" ]]; then
+    local lib_count
+    lib_count=$(find "$THEME_LIBRARY" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | xargs)
+    echo "  Theme library: $lib_count themes with configs"
+    echo "    $(find "$THEME_LIBRARY" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null | xargs -0 -n1 basename | tr '\n' ' ')"
+  else
+    echo "  WARNING: Theme library not found"
+  fi
+
+  # Check current theme
+  local current
+  current=$(get_current_theme 2>/dev/null || echo "")
+  if [[ -n "$current" ]]; then
+    echo "  Current theme: $current"
+    local lib_path
+    lib_path=$(get_library_path "$current")
+    if [[ -n "$lib_path" ]]; then
+      echo "    Library configs: $(find "$lib_path" -mindepth 1 -maxdepth 1 -printf "%f " | tr '\n' ' ')"
+    fi
+  else
+    echo "  Current theme: none applied"
+  fi
+
+  # Platform
+  local platform
+  platform=$(detect_platform)
+  echo "  Platform: $platform"
+
+  echo ""
+  if [[ $errors -eq 0 ]]; then
+    echo "System ready!"
+  else
+    echo "Found $errors error(s). Run: task symlinks:link"
+  fi
+}
+
+#==============================================================================
+# MAIN
+#==============================================================================
+
+main() {
+  case "${1:-}" in
+    current)
+      show_current
+      ;;
+    list|ls)
+      show_list
+      ;;
+    apply)
+      apply_theme "${2:-}"
+      ;;
+    random|rand)
+      apply_random
+      ;;
+    like)
+      mark_liked "${@:2}"
+      ;;
+    dislike)
+      mark_disliked "${@:2}"
+      ;;
+    note)
+      add_note "${@:2}"
+      ;;
+    rank|ranks|ranking)
+      show_rankings
+      ;;
+    log|history)
+      show_log
+      ;;
+    info)
+      show_info "${2:-}"
+      ;;
+    verify)
+      verify_system
+      ;;
+    help|--help|-h)
+      usage
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
