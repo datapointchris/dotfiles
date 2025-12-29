@@ -46,6 +46,13 @@ fi
 
 # Install AUR packages
 log_info "Installing AUR packages from packages.yml..."
+
+# Ensure gnupg directory exists (required for AUR package signature verification)
+# Match XDG location set in .zshrc: GNUPGHOME="$XDG_DATA_HOME/gnupg"
+export GNUPGHOME="${XDG_DATA_HOME:-$HOME/.local/share}/gnupg"
+mkdir -p "$GNUPGHOME"
+chmod 700 "$GNUPGHOME"
+
 AUR_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=aur | tr '\n' ' ')
 if [[ -n "$AUR_PACKAGES" ]]; then
   # shellcheck disable=SC2086
