@@ -63,14 +63,19 @@ cmd-h = []     # disable hide application
 cmd-alt-h = [] # disable hide others
 cmd-m = []     # disable minimize window
 
+# Terminal
 alt-enter = 'exec-and-forget open -na Ghostty'
+
+# Menu
 alt-shift-m = 'exec-and-forget ghostty -e menu'
 
+# Focus navigation (vim-style)
 alt-h = 'focus left'
 alt-j = 'focus down'
 alt-k = 'focus up'
 alt-l = 'focus right'
 
+# Move windows (vim-style)
 alt-shift-h = 'move left'
 alt-shift-j = 'move down'
 alt-shift-k = 'move up'
@@ -84,6 +89,7 @@ alt-shift-l = 'move right'
 # alt-shift-comma = 'move-node-to-monitor left'
 # alt-shift-period = 'move-node-to-monitor right'
 
+# Workspace back-and-forth
 alt-tab = 'workspace-back-and-forth'
 
 # Toggle floating/tiling for current window
@@ -92,44 +98,100 @@ alt-f = 'layout floating tiling'
 # Toggle fullscreen for current window
 alt-shift-f = 'fullscreen'
 
+# Close window (commented out - macOS has cmd+q)
+# alt-q = 'close'
+
+# Reload config
+alt-shift-r = 'reload-config'
+
+# Layout toggles (moved from cmd mode)
+alt-quote = 'layout tiles horizontal vertical'
+alt-backslash = 'layout accordion horizontal vertical'
+
+# ============================================================================
+# DIRECT WORKSPACE ACCESS (new - replaces modal cmd mode for workspaces)
+# ============================================================================
+# Workspaces: A, B, D, E, M, S, X, Z
+alt-a = 'workspace A'
+alt-b = 'workspace B'
+alt-d = 'workspace D'
+alt-e = 'workspace E'
+alt-m = 'workspace M'
+alt-s = 'workspace S'
+alt-x = 'workspace X'
+alt-z = 'workspace Z'
+
+# Move window to workspace
+alt-shift-a = 'move-node-to-workspace A'
+alt-shift-b = 'move-node-to-workspace B'
+alt-shift-d = 'move-node-to-workspace D'
+alt-shift-e = 'move-node-to-workspace E'
+# alt-shift-m is already used for menu, use ctrl-alt-m instead
+ctrl-alt-m = 'move-node-to-workspace M'
+alt-shift-s = 'move-node-to-workspace S'
+alt-shift-x = 'move-node-to-workspace X'
+alt-shift-z = 'move-node-to-workspace Z'
+
+# Resize mode (keeps hjkl available for resize directions)
+alt-r = 'mode resize'
+
+# Modal access for cmd mode (join windows, layout toggles) and service mode
 ctrl-alt-shift-semicolon = 'mode cmd'
 alt-shift-semicolon = 'mode service'
 
+########## ------------------------- RESIZE MODE ------------------------- ##########
+# Enter with alt-r, exit with esc or enter
+[mode.resize.binding]
+esc = 'mode main'
+enter = 'mode main'
+h = 'resize width -50'
+j = 'resize height +50'
+k = 'resize height -50'
+l = 'resize width +50'
+
 ########## ------------------------- CMD MODE ------------------------- ###########
+# LEGACY: This mode is now mostly unused since workspaces moved to main mode
+# Keeping for join-with and layout toggle functionality
 [mode.cmd.binding]
 esc = ['mode main']
 
+# Resize (legacy location, also available in resize mode)
 ctrl-alt-j = 'resize smart -50'
 ctrl-alt-k = 'resize smart +50'
 ctrl-alt-h = 'resize smart-opposite +50'
 ctrl-alt-l = 'resize smart-opposite -50'
 
-# Workspace navigation (exits to main mode after navigation)
-a = ['workspace A', 'mode main'] # name: Project
-b = ['workspace B', 'mode main'] # name: Project
-c = ['workspace C', 'mode main'] # name: Project
-d = ['workspace D', 'mode main'] # name: Dotfiles
-e = ['workspace E', 'mode main'] # name: Email
-m = ['workspace M', 'mode main'] # name: Music
-q = ['workspace Q', 'mode main'] # name: Quick Temporary
-s = ['workspace S', 'mode main'] # name: Social
-x = ['workspace X', 'mode main'] # name: Misc 1
-y = ['workspace Y', 'mode main'] # name: Misc 2
-z = ['workspace Z', 'mode main'] # name: Misc 3
+# ============================================================================
+# LEGACY: Workspace navigation (commented out - now in main mode with alt+letter)
+# ============================================================================
+# a = ['workspace A', 'mode main'] # name: Project
+# b = ['workspace B', 'mode main'] # name: Project
+# c = ['workspace C', 'mode main'] # name: Project
+# d = ['workspace D', 'mode main'] # name: Dotfiles
+# e = ['workspace E', 'mode main'] # name: Email
+# m = ['workspace M', 'mode main'] # name: Music
+# q = ['workspace Q', 'mode main'] # name: Quick Temporary
+# s = ['workspace S', 'mode main'] # name: Social
+# x = ['workspace X', 'mode main'] # name: Misc 1
+# y = ['workspace Y', 'mode main'] # name: Misc 2
+# z = ['workspace Z', 'mode main'] # name: Misc 3
 
-# Move node to workspace (exits to main mode after moving)
-shift-a = ['move-node-to-workspace A', 'mode main']
-shift-b = ['move-node-to-workspace B', 'mode main']
-shift-c = ['move-node-to-workspace C', 'mode main']
-shift-d = ['move-node-to-workspace D', 'mode main']
-shift-e = ['move-node-to-workspace E', 'mode main']
-shift-m = ['move-node-to-workspace M', 'mode main']
-shift-q = ['move-node-to-workspace Q', 'mode main']
-shift-s = ['move-node-to-workspace S', 'mode main']
-shift-x = ['move-node-to-workspace X', 'mode main']
-shift-y = ['move-node-to-workspace Y', 'mode main']
-shift-z = ['move-node-to-workspace Z', 'mode main']
+# ============================================================================
+# LEGACY: Move node to workspace (commented out - now in main mode with alt+shift+letter)
+# ============================================================================
+# shift-a = ['move-node-to-workspace A', 'mode main']
+# shift-b = ['move-node-to-workspace B', 'mode main']
+# shift-c = ['move-node-to-workspace C', 'mode main']
+# shift-d = ['move-node-to-workspace D', 'mode main']
+# shift-e = ['move-node-to-workspace E', 'mode main']
+# shift-m = ['move-node-to-workspace M', 'mode main']
+# shift-q = ['move-node-to-workspace Q', 'mode main']
+# shift-s = ['move-node-to-workspace S', 'mode main']
+# shift-x = ['move-node-to-workspace X', 'mode main']
+# shift-y = ['move-node-to-workspace Y', 'mode main']
+# shift-z = ['move-node-to-workspace Z', 'mode main']
 
+# Join windows (still useful, access via legacy modal if needed)
 shift-h = ['join-with left', 'mode main']
 shift-j = ['join-with down', 'mode main']
 shift-k = ['join-with up', 'mode main']
@@ -138,8 +200,9 @@ shift-l = ['join-with right', 'mode main']
 # alt-shift-h = ['move-workspace-to-monitor left', 'mode main']
 # alt-shift-l = ['move-workspace-to-monitor right', 'mode main']
 
-quote = 'layout tiles horizontal vertical'
-backslash = 'layout accordion horizontal vertical'
+# Layout toggles (commented out - moved to main mode as alt-quote and alt-backslash)
+# quote = 'layout tiles horizontal vertical'
+# backslash = 'layout accordion horizontal vertical'
 
 
 ######## ------------------------- SERVICE MODE ------------------------- #########
@@ -147,7 +210,7 @@ backslash = 'layout accordion horizontal vertical'
 esc = ['reload-config', 'mode main']
 r = ['flatten-workspace-tree', 'mode main']                # reset layout
 f = ['layout floating tiling', 'mode main']                # Toggle floating and tiling layout
-backspace = ['close-all-windows-but-current', 'mode main']
+# backspace = ['close-all-windows-but-current', 'mode main'] # commented out per user (not used)
 
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
 #s = ['layout sticky tiling', 'mode main']
