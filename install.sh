@@ -139,13 +139,20 @@ install_common_phases() {
 }
 
 configure_zsh_default_shell() {
+  # Arch uses /etc/zsh/zshenv, macOS/Ubuntu use /etc/zshenv
+  local zshenv_path="/etc/zshenv"
+  if [[ -d /etc/zsh ]] || command -v pacman &>/dev/null; then
+    zshenv_path="/etc/zsh/zshenv"
+    sudo mkdir -p /etc/zsh
+  fi
+
   # Set ZDOTDIR in system-wide zshenv if not already set
-  if ! grep -q "ZDOTDIR" /etc/zshenv 2>/dev/null; then
+  if ! grep -q "ZDOTDIR" "$zshenv_path" 2>/dev/null; then
     # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
-    echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zshenv >/dev/null
-    log_success "ZDOTDIR configured in /etc/zshenv"
+    echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a "$zshenv_path" >/dev/null
+    log_success "ZDOTDIR configured in $zshenv_path"
   else
-    log_success "ZSHDOTDIR already configured"
+    log_success "ZDOTDIR already configured"
   fi
 
   # Change default shell to zsh
