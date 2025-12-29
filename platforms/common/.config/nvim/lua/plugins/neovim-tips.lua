@@ -1,6 +1,7 @@
 return {
   'saxon1964/neovim-tips',
   version = '*', -- Only update on tagged releases
+  enabled = not vim.g.vscode,
   dependencies = {
     'MunifTanjim/nui.nvim',
     -- Use existing render-markdown.nvim for markdown rendering
