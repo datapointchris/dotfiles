@@ -349,7 +349,7 @@ check_command "shfmt"
 # Cargo Tools
 # ================================================================
 print_section "Cargo Tools (Universal)"
-# Already checked: bat, fd, eza, zoxide, delta, tinty
+# Already checked: bat, fd, eza, zoxide, delta
 check_command "cargo-install-update" "--version"
 
 # ================================================================

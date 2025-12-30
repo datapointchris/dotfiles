@@ -925,7 +925,7 @@ macos_casks:
 #   - GitHub binaries: For tools needing latest versions (neovim, lazygit, etc)
 #
 # Tools NOT in system_packages (installed via other methods):
-#   - bat, eza, fd-find, zoxide, git-delta, tinty: cargo-binstall
+#   - bat, eza, fd-find, zoxide, git-delta: cargo-binstall
 #   - neovim, lazygit, yazi, fzf: GitHub releases
 #   - go: GitHub releases (not apt/pacman golang-go)
 #   - nvm, npm packages: nvm + npm (not system Node.js)
