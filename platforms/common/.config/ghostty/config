@@ -1,5 +1,8 @@
-# Theme colors (imported from themes/current.conf)
+# Theme colors (imported)
 config-file = themes/current.conf
+
+# Font settings (imported - use 'font apply' to change)
+config-file = fonts/current.conf
 
 macos-titlebar-style = hidden
 
@@ -7,14 +10,11 @@ window-padding-x = 16
 window-padding-y = 16
 window-padding-balance = true
 
-# Font configuration to match WezTerm
-font-family = "SauceCodePro Nerd Font"
+# Font rendering preferences
 font-style = Regular
-font-size = 17
 adjust-cell-height = 3
 adjust-cell-width = 0
-
-# Font rendering - keep thin and crisp like WezTerm
 font-thicken = false
-font-feature = -liga  # Disable ligatures for sharper rendering
+font-feature = -liga
+
 keybind = shift+enter=text:\x1b\r
