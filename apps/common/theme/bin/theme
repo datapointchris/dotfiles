@@ -32,6 +32,7 @@ usage() {
 
     print_section "Commands" "blue"
     cat <<'EOF'
+  change               Interactive theme picker with color preview
   current              Show currently active theme
   list                 List available themes from favorites
   apply <theme>        Apply theme across all platform apps
@@ -44,10 +45,13 @@ usage() {
   log                  View complete history
   info <theme>         Show theme details and app mappings
   verify               Check theme system is working
+  generate-previews    Pre-generate all preview images
+  clear-cache          Clear preview cache
 EOF
 
     print_section "Examples" "yellow"
     if command -v print_cyan &>/dev/null; then
+      echo "  $(print_cyan "theme change")                       # Interactive picker with preview"
       echo "  $(print_cyan "theme list")                         # See available themes"
       echo "  $(print_cyan "theme apply \"Rose Pine\"")            # Apply a theme"
       echo "  $(print_cyan "theme like \"Great for night coding\"") # Like with reason"
@@ -55,6 +59,7 @@ EOF
       echo "  $(print_cyan "theme rank")                         # See rankings"
     else
       cat <<'EOF'
+  theme change                       # Interactive picker with preview
   theme list                         # See available themes
   theme apply "Rose Pine"            # Apply a theme
   theme like "Great for night coding" # Like with reason
@@ -78,6 +83,7 @@ Theme Management
 
 Commands
 --------
+  change               Interactive theme picker with color preview
   current              Show currently active theme
   list                 List available themes from favorites
   apply <theme>        Apply theme across all platform apps
@@ -90,9 +96,12 @@ Commands
   log                  View complete history
   info <theme>         Show theme details and app mappings
   verify               Check theme system is working
+  generate-previews    Pre-generate all preview images
+  clear-cache          Clear preview cache
 
 Examples
 --------
+  theme change
   theme list
   theme apply "Rose Pine"
   theme like "Great for night coding"
@@ -195,12 +204,8 @@ apply_theme() {
   local skipped
   skipped=$(echo "$result" | grep "^SKIPPED:" | cut -d: -f2)
 
-  # Reload tmux if it was applied
-  if [[ "$applied" == *"tmux"* ]]; then
-    if reload_tmux; then
-      echo "  Reloaded tmux"
-    fi
-  fi
+  # Reload applicable apps
+  reload_apps "$applied"
 
   # Log the action
   log_action "apply" "$canonical"
@@ -213,7 +218,7 @@ apply_theme() {
     echo "Skipped (no config): $skipped"
   fi
   echo ""
-  echo "Theme applied! Restart terminal to see all changes."
+  echo "Theme applied! Most apps reloaded. Restart terminal for full effect."
 }
 
 apply_random() {
@@ -229,6 +234,80 @@ apply_random() {
   echo "Randomly selected: $random_theme"
   echo ""
   apply_theme "$random_theme"
+}
+
+change_theme() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  if ! command -v magick &>/dev/null; then
+    echo "Error: ImageMagick not found. Install with: brew install imagemagick"
+    exit 1
+  fi
+
+  if ! command -v chafa &>/dev/null && ! command -v viu &>/dev/null; then
+    echo "Note: Install 'chafa' or 'viu' for image preview support"
+    echo "  brew install chafa"
+    echo ""
+    echo "Continuing with text-based preview..."
+    sleep 2
+  fi
+
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  local preview_script="/tmp/theme-fzf-preview-$$.sh"
+  local preview_log="/tmp/theme-preview-debug.log"
+  cat > "$preview_script" <<PREVIEW_EOF
+#!/bin/bash
+exec 2>>"$preview_log"
+echo "=== Preview for: \$1 ===" >>"$preview_log"
+
+if ! source "$THEME_APP_DIR/lib/lib.sh" 2>>"$preview_log"; then
+  echo "ERROR: Failed to source lib.sh"
+  exit 1
+fi
+
+theme="\$1"
+
+if [[ -n "\${TMUX:-}" ]]; then
+  display_theme_details "\$theme" "full"
+  echo ""
+  echo "Graphics preview not available in tmux."
+  echo "Open a regular terminal window to see theme preview."
+elif preview_file=\$(get_or_generate_preview "\$theme" 2>>"$preview_log"); then
+  echo "Preview file: \$preview_file" >>"$preview_log"
+  display_theme_details "\$theme" "compact"
+  echo ""
+  if command -v chafa &>/dev/null; then
+    chafa -f kitty --speed 10 --dither none "\$preview_file" 2>>"$preview_log" || echo "Preview: \$theme"
+  elif command -v viu &>/dev/null; then
+    viu -w 80 "\$preview_file" 2>>"$preview_log" || echo "Preview: \$theme"
+  else
+    echo "(Install chafa or viu for image preview)"
+    display_theme_details "\$theme" "full"
+  fi
+else
+  echo "Failed to generate preview"
+  display_theme_details "\$theme" "full"
+fi
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  local selected
+  selected=$(list_themes | fzf \
+    --prompt="Select theme > " \
+    --height=100% \
+    --preview="$preview_script {}" \
+    --preview-window=right:60%)
+
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    apply_theme "$selected"
+  fi
 }
 
 mark_liked() {
@@ -600,16 +679,61 @@ show_preview() {
   fi
 }
 
+generate_all_previews() {
+  echo "Pre-generating all theme previews..."
+  echo "This will take a few minutes but makes browsing instant."
+  echo ""
+
+  if ! command -v magick &>/dev/null; then
+    echo "Error: ImageMagick not found. Install with: brew install imagemagick"
+    exit 1
+  fi
+
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  local themes
+  themes=$(list_themes)
+  local total
+  total=$(echo "$themes" | wc -l | xargs)
+  local current=0
+
+  while IFS= read -r theme; do
+    current=$((current + 1))
+    printf "[%d/%d] Generating preview for: %s\n" "$current" "$total" "$theme"
+
+    local cache_file
+    cache_file=$(get_cached_preview_path "$theme")
+
+    if [[ -f "$cache_file" ]] && validate_preview_image "$cache_file" &>/dev/null; then
+      echo "  ✓ Already exists"
+      continue
+    fi
+
+    if generate_theme_preview "$theme" "$cache_file" 2>/dev/null; then
+      echo "  ✓ Generated"
+    else
+      echo "  ✗ Failed"
+    fi
+  done <<< "$themes"
+
+  echo ""
+  echo "✓ All previews generated!"
+  echo "  Cache location: $PREVIEW_CACHE_DIR"
+  echo "  Run 'theme change' for instant browsing"
+}
+
 #==============================================================================
 # MAIN
 #==============================================================================
 
 main() {
   case "${1:-}" in
+    change)
+      change_theme
+      ;;
     preview)
       show_preview "${2:-}"
       ;;
-
     current)
       show_current
       ;;
@@ -642,6 +766,12 @@ main() {
       ;;
     verify)
       verify_system
+      ;;
+    generate-previews)
+      generate_all_previews
+      ;;
+    clear-cache)
+      clear_preview_cache
       ;;
     help|--help|-h)
       usage

@@ -1,18 +1,6 @@
 /* Waybar Styling */
-/* Kanagawa color theme */
-
-@define-color bg #1f1f28;
-@define-color bg-dark #16161d;
-@define-color bg-highlight #2a2a37;
-@define-color fg #dcd7ba;
-@define-color fg-dark #c8c093;
-@define-color blue #7e9cd8;
-@define-color cyan #7aa89f;
-@define-color green #98bb6c;
-@define-color magenta #957fb8;
-@define-color red #c34043;
-@define-color yellow #e6c384;
-@define-color orange #ffa066;
+/* Theme colors imported from themes/current.css */
+@import "themes/current.css";
 
 * {
     font-family: "JetBrainsMono Nerd Font", "Font Awesome 6 Free", monospace;

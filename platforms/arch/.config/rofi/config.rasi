@@ -1,5 +1,5 @@
 /* Rofi Configuration */
-/* Kanagawa color theme */
+/* Theme colors imported from themes/current.rasi */
 
 configuration {
     modi: "drun,run,window";
@@ -13,16 +13,11 @@ configuration {
     terminal: "ghostty";
 }
 
-/* Kanagawa colors */
-* {
-    bg: #1f1f28;
-    bg-alt: #2a2a37;
-    bg-selected: #2d4f67;
-    fg: #dcd7ba;
-    fg-alt: #c8c093;
-    blue: #7e9cd8;
-    magenta: #957fb8;
+/* Import theme colors */
+@import "themes/current.rasi"
 
+/* Apply theme colors */
+* {
     background-color: @bg;
     text-color: @fg;
     margin: 0;

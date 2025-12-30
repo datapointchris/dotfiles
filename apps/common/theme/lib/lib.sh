@@ -314,6 +314,138 @@ apply_waybar() {
   return 0
 }
 
+# Apply hyprlock theme (Arch)
+apply_hyprlock() {
+  local theme="$1"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
+
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/hyprlock.conf" ]]; then
+    return 1
+  fi
+
+  local hyprlock_theme_dir="$HOME/.config/hypr/themes"
+  mkdir -p "$hyprlock_theme_dir"
+
+  cp "$lib_path/hyprlock.conf" "$hyprlock_theme_dir/hyprlock.conf"
+
+  return 0
+}
+
+# Apply dunst theme (Arch)
+# Note: Dunst doesn't support includes, so we sed-replace colors in dunstrc
+apply_dunst() {
+  local theme="$1"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
+
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/theme.yml" ]]; then
+    return 1
+  fi
+
+  local dunstrc="$HOME/.config/dunst/dunstrc"
+  [[ ! -f "$dunstrc" ]] && return 1
+
+  # Read colors from theme.yml
+  local bg fg blue red
+  bg=$(yq '.special.background' "$lib_path/theme.yml")
+  fg=$(yq '.special.foreground' "$lib_path/theme.yml")
+  blue=$(yq '.ansi.blue' "$lib_path/theme.yml")
+  red=$(yq '.ansi.red' "$lib_path/theme.yml")
+
+  # Update colors in dunstrc using sed
+  local target="$dunstrc"
+  [[ -L "$dunstrc" ]] && target="$(readlink -f "$dunstrc")"
+
+  # Update background colors in urgency sections
+  sed -i "s|background = \"#[0-9a-fA-F]*\"|background = \"$bg\"|g" "$target"
+  # Update foreground colors
+  sed -i "s|foreground = \"#[0-9a-fA-F]*\"|foreground = \"$fg\"|g" "$target"
+  # Update frame_color for low/normal (blue)
+  sed -i "/\[urgency_low\]/,/\[urgency_normal\]/{s|frame_color = \"#[0-9a-fA-F]*\"|frame_color = \"$blue\"|}" "$target"
+  sed -i "/\[urgency_normal\]/,/\[urgency_critical\]/{s|frame_color = \"#[0-9a-fA-F]*\"|frame_color = \"$blue\"|}" "$target"
+  # Update frame_color for critical (red)
+  sed -i "/\[urgency_critical\]/,\$s|frame_color = \"#[0-9a-fA-F]*\"|frame_color = \"$red\"|" "$target"
+
+  return 0
+}
+
+# Apply rofi theme (Arch)
+apply_rofi() {
+  local theme="$1"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
+
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/rofi.rasi" ]]; then
+    return 1
+  fi
+
+  local rofi_theme_dir="$HOME/.config/rofi/themes"
+  mkdir -p "$rofi_theme_dir"
+
+  cp "$lib_path/rofi.rasi" "$rofi_theme_dir/current.rasi"
+
+  return 0
+}
+
+# Apply Windows Terminal theme (WSL)
+apply_windows_terminal() {
+  local theme="$1"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
+
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/windows-terminal.json" ]]; then
+    return 1
+  fi
+
+  # Get Windows username from WSL
+  local windows_user
+  windows_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r\n')
+  [[ -z "$windows_user" ]] && return 1
+
+  # Find Windows Terminal settings.json
+  local wt_settings=""
+  local paths=(
+    "/mnt/c/Users/$windows_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+    "/mnt/c/Users/$windows_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
+    "/mnt/c/Users/$windows_user/AppData/Local/Microsoft/Windows Terminal/settings.json"
+  )
+
+  for path in "${paths[@]}"; do
+    if [[ -f "$path" ]]; then
+      wt_settings="$path"
+      break
+    fi
+  done
+
+  [[ -z "$wt_settings" ]] && return 1
+
+  # Read theme JSON and merge into settings
+  local theme_json
+  theme_json=$(cat "$lib_path/windows-terminal.json")
+  local theme_name
+  theme_name=$(echo "$theme_json" | jq -r '.name')
+
+  # Backup settings
+  cp "$wt_settings" "${wt_settings}.backup"
+
+  # Remove existing scheme with same name and add new one
+  jq --argjson scheme "$theme_json" \
+    '.schemes = [.schemes[] | select(.name != $scheme.name)] + [$scheme]' \
+    "$wt_settings" > "${wt_settings}.tmp" && mv "${wt_settings}.tmp" "$wt_settings"
+
+  # Set as active colorScheme for WSL profile
+  local wsl_profile_guid
+  wsl_profile_guid=$(jq -r '.profiles.list[] | select(.source == "Windows.Terminal.Wsl") | .guid' "$wt_settings" 2>/dev/null | head -1)
+  if [[ -n "$wsl_profile_guid" ]]; then
+    jq --arg guid "$wsl_profile_guid" --arg theme "$theme_name" \
+      '(.profiles.list[] | select(.guid == $guid)).colorScheme = $theme' \
+      "$wt_settings" > "${wt_settings}.tmp" && mv "${wt_settings}.tmp" "$wt_settings"
+  fi
+
+  return 0
+}
+
 #==============================================================================
 # MAIN APPLY FUNCTION
 #==============================================================================
@@ -344,8 +476,8 @@ apply_theme_to_apps() {
     fi
   fi
 
-  # Kitty (Arch only)
-  if [[ "$platform" == "arch" ]]; then
+  # Kitty (macOS and Arch)
+  if [[ "$platform" == "macos" ]] || [[ "$platform" == "arch" ]]; then
     if apply_kitty "$theme" 2>/dev/null; then
       applied+=("kitty")
     else
@@ -379,6 +511,33 @@ apply_theme_to_apps() {
       applied+=("waybar")
     else
       skipped+=("waybar")
+    fi
+
+    if apply_hyprlock "$theme" 2>/dev/null; then
+      applied+=("hyprlock")
+    else
+      skipped+=("hyprlock")
+    fi
+
+    if apply_dunst "$theme" 2>/dev/null; then
+      applied+=("dunst")
+    else
+      skipped+=("dunst")
+    fi
+
+    if apply_rofi "$theme" 2>/dev/null; then
+      applied+=("rofi")
+    else
+      skipped+=("rofi")
+    fi
+  fi
+
+  # Windows Terminal (WSL only)
+  if [[ "$platform" == "wsl" ]]; then
+    if apply_windows_terminal "$theme" 2>/dev/null; then
+      applied+=("windows-terminal")
+    else
+      skipped+=("windows-terminal")
     fi
   fi
 
@@ -427,4 +586,183 @@ reload_tmux() {
     return 0
   fi
   return 1
+}
+
+reload_kitty() {
+  if command -v pkill &> /dev/null; then
+    pkill -USR1 kitty 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
+
+reload_hyprland() {
+  if command -v hyprctl &> /dev/null; then
+    hyprctl reload 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
+
+reload_waybar() {
+  if command -v killall &> /dev/null; then
+    killall -SIGUSR2 waybar 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
+
+reload_dunst() {
+  if command -v killall &> /dev/null; then
+    killall dunst 2>/dev/null || true
+    # Dunst auto-restarts on next notification, or start it explicitly
+    if command -v dunst &> /dev/null; then
+      dunst &>/dev/null &
+      disown
+    fi
+    return 0
+  fi
+  return 1
+}
+
+# Reload all applicable apps after theme apply
+reload_apps() {
+  local platform
+  platform=$(detect_platform)
+  local applied_apps="${1:-}"
+
+  # tmux (all platforms)
+  [[ "$applied_apps" == *"tmux"* ]] && reload_tmux
+
+  # Platform-specific reloads
+  if [[ "$platform" == "arch" ]]; then
+    [[ "$applied_apps" == *"kitty"* ]] && reload_kitty
+    [[ "$applied_apps" == *"hyprland"* ]] && reload_hyprland
+    [[ "$applied_apps" == *"waybar"* ]] && reload_waybar
+    [[ "$applied_apps" == *"dunst"* ]] && reload_dunst
+    # btop requires manual restart
+    # rofi loads theme on next launch
+    # hyprlock loads theme on next lock
+  fi
+}
+
+#==============================================================================
+# PREVIEW IMAGE GENERATION
+#==============================================================================
+
+PREVIEW_CACHE_DIR="${PREVIEW_CACHE_DIR:-/tmp/theme-preview}"
+PREVIEW_GENERATOR="$THEME_LIB_DIR/generators/preview.sh"
+
+# Get cached preview path for a theme
+get_cached_preview_path() {
+  local theme_name="$1"
+  local safe_name="${theme_name//[^a-zA-Z0-9-]/_}"
+  echo "$PREVIEW_CACHE_DIR/${safe_name}.png"
+}
+
+# Generate a preview image for a theme
+generate_theme_preview() {
+  local theme_name="$1"
+  local output_file="$2"
+  local theme_dir="$THEMES_DIR/$theme_name"
+
+  if [[ ! -d "$theme_dir" ]]; then
+    echo "Error: Theme directory not found: $theme_dir" >&2
+    return 1
+  fi
+
+  if [[ ! -f "$PREVIEW_GENERATOR" ]]; then
+    echo "Error: Preview generator not found: $PREVIEW_GENERATOR" >&2
+    return 1
+  fi
+
+  if ! command -v magick &>/dev/null; then
+    echo "Error: ImageMagick not found" >&2
+    return 1
+  fi
+
+  bash "$PREVIEW_GENERATOR" "$theme_dir" "$output_file"
+}
+
+# Get or generate a preview (uses cache)
+get_or_generate_preview() {
+  local theme_name="$1"
+  local cache_file
+
+  cache_file=$(get_cached_preview_path "$theme_name")
+
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  if [[ -f "$cache_file" ]]; then
+    echo "$cache_file"
+    return 0
+  fi
+
+  if generate_theme_preview "$theme_name" "$cache_file" 2>/dev/null; then
+    echo "$cache_file"
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Validate a preview image file
+validate_preview_image() {
+  local image_file="$1"
+
+  if [[ ! -f "$image_file" ]]; then
+    echo "Error: File does not exist: $image_file" >&2
+    return 1
+  fi
+
+  if [[ ! -s "$image_file" ]]; then
+    echo "Error: File is empty: $image_file" >&2
+    return 1
+  fi
+
+  local file_type
+  file_type=$(file "$image_file")
+
+  if [[ ! "$file_type" =~ PNG ]]; then
+    echo "Error: Not a PNG image: $file_type" >&2
+    return 1
+  fi
+
+  echo "$file_type"
+  return 0
+}
+
+# Clear the preview cache
+clear_preview_cache() {
+  rm -rf "$PREVIEW_CACHE_DIR"
+  mkdir -p "$PREVIEW_CACHE_DIR"
+  echo "Preview cache cleared"
+}
+
+# Display theme details (for fzf preview header)
+display_theme_details() {
+  local theme_name="$1"
+  local format="${2:-full}"
+  local theme_file="$THEMES_DIR/$theme_name/theme.yml"
+
+  if [[ ! -f "$theme_file" ]]; then
+    echo "Theme not found: $theme_name"
+    return 1
+  fi
+
+  local name author variant nvim_cs
+
+  name=$(yq '.meta.name // "Unknown"' "$theme_file")
+  author=$(yq '.meta.author // "Unknown"' "$theme_file")
+  variant=$(yq '.meta.variant // "dark"' "$theme_file")
+  nvim_cs=$(yq '.meta.neovim_colorscheme // .meta.slug // "unknown"' "$theme_file")
+
+  if [[ "$format" == "full" ]]; then
+    echo "Theme: $name"
+    echo "Author: $author"
+    echo "Variant: $variant"
+    echo "Neovim: $nvim_cs"
+  else
+    echo "$name by $author | $variant | nvim: $nvim_cs"
+  fi
 }

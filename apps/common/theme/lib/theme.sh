@@ -90,13 +90,15 @@ load_theme() {
   echo "ANSI_BRIGHT_WHITE=\"${bright_white:-\$BASE07}\""
 
   # Special colors (with fallbacks)
-  local bg fg cursor cursor_text sel_bg sel_fg
+  local bg fg cursor cursor_text sel_bg sel_fg border panel
   bg=$(theme_get '.special.background' "$file")
   fg=$(theme_get '.special.foreground' "$file")
   cursor=$(theme_get '.special.cursor' "$file")
   cursor_text=$(theme_get '.special.cursor_text' "$file")
   sel_bg=$(theme_get '.special.selection_bg' "$file")
   sel_fg=$(theme_get '.special.selection_fg' "$file")
+  border=$(theme_get '.special.border' "$file")
+  panel=$(theme_get '.special.panel' "$file")
 
   echo "SPECIAL_BG=\"${bg:-\$BASE00}\""
   echo "SPECIAL_FG=\"${fg:-\$BASE05}\""
@@ -104,6 +106,8 @@ load_theme() {
   echo "SPECIAL_CURSOR_TEXT=\"${cursor_text:-\$BASE00}\""
   echo "SPECIAL_SELECTION_BG=\"${sel_bg:-\$BASE02}\""
   echo "SPECIAL_SELECTION_FG=\"${sel_fg:-\$BASE05}\""
+  echo "SPECIAL_BORDER=\"${border:-\$BASE03}\""
+  echo "SPECIAL_PANEL=\"${panel:-\$BASE01}\""
 
   # Extended colors (new in theme.yml)
   # These are optional and used by some generators

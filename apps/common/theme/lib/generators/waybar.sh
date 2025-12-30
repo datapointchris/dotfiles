@@ -21,28 +21,23 @@ eval "$(load_colors "$input_file")"
 generate() {
   cat << EOF
 /* ${THEME_NAME} - waybar theme */
-/* Generated from palette.yml */
-/* Author: ${THEME_AUTHOR} */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background ${BASE00};
-@define-color background-alt ${BASE01};
-@define-color foreground ${BASE05};
-@define-color foreground-alt ${BASE04};
-
-/* Selection and highlighting */
-@define-color selection ${BASE02};
-@define-color comment ${BASE03};
+@define-color bg ${SPECIAL_BG};
+@define-color bg-dark ${BASE01};
+@define-color bg-highlight ${BASE02};
+@define-color fg ${SPECIAL_FG};
+@define-color fg-dark ${BASE04};
 
 /* Accent colors */
-@define-color red ${BASE08};
+@define-color blue ${ANSI_BLUE};
+@define-color cyan ${ANSI_CYAN};
+@define-color green ${ANSI_GREEN};
+@define-color magenta ${ANSI_MAGENTA};
+@define-color red ${ANSI_RED};
+@define-color yellow ${ANSI_YELLOW};
 @define-color orange ${BASE09};
-@define-color yellow ${BASE0A};
-@define-color green ${BASE0B};
-@define-color cyan ${BASE0C};
-@define-color blue ${BASE0D};
-@define-color purple ${BASE0E};
-@define-color brown ${BASE0F};
 EOF
 }
 
