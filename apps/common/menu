@@ -15,51 +15,35 @@ gum style \
   --border-foreground=4 \
   --padding="1 2" \
   --bold \
-  "Workflow Tools - What do you want to do?"
+  "Workflow Tools"
 
 echo ""
 
-choice=$(gum choose \
-  "Switch tmux session" \
-  "Preview and apply theme" \
-  "Change terminal font" \
-  "Take or find notes" \
-  "Browse workflows" \
-  "Find a tool" \
-  "Search regex patterns" \
-  "Check references" \
-  "Backup directories" \
-  "Incremental backup" \
-  "Deploy symlinks" \
-  "Check symlinks" \
-  "Open documentation")
+choice=$(gum choose --height=20 \
+  "sess - Switch tmux session" \
+  "theme preview - Change theme" \
+  "font change - Change font" \
+  "notes - Take notes" \
+  "toolbox - Find a tool" \
+  "workflows search - Browse workflows" \
+  "patterns - Log an event" \
+  "refcheck - Check references" \
+  "backup-dirs - Backup directories" \
+  "backup-incremental - Incremental backup" \
+  "open docs - Open documentation")
 
 case "$choice" in
-  "Switch tmux session")
-    sess ;;
-  "Preview and apply theme")
-    theme preview ;;
-  "Change terminal font")
-    font change ;;
-  "Take or find notes")
-    notes ;;
-  "Browse workflows")
-    workflows search ;;
-  "Find a tool")
-    toolbox categories ;;
-  "Search regex patterns")
-    patterns ;;
-  "Check references")
-    refcheck ;;
-  "Backup directories")
-    backup-dirs ;;
-  "Incremental backup")
-    backup-incremental ;;
-  "Deploy symlinks")
-    task symlinks:link ;;
-  "Check symlinks")
-    task symlinks:check ;;
-  "Open documentation")
+  "sess"*) sess ;;
+  "theme preview"*) theme preview ;;
+  "font change"*) font change ;;
+  "notes"*) notes ;;
+  "toolbox"*) toolbox ;;
+  "workflows search"*) workflows search ;;
+  "patterns"*) patterns ;;
+  "refcheck"*) refcheck ;;
+  "backup-dirs"*) backup-dirs --help ;;
+  "backup-incremental"*) backup-incremental --help ;;
+  "open docs"*)
     print_green "Opening documentation..."
     open "https://datapointchris.github.io/dotfiles/"
     ;;

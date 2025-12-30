@@ -18,9 +18,9 @@ Personal CLI tools for enhanced workflows.
 
     Tmux session management
 
-- :material-regex: __[Patterns](patterns.md)__
+- :material-check-all: __[Refcheck](refcheck.md)__
 
-    Common regex pattern library
+    Find broken file references
 
 </div>
 
@@ -30,7 +30,7 @@ Personal CLI tools for enhanced workflows.
 
 - :fontawesome-solid-list: __[Menu](menu.md)__
 
-    Interactive menu system
+    Interactive workflow launcher
 
 - :material-toolbox: __[Toolbox](toolbox.md)__
 
@@ -38,15 +38,11 @@ Personal CLI tools for enhanced workflows.
 
 - :material-backup-restore: __[Backup Dirs](backup-dirs.md)__
 
-    Backup directory manager
+    Compressed archive backup
 
 - :material-backup-restore: __[Backup Incremental](backup-incremental.md)__
 
-    Incremental backup system
-
-- :material-check-all: __[Refcheck](refcheck.md)__
-
-    Reference and link checker
+    Rsync hard-link incremental backup
 
 </div>
 
@@ -61,5 +57,15 @@ Personal CLI tools for enhanced workflows.
 - :fontawesome-solid-font: __[Font](font.md)__
 
     Font management and tracking
+
+</div>
+
+## Personal
+
+<div class="grid cards" markdown>
+
+- :material-chart-timeline-variant: __[Patterns](patterns.md)__
+
+    Timestamped logging for health, mood, and habits
 
 </div>
