@@ -444,6 +444,10 @@ system_packages:
     pacman: ghostty
     description: GPU-accelerated terminal emulator
 
+  - name: visual-studio-code
+    aur: visual-studio-code-bin
+    description: Code editor (Arch only - macOS uses cask)
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================
@@ -906,6 +910,9 @@ macos_casks:
 
   - name: obsidian
     description: Note taking
+
+  - name: visual-studio-code
+    description: Code editor
 # ================================================================
 # NOTES
 # ================================================================
