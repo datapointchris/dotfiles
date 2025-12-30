@@ -63,9 +63,13 @@ generate_app "alacritty" "toml"
 generate_app "tmux" "conf"
 generate_app "btop" "theme"
 
-# Desktop environment (Arch)
+# Desktop environment (Arch/Hyprland)
 generate_app "hyprland" "conf"
 generate_app "waybar" "css"
+generate_app "hyprlock" "conf"
+generate_app "mako" "ini"
+generate_app "walker" "css"
+generate_app "swayosd" "css"
 
 echo ""
 echo "Done! Generated configs in: $theme_dir"

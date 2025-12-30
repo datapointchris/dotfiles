@@ -1,40 +1,40 @@
 #!/usr/bin/env bash
-# Generate tmux config from palette.yml
-# Usage: tmux.sh <palette.yml> [output-file]
+# Generate tmux config from theme.yml or palette.yml
+# Usage: tmux.sh <theme.yml|palette.yml> [output-file]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../palette.sh"
+source "$SCRIPT_DIR/../theme.sh"
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <palette.yml> [output-file]"
+  echo "Usage: $0 <theme.yml|palette.yml> [output-file]"
   exit 1
 fi
 
-palette_file="$1"
+input_file="$1"
 output_file="${2:-}"
 
-# Load palette into variables
-eval "$(load_palette "$palette_file")"
+# Load colors (auto-detects format)
+eval "$(load_colors "$input_file")"
 
 generate() {
   cat << EOF
 # ${THEME_NAME} - tmux theme
-# Generated from palette.yml
+# Generated from theme.yml
 # Author: ${THEME_AUTHOR}
 
 # Default statusbar colors
-# base01 = lighter background (perfect for status bar)
+# base00 = main background (matches terminal)
 # base04 = dark foreground (status bar text)
-set-option -g status-style "fg=${BASE04},bg=${BASE01}"
+set-option -g status-style "fg=${BASE04},bg=${BASE00}"
 
 # Default window title colors
-set-window-option -g window-status-style "fg=${BASE04},bg=${BASE01}"
+set-window-option -g window-status-style "fg=${BASE04},bg=${BASE00}"
 
 # Active window title colors
 # base0A = yellow accent for current window
-set-window-option -g window-status-current-style "fg=${BASE0A},bg=${BASE01}"
+set-window-option -g window-status-current-style "fg=${BASE0A},bg=${BASE00}"
 
 # Pane border colors
 # base01 = subtle border, base04 = visible active border
@@ -62,7 +62,7 @@ set-window-option -g mode-style "fg=${BASE04},bg=${BASE02}"
 set-window-option -g window-status-bell-style "fg=${BASE00},bg=${BASE08}"
 
 # Activity style
-set-window-option -g window-status-activity-style "fg=${BASE05},bg=${BASE01}"
+set-window-option -g window-status-activity-style "fg=${BASE05},bg=${BASE00}"
 
 # Command message style
 set-option -g message-command-style "fg=${BASE06},bg=${BASE02}"

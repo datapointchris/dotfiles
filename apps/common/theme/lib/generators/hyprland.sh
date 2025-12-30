@@ -5,18 +5,18 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../palette.sh"
+source "$SCRIPT_DIR/../theme.sh"
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <palette.yml> [output-file]"
   exit 1
 fi
 
-palette_file="$1"
+input_file="$1"
 output_file="${2:-}"
 
 # Load palette into variables
-eval "$(load_palette "$palette_file")"
+eval "$(load_colors "$input_file")"
 
 # Convert #RRGGBB to RRGGBB for hyprland rgb() format
 strip_hash() {

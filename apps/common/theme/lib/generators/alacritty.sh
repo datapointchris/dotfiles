@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Generate alacritty config from palette.yml
-# Usage: alacritty.sh <palette.yml> [output-file]
+# Generate alacritty config from theme.yml or palette.yml
+# Usage: alacritty.sh <theme.yml|palette.yml> [output-file]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../palette.sh"
+source "$SCRIPT_DIR/../theme.sh"
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <palette.yml> [output-file]"
+  echo "Usage: $0 <theme.yml|palette.yml> [output-file]"
   exit 1
 fi
 
-palette_file="$1"
+input_file="$1"
 output_file="${2:-}"
 
-# Load palette into variables
-eval "$(load_palette "$palette_file")"
+# Load colors (auto-detects format)
+eval "$(load_colors "$input_file")"
 
 # Remove # from hex color for alacritty TOML format
 strip_hash() {
@@ -26,7 +26,7 @@ strip_hash() {
 generate() {
   cat << EOF
 # ${THEME_NAME} - alacritty theme
-# Generated from palette.yml
+# Generated from theme.yml
 # Author: ${THEME_AUTHOR}
 
 [colors.primary]
