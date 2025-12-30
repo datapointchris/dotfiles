@@ -38,7 +38,7 @@ dotfiles/
 │   ├── wsl/          # WSL Ubuntu-specific overrides
 │   └── arch/         # Arch Linux-specific overrides
 ├── apps/             # Personal CLI applications
-│   ├── common/       # Cross-platform tools (menu, notes, toolbox, theme-sync)
+│   ├── common/       # Cross-platform tools (menu, notes, toolbox, theme)
 │   ├── macos/        # macOS-specific tools
 │   └── sess/         # Session manager (Go)
 ├── management/       # Repository management
@@ -131,8 +131,9 @@ Currently 31 tools documented in the registry with usage examples and tips. More
 
 ```bash
 # Themes
-theme-sync favorites                    # See your favorite themes
-theme-sync apply base16-gruvbox-dark   # Switch themes
+theme list                              # List available themes
+theme apply rose-pine                   # Apply theme across terminal apps
+theme preview                           # Preview themes with fzf
 
 # Package updates
 task update                             # Update everything
@@ -154,14 +155,15 @@ The `symlinks` tool manages deploying configs from the repo to their actual loca
 
 ## Theme System
 
-Uses tinty for Base16 theme management across tmux, bat, fzf, and the shell. The `theme-sync` command wraps tinty with some conveniences:
+Unified theme generation from `theme.yml` source files. The `theme` CLI applies themes consistently across ghostty, tmux, btop, and more:
 
-- `theme-sync favorites` - Quick access to 12 hand-picked themes
-- `theme-sync apply <theme>` - Actually apply the theme
-- `theme-sync current` - See what you're currently using
-- `theme-sync random` - Feeling adventurous
+- `theme list` - See available themes
+- `theme apply <name>` - Apply theme across all apps
+- `theme preview` - Interactive preview with fzf
+- `theme current` - Show current theme and stats
+- `theme like/dislike` - Track preferences
 
-Theme persists across sessions. Neovim has its own theme manager (because integration is hard).
+Theme persists across sessions. Neovim uses either generated colorschemes or original plugins based on theme configuration.
 
 ## Documentation
 

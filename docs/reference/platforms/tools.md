@@ -78,33 +78,22 @@ uv tool install mdformat
 
 Tools installed to: `~/.local/bin` (consistent across platforms)
 
-### Theme System (tinty)
+### Theme System
 
-=== "macOS"
+Theme management uses the `theme` CLI from `apps/common/theme/`:
 
-    ```bash
-    brew install tinted-theming/tinted/tinty
-    ```
-
-=== "Ubuntu/WSL"
-
-    ```bash
-    cargo install tinty  # After Rust install
-    ```
-
-=== "Arch Linux"
-
-    ```bash
-    yay -S tinty
-    # or
-    cargo install tinty
-    ```
+```bash
+theme list                  # List available themes
+theme apply rose-pine       # Apply theme
+theme preview               # Interactive fzf preview
+theme current               # Show current theme
+```
 
 **Configuration** (consistent across all platforms):
 
-- Config: `~/.config/tinty/config.toml`
-- Theme files: `~/.local/share/tinted-theming/tinty/`
-- Command: `tinty apply <theme>`
+- Themes: `apps/common/theme/themes/`
+- Generated configs: copied to `~/.config/{app}/themes/current.conf`
+- Theme history: `apps/common/theme/data/history-{platform}.jsonl`
 
 ## Platform-Specific Quirks
 

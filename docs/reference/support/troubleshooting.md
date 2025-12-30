@@ -57,8 +57,9 @@ Common issues and solutions.
 
 !!! warning "Theme not applying"
     ```sh
-    theme-sync current      # Check current theme
-    tinty apply <theme>     # Try direct tinty command
+    theme current           # Check current theme
+    theme verify            # Check theme system
+    theme apply <name>      # Apply theme directly
     ```
 
 !!! warning "Tmux colors wrong"

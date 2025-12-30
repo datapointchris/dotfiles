@@ -37,11 +37,11 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 - Commands: `list`, `show`, `search`, `random`, `installed`, `categories`
 - Built and installed via Task to `~/go/bin/`
 
-**theme-sync** (`apps/common/theme-sync`) - Bash script
+**theme** (`apps/common/theme/`) - Bash script
 
-- Base16 theme synchronization across tmux/bat/fzf/shell
-- Wraps tinty with favorites management
-- Commands: `current`, `apply`, `favorites`, `random`, `list`
+- Unified theme generation from theme.yml source files
+- Applies themes across ghostty, tmux, btop, and Neovim
+- Commands: `current`, `apply`, `list`, `preview`, `random`, `like`, `dislike`
 
 **notes** (`apps/common/notes`) - Bash wrapper
 
@@ -64,7 +64,7 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 toolbox list | fzf --preview='toolbox show {1}'
 
 # Theme picker
-theme-sync favorites | fzf | xargs theme-sync apply
+theme preview  # Built-in fzf preview
 
 # Session switcher
 sess list | fzf | xargs sess
@@ -102,9 +102,9 @@ sess $(basename "$PWD")
 # Time-based theme switching
 hour=$(date +%H)
 if [ $hour -ge 6 ] && [ $hour -lt 18 ]; then
-  theme-sync apply rose-pine-dawn
+  theme apply rose-pine-dawn
 else
-  theme-sync apply rose-pine
+  theme apply rose-pine
 fi
 
 # Create daily journal automatically
@@ -160,8 +160,8 @@ toolbox list | gum choose  # toolbox doesn't know about gum
 
 **Pragmatism over purity**:
 
-- **sess** is Go because: Complex logic, concurrent operations, type safety for config parsing
-- **toolbox/theme-sync/notes/menu** are bash because: Simple text processing, YAML parsing with yq, shell integration
+- **sess/toolbox** are Go because: Complex logic, concurrent operations, type safety for config parsing
+- **theme/notes/menu** are bash because: Simple text processing, YAML parsing with yq, shell integration
 
 **Rule of thumb**: If it's mostly calling other CLI tools and processing text, bash is simpler.
 
@@ -178,7 +178,7 @@ workflow themes     # yet another subcommand
 # Better: Focused tools
 sess
 toolbox
-theme-sync
+theme
 ```
 
 **Benefits**:
@@ -194,21 +194,15 @@ theme-sync
 
 ```text
 User runs:
-  theme-sync favorites | fzf | xargs theme-sync apply
+  theme preview
 
 Flow:
-  1. theme-sync favorites
-     → Reads favorites from script
-     → Outputs 12 theme names (one per line)
-
-  2. | fzf
-     → User selects one theme
-     → Outputs selected theme name
-
-  3. | xargs theme-sync apply
-     → theme-sync receives theme name as arg
-     → Calls: tinty apply <theme>
-     → Updates: tmux colors, bat theme, fzf colors, shell prompt
+  1. theme preview
+     → Scans themes/ directory
+     → Launches fzf with theme list
+     → User selects theme
+     → Applies to ghostty, tmux, btop
+     → Logs action to history
 ```
 
 **Session creation**:
@@ -243,12 +237,12 @@ Flow:
      ├─────┐
      │     │
 ┌────▼─┐ ┌─▼────────┐ ┌────────────┐ ┌─────────┐
-│ sess │ │ toolbox  │ │theme-sync  │ │ notes   │
+│ sess │ │ toolbox  │ │   theme    │ │ notes   │
 └──────┘ └──────────┘ └────────────┘ └────┬────┘
    │         │              │               │
    │         │              │               │
 ┌──▼────┐ ┌─▼────────┐ ┌───▼──────┐ ┌─────▼───┐
-│ tmux  │ │ registry │ │  tinty   │ │   zk    │
+│ tmux  │ │ registry │ │ themes/  │ │   zk    │
 └───────┘ └──────────┘ └──────────┘ └─────────┘
 ```
 
@@ -263,7 +257,7 @@ Flow:
 ```bash
 # After task symlinks:link
 ls ~/.local/bin/
-# theme-sync notes menu printcolors (and platform-specific: ghostty-theme, aws-profiles)
+# theme notes menu printcolors (and platform-specific: aws-profiles)
 ```
 
 **Go binaries** are in `~/go/bin/` (built and installed via Task):
@@ -283,7 +277,6 @@ Tools read from XDG-compliant locations:
 - `~/.config/sess/sessions-{platform}.yml` - Default sessions
 - `~/.config/toolbox/registry.yml` - Tool definitions
 - `~/.config/zk/config.toml` - Note configuration
-- `~/.config/tinty/config.toml` - Theme config
 
 Source files in `platforms/common/.config/` (symlinked to `~/.config/`).
 
@@ -293,7 +286,7 @@ Each tool owns its data:
 
 - **sess**: Aggregates tmux state + tmuxinator + config file
 - **toolbox**: Reads YAML registry
-- **theme-sync**: Wraps tinty (which manages theme files)
+- **theme**: Reads theme.yml files and generates app configs
 - **notes**: Wraps zk (which manages `~/notes/`)
 
 No shared database. No coupling.
@@ -311,7 +304,7 @@ toolbox list
 # eza                       [file-lister] ...
 
 # Good: plain text for piping
-theme-sync favorites
+theme list
 # rose-pine
 # gruvbox-dark-hard
 ```
@@ -353,7 +346,7 @@ sess list | fzf
 ```bash
 # In .zshrc
 alias st='toolbox list | fzf --preview="toolbox show {1}"'
-alias ts='theme-sync favorites | fzf | xargs theme-sync apply'
+alias ts='theme preview'  # Built-in fzf picker
 ```
 
 **Leverage tool output in scripts**:

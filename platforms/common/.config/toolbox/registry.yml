@@ -2073,19 +2073,6 @@ tools:
         desc: "Display full color palette"
     tags: [dotfiles, terminal, colors]
 
-  tmux-colors-from-tinty:
-    category: custom-tools
-    description: "Generate tmux statusbar config from current tinty theme"
-    installed_via: dotfiles
-    usage: "tmux-colors-from-tinty"
-    why_use: "Internal tool used by theme-sync to apply Base16 colors to tmux statusbar"
-    examples:
-      - cmd: "tmux-colors-from-tinty"
-        desc: "Generate tmux config from current theme"
-    see_also: [theme-sync, tinty]
-    tags: [dotfiles, theme, tmux, internal]
-    notes: "Parses tinty YAML scheme files and generates tmux configuration. Used internally by theme-sync system."
-
   backup-dirs:
     category: custom-tools
     description: "Create compressed backup archive of specified directories with progress tracking"

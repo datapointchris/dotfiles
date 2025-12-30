@@ -21,7 +21,7 @@ dotfiles/
 │   │   ├── toolbox/     # Tool discovery (Go)
 │   │   ├── menu         # Universal menu system (bash)
 │   │   ├── notes        # Note-taking wrapper
-│   │   └── theme-sync   # Theme synchronization
+│   │   └── theme/       # Theme management
 │   ├── macos/           # macOS-specific tools
 │   └── wsl/             # WSL-specific tools
 ├── management/          # Repository management
@@ -132,7 +132,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Version Managers for Languages**: Same Node/Python versions across platforms, project-specific versions, no system conflicts.
 
-**Separate Theme Systems**: Ghostty has 600+ themes with live preview. tinty provides Base16 sync across tmux/bat/fzf/shell. Both run in parallel for flexibility.
+**Unified Theme System**: The `theme` CLI generates consistent configs for ghostty, tmux, btop, and Neovim from a single `theme.yml` source file per theme.
 
 ## Advantages
 

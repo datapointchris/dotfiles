@@ -36,7 +36,7 @@
    - ❌ **NEVER symlinked** - they install themselves
    - Added via Taskfile.yml: `cd apps/common/{app} && task install`
 
-2. **Shell Script Apps** (menu, notes, theme-sync, etc.): Executable files
+2. **Shell Script Apps** (menu, notes, etc.): Executable files
    - ✅ Symlinked from `apps/{platform}/` → `~/.local/bin/`
    - ✅ Handled by `link_apps()` in symlinks manager
    - Note: `link_apps()` skips directories, only symlinks files
@@ -177,8 +177,8 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `arch/` - Arch Linux configurations
 - `apps/` - Personal CLI applications
-  - `common/` - Cross-platform tools (menu, notes, toolbox, theme-sync)
-  - `macos/` - macOS-specific tools (ghostty-theme, aws-profiles)
+  - `common/` - Cross-platform tools (menu, notes, toolbox, theme)
+  - `macos/` - macOS-specific tools (aws-profiles)
   - `sess/` - Session manager (Go application)
 - `management/` - Repository management tools
   - `symlinks/` - Symlinks manager (Python)
@@ -192,8 +192,8 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
 **Key Systems**:
 
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
-- **Theme Sync** (`theme-sync`) - Base16 theme synchronization across tmux, bat, fzf, shell
-- **Tools Discovery** (`tools`) - CLI for exploring 30+ installed development tools
+- **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
+- **Tools Discovery** (`toolbox`) - CLI for exploring 30+ installed development tools
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
 - **Pre-commit Hooks** - Quality control with markdownlint, shellcheck, yamllint, prettier
 
@@ -243,14 +243,14 @@ docs/
 - Location: `management/symlinks/`
 - See `.claude/skills/symlinks-developer` for detailed documentation
 
-**Theme Sync** (`theme-sync`):
+**Theme System** (`theme`):
 
-- Base16 theme synchronization using tinty
-- Applies themes across tmux, bat, fzf, and shell simultaneously
-- 12 favorite themes: rose-pine, gruvbox-dark-hard, kanagawa, nord, etc.
-- Commands: `apply`, `current`, `favorites`, `random`
+- Unified theme generation from `theme.yml` source files
+- Applies themes across ghostty, tmux, btop, and Neovim
+- Commands: `apply`, `current`, `list`, `preview`, `random`, `like`, `dislike`
+- Themes stored in `apps/common/theme/themes/` with generated configs
 
-**Tools Discovery** (`tools`):
+**Tools Discovery** (`toolbox`):
 
 - CLI for exploring 30+ installed development tools
 - Registry at `docs/tools/registry.yml` with descriptions, examples, docs

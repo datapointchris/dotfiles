@@ -64,7 +64,6 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 - `zoxide` - cd alternative
 - `eza` - ls alternative
 - `git-delta` - Git diff viewer
-- `tinty` - Theme manager
 - `cargo-update` - Keep cargo tools updated
 
 **Advantages**:
@@ -157,7 +156,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 ```text
 PATH Priority (highest to lowest):
 
-~/.cargo/bin/          # Tier 2: Rust tools (bat, fd, eza, zoxide, delta, tinty)
+~/.cargo/bin/          # Tier 2: Rust tools (bat, fd, eza, zoxide, delta)
 ~/.local/bin/          # Tier 1: GitHub releases (nvim, lazygit, fzf, yq, yazi)
 ~/go/bin/              # Go-installed binaries (sess, toolbox)
 /usr/local/go/bin/     # Go toolchain
@@ -288,7 +287,6 @@ cargo_packages:
   - eza
   - zoxide
   - git-delta
-  - tinty
   - cargo-update
 
 uv_tools:

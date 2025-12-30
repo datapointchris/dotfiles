@@ -37,7 +37,7 @@ Menu is a simple gum-based launcher - not a knowledge management system. It prov
 
 - **sess** - Tmux session management (Go app)
 - **toolbox** - CLI tools discovery (Go app)
-- **theme-sync** - Theme synchronization (bash script)
+- **theme** - Theme management (bash script)
 - **notes** - Note-taking with zk (bash wrapper)
 
 **Philosophy**: Simple launcher, not a complex system. Each tool handles its own data and functionality independently.
@@ -56,11 +56,11 @@ Menu is a simple gum-based launcher - not a knowledge management system. It prov
 - Commands: list, show, search, random, categories
 - 98+ documented tools
 
-**Theme Sync** (`apps/common/theme-sync`):
+**Theme** (`apps/common/theme/`):
 
-- Wraps tinty for Base16 themes
-- Syncs across tmux, bat, fzf, shell
-- Favorites list, apply, current, random
+- Unified theme generation from theme.yml source files
+- Syncs across ghostty, tmux, btop, and Neovim
+- Commands: list, apply, preview, random, like/dislike
 
 **Notes** (`apps/common/notes`):
 
@@ -81,7 +81,7 @@ Menu is a simple gum-based launcher - not a knowledge management system. It prov
 ```bash
 sess                    # Open session picker
 toolbox search git      # Find git tools
-theme-sync current      # Show current theme
+theme current           # Show current theme
 notes                   # Interactive note menu
 ```
 
@@ -89,7 +89,7 @@ notes                   # Interactive note menu
 
 ```bash
 toolbox list | fzf --preview='toolbox show {1}'
-theme-sync favorites | fzf | xargs theme-sync apply
+theme preview           # Built-in fzf preview
 ```
 
 ## Implementation
@@ -106,7 +106,7 @@ theme-sync favorites | fzf | xargs theme-sync apply
 ```text
 apps/common/
 ├── menu              # Main launcher script
-├── theme-sync        # Theme management
+├── theme/            # Theme management
 ├── notes             # Note-taking wrapper
 ├── sess/             # Session manager (Go)
 └── toolbox/          # Tools discovery (Go)
@@ -151,7 +151,7 @@ Menu works identically across platforms. Individual tools handle platform differ
 
 - sess reads `sessions-macos.yml` vs `sessions-wsl.yml`
 - toolbox marks tools as available/not installed per platform
-- theme-sync adjusts tinty config based on installed apps
+- theme generates configs for installed apps only
 
 ## See Also
 

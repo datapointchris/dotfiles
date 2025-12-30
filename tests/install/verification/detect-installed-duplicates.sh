@@ -479,7 +479,6 @@ check_tool "eza" "$HOME/.cargo/bin/eza" "eza"
 check_tool "fd" "$HOME/.cargo/bin/fd" "fd" "fd-find"
 check_tool "zoxide" "$HOME/.cargo/bin/zoxide" "zoxide"
 check_tool "delta" "$HOME/.cargo/bin/delta" "delta" "git-delta"
-check_tool "tinty" "$HOME/.cargo/bin/tinty" "tinty"
 
 # Language Version Managers
 check_tool "rustup" "$HOME/.cargo/bin/rustup" "rustup"

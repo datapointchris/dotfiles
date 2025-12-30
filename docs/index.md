@@ -39,8 +39,8 @@ git config --global user.email "your.email@example.com"
 **Choose a theme:**
 
 ```bash
-theme-sync favorites           # List 12 curated themes
-theme-sync apply rose-pine     # Apply theme across tmux/bat/fzf/shell
+theme list                     # List available themes
+theme apply rose-pine          # Apply theme across terminal apps
 ```
 
 **Install a Nerd Font** for proper terminal icons:
@@ -56,7 +56,7 @@ Download from [nerdfonts.com](https://www.nerdfonts.com/). Recommended: FiraCode
 ```bash
 task --list              # Show available tasks
 toolbox list             # List installed tools
-theme-sync current       # Show current theme
+theme current            # Show current theme
 node --version           # Check Node.js (via nvm)
 ```
 
@@ -86,10 +86,11 @@ toolbox categories       # Interactive category browser
 ### Theme Management
 
 ```bash
-theme-sync current       # Show current theme
-theme-sync apply <name>  # Apply theme
-theme-sync favorites     # List 12 favorite themes
-theme-sync random        # Apply random favorite
+theme current            # Show current theme
+theme apply <name>       # Apply theme
+theme list               # List available themes
+theme random             # Apply random theme
+theme preview            # Preview themes interactively
 ```
 
 ### Note Taking
@@ -140,7 +141,7 @@ dracula                one-dark               solarized-dark
 ```bash
 # Interactive selection with fzf
 toolbox list | fzf --preview='toolbox show {1}'
-theme-sync favorites | fzf | xargs theme-sync apply
+theme preview            # Built-in fzf preview
 zk list | fzf --preview='bat {-1}'
 
 # Session automation
@@ -166,7 +167,7 @@ dotfiles/
 │   │   ├── toolbox/     # Tool discovery (Go)
 │   │   ├── menu         # Universal menu system (Go)
 │   │   ├── notes        # Note-taking wrapper
-│   │   └── theme-sync   # Theme synchronization
+│   │   └── theme/       # Theme management
 │   ├── macos/           # macOS-specific tools
 │   └── wsl/             # WSL-specific tools
 ├── management/          # Repository management
@@ -181,7 +182,7 @@ dotfiles/
 
 - **Version Managers** - uv (Python) and nvm (Node.js) provide cross-platform consistency without system package conflicts
 - **Symlinks** - Deploy configs from repo to home directory with `task symlinks:link`
-- **Theme Sync** - Apply Base16 themes across tmux/bat/fzf/shell with one command via theme-sync wrapper
+- **Theme System** - Apply themes across ghostty/tmux/btop with one command via `theme` CLI
 - **Task Coordination** - Orchestrate complex workflows (install, update, verify) while keeping simple commands direct
 - **Tool Composition** - All custom tools output parseable data for piping with fzf, gum, and Unix utilities
 
@@ -191,7 +192,7 @@ dotfiles/
 
 ```bash
 sess                     # Start or switch to project session
-theme-sync current       # Verify theme
+theme current            # Verify theme
 zk list --sort modified- --limit 10  # Review recent notes
 ```
 
@@ -199,7 +200,7 @@ zk list --sort modified- --limit 10  # Review recent notes
 
 ```bash
 toolbox list | fzf --preview='toolbox show {1}'
-theme-sync favorites | fzf | xargs theme-sync apply
+theme preview            # Interactive theme preview
 ```
 
 **Quick Note Taking**:

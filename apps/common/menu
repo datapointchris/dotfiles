@@ -40,11 +40,7 @@ case "$choice" in
     toolbox categories ;;
 
   "Change theme")
-    selected=$(theme-sync favorites | fzf \
-      --header="Select a theme to apply")
-    if [[ -n "$selected" ]]; then
-      theme-sync apply "$selected"
-    fi
+    theme preview
     ;;
 
   "Take/find a note")

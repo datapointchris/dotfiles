@@ -135,7 +135,6 @@ nav:
   - Apps:
       - apps/index.md
       - Font: apps/font.md
-      - Theme Sync: apps/theme-sync.md
       - Notes: apps/notes.md
       - Patterns: apps/patterns.md
       - Session Manager: apps/sess.md
@@ -144,7 +143,6 @@ nav:
       - Refcheck: apps/refcheck.md
       - Backup Dirs: apps/backup-dirs.md
       - Backup Incremental: apps/backup-incremental.md
-      - Ghostty Theme: apps/ghostty-theme.md
   - Architecture:
       - architecture/index.md
       - Shell Libraries: architecture/shell-libraries.md

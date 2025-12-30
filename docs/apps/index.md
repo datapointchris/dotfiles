@@ -10,10 +10,6 @@ Personal CLI tools for enhanced workflows.
 
 <div class="grid cards" markdown>
 
-- :fontawesome-solid-palette: __[Theme Sync](theme-sync.md)__
-
-    Base16 theme management across tmux, bat, fzf, shell
-
 - :material-notebook: __[Notes](notes.md)__
 
     Zettelkasten note-taking with zk

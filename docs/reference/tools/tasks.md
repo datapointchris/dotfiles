@@ -278,7 +278,7 @@ All package versions, repositories, and configurations are centralized in `manag
 
 - **Runtimes**: Go, Node, Python version requirements
 - **GitHub binaries**: neovim, lazygit, yazi, fzf with repos and versions
-- **Cargo packages**: bat, fd, eza, zoxide, git-delta, tinty
+- **Cargo packages**: bat, fd, eza, zoxide, git-delta
 - **npm global packages**: Language servers and CLI tools
 - **uv tools**: Python development tools (ruff, mypy, etc.)
 - **Shell plugins**: ZSH plugins with git repositories
