@@ -1,0 +1,2937 @@
+[
+  {
+    "theme": "nord",
+    "mappings": {
+      "btop": {
+        "main_bg": {
+          "target": "#2E3440",
+          "closest_base": "base00",
+          "base_color": "#2e3440",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            32.44,
+            2.29,
+            264.18
+          ],
+          "base_oklch": [
+            32.44,
+            2.29,
+            264.18
+          ]
+        },
+        "main_fg": {
+          "target": "#D8DEE9",
+          "closest_base": "base04",
+          "base_color": "#d8dee9",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            89.93,
+            1.64,
+            262.75
+          ],
+          "base_oklch": [
+            89.93,
+            1.64,
+            262.75
+          ]
+        },
+        "title": {
+          "target": "#8FBCBB",
+          "closest_base": "base07",
+          "base_color": "#8fbcbb",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            76.29,
+            4.77,
+            194.49
+          ],
+          "base_oklch": [
+            76.29,
+            4.77,
+            194.49
+          ]
+        },
+        "hi_fg": {
+          "target": "#5E81AC",
+          "closest_base": "base0F",
+          "base_color": "#5e81ac",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.44,
+            7.72,
+            254.03
+          ],
+          "base_oklch": [
+            59.44,
+            7.72,
+            254.03
+          ]
+        },
+        "selected_bg": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "selected_fg": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "inactive_fg": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "proc_misc": {
+          "target": "#5E81AC",
+          "closest_base": "base0F",
+          "base_color": "#5e81ac",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.44,
+            7.72,
+            254.03
+          ],
+          "base_oklch": [
+            59.44,
+            7.72,
+            254.03
+          ]
+        },
+        "cpu_box": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "mem_box": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "net_box": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "proc_box": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "div_line": {
+          "target": "#4C566A",
+          "closest_base": "base03",
+          "base_color": "#4c566a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ],
+          "base_oklch": [
+            45.23,
+            3.52,
+            264.13
+          ]
+        },
+        "temp_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "temp_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "temp_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "cpu_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "cpu_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "cpu_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "free_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "free_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "free_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "cached_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "cached_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "cached_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "available_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "available_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "available_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "used_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "used_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "used_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "download_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "download_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "download_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        },
+        "upload_start": {
+          "target": "#81A1C1",
+          "closest_base": "base0D",
+          "base_color": "#81a1c1",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ],
+          "base_oklch": [
+            69.65,
+            5.91,
+            248.69
+          ]
+        },
+        "upload_mid": {
+          "target": "#88C0D0",
+          "closest_base": "base0C",
+          "base_color": "#88c0d0",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ],
+          "base_oklch": [
+            77.46,
+            6.22,
+            217.47
+          ]
+        },
+        "upload_end": {
+          "target": "#ECEFF4",
+          "closest_base": "base06",
+          "base_color": "#eceff4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ],
+          "base_oklch": [
+            95.13,
+            0.74,
+            260.73
+          ]
+        }
+      }
+    }
+  },
+  {
+    "theme": "kanagawa",
+    "mappings": {
+      "btop": {
+        "main_bg": {
+          "target": "#1f1f28",
+          "closest_base": "base00",
+          "base_color": "#1f1f28",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            24.33,
+            1.7,
+            285.06
+          ],
+          "base_oklch": [
+            24.33,
+            1.7,
+            285.06
+          ]
+        },
+        "main_fg": {
+          "target": "#dcd7ba",
+          "closest_base": "base05",
+          "base_color": "#dcd7ba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            87.55,
+            3.91,
+            99.09
+          ],
+          "base_oklch": [
+            87.55,
+            3.91,
+            99.09
+          ]
+        },
+        "title": {
+          "target": "#dcd7ba",
+          "closest_base": "base05",
+          "base_color": "#dcd7ba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            87.55,
+            3.91,
+            99.09
+          ],
+          "base_oklch": [
+            87.55,
+            3.91,
+            99.09
+          ]
+        },
+        "hi_fg": {
+          "target": "#C34043",
+          "closest_base": "base08",
+          "base_color": "#c34043",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            55.94,
+            16.7,
+            23.09
+          ],
+          "base_oklch": [
+            55.94,
+            16.7,
+            23.09
+          ]
+        },
+        "selected_bg": {
+          "target": "#223249",
+          "closest_base": "base00",
+          "base_color": "#1f1f28",
+          "distance": 0.0781,
+          "lightness_shift": -7.1,
+          "chroma_shift": -2.97,
+          "hue_shift": 27.63,
+          "target_oklch": [
+            31.43,
+            4.67,
+            257.43
+          ],
+          "base_oklch": [
+            24.33,
+            1.7,
+            285.06
+          ]
+        },
+        "selected_fg": {
+          "target": "#dca561",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0459,
+          "lightness_shift": -3.05,
+          "chroma_shift": -2.94,
+          "hue_shift": 11.14,
+          "target_oklch": [
+            75.94,
+            10.73,
+            70.87
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "inactive_fg": {
+          "target": "#727169",
+          "closest_base": "base01",
+          "base_color": "#727169",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ],
+          "base_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ]
+        },
+        "proc_misc": {
+          "target": "#7aa89f",
+          "closest_base": "ansi_bright_cyan",
+          "base_color": "#7aa89f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.59,
+            5.11,
+            181.3
+          ],
+          "base_oklch": [
+            69.59,
+            5.11,
+            181.3
+          ]
+        },
+        "cpu_box": {
+          "target": "#727169",
+          "closest_base": "base01",
+          "base_color": "#727169",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ],
+          "base_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ]
+        },
+        "mem_box": {
+          "target": "#727169",
+          "closest_base": "base01",
+          "base_color": "#727169",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ],
+          "base_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ]
+        },
+        "net_box": {
+          "target": "#727169",
+          "closest_base": "base01",
+          "base_color": "#727169",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ],
+          "base_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ]
+        },
+        "proc_box": {
+          "target": "#727169",
+          "closest_base": "base01",
+          "base_color": "#727169",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ],
+          "base_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ]
+        },
+        "div_line": {
+          "target": "#727169",
+          "closest_base": "base01",
+          "base_color": "#727169",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ],
+          "base_oklch": [
+            54.7,
+            1.22,
+            100.99
+          ]
+        },
+        "temp_start": {
+          "target": "#98BB6C",
+          "closest_base": "ansi_bright_green",
+          "base_color": "#98bb6c",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            74.77,
+            11.25,
+            128.36
+          ],
+          "base_oklch": [
+            74.77,
+            11.25,
+            128.36
+          ]
+        },
+        "temp_mid": {
+          "target": "#DCA561",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0459,
+          "lightness_shift": -3.05,
+          "chroma_shift": -2.94,
+          "hue_shift": 11.14,
+          "target_oklch": [
+            75.94,
+            10.73,
+            70.87
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "temp_end": {
+          "target": "#E82424",
+          "closest_base": "base09",
+          "base_color": "#e82424",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ],
+          "base_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ]
+        },
+        "cpu_start": {
+          "target": "#98BB6C",
+          "closest_base": "ansi_bright_green",
+          "base_color": "#98bb6c",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            74.77,
+            11.25,
+            128.36
+          ],
+          "base_oklch": [
+            74.77,
+            11.25,
+            128.36
+          ]
+        },
+        "cpu_mid": {
+          "target": "#DCA561",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0459,
+          "lightness_shift": -3.05,
+          "chroma_shift": -2.94,
+          "hue_shift": 11.14,
+          "target_oklch": [
+            75.94,
+            10.73,
+            70.87
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "cpu_end": {
+          "target": "#E82424",
+          "closest_base": "base09",
+          "base_color": "#e82424",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ],
+          "base_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ]
+        },
+        "free_start": {
+          "target": "#E82424",
+          "closest_base": "base09",
+          "base_color": "#e82424",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ],
+          "base_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ]
+        },
+        "free_mid": {
+          "target": "#C34043",
+          "closest_base": "base08",
+          "base_color": "#c34043",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            55.94,
+            16.7,
+            23.09
+          ],
+          "base_oklch": [
+            55.94,
+            16.7,
+            23.09
+          ]
+        },
+        "free_end": {
+          "target": "#FF5D62",
+          "closest_base": "base09",
+          "base_color": "#e82424",
+          "distance": 0.1021,
+          "lightness_shift": -9.55,
+          "chroma_shift": 2.98,
+          "hue_shift": 5.54,
+          "target_oklch": [
+            69.31,
+            19.71,
+            22.11
+          ],
+          "base_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ]
+        },
+        "cached_start": {
+          "target": "#C0A36E",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "cached_mid": {
+          "target": "#DCA561",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0459,
+          "lightness_shift": -3.05,
+          "chroma_shift": -2.94,
+          "hue_shift": 11.14,
+          "target_oklch": [
+            75.94,
+            10.73,
+            70.87
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "cached_end": {
+          "target": "#FF9E3B",
+          "closest_base": "ansi_bright_yellow",
+          "base_color": "#e6c384",
+          "distance": 0.0943,
+          "lightness_shift": 5.05,
+          "chroma_shift": -6.81,
+          "hue_shift": 19.96,
+          "target_oklch": [
+            78.27,
+            15.79,
+            61.68
+          ],
+          "base_oklch": [
+            83.32,
+            8.99,
+            81.64
+          ]
+        },
+        "available_start": {
+          "target": "#938AA9",
+          "closest_base": "ansi_bright_magenta",
+          "base_color": "#938aa9",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            65.19,
+            4.66,
+            298.38
+          ],
+          "base_oklch": [
+            65.19,
+            4.66,
+            298.38
+          ]
+        },
+        "available_mid": {
+          "target": "#957FBB",
+          "closest_base": "base0E",
+          "base_color": "#957fb8",
+          "distance": 0.0046,
+          "lightness_shift": -0.14,
+          "chroma_shift": -0.41,
+          "hue_shift": 1.0,
+          "target_oklch": [
+            63.94,
+            9.11,
+            300.69
+          ],
+          "base_oklch": [
+            63.8,
+            8.7,
+            301.7
+          ]
+        },
+        "available_end": {
+          "target": "#9CABCA",
+          "closest_base": "ansi_bright_blue",
+          "base_color": "#7fb4ca",
+          "distance": 0.0404,
+          "lightness_shift": 0.07,
+          "chroma_shift": 1.6,
+          "hue_shift": -39.1,
+          "target_oklch": [
+            74.0,
+            4.8,
+            264.82
+          ],
+          "base_oklch": [
+            74.07,
+            6.4,
+            225.72
+          ]
+        },
+        "used_start": {
+          "target": "#658594",
+          "closest_base": "base0C",
+          "base_color": "#6a9589",
+          "distance": 0.0561,
+          "lightness_shift": 3.71,
+          "chroma_shift": 0.76,
+          "hue_shift": -52.91,
+          "target_oklch": [
+            59.78,
+            4.28,
+            228.33
+          ],
+          "base_oklch": [
+            63.48,
+            5.04,
+            175.42
+          ]
+        },
+        "used_mid": {
+          "target": "#7E9CDB",
+          "closest_base": "base0D",
+          "base_color": "#7e9cd8",
+          "distance": 0.0045,
+          "lightness_shift": -0.14,
+          "chroma_shift": -0.41,
+          "hue_shift": -0.76,
+          "target_oklch": [
+            69.51,
+            9.92,
+            264.42
+          ],
+          "base_oklch": [
+            69.37,
+            9.51,
+            263.66
+          ]
+        },
+        "used_end": {
+          "target": "#7FB4CA",
+          "closest_base": "ansi_bright_blue",
+          "base_color": "#7fb4ca",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            74.07,
+            6.4,
+            225.72
+          ],
+          "base_oklch": [
+            74.07,
+            6.4,
+            225.72
+          ]
+        },
+        "download_start": {
+          "target": "#7E9CDB",
+          "closest_base": "base0D",
+          "base_color": "#7e9cd8",
+          "distance": 0.0045,
+          "lightness_shift": -0.14,
+          "chroma_shift": -0.41,
+          "hue_shift": -0.76,
+          "target_oklch": [
+            69.51,
+            9.92,
+            264.42
+          ],
+          "base_oklch": [
+            69.37,
+            9.51,
+            263.66
+          ]
+        },
+        "download_mid": {
+          "target": "#938AA9",
+          "closest_base": "ansi_bright_magenta",
+          "base_color": "#938aa9",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            65.19,
+            4.66,
+            298.38
+          ],
+          "base_oklch": [
+            65.19,
+            4.66,
+            298.38
+          ]
+        },
+        "download_end": {
+          "target": "#957FBB",
+          "closest_base": "base0E",
+          "base_color": "#957fb8",
+          "distance": 0.0046,
+          "lightness_shift": -0.14,
+          "chroma_shift": -0.41,
+          "hue_shift": 1.0,
+          "target_oklch": [
+            63.94,
+            9.11,
+            300.69
+          ],
+          "base_oklch": [
+            63.8,
+            8.7,
+            301.7
+          ]
+        },
+        "upload_start": {
+          "target": "#DCA561",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0459,
+          "lightness_shift": -3.05,
+          "chroma_shift": -2.94,
+          "hue_shift": 11.14,
+          "target_oklch": [
+            75.94,
+            10.73,
+            70.87
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "upload_mid": {
+          "target": "#E6C384",
+          "closest_base": "ansi_bright_yellow",
+          "base_color": "#e6c384",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.32,
+            8.99,
+            81.64
+          ],
+          "base_oklch": [
+            83.32,
+            8.99,
+            81.64
+          ]
+        },
+        "upload_end": {
+          "target": "#E82424",
+          "closest_base": "base09",
+          "base_color": "#e82424",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ],
+          "base_oklch": [
+            59.76,
+            22.69,
+            27.65
+          ]
+        },
+        "process_start": {
+          "target": "#98BB6C",
+          "closest_base": "ansi_bright_green",
+          "base_color": "#98bb6c",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            74.77,
+            11.25,
+            128.36
+          ],
+          "base_oklch": [
+            74.77,
+            11.25,
+            128.36
+          ]
+        },
+        "process_mid": {
+          "target": "#DCA561",
+          "closest_base": "base0A",
+          "base_color": "#c0a36e",
+          "distance": 0.0459,
+          "lightness_shift": -3.05,
+          "chroma_shift": -2.94,
+          "hue_shift": 11.14,
+          "target_oklch": [
+            75.94,
+            10.73,
+            70.87
+          ],
+          "base_oklch": [
+            72.9,
+            7.8,
+            82.02
+          ]
+        },
+        "process_end": {
+          "target": "#C34043",
+          "closest_base": "base08",
+          "base_color": "#c34043",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            55.94,
+            16.7,
+            23.09
+          ],
+          "base_oklch": [
+            55.94,
+            16.7,
+            23.09
+          ]
+        }
+      }
+    }
+  },
+  {
+    "theme": "gruvbox",
+    "mappings": {
+      "btop": {
+        "main_bg": {
+          "target": "#282828",
+          "closest_base": "base00",
+          "base_color": "#1d2021",
+          "distance": 0.0364,
+          "lightness_shift": -3.6,
+          "chroma_shift": 0.49,
+          "hue_shift": 129.8,
+          "target_oklch": [
+            27.68,
+            0.0,
+            89.88
+          ],
+          "base_oklch": [
+            24.08,
+            0.49,
+            219.67
+          ]
+        },
+        "main_fg": {
+          "target": "#a89984",
+          "closest_base": "base04",
+          "base_color": "#a89984",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ],
+          "base_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ]
+        },
+        "title": {
+          "target": "#ebdbb2",
+          "closest_base": "base05",
+          "base_color": "#ebdbb2",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            89.41,
+            5.66,
+            89.24
+          ],
+          "base_oklch": [
+            89.41,
+            5.66,
+            89.24
+          ]
+        },
+        "hi_fg": {
+          "target": "#d79921",
+          "closest_base": "base0A",
+          "base_color": "#d79921",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            72.51,
+            14.29,
+            77.71
+          ],
+          "base_oklch": [
+            72.51,
+            14.29,
+            77.71
+          ]
+        },
+        "selected_bg": {
+          "target": "#282828",
+          "closest_base": "base00",
+          "base_color": "#1d2021",
+          "distance": 0.0364,
+          "lightness_shift": -3.6,
+          "chroma_shift": 0.49,
+          "hue_shift": 129.8,
+          "target_oklch": [
+            27.68,
+            0.0,
+            89.88
+          ],
+          "base_oklch": [
+            24.08,
+            0.49,
+            219.67
+          ]
+        },
+        "selected_fg": {
+          "target": "#fabd2f",
+          "closest_base": "ansi_bright_yellow",
+          "base_color": "#fabd2f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.25,
+            15.95,
+            82.99
+          ],
+          "base_oklch": [
+            83.25,
+            15.95,
+            82.99
+          ]
+        },
+        "inactive_fg": {
+          "target": "#282828",
+          "closest_base": "base00",
+          "base_color": "#1d2021",
+          "distance": 0.0364,
+          "lightness_shift": -3.6,
+          "chroma_shift": 0.49,
+          "hue_shift": 129.8,
+          "target_oklch": [
+            27.68,
+            0.0,
+            89.88
+          ],
+          "base_oklch": [
+            24.08,
+            0.49,
+            219.67
+          ]
+        },
+        "graph_text": {
+          "target": "#585858",
+          "closest_base": "base02",
+          "base_color": "#665c54",
+          "distance": 0.028,
+          "lightness_shift": 2.14,
+          "chroma_shift": 1.81,
+          "hue_shift": -28.83,
+          "target_oklch": [
+            46.04,
+            0.0,
+            89.88
+          ],
+          "base_oklch": [
+            48.18,
+            1.81,
+            61.04
+          ]
+        },
+        "proc_misc": {
+          "target": "#98971a",
+          "closest_base": "base0B",
+          "base_color": "#98971a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            65.64,
+            13.54,
+            109.12
+          ],
+          "base_oklch": [
+            65.64,
+            13.54,
+            109.12
+          ]
+        },
+        "cpu_box": {
+          "target": "#a89984",
+          "closest_base": "base04",
+          "base_color": "#a89984",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ],
+          "base_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ]
+        },
+        "mem_box": {
+          "target": "#a89984",
+          "closest_base": "base04",
+          "base_color": "#a89984",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ],
+          "base_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ]
+        },
+        "net_box": {
+          "target": "#a89984",
+          "closest_base": "base04",
+          "base_color": "#a89984",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ],
+          "base_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ]
+        },
+        "proc_box": {
+          "target": "#a89984",
+          "closest_base": "base04",
+          "base_color": "#a89984",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ],
+          "base_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ]
+        },
+        "div_line": {
+          "target": "#a89984",
+          "closest_base": "base04",
+          "base_color": "#a89984",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ],
+          "base_oklch": [
+            69.03,
+            3.46,
+            76.31
+          ]
+        },
+        "temp_start": {
+          "target": "#458588",
+          "closest_base": "base0D",
+          "base_color": "#458588",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            57.56,
+            6.58,
+            199.49
+          ],
+          "base_oklch": [
+            57.56,
+            6.58,
+            199.49
+          ]
+        },
+        "temp_mid": {
+          "target": "#d3869b",
+          "closest_base": "ansi_bright_magenta",
+          "base_color": "#d3869b",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            70.54,
+            9.76,
+            2.19
+          ],
+          "base_oklch": [
+            70.54,
+            9.76,
+            2.19
+          ]
+        },
+        "temp_end": {
+          "target": "#fb4394",
+          "closest_base": "base09",
+          "base_color": "#fb4934",
+          "distance": 0.1227,
+          "lightness_shift": -1.38,
+          "chroma_shift": -0.96,
+          "hue_shift": 31.74,
+          "target_oklch": [
+            67.35,
+            22.71,
+            358.65
+          ],
+          "base_oklch": [
+            65.97,
+            21.75,
+            30.39
+          ]
+        },
+        "cpu_start": {
+          "target": "#b8bb26",
+          "closest_base": "ansi_bright_green",
+          "base_color": "#b8bb26",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            76.52,
+            15.81,
+            110.83
+          ],
+          "base_oklch": [
+            76.52,
+            15.81,
+            110.83
+          ]
+        },
+        "cpu_mid": {
+          "target": "#d79921",
+          "closest_base": "base0A",
+          "base_color": "#d79921",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            72.51,
+            14.29,
+            77.71
+          ],
+          "base_oklch": [
+            72.51,
+            14.29,
+            77.71
+          ]
+        },
+        "cpu_end": {
+          "target": "#fb4934",
+          "closest_base": "base09",
+          "base_color": "#fb4934",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            65.97,
+            21.75,
+            30.39
+          ],
+          "base_oklch": [
+            65.97,
+            21.75,
+            30.39
+          ]
+        },
+        "free_start": {
+          "target": "#4e5900",
+          "closest_base": "base02",
+          "base_color": "#665c54",
+          "distance": 0.1026,
+          "lightness_shift": 4.29,
+          "chroma_shift": -8.38,
+          "hue_shift": -56.66,
+          "target_oklch": [
+            43.9,
+            10.19,
+            117.71
+          ],
+          "base_oklch": [
+            48.18,
+            1.81,
+            61.04
+          ]
+        },
+        "free_end": {
+          "target": "#98971a",
+          "closest_base": "base0B",
+          "base_color": "#98971a",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            65.64,
+            13.54,
+            109.12
+          ],
+          "base_oklch": [
+            65.64,
+            13.54,
+            109.12
+          ]
+        },
+        "cached_start": {
+          "target": "#458588",
+          "closest_base": "base0D",
+          "base_color": "#458588",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            57.56,
+            6.58,
+            199.49
+          ],
+          "base_oklch": [
+            57.56,
+            6.58,
+            199.49
+          ]
+        },
+        "cached_end": {
+          "target": "#83a598",
+          "closest_base": "ansi_bright_blue",
+          "base_color": "#83a598",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.27,
+            4.2,
+            169.77
+          ],
+          "base_oklch": [
+            69.27,
+            4.2,
+            169.77
+          ]
+        },
+        "available_start": {
+          "target": "#d79921",
+          "closest_base": "base0A",
+          "base_color": "#d79921",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            72.51,
+            14.29,
+            77.71
+          ],
+          "base_oklch": [
+            72.51,
+            14.29,
+            77.71
+          ]
+        },
+        "available_end": {
+          "target": "#fabd2f",
+          "closest_base": "ansi_bright_yellow",
+          "base_color": "#fabd2f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.25,
+            15.95,
+            82.99
+          ],
+          "base_oklch": [
+            83.25,
+            15.95,
+            82.99
+          ]
+        },
+        "used_start": {
+          "target": "#cc241d",
+          "closest_base": "base08",
+          "base_color": "#cc241d",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            54.58,
+            20.3,
+            28.66
+          ],
+          "base_oklch": [
+            54.58,
+            20.3,
+            28.66
+          ]
+        },
+        "used_end": {
+          "target": "#fb4934",
+          "closest_base": "base09",
+          "base_color": "#fb4934",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            65.97,
+            21.75,
+            30.39
+          ],
+          "base_oklch": [
+            65.97,
+            21.75,
+            30.39
+          ]
+        },
+        "download_start": {
+          "target": "#3d4070",
+          "closest_base": "base02",
+          "base_color": "#665c54",
+          "distance": 0.1308,
+          "lightness_shift": 8.94,
+          "chroma_shift": -6.26,
+          "hue_shift": 141.77,
+          "target_oklch": [
+            39.25,
+            8.07,
+            279.28
+          ],
+          "base_oklch": [
+            48.18,
+            1.81,
+            61.04
+          ]
+        },
+        "download_mid": {
+          "target": "#6c71c4",
+          "closest_base": "base0D",
+          "base_color": "#458588",
+          "distance": 0.1315,
+          "lightness_shift": -0.67,
+          "chroma_shift": -6.03,
+          "hue_shift": -79.61,
+          "target_oklch": [
+            58.23,
+            12.61,
+            279.1
+          ],
+          "base_oklch": [
+            57.56,
+            6.58,
+            199.49
+          ]
+        },
+        "download_end": {
+          "target": "#a3a8f7",
+          "closest_base": "ansi_bright_magenta",
+          "base_color": "#d3869b",
+          "distance": 0.1479,
+          "lightness_shift": -5.26,
+          "chroma_shift": -1.56,
+          "hue_shift": 81.64,
+          "target_oklch": [
+            75.8,
+            11.32,
+            280.55
+          ],
+          "base_oklch": [
+            70.54,
+            9.76,
+            2.19
+          ]
+        },
+        "upload_start": {
+          "target": "#701c45",
+          "closest_base": "base02",
+          "base_color": "#665c54",
+          "distance": 0.1572,
+          "lightness_shift": 10.45,
+          "chroma_shift": -10.55,
+          "hue_shift": 66.13,
+          "target_oklch": [
+            37.73,
+            12.36,
+            354.91
+          ],
+          "base_oklch": [
+            48.18,
+            1.81,
+            61.04
+          ]
+        },
+        "upload_mid": {
+          "target": "#b16286",
+          "closest_base": "base0E",
+          "base_color": "#b16286",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            59.73,
+            11.05,
+            352.22
+          ],
+          "base_oklch": [
+            59.73,
+            11.05,
+            352.22
+          ]
+        },
+        "upload_end": {
+          "target": "#d3869b",
+          "closest_base": "ansi_bright_magenta",
+          "base_color": "#d3869b",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            70.54,
+            9.76,
+            2.19
+          ],
+          "base_oklch": [
+            70.54,
+            9.76,
+            2.19
+          ]
+        }
+      }
+    }
+  },
+  {
+    "theme": "rose-pine",
+    "mappings": {
+      "btop": {
+        "main_bg": {
+          "target": "#faf4ed",
+          "closest_base": "base04",
+          "base_color": "#e0def4",
+          "distance": 0.0727,
+          "lightness_shift": -6.11,
+          "chroma_shift": 1.85,
+          "hue_shift": -141.93,
+          "target_oklch": [
+            96.99,
+            1.13,
+            71.9
+          ],
+          "base_oklch": [
+            90.88,
+            2.99,
+            289.97
+          ]
+        },
+        "main_fg": {
+          "target": "#575279",
+          "closest_base": "base01",
+          "base_color": "#6e6a86",
+          "distance": 0.0809,
+          "lightness_shift": 7.85,
+          "chroma_shift": -1.94,
+          "hue_shift": 1.86,
+          "target_oklch": [
+            45.97,
+            6.29,
+            289.56
+          ],
+          "base_oklch": [
+            53.83,
+            4.35,
+            291.41
+          ]
+        },
+        "title": {
+          "target": "#908caa",
+          "closest_base": "base01",
+          "base_color": "#6e6a86",
+          "distance": 0.1156,
+          "lightness_shift": -11.56,
+          "chroma_shift": -0.09,
+          "hue_shift": 0.18,
+          "target_oklch": [
+            65.39,
+            4.44,
+            291.23
+          ],
+          "base_oklch": [
+            53.83,
+            4.35,
+            291.41
+          ]
+        },
+        "hi_fg": {
+          "target": "#e0def4",
+          "closest_base": "base04",
+          "base_color": "#e0def4",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            90.88,
+            2.99,
+            289.97
+          ],
+          "base_oklch": [
+            90.88,
+            2.99,
+            289.97
+          ]
+        },
+        "selected_bg": {
+          "target": "#524f67",
+          "closest_base": "base02",
+          "base_color": "#403d52",
+          "distance": 0.0683,
+          "lightness_shift": -6.82,
+          "chroma_shift": -0.34,
+          "hue_shift": 0.68,
+          "target_oklch": [
+            43.99,
+            3.92,
+            290.42
+          ],
+          "base_oklch": [
+            37.17,
+            3.58,
+            291.1
+          ]
+        },
+        "selected_fg": {
+          "target": "#f6c177",
+          "closest_base": "base0A",
+          "base_color": "#f6c177",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            84.29,
+            11.0,
+            74.6
+          ],
+          "base_oklch": [
+            84.29,
+            11.0,
+            74.6
+          ]
+        },
+        "inactive_fg": {
+          "target": "#403d52",
+          "closest_base": "base02",
+          "base_color": "#403d52",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            37.17,
+            3.58,
+            291.1
+          ],
+          "base_oklch": [
+            37.17,
+            3.58,
+            291.1
+          ]
+        },
+        "graph_text": {
+          "target": "#9ccfd8",
+          "closest_base": "base0D",
+          "base_color": "#9ccfd8",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ],
+          "base_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ]
+        },
+        "meter_bg": {
+          "target": "#9ccfd8",
+          "closest_base": "base0D",
+          "base_color": "#9ccfd8",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ],
+          "base_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ]
+        },
+        "proc_misc": {
+          "target": "#c4a7e7",
+          "closest_base": "base0E",
+          "base_color": "#c4a7e7",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ],
+          "base_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ]
+        },
+        "cpu_box": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "mem_box": {
+          "target": "#31748f",
+          "closest_base": "base0B",
+          "base_color": "#31748f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ],
+          "base_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ]
+        },
+        "net_box": {
+          "target": "#c4a7e7",
+          "closest_base": "base0E",
+          "base_color": "#c4a7e7",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ],
+          "base_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ]
+        },
+        "proc_box": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "div_line": {
+          "target": "#6e6a86",
+          "closest_base": "base01",
+          "base_color": "#6e6a86",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            53.83,
+            4.35,
+            291.41
+          ],
+          "base_oklch": [
+            53.83,
+            4.35,
+            291.41
+          ]
+        },
+        "temp_start": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "temp_mid": {
+          "target": "#f6c177",
+          "closest_base": "base0A",
+          "base_color": "#f6c177",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            84.29,
+            11.0,
+            74.6
+          ],
+          "base_oklch": [
+            84.29,
+            11.0,
+            74.6
+          ]
+        },
+        "temp_end": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "cpu_start": {
+          "target": "#f6c177",
+          "closest_base": "base0A",
+          "base_color": "#f6c177",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            84.29,
+            11.0,
+            74.6
+          ],
+          "base_oklch": [
+            84.29,
+            11.0,
+            74.6
+          ]
+        },
+        "cpu_mid": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "cpu_end": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "free_start": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "free_mid": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "free_end": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "cached_start": {
+          "target": "#c4a7e7",
+          "closest_base": "base0E",
+          "base_color": "#c4a7e7",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ],
+          "base_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ]
+        },
+        "cached_mid": {
+          "target": "#c4a7e7",
+          "closest_base": "base0E",
+          "base_color": "#c4a7e7",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ],
+          "base_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ]
+        },
+        "cached_end": {
+          "target": "#c4a7e7",
+          "closest_base": "base0E",
+          "base_color": "#c4a7e7",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ],
+          "base_oklch": [
+            77.6,
+            9.45,
+            304.99
+          ]
+        },
+        "available_start": {
+          "target": "#31748f",
+          "closest_base": "base0B",
+          "base_color": "#31748f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ],
+          "base_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ]
+        },
+        "available_mid": {
+          "target": "#31748f",
+          "closest_base": "base0B",
+          "base_color": "#31748f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ],
+          "base_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ]
+        },
+        "available_end": {
+          "target": "#31748f",
+          "closest_base": "base0B",
+          "base_color": "#31748f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ],
+          "base_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ]
+        },
+        "used_start": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "used_mid": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "used_end": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "download_start": {
+          "target": "#31748f",
+          "closest_base": "base0B",
+          "base_color": "#31748f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ],
+          "base_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ]
+        },
+        "download_mid": {
+          "target": "#9ccfd8",
+          "closest_base": "base0D",
+          "base_color": "#9ccfd8",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ],
+          "base_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ]
+        },
+        "download_end": {
+          "target": "#9ccfd8",
+          "closest_base": "base0D",
+          "base_color": "#9ccfd8",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ],
+          "base_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ]
+        },
+        "upload_start": {
+          "target": "#ebbcba",
+          "closest_base": "base0C",
+          "base_color": "#ebbcba",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ],
+          "base_oklch": [
+            83.63,
+            5.44,
+            21.14
+          ]
+        },
+        "upload_mid": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "upload_end": {
+          "target": "#eb6f92",
+          "closest_base": "base08",
+          "base_color": "#eb6f92",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ],
+          "base_oklch": [
+            69.77,
+            15.65,
+            4.22
+          ]
+        },
+        "process_start": {
+          "target": "#31748f",
+          "closest_base": "base0B",
+          "base_color": "#31748f",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ],
+          "base_oklch": [
+            52.77,
+            7.93,
+            227.72
+          ]
+        },
+        "process_mid": {
+          "target": "#9ccfd8",
+          "closest_base": "base0D",
+          "base_color": "#9ccfd8",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ],
+          "base_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ]
+        },
+        "process_end": {
+          "target": "#9ccfd8",
+          "closest_base": "base0D",
+          "base_color": "#9ccfd8",
+          "distance": 0.0,
+          "lightness_shift": 0.0,
+          "chroma_shift": 0.0,
+          "hue_shift": 0.0,
+          "target_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ],
+          "base_oklch": [
+            82.19,
+            5.43,
+            209.56
+          ]
+        }
+      }
+    }
+  }
+]
