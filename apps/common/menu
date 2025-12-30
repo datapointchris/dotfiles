@@ -3,8 +3,6 @@
 # menu - Workflow Tools Quick Reference
 # ================================================================
 # Simple launcher showing available workflow tools and commands
-# Note: This is for development/workflow tools, NOT dotfiles management
-# For dotfiles: use task symlinks:*, task install:*, etc.
 # ================================================================
 
 set -euo pipefail
@@ -22,101 +20,47 @@ gum style \
 echo ""
 
 choice=$(gum choose \
-  "Sessions & Navigation" \
-  "Theming & Appearance" \
-  "Notes & Knowledge" \
-  "Tools & Patterns" \
-  "Backups" \
-  "Dotfiles Management" \
-  "Documentation")
+  "Switch tmux session" \
+  "Preview and apply theme" \
+  "Change terminal font" \
+  "Take or find notes" \
+  "Browse workflows" \
+  "Find a tool" \
+  "Search regex patterns" \
+  "Check references" \
+  "Backup directories" \
+  "Incremental backup" \
+  "Deploy symlinks" \
+  "Check symlinks" \
+  "Open documentation")
 
 case "$choice" in
-  "Sessions & Navigation")
-    action=$(gum choose \
-      "Switch tmux session (sess)" \
-      "Back")
-    case "$action" in
-      "Switch tmux session"*) sess ;;
-    esac
-    ;;
-
-  "Theming & Appearance")
-    action=$(gum choose \
-      "Preview and apply theme (theme preview)" \
-      "Change terminal font (font change)" \
-      "Show current theme (theme current)" \
-      "Show current font (font current)" \
-      "Back")
-    case "$action" in
-      "Preview and apply theme"*) theme preview ;;
-      "Change terminal font"*) font change ;;
-      "Show current theme"*) theme current ;;
-      "Show current font"*) font current ;;
-    esac
-    ;;
-
-  "Notes & Knowledge")
-    action=$(gum choose \
-      "Take or find notes (notes)" \
-      "Browse workflows (workflows)" \
-      "Back")
-    case "$action" in
-      "Take or find notes"*) notes ;;
-      "Browse workflows"*) workflows search ;;
-    esac
-    ;;
-
-  "Tools & Patterns")
-    action=$(gum choose \
-      "Find a tool (toolbox)" \
-      "Search regex patterns (patterns)" \
-      "Check references (refcheck)" \
-      "Back")
-    case "$action" in
-      "Find a tool"*) toolbox categories ;;
-      "Search regex patterns"*) patterns ;;
-      "Check references"*) refcheck ;;
-    esac
-    ;;
-
-  "Backups")
-    action=$(gum choose \
-      "Backup directories (backup-dirs)" \
-      "Incremental backup (backup-incremental)" \
-      "Back")
-    case "$action" in
-      "Backup directories"*) backup-dirs ;;
-      "Incremental backup"*) backup-incremental ;;
-    esac
-    ;;
-
-  "Dotfiles Management")
-    action=$(gum choose \
-      "Deploy symlinks (task symlinks:link)" \
-      "Check symlinks (task symlinks:check)" \
-      "Show symlink mappings (task symlinks:show)" \
-      "Back")
-    case "$action" in
-      "Deploy symlinks"*) task symlinks:link ;;
-      "Check symlinks"*) task symlinks:check ;;
-      "Show symlink mappings"*) task symlinks:show ;;
-    esac
-    ;;
-
-  "Documentation")
-    action=$(gum choose \
-      "Open docs website" \
-      "Serve docs locally (task docs:serve)" \
-      "Back")
-    case "$action" in
-      "Open docs website"*)
-        print_green "Opening documentation..."
-        open "https://datapointchris.github.io/dotfiles/"
-        ;;
-      "Serve docs locally"*)
-        print_green "Starting local docs server..."
-        task docs:serve
-        ;;
-    esac
+  "Switch tmux session")
+    sess ;;
+  "Preview and apply theme")
+    theme preview ;;
+  "Change terminal font")
+    font change ;;
+  "Take or find notes")
+    notes ;;
+  "Browse workflows")
+    workflows search ;;
+  "Find a tool")
+    toolbox categories ;;
+  "Search regex patterns")
+    patterns ;;
+  "Check references")
+    refcheck ;;
+  "Backup directories")
+    backup-dirs ;;
+  "Incremental backup")
+    backup-incremental ;;
+  "Deploy symlinks")
+    task symlinks:link ;;
+  "Check symlinks")
+    task symlinks:check ;;
+  "Open documentation")
+    print_green "Opening documentation..."
+    open "https://datapointchris.github.io/dotfiles/"
     ;;
 esac
