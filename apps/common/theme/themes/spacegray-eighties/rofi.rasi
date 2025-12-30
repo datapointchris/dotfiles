@@ -1,0 +1,16 @@
+/* Spacegray Eighties - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #222222;
+    bg-alt: #555555;
+    bg-selected: #272e35;
+    fg: #bdbaae;
+    fg-alt: #efece7;
+    blue: #5486c0;
+    magenta: #bf83c1;
+    red: #ec5f67;
+    green: #81a764;
+    yellow: #fec254;
+    cyan: #57c2c1;
+}

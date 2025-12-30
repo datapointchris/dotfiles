@@ -1,0 +1,16 @@
+/* Pandora - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #141e43;
+    bg-alt: #3f5648;
+    bg-selected: #2d37ff;
+    fg: #e1e1e1;
+    fg-alt: #e2e2e2;
+    blue: #338f86;
+    magenta: #9414e6;
+    red: #ff4242;
+    green: #74af68;
+    yellow: #ffad29;
+    cyan: #23d7d7;
+}

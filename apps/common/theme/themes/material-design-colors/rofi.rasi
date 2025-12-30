@@ -1,0 +1,16 @@
+/* Material Design Colors - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1d262a;
+    bg-alt: #a1b0b8;
+    bg-selected: #4e6a78;
+    fg: #e7ebed;
+    fg-alt: #ffffff;
+    blue: #37b6ff;
+    magenta: #fc226e;
+    red: #fc3841;
+    green: #5cf19e;
+    yellow: #fed032;
+    cyan: #59ffd1;
+}

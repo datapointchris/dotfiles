@@ -1,0 +1,16 @@
+/* Retrobox - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1c1c1c;
+    bg-alt: #3c3836;
+    bg-selected: #504945;
+    fg: #ebdbb2;
+    fg-alt: #a89984;
+    blue: #458588;
+    magenta: #b16286;
+    red: #cc241d;
+    green: #98971a;
+    yellow: #d79921;
+    cyan: #689d6a;
+}

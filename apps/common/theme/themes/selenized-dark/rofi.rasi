@@ -1,0 +1,16 @@
+/* Selenized Dark - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #103c48;
+    bg-alt: #396775;
+    bg-selected: #184956;
+    fg: #adbcbc;
+    fg-alt: #72898f;
+    blue: #4695f7;
+    magenta: #f275be;
+    red: #fa5750;
+    green: #75b938;
+    yellow: #dbb32d;
+    cyan: #41c7b9;
+}

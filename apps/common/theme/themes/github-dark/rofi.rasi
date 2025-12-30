@@ -1,0 +1,16 @@
+/* GitHub Dark - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #101216;
+    bg-alt: #4d4d4d;
+    bg-selected: #3b5070;
+    fg: #8b949e;
+    fg-alt: #ffffff;
+    blue: #6ca4f8;
+    magenta: #db61a2;
+    red: #f78166;
+    green: #56d364;
+    yellow: #e3b341;
+    cyan: #2b7489;
+}

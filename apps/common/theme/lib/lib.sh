@@ -333,39 +333,20 @@ apply_hyprlock() {
 }
 
 # Apply dunst theme (Arch)
-# Note: Dunst doesn't support includes, so we sed-replace colors in dunstrc
+# Uses drop-in directory: ~/.config/dunst/dunstrc.d/99-theme.conf
 apply_dunst() {
   local theme="$1"
   local lib_path
   lib_path=$(get_library_path "$theme")
 
-  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/theme.yml" ]]; then
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/dunst.conf" ]]; then
     return 1
   fi
 
-  local dunstrc="$HOME/.config/dunst/dunstrc"
-  [[ ! -f "$dunstrc" ]] && return 1
+  local dunst_dropin_dir="$HOME/.config/dunst/dunstrc.d"
+  mkdir -p "$dunst_dropin_dir"
 
-  # Read colors from theme.yml
-  local bg fg blue red
-  bg=$(yq '.special.background' "$lib_path/theme.yml")
-  fg=$(yq '.special.foreground' "$lib_path/theme.yml")
-  blue=$(yq '.ansi.blue' "$lib_path/theme.yml")
-  red=$(yq '.ansi.red' "$lib_path/theme.yml")
-
-  # Update colors in dunstrc using sed
-  local target="$dunstrc"
-  [[ -L "$dunstrc" ]] && target="$(readlink -f "$dunstrc")"
-
-  # Update background colors in urgency sections
-  sed -i "s|background = \"#[0-9a-fA-F]*\"|background = \"$bg\"|g" "$target"
-  # Update foreground colors
-  sed -i "s|foreground = \"#[0-9a-fA-F]*\"|foreground = \"$fg\"|g" "$target"
-  # Update frame_color for low/normal (blue)
-  sed -i "/\[urgency_low\]/,/\[urgency_normal\]/{s|frame_color = \"#[0-9a-fA-F]*\"|frame_color = \"$blue\"|}" "$target"
-  sed -i "/\[urgency_normal\]/,/\[urgency_critical\]/{s|frame_color = \"#[0-9a-fA-F]*\"|frame_color = \"$blue\"|}" "$target"
-  # Update frame_color for critical (red)
-  sed -i "/\[urgency_critical\]/,\$s|frame_color = \"#[0-9a-fA-F]*\"|frame_color = \"$red\"|" "$target"
+  cp "$lib_path/dunst.conf" "$dunst_dropin_dir/99-theme.conf"
 
   return 0
 }

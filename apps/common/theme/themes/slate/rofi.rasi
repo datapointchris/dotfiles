@@ -1,0 +1,16 @@
+/* Slate - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #262626;
+    bg-alt: #333333;
+    bg-selected: #5f8700;
+    fg: #ffffff;
+    fg-alt: #afaf87;
+    blue: #0000ee;
+    magenta: #cd00cd;
+    red: #cd0000;
+    green: #00cd00;
+    yellow: #cdcd00;
+    cyan: #00cdcd;
+}

@@ -1,0 +1,16 @@
+/* Flexoki Moon Toddler - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #2a1f16;
+    bg-alt: #464132;
+    bg-selected: #693c4e;
+    fg: #d4c4a8;
+    fg-alt: #c4b199;
+    blue: #3672da;
+    magenta: #ca1447;
+    red: #dd634d;
+    green: #7eae0f;
+    yellow: #957209;
+    cyan: #4f7edc;
+}

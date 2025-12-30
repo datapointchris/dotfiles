@@ -1,0 +1,16 @@
+/* Popping and Locking - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #181921;
+    bg-alt: #928374;
+    bg-selected: #ebdbb2;
+    fg: #ebdbb2;
+    fg-alt: #a89984;
+    blue: #458588;
+    magenta: #b16286;
+    red: #cc241d;
+    green: #98971a;
+    yellow: #d79921;
+    cyan: #689d6a;
+}

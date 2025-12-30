@@ -1,0 +1,16 @@
+/* Kanagawa - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1f1f28;
+    bg-alt: #16161d;
+    bg-selected: #2d4f67;
+    fg: #dcd7ba;
+    fg-alt: #c8c093;
+    blue: #7e9cd8;
+    magenta: #957fb8;
+    red: #c34043;
+    green: #76946a;
+    yellow: #c0a36e;
+    cyan: #6a9589;
+}

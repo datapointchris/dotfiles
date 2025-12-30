@@ -1,0 +1,16 @@
+/* Spacedust - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #0a1e24;
+    bg-alt: #684c31;
+    bg-selected: #0a385c;
+    fg: #ecf0c1;
+    fg-alt: #f0f1ce;
+    blue: #0f548b;
+    magenta: #e35b00;
+    red: #e35b00;
+    green: #5cab96;
+    yellow: #e3cd7b;
+    cyan: #06afc7;
+}

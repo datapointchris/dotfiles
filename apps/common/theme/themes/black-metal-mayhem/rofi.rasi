@@ -1,0 +1,16 @@
+/* Black Metal (Mayhem) - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #000000;
+    bg-alt: #3f3f3f;
+    bg-selected: #c1c1c1;
+    fg: #c1c1c1;
+    fg-alt: #c1c1c1;
+    blue: #888888;
+    magenta: #999999;
+    red: #5f8787;
+    green: #f3ecd4;
+    yellow: #eecc6c;
+    cyan: #aaaaaa;
+}

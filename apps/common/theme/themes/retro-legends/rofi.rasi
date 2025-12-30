@@ -1,0 +1,16 @@
+/* Retro Legends - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #0d0d0d;
+    bg-alt: #4c594c;
+    bg-selected: #336633;
+    fg: #45eb45;
+    fg-alt: #bfe6bf;
+    blue: #4066f2;
+    magenta: #bf4cf2;
+    red: #de5454;
+    green: #45eb45;
+    yellow: #f7bf2b;
+    cyan: #40d9e6;
+}

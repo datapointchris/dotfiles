@@ -1,0 +1,16 @@
+/* Shades of Purple - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1e1d40;
+    bg-alt: #686868;
+    bg-selected: #b362ff;
+    fg: #ffffff;
+    fg-alt: #c7c7c7;
+    blue: #6943ff;
+    magenta: #ff2c70;
+    red: #d90429;
+    green: #3ad900;
+    yellow: #ffe700;
+    cyan: #00c5c7;
+}

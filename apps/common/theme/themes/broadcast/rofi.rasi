@@ -1,0 +1,16 @@
+/* Broadcast - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #2b2b2b;
+    bg-alt: #585858;
+    bg-selected: #5a647e;
+    fg: #e6e1dc;
+    fg-alt: #ffffff;
+    blue: #6d9cbe;
+    magenta: #d0d0ff;
+    red: #da4939;
+    green: #519f50;
+    yellow: #ffd24a;
+    cyan: #6e9cbe;
+}

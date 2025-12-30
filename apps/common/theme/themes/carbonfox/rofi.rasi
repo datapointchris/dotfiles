@@ -1,0 +1,16 @@
+/* Carbonfox - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #161616;
+    bg-alt: #1c1c1c;
+    bg-selected: #2a2a2a;
+    fg: #f2f4f8;
+    fg-alt: #b6b8bb;
+    blue: #78A9FF;
+    magenta: #BE95FF;
+    red: #EE5396;
+    green: #25be6a;
+    yellow: #08BDBA;
+    cyan: #33B1FF;
+}

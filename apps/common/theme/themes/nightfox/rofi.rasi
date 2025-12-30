@@ -1,0 +1,16 @@
+/* Nightfox - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #192330;
+    bg-alt: #212e3f;
+    bg-selected: #2b3b51;
+    fg: #cdcecf;
+    fg-alt: #71839b;
+    blue: #719cd6;
+    magenta: #9d79d6;
+    red: #c94f6d;
+    green: #81b29a;
+    yellow: #dbc074;
+    cyan: #63cdcf;
+}

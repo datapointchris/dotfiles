@@ -1,0 +1,16 @@
+/* Nordic - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #242933;
+    bg-alt: #2E3440;
+    bg-selected: #3B4252;
+    fg: #BBC3D4;
+    fg-alt: #60728A;
+    blue: #5E81AC;
+    magenta: #B48EAD;
+    red: #BF616A;
+    green: #A3BE8C;
+    yellow: #EBCB8B;
+    cyan: #8FBCBB;
+}

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Generate all app configs from a palette.yml file
+# Generate all app configs from a theme.yml file
 # Usage: generate-all.sh <theme-dir>
 #
-# Expects theme-dir to contain palette.yml
-# Generates: ghostty.conf, kitty.conf, tmux.conf, btop.theme,
-#            alacritty.toml, hyprland.conf, waybar.css
+# Expects theme-dir to contain theme.yml
+# Generates configs for: terminals, TUI apps, Hyprland desktop environment
 
 set -euo pipefail
 
@@ -14,13 +13,13 @@ GENERATORS_DIR="$SCRIPT_DIR/generators"
 usage() {
   echo "Usage: $0 <theme-dir>"
   echo ""
-  echo "Generate all app configs from palette.yml"
+  echo "Generate all app configs from theme.yml"
   echo ""
   echo "Arguments:"
-  echo "  theme-dir    Directory containing palette.yml"
+  echo "  theme-dir    Directory containing theme.yml"
   echo ""
   echo "Example:"
-  echo "  $0 library/nord"
+  echo "  $0 themes/kanagawa"
   exit 1
 }
 
@@ -29,14 +28,14 @@ if [[ $# -lt 1 ]]; then
 fi
 
 theme_dir="$1"
-palette_file="$theme_dir/palette.yml"
+theme_file="$theme_dir/theme.yml"
 
-if [[ ! -f "$palette_file" ]]; then
-  echo "Error: palette.yml not found in $theme_dir" >&2
+if [[ ! -f "$theme_file" ]]; then
+  echo "Error: theme.yml not found in $theme_dir" >&2
   exit 1
 fi
 
-theme_name=$(yq -r '.name' "$palette_file")
+theme_name=$(yq -r '.meta.name' "$theme_file")
 echo "Generating configs for: $theme_name"
 echo ""
 
@@ -48,7 +47,7 @@ generate_app() {
   local output="$theme_dir/${app}.${ext}"
 
   if [[ -f "$generator" ]]; then
-    "$generator" "$palette_file" "$output"
+    "$generator" "$theme_file" "$output"
   else
     echo "  Skipping $app (no generator)"
   fi
@@ -67,6 +66,8 @@ generate_app "btop" "theme"
 generate_app "hyprland" "conf"
 generate_app "waybar" "css"
 generate_app "hyprlock" "conf"
+generate_app "rofi" "rasi"
+generate_app "dunst" "conf"
 generate_app "mako" "ini"
 generate_app "walker" "css"
 generate_app "swayosd" "css"

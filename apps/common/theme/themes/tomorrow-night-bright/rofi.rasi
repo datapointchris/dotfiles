@@ -1,0 +1,16 @@
+/* Tomorrow Night Bright - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #000000;
+    bg-alt: #404040;
+    bg-selected: #424242;
+    fg: #eaeaea;
+    fg-alt: #ffffff;
+    blue: #7aa6da;
+    magenta: #c397d8;
+    red: #d54e53;
+    green: #b9ca4a;
+    yellow: #e7c547;
+    cyan: #70c0b1;
+}

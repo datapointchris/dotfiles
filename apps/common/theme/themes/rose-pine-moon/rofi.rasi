@@ -1,0 +1,16 @@
+/* Rose Pine Moon - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #232136;
+    bg-alt: #6e6a86;
+    bg-selected: #44415a;
+    fg: #e0def4;
+    fg-alt: #e0def4;
+    blue: #9ccfd8;
+    magenta: #c4a7e7;
+    red: #eb6f92;
+    green: #3e8fb0;
+    yellow: #f6c177;
+    cyan: #ea9a97;
+}

@@ -3,8 +3,7 @@
 # Usage: dunst.sh <theme.yml> [output-file]
 #
 # Outputs [urgency_*] sections for dunst.
-# Note: Dunst doesn't support includes, so apply function will
-# need to update dunstrc directly or replace these sections.
+# Applied via drop-in: ~/.config/dunst/dunstrc.d/99-theme.conf
 
 set -euo pipefail
 

@@ -1,5 +1,6 @@
 # Dunst Configuration
 # See dunst(5) for documentation
+# Theme colors loaded from drop-in: dunstrc.d/99-theme.conf
 
 [global]
     # Display
@@ -68,22 +69,3 @@
     mouse_left_click = close_current
     mouse_middle_click = do_action, close_current
     mouse_right_click = close_all
-
-# Kanagawa colors
-[urgency_low]
-    background = "#1f1f28"
-    foreground = "#dcd7ba"
-    frame_color = "#7e9cd8"
-    timeout = 5
-
-[urgency_normal]
-    background = "#1f1f28"
-    foreground = "#dcd7ba"
-    frame_color = "#7e9cd8"
-    timeout = 10
-
-[urgency_critical]
-    background = "#1f1f28"
-    foreground = "#dcd7ba"
-    frame_color = "#c34043"
-    timeout = 0

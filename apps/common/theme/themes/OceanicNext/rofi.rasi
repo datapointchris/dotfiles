@@ -1,0 +1,16 @@
+/* OceanicNext - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #162c35;
+    bg-alt: #65737e;
+    bg-selected: #4f5b66;
+    fg: #c0c5ce;
+    fg-alt: #ffffff;
+    blue: #6699cc;
+    magenta: #c594c5;
+    red: #ec5f67;
+    green: #99c794;
+    yellow: #fac863;
+    cyan: #5fb3b3;
+}

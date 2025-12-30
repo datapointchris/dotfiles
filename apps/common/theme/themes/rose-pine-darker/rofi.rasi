@@ -1,0 +1,16 @@
+/* Rose Pine Darker - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #191724;
+    bg-alt: #1f1d2e;
+    bg-selected: #26233a;
+    fg: #e0def4;
+    fg-alt: #908caa;
+    blue: #9ccfd8;
+    magenta: #c4a7e7;
+    red: #eb6f92;
+    green: #31748f;
+    yellow: #f6c177;
+    cyan: #ebbcba;
+}

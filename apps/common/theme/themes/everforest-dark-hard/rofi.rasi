@@ -1,0 +1,16 @@
+/* Everforest Dark Hard - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1e2326;
+    bg-alt: #a6b0a0;
+    bg-selected: #4c3743;
+    fg: #d3c6aa;
+    fg-alt: #f2efdf;
+    blue: #7fbbb3;
+    magenta: #d699b6;
+    red: #e67e80;
+    green: #a7c080;
+    yellow: #dbbc7f;
+    cyan: #83c092;
+}

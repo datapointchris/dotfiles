@@ -1,0 +1,16 @@
+/* Srcery - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1c1b19;
+    bg-alt: #918175;
+    bg-selected: #fce8c3;
+    fg: #fce8c3;
+    fg-alt: #baa67f;
+    blue: #2c78bf;
+    magenta: #e02c6d;
+    red: #ef2f27;
+    green: #519f50;
+    yellow: #fbb829;
+    cyan: #0aaeb3;
+}

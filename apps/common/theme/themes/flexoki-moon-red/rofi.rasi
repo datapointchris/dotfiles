@@ -1,0 +1,16 @@
+/* Flexoki Moon Red - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #18090b;
+    bg-alt: #251a1a;
+    bg-selected: #42322e;
+    fg: #f0e8dd;
+    fg-alt: #b5967e;
+    blue: #4385be;
+    magenta: #ce5d97;
+    red: #d14d41;
+    green: #879a39;
+    yellow: #d0a215;
+    cyan: #3aa99f;
+}

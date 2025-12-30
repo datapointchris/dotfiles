@@ -1,0 +1,16 @@
+/* Smyck - Rofi colors */
+/* Generated from theme.yml */
+
+* {
+    bg: #1b1b1b;
+    bg-alt: #7a7a7a;
+    bg-selected: #207483;
+    fg: #f7f7f7;
+    fg-alt: #a1a1a1;
+    blue: #62a3c4;
+    magenta: #ba8acc;
+    red: #b84131;
+    green: #7da900;
+    yellow: #c4a500;
+    cyan: #207383;
+}
