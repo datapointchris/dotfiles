@@ -127,9 +127,6 @@ install_common_phases() {
   print_header "Symlinking Dotfiles"
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
 
-  print_header "Theme System"
-  run_installer "$plugins/tinty-themes.sh" "tinty-themes"
-
   print_header "Tmux Plugins"
   run_installer "$plugins/tpm.sh" "tpm"
   run_installer "$plugins/tmux-plugins.sh" "tmux-plugins"

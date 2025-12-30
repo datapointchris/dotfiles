@@ -597,10 +597,6 @@ cargo_packages:
     command: delta
     description: syntax-highlighting git diff
 
-  - name: tinty
-    command: tinty
-    description: Base16 theme manager
-
   - name: cargo-update
     command: cargo-install-update
     description: update installed cargo packages
