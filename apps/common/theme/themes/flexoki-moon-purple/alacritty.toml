@@ -1,0 +1,35 @@
+# Flexoki Moon Purple - alacritty theme
+# Generated from theme.yml
+# Author: datapointchris
+
+[colors.primary]
+background = "#12101d"
+foreground = "#ddd8e8"
+
+[colors.cursor]
+text = "#12101d"
+cursor = "#ddd8e8"
+
+[colors.selection]
+text = "#ddd8e8"
+background = "#252330"
+
+[colors.normal]
+black = "#12101d"
+red = "#d14d41"
+green = "#879a39"
+yellow = "#d0a215"
+blue = "#4385be"
+magenta = "#ce5d97"
+cyan = "#3aa99f"
+white = "#ddd8e8"
+
+[colors.bright]
+black = "#625f68"
+red = "#af3029"
+green = "#66800b"
+yellow = "#ad8301"
+blue = "#205ea6"
+magenta = "#a02f6f"
+cyan = "#24837b"
+white = "#EDEECF"

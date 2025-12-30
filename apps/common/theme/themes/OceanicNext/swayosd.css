@@ -1,0 +1,8 @@
+/* OceanicNext - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #162c35;
+@define-color border-color #c0c5ce;
+@define-color label #c0c5ce;
+@define-color image #c0c5ce;
+@define-color progress #c0c5ce;

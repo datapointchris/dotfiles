@@ -1,0 +1,80 @@
+# Broadcast - btop theme
+# Generated from theme.yml
+# Author: Ghostty
+
+# Main background, empty for terminal default
+theme[main_bg]="#2B2B2B"
+
+# Main text color
+theme[main_fg]="#E6E1DC"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#6E9CBE"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#6D9CBE"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#5A647E"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#FFFFFF"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#585858"
+
+# Misc colors for processes box
+theme[proc_misc]="#6D9CBE"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#585858"
+theme[mem_box]="#585858"
+theme[net_box]="#585858"
+theme[proc_box]="#585858"
+theme[div_line]="#585858"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#6D9CBE"
+theme[temp_mid]="#6E9CBE"
+theme[temp_end]="#FFFFFF"
+
+# CPU graph colors
+theme[cpu_start]="#6D9CBE"
+theme[cpu_mid]="#6E9CBE"
+theme[cpu_end]="#FFFFFF"
+
+# Memory free meter
+theme[free_start]="#519F50"
+theme[free_mid]="#6E9CBE"
+theme[free_end]="#FFFFFF"
+
+# Memory cached meter
+theme[cached_start]="#FFD24A"
+theme[cached_mid]="#FF7B6B"
+theme[cached_end]="#FFFFFF"
+
+# Memory available meter
+theme[available_start]="#6D9CBE"
+theme[available_mid]="#6E9CBE"
+theme[available_end]="#FFFFFF"
+
+# Memory used meter
+theme[used_start]="#DA4939"
+theme[used_mid]="#FF7B6B"
+theme[used_end]="#FFD24A"
+
+# Download graph colors
+theme[download_start]="#519F50"
+theme[download_mid]="#6E9CBE"
+theme[download_end]="#FFFFFF"
+
+# Upload graph colors
+theme[upload_start]="#D0D0FF"
+theme[upload_mid]="#6D9CBE"
+theme[upload_end]="#FFFFFF"

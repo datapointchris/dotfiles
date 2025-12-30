@@ -1,0 +1,56 @@
+# Solarized Osaka - Terminal configs matching solarized-osaka.nvim
+# Source: craftzdog/solarized-osaka.nvim
+
+meta:
+  name: "Solarized Osaka"
+  slug: "solarized-osaka"
+  neovim_colorscheme: "solarized-osaka"
+  author: "Takuya Matsuyama (craftzdog)"
+  variant: "dark"
+  source: "neovim"
+
+base16:
+  base00: "#001419"  # bg (hsl 192, 100, 5)
+  base01: "#002b36"  # bg_highlight (hsl 192, 100, 11)
+  base02: "#073642"  # base02 (hsl 192, 81, 14)
+  base03: "#586e75"  # base01 (hsl 194, 14, 40)
+  base04: "#657b83"  # base00 (hsl 196, 13, 45)
+  base05: "#93a1a1"  # fg (hsl 186, 8, 55)
+  base06: "#a9b1b1"  # base0 (hsl 186, 8, 65)
+  base07: "#eee8d5"  # base2 (hsl 46, 42, 88)
+  base08: "#dc322f"  # red
+  base09: "#cb4b16"  # orange
+  base0A: "#b58900"  # yellow
+  base0B: "#859900"  # green
+  base0C: "#2aa198"  # cyan
+  base0D: "#268bd2"  # blue
+  base0E: "#6c71c4"  # violet
+  base0F: "#d33682"  # magenta
+
+ansi:
+  black: "#002b36"
+  red: "#dc322f"
+  green: "#859900"
+  yellow: "#b58900"
+  blue: "#268bd2"
+  magenta: "#d33682"
+  cyan: "#2aa198"
+  white: "#93a1a1"
+  bright_black: "#586e75"
+  bright_red: "#cb4b16"
+  bright_green: "#859900"
+  bright_yellow: "#b58900"
+  bright_blue: "#268bd2"
+  bright_magenta: "#6c71c4"
+  bright_cyan: "#2aa198"
+  bright_white: "#fdf6e3"
+
+special:
+  background: "#001419"
+  foreground: "#93a1a1"
+  cursor: "#93a1a1"
+  cursor_text: "#001419"
+  selection_bg: "#073642"
+  selection_fg: "#93a1a1"
+  border: "#002b36"
+  panel: "#001419"

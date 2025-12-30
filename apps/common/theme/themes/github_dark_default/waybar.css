@@ -1,0 +1,23 @@
+/* GitHub Dark Default - waybar theme */
+/* Generated from palette.yml */
+/* Author: Projekt0n */
+
+/* Base colors */
+@define-color background #0d1117;
+@define-color background-alt #161b22;
+@define-color foreground #e6edf3;
+@define-color foreground-alt #6e7681;
+
+/* Selection and highlighting */
+@define-color selection #21262d;
+@define-color comment #8b949e;
+
+/* Accent colors */
+@define-color red #ff7b72;
+@define-color orange #ffa657;
+@define-color yellow #f2cc60;
+@define-color green #7ee787;
+@define-color cyan #a5d6ff;
+@define-color blue #79c0ff;
+@define-color purple #d2a8ff;
+@define-color brown #f85149;

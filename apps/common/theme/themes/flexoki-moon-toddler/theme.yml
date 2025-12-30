@@ -1,0 +1,56 @@
+# Flexoki Moon Toddler - Terminal configs matching flexoki-moon-nvim
+# Source: datapointchris/flexoki-moon-nvim
+
+meta:
+  name: "Flexoki Moon Toddler"
+  slug: "flexoki-moon-toddler"
+  neovim_colorscheme: "flexoki-moon-toddler"
+  author: "datapointchris"
+  variant: "dark"
+  source: "neovim"
+
+base16:
+  base00: "#2a1f16"  # base
+  base01: "#464132"  # overlay
+  base02: "#713d3a"  # highlight_low
+  base03: "#726250"  # muted
+  base04: "#c4b199"  # subtle
+  base05: "#d4c4a8"  # text
+  base06: "#fff2d8"  # green_zero
+  base07: "#ffffff"
+  base08: "#dd634d"  # red_two
+  base09: "#d19812"  # orange_two
+  base0A: "#957209"  # yellow_two
+  base0B: "#7eae0f"  # green_two
+  base0C: "#4f7edc"  # cyan_two
+  base0D: "#3672da"  # blue_two
+  base0E: "#be0033"  # purple_two
+  base0F: "#ca1447"  # magenta_two
+
+ansi:
+  black: "#2a1f16"
+  red: "#dd634d"
+  green: "#7eae0f"
+  yellow: "#957209"
+  blue: "#3672da"
+  magenta: "#ca1447"
+  cyan: "#4f7edc"
+  white: "#d4c4a8"
+  bright_black: "#726250"
+  bright_red: "#ce291d"
+  bright_green: "#6da700"
+  bright_yellow: "#e1a100"
+  bright_blue: "#5586e6"
+  bright_magenta: "#cb0036"
+  bright_cyan: "#1f554d"
+  bright_white: "#fff2d8"
+
+special:
+  background: "#2a1f16"
+  foreground: "#d4c4a8"
+  cursor: "#d4c4a8"
+  cursor_text: "#2a1f16"
+  selection_bg: "#693c4e"
+  selection_fg: "#d4c4a8"
+  border: "#713d3a"
+  panel: "#464132"

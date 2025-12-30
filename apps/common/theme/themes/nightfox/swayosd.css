@@ -1,0 +1,8 @@
+/* Nightfox - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #192330;
+@define-color border-color #cdcecf;
+@define-color label #cdcecf;
+@define-color image #cdcecf;
+@define-color progress #cdcecf;

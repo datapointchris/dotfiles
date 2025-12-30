@@ -1,0 +1,8 @@
+/* Srcery - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #1c1b19;
+@define-color border-color #fce8c3;
+@define-color label #fce8c3;
+@define-color image #fce8c3;
+@define-color progress #fce8c3;

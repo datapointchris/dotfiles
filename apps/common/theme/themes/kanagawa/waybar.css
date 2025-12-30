@@ -1,0 +1,23 @@
+/* Kanagawa - waybar theme */
+/* Generated from palette.yml */
+/* Author: Tommaso Laurenzi (rebelot) */
+
+/* Base colors */
+@define-color background #1f1f28;
+@define-color background-alt #16161d;
+@define-color foreground #dcd7ba;
+@define-color foreground-alt #c8c093;
+
+/* Selection and highlighting */
+@define-color selection #2d4f67;
+@define-color comment #727169;
+
+/* Accent colors */
+@define-color red #c34043;
+@define-color orange #ffa066;
+@define-color yellow #c0a36e;
+@define-color green #76946a;
+@define-color cyan #6a9589;
+@define-color blue #7e9cd8;
+@define-color purple #957fb8;
+@define-color brown #d27e99;

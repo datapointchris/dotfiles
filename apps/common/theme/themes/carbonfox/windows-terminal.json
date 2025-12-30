@@ -1,0 +1,23 @@
+{
+  "name": "Carbonfox",
+  "background": "#161616",
+  "foreground": "#f2f4f8",
+  "cursorColor": "#f2f4f8",
+  "selectionBackground": "#2a2a2a",
+  "black": "#282828",
+  "red": "#EE5396",
+  "green": "#25be6a",
+  "yellow": "#08BDBA",
+  "blue": "#78A9FF",
+  "purple": "#BE95FF",
+  "cyan": "#33B1FF",
+  "white": "#dfdfe0",
+  "brightBlack": "#3d3d3d",
+  "brightRed": "#f47dae",
+  "brightGreen": "#46d484",
+  "brightYellow": "#2ed1cf",
+  "brightBlue": "#94bbff",
+  "brightPurple": "#ceadff",
+  "brightCyan": "#5cc0ff",
+  "brightWhite": "#f0f0f1"
+}

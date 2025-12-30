@@ -1,0 +1,35 @@
+# Flexoki Moon Green - alacritty theme
+# Generated from theme.yml
+# Author: datapointchris
+
+[colors.primary]
+background = "#08120b"
+foreground = "#ddd8e8"
+
+[colors.cursor]
+text = "#08120b"
+cursor = "#ddd8e8"
+
+[colors.selection]
+text = "#ddd8e8"
+background = "#2c3b2d"
+
+[colors.normal]
+black = "#08120b"
+red = "#d14d41"
+green = "#879a39"
+yellow = "#d0a215"
+blue = "#4385be"
+magenta = "#ce5d97"
+cyan = "#3aa99f"
+white = "#ddd8e8"
+
+[colors.bright]
+black = "#6b7d6e"
+red = "#af3029"
+green = "#66800b"
+yellow = "#ad8301"
+blue = "#205ea6"
+magenta = "#a02f6f"
+cyan = "#24837b"
+white = "#d6fadc"

@@ -1,0 +1,23 @@
+{
+  "name": "Flexoki Moon Purple",
+  "background": "#12101d",
+  "foreground": "#ddd8e8",
+  "cursorColor": "#ddd8e8",
+  "selectionBackground": "#252330",
+  "black": "#12101d",
+  "red": "#d14d41",
+  "green": "#879a39",
+  "yellow": "#d0a215",
+  "blue": "#4385be",
+  "purple": "#ce5d97",
+  "cyan": "#3aa99f",
+  "white": "#ddd8e8",
+  "brightBlack": "#625f68",
+  "brightRed": "#af3029",
+  "brightGreen": "#66800b",
+  "brightYellow": "#ad8301",
+  "brightBlue": "#205ea6",
+  "brightPurple": "#a02f6f",
+  "brightCyan": "#24837b",
+  "brightWhite": "#EDEECF"
+}

@@ -1,0 +1,8 @@
+/* Smyck - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #1b1b1b;
+@define-color border-color #f7f7f7;
+@define-color label #f7f7f7;
+@define-color image #f7f7f7;
+@define-color progress #f7f7f7;

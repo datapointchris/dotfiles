@@ -1,0 +1,8 @@
+/* Slate - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #262626;
+@define-color border-color #ffffff;
+@define-color label #ffffff;
+@define-color image #ffffff;
+@define-color progress #ffffff;

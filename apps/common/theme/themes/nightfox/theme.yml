@@ -1,0 +1,72 @@
+# Nightfox - Terminal configs matching nightfox.nvim
+# Source: EdenEast/nightfox.nvim
+
+meta:
+  name: "Nightfox"
+  slug: "nightfox"
+  neovim_colorscheme: "nightfox"
+  author: "EdenEast"
+  variant: "dark"
+  source: "neovim"
+
+base16:
+  base00: "#192330"  # bg1 - background
+  base01: "#212e3f"  # bg2 - lighter bg
+  base02: "#29394f"  # bg3 - selection
+  base03: "#738091"  # comment
+  base04: "#71839b"  # fg3 - dark fg
+  base05: "#cdcecf"  # fg1 - default fg
+  base06: "#d6d6d7"  # fg0 - lighter fg
+  base07: "#aeafb0"  # fg2
+  base08: "#c94f6d"  # red
+  base09: "#f4a261"  # orange
+  base0A: "#dbc074"  # yellow
+  base0B: "#81b29a"  # green
+  base0C: "#63cdcf"  # cyan
+  base0D: "#719cd6"  # blue
+  base0E: "#9d79d6"  # magenta
+  base0F: "#d67ad2"  # pink
+
+ansi:
+  black: "#393b44"
+  red: "#c94f6d"
+  green: "#81b29a"
+  yellow: "#dbc074"
+  blue: "#719cd6"
+  magenta: "#9d79d6"
+  cyan: "#63cdcf"
+  white: "#dfdfe0"
+  bright_black: "#475072"
+  bright_red: "#d6616b"
+  bright_green: "#8ebaa4"
+  bright_yellow: "#e0c989"
+  bright_blue: "#86abdc"
+  bright_magenta: "#baa1e2"
+  bright_cyan: "#7ad5d6"
+  bright_white: "#e4e4e5"
+
+special:
+  background: "#192330"
+  foreground: "#cdcecf"
+  cursor: "#cdcecf"
+  cursor_text: "#192330"
+  selection_bg: "#2b3b51"
+  selection_fg: "#cdcecf"
+  border: "#39506d"
+  panel: "#131a24"
+
+extended:
+  bg0: "#131a24"
+  bg1: "#192330"
+  bg2: "#212e3f"
+  bg3: "#29394f"
+  bg4: "#39506d"
+  fg0: "#d6d6d7"
+  fg1: "#cdcecf"
+  fg2: "#aeafb0"
+  fg3: "#71839b"
+  sel0: "#2b3b51"
+  sel1: "#3c5372"
+  comment: "#738091"
+  orange: "#f4a261"
+  pink: "#d67ad2"

@@ -1,0 +1,80 @@
+# Slate - btop theme
+# Generated from theme.yml
+# Author: Ralph Amissah (https://github.com/vim/colorschemes)
+
+# Main background, empty for terminal default
+theme[main_bg]="#262626"
+
+# Main text color
+theme[main_fg]="#FFFFFF"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#00CDCD"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#5F87D7"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#4A4A4A"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#E5E5E5"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#666666"
+
+# Misc colors for processes box
+theme[proc_misc]="#5F87D7"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#333333"
+theme[mem_box]="#333333"
+theme[net_box]="#333333"
+theme[proc_box]="#333333"
+theme[div_line]="#333333"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#5F87D7"
+theme[temp_mid]="#00CDCD"
+theme[temp_end]="#E5E5E5"
+
+# CPU graph colors
+theme[cpu_start]="#5F87D7"
+theme[cpu_mid]="#00CDCD"
+theme[cpu_end]="#E5E5E5"
+
+# Memory free meter
+theme[free_start]="#87D7FF"
+theme[free_mid]="#00CDCD"
+theme[free_end]="#E5E5E5"
+
+# Memory cached meter
+theme[cached_start]="#FFD700"
+theme[cached_mid]="#D7875F"
+theme[cached_end]="#E5E5E5"
+
+# Memory available meter
+theme[available_start]="#5F87D7"
+theme[available_mid]="#00CDCD"
+theme[available_end]="#E5E5E5"
+
+# Memory used meter
+theme[used_start]="#FF8787"
+theme[used_mid]="#D7875F"
+theme[used_end]="#FFD700"
+
+# Download graph colors
+theme[download_start]="#87D7FF"
+theme[download_mid]="#00CDCD"
+theme[download_end]="#E5E5E5"
+
+# Upload graph colors
+theme[upload_start]="#CD00CD"
+theme[upload_mid]="#5F87D7"
+theme[upload_end]="#E5E5E5"

@@ -1,0 +1,8 @@
+/* Flexoki Moon Black - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #100f0f;
+@define-color border-color #cecdc3;
+@define-color label #cecdc3;
+@define-color image #cecdc3;
+@define-color progress #cecdc3;

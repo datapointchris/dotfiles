@@ -1,0 +1,35 @@
+# Spacegray Eighties - alacritty theme
+# Generated from theme.yml
+# Author: Ghostty
+
+[colors.primary]
+background = "#222222"
+foreground = "#bdbaae"
+
+[colors.cursor]
+text = "#ffffff"
+cursor = "#bbbbbb"
+
+[colors.selection]
+text = "#ffffff"
+background = "#272e35"
+
+[colors.normal]
+black = "#15171c"
+red = "#ec5f67"
+green = "#81a764"
+yellow = "#fec254"
+blue = "#5486c0"
+magenta = "#bf83c1"
+cyan = "#57c2c1"
+white = "#efece7"
+
+[colors.bright]
+black = "#555555"
+red = "#ff6973"
+green = "#93d493"
+yellow = "#ffd256"
+blue = "#4d84d1"
+magenta = "#ff55ff"
+cyan = "#83e9e4"
+white = "#ffffff"

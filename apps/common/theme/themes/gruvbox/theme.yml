@@ -1,0 +1,156 @@
+# Gruvbox - Terminal configs matching gruvbox.nvim
+# Source: ellisonleao/gruvbox.nvim extracted palette
+
+meta:
+  name: "Gruvbox"
+  slug: "gruvbox"
+  neovim_colorscheme: "gruvbox"
+  author: "ellisonleao (https://github.com/ellisonleao/gruvbox.nvim)"
+  variant: "dark"
+  source: "neovim"
+  source_url: "https://github.com/ellisonleao/gruvbox.nvim"
+  version: "1.0.0"
+
+# Base16 palette (from gruvbox.nvim extraction)
+# Note: Neovim plugin swaps base05/base06 compared to base16 canonical
+# base04 also uses a different gray (#928374 vs #bdae93)
+base16:
+  base00: "#1d2021"  # Background (dark0_hard)
+  base01: "#3c3836"  # Lighter background (dark1)
+  base02: "#504945"  # Selection background (dark2)
+  base03: "#665c54"  # Comments (dark3)
+  base04: "#928374"  # Dark foreground (gray) - DIFFERENT from base16
+  base05: "#ebdbb2"  # Default foreground (light1) - SWAPPED with base16
+  base06: "#d5c4a1"  # Light foreground (light2) - SWAPPED with base16
+  base07: "#fbf1c7"  # Lightest foreground (light0)
+  base08: "#fb4934"  # Red (bright_red)
+  base09: "#fe8019"  # Orange (bright_orange)
+  base0A: "#fabd2f"  # Yellow (bright_yellow)
+  base0B: "#b8bb26"  # Green (bright_green)
+  base0C: "#8ec07c"  # Cyan (bright_aqua)
+  base0D: "#83a598"  # Blue (bright_blue)
+  base0E: "#d3869b"  # Purple (bright_purple)
+  base0F: "#d65d0e"  # Brown (neutral_orange used as brown)
+
+# ANSI terminal colors
+# Neovim gruvbox uses bright colors for accents (like base16)
+ansi:
+  black: "#1d2021"          # ANSI 0 - dark0_hard
+  red: "#fb4934"            # ANSI 1 - bright_red (matches base16)
+  green: "#b8bb26"          # ANSI 2 - bright_green (matches base16)
+  yellow: "#fabd2f"         # ANSI 3 - bright_yellow (matches base16)
+  blue: "#83a598"           # ANSI 4 - bright_blue (matches base16)
+  magenta: "#d3869b"        # ANSI 5 - bright_purple (matches base16)
+  cyan: "#8ec07c"           # ANSI 6 - bright_aqua (matches base16)
+  white: "#ebdbb2"          # ANSI 7 - light1
+  bright_black: "#928374"   # ANSI 8 - gray
+  bright_red: "#fb4934"     # ANSI 9 - bright_red
+  bright_green: "#b8bb26"   # ANSI 10 - bright_green
+  bright_yellow: "#fabd2f"  # ANSI 11 - bright_yellow
+  bright_blue: "#83a598"    # ANSI 12 - bright_blue
+  bright_magenta: "#d3869b" # ANSI 13 - bright_purple
+  bright_cyan: "#8ec07c"    # ANSI 14 - bright_aqua
+  bright_white: "#fbf1c7"   # ANSI 15 - light0
+
+# Special purpose colors
+special:
+  background: "#1d2021"     # dark0_hard
+  foreground: "#ebdbb2"     # light1
+  cursor: "#ebdbb2"
+  cursor_text: "#1d2021"
+  selection_bg: "#504945"   # dark2
+  selection_fg: "#ebdbb2"
+  border: "#504945"
+  panel: "#3c3836"
+
+# Extended palette for richer theming
+# Complete gruvbox.nvim palette
+extended:
+  # Dark backgrounds
+  dark0_hard: "#1d2021"
+  dark0: "#282828"
+  dark0_soft: "#32302f"
+  dark1: "#3c3836"
+  dark2: "#504945"
+  dark3: "#665c54"
+  dark4: "#7c6f64"
+
+  # Light foregrounds
+  light0_hard: "#f9f5d7"
+  light0: "#fbf1c7"
+  light0_soft: "#f2e5bc"
+  light1: "#ebdbb2"
+  light2: "#d5c4a1"
+  light3: "#bdae93"
+  light4: "#a89984"
+  gray: "#928374"
+
+  # Neutral colors (darker, used in light themes)
+  neutral_red: "#cc241d"
+  neutral_green: "#98971a"
+  neutral_yellow: "#d79921"
+  neutral_blue: "#458588"
+  neutral_purple: "#b16286"
+  neutral_aqua: "#689d6a"
+  neutral_orange: "#d65d0e"
+
+  # Bright colors (used in dark themes)
+  bright_red: "#fb4934"
+  bright_green: "#b8bb26"
+  bright_yellow: "#fabd2f"
+  bright_blue: "#83a598"
+  bright_purple: "#d3869b"
+  bright_aqua: "#8ec07c"
+  bright_orange: "#fe8019"
+
+  # Faded colors (for light backgrounds)
+  faded_red: "#9d0006"
+  faded_green: "#79740e"
+  faded_yellow: "#b57614"
+  faded_blue: "#076678"
+  faded_purple: "#8f3f71"
+  faded_aqua: "#427b58"
+  faded_orange: "#af3a03"
+
+  # Semantic colors for syntax highlighting
+  syntax_comment: "#928374"     # gray (Neovim style)
+  syntax_string: "#b8bb26"      # bright_green
+  syntax_number: "#d3869b"      # bright_purple (Neovim uses purple for numbers)
+  syntax_constant: "#d3869b"    # bright_purple
+  syntax_variable: "#ebdbb2"    # light1
+  syntax_parameter: "#83a598"   # bright_blue
+  syntax_function: "#b8bb26"    # bright_green (Neovim style)
+  syntax_keyword: "#fb4934"     # bright_red (Neovim uses red for keywords)
+  syntax_type: "#fabd2f"        # bright_yellow
+  syntax_operator: "#fe8019"    # bright_orange
+  syntax_punctuation: "#ebdbb2" # light1
+  syntax_tag: "#fb4934"         # bright_red
+  syntax_attribute: "#fabd2f"   # bright_yellow
+
+  # Diagnostic colors
+  diagnostic_error: "#fb4934"   # bright_red
+  diagnostic_warning: "#fabd2f" # bright_yellow (Neovim uses yellow)
+  diagnostic_info: "#83a598"    # bright_blue
+  diagnostic_hint: "#8ec07c"    # bright_aqua
+  diagnostic_ok: "#b8bb26"      # bright_green
+
+  # Git/diff colors (from gruvbox.nvim)
+  git_add: "#b8bb26"       # bright_green
+  git_change: "#fe8019"    # bright_orange
+  git_delete: "#fb4934"    # bright_red
+  git_ignored: "#928374"   # gray
+
+  # UI element colors
+  ui_border: "#504945"
+  ui_panel: "#3c3836"
+  ui_float: "#282828"      # dark0 (Neovim uses medium for floats)
+  ui_accent: "#83a598"
+  ui_selection: "#504945"
+  ui_match: "#fabd2f"
+
+  # Additional Neovim-specific colors
+  visual_bg: "#504945"     # Visual mode selection
+  search_bg: "#fabd2f"     # Search highlight
+  search_fg: "#1d2021"     # Search text
+  inc_search_bg: "#fe8019" # Incremental search
+  inc_search_fg: "#1d2021"

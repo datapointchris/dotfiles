@@ -1,0 +1,8 @@
+/* Retro Legends - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #0d0d0d;
+@define-color border-color #45eb45;
+@define-color label #45eb45;
+@define-color image #45eb45;
+@define-color progress #45eb45;

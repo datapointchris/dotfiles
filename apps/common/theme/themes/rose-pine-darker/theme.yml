@@ -1,0 +1,120 @@
+# Rose Pine Darker - Winner variant (from base16/tinted-theming)
+# Slightly darker background than original rose-pine
+
+meta:
+  name: "Rose Pine Darker"
+  slug: "rose-pine-darker"
+  neovim_colorscheme: "rose-pine-darker"
+  author: "Emilia Dunfelt <edun@dunfelt.se>"
+  variant: "dark"
+  source: "base16"
+  source_url: "https://github.com/tinted-theming/schemes/blob/main/base16/rose-pine.yaml"
+  version: "1.0.0"
+
+# Base16 palette (canonical from tinted-theming)
+base16:
+  base00: "#191724"  # Background (darkest)
+  base01: "#1f1d2e"  # Lighter background
+  base02: "#26233a"  # Selection background
+  base03: "#6e6a86"  # Comments, invisibles
+  base04: "#908caa"  # Dark foreground
+  base05: "#e0def4"  # Default foreground
+  base06: "#e0def4"  # Light foreground
+  base07: "#524f67"  # Lightest foreground
+  base08: "#eb6f92"  # Red - Variables, tags, errors
+  base09: "#f6c177"  # Orange - Integers, constants
+  base0A: "#ebbcba"  # Yellow - Classes, search
+  base0B: "#31748f"  # Green - Strings
+  base0C: "#9ccfd8"  # Cyan - Support, regex
+  base0D: "#c4a7e7"  # Blue - Functions, methods
+  base0E: "#f6c177"  # Purple - Keywords
+  base0F: "#524f67"  # Brown - Deprecated, embed
+
+# ANSI terminal colors (from Ghostty theme)
+ansi:
+  black: "#26233a"
+  red: "#eb6f92"
+  green: "#31748f"
+  yellow: "#f6c177"
+  blue: "#9ccfd8"
+  magenta: "#c4a7e7"
+  cyan: "#ebbcba"
+  white: "#e0def4"
+  bright_black: "#6e6a86"
+  bright_red: "#eb6f92"
+  bright_green: "#31748f"
+  bright_yellow: "#f6c177"
+  bright_blue: "#9ccfd8"
+  bright_magenta: "#c4a7e7"
+  bright_cyan: "#ebbcba"
+  bright_white: "#e0def4"
+
+# Special purpose colors
+special:
+  background: "#191724"
+  foreground: "#e0def4"
+  cursor: "#e0def4"
+  cursor_text: "#191724"
+  selection_bg: "#26233a"
+  selection_fg: "#e0def4"
+  border: "#26233a"
+  panel: "#1f1d2e"
+
+# Extended palette for richer theming
+extended:
+  # Rose Pine signature colors
+  love: "#eb6f92"
+  gold: "#f6c177"
+  rose: "#ebbcba"
+  pine: "#31748f"
+  foam: "#9ccfd8"
+  iris: "#c4a7e7"
+
+  # Surface colors
+  surface: "#1f1d2e"
+  overlay: "#26233a"
+  muted: "#6e6a86"
+  subtle: "#908caa"
+  text: "#e0def4"
+
+  # Additional backgrounds
+  bg_dim: "#191724"
+  bg0: "#191724"
+  bg1: "#1f1d2e"
+  bg2: "#26233a"
+
+  # Semantic colors for syntax highlighting
+  syntax_comment: "#6e6a86"
+  syntax_string: "#31748f"
+  syntax_number: "#f6c177"
+  syntax_constant: "#f6c177"
+  syntax_variable: "#e0def4"
+  syntax_parameter: "#c4a7e7"
+  syntax_function: "#c4a7e7"
+  syntax_keyword: "#eb6f92"
+  syntax_type: "#ebbcba"
+  syntax_operator: "#908caa"
+  syntax_punctuation: "#908caa"
+  syntax_tag: "#eb6f92"
+  syntax_attribute: "#ebbcba"
+
+  # Diagnostic colors
+  diagnostic_error: "#eb6f92"
+  diagnostic_warning: "#f6c177"
+  diagnostic_info: "#9ccfd8"
+  diagnostic_hint: "#c4a7e7"
+  diagnostic_ok: "#31748f"
+
+  # Git/diff colors
+  git_add: "#31748f"
+  git_change: "#f6c177"
+  git_delete: "#eb6f92"
+  git_ignored: "#6e6a86"
+
+  # UI element colors
+  ui_border: "#26233a"
+  ui_panel: "#1f1d2e"
+  ui_float: "#1f1d2e"
+  ui_accent: "#c4a7e7"
+  ui_selection: "#26233a"
+  ui_match: "#f6c177"

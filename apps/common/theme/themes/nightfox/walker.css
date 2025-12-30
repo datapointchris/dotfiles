@@ -1,0 +1,9 @@
+/* Nightfox - Walker colors */
+/* Generated from palette.yml */
+
+@define-color selected-text #63cdcf;
+@define-color text #cdcecf;
+@define-color base #192330;
+@define-color border #cdcecf;
+@define-color foreground #cdcecf;
+@define-color background #192330;

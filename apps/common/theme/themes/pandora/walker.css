@@ -1,0 +1,9 @@
+/* Pandora - Walker colors */
+/* Generated from palette.yml */
+
+@define-color selected-text #23d7d7;
+@define-color text #e1e1e1;
+@define-color base #141e43;
+@define-color border #e1e1e1;
+@define-color foreground #e1e1e1;
+@define-color background #141e43;

@@ -1,0 +1,23 @@
+/* Carbonfox - waybar theme */
+/* Generated from palette.yml */
+/* Author: EdenEast */
+
+/* Base colors */
+@define-color background #161616;
+@define-color background-alt #1c1c1c;
+@define-color foreground #f2f4f8;
+@define-color foreground-alt #b6b8bb;
+
+/* Selection and highlighting */
+@define-color selection #252525;
+@define-color comment #7b7c7e;
+
+/* Accent colors */
+@define-color red #EE5396;
+@define-color orange #3DDBD9;
+@define-color yellow #08BDBA;
+@define-color green #25be6a;
+@define-color cyan #33B1FF;
+@define-color blue #78A9FF;
+@define-color purple #BE95FF;
+@define-color brown #FF7EB6;

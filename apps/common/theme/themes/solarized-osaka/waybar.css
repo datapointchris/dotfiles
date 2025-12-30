@@ -1,0 +1,23 @@
+/* Solarized Osaka - waybar theme */
+/* Generated from palette.yml */
+/* Author: Takuya Matsuyama (craftzdog) */
+
+/* Base colors */
+@define-color background #001419;
+@define-color background-alt #002b36;
+@define-color foreground #93a1a1;
+@define-color foreground-alt #657b83;
+
+/* Selection and highlighting */
+@define-color selection #073642;
+@define-color comment #586e75;
+
+/* Accent colors */
+@define-color red #dc322f;
+@define-color orange #cb4b16;
+@define-color yellow #b58900;
+@define-color green #859900;
+@define-color cyan #2aa198;
+@define-color blue #268bd2;
+@define-color purple #6c71c4;
+@define-color brown #d33682;

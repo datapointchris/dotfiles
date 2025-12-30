@@ -1,0 +1,94 @@
+# Slate - Terminal configs matching Vim slate colorscheme
+# Source: Neovim built-in slate colorscheme (vim/colorschemes project)
+
+meta:
+  name: "Slate"
+  slug: "slate"
+  neovim_colorscheme: "slate"
+  author: "Ralph Amissah (https://github.com/vim/colorschemes)"
+  variant: "dark"
+  source: "neovim"
+  source_url: "https://github.com/vim/colorschemes"
+  version: "1.0.0"
+
+# Base16 palette (extracted from slate.vim GUI colors)
+base16:
+  base00: "#262626"  # Background
+  base01: "#333333"  # Lighter background (color08)
+  base02: "#4a4a4a"  # Selection background (Pmenu)
+  base03: "#666666"  # Comments
+  base04: "#afaf87"  # Dark foreground (status line)
+  base05: "#ffffff"  # Default foreground
+  base06: "#e5e5e5"  # Light foreground (gray)
+  base07: "#ffffff"  # Lightest foreground
+  base08: "#ff8787"  # Red (Identifier)
+  base09: "#d7875f"  # Orange (PreProc/Operator)
+  base0A: "#ffd700"  # Yellow (Title/Define)
+  base0B: "#87d7ff"  # Cyan/String (slate uses cyan for strings)
+  base0C: "#00cdcd"  # Cyan (darkcyan)
+  base0D: "#5f87d7"  # Blue (Statement/Type)
+  base0E: "#cd00cd"  # Magenta
+  base0F: "#ffafaf"  # Brown/Constant
+
+# ANSI terminal colors (from terminal_ansi_colors in slate.vim)
+ansi:
+  black: "#000000"        # ANSI 0 - x_black
+  red: "#cd0000"          # ANSI 1 - x_darkred
+  green: "#00cd00"        # ANSI 2 - x_darkgreen
+  yellow: "#cdcd00"       # ANSI 3 - x_darkyellow
+  blue: "#0000ee"         # ANSI 4 - x_darkblue
+  magenta: "#cd00cd"      # ANSI 5 - x_darkmagenta
+  cyan: "#00cdcd"         # ANSI 6 - x_darkcyan
+  white: "#e5e5e5"        # ANSI 7 - x_gray
+  bright_black: "#7f7f7f" # ANSI 8 - x_darkgray
+  bright_red: "#ff0000"   # ANSI 9 - x_red
+  bright_green: "#00ff00" # ANSI 10 - x_green
+  bright_yellow: "#ffff00" # ANSI 11 - x_yellow
+  bright_blue: "#5c5cff"  # ANSI 12 - x_blue
+  bright_magenta: "#ff00ff" # ANSI 13 - x_magenta
+  bright_cyan: "#00ffff"  # ANSI 14 - x_cyan
+  bright_white: "#ffffff" # ANSI 15 - x_white
+
+# Special purpose colors
+special:
+  background: "#262626"
+  foreground: "#ffffff"
+  cursor: "#d7d787"       # Cursor guibg
+  cursor_text: "#333333"  # Cursor guifg
+  selection_bg: "#5f8700" # Visual guibg
+  selection_fg: "#d7d787" # Visual guifg
+  border: "#666666"
+  panel: "#333333"
+
+# Extended palette
+extended:
+  # Syntax colors (from slate.vim highlight groups)
+  syntax_comment: "#666666"
+  syntax_string: "#87d7ff"
+  syntax_number: "#ffafaf"    # Constant
+  syntax_constant: "#ffafaf"
+  syntax_variable: "#ffffff"
+  syntax_parameter: "#5f87d7"
+  syntax_function: "#ffd7af"
+  syntax_keyword: "#5f87d7"   # Statement
+  syntax_type: "#5f87d7"
+  syntax_operator: "#d7875f"
+  syntax_punctuation: "#ffffff"
+  syntax_tag: "#5f87d7"
+  syntax_attribute: "#ffd7af"
+
+  # UI element colors
+  ui_border: "#666666"
+  ui_panel: "#333333"
+  ui_float: "#4a4a4a"
+  ui_accent: "#5f87d7"
+  ui_selection: "#5f8700"
+  ui_match: "#d7875f"       # Search guibg
+
+  # Additional colors from slate
+  special_yellow: "#d7d787" # Special
+  title_color: "#ffd700"    # Title
+  error_color: "#ff0000"
+  warning_color: "#ff8787"
+  success_color: "#00875f"  # MoreMsg/Directory
+  structure_color: "#00ff00"

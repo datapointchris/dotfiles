@@ -1,0 +1,117 @@
+# Rose Pine - Terminal configs matching rose-pine/neovim
+# Source: rose-pine/neovim official plugin
+
+meta:
+  name: "Rose Pine"
+  slug: "rose-pine"
+  neovim_colorscheme: "rose-pine"
+  author: "Rose Pine (https://rosepinetheme.com)"
+  variant: "dark"
+  source: "neovim"
+  source_url: "https://github.com/rose-pine/neovim"
+  version: "1.0.0"
+
+# Base16 palette (mapped from rose-pine/neovim palette.lua)
+base16:
+  base00: "#191724"  # base
+  base01: "#1f1d2e"  # surface
+  base02: "#26233a"  # overlay
+  base03: "#6e6a86"  # muted
+  base04: "#908caa"  # subtle
+  base05: "#e0def4"  # text
+  base06: "#e0def4"  # text (reused)
+  base07: "#524f67"  # highlight_high
+  base08: "#eb6f92"  # love (red)
+  base09: "#f6c177"  # gold (orange/yellow)
+  base0A: "#ebbcba"  # rose (classes)
+  base0B: "#31748f"  # pine (strings/green)
+  base0C: "#9ccfd8"  # foam (cyan)
+  base0D: "#c4a7e7"  # iris (functions - rose-pine uses iris for functions)
+  base0E: "#eb6f92"  # love (keywords - rose-pine uses love)
+  base0F: "#95b1ac"  # leaf (extra accent)
+
+# ANSI terminal colors (derived from neovim palette)
+ansi:
+  black: "#26233a"      # overlay
+  red: "#eb6f92"        # love
+  green: "#31748f"      # pine
+  yellow: "#f6c177"     # gold
+  blue: "#9ccfd8"       # foam
+  magenta: "#c4a7e7"    # iris
+  cyan: "#ebbcba"       # rose
+  white: "#e0def4"      # text
+  bright_black: "#6e6a86"   # muted
+  bright_red: "#eb6f92"
+  bright_green: "#31748f"
+  bright_yellow: "#f6c177"
+  bright_blue: "#9ccfd8"
+  bright_magenta: "#c4a7e7"
+  bright_cyan: "#ebbcba"
+  bright_white: "#e0def4"
+
+# Special purpose colors
+special:
+  background: "#191724"
+  foreground: "#e0def4"
+  cursor: "#e0def4"
+  cursor_text: "#191724"
+  selection_bg: "#403d52"   # highlight_med
+  selection_fg: "#e0def4"
+  border: "#26233a"
+  panel: "#1f1d2e"
+
+# Extended palette (full rose-pine neovim colors)
+extended:
+  # Rose Pine signature colors
+  _nc: "#16141f"
+  base: "#191724"
+  surface: "#1f1d2e"
+  overlay: "#26233a"
+  muted: "#6e6a86"
+  subtle: "#908caa"
+  text: "#e0def4"
+  love: "#eb6f92"
+  gold: "#f6c177"
+  rose: "#ebbcba"
+  pine: "#31748f"
+  foam: "#9ccfd8"
+  iris: "#c4a7e7"
+  leaf: "#95b1ac"
+
+  # Highlight colors
+  highlight_low: "#21202e"
+  highlight_med: "#403d52"
+  highlight_high: "#524f67"
+
+  # Semantic colors (rose-pine specific mappings)
+  syntax_comment: "#6e6a86"     # muted
+  syntax_string: "#f6c177"      # gold (rose-pine uses gold for strings)
+  syntax_number: "#ebbcba"      # rose
+  syntax_constant: "#f6c177"    # gold
+  syntax_variable: "#e0def4"    # text
+  syntax_parameter: "#c4a7e7"   # iris
+  syntax_function: "#c4a7e7"    # iris
+  syntax_keyword: "#eb6f92"     # love
+  syntax_type: "#9ccfd8"        # foam
+  syntax_operator: "#908caa"    # subtle
+
+  # Diagnostic colors
+  diagnostic_error: "#eb6f92"   # love
+  diagnostic_warning: "#f6c177" # gold
+  diagnostic_info: "#9ccfd8"    # foam
+  diagnostic_hint: "#c4a7e7"    # iris
+  diagnostic_ok: "#31748f"      # pine
+
+  # Git/diff colors
+  git_add: "#31748f"     # pine
+  git_change: "#f6c177"  # gold
+  git_delete: "#eb6f92"  # love
+  git_ignored: "#6e6a86" # muted
+
+  # UI element colors
+  ui_border: "#26233a"
+  ui_panel: "#1f1d2e"
+  ui_float: "#1f1d2e"
+  ui_accent: "#c4a7e7"
+  ui_selection: "#403d52"
+  ui_match: "#f6c177"

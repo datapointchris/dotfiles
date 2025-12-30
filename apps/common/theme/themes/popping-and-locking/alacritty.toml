@@ -1,0 +1,35 @@
+# Popping and Locking - alacritty theme
+# Generated from theme.yml
+# Author: Ghostty
+
+[colors.primary]
+background = "#181921"
+foreground = "#ebdbb2"
+
+[colors.cursor]
+text = "#ffffff"
+cursor = "#c7c7c7"
+
+[colors.selection]
+text = "#928374"
+background = "#ebdbb2"
+
+[colors.normal]
+black = "#1d2021"
+red = "#cc241d"
+green = "#98971a"
+yellow = "#d79921"
+blue = "#458588"
+magenta = "#b16286"
+cyan = "#689d6a"
+white = "#a89984"
+
+[colors.bright]
+black = "#928374"
+red = "#f42c3e"
+green = "#b8bb26"
+yellow = "#fabd2f"
+blue = "#99c6ca"
+magenta = "#d3869b"
+cyan = "#7ec16e"
+white = "#ebdbb2"

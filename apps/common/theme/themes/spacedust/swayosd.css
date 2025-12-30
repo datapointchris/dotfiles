@@ -1,0 +1,8 @@
+/* Spacedust - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #0a1e24;
+@define-color border-color #ecf0c1;
+@define-color label #ecf0c1;
+@define-color image #ecf0c1;
+@define-color progress #ecf0c1;

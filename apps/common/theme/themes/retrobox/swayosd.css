@@ -1,0 +1,8 @@
+/* Retrobox - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #1c1c1c;
+@define-color border-color #ebdbb2;
+@define-color label #ebdbb2;
+@define-color image #ebdbb2;
+@define-color progress #ebdbb2;

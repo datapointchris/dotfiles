@@ -1,0 +1,23 @@
+{
+  "name": "GitHub Dark Dimmed",
+  "background": "#22272e",
+  "foreground": "#adbac7",
+  "cursorColor": "#adbac7",
+  "selectionBackground": "#3d4752",
+  "black": "#545d68",
+  "red": "#f47067",
+  "green": "#57ab5a",
+  "yellow": "#c69026",
+  "blue": "#539bf5",
+  "purple": "#b083f0",
+  "cyan": "#76e3ea",
+  "white": "#909dab",
+  "brightBlack": "#636e7b",
+  "brightRed": "#ff938a",
+  "brightGreen": "#6bc46d",
+  "brightYellow": "#daaa3f",
+  "brightBlue": "#6cb6ff",
+  "brightPurple": "#dcbdfb",
+  "brightCyan": "#b3f0ff",
+  "brightWhite": "#cdd9e5"
+}

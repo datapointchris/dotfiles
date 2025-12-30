@@ -1,0 +1,133 @@
+# Retrobox - Terminal configs matching Vim retrobox colorscheme
+# Source: Neovim built-in retrobox colorscheme (gruvbox-inspired)
+
+meta:
+  name: "Retrobox"
+  slug: "retrobox"
+  neovim_colorscheme: "retrobox"
+  author: "Maxim Kim (https://github.com/vim/colorschemes)"
+  variant: "dark"
+  source: "neovim"
+  source_url: "https://github.com/vim/colorschemes"
+  version: "1.0.0"
+
+# Base16 palette (extracted from retrobox.vim GUI colors)
+# Very similar to gruvbox but with slightly darker background
+base16:
+  base00: "#1c1c1c"  # Background (bg0)
+  base01: "#3c3836"  # Lighter background (bg1)
+  base02: "#504945"  # Selection background (bg2)
+  base03: "#928374"  # Comments (grey)
+  base04: "#a89984"  # Dark foreground (fg4)
+  base05: "#ebdbb2"  # Default foreground (fg1)
+  base06: "#d5c4a1"  # Light foreground (fg2)
+  base07: "#fbf1c7"  # Lightest foreground (fg0)
+  base08: "#fb4934"  # Red
+  base09: "#fe8019"  # Orange
+  base0A: "#fabd2f"  # Yellow
+  base0B: "#b8bb26"  # Green (String/Function)
+  base0C: "#8ec07c"  # Cyan/Aqua
+  base0D: "#83a598"  # Blue (Identifier)
+  base0E: "#d3869b"  # Purple (Constant/Number)
+  base0F: "#d65d0e"  # Brown (neutral_orange)
+
+# ANSI terminal colors (from terminal_ansi_colors in retrobox.vim)
+ansi:
+  black: "#1c1c1c"        # ANSI 0 - bg0
+  red: "#cc241d"          # ANSI 1 - neutralred
+  green: "#98971a"        # ANSI 2 - neutralgreen
+  yellow: "#d79921"       # ANSI 3 - neutralyellow
+  blue: "#458588"         # ANSI 4 - neutralblue
+  magenta: "#b16286"      # ANSI 5 - neutralpurple
+  cyan: "#689d6a"         # ANSI 6 - neutralaqua
+  white: "#a89984"        # ANSI 7 - fg4
+  bright_black: "#928374" # ANSI 8 - grey
+  bright_red: "#fb4934"   # ANSI 9 - red
+  bright_green: "#b8bb26" # ANSI 10 - green
+  bright_yellow: "#fabd2f" # ANSI 11 - yellow
+  bright_blue: "#83a598"  # ANSI 12 - blue
+  bright_magenta: "#d3869b" # ANSI 13 - purple
+  bright_cyan: "#8ec07c"  # ANSI 14 - aqua
+  bright_white: "#ebdbb2" # ANSI 15 - fg1
+
+# Special purpose colors
+special:
+  background: "#1c1c1c"
+  foreground: "#ebdbb2"
+  cursor: "#fbf1c7"       # Cursor guibg (fg0)
+  cursor_text: "#1c1c1c"  # Cursor guifg
+  selection_bg: "#504945" # Visual uses bg2-ish
+  selection_fg: "#ebdbb2"
+  border: "#504945"
+  panel: "#3c3836"
+
+# Extended palette
+extended:
+  # Background shades
+  bg0: "#1c1c1c"
+  bg1: "#3c3836"
+  bg2: "#504945"
+  bg3: "#303030"
+  bg4: "#7c6f64"
+
+  # Foreground shades
+  fg0: "#fbf1c7"
+  fg1: "#ebdbb2"
+  fg2: "#d5c4a1"
+  fg3: "#bdae93"
+  fg4: "#a89984"
+  grey: "#928374"
+
+  # Neutral colors (darker)
+  neutral_red: "#cc241d"
+  neutral_green: "#98971a"
+  neutral_yellow: "#d79921"
+  neutral_blue: "#458588"
+  neutral_purple: "#b16286"
+  neutral_aqua: "#689d6a"
+  neutral_orange: "#d65d0e"
+
+  # Bright colors
+  bright_red: "#fb4934"
+  bright_green: "#b8bb26"
+  bright_yellow: "#fabd2f"
+  bright_blue: "#83a598"
+  bright_purple: "#d3869b"
+  bright_aqua: "#8ec07c"
+  bright_orange: "#fe8019"
+
+  # Syntax colors
+  syntax_comment: "#928374"
+  syntax_string: "#b8bb26"
+  syntax_number: "#d3869b"
+  syntax_constant: "#d3869b"
+  syntax_variable: "#ebdbb2"
+  syntax_parameter: "#83a598"
+  syntax_function: "#b8bb26"
+  syntax_keyword: "#fb4934"
+  syntax_type: "#fabd2f"
+  syntax_operator: "#8ec07c"
+  syntax_punctuation: "#ebdbb2"
+  syntax_tag: "#fb4934"
+  syntax_attribute: "#fabd2f"
+
+  # Diagnostic colors
+  diagnostic_error: "#fb4934"
+  diagnostic_warning: "#fabd2f"
+  diagnostic_info: "#83a598"
+  diagnostic_hint: "#8ec07c"
+  diagnostic_ok: "#b8bb26"
+
+  # Git/diff colors
+  git_add: "#b8bb26"
+  git_change: "#fabd2f"
+  git_delete: "#fb4934"
+  git_ignored: "#928374"
+
+  # UI element colors
+  ui_border: "#504945"
+  ui_panel: "#3c3836"
+  ui_float: "#1c1c1c"
+  ui_accent: "#83a598"
+  ui_selection: "#504945"
+  ui_match: "#fabd2f"

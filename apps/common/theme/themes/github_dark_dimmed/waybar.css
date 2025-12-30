@@ -1,0 +1,23 @@
+/* GitHub Dark Dimmed - waybar theme */
+/* Generated from palette.yml */
+/* Author: Projekt0n */
+
+/* Base colors */
+@define-color background #22272e;
+@define-color background-alt #2d333b;
+@define-color foreground #adbac7;
+@define-color foreground-alt #636e7b;
+
+/* Selection and highlighting */
+@define-color selection #373e47;
+@define-color comment #768390;
+
+/* Accent colors */
+@define-color red #f47067;
+@define-color orange #e0823d;
+@define-color yellow #c69026;
+@define-color green #57ab5a;
+@define-color cyan #96d0ff;
+@define-color blue #6cb6ff;
+@define-color purple #dcbdfb;
+@define-color brown #e5534b;

@@ -1,0 +1,23 @@
+/* Slate - waybar theme */
+/* Generated from palette.yml */
+/* Author: Ralph Amissah (https://github.com/vim/colorschemes) */
+
+/* Base colors */
+@define-color background #262626;
+@define-color background-alt #333333;
+@define-color foreground #ffffff;
+@define-color foreground-alt #afaf87;
+
+/* Selection and highlighting */
+@define-color selection #4a4a4a;
+@define-color comment #666666;
+
+/* Accent colors */
+@define-color red #ff8787;
+@define-color orange #d7875f;
+@define-color yellow #ffd700;
+@define-color green #87d7ff;
+@define-color cyan #00cdcd;
+@define-color blue #5f87d7;
+@define-color purple #cd00cd;
+@define-color brown #ffafaf;

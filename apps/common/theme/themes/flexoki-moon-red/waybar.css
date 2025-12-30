@@ -1,0 +1,23 @@
+/* Flexoki Moon Red - waybar theme */
+/* Generated from palette.yml */
+/* Author: datapointchris */
+
+/* Base colors */
+@define-color background #18090b;
+@define-color background-alt #251a1a;
+@define-color foreground #f0e8dd;
+@define-color foreground-alt #b5967e;
+
+/* Selection and highlighting */
+@define-color selection #3a2b28;
+@define-color comment #8a6b60;
+
+/* Accent colors */
+@define-color red #d14d41;
+@define-color orange #da702c;
+@define-color yellow #d0a215;
+@define-color green #879a39;
+@define-color cyan #3aa99f;
+@define-color blue #4385be;
+@define-color purple #8b7ec8;
+@define-color brown #ce5d97;

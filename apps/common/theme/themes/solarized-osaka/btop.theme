@@ -1,0 +1,80 @@
+# Solarized Osaka - btop theme
+# Generated from theme.yml
+# Author: Takuya Matsuyama (craftzdog)
+
+# Main background, empty for terminal default
+theme[main_bg]="#001419"
+
+# Main text color
+theme[main_fg]="#93A1A1"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#2AA198"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#268BD2"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#073642"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#A9B1B1"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#586E75"
+
+# Misc colors for processes box
+theme[proc_misc]="#268BD2"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#002B36"
+theme[mem_box]="#002B36"
+theme[net_box]="#002B36"
+theme[proc_box]="#002B36"
+theme[div_line]="#002B36"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#268BD2"
+theme[temp_mid]="#2AA198"
+theme[temp_end]="#A9B1B1"
+
+# CPU graph colors
+theme[cpu_start]="#268BD2"
+theme[cpu_mid]="#2AA198"
+theme[cpu_end]="#A9B1B1"
+
+# Memory free meter
+theme[free_start]="#859900"
+theme[free_mid]="#2AA198"
+theme[free_end]="#A9B1B1"
+
+# Memory cached meter
+theme[cached_start]="#B58900"
+theme[cached_mid]="#CB4B16"
+theme[cached_end]="#A9B1B1"
+
+# Memory available meter
+theme[available_start]="#268BD2"
+theme[available_mid]="#2AA198"
+theme[available_end]="#A9B1B1"
+
+# Memory used meter
+theme[used_start]="#DC322F"
+theme[used_mid]="#CB4B16"
+theme[used_end]="#B58900"
+
+# Download graph colors
+theme[download_start]="#859900"
+theme[download_mid]="#2AA198"
+theme[download_end]="#A9B1B1"
+
+# Upload graph colors
+theme[upload_start]="#6C71C4"
+theme[upload_mid]="#268BD2"
+theme[upload_end]="#A9B1B1"

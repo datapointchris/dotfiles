@@ -1,0 +1,80 @@
+# Rose Pine - btop theme
+# Generated from theme.yml
+# Author: Rose Pine (https://rosepinetheme.com)
+
+# Main background, empty for terminal default
+theme[main_bg]="#191724"
+
+# Main text color
+theme[main_fg]="#E0DEF4"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#9CCFD8"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#C4A7E7"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#26233A"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#E0DEF4"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#6E6A86"
+
+# Misc colors for processes box
+theme[proc_misc]="#C4A7E7"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#1F1D2E"
+theme[mem_box]="#1F1D2E"
+theme[net_box]="#1F1D2E"
+theme[proc_box]="#1F1D2E"
+theme[div_line]="#1F1D2E"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#C4A7E7"
+theme[temp_mid]="#9CCFD8"
+theme[temp_end]="#E0DEF4"
+
+# CPU graph colors
+theme[cpu_start]="#C4A7E7"
+theme[cpu_mid]="#9CCFD8"
+theme[cpu_end]="#E0DEF4"
+
+# Memory free meter
+theme[free_start]="#31748F"
+theme[free_mid]="#9CCFD8"
+theme[free_end]="#E0DEF4"
+
+# Memory cached meter
+theme[cached_start]="#EBBCBA"
+theme[cached_mid]="#F6C177"
+theme[cached_end]="#E0DEF4"
+
+# Memory available meter
+theme[available_start]="#C4A7E7"
+theme[available_mid]="#9CCFD8"
+theme[available_end]="#E0DEF4"
+
+# Memory used meter
+theme[used_start]="#EB6F92"
+theme[used_mid]="#F6C177"
+theme[used_end]="#EBBCBA"
+
+# Download graph colors
+theme[download_start]="#31748F"
+theme[download_mid]="#9CCFD8"
+theme[download_end]="#E0DEF4"
+
+# Upload graph colors
+theme[upload_start]="#EB6F92"
+theme[upload_mid]="#C4A7E7"
+theme[upload_end]="#E0DEF4"

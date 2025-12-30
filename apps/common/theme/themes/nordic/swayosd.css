@@ -1,0 +1,8 @@
+/* Nordic - SwayOSD colors */
+/* Generated from palette.yml */
+
+@define-color background-color #242933;
+@define-color border-color #BBC3D4;
+@define-color label #BBC3D4;
+@define-color image #BBC3D4;
+@define-color progress #BBC3D4;

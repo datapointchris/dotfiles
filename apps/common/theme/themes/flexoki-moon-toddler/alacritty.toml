@@ -1,0 +1,35 @@
+# Flexoki Moon Toddler - alacritty theme
+# Generated from theme.yml
+# Author: datapointchris
+
+[colors.primary]
+background = "#2a1f16"
+foreground = "#d4c4a8"
+
+[colors.cursor]
+text = "#2a1f16"
+cursor = "#d4c4a8"
+
+[colors.selection]
+text = "#d4c4a8"
+background = "#693c4e"
+
+[colors.normal]
+black = "#2a1f16"
+red = "#dd634d"
+green = "#7eae0f"
+yellow = "#957209"
+blue = "#3672da"
+magenta = "#ca1447"
+cyan = "#4f7edc"
+white = "#d4c4a8"
+
+[colors.bright]
+black = "#726250"
+red = "#ce291d"
+green = "#6da700"
+yellow = "#e1a100"
+blue = "#5586e6"
+magenta = "#cb0036"
+cyan = "#1f554d"
+white = "#fff2d8"

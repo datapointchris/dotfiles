@@ -1,0 +1,23 @@
+/* Material Design Colors - waybar theme */
+/* Generated from palette.yml */
+/* Author: Ghostty */
+
+/* Base colors */
+@define-color background #1d262a;
+@define-color background-alt #a1b0b8;
+@define-color foreground #e7ebed;
+@define-color foreground-alt #ffffff;
+
+/* Selection and highlighting */
+@define-color selection #4e6a78;
+@define-color comment #a1b0b8;
+
+/* Accent colors */
+@define-color red #fc3841;
+@define-color orange #fc746d;
+@define-color yellow #fed032;
+@define-color green #5cf19e;
+@define-color cyan #59ffd1;
+@define-color blue #37b6ff;
+@define-color purple #fc226e;
+@define-color brown #fc226e;

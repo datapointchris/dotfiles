@@ -1,0 +1,23 @@
+/* Spacedust - waybar theme */
+/* Generated from palette.yml */
+/* Author: Ghostty */
+
+/* Base colors */
+@define-color background #0a1e24;
+@define-color background-alt #684c31;
+@define-color foreground #ecf0c1;
+@define-color foreground-alt #f0f1ce;
+
+/* Selection and highlighting */
+@define-color selection #0a385c;
+@define-color comment #684c31;
+
+/* Accent colors */
+@define-color red #e35b00;
+@define-color orange #ff8a3a;
+@define-color yellow #e3cd7b;
+@define-color green #5cab96;
+@define-color cyan #06afc7;
+@define-color blue #0f548b;
+@define-color purple #e35b00;
+@define-color brown #e35b00;

@@ -1,0 +1,56 @@
+# Flexoki Moon Black - Terminal configs matching flexoki-moon-nvim
+# Source: datapointchris/flexoki-moon-nvim
+
+meta:
+  name: "Flexoki Moon Black"
+  slug: "flexoki-moon-black"
+  neovim_colorscheme: "flexoki-moon-black"
+  author: "datapointchris"
+  variant: "dark"
+  source: "neovim"
+
+base16:
+  base00: "#100f0f"  # base
+  base01: "#1c1b1a"  # overlay
+  base02: "#282726"  # highlight_low
+  base03: "#575653"  # muted
+  base04: "#878580"  # subtle
+  base05: "#cecdc3"  # text
+  base06: "#EDEECF"  # green_zero
+  base07: "#ffffff"
+  base08: "#d14d41"  # red_two
+  base09: "#da702c"  # orange_two
+  base0A: "#d0a215"  # yellow_two
+  base0B: "#879a39"  # green_two
+  base0C: "#3aa99f"  # cyan_two
+  base0D: "#4385be"  # blue_two
+  base0E: "#8b7ec8"  # purple_two
+  base0F: "#ce5d97"  # magenta_two
+
+ansi:
+  black: "#100f0f"
+  red: "#d14d41"
+  green: "#879a39"
+  yellow: "#d0a215"
+  blue: "#4385be"
+  magenta: "#ce5d97"
+  cyan: "#3aa99f"
+  white: "#cecdc3"
+  bright_black: "#575653"
+  bright_red: "#af3029"
+  bright_green: "#66800b"
+  bright_yellow: "#ad8301"
+  bright_blue: "#205ea6"
+  bright_magenta: "#a02f6f"
+  bright_cyan: "#24837b"
+  bright_white: "#EDEECF"
+
+special:
+  background: "#100f0f"
+  foreground: "#cecdc3"
+  cursor: "#cecdc3"
+  cursor_text: "#100f0f"
+  selection_bg: "#343331"
+  selection_fg: "#cecdc3"
+  border: "#282726"
+  panel: "#1c1b1a"

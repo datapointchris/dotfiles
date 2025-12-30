@@ -1,0 +1,35 @@
+# Flexoki Moon Red - alacritty theme
+# Generated from theme.yml
+# Author: datapointchris
+
+[colors.primary]
+background = "#18090b"
+foreground = "#f0e8dd"
+
+[colors.cursor]
+text = "#18090b"
+cursor = "#f0e8dd"
+
+[colors.selection]
+text = "#f0e8dd"
+background = "#42322e"
+
+[colors.normal]
+black = "#18090b"
+red = "#d14d41"
+green = "#879a39"
+yellow = "#d0a215"
+blue = "#4385be"
+magenta = "#ce5d97"
+cyan = "#3aa99f"
+white = "#f0e8dd"
+
+[colors.bright]
+black = "#8a6b60"
+red = "#af3029"
+green = "#66800b"
+yellow = "#ad8301"
+blue = "#205ea6"
+magenta = "#a02f6f"
+cyan = "#24837b"
+white = "#ffeaec"

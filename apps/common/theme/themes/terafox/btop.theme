@@ -1,0 +1,80 @@
+# Terafox - btop theme
+# Generated from theme.yml
+# Author: EdenEast
+
+# Main background, empty for terminal default
+theme[main_bg]="#152528"
+
+# Main text color
+theme[main_fg]="#E6EAEA"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#A1CDD8"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#5A93AA"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#254147"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#EAEEEE"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#6D7F8B"
+
+# Misc colors for processes box
+theme[proc_misc]="#5A93AA"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#1D3337"
+theme[mem_box]="#1D3337"
+theme[net_box]="#1D3337"
+theme[proc_box]="#1D3337"
+theme[div_line]="#1D3337"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#5A93AA"
+theme[temp_mid]="#A1CDD8"
+theme[temp_end]="#EAEEEE"
+
+# CPU graph colors
+theme[cpu_start]="#5A93AA"
+theme[cpu_mid]="#A1CDD8"
+theme[cpu_end]="#EAEEEE"
+
+# Memory free meter
+theme[free_start]="#7AA4A1"
+theme[free_mid]="#A1CDD8"
+theme[free_end]="#EAEEEE"
+
+# Memory cached meter
+theme[cached_start]="#FDA47F"
+theme[cached_mid]="#FF8349"
+theme[cached_end]="#EAEEEE"
+
+# Memory available meter
+theme[available_start]="#5A93AA"
+theme[available_mid]="#A1CDD8"
+theme[available_end]="#EAEEEE"
+
+# Memory used meter
+theme[used_start]="#E85C51"
+theme[used_mid]="#FF8349"
+theme[used_end]="#FDA47F"
+
+# Download graph colors
+theme[download_start]="#7AA4A1"
+theme[download_mid]="#A1CDD8"
+theme[download_end]="#EAEEEE"
+
+# Upload graph colors
+theme[upload_start]="#AD5C7C"
+theme[upload_mid]="#5A93AA"
+theme[upload_end]="#EAEEEE"

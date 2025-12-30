@@ -1,0 +1,80 @@
+# Flexoki Moon Green - btop theme
+# Generated from theme.yml
+# Author: datapointchris
+
+# Main background, empty for terminal default
+theme[main_bg]="#08120B"
+
+# Main text color
+theme[main_fg]="#DDD8E8"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#3AA99F"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#4385BE"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#253426"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#D6FADC"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#6B7D6E"
+
+# Misc colors for processes box
+theme[proc_misc]="#4385BE"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#151F18"
+theme[mem_box]="#151F18"
+theme[net_box]="#151F18"
+theme[proc_box]="#151F18"
+theme[div_line]="#151F18"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#4385BE"
+theme[temp_mid]="#3AA99F"
+theme[temp_end]="#D6FADC"
+
+# CPU graph colors
+theme[cpu_start]="#4385BE"
+theme[cpu_mid]="#3AA99F"
+theme[cpu_end]="#D6FADC"
+
+# Memory free meter
+theme[free_start]="#879A39"
+theme[free_mid]="#3AA99F"
+theme[free_end]="#D6FADC"
+
+# Memory cached meter
+theme[cached_start]="#D0A215"
+theme[cached_mid]="#DA702C"
+theme[cached_end]="#D6FADC"
+
+# Memory available meter
+theme[available_start]="#4385BE"
+theme[available_mid]="#3AA99F"
+theme[available_end]="#D6FADC"
+
+# Memory used meter
+theme[used_start]="#D14D41"
+theme[used_mid]="#DA702C"
+theme[used_end]="#D0A215"
+
+# Download graph colors
+theme[download_start]="#879A39"
+theme[download_mid]="#3AA99F"
+theme[download_end]="#D6FADC"
+
+# Upload graph colors
+theme[upload_start]="#8B7EC8"
+theme[upload_mid]="#4385BE"
+theme[upload_end]="#D6FADC"

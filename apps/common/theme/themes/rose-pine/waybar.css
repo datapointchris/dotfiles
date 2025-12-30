@@ -1,0 +1,23 @@
+/* Rose Pine - waybar theme */
+/* Generated from palette.yml */
+/* Author: Rose Pine (https://rosepinetheme.com) */
+
+/* Base colors */
+@define-color background #191724;
+@define-color background-alt #1f1d2e;
+@define-color foreground #e0def4;
+@define-color foreground-alt #908caa;
+
+/* Selection and highlighting */
+@define-color selection #26233a;
+@define-color comment #6e6a86;
+
+/* Accent colors */
+@define-color red #eb6f92;
+@define-color orange #f6c177;
+@define-color yellow #ebbcba;
+@define-color green #31748f;
+@define-color cyan #9ccfd8;
+@define-color blue #c4a7e7;
+@define-color purple #eb6f92;
+@define-color brown #95b1ac;
