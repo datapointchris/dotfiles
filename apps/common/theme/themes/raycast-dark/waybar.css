@@ -1,23 +1,18 @@
 /* Raycast Dark - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #1a1a1a;
-@define-color background-alt #4c4c4c;
-@define-color foreground #ffffff;
-@define-color foreground-alt #ffffff;
-
-/* Selection and highlighting */
-@define-color selection #333333;
-@define-color comment #4c4c4c;
+@define-color bg #1a1a1a;
+@define-color bg-dark #4c4c4c;
+@define-color bg-highlight #333333;
+@define-color fg #ffffff;
+@define-color fg-dark #ffffff;
 
 /* Accent colors */
-@define-color red #ff5360;
-@define-color orange #ff6363;
-@define-color yellow #ffc531;
-@define-color green #59d499;
-@define-color cyan #52eee5;
 @define-color blue #56c2ff;
-@define-color purple #cf2f98;
-@define-color brown #cf2f98;
+@define-color cyan #52eee5;
+@define-color green #59d499;
+@define-color magenta #cf2f98;
+@define-color red #ff5360;
+@define-color yellow #ffc531;
+@define-color orange #ff6363;

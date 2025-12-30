@@ -1,23 +1,18 @@
 /* GitHub Dark - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #101216;
-@define-color background-alt #4d4d4d;
-@define-color foreground #8b949e;
-@define-color foreground-alt #ffffff;
-
-/* Selection and highlighting */
-@define-color selection #3b5070;
-@define-color comment #4d4d4d;
+@define-color bg #101216;
+@define-color bg-dark #4d4d4d;
+@define-color bg-highlight #3b5070;
+@define-color fg #8b949e;
+@define-color fg-dark #ffffff;
 
 /* Accent colors */
-@define-color red #f78166;
-@define-color orange #f78166;
-@define-color yellow #e3b341;
-@define-color green #56d364;
-@define-color cyan #2b7489;
 @define-color blue #6ca4f8;
-@define-color purple #db61a2;
-@define-color brown #db61a2;
+@define-color cyan #2b7489;
+@define-color green #56d364;
+@define-color magenta #db61a2;
+@define-color red #f78166;
+@define-color yellow #e3b341;
+@define-color orange #f78166;

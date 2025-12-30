@@ -1,23 +1,18 @@
 /* Selenized Dark - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #103c48;
-@define-color background-alt #396775;
-@define-color foreground #adbcbc;
-@define-color foreground-alt #72898f;
-
-/* Selection and highlighting */
-@define-color selection #184956;
-@define-color comment #396775;
+@define-color bg #103c48;
+@define-color bg-dark #396775;
+@define-color bg-highlight #184956;
+@define-color fg #adbcbc;
+@define-color fg-dark #72898f;
 
 /* Accent colors */
-@define-color red #fa5750;
-@define-color orange #ff665c;
-@define-color yellow #dbb32d;
-@define-color green #75b938;
-@define-color cyan #41c7b9;
 @define-color blue #4695f7;
-@define-color purple #f275be;
-@define-color brown #f275be;
+@define-color cyan #41c7b9;
+@define-color green #75b938;
+@define-color magenta #f275be;
+@define-color red #fa5750;
+@define-color yellow #dbb32d;
+@define-color orange #ff665c;

@@ -1,23 +1,18 @@
 /* Tomorrow Night Bright - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #000000;
-@define-color background-alt #404040;
-@define-color foreground #eaeaea;
-@define-color foreground-alt #ffffff;
-
-/* Selection and highlighting */
-@define-color selection #424242;
-@define-color comment #404040;
+@define-color bg #000000;
+@define-color bg-dark #404040;
+@define-color bg-highlight #424242;
+@define-color fg #eaeaea;
+@define-color fg-dark #ffffff;
 
 /* Accent colors */
-@define-color red #d54e53;
-@define-color orange #d54e53;
-@define-color yellow #e7c547;
-@define-color green #b9ca4a;
-@define-color cyan #70c0b1;
 @define-color blue #7aa6da;
-@define-color purple #c397d8;
-@define-color brown #c397d8;
+@define-color cyan #70c0b1;
+@define-color green #b9ca4a;
+@define-color magenta #c397d8;
+@define-color red #d54e53;
+@define-color yellow #e7c547;
+@define-color orange #d54e53;

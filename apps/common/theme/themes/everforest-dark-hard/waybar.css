@@ -1,23 +1,18 @@
 /* Everforest Dark Hard - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #1e2326;
-@define-color background-alt #a6b0a0;
-@define-color foreground #d3c6aa;
-@define-color foreground-alt #f2efdf;
-
-/* Selection and highlighting */
-@define-color selection #4c3743;
-@define-color comment #a6b0a0;
+@define-color bg #1e2326;
+@define-color bg-dark #a6b0a0;
+@define-color bg-highlight #4c3743;
+@define-color fg #d3c6aa;
+@define-color fg-dark #f2efdf;
 
 /* Accent colors */
-@define-color red #e67e80;
-@define-color orange #f85552;
-@define-color yellow #dbbc7f;
-@define-color green #a7c080;
-@define-color cyan #83c092;
 @define-color blue #7fbbb3;
-@define-color purple #d699b6;
-@define-color brown #d699b6;
+@define-color cyan #83c092;
+@define-color green #a7c080;
+@define-color magenta #d699b6;
+@define-color red #e67e80;
+@define-color yellow #dbbc7f;
+@define-color orange #f85552;

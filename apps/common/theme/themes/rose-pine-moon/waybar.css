@@ -1,23 +1,18 @@
 /* Rose Pine Moon - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #232136;
-@define-color background-alt #6e6a86;
-@define-color foreground #e0def4;
-@define-color foreground-alt #e0def4;
-
-/* Selection and highlighting */
-@define-color selection #44415a;
-@define-color comment #6e6a86;
+@define-color bg #232136;
+@define-color bg-dark #6e6a86;
+@define-color bg-highlight #44415a;
+@define-color fg #e0def4;
+@define-color fg-dark #e0def4;
 
 /* Accent colors */
-@define-color red #eb6f92;
-@define-color orange #eb6f92;
-@define-color yellow #f6c177;
-@define-color green #3e8fb0;
-@define-color cyan #ea9a97;
 @define-color blue #9ccfd8;
-@define-color purple #c4a7e7;
-@define-color brown #c4a7e7;
+@define-color cyan #ea9a97;
+@define-color green #3e8fb0;
+@define-color magenta #c4a7e7;
+@define-color red #eb6f92;
+@define-color yellow #f6c177;
+@define-color orange #eb6f92;

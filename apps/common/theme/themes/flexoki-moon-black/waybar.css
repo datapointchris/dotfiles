@@ -1,23 +1,18 @@
 /* Flexoki Moon Black - waybar theme */
-/* Generated from palette.yml */
-/* Author: datapointchris */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #100f0f;
-@define-color background-alt #1c1b1a;
-@define-color foreground #cecdc3;
-@define-color foreground-alt #878580;
-
-/* Selection and highlighting */
-@define-color selection #282726;
-@define-color comment #575653;
+@define-color bg #100f0f;
+@define-color bg-dark #1c1b1a;
+@define-color bg-highlight #282726;
+@define-color fg #cecdc3;
+@define-color fg-dark #878580;
 
 /* Accent colors */
-@define-color red #d14d41;
-@define-color orange #da702c;
-@define-color yellow #d0a215;
-@define-color green #879a39;
-@define-color cyan #3aa99f;
 @define-color blue #4385be;
-@define-color purple #8b7ec8;
-@define-color brown #ce5d97;
+@define-color cyan #3aa99f;
+@define-color green #879a39;
+@define-color magenta #ce5d97;
+@define-color red #d14d41;
+@define-color yellow #d0a215;
+@define-color orange #da702c;

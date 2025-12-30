@@ -1,23 +1,18 @@
 /* Flexoki Moon Purple - waybar theme */
-/* Generated from palette.yml */
-/* Author: datapointchris */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #12101d;
-@define-color background-alt #1c1a25;
-@define-color foreground #ddd8e8;
-@define-color foreground-alt #8f8a98;
-
-/* Selection and highlighting */
-@define-color selection #1f1d2a;
-@define-color comment #625f68;
+@define-color bg #12101d;
+@define-color bg-dark #1c1a25;
+@define-color bg-highlight #1f1d2a;
+@define-color fg #ddd8e8;
+@define-color fg-dark #8f8a98;
 
 /* Accent colors */
-@define-color red #d14d41;
-@define-color orange #da702c;
-@define-color yellow #d0a215;
-@define-color green #879a39;
-@define-color cyan #3aa99f;
 @define-color blue #4385be;
-@define-color purple #8b7ec8;
-@define-color brown #ce5d97;
+@define-color cyan #3aa99f;
+@define-color green #879a39;
+@define-color magenta #ce5d97;
+@define-color red #d14d41;
+@define-color yellow #d0a215;
+@define-color orange #da702c;

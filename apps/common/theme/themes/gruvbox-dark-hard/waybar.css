@@ -1,23 +1,18 @@
 /* Gruvbox Dark Hard - waybar theme */
-/* Generated from palette.yml */
-/* Author: morhetz (https://github.com/morhetz/gruvbox) */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #1d2021;
-@define-color background-alt #3c3836;
-@define-color foreground #ebdbb2;
-@define-color foreground-alt #928374;
-
-/* Selection and highlighting */
-@define-color selection #504945;
-@define-color comment #665c54;
+@define-color bg #1d2021;
+@define-color bg-dark #3c3836;
+@define-color bg-highlight #504945;
+@define-color fg #ebdbb2;
+@define-color fg-dark #928374;
 
 /* Accent colors */
-@define-color red #fb4934;
+@define-color blue #458588;
+@define-color cyan #689d6a;
+@define-color green #98971a;
+@define-color magenta #b16286;
+@define-color red #cc241d;
+@define-color yellow #d79921;
 @define-color orange #fe8019;
-@define-color yellow #fabd2f;
-@define-color green #b8bb26;
-@define-color cyan #8ec07c;
-@define-color blue #83a598;
-@define-color purple #d3869b;
-@define-color brown #d65d0e;

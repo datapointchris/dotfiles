@@ -1,23 +1,18 @@
 /* Flexoki Moon Toddler - waybar theme */
-/* Generated from palette.yml */
-/* Author: datapointchris */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #2a1f16;
-@define-color background-alt #464132;
-@define-color foreground #d4c4a8;
-@define-color foreground-alt #c4b199;
-
-/* Selection and highlighting */
-@define-color selection #713d3a;
-@define-color comment #726250;
+@define-color bg #2a1f16;
+@define-color bg-dark #464132;
+@define-color bg-highlight #713d3a;
+@define-color fg #d4c4a8;
+@define-color fg-dark #c4b199;
 
 /* Accent colors */
-@define-color red #dd634d;
-@define-color orange #d19812;
-@define-color yellow #957209;
-@define-color green #7eae0f;
-@define-color cyan #4f7edc;
 @define-color blue #3672da;
-@define-color purple #be0033;
-@define-color brown #ca1447;
+@define-color cyan #4f7edc;
+@define-color green #7eae0f;
+@define-color magenta #ca1447;
+@define-color red #dd634d;
+@define-color yellow #957209;
+@define-color orange #d19812;

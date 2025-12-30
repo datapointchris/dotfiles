@@ -1,23 +1,18 @@
 /* OceanicNext - waybar theme */
-/* Generated from palette.yml */
-/* Author: Ghostty */
+/* Generated from theme.yml */
 
 /* Base colors */
-@define-color background #162c35;
-@define-color background-alt #65737e;
-@define-color foreground #c0c5ce;
-@define-color foreground-alt #ffffff;
-
-/* Selection and highlighting */
-@define-color selection #4f5b66;
-@define-color comment #65737e;
+@define-color bg #162c35;
+@define-color bg-dark #65737e;
+@define-color bg-highlight #4f5b66;
+@define-color fg #c0c5ce;
+@define-color fg-dark #ffffff;
 
 /* Accent colors */
-@define-color red #ec5f67;
-@define-color orange #ec5f67;
-@define-color yellow #fac863;
-@define-color green #99c794;
-@define-color cyan #5fb3b3;
 @define-color blue #6699cc;
-@define-color purple #c594c5;
-@define-color brown #c594c5;
+@define-color cyan #5fb3b3;
+@define-color green #99c794;
+@define-color magenta #c594c5;
+@define-color red #ec5f67;
+@define-color yellow #fac863;
+@define-color orange #ec5f67;
