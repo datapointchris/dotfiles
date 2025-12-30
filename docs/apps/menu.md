@@ -4,126 +4,127 @@ icon: material/menu
 
 # Menu
 
-Simple workflow tools launcher providing quick access to common development tools.
+Simple workflow tools launcher providing quick access to common development tools through a hierarchical gum-based menu.
 
 ## Quick Start
 
 ```bash
 menu                    # Launch interactive menu
-menu launch             # Same as above
-menu help               # Show available tools
 ```
 
 **From tmux**: `Ctrl-Space + m`
 
-## Commands
+## Categories
 
-**Interactive Menu** (`menu` or `menu launch`):
+The menu organizes tools into categories:
 
-- Switch tmux session → `sess`
-- Find a tool → `toolbox categories`
-- Change theme → Pick from favorites with fzf
-- Take/find a note → `notes`
-- Browse documentation → Opens MkDocs link
-- Manage symlinks → `task symlinks:link`
-- View help → `menu help`
+### Sessions & Navigation
 
-**Help Mode** (`menu help`):
-Shows quick reference for workflow tools and common commands.
+- **Switch tmux session** → `sess`
+
+### Theming & Appearance
+
+- **Preview and apply theme** → `theme preview`
+- **Change terminal font** → `font change`
+- **Show current theme** → `theme current`
+- **Show current font** → `font current`
+
+### Notes & Knowledge
+
+- **Take or find notes** → `notes`
+- **Browse workflows** → `workflows search`
+
+### Tools & Patterns
+
+- **Find a tool** → `toolbox categories`
+- **Search regex patterns** → `patterns`
+- **Check references** → `refcheck`
+
+### Backups
+
+- **Backup directories** → `backup-dirs`
+- **Incremental backup** → `backup-incremental`
+
+### Dotfiles Management
+
+- **Deploy symlinks** → `task symlinks:link`
+- **Check symlinks** → `task symlinks:check`
+- **Show symlink mappings** → `task symlinks:show`
+
+### Documentation
+
+- **Open docs website** → Opens MkDocs site
+- **Serve docs locally** → `task docs:serve`
 
 ## How It Works
 
-Menu is a simple gum-based launcher - not a knowledge management system. It provides quick access to the actual workflow tools:
-
-- **sess** - Tmux session management (Go app)
-- **toolbox** - CLI tools discovery (Go app)
-- **theme** - Theme management (bash script)
-- **notes** - Note-taking with zk (bash wrapper)
+Menu is a simple gum-based launcher - not a knowledge management system. It provides quick access to the actual workflow tools, organized by category for discoverability.
 
 **Philosophy**: Simple launcher, not a complex system. Each tool handles its own data and functionality independently.
 
-## Tool Integration
+## Direct Tool Access
 
-**Session Manager** (`apps/common/sess/`):
-
-- Go application for tmux sessions
-- Reads `~/.config/sess/sessions-{platform}.yml`
-- Aggregates tmux sessions, tmuxinator projects, defaults
-
-**Toolbox** (`apps/common/toolbox/`):
-
-- Go application with registry at `platforms/common/.config/toolbox/registry.yml`
-- Commands: list, show, search, random, categories
-- 98+ documented tools
-
-**Theme** (`apps/common/theme/`):
-
-- Unified theme generation from theme.yml source files
-- Syncs across ghostty, tmux, btop, and Neovim
-- Commands: list, apply, preview, random, like/dislike
-
-**Notes** (`apps/common/notes`):
-
-- Wraps zk for note-taking
-- Auto-discovers notebook sections
-- Interactive gum menu
-
-## Workflow
-
-**Quick launch workflow**:
-
-1. Run `menu` (or `Ctrl-Space + m` in tmux)
-2. Select what you want to do from gum menu
-3. Tool launches and executes
-
-**Direct tool access** (bypass menu):
+Bypass menu for direct access:
 
 ```bash
 sess                    # Open session picker
 toolbox search git      # Find git tools
-theme current           # Show current theme
+theme preview           # Theme preview with fzf
+font change             # Font picker with preview
 notes                   # Interactive note menu
+patterns                # Regex pattern search
+refcheck                # Reference checker
+backup-dirs             # Directory backup
 ```
 
-**With fzf integration**:
+## Tool Summary
 
-```bash
-toolbox list | fzf --preview='toolbox show {1}'
-theme preview           # Built-in fzf preview
-```
+| Tool | Description |
+|------|-------------|
+| `sess` | Tmux session management (Go app) |
+| `toolbox` | CLI tools discovery (Go app) |
+| `theme` | Theme management across apps |
+| `font` | Font tracking and management |
+| `notes` | Note-taking with zk |
+| `workflows` | Workflow documentation browser |
+| `patterns` | Common regex pattern library |
+| `refcheck` | Reference and link checker |
+| `backup-dirs` | Directory backup manager |
+| `backup-incremental` | Incremental backup system |
 
 ## Implementation
 
-**Location**: `apps/common/menu` (174 lines of bash)
+**Location**: `apps/common/menu` (~120 lines of bash)
 
 **Dependencies**:
 
 - gum (required) - TUI components
-- fzf (optional) - fuzzy finding
 
 **File structure**:
 
 ```text
 apps/common/
-├── menu              # Main launcher script
-├── theme/            # Theme management
-├── notes             # Note-taking wrapper
-├── sess/             # Session manager (Go)
-└── toolbox/          # Tools discovery (Go)
-
-~/go/bin/             # Installed Go binaries
-├── sess
-└── toolbox
+├── menu                  # Main launcher script
+├── theme/                # Theme management
+├── font/                 # Font management
+├── notes                 # Note-taking wrapper
+├── patterns              # Regex patterns
+├── workflows             # Workflow browser
+├── refcheck              # Reference checker
+├── backup-dirs           # Directory backup
+├── backup-incremental    # Incremental backup
+├── sess/                 # Session manager (Go)
+└── toolbox/              # Tools discovery (Go)
 ```
 
 ## Design Decisions
 
-**Why simple launcher, not knowledge system?**
+**Why hierarchical categories?**
 
-- Simple is maintainable
-- Each tool handles its own data
-- No central YAML registry to maintain
-- Tools can be used independently
+- Groups related tools for discoverability
+- Reduces top-level clutter
+- Easier to find tools you don't use often
+- "Back" option in each category for navigation
 
 **Why gum?**
 
@@ -139,23 +140,11 @@ apps/common/
 - Single responsibility
 - Can use in scripts and aliases
 
-## Performance
-
-- Startup time: <50ms (bash + gum)
-- Memory: Minimal (script exits after use)
-- No background processes
-
-## Platform Awareness
-
-Menu works identically across platforms. Individual tools handle platform differences:
-
-- sess reads `sessions-macos.yml` vs `sessions-wsl.yml`
-- toolbox marks tools as available/not installed per platform
-- theme generates configs for installed apps only
-
 ## See Also
 
-- [Tool Composition](../architecture/tool-composition.md) - How tools work together
+- [Theme](theme.md) - Theme management
+- [Font](font.md) - Font management
 - [Toolbox](toolbox.md) - Tool discovery
 - [Notes](notes.md) - Note-taking
-- [Sessions](sess.md) - Session manager
+- [Session Manager](sess.md) - Session manager
+- [Patterns](patterns.md) - Regex patterns

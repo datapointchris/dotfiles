@@ -9,7 +9,6 @@
 
 set -euo pipefail
 
-# Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
@@ -23,45 +22,101 @@ gum style \
 echo ""
 
 choice=$(gum choose \
-  "Switch tmux session" \
-  "Find a tool" \
-  "Change theme" \
-  "Take/find a note" \
-  "Browse workflows" \
-  "Browse documentation" \
-  "Manage symlinks" \
-  "View this help")
+  "Sessions & Navigation" \
+  "Theming & Appearance" \
+  "Notes & Knowledge" \
+  "Tools & Patterns" \
+  "Backups" \
+  "Dotfiles Management" \
+  "Documentation")
 
 case "$choice" in
-  "Switch tmux session")
-    sess ;;
-
-  "Find a tool")
-    toolbox categories ;;
-
-  "Change theme")
-    theme preview
+  "Sessions & Navigation")
+    action=$(gum choose \
+      "Switch tmux session (sess)" \
+      "Back")
+    case "$action" in
+      "Switch tmux session"*) sess ;;
+    esac
     ;;
 
-  "Take/find a note")
-    notes ;;
-
-  "Browse workflows")
-    workflows search ;;
-
-  "Browse documentation")
-    print_green "Opening documentation..."
-    open "https://datapointchris.github.io/dotfiles/"
+  "Theming & Appearance")
+    action=$(gum choose \
+      "Preview and apply theme (theme preview)" \
+      "Change terminal font (font change)" \
+      "Show current theme (theme current)" \
+      "Show current font (font current)" \
+      "Back")
+    case "$action" in
+      "Preview and apply theme"*) theme preview ;;
+      "Change terminal font"*) font change ;;
+      "Show current theme"*) theme current ;;
+      "Show current font"*) font current ;;
+    esac
     ;;
 
-  "Manage symlinks")
-    print_green "Symlink Management Commands:"
-    echo ""
-    echo "  task symlinks:link   - Deploy dotfiles to home directory"
-    echo "  task symlinks:check  - Verify symlinks are correct"
-    echo "  task symlinks:show   - Show symlink mappings"
-    echo ""
-    read -r -p "Press Enter to continue..."
+  "Notes & Knowledge")
+    action=$(gum choose \
+      "Take or find notes (notes)" \
+      "Browse workflows (workflows)" \
+      "Back")
+    case "$action" in
+      "Take or find notes"*) notes ;;
+      "Browse workflows"*) workflows search ;;
+    esac
     ;;
 
+  "Tools & Patterns")
+    action=$(gum choose \
+      "Find a tool (toolbox)" \
+      "Search regex patterns (patterns)" \
+      "Check references (refcheck)" \
+      "Back")
+    case "$action" in
+      "Find a tool"*) toolbox categories ;;
+      "Search regex patterns"*) patterns ;;
+      "Check references"*) refcheck ;;
+    esac
+    ;;
+
+  "Backups")
+    action=$(gum choose \
+      "Backup directories (backup-dirs)" \
+      "Incremental backup (backup-incremental)" \
+      "Back")
+    case "$action" in
+      "Backup directories"*) backup-dirs ;;
+      "Incremental backup"*) backup-incremental ;;
+    esac
+    ;;
+
+  "Dotfiles Management")
+    action=$(gum choose \
+      "Deploy symlinks (task symlinks:link)" \
+      "Check symlinks (task symlinks:check)" \
+      "Show symlink mappings (task symlinks:show)" \
+      "Back")
+    case "$action" in
+      "Deploy symlinks"*) task symlinks:link ;;
+      "Check symlinks"*) task symlinks:check ;;
+      "Show symlink mappings"*) task symlinks:show ;;
+    esac
+    ;;
+
+  "Documentation")
+    action=$(gum choose \
+      "Open docs website" \
+      "Serve docs locally (task docs:serve)" \
+      "Back")
+    case "$action" in
+      "Open docs website"*)
+        print_green "Opening documentation..."
+        open "https://datapointchris.github.io/dotfiles/"
+        ;;
+      "Serve docs locally"*)
+        print_green "Starting local docs server..."
+        task docs:serve
+        ;;
+    esac
+    ;;
 esac
