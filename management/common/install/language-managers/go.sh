@@ -111,24 +111,28 @@ log_info "Platform: $PLATFORM/$ARCH → $GO_OS/$GO_ARCH"
 GO_URL="https://go.dev/dl/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
 GO_TARBALL="/tmp/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"
 
-# Download
+# Try download, fallback to home directory
 log_info "Downloading Go..."
 if ! curl -fsSL "$GO_URL" -o "$GO_TARBALL"; then
-  manual_steps="1. Download in your browser (bypasses firewall):
+  # Download failed - check home directory for manual download
+  log_warning "Download failed, checking home directory..."
+  HOME_FILE=$(find "$HOME" -maxdepth 1 -name "go*${GO_VERSION#go}*${GO_OS}*${GO_ARCH}*.tar.gz" -type f 2>/dev/null | head -1)
+
+  if [[ -n "$HOME_FILE" ]]; then
+    log_info "Found in home directory: $HOME_FILE"
+    cp "$HOME_FILE" "$GO_TARBALL"
+  else
+    manual_steps="1. Download in your browser (bypasses firewall):
    $GO_URL
 
-2. After downloading, install:
-   sudo rm -rf /usr/local/go
-   sudo tar -C /usr/local -xzf ~/Downloads/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz
+2. Save to home directory (~/)
 
-3. Add to PATH:
-   export PATH=\$PATH:/usr/local/go/bin
-
-4. Verify installation:
-   go version"
-  output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Download failed"
-  log_error "Go installation failed"
-  exit 1
+3. Re-run this installer:
+   bash $DOTFILES_DIR/management/common/install/language-managers/go.sh"
+    output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Download failed"
+    log_error "Go installation failed"
+    exit 1
+  fi
 fi
 
 # Install

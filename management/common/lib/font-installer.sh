@@ -39,37 +39,41 @@ download_nerd_font() {
   local package="$1"
   local extension="$2"
   local download_dir="$3"
-  local system_font_dir="$4"
+  local _system_font_dir="$4"  # Unused - kept for backward compatibility
 
   local temp_dir
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || return 1
 
   local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${package}.tar.xz"
-  log_info "Downloading from: $url"
+  local archive_file="${package}.tar.xz"
 
-  if ! curl -fsSL "$url" -o "${package}.tar.xz"; then
-    manual_steps="1. Download manually:
+  # Try download, fallback to home directory
+  log_info "Downloading from: $url"
+  if ! curl -fsSL "$url" -o "$archive_file"; then
+    # Download failed - check home directory for manual download
+    log_warning "Download failed, checking home directory..."
+    local home_file
+    home_file=$(find "$HOME" -maxdepth 1 -name "${package}*.tar.xz" -type f 2>/dev/null | head -1)
+
+    if [[ -n "$home_file" ]]; then
+      log_info "Found in home directory: $home_file"
+      cp "$home_file" "$archive_file"
+    else
+      manual_steps="1. Download manually:
    ${url}
 
-2. Extract the archive:
-   tar -xf ${package}.tar.xz
+2. Save to home directory (~/)
 
-3. Copy font files to system font directory:
-   cp *NerdFont*.${extension} ${system_font_dir}/
-
-4. Refresh font cache (Linux only):
-   fc-cache -fv
-
-5. Verify installation:
-   fc-list | grep -i ${package}"
-    output_failure_data "$package" "https://github.com/ryanoasis/nerd-fonts/releases/latest" "latest" "$manual_steps" "Download failed"
-    cd - > /dev/null || return 1
-    rm -rf "$temp_dir"
-    return 1
+3. Re-run the font installer"
+      output_failure_data "$package" "https://github.com/ryanoasis/nerd-fonts/releases/latest" "latest" "$manual_steps" "Download failed"
+      cd - > /dev/null || return 1
+      rm -rf "$temp_dir"
+      return 1
+    fi
   fi
 
-  tar -xf "${package}.tar.xz" || return 1
+  tar -xf "$archive_file" || return 1
   mkdir -p "$download_dir"
   find . -maxdepth 1 -name "*NerdFont*.$extension" -exec mv {} "$download_dir/" \; 2>/dev/null || true
 

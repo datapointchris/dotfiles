@@ -7,7 +7,6 @@
 # This library sources:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/version-helpers.sh"
-source "$SCRIPT_DIR/cache-manager.sh"
 
 # Get platform_arch string with customizable capitalization
 # Usage: get_platform_arch <darwin_x86> <darwin_arm> <linux_x86>
@@ -121,40 +120,27 @@ install_from_tarball() {
   local binary_path_in_tarball="$3"
   local version="${4:-latest}"
 
-  local tarball_path
-  local using_cache=false
+  local tarball_path="/tmp/${binary_name}.tar.gz"
 
-  # Check cache first if version is specified
-  if [[ "$version" != "latest" ]]; then
-    local cached_file
-    if cached_file=$(check_local_cache_for_version "$binary_name" "$version" "tar.gz"); then
-      log_info "Using cached archive: $cached_file"
-      tarball_path="$cached_file"
-      using_cache=true
-    fi
-  fi
+  # Try download, fallback to home directory
+  log_info "Download URL: $download_url"
+  log_info "Downloading $binary_name..."
+  if ! curl -fsSL "$download_url" -o "$tarball_path"; then
+    # Download failed - check home directory for manual download
+    log_warning "Download failed, checking home directory..."
+    local home_file
+    home_file=$(find "$HOME" -maxdepth 1 -name "${binary_name}*.tar.gz" -type f 2>/dev/null | head -1)
 
-  # Download if not in cache
-  if [[ "$using_cache" == "false" ]]; then
-    tarball_path="/tmp/${binary_name}.tar.gz"
-    log_info "Download URL: $download_url"
-    log_info "Downloading $binary_name..."
-    if ! curl -fsSL "$download_url" -o "$tarball_path"; then
+    if [[ -n "$home_file" ]]; then
+      log_info "Found in home directory: $home_file"
+      cp "$home_file" "$tarball_path"
+    else
       local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
-2. Move to cache directory:
-   mv ~/Downloads/${binary_name}*.tar.gz ~/.cache/dotfiles/
+2. Save to home directory (~/)
 
-3. Re-run this installer
-
-Or install manually:
-   tar -xzf ~/Downloads/${binary_name}*.tar.gz
-   mv ${binary_path_in_tarball} ~/.local/bin/
-   chmod +x ~/.local/bin/${binary_name}
-
-Verify installation:
-   ${binary_name} --version"
+3. Re-run this installer"
 
       output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
       log_error "Failed to download from $download_url"
@@ -209,40 +195,27 @@ install_from_zip() {
   local binary_path_in_zip="$3"
   local version="${4:-latest}"
 
-  local zip_path
-  local using_cache=false
+  local zip_path="/tmp/${binary_name}.zip"
 
-  # Check cache first if version is specified
-  if [[ "$version" != "latest" ]]; then
-    local cached_file
-    if cached_file=$(check_local_cache_for_version "$binary_name" "$version" "zip"); then
-      log_info "Using cached archive: $cached_file"
-      zip_path="$cached_file"
-      using_cache=true
-    fi
-  fi
+  # Try download, fallback to home directory
+  log_info "Download URL: $download_url"
+  log_info "Downloading $binary_name..."
+  if ! curl -fsSL "$download_url" -o "$zip_path"; then
+    # Download failed - check home directory for manual download
+    log_warning "Download failed, checking home directory..."
+    local home_file
+    home_file=$(find "$HOME" -maxdepth 1 -name "${binary_name}*.zip" -type f 2>/dev/null | head -1)
 
-  # Download if not in cache
-  if [[ "$using_cache" == "false" ]]; then
-    zip_path="/tmp/${binary_name}.zip"
-    log_info "Download URL: $download_url"
-    log_info "Downloading $binary_name..."
-    if ! curl -fsSL "$download_url" -o "$zip_path"; then
+    if [[ -n "$home_file" ]]; then
+      log_info "Found in home directory: $home_file"
+      cp "$home_file" "$zip_path"
+    else
       local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
-2. Move to cache directory:
-   mv ~/Downloads/${binary_name}*.zip ~/.cache/dotfiles/
+2. Save to home directory (~/)
 
-3. Re-run this installer
-
-Or install manually:
-   unzip ~/Downloads/${binary_name}*.zip
-   mv ${binary_path_in_zip} ~/.local/bin/
-   chmod +x ~/.local/bin/${binary_name}
-
-Verify installation:
-   ${binary_name} --version"
+3. Re-run this installer"
 
       output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
       log_error "Failed to download from $download_url"

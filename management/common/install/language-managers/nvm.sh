@@ -16,7 +16,8 @@ source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 print_section "Node.js (nvm)"
 
 NVM_DIR="$HOME/.config/nvm"
-NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
+NVM_VERSION="v0.40.0"
+NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   log_info "Checking for nvm updates..."
@@ -30,21 +31,46 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   exit 1
 fi
 
+# Run nvm install script (download or use from home directory)
+run_nvm_install() {
+  local tmp_script="/tmp/nvm-install.sh"
+
+  # Try to download
+  log_info "Downloading nvm install script..."
+  if curl -fsSL "$NVM_INSTALL_SCRIPT" -o "$tmp_script"; then
+    chmod +x "$tmp_script"
+    NVM_DIR="$NVM_DIR" bash "$tmp_script"
+    return $?
+  fi
+
+  # Download failed - check home directory for manual download
+  log_warning "Download failed, checking home directory..."
+  local home_script
+  home_script=$(find "$HOME" -maxdepth 1 -name "*nvm*install*.sh" -type f 2>/dev/null | head -1)
+
+  if [[ -n "$home_script" ]]; then
+    log_info "Found in home directory: $home_script"
+    NVM_DIR="$NVM_DIR" bash "$home_script"
+    return $?
+  fi
+
+  # Not found anywhere
+  manual_steps="1. Download nvm install script in your browser:
+   $NVM_INSTALL_SCRIPT
+
+2. Save to home directory (e.g., ~/nvm-install.sh)
+
+3. Re-run this installer:
+   bash $DOTFILES_DIR/management/common/install/language-managers/nvm.sh"
+  output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "$NVM_VERSION" "$manual_steps" "Failed to download install script"
+  return 1
+}
+
 # Install or update nvm
 if [[ "$UPDATE_MODE" == "true" ]]; then
   # Update mode: always re-run install script (it's idempotent)
   log_info "Updating nvm..."
-  if ! curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
-    manual_steps="1. Download nvm install script in your browser:
-   $NVM_INSTALL_SCRIPT
-
-2. After downloading, install manually:
-   curl -o- ~/Downloads/install.sh | NVM_DIR=\"$NVM_DIR\" bash
-
-3. Verify installation:
-   source $NVM_DIR/nvm.sh
-   nvm --version"
-    output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "curl install script failed"
+  if ! run_nvm_install; then
     log_error "Failed to update nvm"
     exit 1
   fi
@@ -54,17 +80,7 @@ else
   if [[ ! -d "$NVM_DIR" ]] || [[ "${FORCE_INSTALL:-false}" == "true" ]]; then
     log_info "Installing nvm to $NVM_DIR..."
     mkdir -p "$NVM_DIR"
-    if ! curl -o- "$NVM_INSTALL_SCRIPT" | NVM_DIR="$NVM_DIR" bash; then
-      manual_steps="1. Download nvm install script in your browser:
-   $NVM_INSTALL_SCRIPT
-
-2. After downloading, install manually:
-   curl -o- ~/Downloads/install.sh | NVM_DIR=\"$NVM_DIR\" bash
-
-3. Verify installation:
-   source $NVM_DIR/nvm.sh
-   nvm --version"
-      output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "v0.40.0" "$manual_steps" "curl install script failed"
+    if ! run_nvm_install; then
       log_error "Failed to install nvm"
       exit 1
     fi
