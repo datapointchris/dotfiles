@@ -237,26 +237,58 @@ change_font_size() {
 
 apply_font() {
   local font="$1"
+  local platform
+  platform=$(detect_platform)
 
   echo "Applying font: $font"
 
-  # Update Ghostty
-  if [[ -f "$GHOSTTY_CONFIG" ]] || [[ -L "$GHOSTTY_CONFIG" ]]; then
-    # Resolve symlink to get the actual file
-    local ghostty_target="$GHOSTTY_CONFIG"
-    if [[ -L "$GHOSTTY_CONFIG" ]]; then
-      ghostty_target="$(readlink -f "$GHOSTTY_CONFIG")"
+  local applied=()
+
+  # Ghostty (macOS and Arch)
+  if [[ "$platform" == "macos" ]] || [[ "$platform" == "arch" ]]; then
+    if apply_font_ghostty "$font" 2>/dev/null; then
+      applied+=("ghostty")
+    fi
+  fi
+
+  # Kitty (macOS and Arch)
+  if [[ "$platform" == "macos" ]] || [[ "$platform" == "arch" ]]; then
+    if apply_font_kitty "$font" 2>/dev/null; then
+      applied+=("kitty")
+    fi
+  fi
+
+  # Arch-specific apps
+  if [[ "$platform" == "arch" ]]; then
+    if apply_font_waybar "$font" 2>/dev/null; then
+      applied+=("waybar")
     fi
 
-    sed -i "s|^font-family = .*|font-family = \"${font}\"|" "$ghostty_target"
-    echo "✓ Updated Ghostty config"
+    if apply_font_hyprlock "$font" 2>/dev/null; then
+      applied+=("hyprlock")
+    fi
+
+    if apply_font_dunst "$font" 2>/dev/null; then
+      applied+=("dunst")
+    fi
+  fi
+
+  # Windows Terminal (WSL only)
+  if [[ "$platform" == "wsl" ]]; then
+    if apply_font_windows_terminal "$font" 2>/dev/null; then
+      applied+=("windows-terminal")
+    fi
   fi
 
   # Log the apply action
   log_action "apply" "$font"
 
   echo ""
-  echo "Font applied! Restart Ghostty to see changes."
+  if [[ ${#applied[@]} -gt 0 ]]; then
+    echo "Applied to: ${applied[*]}"
+  fi
+  echo ""
+  echo "Font applied! Restart terminal to see all changes."
 }
 
 mark_liked() {

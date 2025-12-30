@@ -465,3 +465,141 @@ display_font_details() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   fi
 }
+
+# ==============================================================================
+# PLATFORM DETECTION
+# ==============================================================================
+
+detect_platform() {
+  if [[ -n "${PLATFORM:-}" ]]; then
+    echo "$PLATFORM"
+    return
+  fi
+
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "macos"
+  elif [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+    echo "wsl"
+  elif [[ -f /etc/arch-release ]]; then
+    echo "arch"
+  else
+    echo "linux"
+  fi
+}
+
+# ==============================================================================
+# PLATFORM-SPECIFIC FONT APPLY FUNCTIONS
+# ==============================================================================
+
+# Apply font to Ghostty config
+apply_font_ghostty() {
+  local font="$1"
+  local config="$HOME/.config/ghostty/config"
+
+  if [[ -f "$config" ]] || [[ -L "$config" ]]; then
+    local target="$config"
+    [[ -L "$config" ]] && target="$(readlink -f "$config")"
+    sed -i "s|^font-family = .*|font-family = \"${font}\"|" "$target"
+    return 0
+  fi
+  return 1
+}
+
+# Apply font to Kitty config (Arch)
+apply_font_kitty() {
+  local font="$1"
+  local config="$HOME/.config/kitty/kitty.conf"
+
+  if [[ -f "$config" ]] || [[ -L "$config" ]]; then
+    local target="$config"
+    [[ -L "$config" ]] && target="$(readlink -f "$config")"
+    sed -i "s|^font_family .*|font_family ${font}|" "$target"
+    # Reload kitty
+    pkill -USR1 kitty 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
+
+# Apply font to Waybar style (Arch)
+apply_font_waybar() {
+  local font="$1"
+  local config="$HOME/.config/waybar/style.css"
+
+  if [[ -f "$config" ]] || [[ -L "$config" ]]; then
+    local target="$config"
+    [[ -L "$config" ]] && target="$(readlink -f "$config")"
+    # Update font-family in the * selector
+    sed -i "s|font-family: \"[^\"]*\"|font-family: \"${font}\"|" "$target"
+    # Reload waybar
+    killall -SIGUSR2 waybar 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
+
+# Apply font to Hyprlock config (Arch)
+apply_font_hyprlock() {
+  local font="$1"
+  local config="$HOME/.config/hypr/hyprlock.conf"
+
+  if [[ -f "$config" ]] || [[ -L "$config" ]]; then
+    local target="$config"
+    [[ -L "$config" ]] && target="$(readlink -f "$config")"
+    sed -i "s|font_family = .*|font_family = ${font}|" "$target"
+    return 0
+  fi
+  return 1
+}
+
+# Apply font to Dunst config (Arch)
+apply_font_dunst() {
+  local font="$1"
+  local config="$HOME/.config/dunst/dunstrc"
+
+  if [[ -f "$config" ]] || [[ -L "$config" ]]; then
+    local target="$config"
+    [[ -L "$config" ]] && target="$(readlink -f "$config")"
+    # Dunst format: font = FontName Size
+    sed -i "s|^font = .*|font = ${font} 10|" "$target"
+    # Restart dunst
+    killall dunst 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
+
+# Apply font to Windows Terminal (WSL)
+apply_font_windows_terminal() {
+  local font="$1"
+
+  # Get Windows username
+  local windows_user
+  windows_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r\n')
+  [[ -z "$windows_user" ]] && return 1
+
+  # Find Windows Terminal settings.json
+  local wt_settings=""
+  local paths=(
+    "/mnt/c/Users/$windows_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+    "/mnt/c/Users/$windows_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
+    "/mnt/c/Users/$windows_user/AppData/Local/Microsoft/Windows Terminal/settings.json"
+  )
+
+  for path in "${paths[@]}"; do
+    if [[ -f "$path" ]]; then
+      wt_settings="$path"
+      break
+    fi
+  done
+
+  [[ -z "$wt_settings" ]] && return 1
+
+  # Update font in default profile
+  cp "$wt_settings" "${wt_settings}.backup"
+  jq --arg font "$font" \
+    '.profiles.defaults.font.face = $font' \
+    "$wt_settings" > "${wt_settings}.tmp" && mv "${wt_settings}.tmp" "$wt_settings"
+
+  return 0
+}
