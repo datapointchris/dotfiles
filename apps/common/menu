@@ -21,11 +21,11 @@ echo ""
 
 choice=$(gum choose --height=20 \
   "sess - Switch tmux session" \
-  "theme preview - Change theme" \
-  "font change - Change font" \
+  "theme - Change theme" \
+  "font - Change font" \
   "notes - Take notes" \
   "toolbox - Find a tool" \
-  "workflows search - Browse workflows" \
+  "workflows - Browse workflows" \
   "patterns - Log an event" \
   "refcheck - Check references" \
   "backup-dirs - Backup directories" \
@@ -33,18 +33,18 @@ choice=$(gum choose --height=20 \
   "open docs - Open documentation")
 
 case "$choice" in
-  "sess"*) sess ;;
-  "theme preview"*) theme preview ;;
-  "font change"*) font change ;;
-  "notes"*) notes ;;
-  "toolbox"*) toolbox ;;
-  "workflows search"*) workflows search ;;
-  "patterns"*) patterns ;;
-  "refcheck"*) refcheck ;;
-  "backup-dirs"*) backup-dirs --help ;;
-  "backup-incremental"*) backup-incremental --help ;;
-  "open docs"*)
-    print_green "Opening documentation..."
-    open "https://datapointchris.github.io/dotfiles/"
-    ;;
+"sess"*) sess --help ;;
+"theme"*) theme --help ;;
+"font"*) font --help ;;
+"notes"*) notes --help ;;
+"toolbox"*) toolbox --help ;;
+"workflows"*) workflows --help ;;
+"patterns"*) patterns --help ;;
+"refcheck"*) refcheck ;;
+"backup-dirs"*) backup-dirs --help ;;
+"backup-incremental"*) backup-incremental --help ;;
+"open docs"*)
+  print_green "Opening documentation..."
+  open "https://datapointchris.github.io/dotfiles/"
+  ;;
 esac
