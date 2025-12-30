@@ -3,7 +3,7 @@
 # Used by the `tools` command for discovery and learning
 
 version: "1.0"
-last_updated: "2025-11-10"
+last_updated: "2025-12-30"
 
 tools:
   # =================================================================
@@ -1028,6 +1028,105 @@ tools:
         desc: "Create learning note"
     see_also: [zk, gum, menu]
     tags: [dotfiles, notes, zk, productivity]
+
+  theme:
+    category: custom-tools
+    description: "Unified theme management across terminal apps (ghostty, tmux, btop, waybar, rofi, dunst)"
+    installed_via: dotfiles
+    usage: "theme <command> [theme-name]"
+    why_use: "Apply consistent color schemes across all terminal and desktop apps from a single command"
+    examples:
+      - cmd: "theme list"
+        desc: "List all available themes"
+      - cmd: "theme preview"
+        desc: "Interactive theme preview with fzf"
+      - cmd: "theme apply kanagawa"
+        desc: "Apply theme to all apps"
+      - cmd: "theme current"
+        desc: "Show currently applied theme"
+      - cmd: "theme random"
+        desc: "Apply a random theme"
+      - cmd: "theme like"
+        desc: "Mark current theme as liked"
+    see_also: [font, btop, tmux]
+    tags: [dotfiles, theming, customization, tui]
+
+  font:
+    category: custom-tools
+    description: "Terminal font management with preview and cross-platform support"
+    installed_via: dotfiles
+    usage: "font <command> [font-name]"
+    why_use: "Preview and apply terminal fonts across Ghostty and other terminals"
+    examples:
+      - cmd: "font list"
+        desc: "List available monospace fonts"
+      - cmd: "font preview"
+        desc: "Interactive font preview with fzf"
+      - cmd: "font apply 'JetBrainsMono Nerd Font'"
+        desc: "Apply font to terminal"
+      - cmd: "font current"
+        desc: "Show current font"
+      - cmd: "font random"
+        desc: "Apply a random font"
+    see_also: [theme]
+    tags: [dotfiles, fonts, customization, terminal]
+
+  toolbox:
+    category: custom-tools
+    description: "CLI tool discovery and documentation browser"
+    installed_via: dotfiles
+    usage: "toolbox <command> [query]"
+    why_use: "Explore and learn about installed CLI tools with examples and documentation"
+    examples:
+      - cmd: "toolbox"
+        desc: "Interactive tool browser"
+      - cmd: "toolbox list"
+        desc: "List all registered tools"
+      - cmd: "toolbox show ripgrep"
+        desc: "Show details for specific tool"
+      - cmd: "toolbox search git"
+        desc: "Search tools by name or tag"
+      - cmd: "toolbox random"
+        desc: "Learn about a random tool"
+      - cmd: "toolbox installed"
+        desc: "Check which tools are installed"
+    see_also: [lsalias, lsfunc]
+    tags: [dotfiles, discovery, documentation, learning, go]
+
+  workflows:
+    category: custom-tools
+    description: "Personal multi-step workflow quick reference"
+    installed_via: dotfiles
+    usage: "workflows [command] [query]"
+    why_use: "Browse and search documented procedures for complex multi-step tasks"
+    examples:
+      - cmd: "workflows"
+        desc: "Show help"
+      - cmd: "workflows list"
+        desc: "List all workflows"
+      - cmd: "workflows search deploy"
+        desc: "Search workflows with fzf"
+      - cmd: "workflows show git-rebase"
+        desc: "Show specific workflow"
+      - cmd: "workflows learn"
+        desc: "Show a random workflow"
+    see_also: [menu, notes]
+    tags: [dotfiles, documentation, procedures, reference]
+
+  aws-profiles:
+    category: custom-tools
+    description: "AWS profile switcher for managing multiple AWS accounts (macOS)"
+    installed_via: dotfiles
+    usage: "source aws-profiles"
+    why_use: "Quickly switch between AWS profiles without editing config files"
+    examples:
+      - cmd: "source aws-profiles"
+        desc: "Interactive profile selector (must be sourced)"
+      - cmd: ". aws-profiles"
+        desc: "Short form sourcing"
+    see_also: [terraform]
+    tags: [dotfiles, aws, cloud, macOS]
+    notes: "Must be sourced (not executed) for environment variables to persist"
 
   patterns:
     category: custom-tools
