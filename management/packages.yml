@@ -875,6 +875,9 @@ linux_gui_apps:
 # Installed via: brew install --cask <name>
 
 macos_casks:
+  - name: kitty
+    description: GPU-accelerated terminal emulator
+
   - name: ghostty
     description: GPU-accelerated terminal emulator
 
