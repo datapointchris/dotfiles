@@ -1,5 +1,6 @@
 return {
   'chrishrb/gx.nvim',
+  cond = not vim.g.vscode, -- VS Code handles URLs natively
   keys = { { 'gx', '<cmd>Browse<cr>', mode = { 'n', 'x' } } },
   cmd = { 'Browse' },
   init = function()

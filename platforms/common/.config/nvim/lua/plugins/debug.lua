@@ -1,5 +1,6 @@
 return {
   'mfussenegger/nvim-dap',
+  cond = not vim.g.vscode, -- VS Code has native debugging
   dependencies = {
     'rcarriga/nvim-dap-ui', -- Required dependency for nvim-dap-ui
     'nvim-neotest/nvim-nio', -- Installs the debug adapters for you
