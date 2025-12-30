@@ -32,6 +32,33 @@ return {
   { 'mhartington/oceanic-next', lazy = false },
   { 'datapointchris/flexoki-moon-nvim', lazy = false },
 
+  -- Generated themes from theme system (apps/common/theme)
+  -- Dynamically load all themes that have a neovim/ directory
+  (function()
+    local themes_dir = vim.fn.expand('~/dotfiles/apps/common/theme/themes')
+    local generated_themes = {}
+    local handle = vim.loop.fs_scandir(themes_dir)
+    if handle then
+      while true do
+        local name, type = vim.loop.fs_scandir_next(handle)
+        if not name then
+          break
+        end
+        if type == 'directory' then
+          local neovim_dir = themes_dir .. '/' .. name .. '/neovim'
+          if vim.fn.isdirectory(neovim_dir) == 1 then
+            table.insert(generated_themes, {
+              dir = neovim_dir,
+              name = name,
+              lazy = false,
+            })
+          end
+        end
+      end
+    end
+    return generated_themes
+  end)(),
+
   -- === COLORSCHEME MANAGER ===
   {
     'colorscheme-manager',
@@ -45,7 +72,6 @@ return {
         'terafox',
         'solarized-osaka',
         'slate',
-        'rose-pine-main',
         'retrobox',
         'carbonfox',
         'OceanicNext',
@@ -53,6 +79,9 @@ return {
         'nightfox',
         'kanagawa',
         'gruvbox',
+        'gruvbox-dark-hard',
+        'rose-pine',
+        'rose-pine-darker',
         'github_dark_default',
         'github_dark_dimmed',
         'flexoki-moon-toddler',
