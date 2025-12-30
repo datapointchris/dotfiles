@@ -18,6 +18,10 @@ Personal CLI tools for enhanced workflows.
 
     Tmux session management
 
+- :material-regex: __[Patterns](patterns.md)__
+
+    Common regex pattern library
+
 </div>
 
 ## Utilities
@@ -36,18 +40,26 @@ Personal CLI tools for enhanced workflows.
 
     Backup directory manager
 
+- :material-backup-restore: __[Backup Incremental](backup-incremental.md)__
+
+    Incremental backup system
+
+- :material-check-all: __[Refcheck](refcheck.md)__
+
+    Reference and link checker
+
 </div>
 
-## Platform-Specific
+## Theming & Fonts
 
 <div class="grid cards" markdown>
 
+- :material-palette: __[Theme](theme.md)__
+
+    Unified theme management across terminal apps
+
 - :fontawesome-solid-font: __[Font](font.md)__
 
-    Font management for macOS
-
-- :material-application: __[Ghostty Theme](ghostty-theme.md)__
-
-    Ghostty terminal theme sync
+    Font management and tracking
 
 </div>

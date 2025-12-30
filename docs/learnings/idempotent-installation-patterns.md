@@ -48,7 +48,7 @@ Redundant checks create double-skip behavior
 install-yazi:
   desc: Install yazi terminal file manager with flavors and plugins
   cmds:
-    - bash management/taskfiles/scripts/install-yazi.sh
+    - bash management/common/install/yazi.sh
   # Note: No status check - always run to ensure plugins/flavors are up to date
 ```
 
@@ -125,7 +125,6 @@ After fixing, verify:
 
 ## Related Files
 
-- `management/taskfiles/scripts/install-yazi.sh` - Yazi with plugins/flavors
-- `management/taskfiles/scripts/npm-install-globals.sh` - Good pattern example
-- `management/taskfiles/wsl.yml:install-cargo-tools` - Individual package checks
-- `management/taskfiles/wsl.yml:install-yazi` - No status check pattern
+- `management/common/install/yazi.sh` - Yazi with plugins/flavors
+- `management/common/install/npm-globals.sh` - Good pattern example
+- Installation scripts in `management/{macos,wsl,arch}/install/`

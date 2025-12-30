@@ -903,7 +903,7 @@ cd ~/dotfiles
 - Custom shell functions and aliases
 - Complex tools (Neovim plugins, tmux configurations)
 - System-wide settings (Git config, SSH config)
-- Shell theme synchronization (theme-sync, base16)
+- Shell theme synchronization (theme CLI)
 - Personal CLI applications (menu, notes, sess)
 
 **Shell libraries integration**:
@@ -1340,7 +1340,7 @@ Windows 11 Host
 │   │   ├── Tmux + custom config
 │   │   ├── Neovim + 50+ plugins
 │   │   ├── Shell functions library
-│   │   └── Personal apps (menu, notes, theme-sync)
+│   │   └── Personal apps (menu, notes, theme)
 │   │
 │   ├── Docker daemon (via Docker Desktop or native)
 │   │

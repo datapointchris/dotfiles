@@ -114,11 +114,11 @@ task wsl:apt:update
 ```
 
 ```yaml
-# management/taskfiles/wsl.yml
+# Taskfile.yml
 tasks:
   run-updates:
     cmds:
-      - bash {{.ROOT_DIR}}/management/scripts/update-wsl.sh
+      - bash {{.DOTFILES_DIR}}/management/scripts/update-wsl.sh
 ```
 
 ## Key Learnings

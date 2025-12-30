@@ -40,7 +40,7 @@ This ensures the script always uses `/usr/bin/python3` even if uv-managed Python
 
 **2. Install PyYAML for system Python on each platform**:
 
-WSL/Debian (`management/taskfiles/wsl.yml:43`):
+WSL/Debian (bootstrap script):
 
 ```bash
 sudo apt install -y python3-pyyaml  # Correct package name
@@ -53,7 +53,7 @@ Arch Linux (`management/packages.yml`):
   pacman: python-yaml
 ```
 
-macOS (`management/taskfiles/macos.yml`):
+macOS (bootstrap script):
 
 ```bash
 /usr/bin/python3 -m pip install --user PyYAML
@@ -136,7 +136,7 @@ Best practice for testing system installations:
 - `management/test-wsl-docker.sh` - Docker-based WSL testing (recommended)
 - `management/wsl-docker-images.sh` - Manage WSL Docker images
 - `management/test-install.sh` - Multipass testing (alternative)
-- `management/taskfiles/wsl.yml` - Bootstrap package installation
+- `management/wsl/` - WSL installation scripts
 - `management/verify-installation.sh` - Installation verification
-- `management/parse-packages.py` - Package list parser
+- `management/parse_packages.py` - Package list parser
 - `docs/development/testing.md` - Testing documentation

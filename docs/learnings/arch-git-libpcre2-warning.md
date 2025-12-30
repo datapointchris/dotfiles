@@ -43,7 +43,7 @@ sudo pacman -S --noconfirm pcre2
 sudo ldconfig
 ```
 
-This is implemented automatically in `management/taskfiles/arch.yml` as the `fix-library-links` task.
+This is implemented automatically in the Arch installation scripts under `management/arch/`.
 
 ### Why This Works
 

@@ -165,16 +165,18 @@ dotfiles/
 │   ├── common/          # Cross-platform tools
 │   │   ├── sess/        # Session manager (Go)
 │   │   ├── toolbox/     # Tool discovery (Go)
-│   │   ├── menu         # Universal menu system (Go)
-│   │   ├── notes        # Note-taking wrapper
-│   │   └── theme/       # Theme management
-│   ├── macos/           # macOS-specific tools
-│   └── wsl/             # WSL-specific tools
+│   │   ├── theme/       # Theme management
+│   │   ├── menu         # Universal menu system
+│   │   └── notes        # Note-taking wrapper
+│   └── macos/           # macOS-specific tools
 ├── management/          # Repository management
 │   ├── symlinks/        # Symlinks manager (Python)
-│   ├── taskfiles/       # Modular Task automation
-│   ├── *.sh             # Platform setup scripts
+│   ├── common/          # Shared installers and libraries
+│   ├── macos/           # macOS installation scripts
+│   ├── wsl/             # WSL installation scripts
+│   ├── arch/            # Arch installation scripts
 │   └── packages.yml     # Package definitions
+├── Taskfile.yml         # Task automation
 └── docs/                # MkDocs documentation
 ```
 

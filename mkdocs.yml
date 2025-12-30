@@ -134,6 +134,7 @@ nav:
   - Home: index.md
   - Apps:
       - apps/index.md
+      - Theme: apps/theme.md
       - Font: apps/font.md
       - Notes: apps/notes.md
       - Patterns: apps/patterns.md
@@ -211,6 +212,8 @@ nav:
           - Agent Architecture: research/ai/agent-architecture.md
           - Prompt Engineering: research/ai/prompt-engineering.md
           - Metrics Analysis: research/ai/metrics-analysis-research.md
+      - Hyprland:
+          - Understanding Hyprland: research/hyprland/understanding-hyprland.md
   - Learnings:
       - Overview: learnings/index.md
       - Script Refactoring Principles: learnings/script-refactoring-principles.md

@@ -12,7 +12,7 @@ Listed from highest to lowest priority. First match wins during command executio
 
 ### `~/.local/bin`
 
-- User-installed tools and scripts (neovim, lazygit, yq, fzf, yazi, custom scripts, theme-sync, toolbox).
+- User-installed tools and scripts (neovim, lazygit, yq, fzf, yazi, custom scripts, theme, toolbox).
 
 ### `$ZSH_PLUGINS_DIR/forgit/bin`
 

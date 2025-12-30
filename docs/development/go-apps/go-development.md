@@ -615,22 +615,27 @@ var (
 // go build -ldflags="-X main.version=1.0.0 -X main.commit=abc123"
 ```
 
-**Task integration:**
+**App-level Task integration:**
+
+Each Go app has its own `Taskfile.yml` for building:
 
 ```yaml
-# taskfiles/go.yml
-build-session:
+# apps/common/sess/Taskfile.yml
+build:
   desc: Build sess
-  dir: tools/sess
   vars:
     VERSION:
       sh: git describe --tags --always
     COMMIT:
       sh: git rev-parse --short HEAD
-    DATE:
-      sh: date -u '+%Y-%m-%d_%H:%M:%S'
   cmds:
-    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}} -X main.date={{.DATE}}" -o ~/.local/bin/sess .
+    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}" -o sess .
+
+install:
+  desc: Build and install to ~/.local/bin
+  deps: [build]
+  cmds:
+    - mv sess ~/.local/bin/
 ```
 
 ## Documentation

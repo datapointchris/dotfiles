@@ -123,13 +123,7 @@ Create new Go applications following the established patterns:
    Copy from existing app (sess or toolbox) and modify for your app.
 
 4. **Add to installation**:
-   Update `management/taskfiles/install.yml` to include your app in the installation tasks:
-
-   ```yaml
-   - task: install-go-app
-     vars:
-       APP_NAME: {app}
-   ```
+   Add your app to the Go app installation in `install.sh` or create an install script in `management/common/install/`.
 
 5. **Follow standards**:
    Use the patterns from existing apps (sess, toolbox) for configuration loading, display components, and testing.

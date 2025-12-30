@@ -44,7 +44,7 @@ Bootstrap and installation process expertise.
 
 - Keywords: install, bootstrap, setup, taskfile
 - Intent: `(create|update|fix).*install`, `(macos|wsl|arch).*(setup|install)`
-- Files: `install/*.sh`, `Taskfile.yml`, `taskfiles/*.yml`
+- Files: `install.sh`, `Taskfile.yml`, `management/**/*.sh`
 
 ### documentation
 

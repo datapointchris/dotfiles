@@ -295,7 +295,7 @@ uv_tools:
   # ... more tools
 ```
 
-All installation scripts and taskfiles read from this single source. Change a version once, and it applies everywhere.
+All installation scripts read from this single source. Change a version once, and it applies everywhere.
 
 ### Installation Scripts
 
@@ -330,38 +330,31 @@ Located in `management/scripts/`:
 
 All installer scripts use `failure-logging.sh` for consistent structured error reporting and manual recovery instructions.
 
-### Taskfile Organization
+### Installation Organization
 
-Platform taskfiles (`wsl.yml`, `macos.yml`, `arch.yml`) and specialized taskfiles define installation tasks:
+Installation scripts are organized by platform under `management/`:
 
-**Main Installation Tasks**:
-
-```yaml
-install-go:          # GitHub releases → /usr/local/go
-install-fzf:         # Build from source → ~/.local/bin
-install-neovim:      # GitHub releases → ~/.local/bin (symlink)
-install-lazygit:     # GitHub releases → ~/.local/bin
-install-yazi:        # GitHub releases → ~/.local/bin
-install-glow:        # GitHub releases → ~/.local/bin
-install-duf:         # GitHub releases → ~/.local/bin
-install-awscli:      # AWS official installer
-
-install-cargo-binstall:  # Bootstrap for Rust tools
-install-cargo-tools:     # Reads package list from packages.yml
+```text
+management/
+├── common/          # Shared installation scripts
+│   ├── install/     # Tool installers (neovim, lazygit, yazi, etc.)
+│   └── lib/         # Shared libraries (github-release-installer.sh)
+├── macos/           # macOS-specific installation
+│   ├── install/     # macOS installers
+│   └── setup/       # macOS system configuration
+├── wsl/             # WSL installation scripts
+│   └── install/     # WSL-specific installers
+└── arch/            # Arch Linux installation scripts
+    └── install/     # Arch-specific installers
 ```
 
-**Specialized Taskfiles** (`management/taskfiles/`):
-
-- `go-tools.yml` - Go CLI tools installed via `go install` (cheat, etc.)
-- `brew.yml` - Homebrew package management (macOS)
-- `mas.yml` - Mac App Store applications (macOS)
-- Platform-specific taskfiles for each supported OS
+The root `install.sh` orchestrates the installation process, detecting the platform and running appropriate scripts.
 
 ### Main Installation Flow
 
-`Taskfile.yml` orchestrates 9 phases:
+`install.sh` orchestrates installation phases:
 
-1. System packages (apt)
+1. System packages (brew/apt/pacman)
 2. GitHub release tools
 3. Rust/cargo tools
 4. Language package managers
@@ -371,25 +364,19 @@ install-cargo-tools:     # Reads package list from packages.yml
 8. Theme system
 9. Plugin installation
 
-### Task Separation Pattern
+### Taskfile Tasks
 
-Each platform's package installation uses a two-task pattern:
+The `Taskfile.yml` provides convenience tasks for common operations but delegates complex logic to shell scripts:
 
 ```yaml
-install-packages (public):
-  - Pre-setup (apt update, pacman -Sy, etc.)
-  - task: install-system-packages
-  - Post-setup (docker-compose, fix-library-links, etc.)
-
-install-system-packages (internal):
-  - Bootstrap PyYAML
-  - Parse packages.yml
-  - Install packages
+symlinks:link        # Deploy symlinks
+symlinks:check       # Verify symlinks
+fonts:download       # Download fonts
+fonts:install        # Install fonts
+docs:serve           # Local docs server
 ```
 
-Platform-specific setup (pre/post) is isolated in `install-packages`, while core installation logic remains identical across platforms in `install-system-packages`.
-
-See: `management/taskfiles/{macos,wsl,arch}.yml`
+See [Task Reference](../reference/tools/tasks.md) for all available tasks.
 
 ## Maintenance
 
