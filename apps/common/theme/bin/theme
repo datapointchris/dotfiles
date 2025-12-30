@@ -35,6 +35,7 @@ usage() {
   current              Show currently active theme
   list                 List available themes from favorites
   apply <theme>        Apply theme across all platform apps
+  preview [theme]      Preview generated theme in tmux (fzf if no theme)
   random               Apply random favorite theme
   like [message]       Like current theme with optional reason
   dislike [message]    Dislike current theme with optional reason
@@ -80,6 +81,7 @@ Commands
   current              Show currently active theme
   list                 List available themes from favorites
   apply <theme>        Apply theme across all platform apps
+  preview [theme]      Preview generated theme in tmux (fzf if no theme)
   random               Apply random favorite theme
   like [message]       Like current theme with optional reason
   dislike [message]    Dislike current theme with optional reason
@@ -426,13 +428,13 @@ verify_system() {
 
   local errors=0
 
-  # Check favorites file
-  if [[ -f "$FAVORITES_FILE" ]]; then
+  # Check themes directory
+  if [[ -d "$THEMES_DIR" ]]; then
     local count
     count=$(count_themes)
-    echo "  Favorites file: $count themes"
+    echo "  Themes directory: $count themes available"
   else
-    echo "  ERROR: Favorites file not found: $FAVORITES_FILE"
+    echo "  ERROR: Themes directory not found: $THEMES_DIR"
     errors=$((errors + 1))
   fi
 
@@ -444,25 +446,19 @@ verify_system() {
     errors=$((errors + 1))
   fi
 
-  # Check theme library
-  if [[ -d "$THEME_LIBRARY" ]]; then
-    local lib_count
-    lib_count=$(find "$THEME_LIBRARY" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | xargs)
-    echo "  Theme library: $lib_count themes with configs"
-    echo "    $(find "$THEME_LIBRARY" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null | xargs -0 -n1 basename | tr '\n' ' ')"
-  else
-    echo "  WARNING: Theme library not found"
-  fi
-
   # Check current theme
   local current
   current=$(get_current_theme 2>/dev/null || echo "")
   if [[ -n "$current" ]]; then
     echo "  Current theme: $current"
-    local lib_path
-    lib_path=$(get_library_path "$current")
-    if [[ -n "$lib_path" ]]; then
-      echo "    Library configs: $(find "$lib_path" -mindepth 1 -maxdepth 1 -printf "%f " | tr '\n' ' ')"
+    local theme_path
+    theme_path=$(get_theme_path "$current")
+    if [[ -n "$theme_path" ]]; then
+      local configs=""
+      for f in "$theme_path"/*.{conf,theme,css}; do
+        [[ -f "$f" ]] && configs+="$(basename "$f") "
+      done
+      echo "    Generated configs: $configs"
     fi
   else
     echo "  Current theme: none applied"
@@ -482,11 +478,138 @@ verify_system() {
 }
 
 #==============================================================================
+# PREVIEW
+#==============================================================================
+
+GENERATED_THEMES_DIR="$THEME_APP_DIR/themes"
+DEMO_DIR="$THEME_APP_DIR/demo"
+GHOSTTY_THEME="${HOME}/.config/ghostty/themes/current.conf"
+BTOP_THEME="${HOME}/.config/btop/themes/current.theme"
+TMUX_THEME="${HOME}/.config/tmux/themes/current.conf"
+
+list_generated_themes() {
+  for dir in "$GENERATED_THEMES_DIR"/*/; do
+    [[ -d "$dir" ]] && basename "$dir"
+  done
+}
+
+select_generated_theme() {
+  if command -v fzf &>/dev/null; then
+    list_generated_themes | fzf --prompt="Select theme to preview: "
+  else
+    local themes
+    mapfile -t themes < <(list_generated_themes)
+    select theme in "${themes[@]}"; do
+      [[ -n "$theme" ]] && echo "$theme" && break
+    done
+  fi
+}
+
+apply_preview_themes() {
+  local theme_name="$1"
+  local theme_path="$GENERATED_THEMES_DIR/$theme_name"
+
+  # Ghostty
+  if [[ -f "$theme_path/ghostty.conf" ]]; then
+    cp "$theme_path/ghostty.conf" "$GHOSTTY_THEME"
+    echo "  Applied: ghostty"
+  fi
+
+  # btop
+  if [[ -f "$theme_path/btop.theme" ]]; then
+    mkdir -p "$(dirname "$BTOP_THEME")"
+    cp "$theme_path/btop.theme" "$BTOP_THEME"
+    echo "  Applied: btop"
+  fi
+
+  # tmux
+  if [[ -f "$theme_path/tmux.conf" ]]; then
+    mkdir -p "$(dirname "$TMUX_THEME")"
+    cp "$theme_path/tmux.conf" "$TMUX_THEME"
+    tmux source-file "$TMUX_THEME" 2>/dev/null || true
+    echo "  Applied: tmux"
+  fi
+}
+
+create_preview_window() {
+  local theme_name="$1"
+  local window_name="preview-$theme_name"
+  local theme_path="$GENERATED_THEMES_DIR/$theme_name"
+
+  # Get neovim colorscheme from theme.yml (defaults to theme_name if not specified)
+  local nvim_colorscheme="$theme_name"
+  if [[ -f "$theme_path/theme.yml" ]]; then
+    local yml_colorscheme
+    yml_colorscheme=$(yq -r '.meta.neovim_colorscheme // empty' "$theme_path/theme.yml" 2>/dev/null || true)
+    if [[ -n "$yml_colorscheme" ]]; then
+      nvim_colorscheme="$yml_colorscheme"
+    fi
+  fi
+
+  # Create new window in current session
+  tmux new-window -n "$window_name" -c "$DEMO_DIR"
+
+  # Left: neovim with sample code
+  tmux send-keys "nvim -c 'colorscheme $nvim_colorscheme' sample.py" Enter
+
+  # Split right 40%
+  tmux split-window -h -p 40 -c "$HOME/dotfiles"
+
+  # Right top: btop
+  tmux send-keys "btop" Enter
+
+  # Split bottom right 50%
+  tmux split-window -v -p 50 -c "$HOME/dotfiles"
+
+  # Bottom right: git status + ls
+  tmux send-keys "echo '=== $theme_name ===' && echo '' && git status --short && echo '' && ls --color=always" Enter
+
+  # Focus neovim pane
+  tmux select-pane -L
+}
+
+show_preview() {
+  local theme_name="${1:-}"
+
+  # Select theme if not provided
+  if [[ -z "$theme_name" ]]; then
+    theme_name=$(select_generated_theme)
+    [[ -z "$theme_name" ]] && return 0
+  fi
+
+  # Verify theme exists
+  if [[ ! -d "$GENERATED_THEMES_DIR/$theme_name" ]]; then
+    echo "Error: Theme not found: $theme_name"
+    echo "Available themes:"
+    list_generated_themes | sed 's/^/  /'
+    return 1
+  fi
+
+  echo "Preview: $theme_name"
+  apply_preview_themes "$theme_name"
+  echo ""
+  echo "Reload Ghostty: Cmd+Shift+,"
+  echo "Close preview window: prefix+& or :q in vim, q in btop, exit in shell"
+  echo ""
+
+  if [[ -n "${TMUX:-}" ]]; then
+    create_preview_window "$theme_name"
+  else
+    echo "Error: Must be in tmux to create preview window"
+    return 1
+  fi
+}
+
+#==============================================================================
 # MAIN
 #==============================================================================
 
 main() {
   case "${1:-}" in
+    preview)
+      show_preview "${2:-}"
+      ;;
+
     current)
       show_current
       ;;

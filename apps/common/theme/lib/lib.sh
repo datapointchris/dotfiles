@@ -1,84 +1,104 @@
 #!/usr/bin/env bash
 # Theme library - core functions for theme management
-# Applies themes directly from library (no tinty dependency)
+# Applies themes directly from themes/ directory
 
 set -euo pipefail
 
 THEME_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 THEME_APP_DIR="$(cd "$THEME_LIB_DIR/.." && pwd)"
 
-# Configuration
-FAVORITES_FILE="$HOME/.config/themes/favorites.yml"
-THEME_LIBRARY="$THEME_APP_DIR/library"
+# Configuration - themes/ is the single source of truth
+THEMES_DIR="$THEME_APP_DIR/themes"
 CURRENT_THEME_FILE="$HOME/.local/share/theme/current"
 
 #==============================================================================
-# FAVORITES ACCESS (using mikefarah/yq syntax)
+# THEME ACCESS - scans themes/ directory
 #==============================================================================
 
-get_favorite_names() {
-  if [[ ! -f "$FAVORITES_FILE" ]]; then
-    echo "Error: Favorites file not found: $FAVORITES_FILE" >&2
+# List all theme directory names (the canonical names)
+get_theme_names() {
+  if [[ ! -d "$THEMES_DIR" ]]; then
+    echo "Error: Themes directory not found: $THEMES_DIR" >&2
     return 1
   fi
 
-  yq '.themes[].name' "$FAVORITES_FILE"
+  for dir in "$THEMES_DIR"/*/; do
+    [[ -d "$dir" ]] && basename "$dir"
+  done
 }
 
+# Get theme data from theme.yml
 get_theme_by_name() {
   local name="$1"
+  local theme_file="$THEMES_DIR/$name/theme.yml"
 
-  if [[ ! -f "$FAVORITES_FILE" ]]; then
-    return 1
+  if [[ ! -f "$theme_file" ]]; then
+    # Try case-insensitive match
+    for dir in "$THEMES_DIR"/*/; do
+      local dir_name
+      dir_name=$(basename "$dir")
+      if [[ "${dir_name,,}" == "${name,,}" ]]; then
+        theme_file="$THEMES_DIR/$dir_name/theme.yml"
+        break
+      fi
+    done
   fi
 
-  NAME="$name" yq '.themes[] | select(.name == strenv(NAME))' "$FAVORITES_FILE"
+  if [[ -f "$theme_file" ]]; then
+    cat "$theme_file"
+  else
+    return 1
+  fi
 }
 
+# Get a specific mapping from theme.yml meta section
 get_theme_mapping() {
   local name="$1"
   local app="$2"
+  local theme_file="$THEMES_DIR/$name/theme.yml"
 
-  if [[ ! -f "$FAVORITES_FILE" ]]; then
+  if [[ ! -f "$theme_file" ]]; then
     return 1
   fi
 
-  NAME="$name" APP="$app" yq '.themes[] | select(.name == strenv(NAME)) | .[strenv(APP)] // ""' "$FAVORITES_FILE"
+  APP="$app" yq ".meta.$app // \"\"" "$theme_file"
 }
 
+# Convert input to canonical theme directory name
 theme_name_to_canonical() {
   local input="$1"
 
-  if [[ ! -f "$FAVORITES_FILE" ]]; then
+  # Check if directory exists directly
+  if [[ -d "$THEMES_DIR/$input" ]]; then
     echo "$input"
     return
   fi
 
-  local canonical
-  canonical=$(INPUT="$input" yq '
-    .themes[] |
-    select(
-      .name == strenv(INPUT) or
-      .base16 == strenv(INPUT) or
-      .ghostty == strenv(INPUT) or
-      .kitty == strenv(INPUT) or
-      .neovim == strenv(INPUT)
-    ) | .name
-  ' "$FAVORITES_FILE" | head -1)
+  # Try case-insensitive match
+  for dir in "$THEMES_DIR"/*/; do
+    local dir_name
+    dir_name=$(basename "$dir")
+    if [[ "${dir_name,,}" == "${input,,}" ]]; then
+      echo "$dir_name"
+      return
+    fi
+  done
 
-  if [[ -n "$canonical" ]]; then
-    echo "$canonical"
-  else
-    echo "$input"
-  fi
-}
+  # Try matching against meta.name in theme.yml files
+  for dir in "$THEMES_DIR"/*/; do
+    local theme_file="$dir/theme.yml"
+    if [[ -f "$theme_file" ]]; then
+      local meta_name
+      meta_name=$(yq '.meta.name // ""' "$theme_file" 2>/dev/null || echo "")
+      if [[ "${meta_name,,}" == "${input,,}" ]]; then
+        basename "$dir"
+        return
+      fi
+    fi
+  done
 
-# Map canonical name to library directory name
-theme_to_library_dir() {
-  local name="$1"
-
-  # Convert to lowercase and replace spaces with hyphens
-  echo "$name" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
+  # Return input as-is if no match
+  echo "$input"
 }
 
 #==============================================================================
@@ -86,7 +106,7 @@ theme_to_library_dir() {
 #==============================================================================
 
 list_themes() {
-  get_favorite_names
+  get_theme_names
 }
 
 list_themes_with_status() {
@@ -99,20 +119,11 @@ list_themes_with_status() {
     else
       echo "  $theme"
     fi
-  done < <(get_favorite_names)
+  done < <(get_theme_names)
 }
 
 count_themes() {
-  get_favorite_names | wc -l | xargs
-}
-
-# List themes available in the library (have pre-built configs)
-list_library_themes() {
-  if [[ -d "$THEME_LIBRARY" ]]; then
-    for dir in "$THEME_LIBRARY"/*/; do
-      basename "$dir"
-    done
-  fi
+  get_theme_names | wc -l | xargs
 }
 
 #==============================================================================
@@ -155,21 +166,26 @@ detect_platform() {
 }
 
 #==============================================================================
-# APP HANDLERS - Direct application (no tinty)
+# APP HANDLERS - Direct application from themes/ directory
 #==============================================================================
 
-# Get the library path for a theme
-get_library_path() {
+# Get the theme directory path
+get_theme_path() {
   local theme="$1"
-  local lib_name
-  lib_name=$(theme_to_library_dir "$theme")
+  local canonical
+  canonical=$(theme_name_to_canonical "$theme")
 
-  local path="$THEME_LIBRARY/$lib_name"
+  local path="$THEMES_DIR/$canonical"
   if [[ -d "$path" ]]; then
     echo "$path"
   else
     echo ""
   fi
+}
+
+# Alias for backward compatibility
+get_library_path() {
+  get_theme_path "$@"
 }
 
 # Apply Ghostty theme
