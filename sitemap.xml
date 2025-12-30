@@ -2,1002 +2,986 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://datapointchris.github.io/dotfiles/</loc>
-         <lastmod>2025-12-29</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/agent-id-test/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/changelog/</loc>
-         <lastmod>2025-12-29</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/final-hook-test/</loc>
-         <lastmod>2025-12-29</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/hook-final-test/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/backup-dirs/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/backup-incremental/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/font/</loc>
-         <lastmod>2025-12-29</lastmod>
-    </url>
-    <url>
-         <loc>https://datapointchris.github.io/dotfiles/apps/ghostty-theme/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/menu/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/notes/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/patterns/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/refcheck/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/sess/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
-         <loc>https://datapointchris.github.io/dotfiles/apps/theme-sync/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <loc>https://datapointchris.github.io/dotfiles/apps/theme/</loc>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/toolbox/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/error-handling/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/github-release-installer/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/metrics-tracking/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/package-management/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/path-ordering-strategy/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/shell-libraries/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/tool-composition/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/add-readme-and-error-reporting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/adding-failure-reporting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/agent-metrics-extraction-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/bats-complete-evaluation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/bats-evaluation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brew-bundle-cleanup-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brew-cleanup-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brewfile-migration-final-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brewfile-migration-final-verification/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brewfile-migration-verification/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brewfile-package-categorization/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/brewfile-to-packages-yml-detailed-breakdown/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/commit-agent-optimization-status/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/commit-agent-too-much-work/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/docker-and-brewfile-migration-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/docker-installer-testing-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/error-handling-library-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/failure-handling-deep-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/failure-handling-test-results/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/failure-registry-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/fonts-refactor-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/install-logging-improvements/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/installation-architecture-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/installation-flow-comparison/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/installation-simplification-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/logging-consistency-fixes/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/management-architecture-audit/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/management-audit-progress/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/management-reorganization/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/option-b-refactor-guide/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phase1-structured-logging-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phase2-error-handling-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phase6-efficient-testing-strategy/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/production-grade-management-enhancements/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/refcheck-variable-path-enhancement/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/resilient-installation-failure-handling/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/resilient-installation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/shell-libraries-adoption-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/smart-installer-updates-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/structured-logging/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/taskfile-cleanup-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/test-commit-workflow/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/test-posttooluse-hook-after-restart/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/trivy-migration-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/trivy-mkcert-installation-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/unified-metrics-system/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/update-sh-consolidation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/update-sh-enhancement/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/wsl-error-reporting-fixes/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/analysis/2024-10-22-dotfiles-management-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/font-scripts-refactoring/font-refactor-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/font-scripts-refactoring/font-scripts-refactoring-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/font-scripts-refactoring/font-scripts-refactoring-options/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/font-scripts-refactoring/font-scripts-refactoring-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/go-migration/checklist/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/go-migration/complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/go-migration/quick-start/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/go-migration/strategy/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/go-migration/tui-comparison/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/2024-10-22-lsp/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/2024-11-03-ai/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/neovim/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/neovim/colorscheme-manager/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/neovim/formatter/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/terminal/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/terminal/ghostty/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/workflow/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/legacy-docs/workflow/aerospace-tmux-neovim-workflow/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/docs/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/docs/development/integration-system/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/docs/features/clipboard-support/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/docs/features/favorites-recents/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/docs/features/syntax-highlighting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/menu-go-v1-archived-2025-11-07/docs/testing/testing-guide/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phases/2025-11-03-phase-1-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phases/2025-11-03-phase-2-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phases/2025-11-04-phase-3-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phases/2025-11-04-phase-4-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phases/2025-11-04-phase-5-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/phases/2025-11-04-phase-6-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-03-theme-sync-strategy/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-04-vm-testing-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/cleanup-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/docs-reorganization-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/documentation-audit-2025-11/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/hooks-implementation-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/master-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/mkdocs-navigation-enhancement/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/reorganization-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/repository-restructure-2025-11/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/FINAL-SOLUTION/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/documentation-reorganization-2025-11/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/documentation-reorganization-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/formatting-standardization-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/neovim-claude-integration-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/neovim-claude-integration-revamp/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/neovim-claude-setup-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/refactor-summary-2025-11-18/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/taskfile-reoranization/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-18/universal-packages-todo/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/dotfiles-system-redesign-2025-11/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/phase1-complete-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/phase2-complete-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/phase3-complete-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/phase4-complete-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/01-initial_planning/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/02-architecture_refinement/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/03-context_and_workflow_decisions/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/04-phase1_implementation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/05-comprehensive-redesign/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/06-function-based-knowledge-system/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/changes-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu/implementation-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/enhanced-search/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/fixes-applied/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/fixes-round2/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/fixes-round3/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/fixes-round4-critical/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/fixes-round5-final/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/phase2-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/phase2-fixes-round6/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/phase2-proposal/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/preview-fix/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/progress/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/tldr-highlighting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/tldr-selective-highlighting-fix/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/universal-menu-redesign-context/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/universal-menu-redesign-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-dotfiles-system-redesign/universal-menu-redesign/universal-menu-redesign-tasks/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/backup-dirs-robustness-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/documentation-consolidation-2/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/documentation-consolidation-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/documentation-consolidation-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/font-docs-consolidation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/font-refactor/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/low-priority-enhancements-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/verification-enhancement-plan/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/2025-11-recent/verification-enhancement-summary/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/dotfiles-cleanup/01-initial-scope-and-methodology/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/dotfiles-cleanup/02-comprehensive-findings/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/shell-formatting-refactor-2025-11/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/shell-formatting-refactor-2025-11/formatting-consolidation-complete/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/shell-formatting-refactor-2025-11/management-coherence-refactor/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/shell-formatting-refactor-2025-11/script-formatting-consolidation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/shell-formatting-refactor-2025-11/script-formatting-final/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/planning/shell-formatting-refactor-2025-11/script-formatting-refinement/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/setup-guides/2024-10-22-environment-setup/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/setup-guides/2024-10-22-nvim-migration/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/setup-guides/2024-10-22-setup/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/changelog/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/claude-code-features/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/commit-agent-design/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/commit-agent-metrics-testing/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/commit-agent-research/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/hook-registration/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/log-monitoring-research/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/logsift-workflow/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/metrics-tracking/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/quick-reference/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/transcript-access/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/usage-guide/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/working-with-claude/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/docker/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/neovim-ai-assistants/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/aws-glue-local-workflow/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/publishing-docs/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/shell-formatting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/testing/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/bubbletea-quick-reference/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/go-development/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/go-quick-reference/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/overview/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/app-installation-patterns/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/arch-git-libpcre2-warning/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/bash-script-testing/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/bash-testing-frameworks-guide/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/bash-tty-detection-command-substitution/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/cross-platform-symlink-considerations/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/directory-pattern-matching/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/documentation-consolidation-principles/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/git-history-rewriting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-cli-architecture-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-testing-examples/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-tui-ecosystem-research/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-tui-testing-strategies/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/idempotent-installation-patterns/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/package-version-analysis/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/posttooluse-hook-integration/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/pretooluse-hooks-task-limitation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/relative-path-calculation/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/script-refactoring-principles/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/task-shell-printf-compatibility/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/testing-bootstrap-dependencies/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/tools-over-instructions/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/wsl-ubuntu-package-versions/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/font-comparison/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/font-pruning-rules/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/font-weights-and-variants/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/nerd-fonts-explained/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/terminal-fonts-guide/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/commands/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/differences/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/packages/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/tools/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/support/corporate/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/support/troubleshooting/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/hooks/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/skills/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/symlinks/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/tasks/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/development-environments/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/agent-architecture/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/context-engineering/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/metrics-analysis-research/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/overview/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/prompt-engineering/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/hyprland/understanding-hyprland/</loc>
-         <lastmod>2025-12-29</lastmod>
+         <lastmod>2025-12-30</lastmod>
     </url>
 </urlset>
