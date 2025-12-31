@@ -273,6 +273,91 @@ validate_history_files() {
 }
 
 #==============================================================================
+# REJECTED THEMES TRACKING
+#==============================================================================
+
+REJECTED_THEMES_FILE="$THEME_DATA_DIR/rejected-themes.json"
+
+reject_theme() {
+  local theme="$1"
+  local reason="${2:-No reason provided}"
+
+  if [[ -z "$theme" ]]; then
+    echo "Error: theme name required" >&2
+    return 1
+  fi
+
+  local platform
+  platform=$(detect_platform)
+  local timestamp
+  timestamp=$(date -u -Iseconds 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
+
+  if [[ ! -f "$REJECTED_THEMES_FILE" ]]; then
+    echo "{}" > "$REJECTED_THEMES_FILE"
+  fi
+
+  local temp_file="${REJECTED_THEMES_FILE}.tmp"
+  jq --arg theme "$theme" \
+     --arg reason "$reason" \
+     --arg platform "$platform" \
+     --arg ts "$timestamp" \
+     '.[$theme] = {
+       "rejected_date": $ts,
+       "reason": $reason,
+       "platforms": ((.[$theme].platforms // []) + [$platform] | unique)
+     }' "$REJECTED_THEMES_FILE" > "$temp_file"
+
+  mv "$temp_file" "$REJECTED_THEMES_FILE"
+}
+
+is_theme_rejected() {
+  local theme="$1"
+
+  if [[ ! -f "$REJECTED_THEMES_FILE" ]]; then
+    return 1
+  fi
+
+  jq -e --arg theme "$theme" '.[$theme] != null' "$REJECTED_THEMES_FILE" >/dev/null 2>&1
+}
+
+get_rejected_theme_info() {
+  local theme="$1"
+
+  if [[ ! -f "$REJECTED_THEMES_FILE" ]]; then
+    echo "{}"
+    return
+  fi
+
+  jq --arg theme "$theme" '.[$theme] // {}' "$REJECTED_THEMES_FILE"
+}
+
+list_rejected_themes() {
+  if [[ ! -f "$REJECTED_THEMES_FILE" ]]; then
+    echo "[]"
+    return
+  fi
+
+  jq -c 'to_entries | map({theme: .key, rejected_date: .value.rejected_date, reason: .value.reason, platforms: .value.platforms | join(",")}) | sort_by(.rejected_date) | reverse | .[]' "$REJECTED_THEMES_FILE"
+}
+
+unreject_theme() {
+  local theme="$1"
+
+  if [[ -z "$theme" ]]; then
+    echo "Error: theme name required" >&2
+    return 1
+  fi
+
+  if [[ ! -f "$REJECTED_THEMES_FILE" ]]; then
+    return 0
+  fi
+
+  local temp_file="${REJECTED_THEMES_FILE}.tmp"
+  jq --arg theme "$theme" 'del(.[$theme])' "$REJECTED_THEMES_FILE" > "$temp_file"
+  mv "$temp_file" "$REJECTED_THEMES_FILE"
+}
+
+#==============================================================================
 # INITIALIZATION
 #==============================================================================
 
@@ -287,6 +372,10 @@ init_storage() {
 
   if [[ ! -f "$history_file" ]]; then
     touch "$history_file"
+  fi
+
+  if [[ ! -f "$REJECTED_THEMES_FILE" ]]; then
+    echo "{}" > "$REJECTED_THEMES_FILE"
   fi
 }
 

@@ -22,6 +22,39 @@ fi
 source "$THEME_APP_DIR/lib/lib.sh"
 source "$THEME_APP_DIR/lib/storage.sh"
 
+# Rename original functions and create filtered versions
+eval "$(declare -f list_themes | sed '1s/list_themes/list_themes_unfiltered/')"
+eval "$(declare -f list_themes_with_status | sed '1s/list_themes_with_status/list_themes_with_status_unfiltered/')"
+eval "$(declare -f count_themes | sed '1s/count_themes/count_themes_unfiltered/')"
+
+# Override list_themes to filter out rejected themes
+list_themes() {
+  list_themes_unfiltered | while IFS= read -r theme; do
+    if ! is_theme_rejected "$theme"; then
+      echo "$theme"
+    fi
+  done
+}
+
+# Override list_themes_with_status to filter out rejected themes
+list_themes_with_status() {
+  local current
+  current=$(get_current_theme 2>/dev/null || echo "")
+
+  list_themes | while IFS= read -r theme; do
+    if [[ "$theme" == "$current" ]]; then
+      echo "● $theme (current)"
+    else
+      echo "  $theme"
+    fi
+  done
+}
+
+# Override count_themes to use filtered list
+count_themes() {
+  list_themes | wc -l | xargs
+}
+
 #==============================================================================
 # HELP
 #==============================================================================
@@ -44,6 +77,9 @@ usage() {
   rank                 Show themes ranked by likes/usage
   log                  View complete history
   info <theme>         Show theme details and app mappings
+  reject <message>     Mark current theme as rejected (avoids rediscovery)
+  rejected             List all rejected themes
+  unreject             Restore a rejected theme (fzf picker with history)
   verify               Check theme system is working
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
@@ -70,10 +106,11 @@ EOF
 
     print_section "Data Storage" "green"
     cat <<'EOF'
-  Location: apps/common/theme/data/history-{platform}.jsonl
+  History:  apps/common/theme/data/history-{platform}.jsonl
+  Rejected: apps/common/theme/data/rejected-themes.json
 
-  Per-platform files eliminate git merge conflicts
-  Automatically tracked in dotfiles repo
+  Per-platform history files eliminate git merge conflicts.
+  View locations: theme log
 EOF
 
   else
@@ -95,6 +132,9 @@ Commands
   rank                 Show themes ranked by likes/usage
   log                  View complete history
   info <theme>         Show theme details and app mappings
+  reject <message>     Mark current theme as rejected (avoids rediscovery)
+  rejected             List all rejected themes
+  unreject             Restore a rejected theme (fzf picker with history)
   verify               Check theme system is working
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
@@ -107,6 +147,14 @@ Examples
   theme like "Great for night coding"
   theme random
   theme rank
+
+Data Storage
+------------
+  History:  apps/common/theme/data/history-{platform}.jsonl
+  Rejected: apps/common/theme/data/rejected-themes.json
+
+  Per-platform history files eliminate git merge conflicts.
+  View locations: theme log
 EOF
   fi
 }
@@ -361,6 +409,181 @@ add_note() {
   echo "  Note: $message"
 }
 
+mark_rejected() {
+  local reason="$*"
+  local theme
+  theme=$(get_current_theme)
+
+  if [[ -z "$theme" ]]; then
+    echo "Error: No theme currently applied"
+    exit 1
+  fi
+
+  if [[ -z "$reason" ]]; then
+    echo "Error: Rejection reason required"
+    echo "Usage: theme reject <message>"
+    exit 1
+  fi
+
+  reject_theme "$theme" "$reason"
+  log_action "reject" "$theme" "$reason"
+  echo "Marked as rejected: $theme"
+  echo "  Reason: $reason"
+  echo ""
+  echo "This theme will be tracked to avoid rediscovery."
+}
+
+show_rejected() {
+  local rejected
+  rejected=$(list_rejected_themes)
+
+  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
+    echo "No rejected themes yet."
+    echo ""
+    echo "When you try a theme and don't like it, mark it as rejected:"
+    echo "  theme reject \"reason\""
+    return
+  fi
+
+  echo ""
+  echo "Rejected Themes"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  local count=0
+  while IFS= read -r line; do
+    count=$((count + 1))
+    local theme=$(echo "$line" | jq -r '.theme')
+    local rejected_date=$(echo "$line" | jq -r '.rejected_date')
+    local reason=$(echo "$line" | jq -r '.reason')
+    local platforms=$(echo "$line" | jq -r '.platforms')
+
+    local date_formatted
+    if date --version &>/dev/null 2>&1; then
+      date_formatted=$(date -d "$rejected_date" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
+    else
+      date_formatted=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${rejected_date:0:19}" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
+    fi
+
+    echo "$count. $theme"
+    echo "   Rejected: $date_formatted"
+    echo "   Reason: $reason"
+    [[ -n "$platforms" ]] && echo "   Platforms: $platforms"
+    echo ""
+  done < <(echo "$rejected")
+
+  echo "Total rejected: $count"
+  echo ""
+}
+
+unreject_theme_interactive() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  local rejected
+  rejected=$(list_rejected_themes)
+
+  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
+    echo "No rejected themes to unreject."
+    return
+  fi
+
+  local theme_names
+  theme_names=$(echo "$rejected" | jq -r '.theme')
+
+  if [[ -z "$theme_names" ]]; then
+    echo "No rejected themes to unreject."
+    return
+  fi
+
+  local preview_script="/tmp/theme-unreject-preview-$$.sh"
+  cat > "$preview_script" <<'PREVIEW_EOF'
+#!/bin/bash
+theme="$1"
+THEME_APP_DIR="$2"
+
+source "$THEME_APP_DIR/lib/storage.sh"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Theme: $theme"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo "REJECTION INFO:"
+echo "───────────────────────────────────────────────────"
+rejection_info=$(get_rejected_theme_info "$theme")
+if [[ -n "$rejection_info" ]] && [[ "$rejection_info" != "{}" ]]; then
+  rejected_date=$(echo "$rejection_info" | jq -r '.rejected_date // "unknown"')
+  reason=$(echo "$rejection_info" | jq -r '.reason // "No reason"')
+  platforms=$(echo "$rejection_info" | jq -r '.platforms | join(", ") // "unknown"')
+  echo "  Date: $rejected_date"
+  echo "  Reason: $reason"
+  echo "  Platforms: $platforms"
+else
+  echo "  No rejection info found"
+fi
+echo ""
+
+echo "FULL HISTORY:"
+echo "───────────────────────────────────────────────────"
+history=$(get_history | jq -c --arg theme "$theme" '.[] | select(.theme == $theme)')
+if [[ -n "$history" ]]; then
+  echo "$history" | while IFS= read -r line; do
+    ts=$(echo "$line" | jq -r '.ts')
+    action=$(echo "$line" | jq -r '.action')
+    platform=$(echo "$line" | jq -r '.platform')
+    message=$(echo "$line" | jq -r '.message // empty')
+
+    date_part="${ts:0:10}"
+
+    if [[ -n "$message" ]]; then
+      printf "  %s | %-8s | %s | %s\n" "$date_part" "$action" "$platform" "$message"
+    else
+      printf "  %s | %-8s | %s\n" "$date_part" "$action" "$platform"
+    fi
+  done
+else
+  echo "  No history found"
+fi
+echo ""
+
+echo "STATS SUMMARY:"
+echo "───────────────────────────────────────────────────"
+stats=$(get_theme_stats "$theme" 2>/dev/null)
+if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
+  likes=$(echo "$stats" | jq -r '.likes // 0')
+  dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+  applies=$(echo "$stats" | jq -r '.applies // 0')
+  score=$(echo "$stats" | jq -r '.score // 0')
+  printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+  echo "  Times applied: $applies"
+else
+  echo "  No stats available"
+fi
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  local selected
+  selected=$(echo "$theme_names" | fzf \
+    --prompt="Select theme to unreject > " \
+    --height=80% \
+    --preview="$preview_script {} '$THEME_APP_DIR'" \
+    --preview-window=right:60%)
+
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    unreject_theme "$selected"
+    log_action "unreject" "$selected"
+    echo "Unrejected: $selected"
+    echo ""
+    echo "This theme is now available in the theme list again."
+  fi
+}
+
 show_rankings() {
   local rankings
   rankings=$(get_rankings)
@@ -416,16 +639,21 @@ show_log() {
 
   echo ""
   echo "Theme History Log"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
-  echo "Log files:"
+  echo "Data files:"
   for file in "$THEME_DATA_DIR"/history-*.jsonl; do
     if [[ -f "$file" ]]; then
       local platform=$(basename "$file" .jsonl | sed 's/history-//')
       local count=$(wc -l < "$file" | xargs)
-      printf "  %s: %s (%d entries)\n" "$platform" "$file" "$count"
+      printf "  history-%s: %s (%d entries)\n" "$platform" "$file" "$count"
     fi
   done
+  if [[ -f "$THEME_DATA_DIR/rejected-themes.json" ]]; then
+    local rejected_count=$(jq 'keys | length' "$THEME_DATA_DIR/rejected-themes.json")
+    printf "  rejected:   %s (%d themes)\n" "$THEME_DATA_DIR/rejected-themes.json" "$rejected_count"
+  fi
   echo ""
 
   if command -v bat &>/dev/null; then
@@ -763,6 +991,15 @@ main() {
       ;;
     info)
       show_info "${2:-}"
+      ;;
+    reject)
+      mark_rejected "${@:2}"
+      ;;
+    rejected)
+      show_rejected
+      ;;
+    unreject)
+      unreject_theme_interactive
       ;;
     verify)
       verify_system
