@@ -60,6 +60,7 @@ usage() {
   list                 List all available font families
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
+  unreject             Restore a rejected font (fzf picker with history)
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 EOF
@@ -89,12 +90,11 @@ EOF
 
     print_section "Data Storage" "green"
     cat <<'EOF'
-  Location: apps/common/font/data/history-{platform}.jsonl
+  History:  apps/common/font/data/history-{platform}.jsonl
+  Rejected: apps/common/font/data/rejected-fonts.json
 
-  • Per-platform files eliminate git merge conflicts
-  • Automatically tracked in dotfiles repo
-  • View locations: font log
-  • Auto-recreates if deleted
+  Per-platform history files eliminate git merge conflicts.
+  View locations: font log
 EOF
 
   else
@@ -118,6 +118,9 @@ Commands
   rank                 Show fonts ranked by likes/dislikes
   log                  View complete history
   list                 List all available font families
+  reject <message>     Mark current font as rejected (avoids rediscovery)
+  rejected             List all rejected fonts
+  unreject             Restore a rejected font (fzf picker with history)
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 
@@ -134,12 +137,11 @@ Examples
 
 Data Storage
 ─────────────────────────
-  Location: apps/common/font/data/history-{platform}.jsonl
+  History:  apps/common/font/data/history-{platform}.jsonl
+  Rejected: apps/common/font/data/rejected-fonts.json
 
-  • Per-platform files eliminate git merge conflicts
-  • Automatically tracked in dotfiles repo
-  • View locations: font log
-  • Auto-recreates if deleted
+  Per-platform history files eliminate git merge conflicts.
+  View locations: font log
 
 EOF
   fi
@@ -376,6 +378,7 @@ mark_rejected() {
   fi
 
   reject_font "$font" "$reason"
+  log_action "reject" "$font" "$reason"
   echo "✓ Marked as rejected: $font"
   echo "  Reason: $reason"
   echo ""
@@ -426,6 +429,122 @@ show_rejected() {
 
   echo "Total rejected: $count"
   echo ""
+}
+
+unreject_font_interactive() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  local rejected
+  rejected=$(list_rejected_fonts)
+
+  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
+    echo "No rejected fonts to unreject."
+    return
+  fi
+
+  # Build list of rejected font names
+  local font_names
+  font_names=$(echo "$rejected" | jq -r '.font')
+
+  if [[ -z "$font_names" ]]; then
+    echo "No rejected fonts to unreject."
+    return
+  fi
+
+  # Create preview script that shows font history
+  local preview_script="/tmp/font-unreject-preview-$$.sh"
+  cat > "$preview_script" <<'PREVIEW_EOF'
+#!/bin/bash
+font="$1"
+FONT_APP_DIR="$2"
+
+source "$FONT_APP_DIR/lib/storage.sh"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Font: $font"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Show rejection info
+echo "REJECTION INFO:"
+echo "───────────────────────────────────────────────────"
+rejection_info=$(get_rejected_font_info "$font")
+if [[ -n "$rejection_info" ]] && [[ "$rejection_info" != "{}" ]]; then
+  rejected_date=$(echo "$rejection_info" | jq -r '.rejected_date // "unknown"')
+  reason=$(echo "$rejection_info" | jq -r '.reason // "No reason"')
+  platforms=$(echo "$rejection_info" | jq -r '.platforms | join(", ") // "unknown"')
+  echo "  Date: $rejected_date"
+  echo "  Reason: $reason"
+  echo "  Platforms: $platforms"
+else
+  echo "  No rejection info found"
+fi
+echo ""
+
+# Show full history
+echo "FULL HISTORY:"
+echo "───────────────────────────────────────────────────"
+history=$(get_history | jq -c --arg font "$font" '.[] | select(.font == $font)')
+if [[ -n "$history" ]]; then
+  echo "$history" | while IFS= read -r line; do
+    ts=$(echo "$line" | jq -r '.ts')
+    action=$(echo "$line" | jq -r '.action')
+    platform=$(echo "$line" | jq -r '.platform')
+    message=$(echo "$line" | jq -r '.message // empty')
+
+    # Format timestamp
+    date_part="${ts:0:10}"
+
+    if [[ -n "$message" ]]; then
+      printf "  %s | %-8s | %s | %s\n" "$date_part" "$action" "$platform" "$message"
+    else
+      printf "  %s | %-8s | %s\n" "$date_part" "$action" "$platform"
+    fi
+  done
+else
+  echo "  No history found"
+fi
+echo ""
+
+# Show stats summary
+echo "STATS SUMMARY:"
+echo "───────────────────────────────────────────────────"
+stats=$(get_font_stats "$font" 2>/dev/null)
+if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
+  likes=$(echo "$stats" | jq -r '.likes // 0')
+  dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+  applies=$(echo "$stats" | jq -r '.applies // 0')
+  score=$(echo "$stats" | jq -r '.score // 0')
+  printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+  echo "  Times applied: $applies"
+else
+  echo "  No stats available"
+fi
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  # Run fzf with preview
+  local selected
+  selected=$(echo "$font_names" | fzf \
+    --prompt="Select font to unreject > " \
+    --height=80% \
+    --preview="$preview_script {} '$FONT_APP_DIR'" \
+    --preview-window=right:60%)
+
+  # Cleanup
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    unreject_font "$selected"
+    log_action "unreject" "$selected"
+    echo "Unrejected: $selected"
+    echo ""
+    echo "This font is now available in the font list again."
+  fi
 }
 
 show_rankings() {
@@ -502,14 +621,18 @@ show_log() {
   echo ""
 
   # Show log file locations
-  echo "Log files:"
+  echo "Data files:"
   for file in "$FONT_DATA_DIR"/history-*.jsonl; do
     if [[ -f "$file" ]]; then
       local platform=$(basename "$file" .jsonl | sed 's/history-//')
       local count=$(wc -l < "$file" | xargs)
-      printf "  %s: %s (%d entries)\n" "$platform" "$file" "$count"
+      printf "  history-%s: %s (%d entries)\n" "$platform" "$file" "$count"
     fi
   done
+  if [[ -f "$FONT_DATA_DIR/rejected-fonts.json" ]]; then
+    local rejected_count=$(jq 'keys | length' "$FONT_DATA_DIR/rejected-fonts.json")
+    printf "  rejected:   %s (%d fonts)\n" "$FONT_DATA_DIR/rejected-fonts.json" "$rejected_count"
+  fi
   echo ""
 
   # Format and display with color if bat is available
@@ -721,6 +844,9 @@ main() {
       ;;
     rejected)
       show_rejected
+      ;;
+    unreject)
+      unreject_font_interactive
       ;;
     generate-previews)
       generate_all_previews
