@@ -1,1 +1,30 @@
-{}
+{
+  "Nimbus Mono": {
+    "rejected_date": "2025-12-31T00:55:53+00:00",
+    "reason": "this font has bad typing, hard to read",
+    "platforms": [
+      "macos"
+    ]
+  },
+  "SpaceMono Nerd Font": {
+    "rejected_date": "2025-12-31T03:44:29+00:00",
+    "reason": "Hard to read and thin with ugly g and smashed letters",
+    "platforms": [
+      "macos"
+    ]
+  },
+  "Victor Mono": {
+    "rejected_date": "2025-12-31T03:51:34+00:00",
+    "reason": "Cute font with unique italic, but annoying to read mostly",
+    "platforms": [
+      "macos"
+    ]
+  },
+  "Intel One Mono": {
+    "rejected_date": "2025-12-31T03:52:40+00:00",
+    "reason": "I feel like I am wearing coke bottle glasses! The italics are veritgo inducing.",
+    "platforms": [
+      "macos"
+    ]
+  }
+}
