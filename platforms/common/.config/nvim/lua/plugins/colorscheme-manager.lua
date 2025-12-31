@@ -71,6 +71,11 @@ return {
       local themes_dir = vim.fn.expand('~/dotfiles/apps/common/theme/themes')
       local rejected_file = themes_dir .. '/../data/rejected-themes.json'
 
+      -- Configuration
+      local config = {
+        per_repo_persistence = false, -- Use theme system instead of per-repo colorschemes
+      }
+
       -- Manually curated plugin colorschemes (plugins expose variants, only include good ones)
       local good_plugin_colorschemes = {
         'terafox',
@@ -108,20 +113,65 @@ return {
         return rejected
       end
 
-      -- Parse neovim_colorscheme_name from theme.yml (simple pattern matching)
-      local function get_neovim_colorscheme_from_yml(theme_path)
+      -- Parse meta fields from theme.yml (simple pattern matching)
+      local function parse_theme_yml(theme_path)
         local yml_path = theme_path .. '/theme.yml'
         if vim.fn.filereadable(yml_path) == 0 then
           return nil
         end
         local lines = vim.fn.readfile(yml_path)
+        local result = {}
         for _, line in ipairs(lines) do
-          local match = line:match('^%s*neovim_colorscheme_name:%s*["\']?([^"\'%s]+)["\']?')
-          if match then
-            return match
+          -- Try quoted value first (handles spaces), then unquoted
+          local key, value = line:match('^%s*([%w_]+):%s*"([^"]*)"')
+          if not key then
+            key, value = line:match("^%s*([%w_]+):%s*'([^']*)'")
+          end
+          if not key then
+            key, value = line:match('^%s*([%w_]+):%s*([^%s#]+)')
+          end
+          if key and value then
+            result[key] = value
           end
         end
-        return nil
+        return result
+      end
+
+      local function get_neovim_colorscheme_from_yml(theme_path)
+        local meta = parse_theme_yml(theme_path)
+        return meta and meta.neovim_colorscheme_name or nil
+      end
+
+      -- Build display name mapping for all themes
+      local function build_colorscheme_display_map()
+        local display_map = {}
+        local handle = vim.loop.fs_scandir(themes_dir)
+        if not handle then
+          return display_map
+        end
+
+        while true do
+          local name, type = vim.loop.fs_scandir_next(handle)
+          if not name then
+            break
+          end
+          if type == 'directory' then
+            local meta = parse_theme_yml(themes_dir .. '/' .. name)
+            if meta and meta.neovim_colorscheme_name then
+              local display_name = meta.display_name or name
+              local source = meta.neovim_colorscheme_source or ''
+              local source_label = ''
+              if source == 'generated' then
+                source_label = ' (Generated)'
+              elseif source == 'plugin' then
+                source_label = ' (Neovim Plugin)'
+              end
+              display_map[meta.neovim_colorscheme_name] = display_name .. source_label
+            end
+          end
+        end
+
+        return display_map
       end
 
       -- Dynamically get system colorschemes from theme system
@@ -153,13 +203,14 @@ return {
         return colorschemes
       end
 
-      -- Merge plugin and system colorschemes, removing duplicates
+      -- Merge plugin and system colorschemes, removing duplicates and rejected
       local function get_all_good_colorschemes()
         local all = {}
         local seen = {}
+        local rejected = get_rejected_themes()
 
         for _, cs in ipairs(good_plugin_colorschemes) do
-          if not seen[cs] then
+          if not seen[cs] and not rejected[cs] then
             table.insert(all, cs)
             seen[cs] = true
           end
@@ -183,6 +234,57 @@ return {
         math.randomseed(os.time())
         local index = math.random(#all_colorschemes)
         return all_colorschemes[index]
+      end
+
+      -- === THEME SYSTEM INTEGRATION ===
+      local theme_current_file = vim.fn.expand('~/.local/share/theme/current')
+
+      local function get_current_theme_from_system()
+        if vim.fn.filereadable(theme_current_file) == 0 then
+          return nil
+        end
+        local lines = vim.fn.readfile(theme_current_file)
+        if #lines > 0 and lines[1] ~= '' then
+          return lines[1]
+        end
+        return nil
+      end
+
+      local function load_colorscheme_from_theme_system()
+        local theme_name = get_current_theme_from_system()
+        if not theme_name then
+          return false
+        end
+
+        local colorscheme = get_neovim_colorscheme_from_yml(themes_dir .. '/' .. theme_name)
+        if not colorscheme then
+          return false
+        end
+
+        local ok = pcall(vim.cmd, 'colorscheme ' .. colorscheme)
+        if ok then
+          require('fidget').notify('Theme: ' .. colorscheme)
+        end
+        return ok
+      end
+
+      local function setup_theme_file_watcher()
+        local w = vim.loop.new_fs_event()
+        if not w then
+          return
+        end
+
+        local theme_dir = vim.fn.expand('~/.local/share/theme')
+        w:start(theme_dir, {}, function(err, filename)
+          if err then
+            return
+          end
+          if filename == 'current' then
+            vim.schedule(function()
+              load_colorscheme_from_theme_system()
+            end)
+          end
+        end)
       end
 
       -- === GIT-BASED PERSISTENCE ===
@@ -301,13 +403,24 @@ return {
         get_system_colorschemes = get_system_colorschemes,
         get_all_good_colorschemes = get_all_good_colorschemes,
         get_random_colorscheme = get_random_colorscheme,
+        load_from_theme_system = load_colorscheme_from_theme_system,
+        display_map = build_colorscheme_display_map(),
       }
 
-      if not load_colorscheme() then
-        vim.cmd('colorscheme github_dark_dimmed')
+      if config.per_repo_persistence then
+        -- Use per-repo colorscheme persistence
+        if not load_colorscheme() then
+          vim.cmd('colorscheme github_dark_dimmed')
+        end
+        setup_auto_save()
+      else
+        -- Use theme system integration
+        if not load_colorscheme_from_theme_system() then
+          local random_cs = get_random_colorscheme()
+          pcall(vim.cmd, 'colorscheme ' .. random_cs)
+        end
+        setup_theme_file_watcher()
       end
-
-      setup_auto_save()
     end,
   },
 }

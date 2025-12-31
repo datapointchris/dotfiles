@@ -182,6 +182,7 @@ end
 if not vim.g.vscode then
   local function filtered_colorschemes()
     local good_colorschemes = _G.ColorschemeManager and _G.ColorschemeManager.good_colorschemes or {}
+    local display_map = _G.ColorschemeManager and _G.ColorschemeManager.display_map or {}
     local actions = require('telescope.actions')
     local action_state = require('telescope.actions.state')
     local builtin = require('telescope.builtin')
@@ -199,6 +200,9 @@ if not vim.g.vscode then
         results = vim.tbl_filter(function(colorscheme)
           return vim.tbl_contains(good_colorschemes, colorscheme)
         end, vim.fn.getcompletion('', 'color')),
+        entry_maker = function(cs)
+          return { value = cs, display = display_map[cs] or cs, ordinal = display_map[cs] or cs }
+        end,
       }),
     })
   end
