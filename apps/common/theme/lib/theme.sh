@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # theme.sh - Functions for reading theme.yml files
 # Sources theme colors into shell variables for use by generators
-# Drop-in compatible with palette.sh variable names
 
 set -euo pipefail
 
@@ -123,41 +122,9 @@ load_theme() {
   done
 }
 
-# Detect if file is theme.yml or palette.yml format
-detect_format() {
-  local file="$1"
-
-  if yq -e '.base16' "$file" &>/dev/null; then
-    echo "theme"
-  elif yq -e '.palette' "$file" &>/dev/null; then
-    echo "palette"
-  else
-    echo "unknown"
-  fi
-}
-
-# Universal loader - works with both formats
+# Load colors from theme.yml (alias for load_theme)
 load_colors() {
-  local file="$1"
-  local format
-  format=$(detect_format "$file")
-
-  case "$format" in
-    theme)
-      load_theme "$file"
-      ;;
-    palette)
-      # Fall back to palette.sh loader
-      local script_dir
-      script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-      source "$script_dir/palette.sh"
-      load_palette "$file"
-      ;;
-    *)
-      echo "Error: Unknown file format: $file" >&2
-      return 1
-      ;;
-  esac
+  load_theme "$1"
 }
 
 # Convert color to uppercase (for btop)
