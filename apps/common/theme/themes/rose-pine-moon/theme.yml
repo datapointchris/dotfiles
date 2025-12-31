@@ -1,10 +1,12 @@
 meta:
-  name: "Rose Pine Moon"
-  slug: "rose-pine-moon"
-  neovim_colorscheme: "rose-pine-moon"
-  author: "Ghostty"
+  id: "rose-pine-moon"
+  display_name: "Rose Pine Moon"
+  neovim_colorscheme_name: "rose-pine-moon"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#232136"

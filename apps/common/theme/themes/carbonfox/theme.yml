@@ -2,12 +2,14 @@
 # Source: EdenEast/nightfox.nvim (IBM Carbon inspired)
 
 meta:
-  name: "Carbonfox"
-  slug: "carbonfox"
-  neovim_colorscheme: "carbonfox"
-  author: "EdenEast"
+  id: "carbonfox"
+  display_name: "Carbonfox"
+  neovim_colorscheme_name: "carbonfox"
+  neovim_colorscheme_source: "plugin"
+  plugin: "EdenEast/nightfox.nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
+  author: "EdenEast"
 
 base16:
   base00: "#161616"  # bg1 - background

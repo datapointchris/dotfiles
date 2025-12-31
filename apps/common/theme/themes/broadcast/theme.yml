@@ -1,10 +1,12 @@
 meta:
-  name: "Broadcast"
-  slug: "broadcast"
-  neovim_colorscheme: "broadcast"
-  author: "Ghostty"
+  id: "broadcast"
+  display_name: "Broadcast"
+  neovim_colorscheme_name: "broadcast"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#2b2b2b"

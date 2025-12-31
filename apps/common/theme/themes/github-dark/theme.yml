@@ -1,10 +1,12 @@
 meta:
-  name: "GitHub Dark"
-  slug: "github-dark"
-  neovim_colorscheme: "github-dark"
-  author: "Ghostty"
+  id: "github-dark"
+  display_name: "GitHub Dark"
+  neovim_colorscheme_name: "github-dark"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#101216"

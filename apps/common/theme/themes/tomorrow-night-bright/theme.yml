@@ -1,10 +1,12 @@
 meta:
-  name: "Tomorrow Night Bright"
-  slug: "tomorrow-night-bright"
-  neovim_colorscheme: "tomorrow-night-bright"
-  author: "Ghostty"
+  id: "tomorrow-night-bright"
+  display_name: "Tomorrow Night Bright"
+  neovim_colorscheme_name: "tomorrow-night-bright"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#000000"

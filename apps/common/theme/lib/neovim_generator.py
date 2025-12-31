@@ -992,8 +992,8 @@ def generate_colorscheme(theme_path: Path, output_dir: Path) -> None:
     """Generate complete Neovim colorscheme from theme.yml."""
     theme = load_theme(theme_path)
     meta = theme.get("meta", {})
-    slug = meta.get("slug", theme_path.parent.name)
-    name = meta.get("name", slug)
+    slug = meta.get("id", theme_path.parent.name)
+    name = meta.get("display_name", slug)
     module_name = slug_to_module(slug)
 
     # Create directory structure

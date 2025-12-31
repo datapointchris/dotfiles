@@ -1,10 +1,12 @@
 meta:
-  name: "Srcery"
-  slug: "srcery"
-  neovim_colorscheme: "srcery"
-  author: "Ghostty"
+  id: "srcery"
+  display_name: "Srcery"
+  neovim_colorscheme_name: "srcery"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#1c1b19"

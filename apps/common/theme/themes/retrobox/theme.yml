@@ -2,14 +2,14 @@
 # Source: Neovim built-in retrobox colorscheme (gruvbox-inspired)
 
 meta:
-  name: "Retrobox"
-  slug: "retrobox"
-  neovim_colorscheme: "retrobox"
-  author: "Maxim Kim (https://github.com/vim/colorschemes)"
+  id: "retrobox"
+  display_name: "Retrobox"
+  neovim_colorscheme_name: "retrobox"
+  neovim_colorscheme_source: "plugin"
+  plugin: null
+  derived_from: "vim-builtin"
   variant: "dark"
-  source: "neovim"
-  source_url: "https://github.com/vim/colorschemes"
-  version: "1.0.0"
+  author: "Maxim Kim (https://github.com/vim/colorschemes)"
 
 # Base16 palette (extracted from retrobox.vim GUI colors)
 # Very similar to gruvbox but with slightly darker background

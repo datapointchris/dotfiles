@@ -2,14 +2,14 @@
 # Source: ellisonleao/gruvbox.nvim extracted palette
 
 meta:
-  name: "Gruvbox"
-  slug: "gruvbox"
-  neovim_colorscheme: "gruvbox"
-  author: "ellisonleao (https://github.com/ellisonleao/gruvbox.nvim)"
+  id: "gruvbox"
+  display_name: "Gruvbox"
+  neovim_colorscheme_name: "gruvbox"
+  neovim_colorscheme_source: "plugin"
+  plugin: "ellisonleao/gruvbox.nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
-  source_url: "https://github.com/ellisonleao/gruvbox.nvim"
-  version: "1.0.0"
+  author: "ellisonleao (https://github.com/ellisonleao/gruvbox.nvim)"
 
 # Base16 palette (from gruvbox.nvim extraction)
 # Note: Neovim plugin swaps base05/base06 compared to base16 canonical

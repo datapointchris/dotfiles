@@ -2,14 +2,14 @@
 # Source: rose-pine/neovim official plugin
 
 meta:
-  name: "Rose Pine"
-  slug: "rose-pine"
-  neovim_colorscheme: "rose-pine"
-  author: "Rose Pine (https://rosepinetheme.com)"
+  id: "rose-pine"
+  display_name: "Rose Pine"
+  neovim_colorscheme_name: "rose-pine"
+  neovim_colorscheme_source: "plugin"
+  plugin: "rose-pine/neovim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
-  source_url: "https://github.com/rose-pine/neovim"
-  version: "1.0.0"
+  author: "Rose Pine (https://rosepinetheme.com)"
 
 # Base16 palette (mapped from rose-pine/neovim palette.lua)
 base16:

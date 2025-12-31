@@ -1,10 +1,12 @@
 meta:
-  name: "Everforest Dark Hard"
-  slug: "everforest-dark-hard"
-  neovim_colorscheme: "everforest-dark-hard"
-  author: "Ghostty"
+  id: "everforest-dark-hard"
+  display_name: "Everforest Dark Hard"
+  neovim_colorscheme_name: "everforest-dark-hard"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#1e2326"

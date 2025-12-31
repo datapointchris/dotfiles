@@ -1,10 +1,12 @@
 meta:
-  name: "Gruvbox Dark Medium"
-  slug: "gruvbox-dark-medium"
-  neovim_colorscheme: "gruvbox-dark-medium"
-  author: "Ghostty"
+  id: "gruvbox-dark-medium"
+  display_name: "Gruvbox Dark Medium"
+  neovim_colorscheme_name: "gruvbox-dark-medium"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#282828"

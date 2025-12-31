@@ -1,10 +1,12 @@
 meta:
-  name: "OceanicNext"
-  slug: "OceanicNext"
-  neovim_colorscheme: "OceanicNext"
-  author: "Ghostty"
+  id: "oceanic-next"
+  display_name: "Oceanic Next"
+  neovim_colorscheme_name: "OceanicNext"
+  neovim_colorscheme_source: "plugin"
+  plugin: "mhartington/oceanic-next"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#162c35"

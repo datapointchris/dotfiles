@@ -30,10 +30,10 @@ fi
 eval "$(load_colors "$theme_file")"
 
 # Read metadata
-name=$(yq '.meta.name // "Unknown"' "$theme_file")
+name=$(yq '.meta.display_name // "Unknown"' "$theme_file")
 author=$(yq '.meta.author // "Unknown"' "$theme_file")
 variant=$(yq '.meta.variant // "dark"' "$theme_file")
-nvim_cs=$(yq '.meta.neovim_colorscheme // .meta.slug // "unknown"' "$theme_file")
+nvim_cs=$(yq '.meta.neovim_colorscheme_name // .meta.id // "unknown"' "$theme_file")
 
 # Get extended colors with fallbacks
 syntax_comment="${EXTENDED_SYNTAX_COMMENT:-$ANSI_BRIGHT_BLACK}"

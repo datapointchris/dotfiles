@@ -68,7 +68,11 @@ return {
     priority = 999, -- Load after colorscheme plugins but before other plugins
     cond = not vim.g.vscode,
     config = function()
-      local good_colorschemes = {
+      local themes_dir = vim.fn.expand('~/dotfiles/apps/common/theme/themes')
+      local rejected_file = themes_dir .. '/../data/rejected-themes.json'
+
+      -- Manually curated plugin colorschemes (plugins expose variants, only include good ones)
+      local good_plugin_colorschemes = {
         'terafox',
         'solarized-osaka',
         'slate',
@@ -79,9 +83,7 @@ return {
         'nightfox',
         'kanagawa',
         'gruvbox',
-        'gruvbox-dark-hard',
         'rose-pine',
-        'rose-pine-darker',
         'github_dark_default',
         'github_dark_dimmed',
         'flexoki-moon-toddler',
@@ -91,10 +93,96 @@ return {
         'flexoki-moon-black',
       }
 
+      -- Load rejected themes from JSON file
+      local function get_rejected_themes()
+        local rejected = {}
+        if vim.fn.filereadable(rejected_file) == 1 then
+          local content = table.concat(vim.fn.readfile(rejected_file), '\n')
+          local ok, data = pcall(vim.json.decode, content)
+          if ok and data then
+            for name, _ in pairs(data) do
+              rejected[name] = true
+            end
+          end
+        end
+        return rejected
+      end
+
+      -- Parse neovim_colorscheme_name from theme.yml (simple pattern matching)
+      local function get_neovim_colorscheme_from_yml(theme_path)
+        local yml_path = theme_path .. '/theme.yml'
+        if vim.fn.filereadable(yml_path) == 0 then
+          return nil
+        end
+        local lines = vim.fn.readfile(yml_path)
+        for _, line in ipairs(lines) do
+          local match = line:match('^%s*neovim_colorscheme_name:%s*["\']?([^"\'%s]+)["\']?')
+          if match then
+            return match
+          end
+        end
+        return nil
+      end
+
+      -- Dynamically get system colorschemes from theme system
+      local function get_system_colorschemes()
+        local colorschemes = {}
+        local rejected = get_rejected_themes()
+
+        local handle = vim.loop.fs_scandir(themes_dir)
+        if not handle then
+          return colorschemes
+        end
+
+        while true do
+          local name, type = vim.loop.fs_scandir_next(handle)
+          if not name then
+            break
+          end
+          if type == 'directory' and not rejected[name] then
+            local neovim_dir = themes_dir .. '/' .. name .. '/neovim'
+            if vim.fn.isdirectory(neovim_dir) == 1 then
+              local colorscheme = get_neovim_colorscheme_from_yml(themes_dir .. '/' .. name)
+              if colorscheme then
+                table.insert(colorschemes, colorscheme)
+              end
+            end
+          end
+        end
+
+        return colorschemes
+      end
+
+      -- Merge plugin and system colorschemes, removing duplicates
+      local function get_all_good_colorschemes()
+        local all = {}
+        local seen = {}
+
+        for _, cs in ipairs(good_plugin_colorschemes) do
+          if not seen[cs] then
+            table.insert(all, cs)
+            seen[cs] = true
+          end
+        end
+
+        for _, cs in ipairs(get_system_colorschemes()) do
+          if not seen[cs] then
+            table.insert(all, cs)
+            seen[cs] = true
+          end
+        end
+
+        return all
+      end
+
       local function get_random_colorscheme()
+        local all_colorschemes = get_all_good_colorschemes()
+        if #all_colorschemes == 0 then
+          return 'default'
+        end
         math.randomseed(os.time())
-        local index = math.random(#good_colorschemes)
-        return good_colorschemes[index]
+        local index = math.random(#all_colorschemes)
+        return all_colorschemes[index]
       end
 
       -- === GIT-BASED PERSISTENCE ===
@@ -208,7 +296,10 @@ return {
 
       -- For Telescope to be able to pick from the good colorschemes
       _G.ColorschemeManager = {
-        good_colorschemes = good_colorschemes,
+        good_colorschemes = get_all_good_colorschemes(),
+        good_plugin_colorschemes = good_plugin_colorschemes,
+        get_system_colorschemes = get_system_colorschemes,
+        get_all_good_colorschemes = get_all_good_colorschemes,
         get_random_colorscheme = get_random_colorscheme,
       }
 

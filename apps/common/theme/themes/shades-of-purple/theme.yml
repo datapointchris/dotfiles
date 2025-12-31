@@ -1,10 +1,12 @@
 meta:
-  name: "Shades of Purple"
-  slug: "shades-of-purple"
-  neovim_colorscheme: "shades-of-purple"
-  author: "Ghostty"
+  id: "shades-of-purple"
+  display_name: "Shades of Purple"
+  neovim_colorscheme_name: "shades-of-purple"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#1e1d40"

@@ -1,10 +1,12 @@
 meta:
-  name: "Popping and Locking"
-  slug: "popping-and-locking"
-  neovim_colorscheme: "popping-and-locking"
-  author: "Ghostty"
+  id: "popping-and-locking"
+  display_name: "Popping and Locking"
+  neovim_colorscheme_name: "popping-and-locking"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#181921"

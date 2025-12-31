@@ -2,12 +2,14 @@
 # Source: EdenEast/nightfox.nvim
 
 meta:
-  name: "Terafox"
-  slug: "terafox"
-  neovim_colorscheme: "terafox"
-  author: "EdenEast"
+  id: "terafox"
+  display_name: "Terafox"
+  neovim_colorscheme_name: "terafox"
+  neovim_colorscheme_source: "plugin"
+  plugin: "EdenEast/nightfox.nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
+  author: "EdenEast"
 
 base16:
   base00: "#152528"  # bg1 - background

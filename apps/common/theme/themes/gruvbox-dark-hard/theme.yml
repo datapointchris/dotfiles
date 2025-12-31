@@ -2,14 +2,14 @@
 # Source: Ghostty built-in theme "Gruvbox Dark Hard"
 
 meta:
-  name: "Gruvbox Dark Hard"
-  slug: "gruvbox-dark-hard"
-  neovim_colorscheme: "gruvbox-dark-hard"
-  author: "morhetz (https://github.com/morhetz/gruvbox)"
+  id: "gruvbox-dark-hard"
+  display_name: "Gruvbox Dark Hard"
+  neovim_colorscheme_name: "gruvbox-dark-hard"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "ghostty"
-  source_url: "https://github.com/ghostty-org/ghostty"
-  version: "1.0.0"
+  author: "morhetz (https://github.com/morhetz/gruvbox)"
 
 # Base16 palette (derived from Ghostty ANSI colors)
 # Note: Ghostty uses "neutral" colors for normal ANSI and "bright" for bright ANSI

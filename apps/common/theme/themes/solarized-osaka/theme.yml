@@ -2,12 +2,14 @@
 # Source: craftzdog/solarized-osaka.nvim
 
 meta:
-  name: "Solarized Osaka"
-  slug: "solarized-osaka"
-  neovim_colorscheme: "solarized-osaka"
-  author: "Takuya Matsuyama (craftzdog)"
+  id: "solarized-osaka"
+  display_name: "Solarized Osaka"
+  neovim_colorscheme_name: "solarized-osaka"
+  neovim_colorscheme_source: "plugin"
+  plugin: "craftzdog/solarized-osaka.nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
+  author: "Takuya Matsuyama (craftzdog)"
 
 base16:
   base00: "#001419"  # bg (hsl 192, 100, 5)

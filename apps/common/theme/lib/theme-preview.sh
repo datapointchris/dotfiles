@@ -16,10 +16,10 @@ fi
 WIDTH=56
 
 # Read metadata
-name=$(yq '.meta.name // "Unknown"' "$theme_file")
+name=$(yq '.meta.display_name // "Unknown"' "$theme_file")
 author=$(yq '.meta.author // "Unknown"' "$theme_file")
 variant=$(yq '.meta.variant // "dark"' "$theme_file")
-neovim_cs=$(yq '.meta.neovim_colorscheme // .meta.slug // "unknown"' "$theme_file")
+neovim_cs=$(yq '.meta.neovim_colorscheme_name // .meta.id // "unknown"' "$theme_file")
 
 # Read special colors
 theme_bg=$(yq '.special.background // "#1a1a1a"' "$theme_file")

@@ -1,10 +1,12 @@
 meta:
-  name: "Retro Legends"
-  slug: "retro-legends"
-  neovim_colorscheme: "retro-legends"
-  author: "Ghostty"
+  id: "retro-legends"
+  display_name: "Retro Legends"
+  neovim_colorscheme_name: "retro-legends"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#0d0d0d"

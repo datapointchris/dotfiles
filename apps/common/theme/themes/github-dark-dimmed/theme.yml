@@ -2,12 +2,14 @@
 # Source: projekt0n/github-nvim-theme
 
 meta:
-  name: "GitHub Dark Dimmed"
-  slug: "github_dark_dimmed"
-  neovim_colorscheme: "github_dark_dimmed"
-  author: "Projekt0n"
+  id: "github-dark-dimmed"
+  display_name: "GitHub Dark Dimmed"
+  neovim_colorscheme_name: "github_dark_dimmed"
+  neovim_colorscheme_source: "plugin"
+  plugin: "projekt0n/github-nvim-theme"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
+  author: "Projekt0n"
 
 base16:
   base00: "#22272e"  # background

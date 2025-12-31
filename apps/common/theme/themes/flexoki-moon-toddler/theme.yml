@@ -2,12 +2,14 @@
 # Source: datapointchris/flexoki-moon-nvim
 
 meta:
-  name: "Flexoki Moon Toddler"
-  slug: "flexoki-moon-toddler"
-  neovim_colorscheme: "flexoki-moon-toddler"
-  author: "datapointchris"
+  id: "flexoki-moon-toddler"
+  display_name: "Flexoki Moon Toddler"
+  neovim_colorscheme_name: "flexoki-moon-toddler"
+  neovim_colorscheme_source: "plugin"
+  plugin: "datapointchris/flexoki-moon-nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
+  author: "datapointchris"
 
 base16:
   base00: "#2a1f16"  # base

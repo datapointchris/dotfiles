@@ -2,14 +2,14 @@
 # Source: rebelot/kanagawa.nvim official plugin
 
 meta:
-  name: "Kanagawa"
-  slug: "kanagawa"
-  neovim_colorscheme: "kanagawa"
-  author: "Tommaso Laurenzi (rebelot)"
+  id: "kanagawa"
+  display_name: "Kanagawa"
+  neovim_colorscheme_name: "kanagawa"
+  neovim_colorscheme_source: "plugin"
+  plugin: "rebelot/kanagawa.nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
-  source_url: "https://github.com/rebelot/kanagawa.nvim"
-  version: "1.0.0"
+  author: "Tommaso Laurenzi (rebelot)"
 
 # Base16 palette (mapped from kanagawa.nvim colors.lua)
 base16:

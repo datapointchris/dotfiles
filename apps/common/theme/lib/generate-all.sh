@@ -35,7 +35,7 @@ if [[ ! -f "$theme_file" ]]; then
   exit 1
 fi
 
-theme_name=$(yq -r '.meta.name' "$theme_file")
+theme_name=$(yq -r '.meta.display_name' "$theme_file")
 echo "Generating configs for: $theme_name"
 echo ""
 

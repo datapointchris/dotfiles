@@ -2,14 +2,14 @@
 # Source: Neovim built-in slate colorscheme (vim/colorschemes project)
 
 meta:
-  name: "Slate"
-  slug: "slate"
-  neovim_colorscheme: "slate"
-  author: "Ralph Amissah (https://github.com/vim/colorschemes)"
+  id: "slate"
+  display_name: "Slate"
+  neovim_colorscheme_name: "slate"
+  neovim_colorscheme_source: "plugin"
+  plugin: null
+  derived_from: "vim-builtin"
   variant: "dark"
-  source: "neovim"
-  source_url: "https://github.com/vim/colorschemes"
-  version: "1.0.0"
+  author: "Ralph Amissah (https://github.com/vim/colorschemes)"
 
 # Base16 palette (extracted from slate.vim GUI colors)
 base16:

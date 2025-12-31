@@ -1,10 +1,12 @@
 meta:
-  name: "Black Metal (Mayhem)"
-  slug: "black-metal-mayhem"
-  neovim_colorscheme: "black-metal-mayhem"
-  author: "Ghostty"
+  id: "black-metal-mayhem"
+  display_name: "Black Metal (Mayhem)"
+  neovim_colorscheme_name: "black-metal-mayhem"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#000000"

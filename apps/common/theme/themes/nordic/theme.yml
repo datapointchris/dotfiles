@@ -1,11 +1,12 @@
 meta:
-  name: "Nordic"
-  slug: "nordic"
-  neovim_colorscheme: "nordic"
-  author: "AlexvZyl"
+  id: "nordic"
+  display_name: "Nordic"
+  neovim_colorscheme_name: "nordic"
+  neovim_colorscheme_source: "plugin"
+  plugin: "AlexvZyl/nordic.nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
-  description: "Extracted from AlexvZyl/nordic.nvim - a warmer, darker take on Nord"
+  author: "AlexvZyl"
 
 base16:
   base00: "#242933"  # gray0 - background

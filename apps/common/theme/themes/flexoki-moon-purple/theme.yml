@@ -2,12 +2,14 @@
 # Source: datapointchris/flexoki-moon-nvim
 
 meta:
-  name: "Flexoki Moon Purple"
-  slug: "flexoki-moon-purple"
-  neovim_colorscheme: "flexoki-moon-purple"
-  author: "datapointchris"
+  id: "flexoki-moon-purple"
+  display_name: "Flexoki Moon Purple"
+  neovim_colorscheme_name: "flexoki-moon-purple"
+  neovim_colorscheme_source: "plugin"
+  plugin: "datapointchris/flexoki-moon-nvim"
+  derived_from: "neovim-plugin"
   variant: "dark"
-  source: "neovim"
+  author: "datapointchris"
 
 base16:
   base00: "#12101d"  # base

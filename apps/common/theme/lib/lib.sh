@@ -84,12 +84,12 @@ theme_name_to_canonical() {
     fi
   done
 
-  # Try matching against meta.name in theme.yml files
+  # Try matching against meta.display_name in theme.yml files
   for dir in "$THEMES_DIR"/*/; do
     local theme_file="$dir/theme.yml"
     if [[ -f "$theme_file" ]]; then
       local meta_name
-      meta_name=$(yq '.meta.name // ""' "$theme_file" 2>/dev/null || echo "")
+      meta_name=$(yq '.meta.display_name // ""' "$theme_file" 2>/dev/null || echo "")
       if [[ "${meta_name,,}" == "${input,,}" ]]; then
         basename "$dir"
         return
@@ -733,10 +733,10 @@ display_theme_details() {
 
   local name author variant nvim_cs
 
-  name=$(yq '.meta.name // "Unknown"' "$theme_file")
+  name=$(yq '.meta.display_name // "Unknown"' "$theme_file")
   author=$(yq '.meta.author // "Unknown"' "$theme_file")
   variant=$(yq '.meta.variant // "dark"' "$theme_file")
-  nvim_cs=$(yq '.meta.neovim_colorscheme // .meta.slug // "unknown"' "$theme_file")
+  nvim_cs=$(yq '.meta.neovim_colorscheme_name // .meta.id // "unknown"' "$theme_file")
 
   if [[ "$format" == "full" ]]; then
     echo "Theme: $name"

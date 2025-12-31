@@ -1,10 +1,12 @@
 meta:
-  name: "Spacedust"
-  slug: "spacedust"
-  neovim_colorscheme: "spacedust"
-  author: "Ghostty"
+  id: "spacedust"
+  display_name: "Spacedust"
+  neovim_colorscheme_name: "spacedust"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#0a1e24"

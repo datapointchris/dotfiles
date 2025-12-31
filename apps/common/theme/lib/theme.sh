@@ -25,11 +25,11 @@ load_theme() {
   fi
 
   # Metadata (from meta section)
-  echo "THEME_NAME=\"$(theme_get '.meta.name' "$file")\""
+  echo "THEME_NAME=\"$(theme_get '.meta.display_name' "$file")\""
   echo "THEME_AUTHOR=\"$(theme_get '.meta.author' "$file")\""
   echo "THEME_VARIANT=\"$(theme_get '.meta.variant' "$file")\""
-  echo "THEME_SOURCE=\"$(theme_get '.meta.source' "$file")\""
-  echo "THEME_SLUG=\"$(theme_get '.meta.slug' "$file")\""
+  echo "THEME_SOURCE=\"$(theme_get '.meta.derived_from' "$file")\""
+  echo "THEME_SLUG=\"$(theme_get '.meta.id' "$file")\""
 
   # Base16 palette (from base16 section, not palette)
   echo "BASE00=\"$(theme_get '.base16.base00' "$file")\""

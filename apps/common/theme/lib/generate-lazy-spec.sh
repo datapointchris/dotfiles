@@ -40,8 +40,8 @@ for theme_dir in "$THEME_DIR"/*/; do
 
   # Get metadata from theme.yml
   if [[ -f "$theme_file" ]]; then
-    name=$(yq -r '.meta.name // ""' "$theme_file")
-    source=$(yq -r '.meta.source // ""' "$theme_file")
+    name=$(yq -r '.meta.display_name // ""' "$theme_file")
+    source=$(yq -r '.meta.derived_from // ""' "$theme_file")
   else
     name="$theme_name"
     source="unknown"

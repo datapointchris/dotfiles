@@ -1,10 +1,12 @@
 meta:
-  name: "Treehouse"
-  slug: "treehouse"
-  neovim_colorscheme: "treehouse"
-  author: "Ghostty"
+  id: "treehouse"
+  display_name: "Treehouse"
+  neovim_colorscheme_name: "treehouse"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "ghostty-builtin"
   variant: "dark"
-  source: "Ghostty built-in theme"
+  author: "Ghostty"
 
 base16:
   base00: "#191919"
