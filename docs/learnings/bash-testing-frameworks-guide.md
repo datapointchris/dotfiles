@@ -1232,25 +1232,24 @@ show_menu() {
 
 ## Example Test Structure for Menu System
 
-Based on the dotfiles menu system at `/Users/chris/dotfiles/common/.local/bin/menu`:
+Based on the dotfiles menu system at `apps/common/menu`:
 
 ### Project Structure
 
 ```text
 dotfiles/
-├── common/
-│   └── .local/
-│       └── bin/
-│           ├── menu                 # Main menu script
-│           └── menu-lib.sh          # Extracted functions
-└── test/
-    ├── bats/                        # or shellspec/
+├── apps/
+│   └── common/
+│       ├── menu                 # Main menu script
+│       └── menu-lib.sh          # Extracted functions (hypothetical)
+└── tests/
+    ├── bats/                    # or shellspec/
     ├── test_helper/
     │   ├── bats-support/
     │   ├── bats-assert/
     │   └── mocks/
-    │       ├── gum                  # Mock gum command
-    │       └── fzf                  # Mock fzf command
+    │       ├── gum              # Mock gum command
+    │       └── fzf              # Mock fzf command
     └── menu_test.bats
 ```
 
@@ -1297,7 +1296,7 @@ load 'test_helper/bats-assert/load'
 
 setup() {
     # Source the library
-    source "${BATS_TEST_DIRNAME}/../common/.local/bin/menu-lib.sh"
+    source "${BATS_TEST_DIRNAME}/../apps/common/menu-lib.sh"
 
     # Create test menu directory
     TEST_MENU_DIR=$(mktemp -d)
@@ -1353,7 +1352,7 @@ teardown() {
 ```bash
 #shellcheck shell=bash
 
-Include common/.local/bin/menu-lib.sh
+Include apps/common/menu-lib.sh
 
 Describe 'Menu Library'
   setup() {
@@ -1454,10 +1453,10 @@ Based on your menu system and dotfiles structure, here's my recommendation:
 
 4. **Add Task automation:**
 
-   ```yaml
-   # taskfiles/test.yml
-   version: '3'
+   Tasks are defined in the root `Taskfile.yml`:
 
+   ```yaml
+   # Taskfile.yml (test tasks section)
    tasks:
      test:
        desc: Run all tests
@@ -1468,11 +1467,6 @@ Based on your menu system and dotfiles structure, here's my recommendation:
        desc: Run tests on file changes
        cmds:
          - watchexec -e sh,bash,bats -- task test
-
-     test:coverage:
-       desc: Run tests with coverage
-       cmds:
-         - bashcov -- bats test/
    ```
 
 5. **Add pre-commit hook:**
