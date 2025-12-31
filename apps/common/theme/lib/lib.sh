@@ -109,15 +109,43 @@ list_themes() {
   get_theme_names
 }
 
+get_theme_display_info() {
+  local theme="$1"
+  local theme_file="$THEMES_DIR/$theme/theme.yml"
+
+  if [[ ! -f "$theme_file" ]]; then
+    echo "$theme"
+    return
+  fi
+
+  local display_name source_type
+  display_name=$(yq -r '.meta.display_name // ""' "$theme_file" 2>/dev/null)
+  source_type=$(yq -r '.meta.neovim_colorscheme_source // ""' "$theme_file" 2>/dev/null)
+
+  if [[ -z "$display_name" ]]; then
+    display_name="$theme"
+  fi
+
+  local source_label=""
+  case "$source_type" in
+    generated) source_label=" (Generated)" ;;
+    plugin) source_label=" (Neovim Plugin)" ;;
+  esac
+
+  echo "${display_name}${source_label}"
+}
+
 list_themes_with_status() {
   local current
   current=$(get_current_theme 2>/dev/null || echo "")
 
   while IFS= read -r theme; do
+    local display_info
+    display_info=$(get_theme_display_info "$theme")
     if [[ "$theme" == "$current" ]]; then
-      echo "● $theme (current)"
+      echo "● $display_info (current)"
     else
-      echo "  $theme"
+      echo "  $display_info"
     fi
   done < <(get_theme_names)
 }
