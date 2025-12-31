@@ -176,7 +176,7 @@ func (m model) View() string {
 
 **Message Flow:**
 
-```
+```text
 User Input → Msg → Update(model, msg) → (new model, Cmd)
                                              ↓
                                       View(model) → String
@@ -438,7 +438,7 @@ func switchSession(name string) tea.Cmd {
 
 ### Recommended Structure
 
-```
+```text
 menu/
 ├── cmd/
 │   ├── root.go           # Main command
@@ -595,7 +595,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 **Phase 4 - Polish:**
 
-- Themes (matching tinty)
+- Themes (matching theme system)
 - Configuration UI
 - Plugin system
 - Statistics and analytics

@@ -463,18 +463,19 @@ Most popular Hyprland rices use **wallpaper-driven theming**:
 
 **ML4W uses this approach** with Material Design color extraction.
 
-### Base16 Theming (Your Current Approach)
+### Unified Theme System (Your Current Approach)
 
-Your dotfiles use **tinty** for Base16 theme coordination. This approach:
+Your dotfiles use a custom **theme** tool for unified theming. This approach:
 
-1. Choose a Base16 theme (e.g., gruvbox-dark-hard, kanagawa)
-2. Tinty applies it to: tmux, bat, fzf, shell
+1. Choose a theme (e.g., gruvbox-dark-hard, kanagawa, rose-pine)
+2. `theme apply <name>` generates configs for: Ghostty, tmux, btop, Neovim
 3. Consistent colors regardless of wallpaper
+4. Themes defined in `apps/common/theme/themes/` with generators for each app
 
 **For Hyprland integration:**
 
-- Tinty can generate Hyprland color configs
-- Waybar can use Base16 CSS
+- Theme system already has generators for Hyprland, Waybar, Walker, etc.
+- Each theme can generate CSS/conf for Hyprland components
 - This approach is more "functional" vs "aesthetic-first"
 
 ### Recommendation
@@ -482,7 +483,7 @@ Your dotfiles use **tinty** for Base16 theme coordination. This approach:
 For your use case (development-focused, not rice-focused):
 
 1. Start with a minimal config without heavy theming
-2. Use your existing Base16/tinty approach for colors
+2. Use your existing theme system for colors
 3. Add visual polish incrementally as desired
 4. Keep wallpaper separate from color scheme
 

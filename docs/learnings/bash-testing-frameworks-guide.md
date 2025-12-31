@@ -1449,7 +1449,6 @@ Based on your menu system and dotfiles structure, here's my recommendation:
    │       ├── gum
    │       └── tmux
    ├── menu_test.bats
-   ├── theme-sync_test.bats
    └── tools_test.bats
    ```
 

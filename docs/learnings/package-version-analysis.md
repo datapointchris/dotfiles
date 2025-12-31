@@ -89,7 +89,6 @@ Tools:
   - zoxide
   - eza
   - git-delta
-  - tinty
   - cargo-update
 ```
 
@@ -184,7 +183,7 @@ cargo-binstall   GitHub releases
 ### Immediate Actions
 
 1. ✅ **Keep using apt for**: tmux, zsh, system utilities, multimedia tools
-2. ✅ **Switch to cargo-binstall for**: bat, fd, zoxide, eza, delta, tinty
+2. ✅ **Switch to cargo-binstall for**: bat, fd, zoxide, eza, delta
 3. ✅ **Switch to GitHub releases for**: fzf, neovim, lazygit, yq
 4. ✅ **Remove apt packages that conflict**: Remove fd-find, bat from apt when using cargo versions
 

@@ -26,61 +26,54 @@ apps/common/theme/
 
 ## Theme Categories
 
-### Winners (Custom Neovim Colorschemes)
+### Generated Themes (neovim_colorscheme_source: "generated")
 
-These themes have generated Neovim colorschemes that REPLACE original plugins:
+These themes have generated Neovim colorschemes from theme.yml:
 
-| Directory | Neovim Colorscheme | Notes |
-|-----------|-------------------|-------|
-| `gruvbox-dark-hard` | `gruvbox-dark-hard` | Ghostty-derived, neutral ANSI, brighter text |
-| `rose-pine-darker` | `rose-pine-darker` | Base16-derived, slightly darker background |
+| Directory | display_name | Notes |
+|-----------|-------------|-------|
+| `gruvbox-dark-hard` | Gruvbox Dark Hard | Ghostty-derived, neutral ANSI |
+| `rose-pine-darker` | Rose Pine Darker | Base16-derived, darker background |
 
-These are registered in `colorscheme-manager.lua` as local plugins and included in `good_colorschemes`.
+### Plugin Themes (neovim_colorscheme_source: "plugin")
 
-### Terminal Config Themes
+These themes provide terminal configs that match original Neovim plugins:
 
-These themes provide terminal configs (ghostty, tmux, btop) that match original Neovim plugins. Neovim loads the original plugin via `meta.neovim_colorscheme` field:
-
-| Directory | Neovim Plugin | neovim_colorscheme |
-|-----------|---------------|-------------------|
-| `gruvbox` | ellisonleao/gruvbox.nvim | `gruvbox` |
-| `rose-pine` | rose-pine/neovim | `rose-pine` |
-| `kanagawa` | rebelot/kanagawa.nvim | `kanagawa` |
-| `nordic` | AlexvZyl/nordic.nvim | `nordic` |
-| `terafox` | EdenEast/nightfox.nvim | `terafox` |
-| `nightfox` | EdenEast/nightfox.nvim | `nightfox` |
-| `carbonfox` | EdenEast/nightfox.nvim | `carbonfox` |
-| `solarized-osaka` | craftzdog/solarized-osaka.nvim | `solarized-osaka` |
-| `OceanicNext` | mhartington/oceanic-next | `OceanicNext` |
-| `github_dark_default` | projekt0n/github-nvim-theme | `github_dark_default` |
-| `github_dark_dimmed` | projekt0n/github-nvim-theme | `github_dark_dimmed` |
-| `flexoki-moon-*` | datapointchris/flexoki-moon-nvim | `flexoki-moon-*` |
-| `slate` | Vim built-in | `slate` |
-| `retrobox` | Vim built-in | `retrobox` |
+| Directory | display_name | neovim_colorscheme_name | plugin |
+|-----------|-------------|-------------------------|--------|
+| `gruvbox` | Gruvbox | `gruvbox` | ellisonleao/gruvbox.nvim |
+| `rose-pine` | Rose Pine | `rose-pine` | rose-pine/neovim |
+| `kanagawa` | Kanagawa | `kanagawa` | rebelot/kanagawa.nvim |
+| `nordic` | Nordic | `nordic` | AlexvZyl/nordic.nvim |
+| `terafox` | Terafox | `terafox` | EdenEast/nightfox.nvim |
+| `oceanic-next` | Oceanic Next | `OceanicNext` | mhartington/oceanic-next |
+| `github-dark-default` | GitHub Dark Default | `github_dark_default` | projekt0n/github-nvim-theme |
 
 ## Theme Files
 
 Each theme directory contains:
 
 ```text
-themes/{theme-name}/
+themes/{theme-id}/
 ├── theme.yml      # Source palette (required)
 ├── ghostty.conf   # Generated terminal colors
 ├── tmux.conf      # Generated tmux theme
 ├── btop.theme     # Generated btop theme
-└── neovim/        # Only for winners - generated colorscheme plugin
+└── neovim/        # Only for generated themes - colorscheme plugin
 ```
 
 ### theme.yml Format
 
 ```yaml
 meta:
-  name: "Theme Name"
-  slug: "theme-name"
-  neovim_colorscheme: "colorscheme-name"  # What Neovim loads (may differ from slug)
-  author: "Author"
+  id: "gruvbox-dark-hard"              # Directory name, lowercase-hyphen
+  display_name: "Gruvbox Dark Hard"    # Pretty name for UI
+  neovim_colorscheme_name: "gruvbox-dark-hard"  # What :colorscheme uses
+  neovim_colorscheme_source: "generated"  # "generated" or "plugin"
+  plugin: null                         # "author/repo" or null
+  derived_from: "ghostty-builtin"      # Where colors came from
   variant: "dark"
-  source: "neovim"
+  author: "morhetz"
 
 base16:
   base00: "#1d2021"  # Background through base0F
@@ -105,59 +98,62 @@ extended:
 ### Using Existing Themes
 
 ```bash
-theme preview                    # fzf selection
-theme preview kanagawa           # Direct preview
-theme apply kanagawa             # Apply to all apps
+theme list                       # List with display names
+theme change                     # Interactive picker
+theme apply gruvbox-dark-hard    # Apply by id
+theme current                    # Show current theme
+theme like "great contrast"      # Rate current theme
+theme reject "too bright"        # Remove from rotation
 ```
 
 ### Creating a New Theme
 
-1. Extract colors from Neovim plugin source (e.g., `palette.lua`)
-2. Create `themes/{name}/theme.yml` with base16, ansi, and special sections
-3. Set `meta.neovim_colorscheme` to the Neovim colorscheme name
+1. Create `themes/{id}/theme.yml` with meta, base16, ansi, and special sections
+2. Set `neovim_colorscheme_source: "plugin"` if using existing Neovim plugin
+3. Set `neovim_colorscheme_source: "generated"` if generating Neovim colorscheme
 4. Generate terminal configs:
 
 ```bash
 cd apps/common/theme
-bash lib/generators/ghostty.sh themes/{name}/theme.yml themes/{name}/ghostty.conf
-bash lib/generators/tmux.sh themes/{name}/theme.yml themes/{name}/tmux.conf
-bash lib/generators/btop.sh themes/{name}/theme.yml themes/{name}/btop.theme
+bash lib/generators/ghostty.sh themes/{id}/theme.yml themes/{id}/ghostty.conf
+bash lib/generators/tmux.sh themes/{id}/theme.yml themes/{id}/tmux.conf
+bash lib/generators/btop.sh themes/{id}/theme.yml themes/{id}/btop.theme
 ```
 
-### Creating a Winner Theme
+### Creating a Generated Neovim Colorscheme
 
-If the generated theme should REPLACE the original in Neovim:
+If creating a new colorscheme (not using a plugin):
 
 1. Generate Neovim colorscheme:
 
    ```bash
-   cd /tmp && uv run --with pyyaml python3 ~/dotfiles/apps/common/theme/lib/neovim_generator.py ~/dotfiles/apps/common/theme/themes/{name}
+   uv run --with pyyaml python3 ~/dotfiles/apps/common/theme/lib/neovim_generator.py ~/dotfiles/apps/common/theme/themes/{id}
    ```
 
-2. Add to `colorscheme-manager.lua`:
-
-   ```lua
-   {
-     dir = vim.fn.expand('~/dotfiles/apps/common/theme/themes/{name}/neovim'),
-     name = '{name}',
-     lazy = false,
-   },
-   ```
-
-3. Add to `good_colorschemes` list in the same file
+2. The colorscheme is auto-loaded by `colorscheme-manager.lua` which scans for `neovim/` directories
 
 ## Key Insights
 
-- **Same palette ≠ same result**: Hand-crafted Neovim plugins (kanagawa, nordic) often look better than mechanically generated colorschemes using the same colors
-- **Winners are rare**: Most themes work best with original Neovim plugin + generated terminal configs
-- **The `neovim_colorscheme` field is critical**: Theme preview uses it to load the correct colorscheme
+- **Same palette ≠ same result**: Hand-crafted Neovim plugins often look better than generated colorschemes
+- **Generated themes are rare**: Most themes work best with original Neovim plugin + generated terminal configs
+- **neovim_colorscheme_name may differ from id**: e.g., `oceanic-next` directory uses `OceanicNext` colorscheme
+
+## Neovim Integration
+
+The `colorscheme-manager.lua` plugin:
+
+- Dynamically loads generated colorschemes from `themes/*/neovim/` directories
+- Builds display name mapping from theme.yml meta fields
+- Filters rejected themes from the picker
+- Watches `~/.local/share/theme/current` for changes (auto-updates when `theme apply` runs)
 
 ## Files Reference
 
 | File | Purpose |
 |------|---------|
-| `bin/theme` | Theme CLI (preview, apply, favorites) |
+| `bin/theme` | Theme CLI (apply, list, like/dislike, reject) |
+| `lib/lib.sh` | Core functions (get_theme_display_info, apply_theme_to_apps) |
+| `lib/theme.sh` | Loads theme.yml into shell variables for generators |
+| `lib/storage.sh` | History and rejected themes storage |
 | `lib/neovim_generator.py` | Generates Neovim colorscheme from theme.yml |
 | `lib/generators/*.sh` | Terminal config generators |
-| `analysis/EXPERIMENT_SUMMARY.md` | ML experiment summary |
-| `analysis/GRUVBOX_SOURCE_COMPARISON.md` | Source comparison reference |
