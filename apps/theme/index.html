@@ -4529,52 +4529,171 @@
 
 
 <h1 id="theme-tool">Theme Tool<a class="headerlink" href="#theme-tool" title="Permanent link">&para;</a></h1>
-<p>Unified theme generation and management across terminal applications. Apply consistent color schemes to Ghostty, tmux, btop, and Neovim from a single source.</p>
+<p>Unified theme generation and management across terminal and desktop applications. Apply consistent color schemes from a single <code>theme.yml</code> source to terminals, status bars, notification daemons, window managers, and more.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme<span class="w"> </span>list<span class="w">               </span><span class="c1"># List available themes</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme<span class="w"> </span>apply<span class="w"> </span>rose-pine<span class="w">    </span><span class="c1"># Apply theme to all apps</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme<span class="w"> </span>current<span class="w">            </span><span class="c1"># Show current theme</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme<span class="w"> </span>preview<span class="w">            </span><span class="c1"># Interactive preview with fzf</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>theme<span class="w"> </span>list<span class="w">               </span><span class="c1"># List available themes with display names</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>theme<span class="w"> </span>change<span class="w">             </span><span class="c1"># Interactive picker with preview</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>theme<span class="w"> </span>apply<span class="w"> </span>rose-pine<span class="w">    </span><span class="c1"># Apply theme to all apps</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>theme<span class="w"> </span>current<span class="w">            </span><span class="c1"># Show current theme</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>theme<span class="w"> </span>random<span class="w">             </span><span class="c1"># Apply random theme</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>theme<span class="w"> </span>like<span class="w"> </span><span class="s2">&quot;reason&quot;</span><span class="w">      </span><span class="c1"># Like current theme</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>theme<span class="w"> </span>reject<span class="w"> </span><span class="s2">&quot;reason&quot;</span><span class="w">    </span><span class="c1"># Remove theme from rotation</span>
 </span></code></pre></div>
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
 <h3 id="viewing">Viewing<a class="headerlink" href="#viewing" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>theme current</code> - Show active theme</li>
-<li><code>theme list</code> - List all available themes</li>
-<li><code>theme preview</code> - Interactive fzf preview with live terminal preview</li>
-<li><code>theme preview &lt;name&gt;</code> - Preview specific theme</li>
+<li><code>theme current</code> - Show active theme with stats</li>
+<li><code>theme list</code> - List all available themes with display names</li>
+<li><code>theme change</code> - Interactive fzf picker with image preview</li>
+<li><code>theme info &lt;name&gt;</code> - Show theme details</li>
 </ul>
 <h3 id="applying-themes">Applying Themes<a class="headerlink" href="#applying-themes" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>theme apply &lt;name&gt;</code> - Apply theme to Ghostty, tmux, btop, and Neovim</li>
-<li><code>theme random</code> - Apply random theme from library</li>
+<li><code>theme apply &lt;name&gt;</code> - Apply theme to all platform apps (see table above)</li>
+<li><code>theme random</code> - Apply random theme from available pool</li>
 </ul>
-<h3 id="tracking">Tracking<a class="headerlink" href="#tracking" title="Permanent link">&para;</a></h3>
+<h3 id="rating-filtering">Rating &amp; Filtering<a class="headerlink" href="#rating-filtering" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>theme like [message]</code> - Like current theme with optional reason</li>
 <li><code>theme dislike [message]</code> - Dislike current theme with optional reason</li>
+<li><code>theme reject &lt;message&gt;</code> - Remove theme from rotation permanently</li>
+<li><code>theme rejected</code> - List rejected themes</li>
+<li><code>theme unreject</code> - Restore a rejected theme</li>
+<li><code>theme rank</code> - Show themes ranked by score</li>
 </ul>
-<p>All tracking actions log to per-platform history files for cross-platform rankings.</p>
+<p>All actions log to per-platform history files for cross-platform rankings.</p>
+<h2 id="supported-applications">Supported Applications<a class="headerlink" href="#supported-applications" title="Permanent link">&para;</a></h2>
+<p>The theme system applies colors to different apps depending on your platform:</p>
+<table>
+<thead>
+<tr>
+<th>Application</th>
+<th style="text-align: center;">macOS</th>
+<th style="text-align: center;">Arch</th>
+<th style="text-align: center;">WSL</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ghostty</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>GPU-accelerated terminal</td>
+</tr>
+<tr>
+<td>Kitty</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>Feature-rich terminal</td>
+</tr>
+<tr>
+<td>tmux</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td>Terminal multiplexer</td>
+</tr>
+<tr>
+<td>btop</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td>System monitor</td>
+</tr>
+<tr>
+<td>Neovim</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td>Editor (via colorscheme-manager)</td>
+</tr>
+<tr>
+<td>JankyBorders</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td>Window border highlights</td>
+</tr>
+<tr>
+<td>Wallpaper</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td>Generated desktop wallpaper</td>
+</tr>
+<tr>
+<td>Hyprland</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>Window manager colors</td>
+</tr>
+<tr>
+<td>Waybar</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>Status bar</td>
+</tr>
+<tr>
+<td>Hyprlock</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>Lock screen</td>
+</tr>
+<tr>
+<td>Dunst</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>Notification daemon</td>
+</tr>
+<tr>
+<td>Rofi</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td>Application launcher</td>
+</tr>
+<tr>
+<td>Windows Terminal</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">✓</td>
+<td>WSL terminal colors</td>
+</tr>
+</tbody>
+</table>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>Each theme is defined in a <code>theme.yml</code> source file containing:</p>
 <ul>
 <li><strong>base16</strong>: 16 base colors (base00-base0F)</li>
 <li><strong>ansi</strong>: 16 ANSI terminal colors (black, red, green, etc.)</li>
 <li><strong>special</strong>: Background, foreground, cursor colors</li>
-<li><strong>meta</strong>: Theme name, slug, Neovim colorscheme name</li>
+<li><strong>meta</strong>: Theme metadata (id, display_name, neovim_colorscheme_name, etc.)</li>
 </ul>
 <p>Generators create app-specific configs from this source:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>themes/{name}/
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── theme.yml      # Source palette
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── ghostty.conf   # Generated terminal colors
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── tmux.conf      # Generated tmux theme
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── btop.theme     # Generated btop theme
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>└── neovim/        # Generated colorscheme (for &quot;winner&quot; themes)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>themes/{id}/
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── theme.yml           # Source palette (required)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── ghostty.conf        # Terminal colors
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── kitty.conf          # Kitty terminal
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── tmux.conf           # tmux status bar
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── btop.theme          # System monitor
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>├── bordersrc           # JankyBorders (macOS)
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>├── hyprland.conf       # Window manager (Arch)
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>├── waybar.css          # Status bar (Arch)
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>├── hyprlock.conf       # Lock screen (Arch)
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>├── dunst.conf          # Notifications (Arch)
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>├── rofi.rasi           # App launcher (Arch)
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>├── windows-terminal.json  # WSL terminal
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>└── neovim/             # Generated colorscheme (optional)
 </span></code></pre></div>
 <h2 id="theme-categories">Theme Categories<a class="headerlink" href="#theme-categories" title="Permanent link">&para;</a></h2>
-<h3 id="terminal-config-themes">Terminal Config Themes<a class="headerlink" href="#terminal-config-themes" title="Permanent link">&para;</a></h3>
+<h3 id="plugin-themes-neovim_colorscheme_source-plugin">Plugin Themes (neovim_colorscheme_source: "plugin")<a class="headerlink" href="#plugin-themes-neovim_colorscheme_source-plugin" title="Permanent link">&para;</a></h3>
 <p>Most themes provide terminal configs that match existing Neovim plugins:</p>
 <table>
 <thead>
@@ -4600,15 +4719,11 @@
 <td>gruvbox</td>
 <td>ellisonleao/gruvbox.nvim</td>
 </tr>
-<tr>
-<td>catppuccin-*</td>
-<td>catppuccin/nvim</td>
-</tr>
 </tbody>
 </table>
 <p>When applied, Neovim loads the original plugin colorscheme.</p>
-<h3 id="winner-themes">Winner Themes<a class="headerlink" href="#winner-themes" title="Permanent link">&para;</a></h3>
-<p>Some themes have custom-generated Neovim colorschemes that replace original plugins:</p>
+<h3 id="generated-themes-neovim_colorscheme_source-generated">Generated Themes (neovim_colorscheme_source: "generated")<a class="headerlink" href="#generated-themes-neovim_colorscheme_source-generated" title="Permanent link">&para;</a></h3>
+<p>Some themes have custom-generated Neovim colorschemes:</p>
 <table>
 <thead>
 <tr>
@@ -4627,31 +4742,109 @@
 </tr>
 </tbody>
 </table>
-<p>These are registered as local plugins in Neovim's colorscheme manager.</p>
+<p>These are auto-loaded from the <code>neovim/</code> directory in each theme folder.</p>
+<h2 id="neovim-integration">Neovim Integration<a class="headerlink" href="#neovim-integration" title="Permanent link">&para;</a></h2>
+<p>The theme system integrates with Neovim via <code>colorscheme-manager.lua</code>:</p>
+<ul>
+<li>Auto-loads generated colorschemes from <code>themes/*/neovim/</code> directories</li>
+<li>Watches <code>~/.local/share/theme/current</code> for changes</li>
+<li>When <code>theme apply</code> runs, Neovim automatically switches colorschemes</li>
+<li>Rejected themes are filtered from the Neovim colorscheme picker (<code>&lt;leader&gt;fz</code>)</li>
+<li>Display names shown in picker (e.g., "Gruvbox Dark Hard (Generated)")</li>
+</ul>
 <h2 id="data-history">Data &amp; History<a class="headerlink" href="#data-history" title="Permanent link">&para;</a></h2>
 <p>Theme history is stored in per-platform JSONL files:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>apps/common/theme/data/
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── history-macos.jsonl
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── history-arch.jsonl
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└── history-wsl.jsonl
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── history-wsl.jsonl
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>└── rejected-themes.json
 </span></code></pre></div>
 <p>Rankings combine data across all platforms for consistent preferences.</p>
+<h2 id="wallpaper-generator">Wallpaper Generator<a class="headerlink" href="#wallpaper-generator" title="Permanent link">&para;</a></h2>
+<p>On macOS, <code>theme apply</code> generates a themed wallpaper using ImageMagick. Each apply picks a random style:</p>
+<table>
+<thead>
+<tr>
+<th>Style</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>plasma</td>
+<td>Fractal plasma clouds with theme accent colors</td>
+</tr>
+<tr>
+<td>geometric</td>
+<td>Random geometric shapes</td>
+</tr>
+<tr>
+<td>hexagons</td>
+<td>Honeycomb pattern</td>
+</tr>
+<tr>
+<td>circles</td>
+<td>Overlapping circles</td>
+</tr>
+</tbody>
+</table>
+<p>Wallpapers are saved to <code>~/.local/share/theme/wallpaper.png</code> and set as the desktop background automatically.</p>
+<p>Generate manually with a specific style:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/theme
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>bash<span class="w"> </span>lib/generators/wallpaper.sh<span class="w"> </span>themes/rose-pine/theme.yml<span class="w"> </span>/tmp/wall.png<span class="w"> </span>plasma<span class="w"> </span><span class="m">3840</span><span class="w"> </span><span class="m">2160</span>
+</span></code></pre></div>
 <h2 id="creating-themes">Creating Themes<a class="headerlink" href="#creating-themes" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Extract colors from Neovim plugin source (palette.lua or similar)</li>
-<li>Create <code>themes/{name}/theme.yml</code> with base16, ansi, and special sections</li>
-<li>Set <code>meta.neovim_colorscheme</code> to the Neovim colorscheme name</li>
-<li>Generate terminal configs:</li>
+<li>Create <code>themes/{id}/theme.yml</code> with meta, base16, ansi, and special sections</li>
+<li>Set <code>neovim_colorscheme_source: "plugin"</code> if using existing Neovim plugin</li>
+<li>Set <code>neovim_colorscheme_source: "generated"</code> if generating Neovim colorscheme</li>
+<li>Generate app configs using the generators in <code>lib/generators/</code>:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/theme
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>bash<span class="w"> </span>lib/generators/ghostty.sh<span class="w"> </span>themes/<span class="o">{</span>name<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>name<span class="o">}</span>/ghostty.conf
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>bash<span class="w"> </span>lib/generators/tmux.sh<span class="w"> </span>themes/<span class="o">{</span>name<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>name<span class="o">}</span>/tmux.conf
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>bash<span class="w"> </span>lib/generators/btop.sh<span class="w"> </span>themes/<span class="o">{</span>name<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>name<span class="o">}</span>/btop.theme
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/theme
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Core apps (all platforms)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>bash<span class="w"> </span>lib/generators/ghostty.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/ghostty.conf
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>bash<span class="w"> </span>lib/generators/kitty.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/kitty.conf
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>bash<span class="w"> </span>lib/generators/tmux.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/tmux.conf
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>bash<span class="w"> </span>lib/generators/btop.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/btop.theme
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1"># macOS</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>bash<span class="w"> </span>lib/generators/borders.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/bordersrc
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c1"># Arch/Hyprland</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>bash<span class="w"> </span>lib/generators/hyprland.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/hyprland.conf
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>bash<span class="w"> </span>lib/generators/waybar.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/waybar.css
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>bash<span class="w"> </span>lib/generators/hyprlock.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/hyprlock.conf
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>bash<span class="w"> </span>lib/generators/dunst.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/dunst.conf
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>bash<span class="w"> </span>lib/generators/rofi.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/rofi.rasi
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="c1"># WSL</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>bash<span class="w"> </span>lib/generators/windows-terminal.sh<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/theme.yml<span class="w"> </span>themes/<span class="o">{</span>id<span class="o">}</span>/windows-terminal.json
 </span></code></pre></div>
-<h2 id="favorite-themes">Favorite Themes<a class="headerlink" href="#favorite-themes" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>rose-pine              rose-pine-moon         kanagawa
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>gruvbox-dark-hard      nordic                 terafox
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>catppuccin-mocha       solarized-osaka        tokyo-night-dark
+<h2 id="themeyml-schema">theme.yml Schema<a class="headerlink" href="#themeyml-schema" title="Permanent link">&para;</a></h2>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">meta</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gruvbox-dark-hard&quot;</span><span class="w">              </span><span class="c1"># Directory name, lowercase-hyphen</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Gruvbox</span><span class="nv"> </span><span class="s">Dark</span><span class="nv"> </span><span class="s">Hard&quot;</span><span class="w">    </span><span class="c1"># Pretty name for UI</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">neovim_colorscheme_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gruvbox-dark-hard&quot;</span><span class="w">  </span><span class="c1"># What :colorscheme uses</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">neovim_colorscheme_source</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;generated&quot;</span><span class="w">  </span><span class="c1"># &quot;generated&quot; or &quot;plugin&quot;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">                         </span><span class="c1"># &quot;author/repo&quot; or null</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">derived_from</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ghostty-builtin&quot;</span><span class="w">      </span><span class="c1"># Where colors came from</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="nt">variant</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dark&quot;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span><span class="nt">author</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;morhetz&quot;</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="nt">base16</span><span class="p">:</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="nt">base00</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#1d2021&quot;</span><span class="w">  </span><span class="c1"># Background</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="c1"># ... base01-base0F</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="nt">ansi</span><span class="p">:</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">  </span><span class="nt">black</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#...&quot;</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">  </span><span class="c1"># ... 16 ANSI colors</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="nt">special</span><span class="p">:</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span><span class="nt">background</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#...&quot;</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">  </span><span class="nt">foreground</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#...&quot;</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">  </span><span class="nt">cursor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#...&quot;</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

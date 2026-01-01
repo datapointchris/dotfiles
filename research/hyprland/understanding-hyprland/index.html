@@ -5085,24 +5085,25 @@
 <li>Everything matches your wallpaper</li>
 </ol>
 <p><strong>ML4W uses this approach</strong> with Material Design color extraction.</p>
-<h3 id="base16-theming-your-current-approach">Base16 Theming (Your Current Approach)<a class="headerlink" href="#base16-theming-your-current-approach" title="Permanent link">&para;</a></h3>
-<p>Your dotfiles use <strong>tinty</strong> for Base16 theme coordination. This approach:</p>
+<h3 id="unified-theme-system-your-current-approach">Unified Theme System (Your Current Approach)<a class="headerlink" href="#unified-theme-system-your-current-approach" title="Permanent link">&para;</a></h3>
+<p>Your dotfiles use a custom <strong>theme</strong> tool for unified theming. This approach:</p>
 <ol>
-<li>Choose a Base16 theme (e.g., gruvbox-dark-hard, kanagawa)</li>
-<li>Tinty applies it to: tmux, bat, fzf, shell</li>
+<li>Choose a theme (e.g., gruvbox-dark-hard, kanagawa, rose-pine)</li>
+<li><code>theme apply &lt;name&gt;</code> generates configs for: Ghostty, tmux, btop, Neovim</li>
 <li>Consistent colors regardless of wallpaper</li>
+<li>Themes defined in <code>apps/common/theme/themes/</code> with generators for each app</li>
 </ol>
 <p><strong>For Hyprland integration:</strong></p>
 <ul>
-<li>Tinty can generate Hyprland color configs</li>
-<li>Waybar can use Base16 CSS</li>
+<li>Theme system already has generators for Hyprland, Waybar, Walker, etc.</li>
+<li>Each theme can generate CSS/conf for Hyprland components</li>
 <li>This approach is more "functional" vs "aesthetic-first"</li>
 </ul>
 <h3 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h3>
 <p>For your use case (development-focused, not rice-focused):</p>
 <ol>
 <li>Start with a minimal config without heavy theming</li>
-<li>Use your existing Base16/tinty approach for colors</li>
+<li>Use your existing theme system for colors</li>
 <li>Add visual polish incrementally as desired</li>
 <li>Keep wallpaper separate from color scheme</li>
 </ol>
