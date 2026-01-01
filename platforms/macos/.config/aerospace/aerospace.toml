@@ -66,9 +66,6 @@ cmd-m = []     # disable minimize window
 # Terminal
 alt-enter = 'exec-and-forget open -na Ghostty'
 
-# Menu
-alt-shift-m = 'exec-and-forget ghostty -e menu'
-
 # Focus navigation (vim-style)
 alt-h = 'focus left'
 alt-j = 'focus down'
@@ -126,8 +123,7 @@ alt-shift-a = 'move-node-to-workspace A'
 alt-shift-b = 'move-node-to-workspace B'
 alt-shift-d = 'move-node-to-workspace D'
 alt-shift-e = 'move-node-to-workspace E'
-# alt-shift-m is already used for menu, use ctrl-alt-m instead
-ctrl-alt-m = 'move-node-to-workspace M'
+alt-shift-m = 'move-node-to-workspace M'
 alt-shift-s = 'move-node-to-workspace S'
 alt-shift-x = 'move-node-to-workspace X'
 alt-shift-z = 'move-node-to-workspace Z'
