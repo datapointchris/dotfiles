@@ -49,12 +49,16 @@ repos:
       - id: markdownlint
         args: [--fix]
         stages: [pre-commit]
-  - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0
+  # Using local shellcheck instead of Docker-based shellcheck-precommit
+  # Requires: brew install shellcheck (already installed)
+  - repo: local
     hooks:
       - id: shellcheck
+        name: ShellCheck
+        entry: shellcheck
+        language: system
+        types: [shell]
         stages: [pre-commit]
-      #       args: ["--severity=warning"]  # Optionally only show errors and warnings
   - repo: https://github.com/JohnnyMorganz/StyLua
     rev: v0.20.0
     hooks:
