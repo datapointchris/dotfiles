@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Generate btop theme from theme.yml or palette.yml
 # Usage: btop.sh <theme.yml|palette.yml> [output-file]
+#
+# Enhanced generator using FULL color palette:
+# - All 16 base16 colors utilized
+# - Semantic color choices for meters and graphs
 
 set -euo pipefail
 
@@ -101,6 +105,20 @@ theme[download_end]="$(to_upper "$BASE06")"
 theme[upload_start]="$(to_upper "$BASE0E")"
 theme[upload_mid]="$(to_upper "$BASE0D")"
 theme[upload_end]="$(to_upper "$BASE06")"
+
+# Process tree colors
+# base0F = brown/secondary for tree structure
+theme[process_start]="$(to_upper "$BASE0D")"
+theme[process_mid]="$(to_upper "$BASE0F")"
+theme[process_end]="$(to_upper "$BASE08")"
+
+# Meter background
+# base04 = dark foreground for subtle meter backgrounds
+theme[meter_bg]="$(to_upper "$BASE04")"
+
+# Graph text (brightest for readability)
+# base07 = brightest foreground
+theme[graph_text]="$(to_upper "$BASE07")"
 EOF
 }
 
