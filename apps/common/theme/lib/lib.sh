@@ -301,6 +301,33 @@ apply_btop() {
   return 0
 }
 
+# Apply JankyBorders theme (macOS)
+apply_borders() {
+  local theme="$1"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
+
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/bordersrc" ]]; then
+    return 1
+  fi
+
+  local borders_dir="$HOME/.config/borders"
+  mkdir -p "$borders_dir"
+
+  cp "$lib_path/bordersrc" "$borders_dir/bordersrc"
+  chmod +x "$borders_dir/bordersrc"
+
+  # Restart borders if running
+  if pgrep -x "borders" &>/dev/null; then
+    pkill -x "borders" 2>/dev/null || true
+    sleep 0.5
+    "$borders_dir/bordersrc" &
+    disown
+  fi
+
+  return 0
+}
+
 # Apply Hyprland theme (Arch)
 apply_hyprland() {
   local theme="$1"
@@ -491,6 +518,15 @@ apply_theme_to_apps() {
       applied+=("kitty")
     else
       skipped+=("kitty")
+    fi
+  fi
+
+  # JankyBorders (macOS only)
+  if [[ "$platform" == "macos" ]]; then
+    if apply_borders "$theme" 2>/dev/null; then
+      applied+=("borders")
+    else
+      skipped+=("borders")
     fi
   fi
 

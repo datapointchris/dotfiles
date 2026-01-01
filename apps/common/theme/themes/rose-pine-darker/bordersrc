@@ -1,0 +1,23 @@
+#!/bin/bash
+# Rose Pine Darker - JankyBorders theme
+# Generated from theme.yml
+# Author: Emilia Dunfelt <edun@dunfelt.se>
+
+options=(
+  style=round
+  width=8.0
+  hidpi=on
+
+  # Active window - accent color (base0D)
+  active_color=0xffc4a7e7
+
+  # Inactive windows - subtle border (base02)
+  inactive_color=0xff26233a
+
+  # Glow effect using accent color
+  active_color='glow(0xffc4a7e7)'
+
+  blacklist="System Settings|System Information|QuickTime Player"
+)
+
+borders "${options[@]}"

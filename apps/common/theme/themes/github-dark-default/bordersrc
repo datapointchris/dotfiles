@@ -1,0 +1,23 @@
+#!/bin/bash
+# GitHub Dark Default - JankyBorders theme
+# Generated from theme.yml
+# Author: Projekt0n
+
+options=(
+  style=round
+  width=8.0
+  hidpi=on
+
+  # Active window - accent color (base0D)
+  active_color=0xff79c0ff
+
+  # Inactive windows - subtle border (base02)
+  inactive_color=0xff21262d
+
+  # Glow effect using accent color
+  active_color='glow(0xff79c0ff)'
+
+  blacklist="System Settings|System Information|QuickTime Player"
+)
+
+borders "${options[@]}"

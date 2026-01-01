@@ -1,0 +1,23 @@
+#!/bin/bash
+# Spacegray Eighties - JankyBorders theme
+# Generated from theme.yml
+# Author: Ghostty
+
+options=(
+  style=round
+  width=8.0
+  hidpi=on
+
+  # Active window - accent color (base0D)
+  active_color=0xff5486c0
+
+  # Inactive windows - subtle border (base02)
+  inactive_color=0xff272e35
+
+  # Glow effect using accent color
+  active_color='glow(0xff5486c0)'
+
+  blacklist="System Settings|System Information|QuickTime Player"
+)
+
+borders "${options[@]}"

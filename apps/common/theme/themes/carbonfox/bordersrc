@@ -1,0 +1,23 @@
+#!/bin/bash
+# Carbonfox - JankyBorders theme
+# Generated from theme.yml
+# Author: EdenEast
+
+options=(
+  style=round
+  width=8.0
+  hidpi=on
+
+  # Active window - accent color (base0D)
+  active_color=0xff78A9FF
+
+  # Inactive windows - subtle border (base02)
+  inactive_color=0xff252525
+
+  # Glow effect using accent color
+  active_color='glow(0xff78A9FF)'
+
+  blacklist="System Settings|System Information|QuickTime Player"
+)
+
+borders "${options[@]}"
