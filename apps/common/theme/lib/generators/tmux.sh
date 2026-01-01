@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Generate tmux config from theme.yml or palette.yml
 # Usage: tmux.sh <theme.yml|palette.yml> [output-file]
+#
+# Enhanced generator using FULL color palette:
+# - All 16 base16 colors
+# - ANSI colors for semantic meaning (red=alert, green=success)
+# - Special colors for consistency with terminal
 
 set -euo pipefail
 
@@ -23,49 +28,119 @@ generate() {
 # ${THEME_NAME} - tmux theme
 # Generated from theme.yml
 # Author: ${THEME_AUTHOR}
+#
+# Color mapping:
+#   Background tones: base00 (main), base01 (panels), base02 (selection)
+#   Foreground tones: base03 (muted), base04 (dim), base05 (normal), base06 (bright), base07 (brightest)
+#   Accents: base08 (red), base09 (orange), base0A (yellow), base0B (green),
+#            base0C (cyan), base0D (blue), base0E (magenta), base0F (brown)
 
-# Default statusbar colors
-# base00 = main background (matches terminal)
-# base04 = dark foreground (status bar text)
+# ==============================================================================
+# STATUS BAR
+# ==============================================================================
+
+# Main status bar style
+# base00 = main background, base04 = dim foreground for status text
 set-option -g status-style "fg=${BASE04},bg=${BASE00}"
 
-# Default window title colors
+# ==============================================================================
+# WINDOW STATUS
+# ==============================================================================
+
+# Inactive window titles
+# base04 = dim foreground, base00 = main background
 set-window-option -g window-status-style "fg=${BASE04},bg=${BASE00}"
 
-# Active window title colors
-# base0A = yellow accent for current window
-set-window-option -g window-status-current-style "fg=${BASE0A},bg=${BASE00}"
+# Current/active window - use orange (base09) for high visibility
+# ANSI black for deeper contrast on current window
+set-window-option -g window-status-current-style "fg=${BASE09},bg=${ANSI_BLACK},bold"
 
-# Pane border colors
-# base01 = subtle border, base04 = visible active border
-set-option -g pane-border-style "fg=${BASE01}"
-set-option -g pane-active-border-style "fg=${BASE04}"
+# Last visited window - slightly brighter than inactive
+# base05 = normal foreground, base01 = panel background
+set-window-option -g window-status-last-style "fg=${BASE05},bg=${BASE01}"
 
-# Message text colors
-# base06 = light foreground, base02 = selection background
-set-option -g message-style "fg=${BASE06},bg=${BASE02}"
+# Activity alert - use red (base08) to draw attention
+set-window-option -g window-status-activity-style "fg=${BASE08},bg=${BASE00}"
 
-# Pane number display colors
-set-option -g display-panes-active-colour "${BASE04}"
-set-option -g display-panes-colour "${BASE01}"
+# Bell alert - inverted red for maximum visibility
+set-window-option -g window-status-bell-style "fg=${BASE00},bg=${BASE08},bold"
 
-# Clock color
-# base0D = blue
+# ==============================================================================
+# PANE BORDERS
+# ==============================================================================
+
+# Inactive pane border - subtle, use base02 (selection/muted)
+set-option -g pane-border-style "fg=${BASE02}"
+
+# Active pane border - use yellow (base0A) for visibility without being harsh
+set-option -g pane-active-border-style "fg=${BASE0A}"
+
+# Pane number display (prefix + q)
+set-option -g display-panes-active-colour "${BASE09}"
+set-option -g display-panes-colour "${BASE03}"
+
+# ==============================================================================
+# MESSAGES
+# ==============================================================================
+
+# Message bar (e.g., "Reloaded config")
+# base0A (yellow) foreground on base00 background - visible but not alarming
+set-option -g message-style "fg=${BASE0A},bg=${BASE00}"
+
+# Command mode (prefix + :)
+# Same as message style for consistency
+set-option -g message-command-style "fg=${BASE0A},bg=${BASE00}"
+
+# ==============================================================================
+# COPY MODE
+# ==============================================================================
+
+# Copy mode highlighting - use green (base0B) for "selected/good" semantic
+# base00 background to maintain readability
+set-window-option -g mode-style "fg=${BASE0B},bg=${BASE01}"
+
+# ==============================================================================
+# CLOCK
+# ==============================================================================
+
+# Clock color (prefix + t) - use blue (base0D)
 set-window-option -g clock-mode-colour "${BASE0D}"
 
-# Copy mode highlight
-# base04 = dark foreground, base02 = selection background
-set-window-option -g mode-style "fg=${BASE04},bg=${BASE02}"
+# ==============================================================================
+# WINDOW STYLES (PANE BACKGROUNDS)
+# ==============================================================================
 
-# Bell style
-# base08 = red for alerts
-set-window-option -g window-status-bell-style "fg=${BASE00},bg=${BASE08}"
+# These affect the actual pane content background
+# Using base00 for consistency with terminal background
+set-window-option -g window-style "bg=${BASE00}"
+set-window-option -g window-active-style "bg=${BASE00}"
 
-# Activity style
-set-window-option -g window-status-activity-style "fg=${BASE05},bg=${BASE00}"
+# ==============================================================================
+# STATUS BAR LAYOUT
+# ==============================================================================
 
-# Command message style
-set-option -g message-command-style "fg=${BASE06},bg=${BASE02}"
+# Status bar position and length
+set-option -g status-left-length 100
+set-option -g status-right-length 100
+
+# Status left: session name with icon
+# base0B (green) for session icon and name
+set-option -g status-left " #[fg=${BASE0B}]  #S  "
+
+# Window status separator
+set-window-option -g window-status-separator "  "
+
+# Window status format (backslash separators)
+set-window-option -g window-status-format "\\\\   #W   /"
+set-window-option -g window-status-current-format "\\\\   #W   /"
+
+# Status right: clock and date
+# base04 for muted clock/date text
+set-option -g status-right "#[fg=${BASE04}]%I:%M%p  %m.%d.%Y "
+
+# Pane border format: index, command, path
+# base0D (blue) for command, base0A (yellow) for path
+set-option -g pane-border-format "  #[align=left,fg=${BASE03}](#{pane_index})  #[fg=${BASE0D},align=centre]  #{pane_current_command}  #[fg=${BASE0A},align=right]  #{pane_current_path}  "
 
 # vim: set ft=tmux tw=0:
 EOF
