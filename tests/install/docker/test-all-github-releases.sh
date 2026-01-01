@@ -21,9 +21,9 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo "  --keep-on-failure  Keep containers that fail (for debugging)"
   echo "  -h, --help         Show this help message"
   echo ""
-  echo "Tests 12 GitHub release installers:"
-  echo "  duf, fzf, glow, lazygit, neovim, tenv, terraformer,"
-  echo "  terrascan, tflint, trivy, yazi, zk"
+  echo "Tests 13 GitHub release installers:"
+  echo "  duf, fzf, glow, lazygit, neovim, shellcheck, tenv,"
+  echo "  terraformer, terrascan, tflint, trivy, yazi, zk"
   exit 0
 fi
 
@@ -50,6 +50,7 @@ declare -a INSTALLERS=(
   "glow:glow"
   "lazygit:lazygit"
   "neovim:nvim"
+  "shellcheck:shellcheck"
   "tenv:tenv"
   "terraformer:terraformer"
   "terrascan:terrascan"

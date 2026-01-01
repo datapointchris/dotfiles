@@ -120,7 +120,15 @@ install_from_tarball() {
   local binary_path_in_tarball="$3"
   local version="${4:-latest}"
 
-  local tarball_path="/tmp/${binary_name}.tar.gz"
+  # Detect file extension from URL
+  local ext="tar.gz"
+  if [[ "$download_url" == *.tar.xz ]]; then
+    ext="tar.xz"
+  elif [[ "$download_url" == *.tar.gz ]] || [[ "$download_url" == *.tgz ]]; then
+    ext="tar.gz"
+  fi
+
+  local tarball_path="/tmp/${binary_name}.${ext}"
 
   # Try download, fallback to home directory
   log_info "Download URL: $download_url"
@@ -129,7 +137,7 @@ install_from_tarball() {
     # Download failed - check home directory for manual download
     log_warning "Download failed, checking home directory..."
     local home_file
-    home_file=$(find "$HOME" -maxdepth 1 -name "${binary_name}*.tar.gz" -type f 2>/dev/null | head -1)
+    home_file=$(find "$HOME" -maxdepth 1 -name "${binary_name}*.tar.*" -type f 2>/dev/null | head -1)
 
     if [[ -n "$home_file" ]]; then
       log_info "Found in home directory: $home_file"
@@ -150,7 +158,8 @@ install_from_tarball() {
 
   log_info "Extraction directory: /tmp"
   log_info "Extracting..."
-  tar -xzf "$tarball_path" -C /tmp
+  # Use tar -xf which auto-detects compression format (works with gz, xz, bz2)
+  tar -xf "$tarball_path" -C /tmp
 
   local target_bin="$HOME/.local/bin/$binary_name"
   log_info "Installation target: $target_bin"
