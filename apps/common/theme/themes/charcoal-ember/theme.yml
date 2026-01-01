@@ -1,0 +1,114 @@
+# Charcoal Ember - Custom theme based on original tmux colors
+# A warm, ember-like palette on dark charcoal backgrounds
+# Heritage: Tomorrow Night color family with custom accents
+
+meta:
+  id: "charcoal-ember"
+  display_name: "Charcoal Ember"
+  neovim_colorscheme_name: "charcoal-ember"
+  neovim_colorscheme_source: "generated"
+  plugin: null
+  derived_from: "custom"
+  variant: "dark"
+  author: "datapointchris"
+
+# Base16 palette
+# Mapped from original tmux color scheme
+base16:
+  base00: "#1d1f21"  # Dark Jungle Green - main background
+  base01: "#2d2d2d"  # Charleston Green - lighter background/panels
+  base02: "#373b41"  # Onyx - selection background
+  base03: "#969896"  # Spanish Gray - comments
+  base04: "#969896"  # Spanish Gray - dark foreground
+  base05: "#c5c8c6"  # Silver - default foreground
+  base06: "#e0e0e0"  # Light gray - light foreground
+  base07: "#ffffff"  # White - brightest foreground
+  base08: "#c90d00"  # Red
+  base09: "#f79802"  # Orange
+  base0A: "#ffc400"  # Bright Yellow (accent)
+  base0B: "#60b45a"  # Green
+  base0C: "#5fb3b3"  # Cyan (soft teal)
+  base0D: "#4eb6fe"  # Blue
+  base0E: "#b294bb"  # Magenta (Tomorrow Night purple)
+  base0F: "#c09c24"  # Yellow (muted, for secondary accents)
+
+# ANSI terminal colors
+ansi:
+  black: "#111111"          # True black (used for current window bg)
+  red: "#c90d00"            # Red
+  green: "#60b45a"          # Green
+  yellow: "#c09c24"         # Muted yellow
+  blue: "#4eb6fe"           # Blue
+  magenta: "#b294bb"        # Purple (Tomorrow Night)
+  cyan: "#5fb3b3"           # Soft teal
+  white: "#c5c8c6"          # Silver
+  bright_black: "#969896"   # Spanish Gray
+  bright_red: "#ff3334"     # Bright red
+  bright_green: "#9ec400"   # Bright green
+  bright_yellow: "#ffc400"  # Bright yellow
+  bright_blue: "#6699cc"    # Bright blue
+  bright_magenta: "#c397d8" # Bright purple
+  bright_cyan: "#70c0b1"    # Seafoam
+  bright_white: "#ffffff"   # White
+
+# Special purpose colors
+special:
+  background: "#1d1f21"     # Dark Jungle Green
+  foreground: "#c5c8c6"     # Silver
+  cursor: "#c5c8c6"         # Silver (matches foreground)
+  cursor_text: "#1d1f21"    # Background color
+  selection_bg: "#373b41"   # Onyx
+  selection_fg: "#c5c8c6"   # Silver
+  border: "#373b41"         # Onyx
+  panel: "#2d2d2d"          # Charleston Green
+
+# Extended palette for richer theming
+extended:
+  # Original tmux color names for reference
+  dark_gray: "#1d1f21"
+  medium_gray: "#2d2d2d"
+  medium_light_gray: "#373b41"
+  light_gray: "#969896"
+  silver: "#c5c8c6"
+  true_black: "#111111"
+
+  # Accent colors
+  orange: "#f79802"
+  yellow: "#c09c24"
+  bright_yellow: "#ffc400"
+
+  # Semantic colors for syntax highlighting
+  syntax_comment: "#969896"
+  syntax_string: "#60b45a"
+  syntax_number: "#f79802"
+  syntax_constant: "#f79802"
+  syntax_variable: "#c5c8c6"
+  syntax_parameter: "#b294bb"
+  syntax_function: "#4eb6fe"
+  syntax_keyword: "#b294bb"
+  syntax_type: "#ffc400"
+  syntax_operator: "#c5c8c6"
+  syntax_punctuation: "#969896"
+  syntax_tag: "#c90d00"
+  syntax_attribute: "#ffc400"
+
+  # Diagnostic colors
+  diagnostic_error: "#c90d00"
+  diagnostic_warning: "#f79802"
+  diagnostic_info: "#4eb6fe"
+  diagnostic_hint: "#5fb3b3"
+  diagnostic_ok: "#60b45a"
+
+  # Git/diff colors
+  git_add: "#60b45a"
+  git_change: "#ffc400"
+  git_delete: "#c90d00"
+  git_ignored: "#969896"
+
+  # UI element colors
+  ui_border: "#373b41"
+  ui_panel: "#2d2d2d"
+  ui_float: "#1d1f21"
+  ui_accent: "#4eb6fe"
+  ui_selection: "#373b41"
+  ui_match: "#ffc400"

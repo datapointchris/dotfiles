@@ -1,0 +1,94 @@
+# Charcoal Ember - btop theme
+# Generated from theme.yml
+# Author: datapointchris
+
+# Main background, empty for terminal default
+theme[main_bg]="#1D1F21"
+
+# Main text color
+theme[main_fg]="#C5C8C6"
+
+# Title color for boxes
+# base0C = cyan for titles
+theme[title]="#5FB3B3"
+
+# Highlight color for keyboard shortcuts
+# base0D = blue for highlights
+theme[hi_fg]="#4EB6FE"
+
+# Background color of selected item in processes box
+# base02 = selection background
+theme[selected_bg]="#373B41"
+
+# Foreground color of selected item in processes box
+# base06 = light foreground
+theme[selected_fg]="#E0E0E0"
+
+# Color of inactive/disabled text
+# base03 = comments/muted
+theme[inactive_fg]="#969896"
+
+# Misc colors for processes box
+theme[proc_misc]="#4EB6FE"
+
+# Box outline colors
+# base01 = lighter background for subtle borders
+theme[cpu_box]="#2D2D2D"
+theme[mem_box]="#2D2D2D"
+theme[net_box]="#2D2D2D"
+theme[proc_box]="#2D2D2D"
+theme[div_line]="#2D2D2D"
+
+# Temperature graph colors (gradient: blue -> cyan -> white)
+theme[temp_start]="#4EB6FE"
+theme[temp_mid]="#5FB3B3"
+theme[temp_end]="#E0E0E0"
+
+# CPU graph colors
+theme[cpu_start]="#4EB6FE"
+theme[cpu_mid]="#5FB3B3"
+theme[cpu_end]="#E0E0E0"
+
+# Memory free meter
+theme[free_start]="#60B45A"
+theme[free_mid]="#5FB3B3"
+theme[free_end]="#E0E0E0"
+
+# Memory cached meter
+theme[cached_start]="#FFC400"
+theme[cached_mid]="#F79802"
+theme[cached_end]="#E0E0E0"
+
+# Memory available meter
+theme[available_start]="#4EB6FE"
+theme[available_mid]="#5FB3B3"
+theme[available_end]="#E0E0E0"
+
+# Memory used meter
+theme[used_start]="#C90D00"
+theme[used_mid]="#F79802"
+theme[used_end]="#FFC400"
+
+# Download graph colors
+theme[download_start]="#60B45A"
+theme[download_mid]="#5FB3B3"
+theme[download_end]="#E0E0E0"
+
+# Upload graph colors
+theme[upload_start]="#B294BB"
+theme[upload_mid]="#4EB6FE"
+theme[upload_end]="#E0E0E0"
+
+# Process tree colors
+# base0F = brown/secondary for tree structure
+theme[process_start]="#4EB6FE"
+theme[process_mid]="#C09C24"
+theme[process_end]="#C90D00"
+
+# Meter background
+# base04 = dark foreground for subtle meter backgrounds
+theme[meter_bg]="#969896"
+
+# Graph text (brightest for readability)
+# base07 = brightest foreground
+theme[graph_text]="#FFFFFF"
