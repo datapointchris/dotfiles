@@ -3,7 +3,7 @@
 # Used by the `tools` command for discovery and learning
 
 version: "1.0"
-last_updated: "2025-12-30"
+last_updated: "2026-01-01"
 
 tools:
   # =================================================================
@@ -937,6 +937,27 @@ tools:
     see_also: [htop, top, glances]
     tags: [system, monitoring, tui, themeable]
     docs_url: "https://github.com/aristocratos/btop"
+
+  gdu:
+    category: system-monitoring
+    description: "Fast disk usage analyzer with interactive TUI for finding space hogs"
+    installed_via: go
+    usage: "gdu [directory]"
+    why_use: "Parallel scanning optimized for SSDs, interactive navigation, delete files directly"
+    examples:
+      - cmd: "gdu"
+        desc: "Analyze current directory"
+      - cmd: "gdu ~"
+        desc: "Analyze home directory"
+      - cmd: "gdu -d"
+        desc: "Show all mounted disks"
+      - cmd: "gdu -n /path"
+        desc: "Non-interactive mode (sorted list)"
+      - cmd: "gdu -i /ignore/path /path"
+        desc: "Ignore specific directories"
+    see_also: [htop, btop, du, ncdu]
+    tags: [disk-usage, tui, interactive, storage]
+    docs_url: "https://github.com/dundee/gdu"
 
   # =================================================================
   # SHELL & FORMATTING
