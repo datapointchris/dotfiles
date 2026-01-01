@@ -37,9 +37,9 @@ fetch_github_latest_version() {
   local api_url="https://api.github.com/repos/${repo}/releases/latest"
   local version
 
-  version=$(curl -fsSL "$api_url" 2>/dev/null | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+  version=$(curl -fsSL "$api_url" 2>/dev/null | jq -r '.tag_name')
 
-  if [[ -z "$version" ]]; then
+  if [[ -z "$version" || "$version" == "null" ]]; then
     return 1
   fi
 

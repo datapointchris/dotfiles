@@ -188,11 +188,7 @@ system_packages:
     description: Lua LSP (macOS only for now)
 
   # Linters & Formatters
-  - name: shellcheck
-    apt: shellcheck
-    pacman: shellcheck
-    brew: shellcheck
-    description: Shell script linter
+  # Note: shellcheck moved to github_binaries for consistent versioning across platforms
 
   - name: shfmt
     apt: shfmt
@@ -574,6 +570,13 @@ github_binaries:
     install_dir: "~/.local/bin"
     description: Container/IaC vulnerability scanner
 
+  - name: shellcheck
+    repo: koalaman/shellcheck
+    install_script: github-releases/shellcheck.sh
+    binary_pattern: "shellcheck-{version}.{platform}.{arch}.tar.xz" # Platform-specific: darwin/linux, x86_64/aarch64
+    install_dir: "~/.local/bin"
+    description: Shell script static analysis tool (consistent version across all platforms)
+
 # ================================================================
 # CARGO PACKAGES (Rust)
 # ================================================================
@@ -933,7 +936,7 @@ macos_casks:
 #
 # Tools NOT in system_packages (installed via other methods):
 #   - bat, eza, fd-find, zoxide, git-delta: cargo-binstall
-#   - neovim, lazygit, yazi, fzf: GitHub releases
+#   - neovim, lazygit, yazi, fzf, shellcheck: GitHub releases
 #   - go: GitHub releases (not apt/pacman golang-go)
 #   - nvm, npm packages: nvm + npm (not system Node.js)
 #   - Python tools: uv (not system pip)
