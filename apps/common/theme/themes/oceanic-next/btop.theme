@@ -1,4 +1,4 @@
-# OceanicNext - btop theme
+# Oceanic Next - btop theme
 # Generated from theme.yml
 # Author: Ghostty
 
@@ -78,3 +78,17 @@ theme[download_end]="#FFFFFF"
 theme[upload_start]="#C594C5"
 theme[upload_mid]="#6699CC"
 theme[upload_end]="#FFFFFF"
+
+# Process tree colors
+# base0F = brown/secondary for tree structure
+theme[process_start]="#6699CC"
+theme[process_mid]="#C594C5"
+theme[process_end]="#EC5F67"
+
+# Meter background
+# base04 = dark foreground for subtle meter backgrounds
+theme[meter_bg]="#FFFFFF"
+
+# Graph text (brightest for readability)
+# base07 = brightest foreground
+theme[graph_text]="#FFFFFF"

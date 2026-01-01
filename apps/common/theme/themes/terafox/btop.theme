@@ -78,3 +78,17 @@ theme[download_end]="#EAEEEE"
 theme[upload_start]="#AD5C7C"
 theme[upload_mid]="#5A93AA"
 theme[upload_end]="#EAEEEE"
+
+# Process tree colors
+# base0F = brown/secondary for tree structure
+theme[process_start]="#5A93AA"
+theme[process_mid]="#CB7985"
+theme[process_end]="#E85C51"
+
+# Meter background
+# base04 = dark foreground for subtle meter backgrounds
+theme[meter_bg]="#587B7B"
+
+# Graph text (brightest for readability)
+# base07 = brightest foreground
+theme[graph_text]="#CBD9D8"
