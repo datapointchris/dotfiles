@@ -75,6 +75,13 @@ class ReferenceChecker:
         "site/**",
     ]
 
+    # Patterns excluded in normal mode but included with --test-mode
+    TEST_FIXTURE_PATTERNS = [
+        "tests/apps/test-refcheck.sh",
+        "tests/apps/fixtures/refcheck-*/**",
+        "docs/archive/**",
+    ]
+
     DYNAMIC_PATH_PATTERNS = [
         r"^\$",
         r"^/tmp/",
@@ -93,6 +100,7 @@ class ReferenceChecker:
         file_type: str = None,
         warn_fragile: bool = True,
         strict: bool = False,
+        test_mode: bool = False,
     ):
         self.root_dir = root_dir or Path.cwd()
         self.search_path = search_path or self.root_dir
@@ -100,10 +108,15 @@ class ReferenceChecker:
         self.file_type = file_type
         self.warn_fragile = warn_fragile
         self.strict = strict
+        self.test_mode = test_mode
         self.issues: List[Issue] = []
         self.warnings: List[Warning] = []
         self.exclude_dirs = self.DEFAULT_EXCLUDES.copy()
         self.exclude_patterns = self.DEFAULT_EXCLUDE_PATTERNS.copy()
+
+        # Exclude test fixtures unless in test mode
+        if not test_mode:
+            self.exclude_patterns.extend(self.TEST_FIXTURE_PATTERNS)
 
     def should_skip_file(self, file_path: Path) -> bool:
         """Determine if file should be skipped."""
@@ -612,6 +625,11 @@ Exit codes:
         action="store_true",
         help="Disable fragile path warnings (only check for errors)",
     )
+    parser.add_argument(
+        "--test-mode",
+        action="store_true",
+        help="Include test fixtures (normally excluded)",
+    )
     args = parser.parse_args()
 
     root_dir = Path.cwd()
@@ -631,6 +649,7 @@ Exit codes:
         file_type=args.type,
         warn_fragile=not args.no_warn,
         strict=args.strict,
+        test_mode=args.test_mode,
     )
 
     if args.pattern:

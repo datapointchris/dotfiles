@@ -72,13 +72,13 @@ EOF
 
 cat > "$TEST_DIR/src/old-pattern.sh" << 'EOF'
 #!/usr/bin/env bash
-# Reference to old path: tests/install/verify.sh
+# Reference to old path: management/tests/verify.sh
 echo "Has old pattern"
 EOF
 
 cat > "$TEST_DIR/docs/readme.md" << 'EOF'
 # Documentation
-Reference to tests/install/ in docs
+Reference to management/tests/ in docs
 EOF
 
 cat > "$TEST_DIR/src/self-ref.sh" << 'EOF'
@@ -116,13 +116,13 @@ test_case "Should find pattern in docs directory" 1 \
 print_section "Test 3: Pattern checking" "yellow"
 
 test_case "Should find old pattern" 1 \
-  "$REFCHECK" --pattern "tests/install/"
+  "$REFCHECK" --pattern "management/tests/"
 
 test_case "Should find pattern in specific dir" 1 \
-  "$REFCHECK" --pattern "tests/install/" src/
+  "$REFCHECK" --pattern "management/tests/" src/
 
 test_case "Should not find pattern in docs if skipped" 0 \
-  "$REFCHECK" --pattern "tests/install/" docs/ --skip-docs
+  "$REFCHECK" --pattern "management/tests/" docs/ --skip-docs
 
 # ================================================================
 # Test 4: Pattern with description
@@ -130,7 +130,7 @@ test_case "Should not find pattern in docs if skipped" 0 \
 print_section "Test 4: Pattern with description" "yellow"
 
 test_case "Should accept pattern description" 1 \
-  "$REFCHECK" --pattern "tests/install/" --desc "Update to tests/install/"
+  "$REFCHECK" --pattern "management/tests/" --desc "Update to tests/install/"
 
 # ================================================================
 # Test 5: Type filtering
@@ -184,10 +184,10 @@ test_case "Should combine --type and --skip-docs" 1 \
   "$REFCHECK" --type sh --skip-docs src/
 
 test_case "Should combine --pattern and directory" 1 \
-  "$REFCHECK" --pattern "tests/install/" src/
+  "$REFCHECK" --pattern "management/tests/" src/
 
 test_case "Should combine all filters" 1 \
-  "$REFCHECK" --pattern "tests/install/" --type sh --skip-docs src/
+  "$REFCHECK" --pattern "management/tests/" --type sh --skip-docs src/
 
 # ================================================================
 # Test 8: Valid references should pass
@@ -276,10 +276,10 @@ FIXTURES_DIR="$DOTFILES_DIR/tests/apps/fixtures/refcheck-variables"
 
 # Should detect all 3 broken variable references in the fixtures directory
 test_case "Should detect broken variable references" 1 \
-  "$REFCHECK" "$FIXTURES_DIR/"
+  "$REFCHECK" --test-mode "$FIXTURES_DIR/"
 
 # Verify variable resolution in error messages
-output=$("$REFCHECK" "$FIXTURES_DIR/" 2>&1 || true)
+output=$("$REFCHECK" --test-mode "$FIXTURES_DIR/" 2>&1 || true)
 if echo "$output" | grep -q "SCRIPT_DIR.*→" && echo "$output" | grep -q "DOTFILES_DIR.*→"; then
   log_success "Error messages show variable resolution"
   PASSED=$((PASSED + 1))
