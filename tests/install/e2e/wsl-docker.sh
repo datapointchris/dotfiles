@@ -446,7 +446,7 @@ CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Run test outside of tee subshell to capture result
-if docker exec "$CONTAINER_NAME" bash -c "export PATH=\"${CONTAINER_HOME}/go/bin:${CONTAINER_HOME}/.local/bin:\$PATH\" && bash ${CONTAINER_HOME}/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+if docker exec "$CONTAINER_NAME" bash -c "export PATH=\"${CONTAINER_HOME}/go/bin:${CONTAINER_HOME}/.local/bin:\$PATH\" && bash ${CONTAINER_HOME}/dotfiles/tests/apps/all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
   STEP_STATUS+=("PASS")
 else
   STEP_STATUS+=("FAIL")
@@ -469,10 +469,14 @@ STEP_START=$(date +%s)
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash -c "
-    cd ${CONTAINER_HOME}/dotfiles
-    bash management/wsl/update.sh
-  " || log_warning "WSL update script failed"
+  if docker exec "$CONTAINER_NAME" bash -c "test -f ${CONTAINER_HOME}/dotfiles/management/wsl/update.sh"; then
+    docker exec "$CONTAINER_NAME" bash -c "
+      cd ${CONTAINER_HOME}/dotfiles
+      bash management/wsl/update.sh
+    " || log_warning "WSL update script failed"
+  else
+    log_info "Skipping update test (management/wsl/update.sh not found)"
+  fi
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

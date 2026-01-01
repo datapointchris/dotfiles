@@ -313,7 +313,7 @@ STEP_START=$(date +%s)
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Run test outside of tee subshell to capture result
-if docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "export PATH=\"/home/archuser/go/bin:/home/archuser/.local/bin:\$PATH\" && bash /home/archuser/dotfiles/tests/test-all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+if docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "export PATH=\"/home/archuser/go/bin:/home/archuser/.local/bin:\$PATH\" && bash /home/archuser/dotfiles/tests/apps/all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
   STEP_STATUS+=("PASS")
 else
   STEP_STATUS+=("FAIL")
@@ -335,10 +335,14 @@ STEP_START=$(date +%s)
   echo "Running management/arch/update.sh to verify update functionality..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
-    cd /home/archuser/dotfiles
-    bash management/arch/update.sh
-  " || log_warning "Arch update script failed"
+  if docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "test -f /home/archuser/dotfiles/management/arch/update.sh"; then
+    docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
+      cd /home/archuser/dotfiles
+      bash management/arch/update.sh
+    " || log_warning "Arch update script failed"
+  else
+    log_info "Skipping update test (management/arch/update.sh not found)"
+  fi
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
