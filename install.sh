@@ -98,6 +98,7 @@ install_common_phases() {
   run_installer "$github_releases/terrascan.sh" "terrascan"
   run_installer "$github_releases/trivy.sh" "trivy"
   run_installer "$github_releases/zk.sh" "zk"
+  run_installer "$github_releases/shellcheck.sh" "shellcheck"
 
   print_header "Custom Distribution Tools"
   run_installer "$custom_installers/bats.sh" "bats"
