@@ -11,11 +11,11 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 
 update_shell_plugins() {
   local plugins
-  plugins=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse-packages.py" \
+  plugins=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" \
     --type=shell-plugins --format=names)
 
   for name in $plugins; do
-    local plugin_dir="$HOME/.config/shell/plugins/$name"
+    local plugin_dir="$HOME/.config/zsh/plugins/$name"
     [[ ! -d "$plugin_dir" ]] && continue
 
     cd "$plugin_dir" || continue
@@ -89,7 +89,7 @@ update_common_tools() {
     log_warning "tenv and Terraform update failed"
   fi
 
-  log_info "Updating Shell plugins via $(print_green "git pull")"
+  print_section "Updating Shell plugins via $(print_green "git pull")"
   if update_shell_plugins; then
     log_success "Shell plugins updated"
   else

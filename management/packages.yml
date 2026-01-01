@@ -2,7 +2,7 @@
 # Universal Package Configuration
 # ================================================================
 # Single source of truth for ALL packages across ALL platforms
-# Parsed by management/parse-packages.py
+# Parsed by management/parse_packages.py
 # Last updated: 2025-11-27
 
 # ================================================================
@@ -46,7 +46,7 @@ system_packages:
     pacman: openssl
     description: SSL development libraries
 
-  # Python YAML library (needed for parse-packages.py)
+  # Python YAML library (needed for parse_packages.py)
   - name: python3-yaml
     apt: python3-yaml
     pacman: python-yaml
@@ -924,7 +924,7 @@ macos_casks:
 # NOTES
 # ================================================================
 # This file is the single source of truth for package installation
-# Parsed by management/parse-packages.py (Python)
+# Parsed by management/parse_packages.py (Python)
 #
 # Package Management Philosophy:
 #   - System packages: apt/pacman/brew for OS-level tools (see system_packages)
@@ -950,14 +950,14 @@ macos_casks:
 #   - Rust: Installed via rustup
 #
 # Parsing examples:
-#   python parse-packages.py --type=system --manager=apt
-#   python parse-packages.py --type=cargo
-#   python parse-packages.py --type=npm
-#   python parse-packages.py --type=go
-#   python parse-packages.py --type=mas
-#   python parse-packages.py --type=linux-gui
-#   python parse-packages.py --type=macos-casks
-#   python parse-packages.py --get=runtimes.node.version
+#   python parse_packages.py --type=system --manager=apt
+#   python parse_packages.py --type=cargo
+#   python parse_packages.py --type=npm
+#   python parse_packages.py --type=go
+#   python parse_packages.py --type=mas
+#   python parse_packages.py --type=linux-gui
+#   python parse_packages.py --type=macos-casks
+#   python parse_packages.py --get=runtimes.node.version
 #
 # To update all packages:
 #   task update           # Updates everything
