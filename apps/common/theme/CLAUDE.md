@@ -2,7 +2,7 @@
 
 ## Overview
 
-Unified theme generation system that creates consistent color configurations across terminal applications (Ghostty, tmux, btop) from a single `theme.yml` source file. Each theme in `themes/` provides terminal configs that match a corresponding Neovim colorscheme.
+Unified theme generation system that creates consistent color configurations across terminal and desktop applications from a single `theme.yml` source file. Supports Ghostty, Kitty, tmux, btop, JankyBorders, Hyprland, Waybar, Rofi, Dunst, Windows Terminal, and more. Each theme in `themes/` provides app configs that match a corresponding Neovim colorscheme.
 
 ## Directory Structure
 
@@ -11,10 +11,19 @@ apps/common/theme/
 ├── bin/theme           # Theme CLI tool (apply, preview, like/dislike)
 ├── demo/               # Sample code files for theme preview
 ├── lib/                # Core libraries and generators
-│   ├── generators/     # App-specific generators (ghostty.sh, tmux.sh, btop.sh)
+│   ├── generators/     # App-specific generators
+│   │   ├── ghostty.sh, kitty.sh     # Terminal emulators
+│   │   ├── tmux.sh, btop.sh         # Terminal apps
+│   │   ├── borders.sh               # JankyBorders (macOS)
+│   │   ├── wallpaper.sh             # Themed wallpapers (macOS)
+│   │   ├── hyprland.sh, hyprlock.sh # Hyprland WM (Arch)
+│   │   ├── waybar.sh, rofi.sh       # Desktop apps (Arch)
+│   │   ├── dunst.sh, mako.sh        # Notification daemons
+│   │   ├── windows-terminal.sh      # WSL terminal
+│   │   └── preview.sh               # Theme preview images
 │   ├── neovim_generator.py  # Generates Neovim colorscheme plugin
 │   └── theme.sh        # Loads theme.yml into shell variables
-├── themes/             # All themes with theme.yml source and generated configs
+├── themes/             # 40+ themes with theme.yml source and generated configs
 │   ├── gruvbox-dark-hard/  # With generated neovim/
 │   ├── rose-pine-darker/   # With generated neovim/
 │   ├── kanagawa/           # Terminal configs only (uses plugin for Neovim)
@@ -51,15 +60,23 @@ These themes provide terminal configs that match original Neovim plugins:
 
 ## Theme Files
 
-Each theme directory contains:
+Each theme directory contains app-specific configs generated from `theme.yml`:
 
 ```text
 themes/{theme-id}/
-├── theme.yml      # Source palette (required)
-├── ghostty.conf   # Generated terminal colors
-├── tmux.conf      # Generated tmux theme
-├── btop.theme     # Generated btop theme
-└── neovim/        # Only for generated themes - colorscheme plugin
+├── theme.yml           # Source palette (required)
+├── ghostty.conf        # Ghostty terminal
+├── kitty.conf          # Kitty terminal
+├── tmux.conf           # tmux status bar
+├── btop.theme          # btop system monitor
+├── bordersrc           # JankyBorders (macOS)
+├── hyprland.conf       # Hyprland WM (Arch)
+├── waybar.css          # Waybar status bar (Arch)
+├── hyprlock.conf       # Hyprlock lock screen (Arch)
+├── dunst.conf          # Dunst notifications (Arch)
+├── rofi.rasi           # Rofi launcher (Arch)
+├── windows-terminal.json  # Windows Terminal (WSL)
+└── neovim/             # Only for generated themes - colorscheme plugin
 ```
 
 ### theme.yml Format
@@ -111,13 +128,28 @@ theme reject "too bright"        # Remove from rotation
 1. Create `themes/{id}/theme.yml` with meta, base16, ansi, and special sections
 2. Set `neovim_colorscheme_source: "plugin"` if using existing Neovim plugin
 3. Set `neovim_colorscheme_source: "generated"` if generating Neovim colorscheme
-4. Generate terminal configs:
+4. Generate app configs using generators in `lib/generators/`:
 
 ```bash
 cd apps/common/theme
+
+# Core apps (all platforms)
 bash lib/generators/ghostty.sh themes/{id}/theme.yml themes/{id}/ghostty.conf
+bash lib/generators/kitty.sh themes/{id}/theme.yml themes/{id}/kitty.conf
 bash lib/generators/tmux.sh themes/{id}/theme.yml themes/{id}/tmux.conf
 bash lib/generators/btop.sh themes/{id}/theme.yml themes/{id}/btop.theme
+
+# macOS
+bash lib/generators/borders.sh themes/{id}/theme.yml themes/{id}/bordersrc
+
+# Arch/Hyprland
+bash lib/generators/hyprland.sh themes/{id}/theme.yml themes/{id}/hyprland.conf
+bash lib/generators/waybar.sh themes/{id}/theme.yml themes/{id}/waybar.css
+bash lib/generators/dunst.sh themes/{id}/theme.yml themes/{id}/dunst.conf
+bash lib/generators/rofi.sh themes/{id}/theme.yml themes/{id}/rofi.rasi
+
+# WSL
+bash lib/generators/windows-terminal.sh themes/{id}/theme.yml themes/{id}/windows-terminal.json
 ```
 
 ### Creating a Generated Neovim Colorscheme
@@ -156,4 +188,15 @@ The `colorscheme-manager.lua` plugin:
 | `lib/theme.sh` | Loads theme.yml into shell variables for generators |
 | `lib/storage.sh` | History and rejected themes storage |
 | `lib/neovim_generator.py` | Generates Neovim colorscheme from theme.yml |
-| `lib/generators/*.sh` | Terminal config generators |
+| `lib/generators/ghostty.sh` | Ghostty terminal colors |
+| `lib/generators/kitty.sh` | Kitty terminal colors |
+| `lib/generators/tmux.sh` | tmux status bar theme |
+| `lib/generators/btop.sh` | btop system monitor theme |
+| `lib/generators/borders.sh` | JankyBorders window highlights (macOS) |
+| `lib/generators/wallpaper.sh` | Themed wallpaper generator (macOS) |
+| `lib/generators/hyprland.sh` | Hyprland WM colors (Arch) |
+| `lib/generators/waybar.sh` | Waybar status bar (Arch) |
+| `lib/generators/rofi.sh` | Rofi launcher (Arch) |
+| `lib/generators/dunst.sh` | Dunst notifications (Arch) |
+| `lib/generators/windows-terminal.sh` | Windows Terminal (WSL) |
+| `lib/generators/preview.sh` | Theme preview image generator |

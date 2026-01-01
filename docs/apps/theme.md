@@ -4,7 +4,7 @@ icon: material/palette
 
 # Theme Tool
 
-Unified theme generation and management across terminal applications. Apply consistent color schemes to Ghostty, tmux, btop, and Neovim from a single source.
+Unified theme generation and management across terminal and desktop applications. Apply consistent color schemes from a single `theme.yml` source to terminals, status bars, notification daemons, window managers, and more.
 
 ## Quick Start
 
@@ -29,7 +29,7 @@ theme reject "reason"    # Remove theme from rotation
 
 ### Applying Themes
 
-- `theme apply <name>` - Apply theme to Ghostty, tmux, btop, and Neovim
+- `theme apply <name>` - Apply theme to all platform apps (see table above)
 - `theme random` - Apply random theme from available pool
 
 ### Rating & Filtering
@@ -42,6 +42,26 @@ theme reject "reason"    # Remove theme from rotation
 - `theme rank` - Show themes ranked by score
 
 All actions log to per-platform history files for cross-platform rankings.
+
+## Supported Applications
+
+The theme system applies colors to different apps depending on your platform:
+
+| Application | macOS | Arch | WSL | Description |
+|-------------|:-----:|:----:|:---:|-------------|
+| Ghostty | ✓ | ✓ | | GPU-accelerated terminal |
+| Kitty | ✓ | ✓ | | Feature-rich terminal |
+| tmux | ✓ | ✓ | ✓ | Terminal multiplexer |
+| btop | ✓ | ✓ | ✓ | System monitor |
+| Neovim | ✓ | ✓ | ✓ | Editor (via colorscheme-manager) |
+| JankyBorders | ✓ | | | Window border highlights |
+| Wallpaper | ✓ | | | Generated desktop wallpaper |
+| Hyprland | | ✓ | | Window manager colors |
+| Waybar | | ✓ | | Status bar |
+| Hyprlock | | ✓ | | Lock screen |
+| Dunst | | ✓ | | Notification daemon |
+| Rofi | | ✓ | | Application launcher |
+| Windows Terminal | | | ✓ | WSL terminal colors |
 
 ## How It Works
 
@@ -56,11 +76,19 @@ Generators create app-specific configs from this source:
 
 ```text
 themes/{id}/
-├── theme.yml      # Source palette
-├── ghostty.conf   # Generated terminal colors
-├── tmux.conf      # Generated tmux theme
-├── btop.theme     # Generated btop theme
-└── neovim/        # Generated colorscheme (for generated themes only)
+├── theme.yml           # Source palette (required)
+├── ghostty.conf        # Terminal colors
+├── kitty.conf          # Kitty terminal
+├── tmux.conf           # tmux status bar
+├── btop.theme          # System monitor
+├── bordersrc           # JankyBorders (macOS)
+├── hyprland.conf       # Window manager (Arch)
+├── waybar.css          # Status bar (Arch)
+├── hyprlock.conf       # Lock screen (Arch)
+├── dunst.conf          # Notifications (Arch)
+├── rofi.rasi           # App launcher (Arch)
+├── windows-terminal.json  # WSL terminal
+└── neovim/             # Generated colorscheme (optional)
 ```
 
 ## Theme Categories
@@ -113,18 +141,54 @@ apps/common/theme/data/
 
 Rankings combine data across all platforms for consistent preferences.
 
+## Wallpaper Generator
+
+On macOS, `theme apply` generates a themed wallpaper using ImageMagick. Each apply picks a random style:
+
+| Style | Description |
+|-------|-------------|
+| plasma | Fractal plasma clouds with theme accent colors |
+| geometric | Random geometric shapes |
+| hexagons | Honeycomb pattern |
+| circles | Overlapping circles |
+
+Wallpapers are saved to `~/.local/share/theme/wallpaper.png` and set as the desktop background automatically.
+
+Generate manually with a specific style:
+
+```bash
+cd apps/common/theme
+bash lib/generators/wallpaper.sh themes/rose-pine/theme.yml /tmp/wall.png plasma 3840 2160
+```
+
 ## Creating Themes
 
 1. Create `themes/{id}/theme.yml` with meta, base16, ansi, and special sections
 2. Set `neovim_colorscheme_source: "plugin"` if using existing Neovim plugin
 3. Set `neovim_colorscheme_source: "generated"` if generating Neovim colorscheme
-4. Generate terminal configs:
+4. Generate app configs using the generators in `lib/generators/`:
 
 ```bash
 cd apps/common/theme
+
+# Core apps (all platforms)
 bash lib/generators/ghostty.sh themes/{id}/theme.yml themes/{id}/ghostty.conf
+bash lib/generators/kitty.sh themes/{id}/theme.yml themes/{id}/kitty.conf
 bash lib/generators/tmux.sh themes/{id}/theme.yml themes/{id}/tmux.conf
 bash lib/generators/btop.sh themes/{id}/theme.yml themes/{id}/btop.theme
+
+# macOS
+bash lib/generators/borders.sh themes/{id}/theme.yml themes/{id}/bordersrc
+
+# Arch/Hyprland
+bash lib/generators/hyprland.sh themes/{id}/theme.yml themes/{id}/hyprland.conf
+bash lib/generators/waybar.sh themes/{id}/theme.yml themes/{id}/waybar.css
+bash lib/generators/hyprlock.sh themes/{id}/theme.yml themes/{id}/hyprlock.conf
+bash lib/generators/dunst.sh themes/{id}/theme.yml themes/{id}/dunst.conf
+bash lib/generators/rofi.sh themes/{id}/theme.yml themes/{id}/rofi.rasi
+
+# WSL
+bash lib/generators/windows-terminal.sh themes/{id}/theme.yml themes/{id}/windows-terminal.json
 ```
 
 ## theme.yml Schema
