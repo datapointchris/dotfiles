@@ -50,7 +50,10 @@ while read -r tool; do
 
   # Install the tool
   log_info "Installing $binary_name..."
-  if go install "$tool@latest" 2>&1 | grep -v "go: downloading"; then
+  go install "$tool@latest" 2>&1 | grep -v "go: downloading" || true
+
+  # Check if binary was actually created
+  if [[ -f "$binary_path" ]]; then
     log_success "$binary_name installed"
     INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
   else

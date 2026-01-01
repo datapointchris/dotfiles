@@ -223,9 +223,7 @@ check_command "cargo"
 check_command "rustc"
 check_command "cargo-binstall" "--version"
 
-# Lua
-check_command "lua"
-check_command "luajit"
+# Note: Lua/LuaJIT not checked - Neovim uses hererocks via lazy.nvim for Lua 5.1
 
 # ================================================================
 # GitHub Release Tools & Go Tools
