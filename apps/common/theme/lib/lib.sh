@@ -328,6 +328,40 @@ apply_borders() {
   return 0
 }
 
+# Apply wallpaper (macOS)
+apply_wallpaper() {
+  local theme="$1"
+  local lib_path
+  lib_path=$(get_library_path "$theme")
+
+  if [[ -z "$lib_path" ]] || [[ ! -f "$lib_path/theme.yml" ]]; then
+    return 1
+  fi
+
+  local wallpaper_dir="$HOME/.local/share/theme"
+  local wallpaper_file="$wallpaper_dir/wallpaper.png"
+  mkdir -p "$wallpaper_dir"
+
+  # Pick random style
+  local styles=("plasma" "geometric" "hexagons" "circles")
+  local style="${styles[$((RANDOM % ${#styles[@]}))]}"
+
+  # Generate wallpaper
+  local generator_script
+  generator_script="$(dirname "${BASH_SOURCE[0]}")/generators/wallpaper.sh"
+
+  if [[ ! -f "$generator_script" ]]; then
+    return 1
+  fi
+
+  bash "$generator_script" "$lib_path/theme.yml" "$wallpaper_file" "$style" 3840 2160 2>/dev/null || return 1
+
+  # Set as desktop wallpaper on macOS
+  osascript -e "tell application \"System Events\" to tell every desktop to set picture to \"$wallpaper_file\"" 2>/dev/null || return 1
+
+  return 0
+}
+
 # Apply Hyprland theme (Arch)
 apply_hyprland() {
   local theme="$1"
@@ -527,6 +561,15 @@ apply_theme_to_apps() {
       applied+=("borders")
     else
       skipped+=("borders")
+    fi
+  fi
+
+  # Wallpaper (macOS only)
+  if [[ "$platform" == "macos" ]]; then
+    if apply_wallpaper "$theme" 2>/dev/null; then
+      applied+=("wallpaper")
+    else
+      skipped+=("wallpaper")
     fi
   fi
 

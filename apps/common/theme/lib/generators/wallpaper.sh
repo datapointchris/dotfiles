@@ -7,8 +7,7 @@
 #   geometric  - Random geometric shapes
 #   hexagons   - Honeycomb pattern
 #   circles    - Overlapping circles
-#   noise      - Subtle noise texture
-#   gradient   - Simple diagonal gradient
+#   demo       - All styles in a 2x2 grid with labels
 #
 # Requires: ImageMagick (magick command)
 
@@ -20,7 +19,7 @@ source "$SCRIPT_DIR/../theme.sh"
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <theme.yml> <output-file> [style] [width] [height]"
   echo ""
-  echo "Styles: plasma, geometric, hexagons, circles, noise, gradient"
+  echo "Styles: plasma, geometric, hexagons, circles, demo"
   echo "Default: plasma at 3840x2160"
   exit 1
 fi
@@ -48,131 +47,158 @@ darken_color() {
 }
 
 generate_plasma() {
-  local dark
-  dark=$(darken_color "$BASE00" 30)
+  # Multi-colored nebula clouds using accent palette
+  local colors=("$BASE0D" "$BASE0E" "$BASE0C" "$BASE09" "$BASE0B")
 
-  # Generate plasma with theme colors, then tint to match palette
-  magick -size "${width}x${height}" \
-    plasma:"${dark}-${BASE01}" \
+  # Generate base with first plasma
+  magick -size "${width}x${height}" -seed $RANDOM plasma:fractal \
+    -grayscale Rec709Luminance \
+    -sigmoidal-contrast 12x50% \
+    -solarize 50% \
     -blur 0x2 \
-    -modulate 100,50,100 \
-    +level-colors "${dark},${BASE02}" \
-    "$output_file"
+    +level-colors "${BASE00},${colors[0]}" \
+    /tmp/plasma_base_$$.png
+
+  # Layer additional plasma clouds with different seeds and colors
+  for i in {1..4}; do
+    local color="${colors[$i]}"
+    local contrast=$((10 + RANDOM % 8))
+    local solarize=$((35 + RANDOM % 35))
+
+    magick -size "${width}x${height}" -seed $RANDOM plasma:fractal \
+      -grayscale Rec709Luminance \
+      -sigmoidal-contrast "${contrast}x50%" \
+      -solarize "${solarize}%" \
+      -blur 0x2 \
+      +level-colors "${BASE00},${color}" \
+      /tmp/plasma_layer_$$.png
+
+    magick /tmp/plasma_base_$$.png /tmp/plasma_layer_$$.png \
+      -compose lighten -composite /tmp/plasma_base_$$.png
+  done
+
+  mv /tmp/plasma_base_$$.png "$output_file"
+  rm -f /tmp/plasma_layer_$$.png
 }
 
 generate_geometric() {
-  local dark
-  dark=$(darken_color "$BASE00" 20)
+  # Rotated shapes with accent colors (same palette as circles)
+  local colors=("$BASE0D" "$BASE0E" "$BASE0C" "$BASE09" "$BASE0B")
+  local draw_commands=""
 
-  # Create base image
-  magick -size "${width}x${height}" xc:"${dark}" /tmp/geo_base_$$.png
-
-  # Add random shapes using theme colors with transparency via hex alpha
-  local colors=("$BASE01" "$BASE02" "$BASE03" "$BASE0D" "$BASE0E")
-
-  for _ in {1..30}; do
+  for _ in {1..60}; do
     local color="${colors[$((RANDOM % ${#colors[@]}))]}"
-    # Add alpha channel to color (20% opacity = 33 in hex)
-    local color_alpha="${color}33"
-    local x1=$((RANDOM % width))
-    local y1=$((RANDOM % height))
-    local size=$((RANDOM % 400 + 100))
+    local color_alpha="${color}45"  # 27% opacity
+    local cx=$((RANDOM % width))
+    local cy=$((RANDOM % height))
+    local size=$((RANDOM % 150 + 50))
+    local angle=$((RANDOM % 360))
 
-    # Random shape: rectangle, circle, or triangle
     local shape=$((RANDOM % 3))
     case $shape in
-      0) # Rectangle
-        local x2=$((x1 + size))
-        local y2=$((y1 + size / 2))
-        magick /tmp/geo_base_$$.png -fill "${color_alpha}" \
-          -draw "rectangle $x1,$y1 $x2,$y2" /tmp/geo_base_$$.png
+      0) # Rotated rectangle
+        local hw=$((size / 2))
+        local hh=$((size / 4))
+        draw_commands+=" -fill '${color_alpha}' -draw 'translate $cx,$cy rotate $angle rectangle $((- hw)),$((- hh)) $hw,$hh'"
         ;;
-      1) # Circle
-        magick /tmp/geo_base_$$.png -fill "${color_alpha}" \
-          -draw "circle $x1,$y1 $((x1 + size/2)),$y1" /tmp/geo_base_$$.png
+      1) # Circle (rotation doesn't matter)
+        draw_commands+=" -fill '${color_alpha}' -draw 'circle $cx,$cy $((cx + size/2)),$cy'"
         ;;
-      2) # Polygon (triangle)
-        local x2=$((x1 + size))
-        local y2=$((y1 + size))
-        local x3=$((x1 - size/2))
-        magick /tmp/geo_base_$$.png -fill "${color_alpha}" \
-          -draw "polygon $x1,$y1 $x2,$y2 $x3,$y2" /tmp/geo_base_$$.png
+      2) # Rotated triangle
+        local s=$((size / 2))
+        draw_commands+=" -fill '${color_alpha}' -draw 'translate $cx,$cy rotate $angle polygon 0,$((- s)) $((s)),$s $((-s)),$s'"
         ;;
     esac
   done
 
-  magick /tmp/geo_base_$$.png -blur 0x3 "$output_file"
-  rm -f /tmp/geo_base_$$.png
+  # Single magick call with all draws
+  eval "magick -size '${width}x${height}' xc:'${BASE00}' $draw_commands '$output_file'"
 }
 
 generate_hexagons() {
-  local dark
-  dark=$(darken_color "$BASE00" 15)
-  local hex_size=80
+  # Scattered hexagons of varying sizes and accent colors
+  local colors=("$BASE0D" "$BASE0E" "$BASE0C" "$BASE09" "$BASE0B")
+  local draw_commands=""
 
-  # Create a hexagon tile
-  local tile_file="/tmp/hex_tile_$$.png"
+  for _ in {1..45}; do
+    local color="${colors[$((RANDOM % ${#colors[@]}))]}"
+    local color_alpha="${color}40"
+    local cx=$((RANDOM % width))
+    local cy=$((RANDOM % height))
+    local size=$((RANDOM % 80 + 30))
+    local angle=$((RANDOM % 60))
 
-  magick -size "$((hex_size * 3))x$((hex_size * 3))" xc:"$dark" \
-    -fill "$BASE01" -stroke "$BASE02" -strokewidth 1 \
-    -draw "polygon $((hex_size)),$((hex_size/4)) $((hex_size*2)),$((hex_size/4)) $((hex_size*5/2)),$((hex_size)) $((hex_size*2)),$((hex_size*7/4)) $((hex_size)),$((hex_size*7/4)) $((hex_size/2)),$((hex_size))" \
-    "$tile_file"
+    # Hexagon points relative to center
+    local s=$size
+    local h=$((s * 866 / 1000))  # sqrt(3)/2 approximation
+    draw_commands+=" -fill '${color_alpha}' -draw 'translate $cx,$cy rotate $angle polygon 0,$((-s)) $h,$((-s/2)) $h,$((s/2)) 0,$s $((-h)),$((s/2)) $((-h)),$((-s/2))'"
+  done
 
-  # Tile it across the wallpaper
-  magick -size "${width}x${height}" "tile:${tile_file}" \
-    -blur 0x1 \
-    "$output_file"
-
-  rm -f "$tile_file"
+  eval "magick -size '${width}x${height}' xc:'${BASE00}' $draw_commands '$output_file'"
 }
 
 generate_circles() {
-  local dark
-  dark=$(darken_color "$BASE00" 25)
-
-  # Create base image
-  magick -size "${width}x${height}" xc:"${dark}" /tmp/circles_base_$$.png
-
+  # Build all draw commands at once
   local colors=("$BASE0D" "$BASE0E" "$BASE0C" "$BASE09" "$BASE0B")
+  local draw_commands=""
 
-  # Add overlapping circles with transparency via hex alpha
-  for _ in {1..20}; do
+  for _ in {1..50}; do
     local color="${colors[$((RANDOM % ${#colors[@]}))]}"
-    # Add alpha channel (15% opacity = 26 in hex)
-    local color_alpha="${color}26"
+    local color_alpha="${color}35"  # 21% opacity
     local x=$((RANDOM % width))
     local y=$((RANDOM % height))
-    local radius=$((RANDOM % 300 + 50))
-
-    magick /tmp/circles_base_$$.png -fill "${color_alpha}" \
-      -draw "circle $x,$y $((x + radius)),$y" /tmp/circles_base_$$.png
+    local radius=$((RANDOM % 100 + 30))
+    draw_commands+=" -fill '${color_alpha}' -draw 'circle $x,$y $((x + radius)),$y'"
   done
 
-  magick /tmp/circles_base_$$.png -blur 0x5 "$output_file"
-  rm -f /tmp/circles_base_$$.png
+  # Single magick call with all circles
+  eval "magick -size '${width}x${height}' xc:'${BASE00}' $draw_commands '$output_file'"
 }
 
-generate_noise() {
-  local dark
-  dark=$(darken_color "$BASE00" 10)
+generate_demo() {
+  # Generate all styles in a 2x2 grid with labels
+  local tmp_dir="/tmp/wallpaper_demo_$$"
+  local final_output="$output_file"
+  mkdir -p "$tmp_dir"
 
-  # Subtle noise pattern
-  magick -size "${width}x${height}" xc:"$dark" \
-    +noise gaussian \
-    -blur 0x1 \
-    -modulate 100,20,100 \
-    +level-colors "${dark},${BASE01}" \
+  # Calculate tile size (2 columns, 2 rows)
+  local tile_w=$((width / 2))
+  local tile_h=$((height / 2))
+
+  # Save original dimensions and generate each style at tile size
+  local orig_width="$width"
+  local orig_height="$height"
+  width="$tile_w"
+  height="$tile_h"
+
+  local styles=("plasma" "geometric" "hexagons" "circles")
+
+  for style_name in "${styles[@]}"; do
+    local tile_file="$tmp_dir/${style_name}.png"
+    output_file="$tile_file"
+    "generate_${style_name}"
+
+    # Add label to tile
+    magick "$tile_file" \
+      -gravity South \
+      -fill "$BASE05" -font "Helvetica-Bold" -pointsize 48 \
+      -annotate +0+20 "$style_name" \
+      "$tile_file"
+  done
+
+  # Restore original dimensions and output file
+  width="$orig_width"
+  height="$orig_height"
+  output_file="$final_output"
+
+  # Combine into 2x2 grid
+  magick montage \
+    "$tmp_dir/plasma.png" "$tmp_dir/geometric.png" \
+    "$tmp_dir/hexagons.png" "$tmp_dir/circles.png" \
+    -tile 2x2 -geometry "${tile_w}x${tile_h}+0+0" \
     "$output_file"
-}
 
-generate_gradient() {
-  local dark
-  dark=$(darken_color "$BASE00" 30)
-
-  magick -size "${width}x${height}" \
-    -define gradient:angle=135 \
-    gradient:"${dark}-${BASE00}" \
-    "$output_file"
+  rm -rf "$tmp_dir"
 }
 
 # Generate based on style
@@ -189,15 +215,12 @@ case "$style" in
   circles)
     generate_circles
     ;;
-  noise)
-    generate_noise
-    ;;
-  gradient)
-    generate_gradient
+  demo)
+    generate_demo
     ;;
   *)
     echo "Unknown style: $style"
-    echo "Valid styles: plasma, geometric, hexagons, circles, noise, gradient"
+    echo "Valid styles: plasma, geometric, hexagons, circles, demo"
     exit 1
     ;;
 esac
