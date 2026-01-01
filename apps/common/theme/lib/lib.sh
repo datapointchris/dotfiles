@@ -311,17 +311,17 @@ apply_borders() {
     return 1
   fi
 
-  local borders_dir="$HOME/.config/borders"
-  mkdir -p "$borders_dir"
+  local borders_theme_dir="$HOME/.config/borders/themes"
+  mkdir -p "$borders_theme_dir"
 
-  cp "$lib_path/bordersrc" "$borders_dir/bordersrc"
-  chmod +x "$borders_dir/bordersrc"
+  cp "$lib_path/bordersrc" "$borders_theme_dir/current"
+  chmod +x "$borders_theme_dir/current"
 
   # Restart borders if running
   if pgrep -x "borders" &>/dev/null; then
     pkill -x "borders" 2>/dev/null || true
     sleep 0.5
-    "$borders_dir/bordersrc" &
+    "$HOME/.config/borders/bordersrc" &
     disown
   fi
 

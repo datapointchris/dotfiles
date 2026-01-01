@@ -1,29 +1,20 @@
 #!/bin/bash
+# JankyBorders Configuration
+# Theme colors are loaded from themes/current (managed by `theme` CLI)
 
-# JankyBorders Configuration for AeroSpace
-# Color format: 0xAARRGGBB (A=alpha, R=red, G=green, B=blue)
+THEME_FILE="$HOME/.config/borders/themes/current"
 
-options=(
-  # Border style
-  style=round
-  width=8.0
-  hidpi=on
-
-  # Active window (focused) - Bright blue with slight transparency
-  active_color=0xffe1e3e4
-
-  # Inactive windows - Subtle gray
-  inactive_color=0xff494d64
-
-  # Optional: Use gradient for active window (uncomment to enable)
-  # active_color='gradient(top_left=0xff7aa2f7,bottom_right=0xff9ece6a)'
-
-  # Optional: Add glow effect to active window (uncomment to enable)
-  active_color='glow(0xffe1e3e4)'
-
-  # Blacklist for apps that shouldn't have borders
-  # Add app names separated by pipe |
-  blacklist="System Settings|System Information|QuickTime Player"
-)
-
-borders "${options[@]}"
+if [[ -f "$THEME_FILE" ]]; then
+  source "$THEME_FILE"
+else
+  # Fallback colors if no theme applied
+  options=(
+    style=round
+    width=8.0
+    hidpi=on
+    active_color=0xffe1e3e4
+    inactive_color=0xff494d64
+    blacklist="System Settings|System Information|QuickTime Player"
+  )
+  borders "${options[@]}"
+fi
