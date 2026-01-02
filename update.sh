@@ -109,6 +109,22 @@ update_common_tools() {
   else
     log_warning "Neovim plugins update failed"
   fi
+
+  print_section "Updating personal CLI tools via $(print_green "git pull")"
+  local tools_updated=0
+  for tool_dir in "$HOME/tools/theme" "$HOME/tools/font"; do
+    if [[ -d "$tool_dir/.git" ]]; then
+      local tool_name
+      tool_name=$(basename "$tool_dir")
+      if git -C "$tool_dir" pull --quiet 2>/dev/null; then
+        log_success "$tool_name updated"
+        tools_updated=$((tools_updated + 1))
+      else
+        log_warning "$tool_name update failed"
+      fi
+    fi
+  done
+  [[ $tools_updated -eq 0 ]] && log_info "No personal CLI tools found in ~/tools/"
 }
 
 main() {
