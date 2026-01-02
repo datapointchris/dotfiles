@@ -264,16 +264,18 @@ Flow:
 ```bash
 # After task symlinks:link
 ls ~/.local/bin/
-# theme notes menu printcolors (and platform-specific: aws-profiles)
+# menu notes backup-dirs patterns printcolors
 ```
 
-**Go binaries** are in `~/go/bin/` (built and installed via Task):
+**Go binaries** are in `~/go/bin/` (installed via `go install`):
 
 ```bash
-# After task install in each Go project
+# Installed during dotfiles setup from GitHub
 ls ~/go/bin/
-# sess toolbox
+# sess toolbox gum cheat lazydocker ...
 ```
+
+**External bash tools** (theme, font) are cloned to `~/.local/share/` with binaries symlinked to `~/.local/bin/`.
 
 All tools available in PATH (both `~/.local/bin/` and `~/go/bin/` are in PATH), callable from anywhere.
 

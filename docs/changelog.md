@@ -8,6 +8,22 @@ This file contains high-level summaries of changes to the dotfiles repository. F
 
 ---
 
+## 2025-12 {#2025-12-taskfile-consolidation}
+
+### Taskfile Consolidation
+
+The modular `management/taskfiles/` directory was removed entirely. All tasks are now in the root `Taskfile.yml`. Complex installation logic lives in shell scripts under `management/`.
+
+**Key Changes:**
+
+- Removed: `management/taskfiles/*.yml` (all modular taskfiles)
+- Simplified: Root `Taskfile.yml` now contains only orchestration tasks
+- Philosophy: Tasks coordinate multi-step workflows; complex logic in shell scripts
+
+Historical changelog entries below may reference the old `taskfiles/` structure.
+
+---
+
 ## 2025-11-04 {#2025-11-04-taskfile}
 
 ### Taskfile System Simplification

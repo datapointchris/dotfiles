@@ -177,14 +177,12 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
   - `macos/` - macOS-specific dotfiles and GUI app configs
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `arch/` - Arch Linux configurations
-- `apps/` - Personal CLI applications
-  - `common/` - Cross-platform tools (menu, notes, toolbox, theme)
-  - `macos/` - macOS-specific tools (aws-profiles)
-  - `sess/` - Session manager (Go application)
+- `apps/` - Personal CLI applications (shell scripts only)
+  - `common/` - Cross-platform: menu, notes, backup-dirs, patterns
+  - `macos/` - macOS-specific tools
 - `management/` - Repository management tools
   - `symlinks/` - Symlinks manager (Python)
-  - `taskfiles/` - Modular Task automation
-  - `*.sh` - Platform setup scripts
+  - `{platform}/` - Platform-specific install scripts
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration
@@ -259,8 +257,8 @@ docs/
 
 **Task Automation**:
 
-- Modular Taskfile system in `management/taskfiles/` directory
-- Tasks for building, testing, package management, documentation
+- Minimal Taskfile.yml in root directory for orchestration
+- Complex installation logic in shell scripts under `management/`
 - Run `task --list-all` to see available tasks
 
 ## Learnings Directory

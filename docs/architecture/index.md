@@ -15,24 +15,22 @@ dotfiles/
 │   ├── macos/           # macOS-specific overrides
 │   ├── wsl/             # WSL Ubuntu overrides
 │   └── arch/            # Arch Linux overrides
-├── apps/                # Custom CLI applications
-│   ├── common/          # Cross-platform tools
-│   │   ├── sess/        # Session manager (Go)
-│   │   ├── toolbox/     # Tool discovery (Go)
-│   │   ├── theme/       # Theme management
-│   │   ├── menu         # Universal menu system
-│   │   └── notes        # Note-taking wrapper
+├── apps/                # Personal CLI applications (shell scripts)
+│   ├── common/          # Cross-platform: menu, notes, backup-dirs, patterns
 │   └── macos/           # macOS-specific tools
 ├── management/          # Repository management
 │   ├── symlinks/        # Symlinks manager (Python)
 │   ├── common/          # Shared installers and libraries
-│   ├── macos/           # macOS installation scripts
-│   ├── wsl/             # WSL installation scripts
-│   ├── arch/            # Arch installation scripts
+│   ├── {platform}/      # Platform-specific install scripts
 │   └── packages.yml     # Package definitions
 ├── Taskfile.yml         # Task automation
 └── docs/                # MkDocs documentation
 ```
+
+**External tools** (installed from GitHub, not in this repo):
+
+- `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
+- `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 ## Symlink System
 

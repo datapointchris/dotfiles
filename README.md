@@ -37,17 +37,20 @@ dotfiles/
 │   ├── macos/        # macOS-specific overrides
 │   ├── wsl/          # WSL Ubuntu-specific overrides
 │   └── arch/         # Arch Linux-specific overrides
-├── apps/             # Personal CLI applications
-│   ├── common/       # Cross-platform tools (menu, notes, toolbox, theme)
-│   ├── macos/        # macOS-specific tools
-│   └── sess/         # Session manager (Go)
+├── apps/             # Personal CLI applications (shell scripts)
+│   ├── common/       # Cross-platform: menu, notes, backup-dirs, patterns
+│   └── macos/        # macOS-specific tools
 ├── management/       # Repository management
 │   ├── symlinks/     # Symlinks manager (Python)
-│   ├── taskfiles/    # Task automation (modular)
 │   ├── packages.yml  # Package definitions
-│   └── *.sh          # Platform bootstrap scripts
+│   └── {platform}/   # Platform-specific install scripts
 └── docs/             # Documentation (because future you will forget)
 ```
+
+**External tools** (installed from GitHub, not in this repo):
+
+- `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
+- `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 The core philosophy: write configs once in `platforms/common/`, override only what's platform-specific.
 
