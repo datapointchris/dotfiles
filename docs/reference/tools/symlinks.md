@@ -92,42 +92,23 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 
 The symlinks manager has **special handling for the `apps/` directory**:
 
-**Executable scripts** (`apps/common/*.sh`, etc.):
+**Shell scripts** (`apps/common/menu`, `apps/common/notes`, etc.):
 
-- Symlinked to `~/.local/bin/` automatically
-- Used for bash/python/shell scripts
-- Examples: `menu`, `notes`, `patterns`
+- Symlinked to `~/.local/bin/` automatically by `link_apps()`
+- Examples: `menu`, `notes`, `patterns`, `aws-profiles`
 
-**Go binaries** (`apps/common/sess/`, `apps/common/toolbox/`):
+**Go apps** (sess, toolbox):
 
-- **NOT symlinked** - directories are intentionally skipped
-- Built via `task build` in each project
-- Installed via `task install` to `~/go/bin/`
-- Separation of concerns: source code (dotfiles) vs build artifacts (~/go/bin)
+- Installed from GitHub via `go install` (defined in `packages.yml`)
+- Development in `~/tools/sess/`, `~/tools/toolbox/`
+- NOT managed by symlinks - binaries go to `~/go/bin/`
 
-**Why this pattern**:
+**Personal CLI tools** (theme, font):
 
-- Dotfiles repository = source code (version controlled)
-- Build artifacts are gitignored locally (`.gitignore` in each Go project)
-- Installation happens outside the repo (`~/go/bin` for Go, `~/.local/bin` for scripts)
-- No symlinks for compiled binaries (they need building first)
-
-**Go project structure**:
-
-```text
-apps/common/sess/
-├── *.go              # Source code (tracked)
-├── Taskfile.yml      # Build automation
-├── .gitignore        # Ignores: sess, *.test, coverage.*
-└── sess              # Build artifact (gitignored, NOT symlinked)
-```
-
-**To install Go binaries**:
-
-```bash
-cd apps/common/sess && task install      # Builds and copies to ~/go/bin/sess
-cd apps/common/toolbox && task install   # Builds and copies to ~/go/bin/toolbox
-```
+- Installed via custom installers that clone to `~/.local/share/`
+- Symlink `~/.local/share/{tool}/bin/{tool}` → `~/.local/bin/{tool}`
+- Development in `~/tools/theme/`, `~/tools/font/`
+- NOT managed by symlinks manager - have their own installers
 
 ## Usage
 

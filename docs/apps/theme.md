@@ -129,17 +129,18 @@ The theme system integrates with Neovim via `colorscheme-manager.lua`:
 
 ## Data & History
 
-Theme history is stored in per-platform JSONL files:
+Theme history is stored in `~/.config/theme/` (symlinked to dotfiles for cross-machine sync):
 
 ```text
-apps/common/theme/data/
+~/.config/theme/
 ├── history-macos.jsonl
 ├── history-arch.jsonl
 ├── history-wsl.jsonl
-└── rejected-themes.json
+├── rejected-themes-macos.json
+└── rejected-themes-arch.json
 ```
 
-Rankings combine data across all platforms for consistent preferences.
+Per-platform rejection files prevent git merge conflicts. Rankings combine data across all platforms.
 
 ## Wallpaper Generator
 
@@ -157,7 +158,7 @@ Wallpapers are saved to `~/.local/share/theme/wallpaper.png` and set as the desk
 Generate manually with a specific style:
 
 ```bash
-cd apps/common/theme
+cd ~/tools/theme  # or ~/.local/share/theme
 bash lib/generators/wallpaper.sh themes/rose-pine/theme.yml /tmp/wall.png plasma 3840 2160
 ```
 
@@ -169,7 +170,7 @@ bash lib/generators/wallpaper.sh themes/rose-pine/theme.yml /tmp/wall.png plasma
 4. Generate app configs using the generators in `lib/generators/`:
 
 ```bash
-cd apps/common/theme
+cd ~/tools/theme  # Development location
 
 # Core apps (all platforms)
 bash lib/generators/ghostty.sh themes/{id}/theme.yml themes/{id}/ghostty.conf

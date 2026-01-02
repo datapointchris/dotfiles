@@ -617,10 +617,10 @@ var (
 
 **App-level Task integration:**
 
-Each Go app has its own `Taskfile.yml` for building:
+Each Go app has its own `Taskfile.yml` for local development:
 
 ```yaml
-# apps/common/sess/Taskfile.yml
+# ~/tools/sess/Taskfile.yml
 build:
   desc: Build sess
   vars:
@@ -629,14 +629,15 @@ build:
     COMMIT:
       sh: git rev-parse --short HEAD
   cmds:
-    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}" -o sess .
+    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}" -o sess ./cmd/sess
 
-install:
-  desc: Build and install to ~/.local/bin
-  deps: [build]
+test:
+  desc: Run tests
   cmds:
-    - mv sess ~/.local/bin/
+    - go test -v ./...
 ```
+
+For installation, use `go install` from GitHub rather than local builds.
 
 ## Documentation
 

@@ -138,8 +138,6 @@ Sess is a Go application using:
 - yaml.v3 for config parsing
 - Interfaces and dependency injection for testability
 
-Binary installs to `~/go/bin/sess`.
-
 ## Workflow
 
 Start your day:
@@ -205,20 +203,32 @@ sess list | grep -c "●"
 sess list | grep "⚙"
 ```
 
-## Building from Source
+## Installation
 
-Build and install from source:
+Sess installs via `go install` from GitHub (defined in `packages.yml`):
 
 ```bash
-cd apps/common/sess
-task build    # Creates local binary
-task install  # Installs to ~/go/bin/sess
-task test     # Run tests
+go install github.com/datapointchris/sess/cmd/sess@latest
 ```
+
+Binary installs to `~/go/bin/sess`.
+
+## Development
+
+For local development:
+
+```bash
+cd ~/tools/sess
+go run ./cmd/sess     # Test changes
+go build -o sess ./cmd/sess  # Build local binary
+task test             # Run tests
+```
+
+Push changes to GitHub, then `go install` to update the installed version.
 
 ## Troubleshooting
 
-**Command not found**: Run `cd apps/common/sess && task install` to rebuild. Verify `~/go/bin` is in PATH with `echo $PATH | grep go/bin`.
+**Command not found**: Run `go install github.com/datapointchris/sess/cmd/sess@latest`. Verify `~/go/bin` is in PATH with `echo $PATH | grep go/bin`.
 
 **Session not creating**: Verify tmux is installed (`which tmux`) and running (`tmux info`). Check directory exists in config. Verify tmuxinator project exists if configured.
 

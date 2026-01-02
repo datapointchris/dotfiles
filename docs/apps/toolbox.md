@@ -158,16 +158,28 @@ toolbox show $(toolbox list | grep -v "^#" | shuf -n 1 | awk '{print $1}')
 # Discover a random tool
 ```
 
-## Building from Source
+## Installation
 
-Toolbox is a Go application:
+Toolbox installs via `go install` from GitHub (defined in `packages.yml`):
 
 ```bash
-cd apps/common/toolbox
-task build    # Creates local binary
-task install  # Installs to ~/go/bin/toolbox
-task test     # Run tests
+go install github.com/datapointchris/toolbox@latest
 ```
+
+Binary installs to `~/go/bin/toolbox`.
+
+## Development
+
+For local development:
+
+```bash
+cd ~/tools/toolbox
+go run .              # Test changes
+go build -o toolbox   # Build local binary
+task test             # Run tests
+```
+
+Push changes to GitHub, then `go install` to update the installed version.
 
 ## Adding Tools
 
@@ -204,7 +216,7 @@ Commit changes to dotfiles repo. Toolbox reads the registry on each invocation.
 
 ## Troubleshooting
 
-**Command not found**: Verify installation with `which toolbox`. If missing, run `cd apps/common/toolbox && task install`.
+**Command not found**: Verify installation with `which toolbox`. If missing, run `go install github.com/datapointchris/toolbox@latest`.
 
 **Registry not found**: Check `ls ~/dotfiles/docs/tools/registry.yml`. The registry must exist for toolbox to work.
 

@@ -49,17 +49,19 @@ All tracking actions automatically log to per-platform history files. Rejected f
 
 ## Data & History
 
-Font history is stored in per-platform JSONL files within the app directory:
+Font history is stored in `~/.config/font/` (symlinked to dotfiles for cross-machine sync):
 
 ```text
-apps/common/font/data/
+~/.config/font/
 ├── history-macos.jsonl
 ├── history-arch.jsonl
 ├── history-wsl.jsonl
-└── rejected-fonts.json
+├── rejected-fonts-macos.json
+├── rejected-fonts-arch.json
+└── font-info.json
 ```
 
-**Zero merge conflicts:** Each platform only writes to its own file. When you pull/push across machines, there are no conflicts.
+**Zero merge conflicts:** Each platform writes to its own history and rejection files.
 
 **Cross-platform rankings:** `font rank` combines data from all platforms to show fonts you like across all your machines.
 

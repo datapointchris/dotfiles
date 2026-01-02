@@ -23,25 +23,32 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 
 ## The Tools
 
-**sess** (`apps/common/sess/`) - Go application
+**sess** - Go application (installed via `go install`)
 
 - Tmux session management
 - Aggregates: tmux sessions, tmuxinator projects, default configs
 - Commands: `sess`, `sess list`, `sess <name>`, `sess last`
-- Built and installed via Task to `~/go/bin/`
+- Development: `~/tools/sess/`
 
-**toolbox** (`apps/common/toolbox/`) - Go application
+**toolbox** - Go application (installed via `go install`)
 
 - CLI tool discovery and documentation
 - Registry: `platforms/common/.config/toolbox/registry.yml`
 - Commands: `list`, `show`, `search`, `random`, `installed`, `categories`
-- Built and installed via Task to `~/go/bin/`
+- Development: `~/tools/toolbox/`
 
-**theme** (`apps/common/theme/`) - Bash script
+**theme** - Bash tool (installed via git clone to `~/.local/share/`)
 
 - Unified theme generation from theme.yml source files
 - Applies themes across ghostty, tmux, btop, and Neovim
-- Commands: `current`, `apply`, `list`, `preview`, `random`, `like`, `dislike`
+- Commands: `current`, `apply`, `list`, `preview`, `random`, `like`, `dislike`, `upgrade`
+- Development: `~/tools/theme/`
+
+**font** - Bash tool (installed via git clone to `~/.local/share/`)
+
+- Font management and tracking
+- Commands: `current`, `change`, `apply`, `like`, `dislike`, `rank`, `upgrade`
+- Development: `~/tools/font/`
 
 **notes** (`apps/common/notes`) - Bash wrapper
 

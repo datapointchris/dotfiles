@@ -80,20 +80,22 @@ Tools installed to: `~/.local/bin` (consistent across platforms)
 
 ### Theme System
 
-Theme management uses the `theme` CLI from `apps/common/theme/`:
+Theme management uses the `theme` CLI (installed to `~/.local/bin/theme`):
 
 ```bash
 theme list                  # List available themes
 theme apply rose-pine       # Apply theme
 theme preview               # Interactive fzf preview
 theme current               # Show current theme
+theme upgrade               # Update to latest version
 ```
 
-**Configuration** (consistent across all platforms):
+**Locations**:
 
-- Themes: `apps/common/theme/themes/`
-- Generated configs: copied to `~/.config/{app}/themes/current.conf`
-- Theme history: `apps/common/theme/data/history-{platform}.jsonl`
+- Installed: `~/.local/share/theme/` (cloned from GitHub)
+- Development: `~/tools/theme/`
+- Data: `~/.config/theme/` (history, rejected themes)
+- Themes: `~/.local/share/theme/themes/`
 
 ## Platform-Specific Quirks
 
