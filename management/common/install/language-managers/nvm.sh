@@ -39,7 +39,7 @@ run_nvm_install() {
   log_info "Downloading nvm install script..."
   if curl -fsSL "$NVM_INSTALL_SCRIPT" -o "$tmp_script"; then
     chmod +x "$tmp_script"
-    NVM_DIR="$NVM_DIR" bash "$tmp_script"
+    PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash "$tmp_script"
     return $?
   fi
 
@@ -50,7 +50,7 @@ run_nvm_install() {
 
   if [[ -n "$home_script" ]]; then
     log_info "Found in home directory: $home_script"
-    NVM_DIR="$NVM_DIR" bash "$home_script"
+    PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash "$home_script"
     return $?
   fi
 
