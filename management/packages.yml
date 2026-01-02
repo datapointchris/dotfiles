@@ -785,6 +785,10 @@ go_tools:
     package: github.com/datapointchris/sess/cmd/sess
     description: Terminal session manager
 
+  - name: toolbox
+    package: github.com/datapointchris/toolbox
+    description: CLI for discovering installed development tools
+
 # ================================================================
 # SHELL PLUGINS
 # ================================================================

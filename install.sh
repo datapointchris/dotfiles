@@ -70,7 +70,6 @@ install_common_phases() {
   local common_install="$DOTFILES_DIR/management/common/install"
   local github_releases="$common_install/github-releases"
   local custom_installers="$common_install/custom-installers"
-  local custom_apps="$common_install/custom-apps"
   local lang_managers="$common_install/language-managers"
   local lang_tools="$common_install/language-tools"
   local plugins="$common_install/plugins"
@@ -120,9 +119,6 @@ install_common_phases() {
 
   print_header "Shell Plugins"
   run_installer "$plugins/shell-plugins.sh" "shell-plugins"
-
-  print_header "Custom Go Applications"
-  PATH="/usr/local/go/bin:$HOME/go/bin:$PATH" run_installer "$custom_apps/toolbox.sh" "toolbox"
 
   print_header "Symlinking Dotfiles"
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
