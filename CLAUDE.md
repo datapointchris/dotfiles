@@ -27,21 +27,22 @@
 - ALWAYS use `DOTFILES_DIR="$(git rev-parse --show-toplevel)"` to get repo root
 - NEVER use relative path navigation like `$(cd "$(dirname ...)/../.." && pwd)`
 
-**App Installation Patterns** (⚠️ CRITICAL - Read this carefully, mistakes here are costly):
+**App Installation Patterns** (⚠️ CRITICAL - Three distinct patterns):
 
-**This has caused issues 3+ times. Follow these rules exactly:**
+1. **Go Apps** (sess, toolbox): Installed from GitHub via `go install`
+   - Defined in `packages.yml` under `go_tools`
+   - Development in `~/tools/{app}/`, push to GitHub for deployment
+   - Binary location: `~/go/bin/`
 
-1. **Go Apps** (sess/, toolbox/): Directories with source code
-   - ✅ Built with `task install` → installs to `~/go/bin/`
-   - ❌ **NEVER symlinked** - they install themselves
-   - Added via Taskfile.yml: `cd apps/common/{app} && task install`
-
-2. **Shell Script Apps** (menu, notes, etc.): Executable files
-   - ✅ Symlinked from `apps/{platform}/` → `~/.local/bin/`
-   - ✅ Handled by `link_apps()` in symlinks manager
+2. **Shell Script Apps** (menu, notes): Symlinked from repo
+   - Located in `apps/{platform}/` as executable files
+   - Symlinked by `link_apps()` → `~/.local/bin/`
    - Note: `link_apps()` skips directories, only symlinks files
 
-**Test your understanding**: Before modifying app installation, re-read this section.
+3. **Personal CLI Tools** (theme, font): Git clone + symlink
+   - Custom installers in `management/common/install/custom-installers/`
+   - Clone to `~/.local/share/{tool}/`, symlink bin → `~/.local/bin/`
+   - Development in `~/tools/{app}/`, push to GitHub, run `{tool} upgrade`
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 

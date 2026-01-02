@@ -1,99 +1,84 @@
 # App Installation Patterns
 
-**Context**: Managing custom CLI apps across platforms with different installation methods.
+**Context**: Managing custom CLI apps with different installation methods.
 
-## The Problem
+## Three App Categories
 
-Confusion between Go apps (directories with source) vs shell script apps (executable files) leading to incorrect symlink expectations and installation failures.
+### 1. Go Apps (Remote Install via `go install`)
 
-## Two Distinct App Types
+**Examples**: `sess`, `toolbox`
 
-### 1. Go Apps (Build + Install Pattern)
-
-**Location**: `apps/common/{app}/` (directories)
-
-**Characteristics**:
-
-- Are DIRECTORIES containing Go source code
-- Have a `Taskfile.yml` with `install` task
-- Build process: `go build` → `cp binary ~/go/bin/`
-- **NEVER symlinked** - they install themselves to `~/go/bin`
-
-**Examples**: `sess/`, `toolbox/`
-
-**Installation** (in main Taskfile.yml):
+**Installation**: Installed from GitHub via `go install` in packages.yml:
 
 ```yaml
-- echo "Building Go apps..."
-- cd apps/common/sess && task install
-- cd apps/common/toolbox && task install
+go_tools:
+  - name: sess
+    package: github.com/datapointchris/sess/cmd/sess
+  - name: toolbox
+    package: github.com/datapointchris/toolbox
 ```
+
+**Development**: Source code lives in `~/tools/sess/` and `~/tools/toolbox/`. Changes are tested locally with `go run .` or `go build`, then pushed to GitHub. Fresh installs get the latest from GitHub.
+
+**Binary location**: `~/go/bin/`
 
 ### 2. Shell Script Apps (Symlink Pattern)
 
-**Location**: `apps/{platform}/` (files)
+**Examples**: `menu`, `notes`, `aws-profiles`
 
-**Characteristics**:
+**Location**: `apps/{platform}/` (executable files)
 
-- Are EXECUTABLE FILES (not directories)
-- Symlinked from `apps/{platform}/` → `~/.local/bin/`
-- Handled by `link_apps()` in symlinks manager
-- `link_apps()` skips directories, only symlinks files
-
-**Examples**: `menu`, `notes`, `printcolors`
-
-**Installation** (in symlinks manager `cli.py`):
+**Installation**: Symlinked from repo → `~/.local/bin/` by symlinks manager:
 
 ```python
-manager.link_apps("common")  # Symlinks apps/common/* files
-manager.link_apps(platform)   # Symlinks apps/{platform}/* files
+manager.link_apps("common")  # apps/common/* files → ~/.local/bin/
+manager.link_apps(platform)  # apps/{platform}/* files → ~/.local/bin/
 ```
 
-## Critical Implementation Details
+The `link_apps()` function skips directories, only symlinking executable files.
 
-**Symlink Manager Behavior**:
+### 3. Personal CLI Tools (Git Clone Pattern)
 
-```python
-def link_apps(self, platform: str):
-    for app in apps_dir.iterdir():
-        if app.is_dir():  # SKIP directories (Go apps)
-            continue
-        # Only symlink FILES
-        target.symlink_to(relative_source)
+**Examples**: `theme`, `font`
+
+**Installation**: Custom installers clone from GitHub to `~/.local/share/`, symlink bin to `~/.local/bin/`:
+
+```bash
+# In management/common/install/custom-installers/theme.sh
+git clone https://github.com/datapointchris/theme.git ~/.local/share/theme
+ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 ```
 
-**PATH Requirements**:
-Both `~/.local/bin` and `~/go/bin` must be in PATH (configured in `.zshrc`):
+**Development**: Source code in `~/tools/theme/` and `~/tools/font/`. Changes tested locally, pushed to GitHub. Run `theme upgrade` or `font upgrade` to pull updates to installed version.
+
+**Upgrade**: Built-in `upgrade` command runs `git pull` on the installed version.
+
+## Directory Summary
+
+| Category | Development | Installed | Binary/Symlink |
+|----------|-------------|-----------|----------------|
+| Go apps | ~/tools/{app}/ | GitHub | ~/go/bin/{app} |
+| Shell scripts | apps/{platform}/ | (same) | ~/.local/bin/{app} → repo |
+| Personal tools | ~/tools/{app}/ | ~/.local/share/{app}/ | ~/.local/bin/{app} → .local/share |
+
+## PATH Requirements
+
+Both directories must be in PATH (configured in `.zshrc`):
 
 ```bash
 export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 ```
 
-## Testing
-
-**Verification checks**:
-
-- Go apps: `command -v toolbox` (finds in ~/go/bin)
-- Shell apps: `command -v menu` (finds in ~/.local/bin via symlink)
-
 ## Key Learnings
 
-1. **Go apps install themselves** - Don't try to symlink them
-2. **Shell apps are symlinked** - Don't try to build them
-3. **`link_apps()` only processes files** - Directories are intentionally skipped
-4. **PATH must include both bin directories** - Or apps won't be found
-5. **Don't confuse the two patterns** - They are fundamentally different installation methods
-
-## Common Mistakes
-
-❌ **Trying to symlink Go apps**: They're directories, not files - symlinks manager skips them
-❌ **Trying to build shell scripts**: They're already executable - just symlink them
-❌ **Not calling `link_apps()` in `link` command**: Apps won't get symlinked during installation
-❌ **Forgetting PATH setup**: Apps won't be found even if installed correctly
+1. **Go apps install from GitHub** - Use `go install`, not local builds
+2. **Shell scripts are symlinked** - Direct link from repo to ~/.local/bin
+3. **Personal tools separate dev from installed** - ~/tools/ for dev, ~/.local/share/ for installed
+4. **Upgrade commands are self-contained** - Tools manage their own updates via `git pull`
 
 ## Related Files
 
-- `Taskfile.yml` - Go app build steps
+- `management/packages.yml` - Go tools list
 - `management/symlinks/symlinks/manager.py:link_apps()` - Shell app symlinking
-- `management/symlinks/symlinks/cli.py:link()` - Calls both dotfiles + apps linking
+- `management/common/install/custom-installers/theme.sh` - Personal tool installer
 - `platforms/common/.config/zsh/.zshrc` - PATH configuration
