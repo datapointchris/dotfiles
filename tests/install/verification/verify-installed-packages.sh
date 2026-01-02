@@ -298,10 +298,11 @@ check_command_at_path "yazi" "$HOME/.local/bin/yazi"
 check_command_at_path "ya" "$HOME/.local/bin/ya"
 
 # ================================================================
-# Theme Management
+# Personal CLI Tools
 # ================================================================
-print_section "Theme Management (Universal)"
+print_section "Personal CLI Tools (Universal)"
 check_command "theme" "SKIP_VERSION"
+check_command "font" "SKIP_VERSION"
 
 # ================================================================
 # Custom CLI Tools

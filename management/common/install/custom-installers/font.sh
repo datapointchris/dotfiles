@@ -4,7 +4,7 @@ set -uo pipefail
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 
-INSTALL_DIR="$HOME/tools/font"
+INSTALL_DIR="$HOME/.local/share/font"
 REPO="https://github.com/datapointchris/font.git"
 
 if [[ -d "$INSTALL_DIR/.git" ]] && [[ "${FORCE_INSTALL:-}" != "true" ]]; then
@@ -14,7 +14,7 @@ fi
 
 log_info "Installing font..."
 
-mkdir -p "$HOME/tools"
+mkdir -p "$HOME/.local/share"
 
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   log_info "Updating existing installation..."
