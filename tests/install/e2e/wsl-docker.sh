@@ -464,19 +464,15 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 8/8: Testing WSL Update Script"
-  echo "Running management/wsl/update.sh to verify update functionality..."
+  log_section "STEP 8/8: Testing Update Script"
+  echo "Running update.sh to verify update functionality..."
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  if docker exec "$CONTAINER_NAME" bash -c "test -f ${CONTAINER_HOME}/dotfiles/management/wsl/update.sh"; then
-    docker exec "$CONTAINER_NAME" bash -c "
-      cd ${CONTAINER_HOME}/dotfiles
-      bash management/wsl/update.sh
-    " || log_warning "WSL update script failed"
-  else
-    log_info "Skipping update test (management/wsl/update.sh not found)"
-  fi
+  docker exec "$CONTAINER_NAME" bash -c "
+    cd ${CONTAINER_HOME}/dotfiles
+    bash update.sh
+  " || log_warning "Update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

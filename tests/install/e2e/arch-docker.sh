@@ -331,18 +331,14 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 8/8: Testing Arch Update Script"
-  echo "Running management/arch/update.sh to verify update functionality..."
+  log_section "STEP 8/8: Testing Update Script"
+  echo "Running update.sh to verify update functionality..."
   echo ""
 
-  if docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "test -f /home/archuser/dotfiles/management/arch/update.sh"; then
-    docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
-      cd /home/archuser/dotfiles
-      bash management/arch/update.sh
-    " || log_warning "Arch update script failed"
-  else
-    log_info "Skipping update test (management/arch/update.sh not found)"
-  fi
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
+    cd /home/archuser/dotfiles
+    bash update.sh
+  " || log_warning "Update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

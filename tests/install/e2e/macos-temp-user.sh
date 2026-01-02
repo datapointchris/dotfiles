@@ -250,14 +250,14 @@ STEP_TIMES+=("$STEP_ELAPSED")
 # ================================================================
 STEP_START=$(date +%s)
 {
-  log_section "STEP 7/7: Testing macOS Update Script"
-  echo "Running management/macos/update.sh to verify update functionality..."
+  log_section "STEP 7/7: Testing Update Script"
+  echo "Running update.sh to verify update functionality..."
   echo ""
 
   sudo -u "$TEST_USER" bash -c "
     cd /Users/$TEST_USER/dotfiles
-    bash management/macos/update.sh
-  " || log_warning "macOS update script failed"
+    bash update.sh
+  " || log_warning "Update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
