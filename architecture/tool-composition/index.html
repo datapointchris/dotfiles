@@ -4544,25 +4544,32 @@
 </span></code></pre></div>
 <p>Inspired by <a href="https://github.com/joshmedeski/sesh">sesh</a> - integration happens at the shell level, not within the tool.</p>
 <h2 id="the-tools">The Tools<a class="headerlink" href="#the-tools" title="Permanent link">&para;</a></h2>
-<p><strong>sess</strong> (<code>apps/common/sess/</code>) - Go application</p>
+<p><strong>sess</strong> - Go application (installed via <code>go install</code>)</p>
 <ul>
 <li>Tmux session management</li>
 <li>Aggregates: tmux sessions, tmuxinator projects, default configs</li>
 <li>Commands: <code>sess</code>, <code>sess list</code>, <code>sess &lt;name&gt;</code>, <code>sess last</code></li>
-<li>Built and installed via Task to <code>~/go/bin/</code></li>
+<li>Development: <code>~/tools/sess/</code></li>
 </ul>
-<p><strong>toolbox</strong> (<code>apps/common/toolbox/</code>) - Go application</p>
+<p><strong>toolbox</strong> - Go application (installed via <code>go install</code>)</p>
 <ul>
 <li>CLI tool discovery and documentation</li>
 <li>Registry: <code>platforms/common/.config/toolbox/registry.yml</code></li>
 <li>Commands: <code>list</code>, <code>show</code>, <code>search</code>, <code>random</code>, <code>installed</code>, <code>categories</code></li>
-<li>Built and installed via Task to <code>~/go/bin/</code></li>
+<li>Development: <code>~/tools/toolbox/</code></li>
 </ul>
-<p><strong>theme</strong> (<code>apps/common/theme/</code>) - Bash script</p>
+<p><strong>theme</strong> - Bash tool (installed via git clone to <code>~/.local/share/</code>)</p>
 <ul>
 <li>Unified theme generation from theme.yml source files</li>
 <li>Applies themes across ghostty, tmux, btop, and Neovim</li>
-<li>Commands: <code>current</code>, <code>apply</code>, <code>list</code>, <code>preview</code>, <code>random</code>, <code>like</code>, <code>dislike</code></li>
+<li>Commands: <code>current</code>, <code>apply</code>, <code>list</code>, <code>preview</code>, <code>random</code>, <code>like</code>, <code>dislike</code>, <code>upgrade</code></li>
+<li>Development: <code>~/tools/theme/</code></li>
+</ul>
+<p><strong>font</strong> - Bash tool (installed via git clone to <code>~/.local/share/</code>)</p>
+<ul>
+<li>Font management and tracking</li>
+<li>Commands: <code>current</code>, <code>change</code>, <code>apply</code>, <code>like</code>, <code>dislike</code>, <code>rank</code>, <code>upgrade</code></li>
+<li>Development: <code>~/tools/font/</code></li>
 </ul>
 <p><strong>notes</strong> (<code>apps/common/notes</code>) - Bash wrapper</p>
 <ul>

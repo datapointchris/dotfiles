@@ -137,6 +137,10 @@
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/cache-fallback-implementation-plan/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/commit-agent-optimization-status/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
@@ -145,11 +149,19 @@
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/cross-platform-theme-font-plan/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/docker-and-brewfile-migration-summary/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/docker-installer-testing-plan/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/docs-audit-2025-12/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
@@ -170,6 +182,10 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/fonts-refactor-plan/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/hyprland-integration/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
@@ -225,6 +241,10 @@
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/refcheck-conversion/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/refcheck-variable-path-enhancement/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
@@ -261,6 +281,14 @@
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/theme-meta-refactor/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/tools-migration-2026-01/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/trivy-migration-complete/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
@@ -270,6 +298,14 @@
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/archive/unified-metrics-system/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/unified-theme-generation-plan/</loc>
+         <lastmod>2026-01-02</lastmod>
+    </url>
+    <url>
+         <loc>https://datapointchris.github.io/dotfiles/archive/unified-theme-management/</loc>
          <lastmod>2026-01-02</lastmod>
     </url>
     <url>

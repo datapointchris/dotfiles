@@ -4550,70 +4550,57 @@
 
 
 <h1 id="go-applications">Go Applications<a class="headerlink" href="#go-applications" title="Permanent link">&para;</a></h1>
-<p>This dotfiles repository includes custom Go applications for workflow automation and tool discovery. All Go apps are built from source and installed to <code>~/go/bin/</code>, which is added to PATH by the shell configuration.</p>
+<p>Custom Go applications for workflow automation and tool discovery. Apps are installed from GitHub via <code>go install</code> and binaries live in <code>~/go/bin/</code>.</p>
 <h2 id="applications">Applications<a class="headerlink" href="#applications" title="Permanent link">&para;</a></h2>
 <h3 id="sess-session-manager">sess - Session Manager<a class="headerlink" href="#sess-session-manager" title="Permanent link">&para;</a></h3>
-<p>Fast tmux session manager that replaces sesh. Provides interactive session selection, creation, and switching with integration for tmuxinator projects and configurable default sessions.</p>
-<p><strong>Location</strong>: <code>apps/common/sess/</code></p>
-<p><strong>Installation</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/apps/common/sess
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>task<span class="w"> </span>install
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Installs to ~/go/bin/sess</span>
-</span></code></pre></div>
+<p>Fast tmux session manager with interactive selection, creation, and switching. Integrates with tmuxinator projects and configurable default sessions.</p>
+<p><strong>Installation</strong>: <code>go install github.com/datapointchris/sess/cmd/sess@latest</code></p>
 <p><strong>Key features</strong>:</p>
 <ul>
 <li>Interactive session picker with gum</li>
 <li>Create or switch to sessions by name</li>
 <li>List all sessions (tmux + tmuxinator + defaults)</li>
-<li>Platform-specific default sessions (configured in <code>~/.config/sess/sessions-{platform}.yml</code>)</li>
-<li>Fast startup and low memory footprint</li>
+<li>Platform-specific default sessions (<code>~/.config/sess/sessions-{platform}.yml</code>)</li>
 </ul>
 <p>See <a href="../../../apps/sess/">Session Manager Reference</a> for usage details.</p>
 <h3 id="toolbox-tool-discovery">toolbox - Tool Discovery<a class="headerlink" href="#toolbox-tool-discovery" title="Permanent link">&para;</a></h3>
-<p>Tool discovery and documentation system that helps explore the 30+ CLI tools installed in your dotfiles. Provides searchable registry with descriptions, examples, and installation information.</p>
-<p><strong>Location</strong>: <code>apps/common/toolbox/</code></p>
-<p><strong>Installation</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/apps/common/toolbox
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>task<span class="w"> </span>install
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Installs to ~/go/bin/toolbox</span>
-</span></code></pre></div>
+<p>Tool discovery and documentation system for exploring CLI tools. Provides searchable registry with descriptions, examples, and installation information.</p>
+<p><strong>Installation</strong>: <code>go install github.com/datapointchris/toolbox@latest</code></p>
 <p><strong>Key features</strong>:</p>
 <ul>
 <li>List all tools by category</li>
 <li>Search by name, description, or tags</li>
 <li>Show detailed tool information with examples</li>
 <li>Interactive category browser</li>
-<li>Registry-based architecture (YAML configuration)</li>
 </ul>
 <p>See <a href="../../../apps/toolbox/">Toolbox Reference</a> for usage details.</p>
 <h2 id="development-workflow">Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h2>
-<h3 id="building-applications">Building Applications<a class="headerlink" href="#building-applications" title="Permanent link">&para;</a></h3>
-<p>Each Go application has its own Taskfile for build automation:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/apps/common/<span class="o">{</span>app<span class="o">}</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>task<span class="w"> </span>build<span class="w">        </span><span class="c1"># Build binary</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>task<span class="w"> </span>install<span class="w">      </span><span class="c1"># Build and install to ~/go/bin</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">         </span><span class="c1"># Run tests</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>task<span class="w"> </span>clean<span class="w">        </span><span class="c1"># Clean build artifacts</span>
+<p>Development happens in <code>~/tools/</code> with source code pushed to GitHub.</p>
+<h3 id="testing-changes-locally">Testing Changes Locally<a class="headerlink" href="#testing-changes-locally" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">cd</span><span class="w"> </span>~/tools/sess
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>go<span class="w"> </span>run<span class="w"> </span>./cmd/sess<span class="w">     </span><span class="c1"># Test changes</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>go<span class="w"> </span>build<span class="w"> </span>-o<span class="w"> </span>sess<span class="w"> </span>./cmd/sess<span class="w">  </span><span class="c1"># Build local binary</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">             </span><span class="c1"># Run tests</span>
 </span></code></pre></div>
-<h3 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h3>
-<p>Go apps use Go's standard testing framework with table-driven tests and the Bubbletea test utilities for TUI testing:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/apps/common/<span class="o">{</span>app<span class="o">}</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">         </span><span class="c1"># Run all tests</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-v<span class="w"> </span>./...<span class="w">  </span><span class="c1"># Verbose test output</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-run<span class="w"> </span>TestSpecificFunction<span class="w">  </span><span class="c1"># Run specific test</span>
+<h3 id="publishing-changes">Publishing Changes<a class="headerlink" href="#publishing-changes" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>~/tools/sess
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>add<span class="w"> </span>-A<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add feature&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>git<span class="w"> </span>push
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Update installed version</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/datapointchris/sess/cmd/sess@latest
 </span></code></pre></div>
 <h3 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h3>
-<p>Standard Go project layout:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>apps/common/{app}/
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── cmd/              # Command implementations
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>├── internal/         # Internal packages (not importable)
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   ├── config/       # Configuration loading
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│   ├── display/      # UI components (Bubbletea)
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   └── models/       # Data structures
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>├── go.mod            # Go module definition
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>├── go.sum            # Dependency checksums
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>├── Taskfile.yml      # Build automation
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>└── README.md         # App-specific documentation
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>~/tools/sess/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── cmd/sess/         # Main entry point
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── internal/         # Internal packages
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│   ├── config/       # Configuration loading
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│   ├── display/      # UI components (Bubbletea)
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   └── models/       # Data structures
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>├── go.mod            # Go module definition
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>├── go.sum            # Dependency checksums
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>├── Taskfile.yml      # Build automation
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>└── README.md         # Documentation
 </span></code></pre></div>
 <h2 id="development-standards">Development Standards<a class="headerlink" href="#development-standards" title="Permanent link">&para;</a></h2>
 <p>Follow the coding standards and patterns documented in:</p>
@@ -4622,63 +4609,41 @@
 <li><a href="../go-quick-reference/">Go Quick Reference</a> - Common Go patterns and idioms</li>
 <li><a href="../bubbletea-quick-reference/">Bubbletea Quick Reference</a> - TUI development with Bubbletea</li>
 </ul>
-<h2 id="adding-new-applications">Adding New Applications<a class="headerlink" href="#adding-new-applications" title="Permanent link">&para;</a></h2>
-<p>Create new Go applications following the established patterns:</p>
+<h2 id="adding-new-go-applications">Adding New Go Applications<a class="headerlink" href="#adding-new-go-applications" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Create directory structure</strong>:</li>
+<li><strong>Create repository in ~/tools/</strong>:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>apps/common/<span class="o">{</span>app<span class="o">}</span>/<span class="o">{</span>cmd,internal<span class="o">}</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/tools/<span class="o">{</span>app<span class="o">}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>~/tools/<span class="o">{</span>app<span class="o">}</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>go<span class="w"> </span>mod<span class="w"> </span>init<span class="w"> </span>github.com/datapointchris/<span class="o">{</span>app<span class="o">}</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>git<span class="w"> </span>init
 </span></code></pre></div>
 <ol>
-<li><strong>Initialize Go module</strong>:</li>
+<li><strong>Add to packages.yml</strong> for automatic installation:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/<span class="o">{</span>app<span class="o">}</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>go<span class="w"> </span>mod<span class="w"> </span>init<span class="w"> </span>github.com/datapointchris/dotfiles/apps/common/<span class="o">{</span>app<span class="o">}</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">go_tools</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">app</span><span class="p p-Indicator">}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/datapointchris/{app}</span>
 </span></code></pre></div>
 <ol>
-<li>
-<p><strong>Create Taskfile.yml</strong>:
-   Copy from existing app (sess or toolbox) and modify for your app.</p>
-</li>
-<li>
-<p><strong>Add to installation</strong>:
-   Add your app to the Go app installation in <code>install.sh</code> or create an install script in <code>management/common/install/</code>.</p>
-</li>
-<li>
-<p><strong>Follow standards</strong>:
-   Use the patterns from existing apps (sess, toolbox) for configuration loading, display components, and testing.</p>
-</li>
+<li><strong>Push to GitHub</strong> and install:</li>
 </ol>
-<h2 id="migration-history">Migration History<a class="headerlink" href="#migration-history" title="Permanent link">&para;</a></h2>
-<p>Both <code>sess</code> and <code>toolbox</code> were migrated from bash scripts to Go applications in November 2025 for improved performance, reliability, and maintainability. The migration provided:</p>
-<ul>
-<li><strong>Type safety</strong> - Compile-time error detection</li>
-<li><strong>Testing</strong> - Unit tests with table-driven tests and TUI test utilities</li>
-<li><strong>Performance</strong> - Faster startup and execution</li>
-<li><strong>Maintainability</strong> - Clear structure and separation of concerns</li>
-<li><strong>Cross-platform</strong> - Single binary works on all platforms</li>
-</ul>
-<p>See <code>docs/archive/go-migration/</code> for detailed migration documentation (planning, strategy, and completion report).</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>origin<span class="w"> </span>git@github.com:datapointchris/<span class="o">{</span>app<span class="o">}</span>.git
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/datapointchris/<span class="o">{</span>app<span class="o">}</span>@latest
+</span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p><strong>Command not found after installation</strong>:</p>
 <p>Verify <code>~/go/bin</code> is in your PATH:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$PATH</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/go/bin&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$PATH</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/go/bin&quot;</span>
 </span></code></pre></div>
 <p>If not, restart your shell or run <code>exec zsh</code>.</p>
-<p><strong>Build failures</strong>:</p>
-<p>Ensure Go is installed and up to date:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>go<span class="w"> </span>version<span class="w">  </span><span class="c1"># Should be 1.23+</span>
+<p><strong>Update to latest version</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/datapointchris/<span class="o">{</span>app<span class="o">}</span>@latest
 </span></code></pre></div>
-<p>If Go is missing, run the installation task:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>task<span class="w"> </span>install<span class="w">  </span><span class="c1"># Installs Go as part of GitHub release tools phase</span>
-</span></code></pre></div>
-<p><strong>Import errors</strong>:</p>
-<p>Clean and rebuild:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/apps/common/<span class="o">{</span>app<span class="o">}</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>task<span class="w"> </span>clean
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>go<span class="w"> </span>mod<span class="w"> </span>tidy
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>task<span class="w"> </span>install
+<p><strong>Import errors during development</strong>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>~/tools/<span class="o">{</span>app<span class="o">}</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>go<span class="w"> </span>mod<span class="w"> </span>tidy
 </span></code></pre></div>
 
 

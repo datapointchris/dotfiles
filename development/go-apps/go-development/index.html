@@ -5071,8 +5071,8 @@
 </span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="c1">// go build -ldflags=&quot;-X main.version=1.0.0 -X main.commit=abc123&quot;</span>
 </span></code></pre></div>
 <p><strong>App-level Task integration:</strong></p>
-<p>Each Go app has its own <code>Taskfile.yml</code> for building:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># apps/common/sess/Taskfile.yml</span>
+<p>Each Go app has its own <code>Taskfile.yml</code> for local development:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># ~/tools/sess/Taskfile.yml</span>
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="nt">build</span><span class="p">:</span>
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">  </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build sess</span>
 </span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">  </span><span class="nt">vars</span><span class="p">:</span>
@@ -5081,14 +5081,14 @@
 </span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="w">    </span><span class="nt">COMMIT</span><span class="p">:</span>
 </span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="w">      </span><span class="nt">sh</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">git rev-parse --short HEAD</span>
 </span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a><span class="w">  </span><span class="nt">cmds</span><span class="p">:</span>
-</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">go build -ldflags=&quot;-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}&quot; -o sess .</span>
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">go build -ldflags=&quot;-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}&quot; -o sess ./cmd/sess</span>
 </span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>
-</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="nt">install</span><span class="p">:</span>
-</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a><span class="w">  </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build and install to ~/.local/bin</span>
-</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a><span class="w">  </span><span class="nt">deps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">build</span><span class="p p-Indicator">]</span>
-</span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="w">  </span><span class="nt">cmds</span><span class="p">:</span>
-</span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mv sess ~/.local/bin/</span>
+</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="nt">test</span><span class="p">:</span>
+</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a><span class="w">  </span><span class="nt">desc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run tests</span>
+</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a><span class="w">  </span><span class="nt">cmds</span><span class="p">:</span>
+</span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">go test -v ./...</span>
 </span></code></pre></div>
+<p>For installation, use <code>go install</code> from GitHub rather than local builds.</p>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <p><strong>Package documentation:</strong></p>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1">// Package session provides tmux session management.</span>

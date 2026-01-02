@@ -4710,17 +4710,19 @@
 </span></code></pre></div>
 <p>Tools installed to: <code>~/.local/bin</code> (consistent across platforms)</p>
 <h3 id="theme-system">Theme System<a class="headerlink" href="#theme-system" title="Permanent link">&para;</a></h3>
-<p>Theme management uses the <code>theme</code> CLI from <code>apps/common/theme/</code>:</p>
+<p>Theme management uses the <code>theme</code> CLI (installed to <code>~/.local/bin/theme</code>):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>theme<span class="w"> </span>list<span class="w">                  </span><span class="c1"># List available themes</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>theme<span class="w"> </span>apply<span class="w"> </span>rose-pine<span class="w">       </span><span class="c1"># Apply theme</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>theme<span class="w"> </span>preview<span class="w">               </span><span class="c1"># Interactive fzf preview</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>theme<span class="w"> </span>current<span class="w">               </span><span class="c1"># Show current theme</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>theme<span class="w"> </span>upgrade<span class="w">               </span><span class="c1"># Update to latest version</span>
 </span></code></pre></div>
-<p><strong>Configuration</strong> (consistent across all platforms):</p>
+<p><strong>Locations</strong>:</p>
 <ul>
-<li>Themes: <code>apps/common/theme/themes/</code></li>
-<li>Generated configs: copied to <code>~/.config/{app}/themes/current.conf</code></li>
-<li>Theme history: <code>apps/common/theme/data/history-{platform}.jsonl</code></li>
+<li>Installed: <code>~/.local/share/theme/</code> (cloned from GitHub)</li>
+<li>Development: <code>~/tools/theme/</code></li>
+<li>Data: <code>~/.config/theme/</code> (history, rejected themes)</li>
+<li>Themes: <code>~/.local/share/theme/themes/</code></li>
 </ul>
 <h2 id="platform-specific-quirks">Platform-Specific Quirks<a class="headerlink" href="#platform-specific-quirks" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">macOS</label><label for="__tabbed_1_2">Ubuntu/WSL</label><label for="__tabbed_1_3">Arch Linux</label></div>

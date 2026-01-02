@@ -8,31 +8,27 @@
       
       
       
-        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/reference/tools/symlinks/">
+        <link rel="canonical" href="https://datapointchris.github.io/dotfiles/archive/cache-fallback-implementation-plan/">
       
       
-        <link rel="prev" href="../../fonts/font-comparison/">
-      
-      
-        <link rel="next" href="../tasks/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
-        <title>Symlinks Manager - Dotfiles</title>
+        <title>Cache Fallback Implementation Plan - Dotfiles</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
   
@@ -116,11 +112,11 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -156,7 +152,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-header__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -176,7 +172,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Symlinks Manager
+              Cache Fallback Implementation Plan
             
           </span>
         </div>
@@ -288,7 +284,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -309,7 +305,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../apps/" class="md-tabs__link">
+        <a href="../../apps/" class="md-tabs__link">
           
   
   
@@ -333,7 +329,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../architecture/" class="md-tabs__link">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   
@@ -357,7 +353,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../configuration/neovim-ai-assistants/" class="md-tabs__link">
+        <a href="../../configuration/neovim-ai-assistants/" class="md-tabs__link">
           
   
   
@@ -375,13 +371,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   
@@ -405,7 +399,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../development/" class="md-tabs__link">
+        <a href="../../development/" class="md-tabs__link">
           
   
   
@@ -429,7 +423,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../claude-code/" class="md-tabs__link">
+        <a href="../../claude-code/" class="md-tabs__link">
           
   
   
@@ -451,7 +445,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../research/" class="md-tabs__link">
+        <a href="../../research/" class="md-tabs__link">
           
   
   
@@ -475,7 +469,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../learnings/" class="md-tabs__link">
+        <a href="../../learnings/" class="md-tabs__link">
           
   
   
@@ -499,7 +493,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../changelog/" class="md-tabs__link">
+        <a href="../../changelog/" class="md-tabs__link">
           
   
   
@@ -541,7 +535,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
+    <a href="../.." title="Dotfiles" class="md-nav__button md-logo" aria-label="Dotfiles" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -571,7 +565,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -643,7 +637,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../apps/" class="md-nav__link ">
+            <a href="../../apps/" class="md-nav__link ">
               
   
   
@@ -689,7 +683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/theme/" class="md-nav__link">
+      <a href="../../apps/theme/" class="md-nav__link">
         
   
   
@@ -719,7 +713,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/font/" class="md-nav__link">
+      <a href="../../apps/font/" class="md-nav__link">
         
   
   
@@ -749,7 +743,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/notes/" class="md-nav__link">
+      <a href="../../apps/notes/" class="md-nav__link">
         
   
   
@@ -779,7 +773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/patterns/" class="md-nav__link">
+      <a href="../../apps/patterns/" class="md-nav__link">
         
   
   
@@ -809,7 +803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/sess/" class="md-nav__link">
+      <a href="../../apps/sess/" class="md-nav__link">
         
   
   
@@ -839,7 +833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/menu/" class="md-nav__link">
+      <a href="../../apps/menu/" class="md-nav__link">
         
   
   
@@ -869,7 +863,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/toolbox/" class="md-nav__link">
+      <a href="../../apps/toolbox/" class="md-nav__link">
         
   
   
@@ -899,7 +893,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/refcheck/" class="md-nav__link">
+      <a href="../../apps/refcheck/" class="md-nav__link">
         
   
   
@@ -927,7 +921,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/backup-dirs/" class="md-nav__link">
+      <a href="../../apps/backup-dirs/" class="md-nav__link">
         
   
   
@@ -957,7 +951,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../apps/backup-incremental/" class="md-nav__link">
+      <a href="../../apps/backup-incremental/" class="md-nav__link">
         
   
   
@@ -1031,7 +1025,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../architecture/" class="md-nav__link ">
+            <a href="../../architecture/" class="md-nav__link ">
               
   
   
@@ -1077,7 +1071,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/shell-libraries/" class="md-nav__link">
+      <a href="../../architecture/shell-libraries/" class="md-nav__link">
         
   
   
@@ -1105,7 +1099,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/package-management/" class="md-nav__link">
+      <a href="../../architecture/package-management/" class="md-nav__link">
         
   
   
@@ -1133,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/path-ordering-strategy/" class="md-nav__link">
+      <a href="../../architecture/path-ordering-strategy/" class="md-nav__link">
         
   
   
@@ -1161,7 +1155,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/tool-composition/" class="md-nav__link">
+      <a href="../../architecture/tool-composition/" class="md-nav__link">
         
   
   
@@ -1189,7 +1183,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/error-handling/" class="md-nav__link">
+      <a href="../../architecture/error-handling/" class="md-nav__link">
         
   
   
@@ -1217,7 +1211,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/github-release-installer/" class="md-nav__link">
+      <a href="../../architecture/github-release-installer/" class="md-nav__link">
         
   
   
@@ -1312,7 +1306,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../configuration/neovim-ai-assistants/" class="md-nav__link">
+      <a href="../../configuration/neovim-ai-assistants/" class="md-nav__link">
         
   
   
@@ -1340,7 +1334,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../configuration/docker/" class="md-nav__link">
+      <a href="../../configuration/docker/" class="md-nav__link">
         
   
   
@@ -1372,8 +1366,6 @@
       
   
   
-    
-  
   
   
     
@@ -1395,23 +1387,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
+            <a href="../../reference/" class="md-nav__link ">
               
   
   
@@ -1431,13 +1422,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="">
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1473,13 +1464,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -1488,7 +1476,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
         
           
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
             
   
   
@@ -1524,7 +1512,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../platforms/differences/" class="md-nav__link">
+      <a href="../../reference/platforms/differences/" class="md-nav__link">
         
   
   
@@ -1552,7 +1540,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../platforms/packages/" class="md-nav__link">
+      <a href="../../reference/platforms/packages/" class="md-nav__link">
         
   
   
@@ -1580,7 +1568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../platforms/commands/" class="md-nav__link">
+      <a href="../../reference/platforms/commands/" class="md-nav__link">
         
   
   
@@ -1608,7 +1596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../platforms/tools/" class="md-nav__link">
+      <a href="../../reference/platforms/tools/" class="md-nav__link">
         
   
   
@@ -1660,13 +1648,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -1675,7 +1660,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
         
           
-          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   
@@ -1711,7 +1696,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../fonts/nerd-fonts-explained/" class="md-nav__link">
+      <a href="../../reference/fonts/nerd-fonts-explained/" class="md-nav__link">
         
   
   
@@ -1739,7 +1724,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../fonts/font-weights-and-variants/" class="md-nav__link">
+      <a href="../../reference/fonts/font-weights-and-variants/" class="md-nav__link">
         
   
   
@@ -1767,7 +1752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../fonts/terminal-fonts-guide/" class="md-nav__link">
+      <a href="../../reference/fonts/terminal-fonts-guide/" class="md-nav__link">
         
   
   
@@ -1795,7 +1780,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../fonts/font-comparison/" class="md-nav__link">
+      <a href="../../reference/fonts/font-comparison/" class="md-nav__link">
         
   
   
@@ -1828,10 +1813,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1848,21 +1831,20 @@
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
         
           
-          
         
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" checked>
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
         
           
-          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
             
   
   
@@ -1880,7 +1862,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1895,17 +1877,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/tools/symlinks/" class="md-nav__link">
         
   
   
@@ -1921,7 +1896,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1934,7 +1908,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tasks/" class="md-nav__link">
+      <a href="../../reference/tools/tasks/" class="md-nav__link">
         
   
   
@@ -1962,7 +1936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../skills/" class="md-nav__link">
+      <a href="../../reference/tools/skills/" class="md-nav__link">
         
   
   
@@ -1990,7 +1964,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../hooks/" class="md-nav__link">
+      <a href="../../reference/tools/hooks/" class="md-nav__link">
         
   
   
@@ -2038,13 +2012,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -2053,7 +2024,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
         
           
-          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
             
   
   
@@ -2089,7 +2060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../support/troubleshooting/" class="md-nav__link">
+      <a href="../../reference/support/troubleshooting/" class="md-nav__link">
         
   
   
@@ -2117,7 +2088,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../support/corporate/" class="md-nav__link">
+      <a href="../../reference/support/corporate/" class="md-nav__link">
         
   
   
@@ -2195,7 +2166,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../development/" class="md-nav__link ">
+            <a href="../../development/" class="md-nav__link ">
               
   
   
@@ -2241,7 +2212,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/aws-glue-local-workflow/" class="md-nav__link">
+      <a href="../../development/aws-glue-local-workflow/" class="md-nav__link">
         
   
   
@@ -2269,7 +2240,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/testing/" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
@@ -2361,7 +2332,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/overview/" class="md-nav__link">
+      <a href="../../development/go-apps/overview/" class="md-nav__link">
         
   
   
@@ -2389,7 +2360,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/go-development/" class="md-nav__link">
+      <a href="../../development/go-apps/go-development/" class="md-nav__link">
         
   
   
@@ -2417,7 +2388,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/go-quick-reference/" class="md-nav__link">
+      <a href="../../development/go-apps/go-quick-reference/" class="md-nav__link">
         
   
   
@@ -2445,7 +2416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
+      <a href="../../development/go-apps/bubbletea-quick-reference/" class="md-nav__link">
         
   
   
@@ -2481,7 +2452,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/shell-formatting/" class="md-nav__link">
+      <a href="../../development/shell-formatting/" class="md-nav__link">
         
   
   
@@ -2509,7 +2480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../development/publishing-docs/" class="md-nav__link">
+      <a href="../../development/publishing-docs/" class="md-nav__link">
         
   
   
@@ -2575,7 +2546,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../claude-code/" class="md-nav__link ">
+            <a href="../../claude-code/" class="md-nav__link ">
               
   
   
@@ -2679,7 +2650,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/working-with-claude/" class="md-nav__link">
+      <a href="../../claude-code/working-with-claude/" class="md-nav__link">
         
   
   
@@ -2707,7 +2678,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/quick-reference/" class="md-nav__link">
+      <a href="../../claude-code/quick-reference/" class="md-nav__link">
         
   
   
@@ -2805,7 +2776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/commit-agent-design/" class="md-nav__link">
+      <a href="../../claude-code/commit-agent-design/" class="md-nav__link">
         
   
   
@@ -2833,7 +2804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/commit-agent-metrics-testing/" class="md-nav__link">
+      <a href="../../claude-code/commit-agent-metrics-testing/" class="md-nav__link">
         
   
   
@@ -2861,7 +2832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/commit-agent-research/" class="md-nav__link">
+      <a href="../../claude-code/commit-agent-research/" class="md-nav__link">
         
   
   
@@ -2967,7 +2938,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/hook-registration/" class="md-nav__link">
+      <a href="../../claude-code/hook-registration/" class="md-nav__link">
         
   
   
@@ -2995,7 +2966,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/metrics-tracking/" class="md-nav__link">
+      <a href="../../claude-code/metrics-tracking/" class="md-nav__link">
         
   
   
@@ -3023,7 +2994,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/transcript-access/" class="md-nav__link">
+      <a href="../../claude-code/transcript-access/" class="md-nav__link">
         
   
   
@@ -3051,7 +3022,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/logsift-workflow/" class="md-nav__link">
+      <a href="../../claude-code/logsift-workflow/" class="md-nav__link">
         
   
   
@@ -3079,7 +3050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/claude-code-features/" class="md-nav__link">
+      <a href="../../claude-code/claude-code-features/" class="md-nav__link">
         
   
   
@@ -3107,7 +3078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/log-monitoring-research/" class="md-nav__link">
+      <a href="../../claude-code/log-monitoring-research/" class="md-nav__link">
         
   
   
@@ -3135,7 +3106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../claude-code/usage-guide/" class="md-nav__link">
+      <a href="../../claude-code/usage-guide/" class="md-nav__link">
         
   
   
@@ -3209,7 +3180,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../research/" class="md-nav__link ">
+            <a href="../../research/" class="md-nav__link ">
               
   
   
@@ -3255,7 +3226,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/development-environments/" class="md-nav__link">
+      <a href="../../research/development-environments/" class="md-nav__link">
         
   
   
@@ -3349,7 +3320,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/ai/overview/" class="md-nav__link">
+      <a href="../../research/ai/overview/" class="md-nav__link">
         
   
   
@@ -3377,7 +3348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/ai/context-engineering/" class="md-nav__link">
+      <a href="../../research/ai/context-engineering/" class="md-nav__link">
         
   
   
@@ -3405,7 +3376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/ai/agent-architecture/" class="md-nav__link">
+      <a href="../../research/ai/agent-architecture/" class="md-nav__link">
         
   
   
@@ -3433,7 +3404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/ai/prompt-engineering/" class="md-nav__link">
+      <a href="../../research/ai/prompt-engineering/" class="md-nav__link">
         
   
   
@@ -3461,7 +3432,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/ai/metrics-analysis-research/" class="md-nav__link">
+      <a href="../../research/ai/metrics-analysis-research/" class="md-nav__link">
         
   
   
@@ -3555,7 +3526,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../research/hyprland/understanding-hyprland/" class="md-nav__link">
+      <a href="../../research/hyprland/understanding-hyprland/" class="md-nav__link">
         
   
   
@@ -3669,7 +3640,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../learnings/" class="md-nav__link ">
+            <a href="../../learnings/" class="md-nav__link ">
               
   
   
@@ -3715,7 +3686,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/script-refactoring-principles/" class="md-nav__link">
+      <a href="../../learnings/script-refactoring-principles/" class="md-nav__link">
         
   
   
@@ -3743,7 +3714,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/posttooluse-hook-integration/" class="md-nav__link">
+      <a href="../../learnings/posttooluse-hook-integration/" class="md-nav__link">
         
   
   
@@ -3771,7 +3742,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/app-installation-patterns/" class="md-nav__link">
+      <a href="../../learnings/app-installation-patterns/" class="md-nav__link">
         
   
   
@@ -3799,7 +3770,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
+      <a href="../../learnings/arch-git-libpcre2-warning/" class="md-nav__link">
         
   
   
@@ -3827,7 +3798,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/idempotent-installation-patterns/" class="md-nav__link">
+      <a href="../../learnings/idempotent-installation-patterns/" class="md-nav__link">
         
   
   
@@ -3855,7 +3826,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
+      <a href="../../learnings/testing-bootstrap-dependencies/" class="md-nav__link">
         
   
   
@@ -3883,7 +3854,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
+      <a href="../../learnings/wsl-ubuntu-package-versions/" class="md-nav__link">
         
   
   
@@ -3911,7 +3882,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/package-version-analysis/" class="md-nav__link">
+      <a href="../../learnings/package-version-analysis/" class="md-nav__link">
         
   
   
@@ -3939,7 +3910,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
+      <a href="../../learnings/bash-testing-frameworks-guide/" class="md-nav__link">
         
   
   
@@ -3967,7 +3938,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-script-testing/" class="md-nav__link">
+      <a href="../../learnings/bash-script-testing/" class="md-nav__link">
         
   
   
@@ -3995,7 +3966,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
+      <a href="../../learnings/bash-tty-detection-command-substitution/" class="md-nav__link">
         
   
   
@@ -4023,7 +3994,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
+      <a href="../../learnings/task-shell-printf-compatibility/" class="md-nav__link">
         
   
   
@@ -4051,7 +4022,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/git-history-rewriting/" class="md-nav__link">
+      <a href="../../learnings/git-history-rewriting/" class="md-nav__link">
         
   
   
@@ -4079,7 +4050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/relative-path-calculation/" class="md-nav__link">
+      <a href="../../learnings/relative-path-calculation/" class="md-nav__link">
         
   
   
@@ -4107,7 +4078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/directory-pattern-matching/" class="md-nav__link">
+      <a href="../../learnings/directory-pattern-matching/" class="md-nav__link">
         
   
   
@@ -4135,7 +4106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
+      <a href="../../learnings/cross-platform-symlink-considerations/" class="md-nav__link">
         
   
   
@@ -4163,7 +4134,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/documentation-consolidation-principles/" class="md-nav__link">
+      <a href="../../learnings/documentation-consolidation-principles/" class="md-nav__link">
         
   
   
@@ -4191,7 +4162,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-tui-testing-strategies/" class="md-nav__link">
+      <a href="../../learnings/go-tui-testing-strategies/" class="md-nav__link">
         
   
   
@@ -4219,7 +4190,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-testing-examples/" class="md-nav__link">
+      <a href="../../learnings/go-testing-examples/" class="md-nav__link">
         
   
   
@@ -4247,7 +4218,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
+      <a href="../../learnings/go-tui-ecosystem-research/" class="md-nav__link">
         
   
   
@@ -4275,7 +4246,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
+      <a href="../../learnings/go-cli-architecture-analysis/" class="md-nav__link">
         
   
   
@@ -4303,7 +4274,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/pretooluse-hooks-task-limitation/" class="md-nav__link">
+      <a href="../../learnings/pretooluse-hooks-task-limitation/" class="md-nav__link">
         
   
   
@@ -4331,7 +4302,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learnings/tools-over-instructions/" class="md-nav__link">
+      <a href="../../learnings/tools-over-instructions/" class="md-nav__link">
         
   
   
@@ -4424,7 +4395,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../changelog/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
@@ -4490,64 +4461,6 @@
   
 
 
-  <nav class="md-path" aria-label="Navigation" >
-    <ol class="md-path__list">
-      
-        
-  
-  
-    <li class="md-path__item">
-      <a href="../../.." class="md-path__link">
-        
-  <span class="md-ellipsis">
-    Home
-  </span>
-
-      </a>
-    </li>
-  
-
-      
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="../../" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Reference
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="./" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Tools
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
               
               <article class="md-content__inner md-typeset">
                 
@@ -4558,201 +4471,332 @@
   
 
 
-<h1 id="symlinks-manager">Symlinks Manager<a class="headerlink" href="#symlinks-manager" title="Permanent link">&para;</a></h1>
-<p>Cross-platform dotfiles symlink manager with layered architecture.</p>
-<h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
-<p>All symlinks commands are run via Task from the dotfiles root directory. The tool uses <code>uv run</code> internally for project-local execution.</p>
-<h3 id="task-symlinkslink">task symlinks:link<a class="headerlink" href="#task-symlinkslink" title="Permanent link">&para;</a></h3>
-<p>Deploy symlinks for current platform (common + platform layers). Additive only - creates new symlinks without removing existing ones.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>task<span class="w"> </span>symlinks:link<span class="w">         </span><span class="c1"># Create symlinks (safe, no removal)</span>
+<h1 id="cache-fallback-implementation-plan">Cache Fallback Implementation Plan<a class="headerlink" href="#cache-fallback-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>STATUS: ✅ COMPLETE</strong> (2024-12-30)</p>
+<p>All cache fallback implementations are done. User confirmed Go, nvm, and fonts are blocked on corporate network.</p>
+<p><strong>Archived to:</strong> <code>.planning/archive/</code></p>
+</blockquote>
+<p><strong>Created</strong>: 2025-12-08
+<strong>Completed</strong>: 2024-12-30
+<strong>Status</strong>: ✅ ALL COMPLETE
+<strong>Goal</strong>: Add cache fallback support for installers blocked by corporate firewalls</p>
+<h2 id="implementation-summary">✅ Implementation Summary<a class="headerlink" href="#implementation-summary" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-completed-2025-12-08-cargo-binstall">Phase 1 (Completed 2025-12-08): cargo-binstall<a class="headerlink" href="#phase-1-completed-2025-12-08-cargo-binstall" title="Permanent link">&para;</a></h3>
+<p><strong>What was implemented</strong>:
+1. ✅ Created <code>cache-manager.sh</code> - shared cache lookup library
+2. ✅ Refactored <code>github-release-installer.sh</code> to source <code>cache-manager.sh</code> and <code>version-helpers.sh</code>
+3. ✅ Eliminated duplicate <code>get_latest_version()</code> function (now wrapper for <code>fetch_github_latest_version()</code>)
+4. ✅ Added idempotency check to <code>cargo-tools.sh</code>:
+   - Checks if binary already installed before running cargo-binstall
+   - Prevents spurious errors on already-installed tools
+   - Works offline/on blocked networks
+   - Updated <code>parse_packages.py</code> to support <code>--format=name_command</code> for cargo packages
+5. ✅ Comprehensive tests: 20 passing (github-release-installer.bats)</p>
+<h3 id="phase-2-completed-2024-12-30-go-nvm-fonts">Phase 2 (Completed 2024-12-30): Go, nvm, fonts<a class="headerlink" href="#phase-2-completed-2024-12-30-go-nvm-fonts" title="Permanent link">&para;</a></h3>
+<p>User confirmed all three are blocked on corporate network. Implemented cache fallback for all:</p>
+<p><strong>Go installer</strong> (<code>management/common/install/language-managers/go.sh</code>):
+- Sources <code>cache-manager.sh</code>
+- Checks <code>~/.cache/dotfiles/</code> for <code>go*{version}*{OS}-{ARCH}*.tar.gz</code>
+- Uses cached file if found, otherwise downloads
+- Clear manual instructions on failure with cache path</p>
+<p><strong>nvm installer</strong> (<code>management/common/install/language-managers/nvm.sh</code>):
+- Downloads install script to cache first (<code>~/.cache/dotfiles/nvm-v0.40.0-install.sh</code>)
+- Executes from cache (not piped from curl)
+- Cached script persists for future installs
+- Clear manual instructions on failure with cache path</p>
+<p><strong>Font installer library</strong> (<code>management/common/lib/font-installer.sh</code>):
+- <code>download_nerd_font()</code> checks <code>~/.cache/dotfiles/{Package}.tar.xz</code> first
+- Uses cached archive if found, otherwise downloads
+- Clear manual instructions on failure with cache path
+- Benefits ALL Nerd Font installers (Iosevka, JetBrains, etc.)</p>
+<p><strong>User workflow example</strong>:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># On corporate network - Go blocked</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>$<span class="w"> </span>bash<span class="w"> </span>management/common/install/language-managers/go.sh
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="o">[</span>ERROR<span class="o">]</span><span class="w"> </span>Download<span class="w"> </span>failed
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Manual steps shown with exact URL and cache path</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># User downloads in browser, moves to cache</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>$<span class="w"> </span>mv<span class="w"> </span>~/Downloads/go1.23.4.darwin-arm64.tar.gz<span class="w"> </span>~/.cache/dotfiles/
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Re-run installer</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>$<span class="w"> </span>bash<span class="w"> </span>management/common/install/language-managers/go.sh
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>Found<span class="w"> </span>cached<span class="w"> </span>file:<span class="w"> </span>~/.cache/dotfiles/go1.23.4.darwin-arm64.tar.gz
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="o">[</span>SUCCESS<span class="o">]</span><span class="w"> </span>go<span class="w"> </span>version<span class="w"> </span>go1.23.4<span class="w"> </span>darwin/arm64<span class="w"> </span>installed
+</span></code></pre></div></p>
+<p><strong>Decisions</strong>:
+- ❌ <strong>cargo-binstall cache fallback removed</strong> - unnecessary complexity
+  - cargo-binstall already falls back to building from source (good enough)
+  - Idempotency check solves the real problem (spurious errors)
+- ✅ <strong>GitHub releases cache</strong> - kept (already implemented and working)
+- ✅ <strong>Go installer</strong> - cache fallback added
+- ✅ <strong>nvm installer</strong> - cache fallback added (script cached, not piped)
+- ✅ <strong>Font installers</strong> - cache fallback added to library (all Nerd Fonts benefit)</p>
+<hr />
+<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
+<p>Corporate networks block downloads from:
+- GitHub releases (github.com/<em>/releases/download/) ✅ </em><em>SOLVED</em>*
+- cargo-binstall binaries (fetches from GitHub)
+- Language runtime downloads (go.dev, raw.githubusercontent.com)
+- Font downloads (various sources)</p>
+<p>Users need a way to manually download files and have installers discover them.</p>
+<h2 id="architecture-decision-minimal-abstraction">Architecture Decision: Minimal Abstraction<a class="headerlink" href="#architecture-decision-minimal-abstraction" title="Permanent link">&para;</a></h2>
+<p><strong>Principle</strong>: Don't over-engineer. Each installer type has different needs.</p>
+<p><strong>Approach</strong>:
+1. Reuse existing <code>check_local_cache_for_version()</code> where applicable
+2. Add minimal, focused helpers only when duplication appears 3+ times
+3. Each installer implements its own fallback logic
+4. No generic "download manager" abstraction</p>
+<p><strong>Why</strong>:
+- Different download types: tarballs, scripts, binaries, fonts
+- Different sources: GitHub, go.dev, npm, custom sites
+- Different extraction: tar, unzip, direct copy, pipe to bash
+- Premature abstraction = maintenance burden</p>
+<h2 id="cache-convention">Cache Convention<a class="headerlink" href="#cache-convention" title="Permanent link">&para;</a></h2>
+<p><strong>Location</strong>: <code>~/.cache/dotfiles/</code> (flat, XDG-compliant)
+<strong>Naming</strong>: Fuzzy match on <code>{tool}*{version}*.{ext}</code>
+<strong>User workflow</strong>: Download → <code>mv ~/Downloads/* ~/.cache/dotfiles/</code> → re-run installer</p>
+<h2 id="priority-1-cargo-binstall-implement-now">Priority 1: cargo-binstall (IMPLEMENT NOW)<a class="headerlink" href="#priority-1-cargo-binstall-implement-now" title="Permanent link">&para;</a></h2>
+<h3 id="challenge">Challenge<a class="headerlink" href="#challenge" title="Permanent link">&para;</a></h3>
+<p><code>cargo binstall</code> does the downloading internally - we can't intercept it.</p>
+<p>When blocked:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span>cargo<span class="w"> </span>binstall<span class="w"> </span>bat
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Error:<span class="w"> </span>Failed<span class="w"> </span>to<span class="w"> </span>download<span class="w"> </span>from<span class="w"> </span>GitHub
+</span></code></pre></div></p>
+<p>We need to install manually from cached GitHub release tarballs.</p>
+<h3 id="solution-architecture">Solution Architecture<a class="headerlink" href="#solution-architecture" title="Permanent link">&para;</a></h3>
+<p><strong>Flow</strong>:
+1. Try <code>cargo binstall &lt;package&gt;</code> (fast path)
+2. On failure:
+   - Map package → GitHub repo (bat → sharkdp/bat)
+   - Fetch latest version from GitHub API
+   - Check cache using existing <code>check_local_cache_for_version()</code>
+   - If found: Extract tarball, install binary to <code>~/.cargo/bin/</code>
+   - If not found: Show cache instructions</p>
+<p><strong>Key insight</strong>: cargo-binstall downloads GitHub releases, same files we already cache!</p>
+<h3 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h3>
+<p><strong>File</strong>: <code>management/common/install/language-tools/cargo-tools.sh</code></p>
+<p><strong>New function</strong>:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>install_from_cache_fallback<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span><span class="nv">package</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span><span class="nv">github_repo</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$2</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># e.g., &quot;sharkdp/bat&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="c1"># Get latest version</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span><span class="nv">version</span><span class="o">=</span><span class="k">$(</span>get_latest_version<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$github_repo</span><span class="s2">&quot;</span><span class="k">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="c1"># Check cache (reuse existing function)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nb">local</span><span class="w"> </span><span class="nv">cached</span><span class="o">=</span><span class="k">$(</span>check_local_cache_for_version<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$package</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$version</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;tar.gz&quot;</span><span class="k">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cached</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span>log_info<span class="w"> </span><span class="s2">&quot;Found cached release, installing manually...&quot;</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="c1"># Extract and install to ~/.cargo/bin/</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span>tar<span class="w"> </span>-xzf<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cached</span><span class="s2">&quot;</span><span class="w"> </span>-C<span class="w"> </span>/tmp
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span>mv<span class="w"> </span>/tmp/*/<span class="nv">$package</span><span class="w"> </span>~/.cargo/bin/
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span>chmod<span class="w"> </span>+x<span class="w"> </span>~/.cargo/bin/<span class="nv">$package</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span><span class="k">fi</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="o">}</span>
+</span></code></pre></div></p>
+<p><strong>Package → Repo mapping</strong>:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">declare</span><span class="w"> </span>-A<span class="w"> </span><span class="nv">CARGO_GITHUB_REPOS</span><span class="o">=(</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="o">[</span><span class="s2">&quot;bat&quot;</span><span class="o">]=</span><span class="s2">&quot;sharkdp/bat&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="o">[</span><span class="s2">&quot;fd-find&quot;</span><span class="o">]=</span><span class="s2">&quot;sharkdp/fd&quot;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="o">[</span><span class="s2">&quot;eza&quot;</span><span class="o">]=</span><span class="s2">&quot;eza-community/eza&quot;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="o">[</span><span class="s2">&quot;zoxide&quot;</span><span class="o">]=</span><span class="s2">&quot;ajeetdsouza/zoxide&quot;</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="o">[</span><span class="s2">&quot;git-delta&quot;</span><span class="o">]=</span><span class="s2">&quot;dandavison/delta&quot;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="o">[</span><span class="s2">&quot;tinty&quot;</span><span class="o">]=</span><span class="s2">&quot;tinted-theming/tinty&quot;</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="o">)</span>
+</span></code></pre></div></p>
+<p><strong>Modified install loop</strong>:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>package<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span>cargo<span class="w"> </span>binstall<span class="w"> </span>-y<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$package</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>log_success<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$package</span><span class="s2"> installed&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="k">elif</span><span class="w"> </span>install_from_cache_fallback<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$package</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CARGO_GITHUB_REPOS</span><span class="p">[</span><span class="nv">$package</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span>log_success<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$package</span><span class="s2"> installed from cache&quot;</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="k">else</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="c1"># Existing failure handling + cache instructions</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="k">fi</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="k">done</span>
+</span></code></pre></div></p>
+<h3 id="edge-cases">Edge Cases<a class="headerlink" href="#edge-cases" title="Permanent link">&para;</a></h3>
+<p><strong>Binary name ≠ package name</strong>:
+- <code>fd-find</code> installs binary named <code>fd</code>
+- Solution: Add binary name mapping if needed</p>
+<p><strong>Tarball structure variations</strong>:
+- Some: <code>bat-v0.24.0/bat</code> (nested)
+- Some: <code>bat</code> (root)
+- Solution: Try both patterns with glob</p>
+<p><strong>Multiple binaries</strong>:
+- Example: yazi ships with yazi + ya
+- Solution: Install main binary only (matches cargo binstall behavior)</p>
+<h3 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h3>
+<p><strong>Unit test</strong>: <code>tests/libraries/cargo-cache-fallback.bats</code>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>@test<span class="w"> </span><span class="s2">&quot;install_from_cache_fallback finds and installs cached release&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>@test<span class="w"> </span><span class="s2">&quot;install_from_cache_fallback handles nested tarball structure&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>@test<span class="w"> </span><span class="s2">&quot;install_from_cache_fallback returns 1 when no cache found&quot;</span>
+</span></code></pre></div></p>
+<p><strong>Integration test</strong>: Mock cargo binstall failure, verify cache fallback</p>
+<h3 id="user-workflow">User Workflow<a class="headerlink" href="#user-workflow" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Corporate network blocks cargo binstall</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>$<span class="w"> </span>bash<span class="w"> </span>management/common/install/language-tools/cargo-tools.sh
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="o">[</span>ERROR<span class="o">]</span><span class="w"> </span>cargo<span class="w"> </span>binstall<span class="w"> </span>bat<span class="w"> </span>failed
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>Checking<span class="w"> </span>cache<span class="w"> </span><span class="k">for</span><span class="w"> </span>fallback...
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="o">[</span>ERROR<span class="o">]</span><span class="w"> </span>Not<span class="w"> </span>found<span class="w"> </span><span class="k">in</span><span class="w"> </span>cache
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>To<span class="w"> </span>install<span class="w"> </span>manually:
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="m">1</span>.<span class="w"> </span>Download:<span class="w"> </span>https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-unknown-linux-gnu.tar.gz
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="m">2</span>.<span class="w"> </span>Move<span class="w"> </span>to:<span class="w"> </span>~/.cache/dotfiles/
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="m">3</span>.<span class="w"> </span>Re-run<span class="w"> </span>installer
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># User downloads in browser</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>$<span class="w"> </span>mv<span class="w"> </span>~/Downloads/bat-v0.24.0-x86_64-unknown-linux-gnu.tar.gz<span class="w"> </span>~/.cache/dotfiles/
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1"># Re-run installer</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>$<span class="w"> </span>bash<span class="w"> </span>management/common/install/language-tools/cargo-tools.sh
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>cargo<span class="w"> </span>binstall<span class="w"> </span>bat<span class="w"> </span>failed,<span class="w"> </span>checking<span class="w"> </span>cache...
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>Found<span class="w"> </span>cached<span class="w"> </span>release:<span class="w"> </span>~/.cache/dotfiles/bat-v0.24.0-x86_64-unknown-linux-gnu.tar.gz
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="o">[</span>INFO<span class="o">]</span><span class="w"> </span>Installing<span class="w"> </span>manually...
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="o">[</span>SUCCESS<span class="o">]</span><span class="w"> </span>bat<span class="w"> </span>installed<span class="w"> </span>from<span class="w"> </span>cache
 </span></code></pre></div>
-<p>Use when adding new dotfiles to create their symlinks without disturbing existing ones.</p>
-<h3 id="task-symlinksrelink">task symlinks:relink<a class="headerlink" href="#task-symlinksrelink" title="Permanent link">&para;</a></h3>
-<p>Complete refresh - removes all symlinks and recreates them.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>symlinks:relink<span class="w">       </span><span class="c1"># Full refresh (removes + links)</span>
-</span></code></pre></div>
-<p>Use after removing files from dotfiles repo or when you need a clean slate.</p>
-<h3 id="task-symlinkscheck">task symlinks:check<a class="headerlink" href="#task-symlinkscheck" title="Permanent link">&para;</a></h3>
-<p>Verify symlink integrity.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>task<span class="w"> </span>symlinks:check<span class="w">        </span><span class="c1"># Find broken symlinks</span>
-</span></code></pre></div>
-<p>Shows broken symlinks in home directory.</p>
-<h3 id="task-symlinksshow">task symlinks:show<a class="headerlink" href="#task-symlinksshow" title="Permanent link">&para;</a></h3>
-<p>Display current symlinks.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>task<span class="w"> </span>symlinks:show<span class="w">         </span><span class="c1"># Show all symlinks</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>task<span class="w"> </span>symlinks:show-common<span class="w">  </span><span class="c1"># Show common layer only</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>task<span class="w"> </span>symlinks:show-platform<span class="w"> </span><span class="c1"># Show platform layer only</span>
-</span></code></pre></div>
-<h3 id="additional-commands">Additional Commands<a class="headerlink" href="#additional-commands" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>task<span class="w"> </span>symlinks:link-common<span class="w">    </span><span class="c1"># Link common base layer only (additive)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>task<span class="w"> </span>symlinks:link-platform<span class="w">  </span><span class="c1"># Link platform overlay only (additive)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>task<span class="w"> </span>symlinks:unlink<span class="w">         </span><span class="c1"># Remove all symlinks</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>task<span class="w"> </span>symlinks:check-clean<span class="w">    </span><span class="c1"># Check and remove broken symlinks</span>
-</span></code></pre></div>
-<h3 id="direct-usage-advanced">Direct Usage (Advanced)<a class="headerlink" href="#direct-usage-advanced" title="Permanent link">&para;</a></h3>
-<p>If needed, run the tool directly from dotfiles root:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>link<span class="w"> </span>common
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>link<span class="w"> </span>macos
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>relink<span class="w"> </span>macos
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>uv<span class="w"> </span>run<span class="w"> </span>tools/symlinks<span class="w"> </span>check
-</span></code></pre></div>
-<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<p>The symlinks tool uses a <strong>layered architecture</strong>: common base + platform overlay.</p>
-<p><strong>Common base</strong> (<code>common/</code>):</p>
-<ul>
-<li>Shared configs across all platforms</li>
-<li>.zshrc, .config/nvim, .config/tmux, etc.</li>
-<li>Linked first</li>
-</ul>
-<p><strong>Platform overlay</strong> (<code>macos/</code>, <code>wsl/</code>, <code>arch/</code>):</p>
-<ul>
-<li>Platform-specific configs</li>
-<li>Overrides or extends common configs</li>
-<li>Linked second (can override common)</li>
-</ul>
-<p><strong>Conflict handling</strong>:</p>
-<ul>
-<li>File vs file: Platform overlay wins</li>
-<li>Directory vs directory: Merged (both symlinked)</li>
-<li>File vs directory: Error (must resolve manually)</li>
-</ul>
-<h2 id="apps-directory-handling">Apps Directory Handling<a class="headerlink" href="#apps-directory-handling" title="Permanent link">&para;</a></h2>
-<p>The symlinks manager has <strong>special handling for the <code>apps/</code> directory</strong>:</p>
-<p><strong>Shell scripts</strong> (<code>apps/common/menu</code>, <code>apps/common/notes</code>, etc.):</p>
-<ul>
-<li>Symlinked to <code>~/.local/bin/</code> automatically by <code>link_apps()</code></li>
-<li>Examples: <code>menu</code>, <code>notes</code>, <code>patterns</code>, <code>aws-profiles</code></li>
-</ul>
-<p><strong>Go apps</strong> (sess, toolbox):</p>
-<ul>
-<li>Installed from GitHub via <code>go install</code> (defined in <code>packages.yml</code>)</li>
-<li>Development in <code>~/tools/sess/</code>, <code>~/tools/toolbox/</code></li>
-<li>NOT managed by symlinks - binaries go to <code>~/go/bin/</code></li>
-</ul>
-<p><strong>Personal CLI tools</strong> (theme, font):</p>
-<ul>
-<li>Installed via custom installers that clone to <code>~/.local/share/</code></li>
-<li>Symlink <code>~/.local/share/{tool}/bin/{tool}</code> → <code>~/.local/bin/{tool}</code></li>
-<li>Development in <code>~/tools/theme/</code>, <code>~/tools/font/</code></li>
-<li>NOT managed by symlinks manager - have their own installers</li>
-</ul>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<p>The symlinks tool runs via <code>uv run</code> from the dotfiles root directory. Use Task commands for the best experience:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>task<span class="w"> </span>symlinks:link<span class="w">     </span><span class="c1"># Create symlinks (additive, safe)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>task<span class="w"> </span>symlinks:relink<span class="w">   </span><span class="c1"># Full refresh (removes + recreates)</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>task<span class="w"> </span>symlinks:check<span class="w">    </span><span class="c1"># Verify symlinks</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>task<span class="w"> </span>symlinks:show<span class="w">     </span><span class="c1"># Display current symlinks</span>
-</span></code></pre></div>
-<p>No installation required - <code>uv run</code> executes the tool in-place.</p>
-<h2 id="when-to-link-vs-relink">When to Link vs Relink<a class="headerlink" href="#when-to-link-vs-relink" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>task symlinks:link</code></strong> (additive, safe):</p>
-<ul>
-<li>Adding new files to dotfiles repo</li>
-<li>Adding new dotfile directories</li>
-<li>After fresh install or setup</li>
-</ul>
-<p><strong>Use <code>task symlinks:relink</code></strong> (full refresh):</p>
-<ul>
-<li>Removing files from dotfiles repo</li>
-<li>Moving files between directories</li>
-<li>Fixing broken or stale symlinks</li>
-<li>When you need a clean slate</li>
-<li>Changing platform (macos → wsl, etc.)</li>
-<li>Symlink errors or broken links</li>
-</ul>
-<p><strong>Symptom of outdated symlinks</strong>: "module not found" errors in Neovim after creating new files in <code>common/.config/nvim/lua/</code> directories.</p>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<p>The symlinks tool has comprehensive pytest test suite.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/tools/symlinks
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>pytest<span class="w"> </span>-v<span class="w">                              </span><span class="c1"># Run all tests</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>pytest<span class="w"> </span>tests/test_manager.py<span class="w">           </span><span class="c1"># Manager tests</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>pytest<span class="w"> </span>tests/test_integration.py<span class="w">       </span><span class="c1"># Integration tests</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>pytest<span class="w"> </span>test_edge_cases.py<span class="w">              </span><span class="c1"># Edge cases</span>
-</span></code></pre></div>
-<p>Tests cover:</p>
-<ul>
-<li>Link creation and unlinking</li>
-<li>Conflict detection</li>
-<li>Platform overlay logic</li>
-<li>Cross-platform path resolution</li>
-<li>Edge cases (loops, permissions)</li>
-</ul>
-<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Exclusion patterns in <code>tools/symlinks/symlinks/config.py</code>:</p>
-<p><strong>Excluded by default</strong>:</p>
-<ul>
-<li><code>.git/</code> directories</li>
-<li><code>.DS_Store</code> files</li>
-<li><code>__pycache__/</code> directories</li>
-<li><code>.pytest_cache/</code> directories</li>
-<li><code>.venv/</code> virtual environments</li>
-</ul>
-<p><strong>Platform-specific exclusions</strong>: Each platform config can define additional exclusions.</p>
-<h2 id="critical-bugs-to-avoid">Critical Bugs to Avoid<a class="headerlink" href="#critical-bugs-to-avoid" title="Permanent link">&para;</a></h2>
-<h3 id="substring-matching">Substring Matching<a class="headerlink" href="#substring-matching" title="Permanent link">&para;</a></h3>
-<p><strong>Problem</strong>: Pattern <code>.git/</code> incorrectly excluded <code>.gitconfig</code></p>
-<p><strong>Fix</strong>: Check for <code>/.git/</code> or starts with <code>.git/</code>, not substring match</p>
-<p>See: <code>docs/learnings/directory-pattern-matching.md</code></p>
-<h3 id="relative-path-calculation">Relative Path Calculation<a class="headerlink" href="#relative-path-calculation" title="Permanent link">&para;</a></h3>
-<p><strong>Problem</strong>: Manual path calculation broke 122 symlinks</p>
-<p><strong>Fix</strong>: Use Python stdlib <code>Path.relative_to(walk_up=True)</code> (Python 3.12+)</p>
-<p>See: <code>docs/learnings/relative-path-calculation.md</code></p>
-<h3 id="cross-platform-files">Cross-Platform Files<a class="headerlink" href="#cross-platform-files" title="Permanent link">&para;</a></h3>
-<p><strong>Problem</strong>: Some files needed on all platforms weren't symlinked</p>
-<p><strong>Fix</strong>: Test edge cases - <code>.gitconfig</code>, <code>.gitignore</code>, <code>.gitattributes</code> should NEVER be excluded</p>
-<p>See: <code>docs/learnings/cross-platform-symlink-considerations.md</code></p>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Symlinks not created</strong>:</p>
-<ul>
-<li>Run with verbose flag: <code>uv run tools/symlinks link macos -v</code></li>
-<li>Check for permission errors</li>
-<li>Verify source files exist in dotfiles repo</li>
-</ul>
-<p><strong>Broken symlinks</strong>:</p>
-<ul>
-<li>Run <code>task symlinks:check</code> to find them</li>
-<li>Remove: <code>find ~ -type l ! -exec test -e {} \; -delete</code></li>
-<li>Re-run: <code>task symlinks:link</code></li>
-</ul>
-<p><strong>File conflicts</strong>:</p>
-<ul>
-<li>Manual resolution required</li>
-<li>Check conflict error message for paths</li>
-<li>Decide: keep existing file or use dotfiles version</li>
-<li>Move existing file to backup, then relink</li>
-</ul>
-<p><strong>Module not found in Neovim</strong>:</p>
-<ul>
-<li>Added new files in <code>common/.config/nvim/lua/</code>?</li>
-<li>Run: <code>task symlinks:link</code></li>
-<li>Restart Neovim</li>
-</ul>
-<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
-<p><strong>Project structure</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>tools/symlinks/
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>├── symlinks/               # Main package
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>│   ├── cli.py             # Click CLI
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>│   ├── config.py          # Configuration
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>│   ├── manager.py         # Core logic
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>│   └── utils.py           # Helper functions
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>├── tests/                 # Test suite
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>│   ├── test_manager.py    # Manager tests
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>│   ├── test_utils.py      # Utility tests
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>│   └── test_integration.py  # Integration tests
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>├── test_edge_cases.py     # Edge case tests
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>├── pyproject.toml         # uv configuration
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>├── uv.lock                # Locked dependencies
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>└── README.md              # Implementation docs
-</span></code></pre></div>
-<p><strong>Dependencies</strong>: click (CLI framework)</p>
-<p><strong>Python version</strong>: 3.12+ (requires <code>Path.relative_to(walk_up=True)</code>)</p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../../../learnings/directory-pattern-matching/">Learnings: Directory Pattern Matching</a></li>
-<li><a href="../../../learnings/relative-path-calculation/">Learnings: Relative Path Calculation</a></li>
-<li><a href="../../../learnings/cross-platform-symlink-considerations/">Learnings: Cross-Platform Symlinks</a></li>
-<li><a href="../skills/">Skills System</a> - symlinks-developer skill provides context-aware help</li>
-</ul>
+<h2 id="priority-2-go-installer-later">Priority 2: Go Installer (LATER)<a class="headerlink" href="#priority-2-go-installer-later" title="Permanent link">&para;</a></h2>
+<h3 id="current-behavior">Current Behavior<a class="headerlink" href="#current-behavior" title="Permanent link">&para;</a></h3>
+<p>Downloads tarball from go.dev:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">GO_VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>https://go.dev/VERSION?m<span class="o">=</span>text<span class="k">)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span><span class="s2">&quot;https://go.dev/dl/</span><span class="si">${</span><span class="nv">GO_VERSION</span><span class="si">}</span><span class="s2">.</span><span class="si">${</span><span class="nv">OS</span><span class="si">}</span><span class="s2">-</span><span class="si">${</span><span class="nv">ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp/go.tar.gz
+</span></code></pre></div></p>
+<h3 id="solution">Solution<a class="headerlink" href="#solution" title="Permanent link">&para;</a></h3>
+<p><strong>Flow</strong>:
+1. Fetch version from go.dev API
+2. Check cache for <code>go*{version}*{OS}-{ARCH}*.tar.gz</code>
+3. If found: use cached tarball
+4. If not found: try download
+5. Extract and install</p>
+<p><strong>Implementation</strong>: ~20 lines added to <code>go.sh</code></p>
+<p><strong>Reuse</strong>: Can use same <code>check_local_cache_for_version()</code> pattern</p>
+<h3 id="edge-cases_1">Edge Cases<a class="headerlink" href="#edge-cases_1" title="Permanent link">&para;</a></h3>
+<p><strong>Arch naming</strong>: go1.21.5.linux-amd64.tar.gz vs darwin-arm64
+<strong>Cache matching</strong>: Must match OS and arch in pattern</p>
+<h2 id="priority-3-nvm-installer-later">Priority 3: nvm Installer (LATER)<a class="headerlink" href="#priority-3-nvm-installer-later" title="Permanent link">&para;</a></h2>
+<h3 id="current-behavior_1">Current Behavior<a class="headerlink" href="#current-behavior_1" title="Permanent link">&para;</a></h3>
+<p>Pipes install script directly to bash:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-o-<span class="w"> </span>https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
+</span></code></pre></div></p>
+<p><strong>Problem</strong>: Can't cache something piped to bash</p>
+<h3 id="solution_1">Solution<a class="headerlink" href="#solution_1" title="Permanent link">&para;</a></h3>
+<p><strong>Flow</strong>:
+1. Download script to cache first (not pipe)
+2. Execute from cache
+3. Cache persists for future installs</p>
+<p><strong>Implementation</strong>:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Check cache</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">CACHED_SCRIPT</span><span class="o">=</span><span class="k">$(</span>check_cache_for_pattern<span class="w"> </span><span class="s2">&quot;nvm*install.sh&quot;</span><span class="k">)</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CACHED_SCRIPT</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="c1"># Download to cache</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>curl<span class="w"> </span>-fsSL<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$NVM_INSTALL_SCRIPT</span><span class="s2">&quot;</span><span class="w"> </span>-o<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.cache/dotfiles/nvm-v0.40.0-install.sh&quot;</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nv">CACHED_SCRIPT</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.cache/dotfiles/nvm-v0.40.0-install.sh&quot;</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">fi</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="c1"># Execute from cache</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="nv">NVM_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$NVM_DIR</span><span class="s2">&quot;</span><span class="w"> </span>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CACHED_SCRIPT</span><span class="s2">&quot;</span>
+</span></code></pre></div></p>
+<p><strong>Benefit</strong>: Script stays cached, future installs don't download</p>
+<h3 id="edge-cases_2">Edge Cases<a class="headerlink" href="#edge-cases_2" title="Permanent link">&para;</a></h3>
+<p><strong>Execute permissions</strong>: Ensure cached script is executable
+<strong>Version in filename</strong>: Include version for multiple nvm versions</p>
+<h2 id="priority-4-font-installers-optional">Priority 4: Font Installers (OPTIONAL)<a class="headerlink" href="#priority-4-font-installers-optional" title="Permanent link">&para;</a></h2>
+<h3 id="analysis">Analysis<a class="headerlink" href="#analysis" title="Permanent link">&para;</a></h3>
+<p><strong>Fonts</strong>: 10+ different installers, multiple sources</p>
+<p><strong>Sources</strong>:
+- GitHub releases: FiraCode, CommitMono, Iosevka, IntelOne, Victor
+- raw.githubusercontent.com: FiraCodeiScript
+- Custom sites: Comic Mono (dtinth.github.io)
+- Nerd Fonts: Special case (many fonts)</p>
+<h3 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h3>
+<p><strong>Only cache the most important</strong> (2-3 fonts):
+1. <strong>FiraCode</strong> - Most used in dotfiles
+2. <strong>Nerd Fonts</strong> - Most used, largest downloads
+3. Skip: Specialty fonts (Victor, Comic Mono, SGr variants)</p>
+<p><strong>Reason</strong>: Font installation is less critical than dev tools</p>
+<h3 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h3>
+<p>Similar to GitHub releases pattern, each font installer adds cache check.</p>
+<p><strong>Effort</strong>: ~10 lines per font × 2 fonts = 20 lines</p>
+<h2 id="common-helpers-decision-tree">Common Helpers: Decision Tree<a class="headerlink" href="#common-helpers-decision-tree" title="Permanent link">&para;</a></h2>
+<p><strong>Question</strong>: Should we create shared helper functions?</p>
+<p><strong>Answer</strong>: Only if we see duplication in 3+ places</p>
+<p><strong>Current status</strong>:
+- GitHub releases: Has library ✅
+- cargo-binstall: Uses GitHub library ✅
+- Go: Simple inline cache check (~10 lines)
+- nvm: Different pattern (script vs tarball)</p>
+<p><strong>Decision</strong>: No shared helpers needed yet. Re-evaluate after implementing Go/nvm.</p>
+<p><strong>If we do create helpers</strong>, put in: <code>management/common/lib/cache-helpers.sh</code></p>
+<p>Functions:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>check_cache_for_pattern<span class="w"> </span>&lt;pattern&gt;<span class="w">  </span><span class="c1"># Generic find in cache</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>show_cache_instructions<span class="w"> </span>&lt;tool&gt;<span class="w"> </span>&lt;url&gt;<span class="w"> </span>&lt;version&gt;<span class="w">  </span><span class="c1"># Consistent messaging</span>
+</span></code></pre></div></p>
+<h2 id="implementation-order">Implementation Order<a class="headerlink" href="#implementation-order" title="Permanent link">&para;</a></h2>
+<ol>
+<li>✅ <strong>GitHub releases</strong> - DONE (github-release-installer.sh)</li>
+<li>🎯 <strong>cargo-binstall</strong> - DO NOW (highest priority, known blocked)</li>
+<li>⏸️  <strong>Go installer</strong> - LATER (wait for user confirmation it's blocked)</li>
+<li>⏸️  <strong>nvm installer</strong> - LATER (wait for user confirmation)</li>
+<li>⏸️  <strong>Fonts</strong> - MAYBE (nice-to-have)</li>
+</ol>
+<h2 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
+<p><strong>Unit tests</strong>: Cache lookup functions
+<strong>Integration tests</strong>: End-to-end with cached files
+<strong>Manual tests</strong>: Each installer with real cached downloads</p>
+<p><strong>Don't test</strong>: Every edge case, focus on happy path + cache hit/miss</p>
+<h2 id="success-metrics">Success Metrics<a class="headerlink" href="#success-metrics" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Reduced install failures on corporate networks</li>
+<li>Clear error messages with exact download instructions</li>
+<li>Minimal code added (&lt;100 lines total for all implementations)</li>
+<li>No code duplication (reuse GitHub library)</li>
+<li>All existing tests pass</li>
+</ol>
+<h2 id="code-complexity-budget">Code Complexity Budget<a class="headerlink" href="#code-complexity-budget" title="Permanent link">&para;</a></h2>
+<p><strong>Maximum new code</strong>:
+- cargo-binstall: ~50 lines (mapping + fallback function)
+- Go installer: ~20 lines (cache check)
+- nvm installer: ~15 lines (download to cache first)
+- Font installers: ~10 lines each × 2 = 20 lines
+- <strong>Total</strong>: ~105 lines</p>
+<p><strong>If exceeding budget</strong>: Re-evaluate, consider shared helpers</p>
+<h2 id="open-questions">Open Questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>cargo-binstall arch detection</strong>: How to match tarball arch to system arch?</li>
+<li>
+<p>Solution: Reuse <code>get_platform_arch()</code> from github-release-installer.sh</p>
+</li>
+<li>
+<p><strong>Binary name mapping</strong>: fd-find → fd, git-delta → delta</p>
+</li>
+<li>
+<p>Solution: Add optional third parameter to mapping</p>
+</li>
+<li>
+<p><strong>Error messages</strong>: Should we output JSON for failure logging?</p>
+</li>
+<li>
+<p>Solution: Yes, use existing <code>output_failure_data()</code> for consistency</p>
+</li>
+<li>
+<p><strong>Cache cleanup</strong>: Should we auto-clean old versions?</p>
+</li>
+<li>Solution: No, user responsibility. Cache is explicitly opt-in.</li>
+</ol>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Review this plan</li>
+<li>Implement cargo-binstall cache fallback</li>
+<li>Test on blocked network (WSL at work)</li>
+<li>Decide on Go/nvm based on real-world blocking data</li>
+<li>Archive plan when complete</li>
+</ol>
 
 
 
@@ -4821,10 +4865,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

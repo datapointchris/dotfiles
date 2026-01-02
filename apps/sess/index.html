@@ -4621,7 +4621,6 @@
 <li>yaml.v3 for config parsing</li>
 <li>Interfaces and dependency injection for testability</li>
 </ul>
-<p>Binary installs to <code>~/go/bin/sess</code>.</p>
 <h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
 <p>Start your day:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive picker</span>
@@ -4662,15 +4661,21 @@
 </span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Filter tmuxinator projects only</span>
 </span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;⚙&quot;</span>
 </span></code></pre></div>
-<h2 id="building-from-source">Building from Source<a class="headerlink" href="#building-from-source" title="Permanent link">&para;</a></h2>
-<p>Build and install from source:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">cd</span><span class="w"> </span>apps/common/sess
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>task<span class="w"> </span>build<span class="w">    </span><span class="c1"># Creates local binary</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>task<span class="w"> </span>install<span class="w">  </span><span class="c1"># Installs to ~/go/bin/sess</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">     </span><span class="c1"># Run tests</span>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p>Sess installs via <code>go install</code> from GitHub (defined in <code>packages.yml</code>):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/datapointchris/sess/cmd/sess@latest
 </span></code></pre></div>
+<p>Binary installs to <code>~/go/bin/sess</code>.</p>
+<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
+<p>For local development:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">cd</span><span class="w"> </span>~/tools/sess
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>go<span class="w"> </span>run<span class="w"> </span>./cmd/sess<span class="w">     </span><span class="c1"># Test changes</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>go<span class="w"> </span>build<span class="w"> </span>-o<span class="w"> </span>sess<span class="w"> </span>./cmd/sess<span class="w">  </span><span class="c1"># Build local binary</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">             </span><span class="c1"># Run tests</span>
+</span></code></pre></div>
+<p>Push changes to GitHub, then <code>go install</code> to update the installed version.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Command not found</strong>: Run <code>cd apps/common/sess &amp;&amp; task install</code> to rebuild. Verify <code>~/go/bin</code> is in PATH with <code>echo $PATH | grep go/bin</code>.</p>
+<p><strong>Command not found</strong>: Run <code>go install github.com/datapointchris/sess/cmd/sess@latest</code>. Verify <code>~/go/bin</code> is in PATH with <code>echo $PATH | grep go/bin</code>.</p>
 <p><strong>Session not creating</strong>: Verify tmux is installed (<code>which tmux</code>) and running (<code>tmux info</code>). Check directory exists in config. Verify tmuxinator project exists if configured.</p>
 <p><strong>Config not loading</strong>: Check file exists at <code>~/.config/sess/sessions-{platform}.yml</code>. Verify YAML syntax and required fields (name, directory, description).</p>
 <p><strong>Interactive mode not working</strong>: Ensure gum is installed (<code>brew install gum</code>). Try <code>sess list</code> as fallback.</p>
