@@ -727,6 +727,17 @@ uv_tools:
       description: Collaborative cheatsheets for console commands
 
 # ================================================================
+# LOCAL UV TOOLS
+# ================================================================
+# Installed via: uv tool install -e <path>
+# Local Python tools installed in editable mode from ~/tools/
+
+local_uv_tools:
+  - name: refcheck
+    path: ~/tools/refcheck
+    description: Find broken file references and fragile path patterns
+
+# ================================================================
 # GO TOOLS
 # ================================================================
 # Installed via: go install <package>@latest

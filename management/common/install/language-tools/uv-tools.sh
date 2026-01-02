@@ -39,4 +39,24 @@ print_section "Python Tools (uv)"
   fi
 done
 
+print_section "Local Python Tools (uv)"
+
+/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=local_uv | while read -r line; do
+  name=$(echo "$line" | cut -d: -f1)
+  path=$(echo "$line" | cut -d: -f2 | sed "s|~|$HOME|")
+
+  if uv tool list | grep -q "^$name "; then
+    log_success "$name already installed, skipping"
+  elif [[ ! -d "$path" ]]; then
+    log_warning "$name: path $path does not exist, skipping"
+  else
+    log_info "Installing $name from $path..."
+    if uv tool install -e "$path" --force; then
+      log_success "$name installed"
+    else
+      log_warning "Failed to install $name"
+    fi
+  fi
+done
+
 log_success "Python tools installed"

@@ -7,6 +7,7 @@ Usage:
     python parse_packages.py --type=cargo
     python parse_packages.py --type=npm
     python parse_packages.py --type=uv
+    python parse_packages.py --type=local_uv
     python parse_packages.py --type=go
     python parse_packages.py --type=mas
     python parse_packages.py --type=github
@@ -107,6 +108,13 @@ def get_uv_packages(data):
     return packages
 
 
+def get_local_uv_packages(data):
+    """Extract local uv tool name:path pairs."""
+    if 'local_uv_tools' not in data:
+        return []
+    return [f"{pkg['name']}:{pkg['path']}" for pkg in data['local_uv_tools']]
+
+
 def get_go_packages(data):
     """Extract go tool package paths."""
     if 'go_tools' not in data:
@@ -175,7 +183,7 @@ def get_macos_casks(data):
 
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'local_uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
@@ -231,6 +239,8 @@ def main():
         packages = get_npm_packages(data)
     elif args.type == 'uv':
         packages = get_uv_packages(data)
+    elif args.type == 'local_uv':
+        packages = get_local_uv_packages(data)
     elif args.type == 'go':
         packages = get_go_packages(data)
     elif args.type == 'mas':

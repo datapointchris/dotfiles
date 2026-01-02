@@ -13,7 +13,7 @@ cd "$DOTFILES_DIR" || exit 1
 source platforms/common/.local/shell/logging.sh
 source platforms/common/.local/shell/formatting.sh
 
-REFCHECK="$DOTFILES_DIR/apps/common/refcheck"
+REFCHECK="refcheck"
 TEST_DIR=$(mktemp -d)
 trap 'rm -rf "$TEST_DIR"' EXIT
 
