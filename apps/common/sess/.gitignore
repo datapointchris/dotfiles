@@ -1,9 +1,0 @@
-# Compiled binary (in root only)
-/sess
-
-# Test binary
-*.test
-
-# Test coverage reports
-coverage.out
-coverage.html

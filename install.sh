@@ -122,7 +122,6 @@ install_common_phases() {
   run_installer "$plugins/shell-plugins.sh" "shell-plugins"
 
   print_header "Custom Go Applications"
-  PATH="/usr/local/go/bin:$HOME/go/bin:$PATH" run_installer "$custom_apps/sess.sh" "sess"
   PATH="/usr/local/go/bin:$HOME/go/bin:$PATH" run_installer "$custom_apps/toolbox.sh" "toolbox"
 
   print_header "Symlinking Dotfiles"
