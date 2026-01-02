@@ -105,6 +105,10 @@ install_common_phases() {
   run_installer "$custom_installers/claude-code.sh" "claude-code"
   run_installer "$custom_installers/terraform-ls.sh" "terraform-ls"
 
+  print_header "Personal CLI Tools"
+  run_installer "$custom_installers/theme.sh" "theme"
+  run_installer "$custom_installers/font.sh" "font"
+
   print_header "Rust/Cargo Tools"
   run_installer "$lang_managers/rust.sh" "rust"
   run_installer "$lang_tools/cargo-binstall.sh" "cargo-binstall"
