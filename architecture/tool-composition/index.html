@@ -4739,13 +4739,14 @@
 <p><strong>Bash/Shell scripts</strong> are in <code>~/.local/bin/</code> (symlinked from <code>apps/common/</code> and <code>apps/{platform}/</code>):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># After task symlinks:link</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ls<span class="w"> </span>~/.local/bin/
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># theme notes menu printcolors (and platform-specific: aws-profiles)</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># menu notes backup-dirs patterns printcolors</span>
 </span></code></pre></div>
-<p><strong>Go binaries</strong> are in <code>~/go/bin/</code> (built and installed via Task):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># After task install in each Go project</span>
+<p><strong>Go binaries</strong> are in <code>~/go/bin/</code> (installed via <code>go install</code>):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Installed during dotfiles setup from GitHub</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ls<span class="w"> </span>~/go/bin/
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># sess toolbox</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># sess toolbox gum cheat lazydocker ...</span>
 </span></code></pre></div>
+<p><strong>External bash tools</strong> (theme, font) are cloned to <code>~/.local/share/</code> with binaries symlinked to <code>~/.local/bin/</code>.</p>
 <p>All tools available in PATH (both <code>~/.local/bin/</code> and <code>~/go/bin/</code> are in PATH), callable from anywhere.</p>
 <h3 id="configuration-files">Configuration Files<a class="headerlink" href="#configuration-files" title="Permanent link">&para;</a></h3>
 <p>Tools read from XDG-compliant locations:</p>
