@@ -2236,7 +2236,7 @@ tools:
   refcheck:
     category: custom-tools
     description: "Find broken file references, validate variable paths, and detect fragile path patterns"
-    installed_via: dotfiles
+    installed_via: uv
     usage: "refcheck [OPTIONS] [path]"
     why_use: "Proactive error detection before running tests - catches broken paths in seconds vs minutes of test failures"
     examples:
@@ -2250,9 +2250,11 @@ tools:
         desc: "Check only shell scripts, skip documentation"
       - cmd: "refcheck --strict"
         desc: "Treat warnings as errors (strict mode for CI)"
+      - cmd: "refcheck --learn-rules"
+        desc: "Learn path mappings from git rename history"
     see_also: [grep, fd]
     tags: [validation, testing, refactoring, ci]
-    notes: "Resolves variable paths ($SCRIPT_DIR, $DOTFILES_DIR). Detects fragile patterns (CWD-dependent, ../ traversal)."
+    notes: "Resolves variable paths ($SCRIPT_DIR, $DOTFILES_DIR). Learns from git history to suggest correct paths. Config at ~/.config/refcheck/config.toml."
     docs_url: "docs/apps/refcheck.md"
 
 backup-important:

@@ -54,11 +54,13 @@ Fast reference validator for codebases. Finds broken file references, fragile pa
 
 ## Installation
 
-Symlinked to `~/.local/bin/refcheck` via:
+Installed as a Python tool via uv:
 
 ```bash
-task symlinks:link
+uv tool install -e ~/tools/refcheck
 ```
+
+This is handled automatically by `management/common/install/language-tools/uv-tools.sh`.
 
 ## Usage
 
@@ -137,6 +139,29 @@ refcheck  # Shows warnings for fragile relative paths
 
 # Find variable assignments using ../ traversal
 refcheck  # Shows warnings for SCRIPT_DIR="$(cd "$DIR/../../.." && pwd)"
+```
+
+### Learn from git history
+
+```bash
+# Generate rules from git rename history (last 6 months by default)
+refcheck --learn-rules
+
+# Rules are stored per-repo at ~/.config/refcheck/repos/{repo-name}/rules.json
+# These help suggest correct paths when references are broken
+```
+
+## Configuration
+
+Create `~/.config/refcheck/config.toml` to customize behavior:
+
+```toml
+[learn]
+time_window = "6 months"  # How far back to analyze git history
+
+[warnings]
+stale_threshold = "7 days"  # Warn when rules are older than this
+show_no_rules_hint = true   # Show hint to run --learn-rules
 ```
 
 ## Output
@@ -244,6 +269,8 @@ fi
 | `--skip-docs` | Skip markdown files | `--skip-docs` |
 | `--strict` | Treat warnings as errors (exit 1) | `--strict` |
 | `--no-warn` | Disable fragile path warnings | `--no-warn` |
+| `--learn-rules` | Generate rules from git history | `--learn-rules` |
+| `--test-mode` | Include test fixtures (normally excluded) | `--test-mode` |
 | `--help, -h` | Show help | `--help` |
 
 ## Smart filtering
@@ -257,20 +284,28 @@ Automatically excludes:
 
 ## Testing
 
-Comprehensive test suite:
+Comprehensive pytest test suite (69 tests):
 
 ```bash
-bash tests/apps/test-refcheck.sh
-# Tests all flags and combinations
+cd ~/tools/refcheck && uv run --with pytest pytest
 ```
+
+Tests cover config parsing, rules management, file suggestions, and end-to-end CLI behavior.
 
 ## Implementation
 
-**Location:** `apps/common/refcheck`
-**Language:** Python 3
+**Location:** `~/tools/refcheck` (standalone Python package)
+**Language:** Python 3.11+
 **Dependencies:** None (uses stdlib only)
 
-See [source code](../../apps/common/refcheck) for implementation details.
+Modular structure:
+
+- `cli.py` - argparse CLI entry point
+- `config.py` - Config dataclass, TOML loading
+- `checker.py` - ReferenceChecker class (core logic)
+- `rules.py` - Rules loading/learning from git
+- `suggestions.py` - File similarity matching
+- `output.py` - Result formatting
 
 ## Comparison to alternatives
 
