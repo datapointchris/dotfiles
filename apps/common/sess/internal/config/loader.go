@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ichrisbirch/sess/internal/session"
+	"github.com/datapointchris/sess/internal/session"
 	"gopkg.in/yaml.v3"
 )
 

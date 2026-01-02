@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ichrisbirch/sess/internal/config"
-	"github.com/ichrisbirch/sess/internal/session"
-	"github.com/ichrisbirch/sess/internal/tmux"
+	"github.com/datapointchris/sess/internal/config"
+	"github.com/datapointchris/sess/internal/session"
+	"github.com/datapointchris/sess/internal/tmux"
 	"github.com/spf13/cobra"
 )
 

@@ -1,5 +1,5 @@
-# Compiled binary
-sess
+# Compiled binary (in root only)
+/sess
 
 # Test binary
 *.test

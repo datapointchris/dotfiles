@@ -1,4 +1,4 @@
-module github.com/ichrisbirch/sess
+module github.com/datapointchris/sess
 
 go 1.24.0
 

@@ -770,6 +770,10 @@ go_tools:
     package: github.com/dundee/gdu/v5/cmd/gdu
     description: Fast disk usage analyzer with interactive TUI
 
+  - name: sess
+    package: github.com/datapointchris/sess/cmd/sess
+    description: Terminal session manager
+
 # ================================================================
 # SHELL PLUGINS
 # ================================================================
