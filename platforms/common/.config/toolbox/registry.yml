@@ -625,6 +625,25 @@ tools:
     tags: [nodejs, version-manager, development]
     docs_url: "https://github.com/nvm-sh/nvm"
 
+  direnv:
+    category: language-manager
+    description: "Per-directory environment variables, auto-loaded on cd"
+    installed_via: brew
+    usage: "direnv [command]"
+    why_use: "Automatic environment switching per project, no manual source/export"
+    examples:
+      - cmd: "direnv allow"
+        desc: "Allow .envrc in current directory"
+      - cmd: "direnv deny"
+        desc: "Revoke .envrc permissions"
+      - cmd: "direnv status"
+        desc: "Show current direnv state"
+      - cmd: "echo 'export FOO=bar' > .envrc && direnv allow"
+        desc: "Create and activate environment"
+    see_also: [nvm, uv, dotenv]
+    tags: [environment, shell, development, automation]
+    docs_url: "https://direnv.net/"
+
   # =================================================================
   # PYTHON TOOLS
   # =================================================================
