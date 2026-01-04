@@ -2,21 +2,15 @@
 # Git Bash config - sources shell config from WSL Ubuntu dotfiles
 
 # WSL paths (must be running for these to work)
-WSL_HOME="//wsl$/Ubuntu/home/chris"
+WSL_HOME="//wsl$/Ubuntu-24.04/home/chris"
 WSL_SHELL_DIR="$WSL_HOME/.local/shell"
-
-# Fix fstab (Avanti update issue) - ensures /c/ instead of /cygdrive/c/
-if [[ ! -f /etc/fstab ]]; then
-    echo 'none / cygdrive binary,posix=0,noacl,user 0 0' > /etc/fstab
-    echo "Created /etc/fstab - restart Git Bash for mount changes to take effect"
-fi
 
 # Fallback if WSL not running
 if [[ ! -d "$WSL_HOME" ]]; then
-    echo "⚠ WSL not running - using minimal config"
-    PS1='\[\e[32m\]\u@gitbash\[\e[0m\]:\[\e[33m\]\w\[\e[0m\] \$ '
-    # shellcheck disable=SC2317
-    return 0 2>/dev/null || exit 0
+  echo "⚠ WSL not running - using minimal config"
+  PS1='\[\e[32m\]\u@gitbash\[\e[0m\]:\[\e[33m\]\w\[\e[0m\] \$ '
+  # shellcheck disable=SC2317
+  return 0 2>/dev/null || exit 0
 fi
 
 # Shell library
