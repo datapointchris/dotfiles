@@ -196,6 +196,12 @@ system_packages:
     brew: shfmt
     description: Shell script formatter
 
+  - name: direnv
+    apt: direnv
+    pacman: direnv
+    brew: direnv
+    description: Per-directory environment variables
+
   # Security
   - name: gnupg
     apt: gnupg
