@@ -1,25 +1,45 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-UPDATE_MODE=false
-if [[ "${1:-}" == "--update" ]]; then
-  UPDATE_MODE=true
-fi
-
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+
+BINARY_NAME="tenv"
+REPO="tofuutils/tenv"
+
+get_download_url() {
+  local version="$1" os="$2" arch="$3"
+  local platform raw_arch
+  if [[ "$os" == "darwin" ]]; then
+    platform="Darwin"
+  else
+    platform="Linux"
+  fi
+  [[ "$arch" == "arm64" ]] && raw_arch="arm64" || raw_arch="x86_64"
+  echo "https://github.com/${REPO}/releases/download/${version}/tenv_${version}_${platform}_${raw_arch}.tar.gz"
+}
+
+if [[ "${1:-}" == "--print-url" ]]; then
+  OS="${2:-linux}"
+  ARCH="${3:-x86_64}"
+  VERSION=$(fetch_github_latest_version "$REPO")
+  URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
+  echo "$BINARY_NAME|$VERSION|$URL"
+  exit 0
+fi
 
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
-source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 print_section "tenv (Terraform Version Manager)"
 
-BINARY_NAME="tenv"
-REPO="tofuutils/tenv"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
+
+UPDATE_MODE=false
+[[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest tenv version: $VERSION"

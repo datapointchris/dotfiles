@@ -673,22 +673,27 @@ cargo_packages:
   - name: bat
     command: bat
     description: cat with syntax highlighting
+    github_repo: sharkdp/bat
 
   - name: fd-find
     command: fd
     description: modern find replacement
+    github_repo: sharkdp/fd
 
   - name: eza
     command: eza
     description: modern ls replacement
+    github_repo: eza-community/eza
 
   - name: zoxide
     command: zoxide
     description: smarter cd command
+    github_repo: ajeetdsouza/zoxide
 
   - name: git-delta
     command: delta
     description: syntax-highlighting git diff
+    github_repo: dandavison/delta
 
   - name: cargo-update
     command: cargo-install-update

@@ -1,22 +1,43 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-UPDATE_MODE=false
-if [[ "${1:-}" == "--update" ]]; then
-  UPDATE_MODE=true
-fi
-
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 BINARY_NAME="lazygit"
 REPO="jesseduffield/lazygit"
+
+get_download_url() {
+  local version="$1" os="$2" arch="$3"
+  local platform_arch
+  if [[ "$os" == "darwin" ]]; then
+    [[ "$arch" == "arm64" ]] && platform_arch="Darwin_arm64" || platform_arch="Darwin_x86_64"
+  else
+    platform_arch="Linux_x86_64"
+  fi
+  echo "https://github.com/${REPO}/releases/download/${version}/lazygit_${version#v}_${platform_arch}.tar.gz"
+}
+
+# --print-url mode for offline bundle creator
+if [[ "${1:-}" == "--print-url" ]]; then
+  OS="${2:-linux}"
+  ARCH="${3:-x86_64}"
+  VERSION=$(fetch_github_latest_version "$REPO")
+  URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
+  echo "$BINARY_NAME|$VERSION|$URL"
+  exit 0
+fi
+
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
+
+UPDATE_MODE=false
+[[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest $BINARY_NAME version: $VERSION"
@@ -31,10 +52,8 @@ else
   fi
 fi
 
-PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
+OS=$([[ "$OSTYPE" == "darwin"* ]] && echo "darwin" || echo "linux")
+ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/;s/arm64/arm64/')
+DOWNLOAD_URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
 
-# Format: lazygit_{version}_{platform}.tar.gz
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
-
-# Binary is at root of tarball
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit" "$VERSION"

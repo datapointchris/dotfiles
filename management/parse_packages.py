@@ -74,12 +74,21 @@ def get_system_packages(data, manager):
 
 
 def get_cargo_packages(data, output_format='names'):
-    """Extract cargo package information."""
+    """Extract cargo package information.
+
+    Args:
+        output_format: 'names' returns just names,
+                      'name_command' returns 'name|command' pairs,
+                      'github_repos' returns 'command|github_repo' for offline bundling
+    """
     if 'cargo_packages' not in data:
         return []
 
     if output_format == 'name_command':
         return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in data['cargo_packages']]
+    elif output_format == 'github_repos':
+        return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
+                for pkg in data['cargo_packages'] if 'github_repo' in pkg]
     else:
         return [pkg['name'] for pkg in data['cargo_packages']]
 
@@ -212,8 +221,8 @@ def main():
                         help='Get macOS Homebrew taps')
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
-    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), packages (nerd-fonts), full (nerd-fonts: name|package|pattern)')
+    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full', 'github_repos'], default='names',
+                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), github_repos (cargo for offline), packages (nerd-fonts), full (nerd-fonts)')
 
     args = parser.parse_args()
 

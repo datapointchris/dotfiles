@@ -1,19 +1,39 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-UPDATE_MODE=false
-if [[ "${1:-}" == "--update" ]]; then
-  UPDATE_MODE=true
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+
+BINARY_NAME="neovim"
+REPO="neovim/neovim"
+
+get_download_url() {
+  local version="$1" os="$2" arch="$3"
+  local binary_name
+  if [[ "$os" == "darwin" ]]; then
+    [[ "$arch" == "arm64" ]] && binary_name="nvim-macos-arm64" || binary_name="nvim-macos-x86_64"
+  else
+    binary_name="nvim-linux-x86_64"
+  fi
+  echo "https://github.com/${REPO}/releases/download/${version}/${binary_name}.tar.gz"
+}
+
+if [[ "${1:-}" == "--print-url" ]]; then
+  OS="${2:-linux}"
+  ARCH="${3:-x86_64}"
+  VERSION=$(fetch_github_latest_version "$REPO")
+  URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
+  echo "$BINARY_NAME|$VERSION|$URL"
+  exit 0
 fi
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
-source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-REPO=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --github-binary=neovim --field=repo)
+UPDATE_MODE=false
+[[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
 OS=$(detect_os)
 ARCH=$(detect_arch)

@@ -1,23 +1,44 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-UPDATE_MODE=false
-if [[ "${1:-}" == "--update" ]]; then
-  UPDATE_MODE=true
-fi
-
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
 source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 BINARY_NAME="zk"
 REPO="zk-org/zk"
+
+get_download_url() {
+  local version="$1" os="$2" arch="$3"
+  local platform raw_arch
+  if [[ "$os" == "darwin" ]]; then
+    platform="macos"
+    [[ "$arch" == "arm64" ]] && raw_arch="arm64" || raw_arch="x86_64"
+  else
+    platform="linux"
+    raw_arch="amd64"
+  fi
+  echo "https://github.com/${REPO}/releases/download/${version}/zk-${version}-${platform}-${raw_arch}.tar.gz"
+}
+
+if [[ "${1:-}" == "--print-url" ]]; then
+  OS="${2:-linux}"
+  ARCH="${3:-x86_64}"
+  VERSION=$(fetch_github_latest_version "$REPO")
+  URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
+  echo "$BINARY_NAME|$VERSION|$URL"
+  exit 0
+fi
+
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
+
+UPDATE_MODE=false
+[[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest $BINARY_NAME version: $VERSION"
@@ -31,19 +52,9 @@ else
     exit 0
   fi
 fi
-log_info "Latest version: $VERSION"
 
-OS=$(detect_os)
-ARCH=$(detect_arch)
-
-if [[ "$OS" == "darwin" ]]; then
-  PLATFORM="macos"
-  RAW_ARCH=$(uname -m)
-else
-  PLATFORM="linux"
-  RAW_ARCH="$ARCH"
-fi
-
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/zk-${VERSION}-${PLATFORM}-${RAW_ARCH}.tar.gz"
+OS=$([[ "$OSTYPE" == "darwin"* ]] && echo "darwin" || echo "linux")
+ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/;s/arm64/arm64/')
+DOWNLOAD_URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "zk" "$VERSION"

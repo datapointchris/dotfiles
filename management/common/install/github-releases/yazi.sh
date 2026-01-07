@@ -1,23 +1,43 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-UPDATE_MODE=false
-if [[ "${1:-}" == "--update" ]]; then
-  UPDATE_MODE=true
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+
+BINARY_NAME="yazi"
+REPO="sxyazi/yazi"
+
+get_download_url() {
+  local version="$1" os="$2" arch="$3"
+  local target
+  if [[ "$os" == "darwin" ]]; then
+    [[ "$arch" == "arm64" ]] && target="aarch64-apple-darwin" || target="x86_64-apple-darwin"
+  else
+    target="x86_64-unknown-linux-gnu"
+  fi
+  echo "https://github.com/${REPO}/releases/download/${version}/yazi-${target}.zip"
+}
+
+if [[ "${1:-}" == "--print-url" ]]; then
+  OS="${2:-linux}"
+  ARCH="${3:-x86_64}"
+  VERSION=$(fetch_github_latest_version "$REPO")
+  URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
+  echo "$BINARY_NAME|$VERSION|$URL"
+  exit 0
 fi
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
-source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
-source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-BINARY_NAME="yazi"
-REPO="sxyazi/yazi"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
+
+UPDATE_MODE=false
+[[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
 VERSION=$(get_latest_version "$REPO")
 log_info "Latest $BINARY_NAME version: $VERSION"
