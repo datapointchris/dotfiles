@@ -79,7 +79,8 @@ def get_cargo_packages(data, output_format='names'):
     Args:
         output_format: 'names' returns just names,
                       'name_command' returns 'name|command' pairs,
-                      'github_repos' returns 'command|github_repo' for offline bundling
+                      'github_repos' returns 'command|github_repo' for offline bundling,
+                      'binary_info' returns 'command|repo|pattern|linux_target' for offline bundling
     """
     if 'cargo_packages' not in data:
         return []
@@ -89,6 +90,16 @@ def get_cargo_packages(data, output_format='names'):
     elif output_format == 'github_repos':
         return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
                 for pkg in data['cargo_packages'] if 'github_repo' in pkg]
+    elif output_format == 'binary_info':
+        results = []
+        for pkg in data['cargo_packages']:
+            if 'github_repo' in pkg and 'binary_pattern' in pkg:
+                cmd = pkg.get('command', pkg['name'])
+                repo = pkg['github_repo']
+                pattern = pkg['binary_pattern']
+                linux_target = pkg.get('linux_target', '')
+                results.append(f"{cmd}|{repo}|{pattern}|{linux_target}")
+        return results
     else:
         return [pkg['name'] for pkg in data['cargo_packages']]
 
@@ -221,8 +232,8 @@ def main():
                         help='Get macOS Homebrew taps')
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
-    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full', 'github_repos'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), github_repos (cargo for offline), packages (nerd-fonts), full (nerd-fonts)')
+    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
+                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), github_repos/binary_info (cargo for offline), packages/full (nerd-fonts)')
 
     args = parser.parse_args()
 

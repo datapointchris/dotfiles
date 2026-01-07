@@ -674,26 +674,32 @@ cargo_packages:
     command: bat
     description: cat with syntax highlighting
     github_repo: sharkdp/bat
+    binary_pattern: "bat-{version}-{target}.tar.gz"
 
   - name: fd-find
     command: fd
     description: modern find replacement
     github_repo: sharkdp/fd
+    binary_pattern: "fd-{version}-{target}.tar.gz"
 
   - name: eza
     command: eza
     description: modern ls replacement
     github_repo: eza-community/eza
+    binary_pattern: "eza_{target}.tar.gz"
 
   - name: zoxide
     command: zoxide
     description: smarter cd command
     github_repo: ajeetdsouza/zoxide
+    binary_pattern: "zoxide-{version_num}-{target}.tar.gz"
+    linux_target: x86_64-unknown-linux-musl
 
   - name: git-delta
     command: delta
     description: syntax-highlighting git diff
     github_repo: dandavison/delta
+    binary_pattern: "delta-{version}-{target}.tar.gz"
 
   - name: cargo-update
     command: cargo-install-update

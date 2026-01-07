@@ -40,45 +40,37 @@ fetch_latest_version() {
   echo "$version"
 }
 
-# Get download URL for a Cargo tool binary from GitHub releases
-# Usage: get_cargo_binary_url "tool" "repo" "version" "os" "arch"
-get_cargo_binary_url() {
-  local tool="$1"
-  local repo="$2"
-  local version="$3"
-  local os="$4"
-  local arch="$5"
-
-  local version_num="${version#v}"
-  local target
+# Compute target string for cargo binaries
+# Usage: get_cargo_target "os" "arch" "linux_target_override"
+get_cargo_target() {
+  local os="$1"
+  local arch="$2"
+  local linux_override="$3"
 
   if [[ "$os" == "darwin" ]]; then
-    [[ "$arch" == "arm64" ]] && target="aarch64-apple-darwin" || target="x86_64-apple-darwin"
+    [[ "$arch" == "arm64" ]] && echo "aarch64-apple-darwin" || echo "x86_64-apple-darwin"
   else
-    target="x86_64-unknown-linux-gnu"
+    if [[ -n "$linux_override" ]]; then
+      echo "$linux_override"
+    else
+      echo "x86_64-unknown-linux-gnu"
+    fi
   fi
+}
 
-  case "$tool" in
-    bat)
-      echo "https://github.com/${repo}/releases/download/${version}/bat-${version}-${target}.tar.gz"
-      ;;
-    fd)
-      echo "https://github.com/${repo}/releases/download/${version}/fd-${version}-${target}.tar.gz"
-      ;;
-    eza)
-      echo "https://github.com/${repo}/releases/download/${version}/eza_${target}.tar.gz"
-      ;;
-    zoxide)
-      [[ "$os" != "darwin" ]] && target="x86_64-unknown-linux-musl"
-      echo "https://github.com/${repo}/releases/download/${version}/zoxide-${version_num}-${target}.tar.gz"
-      ;;
-    delta)
-      echo "https://github.com/${repo}/releases/download/${version}/delta-${version}-${target}.tar.gz"
-      ;;
-    *)
-      return 1
-      ;;
-  esac
+# Expand binary pattern with version and target
+# Usage: expand_binary_pattern "pattern" "version" "target"
+expand_binary_pattern() {
+  local pattern="$1"
+  local version="$2"
+  local target="$3"
+  local version_num="${version#v}"
+
+  local result="$pattern"
+  result="${result//\{version\}/$version}"
+  result="${result//\{version_num\}/$version_num}"
+  result="${result//\{target\}/$target}"
+  echo "$result"
 }
 
 # Get Nerd Font download URL
@@ -115,20 +107,20 @@ print_cargo_binary_urls() {
   local os="$1"
   local arch="$2"
 
-  while IFS='|' read -r tool repo; do
+  while IFS='|' read -r tool repo pattern linux_target; do
     [[ -z "$tool" ]] && continue
     local version
     if ! version=$(fetch_latest_version "$repo"); then
       echo "# ERROR: Could not fetch version for $tool ($repo)" >&2
       continue
     fi
-    local url
-    if url=$(get_cargo_binary_url "$tool" "$repo" "$version" "$os" "$arch"); then
-      echo "$tool|$version|$url"
-    else
-      echo "# ERROR: Could not generate URL for $tool" >&2
-    fi
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=github_repos)
+    local target
+    target=$(get_cargo_target "$os" "$arch" "$linux_target")
+    local filename
+    filename=$(expand_binary_pattern "$pattern" "$version" "$target")
+    local url="https://github.com/${repo}/releases/download/${version}/${filename}"
+    echo "$tool|$version|$url"
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=binary_info)
 }
 
 # Print all Nerd Font URLs
