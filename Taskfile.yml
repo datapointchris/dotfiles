@@ -11,20 +11,6 @@ tasks:
       - task --list
 
   # ================================================================
-  # FONT INSTALLATION
-  # ================================================================
-
-  fonts:download:
-    desc: Download coding fonts from GitHub releases
-    cmds:
-      - bash management/common/install/fonts/download.sh {{.CLI_ARGS}}
-
-  fonts:install:
-    desc: Install downloaded fonts to system font directory
-    cmds:
-      - bash management/common/install/fonts/install.sh {{.CLI_ARGS}}
-
-  # ================================================================
   # SYMLINKS MANAGEMENT
   # ================================================================
 

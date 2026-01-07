@@ -35,23 +35,15 @@ show_failures_summary() {
 }
 
 install_fonts() {
+  local common_install="$DOTFILES_DIR/management/common/install"
+
   if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
     log_warning "WSL detected - fonts install to Windows (may require manual steps)"
   fi
-  # Nerd Fonts
-  run_installer "$common_install/fonts/jetbrains.sh" "jetbrains-font"
-  run_installer "$common_install/fonts/cascadia.sh" "cascadia-font"
-  run_installer "$common_install/fonts/meslo.sh" "meslo-font"
-  run_installer "$common_install/fonts/monaspace.sh" "monaspace-font"
-  run_installer "$common_install/fonts/iosevka.sh" "iosevka-font"
-  run_installer "$common_install/fonts/droid.sh" "droid-font"
-  run_installer "$common_install/fonts/seriousshanns.sh" "seriousshanns-font"
-  run_installer "$common_install/fonts/sourcecode.sh" "sourcecode-font"
-  run_installer "$common_install/fonts/terminess.sh" "terminess-font"
-  run_installer "$common_install/fonts/hack.sh" "hack-font"
-  run_installer "$common_install/fonts/3270.sh" "3270-font"
-  run_installer "$common_install/fonts/robotomono.sh" "robotomono-font"
-  run_installer "$common_install/fonts/spacemono.sh" "spacemono-font"
+
+  # Nerd Fonts (all from packages.yml via single installer)
+  run_installer "$common_install/fonts/nerd-fonts.sh" "nerd-fonts"
+
   # GitHub Release Fonts
   run_installer "$common_install/fonts/firacode.sh" "firacode-font"
   run_installer "$common_install/fonts/commitmono.sh" "commitmono-font"

@@ -371,8 +371,6 @@ The `Taskfile.yml` provides convenience tasks for common operations but delegate
 ```yaml
 symlinks:link        # Deploy symlinks
 symlinks:check       # Verify symlinks
-fonts:download       # Download fonts
-fonts:install        # Install fonts
 docs:serve           # Local docs server
 ```
 

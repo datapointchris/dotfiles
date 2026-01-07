@@ -181,9 +181,29 @@ def get_macos_casks(data):
     return [cask['name'] for cask in data['macos_casks']]
 
 
+def get_nerd_fonts(data, output_format='names'):
+    """Extract Nerd Font information.
+
+    Args:
+        output_format: 'names' returns just names,
+                      'packages' returns just package names (for download),
+                      'full' returns 'name|package|check_pattern|extension' tuples
+    """
+    if 'nerd_fonts' not in data:
+        return []
+
+    fonts = data['nerd_fonts']
+    if output_format == 'packages':
+        return [font['package'] for font in fonts]
+    elif output_format == 'full':
+        return [f"{font['name']}|{font['package']}|{font['check_pattern']}|{font['extension']}" for font in fonts]
+    else:  # names
+        return [font['name'] for font in fonts]
+
+
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'local_uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'local_uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks', 'nerd-fonts'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
@@ -192,8 +212,8 @@ def main():
                         help='Get macOS Homebrew taps')
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
-    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), or name|command pairs (cargo)')
+    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full'], default='names',
+                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), packages (nerd-fonts), full (nerd-fonts: name|package|pattern)')
 
     args = parser.parse_args()
 
@@ -253,6 +273,8 @@ def main():
         packages = get_linux_gui_apps(data)
     elif args.type == 'macos-casks':
         packages = get_macos_casks(data)
+    elif args.type == 'nerd-fonts':
+        packages = get_nerd_fonts(data, args.format)
 
     for pkg in packages:
         print(pkg)

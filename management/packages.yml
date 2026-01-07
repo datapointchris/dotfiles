@@ -584,6 +584,86 @@ github_binaries:
     description: Shell script static analysis tool (consistent version across all platforms)
 
 # ================================================================
+# NERD FONTS
+# ================================================================
+# Patched fonts with icons for terminal/editor use
+# Downloaded from: https://github.com/ryanoasis/nerd-fonts/releases
+# Installed via: management/common/install/fonts/nerd-fonts.sh
+#
+# Note: Nerd Fonts renames some fonts for trademark reasons:
+#   CascadiaCode -> CaskaydiaCove
+#   SourceCodePro -> SauceCodePro
+#   DroidSansMono -> DroidSansM
+#   Monaspace -> Monaspice
+#   Terminus -> Terminess
+
+nerd_fonts:
+  - name: 3270 Nerd Font
+    package: 3270
+    check_pattern: "*3270*NerdFont*"
+    extension: ttf
+
+  - name: CaskaydiaCove Nerd Font
+    package: CascadiaCode
+    check_pattern: "*CaskaydiaCove*NerdFont*"
+    extension: ttf
+
+  - name: ComicShannsMono Nerd Font
+    package: ComicShannsMono
+    check_pattern: "*ComicShannsMono*NerdFont*"
+    extension: otf
+
+  - name: DroidSansM Nerd Font
+    package: DroidSansMono
+    check_pattern: "*DroidSansM*NerdFont*"
+    extension: otf
+
+  - name: Hack Nerd Font
+    package: Hack
+    check_pattern: "*Hack*NerdFont*"
+    extension: ttf
+
+  - name: Iosevka Nerd Font
+    package: Iosevka
+    check_pattern: "*IosevkaNerdFont*"
+    extension: ttf
+
+  - name: JetBrainsMono Nerd Font
+    package: JetBrainsMono
+    check_pattern: "*JetBrains*NerdFont*"
+    extension: ttf
+
+  - name: MesloLG Nerd Font
+    package: Meslo
+    check_pattern: "*MesloLG*NerdFont*"
+    extension: ttf
+
+  - name: Monaspice Nerd Font
+    package: Monaspace
+    check_pattern: "*Monaspice*NerdFont*"
+    extension: otf
+
+  - name: RobotoMono Nerd Font
+    package: RobotoMono
+    check_pattern: "*RobotoMono*NerdFont*"
+    extension: ttf
+
+  - name: SauceCodePro Nerd Font
+    package: SourceCodePro
+    check_pattern: "*SauceCodePro*NerdFont*"
+    extension: ttf
+
+  - name: SpaceMono Nerd Font
+    package: SpaceMono
+    check_pattern: "*SpaceMono*NerdFont*"
+    extension: ttf
+
+  - name: Terminess Nerd Font
+    package: Terminus
+    check_pattern: "*Terminess*NerdFont*"
+    extension: ttf
+
+# ================================================================
 # CARGO PACKAGES (Rust)
 # ================================================================
 # Installed via: cargo binstall -y <package>

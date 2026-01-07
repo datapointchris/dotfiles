@@ -22,13 +22,6 @@ task symlinks:unlink    # Remove all symlinks
 
 Symlinks use a two-layer system: common configs first, then platform-specific overlay.
 
-### Font Installation
-
-```bash
-task fonts:download     # Download coding fonts from GitHub releases
-task fonts:install      # Install downloaded fonts to system font directory
-```
-
 ### Testing
 
 ```bash
