@@ -8,6 +8,9 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/version-helpers.sh"
 
+# Offline cache directory for pre-downloaded binaries
+OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
+
 # Get platform_arch string with customizable capitalization
 # Usage: get_platform_arch <darwin_x86> <darwin_arm> <linux_x86>
 # Example: get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64"
@@ -129,24 +132,27 @@ install_from_tarball() {
   fi
 
   local tarball_path="/tmp/${binary_name}.${ext}"
+  local url_filename
+  url_filename=$(basename "$download_url")
 
-  # Try download, fallback to home directory
-  log_info "Download URL: $download_url"
-  log_info "Downloading $binary_name..."
-  if ! curl -fsSL "$download_url" -o "$tarball_path"; then
-    # Download failed - check home directory for manual download
-    log_warning "Download failed, checking home directory..."
-    local home_file
-    home_file=$(find "$HOME" -maxdepth 1 -name "${binary_name}*.tar.*" -type f 2>/dev/null | head -1)
+  # Check offline cache first
+  if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
+    local cached_file="$OFFLINE_CACHE_DIR/$url_filename"
+    if [[ -f "$cached_file" ]]; then
+      log_info "Using cached file: $cached_file"
+      cp "$cached_file" "$tarball_path"
+    fi
+  fi
 
-    if [[ -n "$home_file" ]]; then
-      log_info "Found in home directory: $home_file"
-      cp "$home_file" "$tarball_path"
-    else
+  # If not found in cache, try download
+  if [[ ! -f "$tarball_path" ]]; then
+    log_info "Download URL: $download_url"
+    log_info "Downloading $binary_name..."
+    if ! curl -fsSL "$download_url" -o "$tarball_path"; then
       local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
-2. Save to home directory (~/)
+2. Save to: $OFFLINE_CACHE_DIR/$url_filename
 
 3. Re-run this installer"
 
@@ -205,24 +211,27 @@ install_from_zip() {
   local version="${4:-latest}"
 
   local zip_path="/tmp/${binary_name}.zip"
+  local url_filename
+  url_filename=$(basename "$download_url")
 
-  # Try download, fallback to home directory
-  log_info "Download URL: $download_url"
-  log_info "Downloading $binary_name..."
-  if ! curl -fsSL "$download_url" -o "$zip_path"; then
-    # Download failed - check home directory for manual download
-    log_warning "Download failed, checking home directory..."
-    local home_file
-    home_file=$(find "$HOME" -maxdepth 1 -name "${binary_name}*.zip" -type f 2>/dev/null | head -1)
+  # Check offline cache first
+  if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
+    local cached_file="$OFFLINE_CACHE_DIR/$url_filename"
+    if [[ -f "$cached_file" ]]; then
+      log_info "Using cached file: $cached_file"
+      cp "$cached_file" "$zip_path"
+    fi
+  fi
 
-    if [[ -n "$home_file" ]]; then
-      log_info "Found in home directory: $home_file"
-      cp "$home_file" "$zip_path"
-    else
+  # If not found in cache, try download
+  if [[ ! -f "$zip_path" ]]; then
+    log_info "Download URL: $download_url"
+    log_info "Downloading $binary_name..."
+    if ! curl -fsSL "$download_url" -o "$zip_path"; then
       local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 
-2. Save to home directory (~/)
+2. Save to: $OFFLINE_CACHE_DIR/$url_filename
 
 3. Re-run this installer"
 

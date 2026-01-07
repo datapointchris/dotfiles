@@ -31,9 +31,21 @@ if [[ ! -f "$DOTFILES_DIR/management/packages.yml" ]]; then
   exit 1
 fi
 
-# Run nvm install script (download or use from home directory)
+# Offline cache directory
+OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
+CACHED_SCRIPT="$OFFLINE_CACHE_DIR/nvm-install.sh"
+
+# Run nvm install script (cache → download → fail with instructions)
 run_nvm_install() {
   local tmp_script="/tmp/nvm-install.sh"
+
+  # Check offline cache first
+  if [[ -f "$CACHED_SCRIPT" ]]; then
+    log_info "Using cached install script: $CACHED_SCRIPT"
+    chmod +x "$CACHED_SCRIPT"
+    PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash "$CACHED_SCRIPT"
+    return $?
+  fi
 
   # Try to download
   log_info "Downloading nvm install script..."
@@ -43,22 +55,11 @@ run_nvm_install() {
     return $?
   fi
 
-  # Download failed - check home directory for manual download
-  log_warning "Download failed, checking home directory..."
-  local home_script
-  home_script=$(find "$HOME" -maxdepth 1 -name "*nvm*install*.sh" -type f 2>/dev/null | head -1)
-
-  if [[ -n "$home_script" ]]; then
-    log_info "Found in home directory: $home_script"
-    PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash "$home_script"
-    return $?
-  fi
-
   # Not found anywhere
   manual_steps="1. Download nvm install script in your browser:
    $NVM_INSTALL_SCRIPT
 
-2. Save to home directory (e.g., ~/nvm-install.sh)
+2. Save to: $CACHED_SCRIPT
 
 3. Re-run this installer:
    bash $DOTFILES_DIR/management/common/install/language-managers/nvm.sh"

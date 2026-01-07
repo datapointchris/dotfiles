@@ -3,37 +3,56 @@ set -uo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 INSTALL_DIR="$HOME/.local/share/theme"
-REPO="https://github.com/datapointchris/theme.git"
 
 if [[ -d "$INSTALL_DIR/.git" ]] && [[ "${FORCE_INSTALL:-}" != "true" ]]; then
   log_success "theme already installed at $INSTALL_DIR"
   exit 0
 fi
 
-log_info "Installing theme..."
+log_info "Installing theme via official installer..."
 
-mkdir -p "$HOME/.local/share"
+# Offline cache and download URL
+OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
+CACHED_SCRIPT="$OFFLINE_CACHE_DIR/theme-install.sh"
+THEME_INSTALL_URL="https://raw.githubusercontent.com/datapointchris/theme/main/install.sh"
 
-if [[ -d "$INSTALL_DIR/.git" ]]; then
-  log_info "Updating existing installation..."
-  if git -C "$INSTALL_DIR" pull --quiet; then
-    log_success "theme updated"
-  else
-    log_warning "theme update failed"
+run_theme_install() {
+  local tmp_script="/tmp/theme-install.sh"
+
+  # Check offline cache first
+  if [[ -f "$CACHED_SCRIPT" ]]; then
+    log_info "Using cached install script: $CACHED_SCRIPT"
+    chmod +x "$CACHED_SCRIPT"
+    bash "$CACHED_SCRIPT"
+    return $?
   fi
+
+  # Try to download
+  log_info "Downloading theme install script..."
+  if curl -fsSL "$THEME_INSTALL_URL" -o "$tmp_script"; then
+    chmod +x "$tmp_script"
+    bash "$tmp_script"
+    return $?
+  fi
+
+  return 1
+}
+
+if run_theme_install; then
+  log_success "theme installed: $(command -v theme 2>/dev/null || echo "$HOME/.local/bin/theme")"
 else
-  log_info "Cloning theme repository..."
-  if git clone --quiet "$REPO" "$INSTALL_DIR"; then
-    log_success "theme cloned to $INSTALL_DIR"
-  else
-    log_error "Failed to clone theme repository"
-    exit 1
-  fi
-fi
+  manual_steps="1. Download theme install script in your browser:
+   $THEME_INSTALL_URL
 
-log_info "Creating symlink..."
-mkdir -p "$HOME/.local/bin"
-ln -sf "$INSTALL_DIR/bin/theme" "$HOME/.local/bin/theme"
-log_success "theme installed: $(command -v theme 2>/dev/null || echo "$HOME/.local/bin/theme")"
+2. Save to: $CACHED_SCRIPT
+
+3. Re-run this installer:
+   bash $DOTFILES_DIR/management/common/install/custom-installers/theme.sh"
+
+  output_failure_data "theme" "$THEME_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
+  log_error "theme installation failed"
+  exit 1
+fi

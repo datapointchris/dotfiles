@@ -16,14 +16,43 @@ fi
 
 log_info "Installing uv Python package manager..."
 
-# Set XDG_BIN_HOME to ensure clean install path and prevent shell modification
-if ! XDG_BIN_HOME="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh/uv/install.sh | sh; then
-  manual_steps="1. Visit: https://docs.astral.sh/uv/getting-started/installation/
-2. Run installer: curl -LsSf https://astral.sh/uv/install.sh | sh
-3. Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\"
-4. Verify: uv --version"
+# Offline cache and download URL
+OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
+CACHED_SCRIPT="$OFFLINE_CACHE_DIR/uv-install.sh"
+UV_INSTALL_URL="https://astral.sh/uv/install.sh"
 
-  output_failure_data "uv" "https://astral.sh/uv/install.sh" "latest" "$manual_steps" "curl install script failed"
+run_uv_install() {
+  local tmp_script="/tmp/uv-install.sh"
+
+  # Check offline cache first
+  if [[ -f "$CACHED_SCRIPT" ]]; then
+    log_info "Using cached install script: $CACHED_SCRIPT"
+    chmod +x "$CACHED_SCRIPT"
+    XDG_BIN_HOME="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 bash "$CACHED_SCRIPT"
+    return $?
+  fi
+
+  # Try to download
+  log_info "Downloading uv install script..."
+  if curl -LsSf "$UV_INSTALL_URL" -o "$tmp_script"; then
+    chmod +x "$tmp_script"
+    XDG_BIN_HOME="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 bash "$tmp_script"
+    return $?
+  fi
+
+  return 1
+}
+
+if ! run_uv_install; then
+  manual_steps="1. Download uv install script in your browser:
+   $UV_INSTALL_URL
+
+2. Save to: $CACHED_SCRIPT
+
+3. Re-run this installer:
+   bash $DOTFILES_DIR/management/common/install/language-managers/uv.sh"
+
+  output_failure_data "uv" "$UV_INSTALL_URL" "latest" "$manual_steps" "curl install script failed"
   log_error "uv installation failed"
   exit 1
 fi

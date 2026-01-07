@@ -170,6 +170,7 @@ usage() {
   echo ""
   echo "Options:"
   echo "  --force, -f    Force reinstall of all tools even if already installed"
+  echo "  --offline      Use offline bundle (extracts ~/installers/ from tarball)"
   echo "  --help, -h     Show this help message"
   echo ""
   echo "Environment Variables:"
@@ -178,15 +179,55 @@ usage() {
   echo "Examples:"
   echo "  ./install.sh                    # Full installation"
   echo "  SKIP_FONTS=1 ./install.sh       # Install without fonts"
+  echo "  ./install.sh --offline          # Use pre-downloaded offline bundle"
   exit 0
+}
+
+extract_offline_bundle() {
+  local bundle_file=""
+
+  # Look for bundle in current directory first, then home
+  for search_dir in "." "$HOME"; do
+    local found
+    found=$(find "$search_dir" -maxdepth 1 -name "dotfiles-offline-*.tar.gz" -type f 2>/dev/null | head -1)
+    if [[ -n "$found" ]]; then
+      bundle_file="$found"
+      break
+    fi
+  done
+
+  if [[ -z "$bundle_file" ]]; then
+    log_error "No offline bundle found. Expected: dotfiles-offline-*.tar.gz in ./ or ~/"
+    log_info "Create a bundle first: ./management/offline/create-bundle.sh"
+    exit 1
+  fi
+
+  log_info "Found offline bundle: $bundle_file"
+  log_info "Extracting to ~/installers/..."
+
+  # Extract to home directory (tarball contains installers/ directory)
+  tar -xzf "$bundle_file" -C "$HOME"
+
+  if [[ -d "$HOME/installers" ]]; then
+    log_success "Offline cache ready: ~/installers/"
+    ls -la "$HOME/installers/"
+  else
+    log_error "Failed to extract bundle"
+    exit 1
+  fi
 }
 
 parse_args() {
   FORCE_INSTALL=false
+  OFFLINE_MODE=false
   while [[ $# -gt 0 ]]; do
     case $1 in
     --force | -f)
       FORCE_INSTALL=true
+      shift
+      ;;
+    --offline)
+      OFFLINE_MODE=true
       shift
       ;;
     --help | -h)
@@ -201,9 +242,16 @@ parse_args() {
   done
 
   export FORCE_INSTALL
+  export OFFLINE_MODE
 
   if [[ "$FORCE_INSTALL" == "true" ]]; then
     log_warning "Force install mode enabled - will reinstall all tools"
+    echo ""
+  fi
+
+  if [[ "$OFFLINE_MODE" == "true" ]]; then
+    log_info "Offline mode enabled - using cached files from ~/installers/"
+    extract_offline_bundle
     echo ""
   fi
 }
