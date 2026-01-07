@@ -1,0 +1,60 @@
+======================================
+Dotfiles Connectivity Test Results
+======================================
+Host: PF4ZV43G
+Date: Tue Jan  6 19:36:11 EST 2026
+User: chris
+
+Summary: 36 passed, 10 failed
+
+Results:
+--------------------------------------
+NO  | neovim | https://github.com/neovim/neovim/releases/download/v0.10.0/nvim-linux64.tar.gz
+NO  | lazygit | https://github.com/jesseduffield/lazygit/releases/download/v0.44.1/lazygit_0.44.1_Linux_x86_64.tar.gz
+YES | yazi | https://github.com/sxyazi/yazi/releases/latest
+YES | fzf | https://github.com/junegunn/fzf/releases/latest
+YES | glow | https://github.com/charmbracelet/glow/releases/latest
+YES | duf | https://github.com/muesli/duf/releases/latest
+YES | shellcheck | https://github.com/koalaman/shellcheck/releases/latest
+YES | tflint | https://github.com/terraform-linters/tflint/releases/latest
+YES | trivy | https://github.com/aquasecurity/trivy/releases/latest
+YES | zk | https://github.com/zk-org/zk/releases/latest
+YES | github-api-releases | https://api.github.com/repos/neovim/neovim/releases/latest
+NO  | theme-install | https://raw.githubusercontent.com/datapointchris/theme/main/install.sh
+NO  | font-install | https://raw.githubusercontent.com/datapointchris/font/main/install.sh
+NO  | nvm-install | https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh
+NO  | homebrew-install | https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+YES | github-dotfiles | https://github.com/datapointchris/dotfiles.git
+YES | github-theme | https://github.com/datapointchris/theme.git
+YES | github-tpm | https://github.com/tmux-plugins/tpm.git
+YES | github-zsh-syntax | https://github.com/zsh-users/zsh-syntax-highlighting.git
+YES | github-bats-core | https://github.com/bats-core/bats-core.git
+YES | nerd-fonts-releases | https://github.com/ryanoasis/nerd-fonts/releases/latest
+NO  | nerd-fonts-jetbrains | https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/JetBrainsMono.tar.xz
+NO  | firacode | https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip
+YES | victor-mono | https://github.com/rubjo/victor-mono/releases/latest
+YES | iosevka | https://github.com/be5invis/Iosevka/releases/latest
+YES | go-download | https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
+YES | go-version-api | https://go.dev/VERSION?m=text
+YES | rustup | https://sh.rustup.rs
+NO  | uv-install | https://astral.sh/uv/install.sh
+YES | go-proxy-task | https://proxy.golang.org/github.com/go-task/task/v3/@latest
+YES | go-proxy-gum | https://proxy.golang.org/github.com/charmbracelet/gum/@latest
+YES | go-proxy-lazydocker | https://proxy.golang.org/github.com/jesseduffield/lazydocker/@latest
+YES | task-release | https://github.com/go-task/task/releases/latest
+YES | gum-release | https://github.com/charmbracelet/gum/releases/latest
+YES | lazydocker-release | https://github.com/jesseduffield/lazydocker/releases/latest
+YES | cheat-release | https://github.com/cheat/cheat/releases/latest
+YES | terraform-docs-release | https://github.com/terraform-docs/terraform-docs/releases/latest
+YES | actionlint-release | https://github.com/rhysd/actionlint/releases/latest
+YES | goose-release | https://github.com/pressly/goose/releases/latest
+YES | gofumpt-release | https://github.com/mvdan/gofumpt/releases/latest
+YES | gdu-release | https://github.com/dundee/gdu/releases/latest
+YES | npm-registry | https://registry.npmjs.org/typescript/latest
+YES | pypi | https://pypi.org/simple/ruff/
+NO  | crates-io | https://crates.io/api/v1/crates/bat
+YES | awscli-linux | https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+YES | terraform-releases | https://releases.hashicorp.com/terraform-ls/
+--------------------------------------
+
+Legend: YES = accessible, NO = blocked/failed
