@@ -4,6 +4,9 @@ config-file = themes/current.conf
 # Font settings (imported - use 'font apply' to change)
 config-file = fonts/current.conf
 
+# Opacity (imported - use 'theme opacity-up/down' to change)
+config-file = opacity/current.conf
+
 macos-titlebar-style = hidden
 
 window-padding-x = 16
