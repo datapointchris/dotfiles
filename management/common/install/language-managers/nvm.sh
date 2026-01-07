@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+
+NVM_DIR="$HOME/.config/nvm"
+NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
+
+# Support --print-url for offline bundle creator
+if [[ "${1:-}" == "--print-url" ]]; then
+  echo "nvm|latest|$NVM_INSTALL_URL"
+  exit 0
+fi
+
 UPDATE_MODE=false
 if [[ "${1:-}" == "--update" ]]; then
   UPDATE_MODE=true
 fi
-
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
@@ -14,10 +23,6 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 print_section "Node.js (nvm)"
-
-NVM_DIR="$HOME/.config/nvm"
-NVM_VERSION="v0.40.0"
-NVM_INSTALL_SCRIPT="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   log_info "Checking for nvm updates..."
@@ -49,7 +54,7 @@ run_nvm_install() {
 
   # Try to download
   log_info "Downloading nvm install script..."
-  if curl -fsSL "$NVM_INSTALL_SCRIPT" -o "$tmp_script"; then
+  if curl -fsSL "$NVM_INSTALL_URL" -o "$tmp_script"; then
     chmod +x "$tmp_script"
     PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash "$tmp_script"
     return $?
@@ -57,13 +62,13 @@ run_nvm_install() {
 
   # Not found anywhere
   manual_steps="1. Download nvm install script in your browser:
-   $NVM_INSTALL_SCRIPT
+   $NVM_INSTALL_URL
 
 2. Save to: $CACHED_SCRIPT
 
 3. Re-run this installer:
    bash $DOTFILES_DIR/management/common/install/language-managers/nvm.sh"
-  output_failure_data "nvm" "$NVM_INSTALL_SCRIPT" "$NVM_VERSION" "$manual_steps" "Failed to download install script"
+  output_failure_data "nvm" "$NVM_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
   return 1
 }
 

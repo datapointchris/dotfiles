@@ -40,14 +40,18 @@ install_from_cache() {
   target=$(get_target_string)
 
   # Search for matching tarball (handle different naming conventions)
+  # Search by both package name AND binary name since GitHub release names
+  # often differ from cargo package names (e.g., fd-find vs fd, git-delta vs delta)
   local cached_file=""
-  for pattern in "${package}-"*"${target}"*.tar.gz "${package}_${target}"*.tar.gz; do
-    local found
-    found=$(find "$OFFLINE_CACHE_DIR" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | head -1)
-    if [[ -n "$found" ]]; then
-      cached_file="$found"
-      break
-    fi
+  for name in "$package" "$binary_name"; do
+    for pattern in "${name}-"*"${target}"*.tar.gz "${name}_${target}"*.tar.gz "${name}-"*".tar.gz" "${name}_"*".tar.gz"; do
+      local found
+      found=$(find "$OFFLINE_CACHE_DIR" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | head -1)
+      if [[ -n "$found" ]]; then
+        cached_file="$found"
+        break 2
+      fi
+    done
   done
 
   [[ -z "$cached_file" ]] && return 1

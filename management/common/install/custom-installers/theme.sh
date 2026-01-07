@@ -2,6 +2,15 @@
 set -uo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+
+THEME_INSTALL_URL="https://raw.githubusercontent.com/datapointchris/theme/main/install.sh"
+
+# Support --print-url for offline bundle creator
+if [[ "${1:-}" == "--print-url" ]]; then
+  echo "theme|latest|$THEME_INSTALL_URL"
+  exit 0
+fi
+
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
@@ -14,10 +23,9 @@ fi
 
 log_info "Installing theme via official installer..."
 
-# Offline cache and download URL
+# Offline cache
 OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
 CACHED_SCRIPT="$OFFLINE_CACHE_DIR/theme-install.sh"
-THEME_INSTALL_URL="https://raw.githubusercontent.com/datapointchris/theme/main/install.sh"
 
 run_theme_install() {
   local tmp_script="/tmp/theme-install.sh"

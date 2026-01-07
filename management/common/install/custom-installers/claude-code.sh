@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+
+CLAUDE_CODE_INSTALL_URL="https://claude.ai/install.sh"
+
+# Support --print-url for offline bundle creator
+if [[ "${1:-}" == "--print-url" ]]; then
+  echo "claude-code|latest|$CLAUDE_CODE_INSTALL_URL"
+  exit 0
+fi
+
 UPDATE_MODE=false
 if [[ "${1:-}" == "--update" ]]; then
   UPDATE_MODE=true
 fi
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
@@ -69,7 +78,7 @@ log_info "Installing via official installer..."
 # Download and run official installer
 # The installer script handles platform detection and installs to ~/.local/bin
 # If it fails due to Claude running, skip gracefully
-INSTALLER_OUTPUT=$(curl -fsSL https://claude.ai/install.sh | bash 2>&1)
+INSTALLER_OUTPUT=$(curl -fsSL "$CLAUDE_CODE_INSTALL_URL" | bash 2>&1)
 INSTALLER_EXIT=$?
 
 if [[ $INSTALLER_EXIT -eq 0 ]]; then
@@ -87,7 +96,7 @@ else
   manual_steps="The Claude Code installer failed.
 
 Try manually:
-   1. Download installer: curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
+   1. Download installer: curl -fsSL $CLAUDE_CODE_INSTALL_URL -o /tmp/claude-install.sh
    2. Review script: less /tmp/claude-install.sh
    3. Run installer: bash /tmp/claude-install.sh
 
@@ -95,7 +104,7 @@ If Claude is running, close it first and try again.
 
 Official docs: https://docs.claude.ai/docs/claude-code"
 
-  output_failure_data "claude-code" "https://claude.ai/install.sh" "latest" "$manual_steps" "Installer failed"
+  output_failure_data "claude-code" "$CLAUDE_CODE_INSTALL_URL" "latest" "$manual_steps" "Installer failed"
   if [[ "$UPDATE_MODE" == "true" ]]; then
     log_warning "Claude Code update failed (see summary)"
   else
