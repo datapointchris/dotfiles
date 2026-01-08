@@ -32,10 +32,10 @@ return {
   { 'mhartington/oceanic-next', lazy = false },
   { 'datapointchris/flexoki-moon-nvim', lazy = false },
 
-  -- Generated themes from theme system (apps/common/theme)
+  -- Generated themes from theme system (~/tools/theme)
   -- Dynamically load all themes that have a neovim/ directory
   (function()
-    local themes_dir = vim.fn.expand('~/dotfiles/apps/common/theme/themes')
+    local themes_dir = vim.fn.expand('~/tools/theme/themes')
     local generated_themes = {}
     local handle = vim.loop.fs_scandir(themes_dir)
     if handle then
@@ -68,8 +68,8 @@ return {
     priority = 999, -- Load after colorscheme plugins but before other plugins
     cond = not vim.g.vscode,
     config = function()
-      local themes_dir = vim.fn.expand('~/dotfiles/apps/common/theme/themes')
-      local rejected_file = themes_dir .. '/../data/rejected-themes.json'
+      local themes_dir = vim.fn.expand('~/tools/theme/themes')
+      local history_file = vim.fn.expand('~/.local/state/theme/history.jsonl')
 
       -- Configuration
       local config = {
@@ -98,18 +98,35 @@ return {
         'flexoki-moon-black',
       }
 
-      -- Load rejected themes from JSON file
+      -- Load rejected themes from history.jsonl
+      -- A theme is rejected if its last reject/unreject action was "reject"
       local function get_rejected_themes()
         local rejected = {}
-        if vim.fn.filereadable(rejected_file) == 1 then
-          local content = table.concat(vim.fn.readfile(rejected_file), '\n')
-          local ok, data = pcall(vim.json.decode, content)
-          if ok and data then
-            for name, _ in pairs(data) do
-              rejected[name] = true
+        if vim.fn.filereadable(history_file) == 0 then
+          return rejected
+        end
+
+        local lines = vim.fn.readfile(history_file)
+        local last_action = {} -- theme -> {action, ts}
+
+        for _, line in ipairs(lines) do
+          if line ~= '' then
+            local ok, entry = pcall(vim.json.decode, line)
+            if ok and entry and entry.theme then
+              local action = entry.action
+              if action == 'reject' or action == 'unreject' then
+                last_action[entry.theme] = action
+              end
             end
           end
         end
+
+        for theme, action in pairs(last_action) do
+          if action == 'reject' then
+            rejected[theme] = true
+          end
+        end
+
         return rejected
       end
 
@@ -237,7 +254,7 @@ return {
       end
 
       -- === THEME SYSTEM INTEGRATION ===
-      local theme_current_file = vim.fn.expand('~/.local/share/theme/current')
+      local theme_current_file = vim.fn.expand('~/.local/state/theme/current')
 
       local function get_current_theme_from_system()
         if vim.fn.filereadable(theme_current_file) == 0 then
@@ -274,7 +291,7 @@ return {
           return
         end
 
-        local theme_dir = vim.fn.expand('~/.local/share/theme')
+        local theme_dir = vim.fn.expand('~/.local/state/theme')
         w:start(theme_dir, {}, function(err, filename)
           if err then
             return

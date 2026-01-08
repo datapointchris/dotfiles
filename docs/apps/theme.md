@@ -122,7 +122,7 @@ These are auto-loaded from the `neovim/` directory in each theme folder.
 The theme system integrates with Neovim via `colorscheme-manager.lua`:
 
 - Auto-loads generated colorschemes from `themes/*/neovim/` directories
-- Watches `~/.local/share/theme/current` for changes
+- Watches `~/.local/state/theme/current` for changes
 - When `theme apply` runs, Neovim automatically switches colorschemes
 - Rejected themes are filtered from the Neovim colorscheme picker (`<leader>fz`)
 - Display names shown in picker (e.g., "Gruvbox Dark Hard (Generated)")
