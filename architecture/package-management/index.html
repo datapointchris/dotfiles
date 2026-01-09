@@ -4827,35 +4827,22 @@
 </span></code></pre></div>
 <p>All installation scripts read from this single source. Change a version once, and it applies everywhere.</p>
 <h3 id="installation-scripts">Installation Scripts<a class="headerlink" href="#installation-scripts" title="Permanent link">&para;</a></h3>
-<p>Located in <code>management/scripts/</code>:</p>
-<p><strong>Core Helpers</strong>:</p>
+<p>Located in <code>management/common/install/</code>:</p>
+<p><strong>Directory Structure</strong>:</p>
 <ul>
-<li><code>failure-logging.sh</code> - Structured failure reporting for installer scripts</li>
+<li><code>github-releases/</code> - Tools installed from GitHub releases (neovim, lazygit, yazi, fzf, etc.)</li>
+<li><code>language-managers/</code> - Language runtime installers (go, rust, nvm, uv)</li>
+<li><code>language-tools/</code> - Language-specific tools (go-tools, npm-globals, cargo-tools)</li>
+<li><code>custom-installers/</code> - Special installers (theme, font, awscli, claude-code)</li>
+<li><code>plugins/</code> - Plugin installers (tmux, yazi)</li>
+<li><code>fonts/</code> - Font installers</li>
 </ul>
-<p><strong>GitHub Release Tools</strong>:</p>
+<p><strong>Core Library</strong> (<code>management/common/lib/</code>):</p>
 <ul>
-<li><code>install-go.sh</code> - Latest Go from go.dev</li>
-<li><code>install-fzf.sh</code> - Build fzf from source with Go</li>
-<li><code>install-neovim.sh</code> - Extract neovim bundle, symlink binary</li>
-<li><code>install-lazygit.sh</code> - Download single binary</li>
-<li><code>install-yazi.sh</code> - Download binaries, install plugins</li>
-<li><code>install-glow.sh</code> - Markdown renderer</li>
-<li><code>install-duf.sh</code> - Disk usage utility</li>
-<li><code>install-awscli.sh</code> - AWS CLI v2 (platform-specific)</li>
+<li><code>failure-logging.sh</code> - Structured failure reporting</li>
+<li><code>github-release-installer.sh</code> - Shared functions for GitHub release tools</li>
 </ul>
-<p><strong>Language Ecosystems</strong>:</p>
-<ul>
-<li><code>install-rust.sh</code> - Install Rust via rustup</li>
-<li><code>install-uv.sh</code> - Install uv for Python management</li>
-<li><code>install-cargo-binstall.sh</code> - Bootstrap cargo-binstall</li>
-<li><code>install-cargo-tools.sh</code> - Install all cargo packages from packages.yml</li>
-<li><code>npm-install-globals.sh</code> - Install npm global packages from packages.yml</li>
-</ul>
-<p><strong>Plugins</strong>:</p>
-<ul>
-<li><code>install-tmux-plugins.sh</code> - Install tmux plugins</li>
-</ul>
-<p>All installer scripts use <code>failure-logging.sh</code> for consistent structured error reporting and manual recovery instructions.</p>
+<p>All installer scripts support <code>--update</code> for the update system and use structured error reporting.</p>
 <h3 id="installation-organization">Installation Organization<a class="headerlink" href="#installation-organization" title="Permanent link">&para;</a></h3>
 <p>Installation scripts are organized by platform under <code>management/</code>:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>management/
