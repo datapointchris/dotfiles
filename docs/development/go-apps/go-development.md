@@ -603,17 +603,22 @@ CGO_ENABLED=0 go build -ldflags="-s -w" -o sess .
 
 **Versioning:**
 
-```go
-// Set at build time
-var (
-    version = "dev"
-    commit  = "none"
-    date    = "unknown"
-)
+Use `debug.ReadBuildInfo()` for automatic version detection from Go module info:
 
-// Build with:
-// go build -ldflags="-X main.version=1.0.0 -X main.commit=abc123"
+```go
+import "runtime/debug"
+
+func getVersion() string {
+    if info, ok := debug.ReadBuildInfo(); ok {
+        if info.Main.Version != "" && info.Main.Version != "(devel)" {
+            return info.Main.Version
+        }
+    }
+    return "dev"
+}
 ```
+
+When installed via `go install pkg@latest`, the version automatically reflects git tags (e.g., `v1.0.2`). No ldflags needed.
 
 **App-level Task integration:**
 
@@ -772,34 +777,49 @@ func detectPlatform() string {
 
 ## Pre-Commit Hooks
 
-**Setup:**
+Go projects use comprehensive pre-commit hooks via `tekwizely/pre-commit-golang`:
 
-```bash
+```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.55.0
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
     hooks:
-      - id: golangci-lint
-        args: [--fix]
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [--strict]
 
-  - repo: local
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      - id: go-test
-        name: go test
-        entry: go test ./...
-        language: system
-        pass_filenames: false
-        files: \.go$
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-fumpt-repo
+      - id: go-vet-repo-mod
+      - id: go-build-repo-mod
+      - id: go-mod-tidy-repo
+      - id: go-test-repo-mod
+      - id: golangci-lint-repo-mod
 ```
 
-**Manual checks before commit:**
+**Install hooks:**
 
 ```bash
-task go:test           # Run tests
-task go:lint           # Run linter
-task go:build          # Ensure it builds
+pre-commit install
+pre-commit install --hook-type commit-msg
+pre-commit install --hook-type prepare-commit-msg
 ```
+
+**Configuration files** (create in project root):
+
+- `.golangci.yml` - golangci-lint settings
+- `.markdownlint.json` - markdownlint settings (disable MD013 for line length)
+- `.editorconfig` - editor formatting consistency
 
 ## Resources
 
