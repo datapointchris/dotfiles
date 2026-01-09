@@ -40,6 +40,13 @@ update_common_tools() {
     log_warning "Go update failed"
   fi
 
+  print_section "Updating Go tools via $(print_green "go-tools.sh --update")"
+  if bash "$DOTFILES_DIR/management/common/install/language-tools/go-tools.sh" --update; then
+    log_success "Go tools updated"
+  else
+    log_warning "Go tools update failed"
+  fi
+
   print_section "Updating Rust toolchain via $(print_green "rustup update")"
   if rustup update; then
     log_success "Rust toolchain updated"
@@ -82,12 +89,23 @@ update_common_tools() {
     log_warning "npm global packages update failed"
   fi
 
-  print_section "Updating tenv and Terraform via $(print_green "tenv.sh --update")"
-  if bash "$DOTFILES_DIR/management/common/install/github-releases/tenv.sh" --update; then
-    log_success "tenv and Terraform updated"
-  else
-    log_warning "tenv and Terraform update failed"
-  fi
+  print_section "Updating GitHub Release Tools"
+  local github_releases="$DOTFILES_DIR/management/common/install/github-releases"
+  for script in "$github_releases"/*.sh; do
+    local tool=$(basename "$script" .sh)
+    if ! bash "$script" --update; then
+      log_warning "$tool update failed"
+    fi
+  done
+
+  print_section "Updating Custom Distribution Tools"
+  local custom_installers="$DOTFILES_DIR/management/common/install/custom-installers"
+  for script in "$custom_installers"/*.sh; do
+    local tool=$(basename "$script" .sh)
+    if ! bash "$script" --update; then
+      log_warning "$tool update failed"
+    fi
+  done
 
   print_section "Updating Shell plugins via $(print_green "git pull")"
   if update_shell_plugins; then
@@ -109,17 +127,6 @@ update_common_tools() {
   else
     log_warning "Neovim plugins update failed"
   fi
-
-  print_section "Updating personal CLI tools"
-  for tool in theme font; do
-    if command -v "$tool" &>/dev/null; then
-      if "$tool" upgrade 2>/dev/null; then
-        log_success "$tool updated"
-      else
-        log_warning "$tool update skipped (no remote or failed)"
-      fi
-    fi
-  done
 }
 
 main() {
