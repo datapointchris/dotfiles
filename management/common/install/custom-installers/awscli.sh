@@ -19,12 +19,9 @@ if [[ "$OS" == "darwin" ]]; then
   if command -v aws >/dev/null 2>&1; then
     CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
     if [[ "$UPDATE_MODE" == "true" ]]; then
-      log_success "Current version: $CURRENT_VERSION"
-      log_info "macOS: AWS CLI managed by Homebrew"
-      log_info "Update via: brew upgrade awscli"
+      log_success "awscli at version $CURRENT_VERSION (managed by Homebrew)"
     else
-      log_success "macOS: AWS CLI managed by Homebrew"
-      log_success "Current version: $CURRENT_VERSION"
+      log_success "awscli already installed: $CURRENT_VERSION (managed by Homebrew)"
     fi
   else
     if [[ "$UPDATE_MODE" == "true" ]]; then

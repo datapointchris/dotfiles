@@ -84,27 +84,33 @@ check_if_update_needed() {
     return 0
   fi
 
-  local current_version
-  current_version=$("$binary_name" --version 2>&1 | head -1)
+  local version_output current_version
 
-  if [[ -z "$current_version" ]]; then
-    log_warning "Could not determine current version, will reinstall"
+  # Try different version command patterns (some tools use subcommands)
+  version_output=$("$binary_name" --version 2>&1) ||
+    version_output=$("$binary_name" version 2>&1) ||
+    version_output=$("$binary_name" -version 2>&1) ||
+    version_output=""
+
+  if [[ -z "$version_output" ]]; then
+    log_warning "Could not determine $binary_name version, will reinstall"
     return 0
   fi
 
-  current_version=$(parse_version "$current_version")
+  # Parse version from full output (not just first line)
+  current_version=$(parse_version "$version_output")
 
   if [[ -z "$current_version" ]]; then
-    log_warning "Could not parse current version, will reinstall"
+    log_warning "Could not parse $binary_name version, will reinstall"
     return 0
   fi
 
   if version_compare "$current_version" "$latest_version"; then
-    log_success "Already at latest version: $latest_version"
+    log_success "$binary_name already at latest: $latest_version"
     return 1
   fi
 
-  log_info "Update available: $current_version → $latest_version"
+  log_info "$binary_name update available: $current_version → $latest_version"
   return 0
 }
 

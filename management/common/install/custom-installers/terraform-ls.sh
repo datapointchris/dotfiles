@@ -20,7 +20,6 @@ REPO="hashicorp/terraform-ls"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 VERSION=$(get_latest_version "$REPO")
-log_info "Latest version: $VERSION"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then

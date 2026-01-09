@@ -28,14 +28,10 @@ if [[ -z "$BATS_VERSION" ]]; then
   exit 1
 fi
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Latest version: $BATS_VERSION"
-fi
-
 # Check if BATS is already installed
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! command -v bats >/dev/null 2>&1; then
-    log_info "BATS not installed, will install"
+    log_info "bats not installed, will install"
   else
     CURRENT_VERSION=$(bats --version 2>&1 | head -n1)
     CURRENT_VERSION=$(parse_version "$CURRENT_VERSION")
@@ -43,10 +39,10 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
     if [[ -z "$CURRENT_VERSION" ]]; then
       log_warning "Could not parse current version, will reinstall"
     elif version_compare "$CURRENT_VERSION" "$BATS_VERSION"; then
-      log_success "Already at latest version: $BATS_VERSION"
+      log_success "bats already at latest: $BATS_VERSION"
       exit 0
     else
-      log_info "Update available: $CURRENT_VERSION → $BATS_VERSION"
+      log_info "bats update available: $CURRENT_VERSION → $BATS_VERSION"
     fi
   fi
 else
