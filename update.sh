@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 
@@ -83,8 +83,9 @@ update_common_tools() {
   fi
 
   print_section "Updating npm global packages via $(print_green "npm update -g")"
-  if npm update -g 2>&1 | grep -v "npm warn"; then
-    log_success "npm global packages updated (warnings suppressed)"
+  npm update -g 2>&1 | grep -v "npm warn" || true
+  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+    log_success "npm global packages updated"
   else
     log_warning "npm global packages update failed"
   fi
@@ -192,9 +193,9 @@ main() {
       exit 1
       ;;
   esac
-  local end_time
+
   end_time=$(date +%s)
-  local total_duration=$((end_time - start_time))
+  total_duration=$((end_time - start_time))
 
   print_title_success "System Update - $platform COMPLETE (${total_duration}s)"
 }

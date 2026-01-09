@@ -9,8 +9,7 @@
 set -euo pipefail
 
 # Source shared test helpers (includes formatting library)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/tests/install/helpers.sh"
 
 # Show usage
