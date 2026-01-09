@@ -11,6 +11,25 @@ if [[ "${1:-}" == "--print-url" ]]; then
   exit 0
 fi
 
+# Support --update by delegating to font's own upgrade command
+if [[ "${1:-}" == "--update" ]]; then
+  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+  if command -v font >/dev/null 2>&1; then
+    if upgrade_output=$(font upgrade 2>&1); then
+      if [[ "$upgrade_output" == *"already up to date"* ]]; then
+        log_success "font already at latest"
+      else
+        log_success "font upgraded"
+      fi
+    else
+      log_warning "font upgrade failed"
+    fi
+  else
+    log_info "font not installed, skipping update"
+  fi
+  exit 0
+fi
+
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 

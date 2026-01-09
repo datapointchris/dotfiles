@@ -299,36 +299,23 @@ All installation scripts read from this single source. Change a version once, an
 
 ### Installation Scripts
 
-Located in `management/scripts/`:
+Located in `management/common/install/`:
 
-**Core Helpers**:
+**Directory Structure**:
 
-- `failure-logging.sh` - Structured failure reporting for installer scripts
+- `github-releases/` - Tools installed from GitHub releases (neovim, lazygit, yazi, fzf, etc.)
+- `language-managers/` - Language runtime installers (go, rust, nvm, uv)
+- `language-tools/` - Language-specific tools (go-tools, npm-globals, cargo-tools)
+- `custom-installers/` - Special installers (theme, font, awscli, claude-code)
+- `plugins/` - Plugin installers (tmux, yazi)
+- `fonts/` - Font installers
 
-**GitHub Release Tools**:
+**Core Library** (`management/common/lib/`):
 
-- `install-go.sh` - Latest Go from go.dev
-- `install-fzf.sh` - Build fzf from source with Go
-- `install-neovim.sh` - Extract neovim bundle, symlink binary
-- `install-lazygit.sh` - Download single binary
-- `install-yazi.sh` - Download binaries, install plugins
-- `install-glow.sh` - Markdown renderer
-- `install-duf.sh` - Disk usage utility
-- `install-awscli.sh` - AWS CLI v2 (platform-specific)
+- `failure-logging.sh` - Structured failure reporting
+- `github-release-installer.sh` - Shared functions for GitHub release tools
 
-**Language Ecosystems**:
-
-- `install-rust.sh` - Install Rust via rustup
-- `install-uv.sh` - Install uv for Python management
-- `install-cargo-binstall.sh` - Bootstrap cargo-binstall
-- `install-cargo-tools.sh` - Install all cargo packages from packages.yml
-- `npm-install-globals.sh` - Install npm global packages from packages.yml
-
-**Plugins**:
-
-- `install-tmux-plugins.sh` - Install tmux plugins
-
-All installer scripts use `failure-logging.sh` for consistent structured error reporting and manual recovery instructions.
+All installer scripts support `--update` for the update system and use structured error reporting.
 
 ### Installation Organization
 
