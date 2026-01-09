@@ -210,7 +210,7 @@ print_section "Language Runtimes (Universal)"
 check_command_at_path "go" "/usr/local/go/bin/go" "version"
 
 # Node.js (via nvm)
-check_file_exists "nvm" "$HOME/.config/nvm/nvm.sh"
+check_file_exists "nvm" "$HOME/.local/share/nvm/nvm.sh"
 check_command "node"
 check_command "npm"
 

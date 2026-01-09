@@ -79,7 +79,7 @@ export BAT_THEME="gruvbox-dark"
 
 # Tool directories
 export CARGO_HOME="$HOME/.cargo"
-export NVM_DIR="$HOME/.config/nvm"
+export NVM_DIR="$HOME/.local/share/nvm"
 
 # ------------------------------------------------------------------ #
 # XDG BASE DIRECTORY

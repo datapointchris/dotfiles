@@ -67,7 +67,7 @@ These paths are added by version managers (nvm, uv) and take precedence:
 
 ```bash
 # nvm (Node.js)
-~/.config/nvm/versions/node/<version>/bin
+~/.local/share/nvm/versions/node/<version>/bin
 
 # uv (Python)
 ~/.local/bin        # uv tools installed here

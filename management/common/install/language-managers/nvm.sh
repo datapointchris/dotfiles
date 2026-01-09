@@ -3,7 +3,7 @@ set -uo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 
-NVM_DIR="$HOME/.config/nvm"
+NVM_DIR="$HOME/.local/share/nvm"
 NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
 
 # Support --print-url for offline bundle creator

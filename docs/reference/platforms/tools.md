@@ -46,12 +46,12 @@ nvm alias default lts/*
 
 **Configuration**:
 
-nvm directory: `~/.config/nvm` (consistent across platforms)
+nvm directory: `~/.local/share/nvm` (consistent across platforms)
 
 Shell integration (added to `.zshrc`):
 
 ```bash
-export NVM_DIR="$HOME/.config/nvm"
+export NVM_DIR="$HOME/.local/share/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 ```
 

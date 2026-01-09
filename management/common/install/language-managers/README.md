@@ -7,7 +7,7 @@ This directory contains installers for language version managers (uv, nvm, rustu
 **Key characteristics**:
 
 - Each installer has unique installation method (curl install script, git clone, download binary)
-- Install to language-specific directories (`~/.cargo`, `~/.config/nvm`, etc.)
+- Install to language-specific directories (`~/.cargo`, `~/.local/share/nvm`, etc.)
 - Modify PATH or require sourcing environment files
 - One-time setup (not upgraded through these scripts)
 
@@ -87,7 +87,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ```bash
 # nvm.sh
-export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
+export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
 
 if [[ ! -d "$NVM_DIR" ]]; then
   git clone https://github.com/nvm-sh/nvm.git "$NVM_DIR"
@@ -188,14 +188,14 @@ log_success "uv installed: $(uv --version)"
 ### Git clone installer (nvm.sh)
 
 ```bash
-export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
+export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
 
 if [[ ! -d "$NVM_DIR" ]]; then
   log_info "Cloning nvm repository..."
   if ! git clone https://github.com/nvm-sh/nvm.git "$NVM_DIR"; then
-    manual_steps="1. Clone nvm: git clone https://github.com/nvm-sh/nvm.git ~/.config/nvm
-2. Checkout latest: cd ~/.config/nvm && git checkout \$(git describe --abbrev=0 --tags)
-3. Source nvm: source ~/.config/nvm/nvm.sh
+    manual_steps="1. Clone nvm: git clone https://github.com/nvm-sh/nvm.git ~/.local/share/nvm
+2. Checkout latest: cd ~/.local/share/nvm && git checkout \$(git describe --abbrev=0 --tags)
+3. Source nvm: source ~/.local/share/nvm/nvm.sh
 4. Verify: nvm --version"
     output_failure_data "nvm" "https://github.com/nvm-sh/nvm" "latest" "$manual_steps" "git clone failed"
     log_error "nvm installation failed"

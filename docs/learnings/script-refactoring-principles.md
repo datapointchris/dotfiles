@@ -278,7 +278,7 @@ update.sh                      # 156 lines total
 
 ```bash
 update_npm_globals() {
-  export NVM_DIR="$HOME/.config/nvm"
+  export NVM_DIR="$HOME/.local/share/nvm"
   [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
   bash "$DOTFILES_DIR/management/common/install/language-tools/npm-install-globals.sh"
 }

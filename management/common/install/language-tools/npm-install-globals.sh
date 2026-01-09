@@ -10,7 +10,7 @@ source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 print_section "npm Global Packages"
 
 # Source nvm to get npm in PATH
-export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
+export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
 if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
   log_error "nvm not found at $NVM_DIR"
   exit 1
