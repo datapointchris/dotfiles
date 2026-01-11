@@ -108,12 +108,6 @@ system_packages:
     brew: jq
     description: JSON processor
 
-  - name: yq
-    apt: yq
-    pacman: yq
-    brew: yq
-    description: YAML processor (jq for YAML)
-
   - name: tree
     apt: tree
     pacman: tree
@@ -878,6 +872,9 @@ uv_tools:
 
   # Utilities
   utilities:
+    - name: yq
+      description: YAML/XML processor (jq wrapper for YAML)
+
     - name: keymap-drawer
       command: keymap
       description: Generate keyboard layout diagrams
