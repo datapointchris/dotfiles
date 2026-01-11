@@ -91,13 +91,16 @@ system_packages:
     apt: ripgrep
     pacman: ripgrep
     brew: ripgrep
+    command: rg
     description: Fast grep alternative
+    tags: [cli, search]
 
   - name: tmux
     apt: tmux
     pacman: tmux
     brew: tmux
     description: Terminal multiplexer
+    tags: [cli, terminal]
 
   - name: jq
     apt: jq
@@ -128,6 +131,7 @@ system_packages:
     pacman: btop
     brew: btop
     description: Resource monitor with themeable UI
+    tags: [cli, tui]
 
   # Shell
   - name: zsh
@@ -207,6 +211,7 @@ system_packages:
     apt: gnupg
     pacman: gnupg
     brew: gnupg
+    command: gpg
     description: GPG encryption
 
   # Media Processing
@@ -220,12 +225,14 @@ system_packages:
     apt: imagemagick
     pacman: imagemagick
     brew: imagemagick
+    command: magick
     description: Image processing
 
   - name: poppler-utils
     apt: poppler-utils
     pacman: poppler
     brew: poppler
+    command: pdftotext
     description: PDF rendering library (provides pdftoppm, pdftotext, etc.)
 
   - name: chafa
@@ -241,32 +248,39 @@ system_packages:
     apt: 7zip-standalone
     pacman: 7zip
     brew: sevenzip
+    command: 7zz
     description: 7-Zip compression (provides 7zz command on all platforms)
 
   # Build & Task Automation
   - name: go-task
     brew: go-task
+    command: task
     description: Task runner (apt/pacman install via script or AUR)
 
   # macOS-Specific Tools
   - name: gnu-sed
     brew: gnu-sed
+    command: gsed
     description: GNU sed (macOS only, available as gsed)
 
   - name: gnu-tar
     brew: gnu-tar
+    command: gtar
     description: GNU tar (macOS only, available as gtar)
 
   - name: grep
     brew: grep
+    command: ggrep
     description: GNU grep (macOS only)
 
   - name: coreutils
     brew: coreutils
+    command: gls
     description: GNU core utilities (macOS only, g-prefixed)
 
   - name: findutils
     brew: findutils
+    command: gfind
     description: GNU find utilities (macOS only)
 
   - name: mas
@@ -491,6 +505,8 @@ github_binaries:
     binary_pattern: "nvim-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
     install_dir: "~/.local/nvim-{platform}-{arch}" # Platform-specific
     binary_link: "~/.local/bin/nvim"
+    description: Extensible text editor
+    tags: [cli, editor]
 
   - name: lazygit
     repo: jesseduffield/lazygit
@@ -498,12 +514,16 @@ github_binaries:
     install_script: install-lazygit.sh
     binary_pattern: "lazygit_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
     install_dir: "~/.local/bin"
+    description: Terminal UI for git
+    tags: [cli, tui, git]
 
   - name: yazi
     repo: sxyazi/yazi
     install_script: install-yazi.sh
     binary_pattern: "yazi-{arch}-{platform}.zip" # Platform-specific: apple-darwin/unknown-linux-gnu
     install_dir: "~/.local/bin"
+    description: Terminal file manager
+    tags: [cli, tui, files]
 
   - name: fzf
     repo: junegunn/fzf
@@ -511,18 +531,24 @@ github_binaries:
     install_script: install-fzf.sh
     build_method: go # Universal: built from source
     install_dir: "~/.local/bin"
+    description: Fuzzy finder
+    tags: [cli, search]
 
   - name: glow
     repo: charmbracelet/glow
     install_script: install-glow.sh
     binary_pattern: "glow_{version}_{platform}_{arch}.tar.gz" # Platform-specific: Darwin/linux
     install_dir: "~/.local/bin"
+    description: Markdown renderer for terminal
+    tags: [cli]
 
   - name: duf
     repo: muesli/duf
     install_script: install-duf.sh
     binary_pattern: "duf_{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
     install_dir: "~/.local/bin"
+    description: Disk usage analyzer
+    tags: [cli]
 
   # Terraform ecosystem tools
   - name: tenv
@@ -602,66 +628,92 @@ nerd_fonts:
     package: 3270
     check_pattern: "*3270*NerdFont*"
     extension: ttf
+    description: IBM 3270 terminal font with icons
+    tags: [font]
 
   - name: CaskaydiaCove Nerd Font
     package: CascadiaCode
     check_pattern: "*CaskaydiaCove*NerdFont*"
     extension: ttf
+    description: Cascadia Code with icons
+    tags: [font]
 
   - name: ComicShannsMono Nerd Font
     package: ComicShannsMono
     check_pattern: "*ComicShannsMono*NerdFont*"
     extension: otf
+    description: Comic Shanns Mono with icons
+    tags: [font]
 
   - name: DroidSansM Nerd Font
     package: DroidSansMono
     check_pattern: "*DroidSansM*NerdFont*"
     extension: otf
+    description: Droid Sans Mono with icons
+    tags: [font]
 
   - name: Hack Nerd Font
     package: Hack
     check_pattern: "*Hack*NerdFont*"
     extension: ttf
+    description: Hack font with icons
+    tags: [font]
 
   - name: Iosevka Nerd Font
     package: Iosevka
     check_pattern: "*IosevkaNerdFont*"
     extension: ttf
+    description: Iosevka font with icons
+    tags: [font]
 
   - name: JetBrainsMono Nerd Font
     package: JetBrainsMono
     check_pattern: "*JetBrains*NerdFont*"
     extension: ttf
+    description: JetBrains Mono with icons
+    tags: [font]
 
   - name: MesloLG Nerd Font
     package: Meslo
     check_pattern: "*MesloLG*NerdFont*"
     extension: ttf
+    description: Meslo LG font with icons
+    tags: [font]
 
   - name: Monaspice Nerd Font
     package: Monaspace
     check_pattern: "*Monaspice*NerdFont*"
     extension: otf
+    description: Monaspace font with icons
+    tags: [font]
 
   - name: RobotoMono Nerd Font
     package: RobotoMono
     check_pattern: "*RobotoMono*NerdFont*"
     extension: ttf
+    description: Roboto Mono with icons
+    tags: [font]
 
   - name: SauceCodePro Nerd Font
     package: SourceCodePro
     check_pattern: "*SauceCodePro*NerdFont*"
     extension: ttf
+    description: Source Code Pro with icons
+    tags: [font]
 
   - name: SpaceMono Nerd Font
     package: SpaceMono
     check_pattern: "*SpaceMono*NerdFont*"
     extension: ttf
+    description: Space Mono with icons
+    tags: [font]
 
   - name: Terminess Nerd Font
     package: Terminus
     check_pattern: "*Terminess*NerdFont*"
     extension: ttf
+    description: Terminus font with icons
+    tags: [font]
 
 # ================================================================
 # CARGO PACKAGES (Rust)
@@ -675,31 +727,36 @@ cargo_packages:
     description: cat with syntax highlighting
     github_repo: sharkdp/bat
     binary_pattern: "bat-{version}-{target}.tar.gz"
+    tags: [cli, files]
 
   - name: fd-find
     command: fd
     description: modern find replacement
     github_repo: sharkdp/fd
     binary_pattern: "fd-{version}-{target}.tar.gz"
+    tags: [cli, search, files]
 
   - name: eza
     command: eza
     description: modern ls replacement
     github_repo: eza-community/eza
     binary_pattern: "eza_{target}.tar.gz"
+    tags: [cli, files]
 
   - name: zoxide
     command: zoxide
-    description: smarter cd command
+    description: Smarter cd command
     github_repo: ajeetdsouza/zoxide
     binary_pattern: "zoxide-{version_num}-{target}.tar.gz"
     linux_target: x86_64-unknown-linux-musl
+    tags: [cli]
 
   - name: git-delta
     command: delta
     description: syntax-highlighting git diff
     github_repo: dandavison/delta
     binary_pattern: "delta-{version}-{target}.tar.gz"
+    tags: [cli, git]
 
   - name: cargo-update
     command: cargo-install-update
@@ -1004,45 +1061,59 @@ linux_gui_apps:
 macos_casks:
   - name: kitty
     description: GPU-accelerated terminal emulator
+    tags: [gui, terminal]
 
   - name: ghostty
     description: GPU-accelerated terminal emulator
+    tags: [gui, terminal]
 
   - name: aerospace
     description: Tiling window manager
+    tags: [gui]
 
   - name: alfred
     description: Launcher & productivity
+    tags: [gui]
 
   - name: bettertouchtool
     description: Input customization
+    tags: [gui]
 
   - name: dbeaver-community
-    description: Universal database GUI
+    description: Database client
+    tags: [gui]
 
   - name: macs-fan-control
     description: Fan control utility
+    tags: [gui]
 
   - name: michaelvillar-timer
     description: Timer app
+    tags: [gui]
 
   - name: multipass
     description: Ubuntu VM manager
+    tags: [gui]
 
   - name: discord
     description: Chat platform
+    tags: [gui, communication]
 
   - name: slack
-    description: Team communication (using cask for automation, removed from MAS)
+    description: Team messaging
+    tags: [gui, communication]
 
   - name: zoom
     description: Video conferencing
+    tags: [gui, communication]
 
   - name: obsidian
-    description: Note taking
+    description: Note-taking app
+    tags: [gui, editor]
 
   - name: visual-studio-code
     description: Code editor
+    tags: [gui, editor]
 # ================================================================
 # NOTES
 # ================================================================
