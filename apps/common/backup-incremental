@@ -56,76 +56,67 @@ VERBOSE=false
 EXCLUDE_PATTERNS=()
 
 usage() {
+  color_bright_white "Space-efficient incremental backups using rsync hard links"
   echo ""
-  print_banner "backup-incremental" "cyan"
-  echo ""
-  echo "  $(color_bright_white "Space-efficient incremental backups using rsync hard links")"
-  echo ""
-
-  print_section "Usage" "brightcyan"
-  echo ""
-  echo "  $(color_bright_yellow "backup-incremental") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<source_dir>")"
-  echo ""
-
+  echo "$(color_bright_white "Usage:") $(color_bright_yellow "backup-incremental") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<source_dir>")"
   print_section "Options" "brightcyan"
-  echo ""
-  echo "  $(color_bright_magenta "-n, --name") $(color_cyan "<name>")        Backup name $(color_bright_black "(required, e.g., \"learning\")")"
+  echo "  $(color_bright_magenta "-n, --name") $(color_cyan "<name>")        Backup name $(color_bright_black "(required)")"
   echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")        Backup destination $(color_bright_black "(default: ~/Documents/backups)")"
   echo "  $(color_bright_magenta "--exclude") $(color_cyan "<pattern>")      Exclude pattern $(color_bright_black "(can be used multiple times)")"
-  echo "  $(color_bright_magenta "--network") $(color_cyan "<host:path>")    Network destination $(color_bright_black "(e.g., homelab:/mnt/backups)")"
+  echo "  $(color_bright_magenta "--network") $(color_cyan "<host:path>")    Network destination $(color_bright_black "(e.g., homelab:/backups)")"
   echo "  $(color_bright_magenta "-v, --verbose")             Show detailed rsync output"
   echo "  $(color_bright_magenta "-h, --help")                Show this help message"
   echo ""
-
-  print_section "Arguments" "brightcyan"
-  echo ""
-  echo "  $(color_bright_green "<source_dir>")    Directory to backup $(color_bright_black "(absolute or relative to HOME)")"
-  echo ""
-
   print_section "Examples" "brightcyan"
-  echo ""
   echo "  $(color_bright_black "# Basic incremental backup")"
+  # shellcheck disable=SC2088
   echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning") $(color_green "~/learning")"
-  echo ""
   echo "  $(color_bright_black "# Exclude large static content")"
+  # shellcheck disable=SC2088
   echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --exclude books") $(color_green "~/learning")"
-  echo ""
-  echo "  $(color_bright_black "# Multiple exclusions")"
-  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --exclude books --exclude temp") $(color_green "~/learning")"
-  echo ""
-  echo "  $(color_bright_black "# Backup to network storage via SSH")"
+  echo "  $(color_bright_black "# Backup to network storage")"
+  # shellcheck disable=SC2088
   echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --network homelab:/backups") $(color_green "~/learning")"
   echo ""
-  echo "  $(color_bright_black "# Backup to mounted network share")"
-  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--dest ~/mnt/homelab/backups --name learning") $(color_green "~/learning")"
+  print_section "Restore" "brightcyan"
+  echo "  $(color_bright_black "# Backups are complete directories - just copy files directly")"
+  # shellcheck disable=SC2088
+  echo "  $(color_bright_yellow "cp") $(color_magenta "-r") $(color_green "~/Documents/backups/learning/latest/file.md") $(color_cyan "~/destination")"
+  echo "  $(color_bright_black "# Restore entire backup")"
+  # shellcheck disable=SC2088
+  echo "  $(color_bright_yellow "cp") $(color_magenta "-r") $(color_green "~/Documents/backups/learning/latest/") $(color_cyan "~/restore")"
+  echo "  $(color_bright_black "# Browse backup contents directly")"
+  # shellcheck disable=SC2088
+  echo "  $(color_bright_yellow "ls") $(color_green "~/Documents/backups/learning/latest/")"
   echo ""
-
+  print_section "Identifying Backups" "brightcyan"
+  echo "  $(color_bright_white "Directories with 'latest' symlink")  Incremental backup $(color_bright_black "(this tool)")"
+  echo "  $(color_bright_white "*.tar.zst/*.tar.gz/*.tar.xz")        Compressed archive $(color_bright_black "(backup-dirs)")"
+  echo ""
   print_section "How It Works" "brightcyan"
-  echo ""
   echo "  $(color_cyan "•") First backup: Full copy of all files"
-  echo "  $(color_cyan "•") Later backups: Only copy changed files"
-  echo "  $(color_cyan "•") Unchanged files: Hard-linked to previous backup $(color_bright_black "(zero extra space)")"
+  echo "  $(color_cyan "•") Later backups: Only changed files copied"
+  echo "  $(color_cyan "•") Unchanged files: Hard-linked $(color_bright_black "(zero extra space)")"
   echo "  $(color_cyan "•") Each backup: Complete browsable snapshot"
-  echo "  $(color_cyan "•") Storage used: Only actual changes between backups"
   echo ""
-
   print_section "Storage Example" "brightcyan"
-  echo ""
   echo "  Backup 1: $(color_bright_yellow "5.0 GB")  $(color_bright_black "(3GB books + 2GB docs)")"
   echo "  Backup 2: $(color_bright_green "100 MB")  $(color_bright_black "(changed docs, books hard-linked)")"
   echo "  Backup 3: $(color_bright_green "50 MB")   $(color_bright_black "(changed docs, books still linked)")"
   echo "  $(color_bright_black "─────────────────────────────────────")"
   echo "  Total:    $(color_bright_cyan "5.15 GB") $(color_bright_black "stored, appears as 15GB of backups")"
   echo ""
-
-  print_section "Network Storage" "brightcyan"
-  echo ""
-  echo "  $(color_cyan "SSH method:")    $(color_bright_white "--network homelab:/mnt/backups") $(color_bright_black "(rsync over SSH)")"
-  echo "  $(color_cyan "Mount method:")  $(color_bright_white "--dest ~/mnt/backups") $(color_bright_black "(mount NFS/SMB first)")"
-  echo ""
 }
 
 parse_arguments() {
+  local arg_count=$#
+
+  # No arguments - just show usage
+  if [[ $arg_count -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       -h|--help)
@@ -170,6 +161,7 @@ parse_arguments() {
         ;;
       -*)
         color_red "Error: Unknown option: $1"
+        echo ""
         usage
         exit 1
         ;;
@@ -180,7 +172,7 @@ parse_arguments() {
     esac
   done
 
-  # Validate required arguments
+  # Validate required arguments (only reached if some args were provided)
   if [[ -z "$BACKUP_NAME" ]]; then
     color_red "Error: --name is required"
     echo ""
@@ -271,7 +263,8 @@ create_incremental_backup() {
     if [[ -n "$NETWORK_DEST" ]]; then
       # For network destinations, create symlink via SSH
       local host="${NETWORK_DEST%%:*}"
-      ssh "$host" "ln -snf '$new_backup' '$latest_link'"
+      # shellcheck disable=SC2029
+      ssh "$host" "ln -snf \"$new_backup\" \"$latest_link\""
     else
       # Local destination
       ln -snf "$new_backup" "$latest_link"
@@ -289,7 +282,8 @@ create_incremental_backup() {
 
     if [[ -n "$NETWORK_DEST" ]]; then
       local host="${NETWORK_DEST%%:*}"
-      local size_kb=$(ssh "$host" "du -sk '$new_backup' | cut -f1")
+      # shellcheck disable=SC2029
+      local size_kb=$(ssh "$host" "du -sk \"$new_backup\" | cut -f1")
       local size_mb=$((size_kb / 1024))
       echo "  Backup size: $(color_bright_green "${size_mb} MB")"
     else
