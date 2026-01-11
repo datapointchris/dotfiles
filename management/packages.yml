@@ -464,6 +464,22 @@ system_packages:
     aur: visual-studio-code-bin
     description: Code editor (Arch only - macOS uses cask)
 
+  - name: aerc
+    brew: aerc
+    pacman: aerc
+    description: Terminal email client
+    tags: [cli, communication]
+
+  - name: thunderbird
+    pacman: thunderbird
+    description: Email client (Arch only - macOS uses cask)
+    tags: [gui, communication]
+
+  - name: librewolf
+    aur: librewolf-bin
+    description: Privacy-focused Firefox fork (Arch only - macOS uses cask)
+    tags: [gui]
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================
@@ -1047,10 +1063,12 @@ flatpak_apps:
   - name: discord
     flatpak_id: com.discordapp.Discord
     description: Chat platform
+    tags: [gui, communication]
 
-  - name: slack
-    flatpak_id: com.slack.Slack
-    description: Team communication
+  - name: zen-browser
+    flatpak_id: app.zen_browser.zen
+    description: Privacy-focused Firefox fork with modern UI
+    tags: [gui]
 
 # ================================================================
 # MACOS CASKS
@@ -1099,10 +1117,6 @@ macos_casks:
     description: Chat platform
     tags: [gui, communication]
 
-  - name: slack
-    description: Team messaging
-    tags: [gui, communication]
-
   - name: zoom
     description: Video conferencing
     tags: [gui, communication]
@@ -1114,6 +1128,18 @@ macos_casks:
   - name: visual-studio-code
     description: Code editor
     tags: [gui, editor]
+
+  - name: librewolf
+    description: Privacy-focused Firefox fork
+    tags: [gui]
+
+  - name: zen
+    description: Privacy-focused Firefox fork with modern UI
+    tags: [gui]
+
+  - name: thunderbird
+    description: Email client
+    tags: [gui, communication]
 # ================================================================
 # NOTES
 # ================================================================
