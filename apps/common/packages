@@ -1,0 +1,607 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pyyaml"]
+# ///
+"""Query packages.yml for browsing and discovery.
+
+A CLI tool to browse, search, and query packages defined in packages.yml.
+Supports filtering by section, tag, and platform with colored output.
+"""
+
+import argparse
+import json
+import os
+import platform
+import shutil
+import sys
+from collections import Counter
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+VERSION = "1.0.0"
+
+PACKAGE_SECTIONS = (
+    "system_packages",
+    "github_binaries",
+    "cargo_packages",
+    "npm_globals",
+    "uv_tools",
+    "local_uv_tools",
+    "go_tools",
+    "nerd_fonts",
+    "shell_plugins",
+    "tmux_plugins",
+    "mas_apps",
+    "linux_gui_apps",
+    "macos_casks",
+)
+
+
+class Color(Enum):
+    """ANSI color codes."""
+
+    RESET = "\033[0m"
+    CYAN = "\033[0;36m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[0;33m"
+    MAGENTA = "\033[0;35m"
+    BRIGHT_CYAN = "\033[0;96m"
+    BRIGHT_MAGENTA = "\033[0;95m"
+    BRIGHT_YELLOW = "\033[0;93m"
+    BRIGHT_BLUE = "\033[0;94m"
+    BRIGHT_BLACK = "\033[0;90m"
+    ORANGE = "\033[38;5;208m"
+
+
+class InstallStatus(Enum):
+    """Package installation status."""
+
+    INSTALLED = "installed"
+    APP_ONLY = "app-only"
+    NOT_INSTALLED = "not-installed"
+    NOT_AVAILABLE = "not-available"
+
+
+class Platform(Enum):
+    """Supported platforms."""
+
+    MACOS = "macos"
+    ARCH = "arch"
+    LINUX = "linux"
+    UNKNOWN = "unknown"
+
+
+def use_color() -> bool:
+    """Check if terminal supports color output."""
+    return sys.stdout.isatty() and os.environ.get("TERM", "") != "dumb"
+
+
+USE_COLOR = use_color()
+
+
+def colorize(text: str, color: Color) -> str:
+    """Apply color to text if terminal supports it."""
+    if USE_COLOR:
+        return f"{color.value}{text}{Color.RESET.value}"
+    return text
+
+
+def print_section(title: str, color: Color = Color.BRIGHT_CYAN) -> None:
+    """Print a section header with underline."""
+    print(f"\n{title}")
+    line_char = "─" if USE_COLOR else "-"
+    line = line_char * (len(title) + 15)
+    print(colorize(line, color) if USE_COLOR else line)
+
+
+def print_header(title: str) -> None:
+    """Print a main header with box drawing."""
+    line = "━" * 50
+    if USE_COLOR:
+        print(colorize(line, Color.BRIGHT_CYAN))
+        print(colorize(f" {title}", Color.BRIGHT_CYAN))
+        print(colorize(line, Color.BRIGHT_CYAN))
+    else:
+        print(line)
+        print(f" {title}")
+        print(line)
+
+
+def get_packages_file() -> Path:
+    """Find packages.yml by traversing up to git root or falling back to ~/dotfiles."""
+    script_path = Path(__file__).resolve()
+
+    # Walk up directory tree looking for git root
+    for parent in script_path.parents:
+        if (parent / ".git").exists():
+            packages_file = parent / "management" / "packages.yml"
+            if packages_file.exists():
+                return packages_file
+            break
+
+    # Fallback to home dotfiles
+    home_packages = Path.home() / "dotfiles" / "management" / "packages.yml"
+    if home_packages.exists():
+        return home_packages
+
+    print("Error: packages.yml not found", file=sys.stderr)
+    sys.exit(1)
+
+
+def load_packages() -> dict[str, Any]:
+    """Load and parse packages.yml."""
+    with get_packages_file().open() as f:
+        return yaml.safe_load(f)
+
+
+def flatten_packages(data: dict[str, Any], section: str) -> list[dict[str, Any]]:
+    """Extract packages from a section, handling nested structures like npm_globals."""
+    if section not in data:
+        return []
+
+    section_data = data[section]
+
+    # Handle nested categories (npm_globals, uv_tools have subcategories)
+    if isinstance(section_data, dict):
+        packages = []
+        for category in section_data.values():
+            if isinstance(category, list):
+                packages.extend(category)
+        return packages
+
+    if isinstance(section_data, list):
+        return section_data
+
+    return []
+
+
+def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Get all packages with their section attached as _section."""
+    all_packages = []
+    for section in PACKAGE_SECTIONS:
+        for pkg in flatten_packages(data, section):
+            if isinstance(pkg, dict) and "name" in pkg:
+                pkg_copy = dict(pkg)
+                pkg_copy["_section"] = section
+                all_packages.append(pkg_copy)
+    return all_packages
+
+
+def get_current_platform() -> Platform:
+    """Detect the current operating system platform."""
+    system = platform.system()
+    if system == "Darwin":
+        return Platform.MACOS
+    if system == "Linux":
+        if Path("/etc/arch-release").exists():
+            return Platform.ARCH
+        return Platform.LINUX
+    return Platform.UNKNOWN
+
+
+def is_available_on_platform(pkg: dict[str, Any]) -> bool:
+    """Check if package is available on the current platform."""
+    section = pkg.get("_section", "")
+    current = get_current_platform()
+
+    # Platform-exclusive sections
+    macos_only = ("macos_casks", "mas_apps")
+    linux_only = ("linux_gui_apps",)
+
+    if section in macos_only and current != Platform.MACOS:
+        return False
+    if section in linux_only and current == Platform.MACOS:
+        return False
+
+    # System packages must have an entry for the current package manager
+    if section == "system_packages":
+        if current == Platform.MACOS:
+            return "brew" in pkg
+        if current == Platform.ARCH:
+            return "pacman" in pkg or "aur" in pkg
+        return "apt" in pkg  # Linux/Ubuntu default
+
+    return True
+
+
+def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
+    """Check if a package is installed and return its status and path."""
+    if not is_available_on_platform(pkg):
+        return InstallStatus.NOT_AVAILABLE, None
+
+    name = pkg.get("name", "")
+    cmd_name = pkg.get("command", name)
+    section = pkg.get("_section", "")
+
+    # Check binary_link field (used by github_binaries)
+    binary_link = pkg.get("binary_link", "")
+    if binary_link:
+        link_path = Path(binary_link).expanduser()
+        if link_path.exists():
+            return InstallStatus.INSTALLED, str(link_path)
+
+    # Check if command is in PATH
+    which_path = shutil.which(cmd_name)
+    if which_path:
+        return InstallStatus.INSTALLED, which_path
+
+    # Check macOS application bundles
+    if section in ("macos_casks", "mas_apps"):
+        app_path = find_macos_app(name)
+        if app_path:
+            return InstallStatus.APP_ONLY, str(app_path)
+
+    # Check fonts
+    if section == "nerd_fonts":
+        font_path = find_font(pkg.get("check_pattern", ""))
+        if font_path:
+            return InstallStatus.INSTALLED, str(font_path)
+
+    return InstallStatus.NOT_INSTALLED, None
+
+
+def find_macos_app(name: str) -> Path | None:
+    """Find a macOS .app bundle by name (case-insensitive)."""
+    target = f"{name}.app".lower()
+    for base in (Path("/Applications"), Path.home() / "Applications"):
+        if not base.exists():
+            continue
+        for entry in base.iterdir():
+            if entry.name.lower() == target:
+                return entry
+    return None
+
+
+def find_font(check_pattern: str) -> Path | None:
+    """Find a font matching the check_pattern glob in standard font directories."""
+    if not check_pattern:
+        return None
+
+    font_dirs = (
+        Path.home() / "Library/Fonts",
+        Path("/Library/Fonts"),
+        Path.home() / ".local/share/fonts",
+        Path("/usr/share/fonts"),
+    )
+
+    for font_dir in font_dirs:
+        if font_dir.exists() and list(font_dir.glob(check_pattern)):
+            return font_dir
+    return None
+
+
+def format_status(status: InstallStatus, path: str | None) -> str | None:
+    """Format installation status for display."""
+    if status == InstallStatus.INSTALLED:
+        return colorize(f"✓ {path}", Color.GREEN)
+    if status == InstallStatus.APP_ONLY:
+        return colorize(f"⚠ app exists but CLI not in PATH: {path}", Color.YELLOW)
+    if status == InstallStatus.NOT_AVAILABLE:
+        return None
+    return colorize("✗ not installed", Color.BRIGHT_BLACK)
+
+
+def calculate_column_widths(
+    items: list[dict[str, Any]], fields: list[str], max_widths: dict[str, int] | None = None
+) -> dict[str, int]:
+    """Calculate optimal column widths for a list of items."""
+    max_widths = max_widths or {}
+    widths = {}
+    for field in fields:
+        width = max(len(str(item.get(field, ""))) for item in items) + 2
+        if field in max_widths:
+            width = min(width, max_widths[field])
+        widths[field] = width
+    return widths
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Commands
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """List all package sections with counts."""
+    print_section("Package Sections")
+    print()
+    for section in PACKAGE_SECTIONS:
+        packages = flatten_packages(data, section)
+        if packages:
+            print(f"  {section:<20} {len(packages):3d} packages")
+
+
+def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """Show package statistics by section."""
+    print_section("Package Statistics")
+    print()
+
+    print(f"{'Section':<24} {'Count':>5}")
+    print("─" * 32)
+
+    total = 0
+    for section in PACKAGE_SECTIONS:
+        count = len(flatten_packages(data, section))
+        if count:
+            print(f"{section:<24} {count:5d}")
+            total += count
+
+    print("─" * 32)
+    print(f"{'Total':<24} {total:5d}")
+
+
+def cmd_tags(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """List all tags with package counts."""
+    print_section("Available Tags")
+    print()
+
+    tag_counts: Counter[str] = Counter()
+    for pkg in get_all_packages(data):
+        tag_counts.update(pkg.get("tags", []))
+
+    if not tag_counts:
+        print("  No tags defined yet.")
+        print()
+        print("  Add tags to packages.yml entries:")
+        print("    - name: ghostty")
+        print("      description: GPU-accelerated terminal")
+        print("      tags: [gui, terminal]")
+        return
+
+    for tag, count in tag_counts.most_common():
+        print(f"  {tag:<16} {count:3d} packages")
+
+
+def cmd_show(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """Show details for a specific package."""
+    name_lower = args.name.lower()
+    matches = [p for p in get_all_packages(data) if p.get("name", "").lower() == name_lower]
+
+    if not matches:
+        print(f"Error: Package not found: {args.name}", file=sys.stderr)
+        print("\nSimilar packages:", file=sys.stderr)
+        similar = [p for p in get_all_packages(data) if name_lower in p.get("name", "").lower()]
+        for pkg in similar[:5]:
+            print(f"  {pkg['name']:<28} {pkg.get('description', '')}", file=sys.stderr)
+        sys.exit(1)
+
+    # Sort with available-on-this-platform first
+    matches.sort(key=lambda p: 0 if is_available_on_platform(p) else 1)
+
+    for pkg in matches:
+        print()
+        print(colorize(f"Package: {pkg['name']}", Color.CYAN))
+        print("━" * 40)
+        print()
+
+        print(f"Description: {pkg.get('description', 'N/A')}")
+        print(f"Section:     {pkg['_section']}")
+        print(f"Tags:        {', '.join(pkg.get('tags', [])) or 'none'}")
+
+        # Platform package names
+        platform_fields = ("apt", "brew", "pacman", "aur")
+        platforms = [(f, pkg[f]) for f in platform_fields if f in pkg]
+        if platforms:
+            print("\nPlatform Packages:")
+            for field, value in platforms:
+                print(f"  {field}:    {value}")
+
+        # Additional metadata fields
+        for field, label in (("package", "Package"), ("repo", "Repository"), ("github_repo", "GitHub")):
+            if field in pkg:
+                print(f"{label}:     {pkg[field]}")
+
+        # Installation status
+        if is_available_on_platform(pkg):
+            status, path = check_installed(pkg)
+            status_str = format_status(status, path)
+            if status_str:
+                print(f"\nStatus:      {status_str}")
+
+        print()
+
+
+def cmd_search(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """Search packages by name."""
+    query_lower = args.query.lower()
+    results = [p for p in get_all_packages(data) if query_lower in p.get("name", "").lower()]
+
+    if not results:
+        print(f"No packages found matching: {args.query}")
+        return
+
+    widths = calculate_column_widths(results, ["name", "_section"])
+
+    for pkg in results:
+        name = pkg.get("name", "")
+        desc = pkg.get("description", "")
+        section = pkg.get("_section", "")
+        tags = pkg.get("tags", [])
+
+        status, path = check_installed(pkg)
+        status_str = format_status(status, path)
+        tags_str = f"[{', '.join(tags)}]" if tags else ""
+
+        print(f"{name:<{widths['name']}} {section:<{widths['_section']}} {tags_str}")
+        print(f"  {desc}")
+        if status_str:
+            print(f"  {status_str}")
+        print()
+
+
+def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """List packages with optional filters."""
+    # Validate section filter
+    if args.section and args.section not in PACKAGE_SECTIONS:
+        print(f"Error: Unknown section: {args.section}", file=sys.stderr)
+        print("\nAvailable sections:", file=sys.stderr)
+        for s in PACKAGE_SECTIONS:
+            print(f"  {s}", file=sys.stderr)
+        sys.exit(1)
+
+    # Determine which sections to query
+    if args.section:
+        sections = [args.section]
+    elif args.platform == "macos":
+        sections = [s for s in PACKAGE_SECTIONS if s != "linux_gui_apps"]
+    elif args.platform == "linux":
+        sections = [s for s in PACKAGE_SECTIONS if s not in ("macos_casks", "mas_apps")]
+    else:
+        sections = list(PACKAGE_SECTIONS)
+
+    # Collect matching packages
+    results = []
+    for section in sections:
+        for pkg in flatten_packages(data, section):
+            if not isinstance(pkg, dict) or "name" not in pkg:
+                continue
+            if args.tag and args.tag not in pkg.get("tags", []):
+                continue
+            results.append({
+                "name": pkg["name"],
+                "description": pkg.get("description", ""),
+                "section": section,
+                "tags": pkg.get("tags", []),
+            })
+
+    if args.json:
+        print(json.dumps(results, indent=2))
+        return
+
+    if not results:
+        print("No packages found")
+        return
+
+    widths = calculate_column_widths(results, ["name", "section"], max_widths={"name": 30})
+
+    if args.verbose:
+        print(f"{'Name':<{widths['name']}} {'Section':<{widths['section']}} {'Description':<35} Tags")
+        print("─" * (widths["name"] + widths["section"] + 50))
+        for pkg in results:
+            tags_str = ", ".join(pkg["tags"])
+            desc = pkg["description"][:35]
+            print(f"{pkg['name']:<{widths['name']}} {pkg['section']:<{widths['section']}} {desc:<35} {tags_str}")
+    else:
+        for pkg in results:
+            print(f"{pkg['name']:<{widths['name']}} {pkg['description']}")
+
+
+def show_help() -> None:
+    """Show main help with examples."""
+    print_header("packages - Query packages.yml")
+    print()
+    print("Browse and search packages across all sections and platforms.")
+    print()
+
+    print_section("Commands", Color.BRIGHT_MAGENTA)
+    commands = [
+        ("packages", "Show this help"),
+        ("packages list", "List all packages"),
+        ("packages show <name>", "Show package details"),
+        ("packages search <query>", "Search by name"),
+        ("packages sections", "List all sections"),
+        ("packages stats", "Show package counts"),
+        ("packages tags", "List all tags with counts"),
+    ]
+    for cmd, desc in commands:
+        print(f"  {colorize(cmd, Color.CYAN):<35} {desc}")
+    print()
+
+    print_section("List Filters", Color.BRIGHT_BLUE)
+    filters = [
+        ("--section=<section>", "Filter by section"),
+        ("--tag=<tag>", "Filter by tag (gui, cli, terminal, etc.)"),
+        ("--platform=<plat>", "Filter by platform (macos, linux, all)"),
+        ("--verbose", "Show section, tags, platform"),
+        ("--json", "Output as JSON"),
+    ]
+    for flag, desc in filters:
+        print(f"  {colorize(flag, Color.CYAN):<25} {desc}")
+    print()
+
+    print_section("Examples", Color.BRIGHT_YELLOW)
+    examples = [
+        ("packages list", "All packages"),
+        ("packages list --section=go_tools", "Just Go tools"),
+        ("packages list --tag=terminal", "Terminal emulators"),
+        ("packages list --platform=macos", "macOS packages"),
+        ("packages show ghostty", "Package details"),
+        ("packages search neovim", "Find by name"),
+    ]
+    for cmd, desc in examples:
+        print(f"  {colorize(cmd, Color.GREEN):<42} # {desc}")
+    print()
+
+    print_section("Tag Vocabulary", Color.ORANGE)
+    print("  Interface:   gui, cli, tui")
+    print("  Environment: terminal, browser, editor")
+    print("  Purpose:     lsp, linter, formatter, build, search, monitoring")
+    print("  Type:        font, plugin, runtime")
+    print()
+
+    print_section("Files", Color.BRIGHT_BLACK)
+    print(f"  Config: {colorize(str(get_packages_file()), Color.CYAN)}")
+
+
+def main() -> None:
+    """Main entry point with argument parsing."""
+    parser = argparse.ArgumentParser(
+        prog="packages",
+        description="Query packages.yml for browsing and discovery",
+        add_help=False,
+    )
+    parser.add_argument("--help", "-h", action="store_true", help="Show help")
+    parser.add_argument("--version", "-V", action="store_true", help="Show version")
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # sections command
+    sections_parser = subparsers.add_parser("sections", help="List all sections")
+    sections_parser.set_defaults(func=cmd_sections)
+
+    # stats command
+    stats_parser = subparsers.add_parser("stats", help="Show package counts")
+    stats_parser.set_defaults(func=cmd_stats)
+
+    # tags command
+    tags_parser = subparsers.add_parser("tags", help="List all tags")
+    tags_parser.set_defaults(func=cmd_tags)
+
+    # show command
+    show_parser = subparsers.add_parser("show", help="Show package details")
+    show_parser.add_argument("name", help="Package name")
+    show_parser.set_defaults(func=cmd_show)
+
+    # search command
+    search_parser = subparsers.add_parser("search", aliases=["find"], help="Search packages")
+    search_parser.add_argument("query", help="Search query")
+    search_parser.set_defaults(func=cmd_search)
+
+    # list command
+    list_parser = subparsers.add_parser("list", aliases=["ls"], help="List packages")
+    list_parser.add_argument("--section", help="Filter by section")
+    list_parser.add_argument("--tag", help="Filter by tag")
+    list_parser.add_argument("--platform", choices=["macos", "linux", "all"], help="Filter by platform")
+    list_parser.add_argument("--verbose", "-v", action="store_true", help="Show details")
+    list_parser.add_argument("--json", action="store_true", help="Output as JSON")
+    list_parser.set_defaults(func=cmd_list)
+
+    args = parser.parse_args()
+
+    if args.version:
+        print(f"packages {VERSION}")
+        return
+
+    if args.help or not args.command:
+        show_help()
+        return
+
+    data = load_packages()
+    args.func(args, data)
+
+
+if __name__ == "__main__":
+    main()
