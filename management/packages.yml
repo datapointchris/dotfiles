@@ -1039,7 +1039,7 @@ mas_apps:
 # Install: flatpak install flathub <flatpak_id>
 # See: https://flathub.org for application catalog
 
-linux_gui_apps:
+flatpak_apps:
   - name: dbeaver-community
     flatpak_id: io.dbeaver.DBeaverCommunity
     description: Universal database GUI
@@ -1149,7 +1149,7 @@ macos_casks:
 #   python parse_packages.py --type=npm
 #   python parse_packages.py --type=go
 #   python parse_packages.py --type=mas
-#   python parse_packages.py --type=linux-gui
+#   python parse_packages.py --type=flatpak
 #   python parse_packages.py --type=macos-casks
 #   python parse_packages.py --get=runtimes.node.version
 #

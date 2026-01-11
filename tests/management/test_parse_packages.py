@@ -65,7 +65,7 @@ def sample_packages_data():
         "macos_taps": [
             "homebrew/cask-fonts"
         ],
-        "linux_gui_apps": [
+        "flatpak_apps": [
             {"flatpak_id": "com.slack.Slack"},
             {"flatpak_id": "us.zoom.Zoom"}
         ],
@@ -181,9 +181,9 @@ def test_get_macos_taps(sample_packages_data):
     assert taps == ["homebrew/cask-fonts"]
 
 
-def test_get_linux_gui_apps(sample_packages_data):
-    """Test extracting Linux GUI app Flatpak IDs."""
-    apps = parse_packages.get_linux_gui_apps(sample_packages_data)
+def test_get_flatpak_apps(sample_packages_data):
+    """Test extracting Flatpak app IDs."""
+    apps = parse_packages.get_flatpak_apps(sample_packages_data)
     assert apps == ["com.slack.Slack", "us.zoom.Zoom"]
 
 

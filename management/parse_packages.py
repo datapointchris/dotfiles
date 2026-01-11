@@ -11,7 +11,7 @@ Usage:
     python parse_packages.py --type=go
     python parse_packages.py --type=mas
     python parse_packages.py --type=github
-    python parse_packages.py --type=linux-gui
+    python parse_packages.py --type=flatpak
     python parse_packages.py --type=macos-casks
     python parse_packages.py --taps
     python parse_packages.py --get=runtimes.node.version
@@ -187,11 +187,11 @@ def get_macos_taps(data):
     return data.get('macos_taps', [])
 
 
-def get_linux_gui_apps(data):
-    """Extract Linux GUI app Flatpak IDs."""
-    if 'linux_gui_apps' not in data:
+def get_flatpak_apps(data):
+    """Extract Flatpak app IDs."""
+    if 'flatpak_apps' not in data:
         return []
-    return [app['flatpak_id'] for app in data['linux_gui_apps']]
+    return [app['flatpak_id'] for app in data['flatpak_apps']]
 
 
 def get_macos_casks(data):
@@ -223,7 +223,7 @@ def get_nerd_fonts(data, output_format='names'):
 
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'local_uv', 'go', 'mas', 'github', 'shell-plugins', 'linux-gui', 'macos-casks', 'nerd-fonts'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'local_uv', 'go', 'mas', 'github', 'shell-plugins', 'flatpak', 'macos-casks', 'nerd-fonts'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
@@ -289,8 +289,8 @@ def main():
         packages = get_github_packages(data)
     elif args.type == 'shell-plugins':
         packages = get_shell_plugins(data, args.format)
-    elif args.type == 'linux-gui':
-        packages = get_linux_gui_apps(data)
+    elif args.type == 'flatpak':
+        packages = get_flatpak_apps(data)
     elif args.type == 'macos-casks':
         packages = get_macos_casks(data)
     elif args.type == 'nerd-fonts':

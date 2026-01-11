@@ -19,7 +19,7 @@ log_info "Adding Flathub repository..."
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 log_info "Installing GUI apps from packages.yml..."
-APPS=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=linux-gui)
+APPS=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=flatpak)
 
 for app in $APPS; do
   if flatpak list --app | grep -q "$app"; then
