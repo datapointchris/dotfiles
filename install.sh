@@ -273,6 +273,7 @@ main() {
     print_header "System Tools (Homebrew)"
     bash "$macos_install/homebrew.sh"
     bash "$macos_install/system-packages.sh"
+    bash "$macos_install/casks.sh"
     bash "$macos_install/mas-apps.sh"
     bash "$macos_setup/xcode.sh"
 
@@ -303,6 +304,7 @@ main() {
   arch)
     print_header "System Packages (pacman)"
     bash "$DOTFILES_DIR/management/arch/install/system-packages.sh"
+    bash "$DOTFILES_DIR/management/arch/install/linux-gui-apps.sh"
 
     install_common_phases
 
