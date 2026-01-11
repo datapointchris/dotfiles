@@ -468,7 +468,7 @@ STEP_START=$(date +%s)
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash -c "
+  docker exec --env PLATFORM=wsl "$CONTAINER_NAME" bash -c "
     cd ${CONTAINER_HOME}/dotfiles
     bash update.sh
   " || log_warning "Update script failed"
