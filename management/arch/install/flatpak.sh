@@ -7,7 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
-print_section "Installing Linux GUI apps (Flatpak)"
+print_section "Installing Flatpak apps"
 
 if ! command -v flatpak &>/dev/null; then
   log_info "Installing flatpak..."
@@ -34,4 +34,4 @@ for app in $APPS; do
   fi
 done
 
-log_success "Linux GUI apps installed"
+log_success "Flatpak apps installed"

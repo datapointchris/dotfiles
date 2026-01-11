@@ -304,7 +304,7 @@ main() {
   arch)
     print_header "System Packages (pacman)"
     bash "$DOTFILES_DIR/management/arch/install/system-packages.sh"
-    bash "$DOTFILES_DIR/management/arch/install/linux-gui-apps.sh"
+    bash "$DOTFILES_DIR/management/arch/install/flatpak.sh"
 
     install_common_phases
 
