@@ -34,14 +34,14 @@ teardown() {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/lazygit.sh --update"
   assert_success
-  assert_output --regexp "Latest version: v[0-9]+\.[0-9]+\.[0-9]+"
+  assert_output --regexp "Latest lazygit version: v[0-9]+\.[0-9]+\.[0-9]+"
 }
 
 @test "fzf: accepts --update flag and downloads from GitHub" {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/fzf.sh --update"
   assert_success
-  assert_output --partial "Latest version:"
+  assert_output --partial "Latest fzf version:"
 }
 
 @test "glow: installs successfully with real network call" {

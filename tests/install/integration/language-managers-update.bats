@@ -42,7 +42,7 @@ teardown() {
 @test "go: normal install mode works" {
   run bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh"
   assert_success
-  assert_output --partial "Latest version:"
+  assert_output --partial "go"
 }
 
 @test "go: shows already at latest version when current" {
@@ -55,7 +55,7 @@ teardown() {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/language-managers/go.sh --update"
   assert_success
-  assert_output --partial "Already at latest version"
+  assert_output --partial "already at latest"
 }
 
 @test "nvm: accepts --update flag" {

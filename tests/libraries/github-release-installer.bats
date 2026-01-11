@@ -94,12 +94,12 @@ setup() {
 
 @test "check_if_update_needed works with real binary (bash)" {
   # bash is always installed, so this tests the version comparison logic
-  # We expect either "Already at latest version" or "Update available" or "Could not determine"
+  # We expect either "already at latest" or "update available" or "Could not determine"
   run check_if_update_needed "bash" "v999.999.999"
 
   # Should succeed (returns 0 = update needed or 1 = already latest)
   # Output should contain one of the expected messages
-  [[ "$output" =~ "Already at latest version"|"Update available"|"Could not determine" ]]
+  [[ "$output" =~ "already at latest"|"update available"|"Could not determine" ]]
 }
 
 # Helper functions

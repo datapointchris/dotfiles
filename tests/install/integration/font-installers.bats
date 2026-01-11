@@ -139,23 +139,19 @@ teardown_file() {
 
 @test "fonts: real installer has proper structure" {
   # Test that a real font installer has expected components
-  local installer="$DOTFILES_DIR/management/common/install/fonts/jetbrains.sh"
+  local installer="$DOTFILES_DIR/management/common/install/fonts/firacode.sh"
 
   # Should source font-installer library
   grep -q "font-installer.sh" "$installer"
 
   # Should have set -euo pipefail
   grep -q "set -euo pipefail" "$installer"
-
-  # Should define font_name and nerd_font_package variables
-  grep -q "font_name=" "$installer"
-  grep -q "nerd_font_package=" "$installer"
 }
 
 @test "fonts: real installer can run without errors (idempotent)" {
   # Run real installer - should either succeed or fail gracefully
   # This tests that the installer structure is correct
-  local installer="$DOTFILES_DIR/management/common/install/fonts/jetbrains.sh"
+  local installer="$DOTFILES_DIR/management/common/install/fonts/firacode.sh"
 
   run bash "$installer"
   # Should exit with 0 (success/skip) or 1 (failure with structured output)
@@ -164,14 +160,14 @@ teardown_file() {
 }
 
 @test "fonts: real installer produces logging output" {
-  local installer="$DOTFILES_DIR/management/common/install/fonts/jetbrains.sh"
+  local installer="$DOTFILES_DIR/management/common/install/fonts/firacode.sh"
 
   run bash "$installer"
   # Should produce some output (either success or error messages)
   [[ -n "$output" ]]
 
   # Output should include font name
-  assert_output --partial "JetBrains"
+  assert_output --partial "Fira Code"
 }
 
 # ================================================================

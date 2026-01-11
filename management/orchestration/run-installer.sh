@@ -1,6 +1,9 @@
 # shellcheck shell=bash
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+# NOTE: Use exported DOTFILES_DIR if available, fall back to git rev-parse.
+# This is required for bootstrapping - install.sh exports DOTFILES_DIR before
+# git is installed on fresh systems. Do NOT change to just git rev-parse.
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"

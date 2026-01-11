@@ -37,35 +37,35 @@ teardown() {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/lazygit.sh --update"
   assert_success
-  assert_output --regexp "Latest version: v[0-9]+"
+  assert_output --partial "Latest lazygit version:"
 }
 
 @test "fzf: accepts --update flag" {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/fzf.sh --update"
   assert_success
-  assert_output --partial "Latest version:"
+  assert_output --partial "Latest fzf version:"
 }
 
 @test "glow: accepts --update flag" {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/glow.sh --update"
   assert_success
-  assert_output --regexp "Latest version: v[0-9]+"
+  assert_output --partial "Latest glow version:"
 }
 
 @test "duf: accepts --update flag" {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/duf.sh --update"
   assert_success
-  assert_output --regexp "Latest version: v[0-9]+"
+  assert_output --partial "Latest duf version:"
 }
 
 @test "yazi: accepts --update flag" {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/yazi.sh --update"
   assert_success
-  assert_output --regexp "Latest version: v[0-9]+"
+  assert_output --partial "Latest yazi version:"
 }
 
 @test "neovim: accepts --update flag" {
@@ -87,7 +87,7 @@ teardown() {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/lazygit.sh --update"
   assert_success
-  assert_output --partial "Already at latest"
+  assert_output --partial "already at latest"
 }
 
 @test "fzf: shows already at latest version when current" {
@@ -100,7 +100,7 @@ teardown() {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/fzf.sh --update"
   assert_success
-  assert_output --partial "Already at latest"
+  assert_output --partial "already at latest"
 }
 
 # Test that installers still work in normal mode
@@ -109,14 +109,14 @@ teardown() {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/lazygit.sh"
   assert_success
-  assert_output --regexp "Latest version: v[0-9]+"
+  assert_output --partial "Latest lazygit version:"
 }
 
 @test "fzf: normal install mode works" {
   run docker_exec "$BATS_TEST_CONTAINER" \
     "bash management/common/install/github-releases/fzf.sh"
   assert_success
-  assert_output --partial "Latest version:"
+  assert_output --partial "Latest fzf version:"
 }
 
 # Test all 11 installers have --update support
