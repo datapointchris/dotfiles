@@ -204,11 +204,21 @@ check_package_manager() {
   $found
 }
 
-# Find all locations of a command in PATH
+# Find all locations of a command in PATH (deduplicated by real path)
 find_all_in_path() {
   local cmd=$1
+  local -A seen_real_paths
+
   if command -v which &>/dev/null; then
-    which -a "$cmd" 2>/dev/null || true
+    while IFS= read -r path; do
+      [[ -z "$path" ]] && continue
+      local real_path
+      real_path=$(readlink -f "$path" 2>/dev/null || echo "$path")
+      if [[ -z "${seen_real_paths[$real_path]:-}" ]]; then
+        seen_real_paths[$real_path]=1
+        echo "$path"
+      fi
+    done < <(which -a "$cmd" 2>/dev/null)
   else
     type -a "$cmd" 2>/dev/null | grep -o '/.*' || true
   fi

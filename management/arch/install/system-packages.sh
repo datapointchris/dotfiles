@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# NOTE: Use exported DOTFILES_DIR from install.sh - git isn't installed yet.
-# Do NOT change to just git rev-parse.
+# NOTE: Use exported DOTFILES_DIR from install.sh for consistency.
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
 export TERM=${TERM:-xterm}

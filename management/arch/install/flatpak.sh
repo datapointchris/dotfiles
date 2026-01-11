@@ -8,6 +8,12 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
+# Flatpak requires D-Bus which isn't available in Docker containers
+if [[ "${DOTFILES_DOCKER_TEST:-}" == "true" ]]; then
+  log_info "Skipping Flatpak in Docker test mode (requires D-Bus)"
+  exit 0
+fi
+
 print_section "Installing Flatpak apps"
 
 if ! command -v flatpak &>/dev/null; then

@@ -5,6 +5,13 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 
+# Set up PATH to find installed tools
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH"
+
+# Source nvm if available (for node/npm)
+export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
+[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
+
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"

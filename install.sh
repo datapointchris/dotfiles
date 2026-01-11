@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-readonly DOTFILES_DIR="$SCRIPT_DIR"
-readonly FAILURES_LOG="/tmp/dotfiles-install-failures-$(date +%Y%m%d-%H%M%S).txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+DOTFILES_DIR="$SCRIPT_DIR"
+FAILURES_LOG="/tmp/dotfiles-install-failures-$(date +%Y%m%d-%H%M%S).txt"
 
 export DOTFILES_DIR
 export FAILURES_LOG

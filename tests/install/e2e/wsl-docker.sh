@@ -309,7 +309,7 @@ EOF'
 
   # Copy dotfiles to writable location (install script modifies files)
   echo "Copying dotfiles to writable location..."
-  docker exec "$CONTAINER_NAME" bash -c "cp -r /dotfiles ${CONTAINER_HOME}/dotfiles"
+  docker exec "$CONTAINER_NAME" bash -c "cp -r /dotfiles ${CONTAINER_HOME}/dotfiles && cd ${CONTAINER_HOME}/dotfiles && git init -q"
 
   log_success "Container environment ready"
 } 2>&1 | tee -a "$LOG_FILE"
@@ -423,7 +423,7 @@ STEP_START=$(date +%s)
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/tests/install/verification/detect-installed-duplicates.sh"
+  docker exec "$CONTAINER_NAME" bash -c "cd ${CONTAINER_HOME}/dotfiles && bash tests/install/verification/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

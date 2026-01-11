@@ -193,9 +193,9 @@ STEP_START=$(date +%s)
 {
   log_section "STEP 3/8: Preparing Container Environment"
 
-  # Update package database and install sudo (required for fresh Arch containers)
-  echo "Updating package database and installing sudo..."
-  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo
+  # Update package database and install sudo + git (required for fresh Arch containers)
+  echo "Updating package database and installing sudo and git..."
+  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo git
 
   # Create non-root user for realistic Arch testing
   echo "Creating test user 'archuser' for realistic testing..."
@@ -224,6 +224,7 @@ EOF"
       cp -rp \"\$item\" ${CONTAINER_HOME}/dotfiles/
     done
     chmod +x ${CONTAINER_HOME}/dotfiles/install.sh
+    cd ${CONTAINER_HOME}/dotfiles && git init -q
   "
 
   log_success "Container environment ready"
@@ -291,7 +292,7 @@ STEP_START=$(date +%s)
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/tests/install/verification/detect-installed-duplicates.sh"
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "cd /home/archuser/dotfiles && bash tests/install/verification/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

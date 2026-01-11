@@ -472,6 +472,35 @@ else
 fi
 
 # ================================================================
+# Flatpak Apps (Arch only, skip in Docker)
+# ================================================================
+if [[ "$DETECTED_PLATFORM" == "arch" ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
+  print_section "Flatpak Apps (Arch)"
+
+  # Check if flatpak command exists
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  if command -v flatpak >/dev/null 2>&1; then
+    log_success "flatpak: installed"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+
+    # Check for at least one flatpak app (zen-browser as sample)
+    TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+    if flatpak list --app 2>/dev/null | grep -q "zen"; then
+      log_success "flatpak app (zen-browser): installed"
+      PASSED_CHECKS=$((PASSED_CHECKS + 1))
+    else
+      log_error "flatpak app (zen-browser): NOT FOUND"
+      FAILED_CHECKS=$((FAILED_CHECKS + 1))
+      FAILED_TOOLS+=("flatpak-zen-browser")
+    fi
+  else
+    log_error "flatpak: NOT FOUND"
+    FAILED_CHECKS=$((FAILED_CHECKS + 1))
+    FAILED_TOOLS+=("flatpak")
+  fi
+fi
+
+# ================================================================
 # Summary
 # ================================================================
 
