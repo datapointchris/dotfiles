@@ -29,6 +29,9 @@ alias locallogs="z /usr/local/var/log; ls -l"
 
 # ---------- Operations ---------- #
 
+# Fix docker socket with colima
+alias fixcolima='sudo ln -sf /Users/chris/.config/colima/default/docker.sock /var/run/docker.sock'
+
 # Start Github Issues Flask Server
 alias issues='$HOME/code/python-projects/github-issues/.venv/bin/python $HOME/code/python-projects/github-issues/github_issues/main.py'
 
