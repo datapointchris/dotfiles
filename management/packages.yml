@@ -298,6 +298,12 @@ system_packages:
     brew: bash
     description: Bash shell (macOS default is outdated)
 
+  - name: parallel
+    apt: parallel
+    pacman: parallel
+    brew: parallel
+    description: Execute jobs in parallel
+
   - name: watch
     apt: procps
     pacman: procps-ng
