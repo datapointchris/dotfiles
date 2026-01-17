@@ -13,7 +13,51 @@ return {
       sync_install = false,
       highlight = { enable = true },
       indent = { enable = true },
-      ensure_installed = {},
+      ensure_installed = {
+        -- Web development (Vue needs all of these for proper injection)
+        'vue',
+        'typescript',
+        'tsx',
+        'javascript',
+        'html',
+        'css',
+        'scss',
+        -- Data formats
+        'json',
+        'yaml',
+        'toml',
+        -- Backend
+        'go',
+        'gomod',
+        'gosum',
+        'sql',
+        'python',
+        'rust',
+        -- Systems programming (ZMK, embedded)
+        'c',
+        'cpp',
+        -- Shell/scripting
+        'bash',
+        'lua',
+        'fish',
+        'nu',
+        'nix',
+        -- Infrastructure
+        'terraform',
+        'hcl',
+        'proto',
+        -- Build systems
+        'cmake',
+        'make',
+        -- Docs
+        'markdown',
+        'markdown_inline',
+        -- Config
+        'dockerfile',
+        'gitignore',
+        'vim',
+        'vimdoc',
+      },
       ignore_install = {},
       modules = {},
       incremental_selection = {
