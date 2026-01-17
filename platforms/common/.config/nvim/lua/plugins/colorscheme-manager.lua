@@ -31,6 +31,21 @@ return {
   { 'craftzdog/solarized-osaka.nvim', lazy = false },
   { 'mhartington/oceanic-next', lazy = false },
   { 'datapointchris/flexoki-moon-nvim', lazy = false },
+  {
+    'neanias/everforest-nvim',
+    version = false,
+    lazy = false,
+    priority = 1000,
+    config = function()
+      vim.o.background = 'dark'
+      require('everforest').setup({
+        background = 'hard',
+        colours_override = function(palette)
+          palette.bg0 = palette.bg_dim
+        end,
+      })
+    end,
+  },
 
   -- Generated themes from theme system (~/tools/theme)
   -- Dynamically load all themes that have a neovim/ directory
@@ -78,6 +93,7 @@ return {
 
       -- Manually curated plugin colorschemes (plugins expose variants, only include good ones)
       local good_plugin_colorschemes = {
+        'everforest',
         'terafox',
         'solarized-osaka',
         'slate',
@@ -207,9 +223,16 @@ return {
             break
           end
           if type == 'directory' and not rejected[name] then
-            local neovim_dir = themes_dir .. '/' .. name .. '/neovim'
-            if vim.fn.isdirectory(neovim_dir) == 1 then
-              local colorscheme = get_neovim_colorscheme_from_yml(themes_dir .. '/' .. name)
+            local theme_path = themes_dir .. '/' .. name
+            local neovim_dir = theme_path .. '/neovim'
+            local meta = parse_theme_yml(theme_path)
+
+            -- Include if has neovim/ dir (generated) OR neovim_colorscheme_source is 'plugin'
+            local has_neovim_dir = vim.fn.isdirectory(neovim_dir) == 1
+            local is_plugin_theme = meta and meta.neovim_colorscheme_source == 'plugin'
+
+            if has_neovim_dir or is_plugin_theme then
+              local colorscheme = meta and meta.neovim_colorscheme_name
               if colorscheme then
                 table.insert(colorschemes, colorscheme)
               end
@@ -273,9 +296,17 @@ return {
           return false
         end
 
-        local colorscheme = get_neovim_colorscheme_from_yml(themes_dir .. '/' .. theme_name)
+        local meta = parse_theme_yml(themes_dir .. '/' .. theme_name)
+        local colorscheme = meta and meta.neovim_colorscheme_name
         if not colorscheme then
           return false
+        end
+
+        -- Ensure dark background for dark variant themes
+        if meta.variant == 'dark' then
+          vim.o.background = 'dark'
+        elseif meta.variant == 'light' then
+          vim.o.background = 'light'
         end
 
         local ok = pcall(vim.cmd, 'colorscheme ' .. colorscheme)
