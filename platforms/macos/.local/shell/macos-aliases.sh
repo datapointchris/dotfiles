@@ -15,7 +15,7 @@ alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&
 alias icloud="z ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
 
 alias docs='z $HOME/code/docs'
-alias icb='ichrisbirch'
+alias icb='~/webapps/ichrisbirch/cli/ichrisbirch'
 
 # ---------- Logs ---------- #
 
@@ -52,11 +52,16 @@ alias symlink-hosts='sudo ln -sf $HOME/etc.hosts /etc/hosts'
 
 # ---------- Network ---------- #
 
+# Homelab
+alias sshicb='ssh chris@10.0.20.11'
+alias sshlearn='ssh chris@10.0.20.12'
+alias sshops='ssh chris@10.0.20.15'
+
+# Local Computers
 alias sshmbp='ssh chris@$mbp'
 alias sshmacmini='ssh chris@$macmini'
 alias sshgreenpi='ssh chris@$greenpi'
 alias sshpython='ssh chris@$python'
-alias sshichrisbirch='ssh -t -o StrictHostKeyChecking=no -i ~/.ssh/ichrisbirch-webserver.pem ubuntu@18.117.41.228'
 
 # ---------- Miscellaneous ---------- #
 
