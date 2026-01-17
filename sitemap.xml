@@ -2,382 +2,382 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://datapointchris.github.io/dotfiles/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/changelog/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/backup-dirs/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/backup-incremental/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/font/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/menu/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/notes/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/patterns/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/refcheck/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/sess/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/theme/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/apps/toolbox/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/error-handling/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/github-release-installer/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/metrics-tracking/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/package-management/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/path-ordering-strategy/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/shell-libraries/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/architecture/tool-composition/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/changelog/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/claude-code-features/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/commit-agent-design/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/commit-agent-metrics-testing/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/commit-agent-research/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/hook-registration/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/log-monitoring-research/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/logsift-workflow/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/metrics-tracking/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/quick-reference/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/transcript-access/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/usage-guide/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/claude-code/working-with-claude/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/docker/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/configuration/neovim-ai-assistants/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/aws-glue-local-workflow/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/publishing-docs/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/shell-formatting/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/testing/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/bubbletea-quick-reference/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/go-development/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/go-quick-reference/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/development/go-apps/overview/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/app-installation-patterns/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/arch-git-libpcre2-warning/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/bash-script-testing/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/bash-testing-frameworks-guide/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/bash-tty-detection-command-substitution/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/cross-platform-symlink-considerations/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/directory-pattern-matching/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/documentation-consolidation-principles/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/git-history-rewriting/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-cli-architecture-analysis/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-testing-examples/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-tui-ecosystem-research/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/go-tui-testing-strategies/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/idempotent-installation-patterns/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/package-version-analysis/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/posttooluse-hook-integration/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/pretooluse-hooks-task-limitation/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/relative-path-calculation/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/script-refactoring-principles/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/task-shell-printf-compatibility/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/testing-bootstrap-dependencies/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/tools-over-instructions/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/learnings/wsl-ubuntu-package-versions/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/font-comparison/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/font-pruning-rules/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/font-weights-and-variants/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/nerd-fonts-explained/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/fonts/terminal-fonts-guide/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/commands/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/differences/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/packages/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/platforms/tools/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/support/corporate/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/support/troubleshooting/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/hooks/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/skills/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/symlinks/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/reference/tools/tasks/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/development-environments/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/agent-architecture/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/context-engineering/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/metrics-analysis-research/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/overview/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/ai/prompt-engineering/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
     <url>
          <loc>https://datapointchris.github.io/dotfiles/research/hyprland/understanding-hyprland/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-01-17</lastmod>
     </url>
 </urlset>
