@@ -4591,12 +4591,38 @@
 <h1 id="font-terminal-compatibility">Font Terminal Compatibility<a class="headerlink" href="#font-terminal-compatibility" title="Permanent link">&para;</a></h1>
 <p>Terminal emulators use different font metadata to determine if a font is monospace. This causes fonts to work in one terminal but fail in another.</p>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
-<p>Comic Mono variants behave inconsistently:</p>
+<h3 id="comic-mono-variants">Comic Mono Variants<a class="headerlink" href="#comic-mono-variants" title="Permanent link">&para;</a></h3>
 <ul>
 <li>dtinth original: Works in Kitty, NOT in Ghostty</li>
 <li>xtevenx v1: Works in BOTH</li>
 <li>xtevenx v2: Works in Ghostty, NOT in Kitty</li>
 </ul>
+<h3 id="nerd-fonts-non-mono-vs-mono">Nerd Fonts Non-Mono vs Mono<a class="headerlink" href="#nerd-fonts-non-mono-vs-mono" title="Permanent link">&para;</a></h3>
+<p>Official Nerd Fonts ship with broken metadata in non-Mono variants:</p>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>isFixedPitch</th>
+<th>Kitty Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JetBrainsMono Nerd Font</td>
+<td>0</td>
+<td>Rejected</td>
+</tr>
+<tr>
+<td>JetBrainsMono Nerd Font Mono</td>
+<td>1</td>
+<td>Works</td>
+</tr>
+</tbody>
+</table>
+<p>The non-Mono variants have larger icons (span 2 cells) but Kitty rejects them due to <code>isFixedPitch=0</code>.</p>
+<h3 id="bold-weight-bug">Bold Weight Bug<a class="headerlink" href="#bold-weight-bug" title="Permanent link">&para;</a></h3>
+<p>Some fonts (e.g., ComicMonoNF-Bold) have incorrect <code>usWeightClass=400</code> instead of <code>700</code>, causing Kitty to select Bold for Normal text.</p>
 <h2 id="root-cause">Root Cause<a class="headerlink" href="#root-cause" title="Permanent link">&para;</a></h2>
 <h3 id="kitty-compatibility">Kitty Compatibility<a class="headerlink" href="#kitty-compatibility" title="Permanent link">&para;</a></h3>
 <p>Kitty uses the <code>post</code> table <code>isFixedPitch</code> field:</p>
@@ -4644,16 +4670,41 @@
 <p>Use fonttools to modify metadata:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fontTools.ttLib</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTFont</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">font</span> <span class="o">=</span> <span class="n">TTFont</span><span class="p">(</span><span class="s2">&quot;ComicMono.ttf&quot;</span><span class="p">)</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">font</span> <span class="o">=</span> <span class="n">TTFont</span><span class="p">(</span><span class="s2">&quot;FontName.ttf&quot;</span><span class="p">)</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Fix for Kitty</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Fix for Kitty (isFixedPitch)</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">font</span><span class="p">[</span><span class="s2">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isFixedPitch</span> <span class="o">=</span> <span class="mi">1</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Fix for Ghostty</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Fix for Ghostty (PANOSE)</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">font</span><span class="p">[</span><span class="s2">&quot;OS/2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">panose</span><span class="o">.</span><span class="n">bFamilyType</span> <span class="o">=</span> <span class="mi">2</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">font</span><span class="p">[</span><span class="s2">&quot;OS/2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">panose</span><span class="o">.</span><span class="n">bProportion</span> <span class="o">=</span> <span class="mi">9</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">font</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;ComicMono-fixed.ttf&quot;</span><span class="p">)</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># Fix Bold weight (if incorrectly set to 400)</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="k">if</span> <span class="s2">&quot;Bold&quot;</span> <span class="ow">in</span> <span class="n">filename</span> <span class="ow">and</span> <span class="n">font</span><span class="p">[</span><span class="s2">&quot;OS/2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">usWeightClass</span> <span class="o">==</span> <span class="mi">400</span><span class="p">:</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="n">font</span><span class="p">[</span><span class="s2">&quot;OS/2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">usWeightClass</span> <span class="o">=</span> <span class="mi">700</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="n">font</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;FontName.ttf&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="automated-fix-in-installer">Automated Fix in Installer<a class="headerlink" href="#automated-fix-in-installer" title="Permanent link">&para;</a></h2>
+<p>The dotfiles installer automatically fixes Nerd Font metadata via <code>fix_font_metadata()</code> in <code>font-installer.sh</code>. This runs at the end of <code>install.sh</code> after uvx/fonttools is available.</p>
+<h2 id="macos-coretext-cache">macOS CoreText Cache<a class="headerlink" href="#macos-coretext-cache" title="Permanent link">&para;</a></h2>
+<p><strong>Critical</strong>: macOS caches font metadata at the system level. After fixing font files, the cache may still report old values. A <strong>system restart</strong> is required to flush the CoreText cache.</p>
+<p>Verify cache status with Swift:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>swift<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="s">import CoreText</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="s">import Foundation</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="s">let desc = CTFontDescriptorCreateWithAttributes([:] as CFDictionary)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="s">let coll = CTFontCollectionCreateWithFontDescriptors([desc] as CFArray, [:] as CFDictionary)</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="s">let descs = CTFontCollectionCreateMatchingFontDescriptors(coll) as? [CTFontDescriptor] ?? []</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="s">for d in descs {</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="s">    guard let fam = CTFontDescriptorCopyAttribute(d, kCTFontFamilyNameAttribute) as? String,</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="s">          fam.contains(&quot;Nerd&quot;) else { continue }</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="s">    let traits = CTFontDescriptorCopyAttribute(d, kCTFontTraitsAttribute) as? [String: Any]</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="s">    let sym = traits?[kCTFontSymbolicTrait as String] as? UInt32 ?? 0</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="s">    let mono = (sym &amp; UInt32(CTFontSymbolicTraits.traitMonoSpace.rawValue)) != 0</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="s">    print(&quot;\(fam): monospace=\(mono)&quot;)</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="s">}</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="s">EOF</span>
 </span></code></pre></div>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
