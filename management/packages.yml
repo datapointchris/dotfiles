@@ -856,6 +856,9 @@ uv_tools:
     - name: numpy
       description: Numerical computing (for various tools)
 
+    - name: fonttools
+      description: Font manipulation library (fix Nerd Font metadata)
+
   # Development Tools
   development:
     - name: pre-commit
