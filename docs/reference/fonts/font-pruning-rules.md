@@ -72,6 +72,7 @@ These fonts don't have Nerd Font variants, or don't have Mono versions:
 - Fira Code (official release, not Nerd Font)
 - Commit Mono
 - ComicMonoNF (xtevenx release, TTF files)
+- SeriousShanns Nerd Font Mono (kaBeech release, OTF files)
 - SGr-Iosevka Term Slab (.ttc file)
 
 ## Font-Specific Variant Pruning
@@ -191,6 +192,7 @@ font-download -f firacode --standardize-only
 | Commit Mono | 8 files | 4 files | Regular, Bold, Italic, BoldItalic |
 | ComicShannsMono | 18 files | 6 files | Mono: Regular, Bold, Italic, BoldItalic, Light, LightItalic |
 | ComicMonoNF | 2 files | 2 files | Regular, Bold |
+| SeriousShanns | 6 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
 | Hack | 12 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
 | RobotoMono | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
 | SGr-Iosevka | 1 .ttc | 1 .ttc | Term Slab only |

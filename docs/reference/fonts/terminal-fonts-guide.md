@@ -410,7 +410,8 @@ fc-list "Font Name" | grep spacing
 
 **Priority**: Comic sans style, casual
 
-- ComicShannsMono Nerd Font
+- ComicShannsMono Nerd Font (original Comic Shanns v2 aesthetic)
+- SeriousShanns Nerd Font Mono (modified for legibility: clearer a/o, l/1, Y/y)
 - ComicMonoNF (xtevenx v1 - works in both Ghostty and Kitty)
 
 ## Converting a Proportional Font (Don't Do This)

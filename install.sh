@@ -51,6 +51,7 @@ install_fonts() {
   run_installer "$common_install/fonts/sgr-iosevka.sh" "sgr-iosevka-font"
   # Direct Download Fonts
   run_installer "$common_install/fonts/comicmononf.sh" "comicmononf-font"
+  run_installer "$common_install/fonts/seriousshanns.sh" "seriousshanns-font"
 }
 
 install_common_phases() {
