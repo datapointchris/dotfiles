@@ -4,11 +4,26 @@ Terminal emulators use different font metadata to determine if a font is monospa
 
 ## The Problem
 
-Comic Mono variants behave inconsistently:
+### Comic Mono Variants
 
 - dtinth original: Works in Kitty, NOT in Ghostty
 - xtevenx v1: Works in BOTH
 - xtevenx v2: Works in Ghostty, NOT in Kitty
+
+### Nerd Fonts Non-Mono vs Mono
+
+Official Nerd Fonts ship with broken metadata in non-Mono variants:
+
+| Variant | isFixedPitch | Kitty Status |
+|---------|--------------|--------------|
+| JetBrainsMono Nerd Font | 0 | Rejected |
+| JetBrainsMono Nerd Font Mono | 1 | Works |
+
+The non-Mono variants have larger icons (span 2 cells) but Kitty rejects them due to `isFixedPitch=0`.
+
+### Bold Weight Bug
+
+Some fonts (e.g., ComicMonoNF-Bold) have incorrect `usWeightClass=400` instead of `700`, causing Kitty to select Bold for Normal text.
 
 ## Root Cause
 
@@ -83,16 +98,48 @@ Use fonttools to modify metadata:
 ```python
 from fontTools.ttLib import TTFont
 
-font = TTFont("ComicMono.ttf")
+font = TTFont("FontName.ttf")
 
-# Fix for Kitty
+# Fix for Kitty (isFixedPitch)
 font["post"].isFixedPitch = 1
 
-# Fix for Ghostty
+# Fix for Ghostty (PANOSE)
 font["OS/2"].panose.bFamilyType = 2
 font["OS/2"].panose.bProportion = 9
 
-font.save("ComicMono-fixed.ttf")
+# Fix Bold weight (if incorrectly set to 400)
+if "Bold" in filename and font["OS/2"].usWeightClass == 400:
+    font["OS/2"].usWeightClass = 700
+
+font.save("FontName.ttf")
+```
+
+## Automated Fix in Installer
+
+The dotfiles installer automatically fixes Nerd Font metadata via `fix_font_metadata()` in `font-installer.sh`. This runs at the end of `install.sh` after uvx/fonttools is available.
+
+## macOS CoreText Cache
+
+**Critical**: macOS caches font metadata at the system level. After fixing font files, the cache may still report old values. A **system restart** is required to flush the CoreText cache.
+
+Verify cache status with Swift:
+
+```bash
+swift << 'EOF'
+import CoreText
+import Foundation
+let desc = CTFontDescriptorCreateWithAttributes([:] as CFDictionary)
+let coll = CTFontCollectionCreateWithFontDescriptors([desc] as CFArray, [:] as CFDictionary)
+let descs = CTFontCollectionCreateMatchingFontDescriptors(coll) as? [CTFontDescriptor] ?? []
+for d in descs {
+    guard let fam = CTFontDescriptorCopyAttribute(d, kCTFontFamilyNameAttribute) as? String,
+          fam.contains("Nerd") else { continue }
+    let traits = CTFontDescriptorCopyAttribute(d, kCTFontTraitsAttribute) as? [String: Any]
+    let sym = traits?[kCTFontSymbolicTrait as String] as? UInt32 ?? 0
+    let mono = (sym & UInt32(CTFontSymbolicTraits.traitMonoSpace.rawValue)) != 0
+    print("\(fam): monospace=\(mono)")
+}
+EOF
 ```
 
 ## Related

@@ -217,6 +217,73 @@ fetch_github_release_asset() {
   echo "$release_json" | grep -o "\"browser_download_url\": *\"[^\"]*$pattern\"" | head -1 | sed 's/.*": *"//' | sed 's/"$//'
 }
 
+# Fix font metadata issues in Nerd Fonts
+# - Sets isFixedPitch=1 so non-Mono variants work in Kitty on macOS
+# - Fixes Bold fonts with incorrect usWeightClass (400 -> 700)
+fix_font_metadata() {
+  local font_dir="$1"
+  [[ ! -d "$font_dir" ]] && return 0
+
+  local count
+  count=$(count_font_files "$font_dir")
+  [[ $count -eq 0 ]] && return 0
+
+  # Check if uvx is available for fonttools
+  if ! command -v uvx &>/dev/null; then
+    log_warning "uvx not available, skipping font metadata fixes"
+    return 0
+  fi
+
+  log_info "Fixing font metadata (isFixedPitch, usWeightClass)"
+
+  local fixed=0
+  fixed=$(uvx --from fonttools python3 << EOF
+import sys
+from fontTools.ttLib import TTFont
+import glob
+import os
+
+font_dir = "$font_dir"
+fixed_count = 0
+
+for ext in ['ttf', 'otf']:
+    for path in glob.glob(os.path.join(font_dir, f'*.{ext}')):
+        try:
+            font = TTFont(path)
+            modified = False
+            basename = os.path.basename(path)
+
+            # Fix 1: isFixedPitch should be 1 for monospace fonts
+            if 'post' in font and font['post'].isFixedPitch == 0:
+                font['post'].isFixedPitch = 1
+                modified = True
+
+            # Fix 2: Bold fonts should have usWeightClass=700, not 400
+            if 'OS/2' in font:
+                is_bold = 'Bold' in basename and 'SemiBold' not in basename
+                if is_bold and font['OS/2'].usWeightClass == 400:
+                    font['OS/2'].usWeightClass = 700
+                    modified = True
+
+            if modified:
+                font.save(path)
+                fixed_count += 1
+
+            font.close()
+        except Exception as e:
+            print(f"Warning: Could not process {basename}: {e}", file=sys.stderr)
+
+print(fixed_count)
+EOF
+  ) 2>/dev/null || fixed=0
+
+  if [[ "$fixed" -gt 0 ]]; then
+    log_success "Fixed metadata in $fixed font files"
+  else
+    log_info "No metadata fixes needed"
+  fi
+}
+
 # Prune font-specific variants (runs AFTER prune_font_family for weight pruning)
 # This handles fonts with multiple sub-families where we only want specific ones
 prune_font_variants() {
