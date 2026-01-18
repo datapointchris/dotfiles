@@ -167,6 +167,7 @@ nav:
           - Font Weights and Variants: reference/fonts/font-weights-and-variants.md
           - Terminal Fonts Guide: reference/fonts/terminal-fonts-guide.md
           - Font Comparison: reference/fonts/font-comparison.md
+          - Font Pruning Rules: reference/fonts/font-pruning-rules.md
       - Tools:
           - Symlinks Manager: reference/tools/symlinks.md
           - Task Reference: reference/tools/tasks.md
@@ -239,6 +240,7 @@ nav:
       - Go CLI Architecture Analysis: learnings/go-cli-architecture-analysis.md
       - PreToolUse Hooks Task Limitation: learnings/pretooluse-hooks-task-limitation.md
       - Tools Over Instructions: learnings/tools-over-instructions.md
+      - Font Terminal Compatibility: learnings/font-terminal-compatibility.md
   - Changelog:
       - Summary: changelog.md
 

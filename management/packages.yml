@@ -640,13 +640,6 @@ github_binaries:
 #   Terminus -> Terminess
 
 nerd_fonts:
-  - name: 3270 Nerd Font
-    package: 3270
-    check_pattern: "*3270*NerdFont*"
-    extension: ttf
-    description: IBM 3270 terminal font with icons
-    tags: [font]
-
   - name: CaskaydiaCove Nerd Font
     package: CascadiaCode
     check_pattern: "*CaskaydiaCove*NerdFont*"
@@ -659,13 +652,6 @@ nerd_fonts:
     check_pattern: "*ComicShannsMono*NerdFont*"
     extension: otf
     description: Comic Shanns Mono with icons
-    tags: [font]
-
-  - name: DroidSansM Nerd Font
-    package: DroidSansMono
-    check_pattern: "*DroidSansM*NerdFont*"
-    extension: otf
-    description: Droid Sans Mono with icons
     tags: [font]
 
   - name: Hack Nerd Font
@@ -708,27 +694,6 @@ nerd_fonts:
     check_pattern: "*RobotoMono*NerdFont*"
     extension: ttf
     description: Roboto Mono with icons
-    tags: [font]
-
-  - name: SauceCodePro Nerd Font
-    package: SourceCodePro
-    check_pattern: "*SauceCodePro*NerdFont*"
-    extension: ttf
-    description: Source Code Pro with icons
-    tags: [font]
-
-  - name: SpaceMono Nerd Font
-    package: SpaceMono
-    check_pattern: "*SpaceMono*NerdFont*"
-    extension: ttf
-    description: Space Mono with icons
-    tags: [font]
-
-  - name: Terminess Nerd Font
-    package: Terminus
-    check_pattern: "*Terminess*NerdFont*"
-    extension: ttf
-    description: Terminus font with icons
     tags: [font]
 
 # ================================================================

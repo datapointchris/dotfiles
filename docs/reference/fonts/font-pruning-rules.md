@@ -58,30 +58,66 @@ These Nerd Fonts have Mono variants, so we delete default and Propo:
 
 - JetBrains Mono Nerd Font
 - Cascadia Code Nerd Font (CaskaydiaCove)
-- Meslo Nerd Font
-- Monaspace Nerd Font (Monaspice)
+- Meslo Nerd Font (MesloLGM only - see variant pruning below)
+- Monaspace Nerd Font (MonaspiceNe only - see variant pruning below)
 - Iosevka Nerd Font
-- DroidSansMono Nerd Font
 - SeriousShanns Nerd Font (ComicShannsMono)
-- Source Code Pro Nerd Font (SauceCodePro)
-- Terminess Nerd Font
 - Hack Nerd Font
-- 3270 Nerd Font
 - RobotoMono Nerd Font
-- SpaceMono Nerd Font
 
 ### Fonts WITHOUT Mono Variants (keep default)
 
 These fonts don't have Nerd Font variants, or don't have Mono versions:
 
-- Victor Mono (has own Mono in font name, not Nerd Font Mono variant)
 - Fira Code (official release, not Nerd Font)
-- FiraCodeiScript
-- Nimbus Mono
 - Commit Mono
-- Comic Mono
-- Iosevka base (.ttc files)
-- SGr-Iosevka variants (.ttc files)
+- ComicMonoNF (xtevenx release, TTF files)
+- SGr-Iosevka Term Slab (.ttc file)
+
+## Font-Specific Variant Pruning
+
+Some font families contain multiple sub-families. The `prune_font_variants()` function removes unwanted sub-families after weight pruning.
+
+### MesloLG Nerd Font (package: Meslo)
+
+The Meslo font comes in 3 line-gap variants × 2 zero-styles:
+
+- **MesloLGS** - Small line gap
+- **MesloLGM** - Medium line gap (KEEP)
+- **MesloLGL** - Large line gap
+- **\*DZ\*** - Dotted Zero variants
+
+**Pruning**: Keep only `MesloLGM*`, remove `MesloLGS*`, `MesloLGL*`, and `*DZ*`
+
+**Result**: 48 files → 8 files
+
+### Monaspice Nerd Font (package: Monaspace)
+
+Monaspace includes 5 font families designed to work together:
+
+- **MonaspiceAr** - Argon (humanist)
+- **MonaspiceKr** - Krypton (mechanical)
+- **MonaspiceNe** - Neon (neo-grotesque) (KEEP)
+- **MonaspiceRn** - Radon (handwriting)
+- **MonaspiceXe** - Xenon (slab-serif)
+
+**Pruning**: Keep only `MonaspiceNe*`, remove all other variants
+
+**Result**: 40 files → 8 files
+
+### SGr-Iosevka (custom installer)
+
+SGr-Iosevka is available as TTC (TrueType Collection) files. We install only the Term Slab variant:
+
+- **SGr-IosevkaTermSlab.ttc** - Slab-serif, fixed-width terminal (INSTALLED)
+
+Other variants available but not installed:
+
+- SGr-Iosevka.ttc - Sans-serif, variable width icons
+- SGr-IosevkaTerm.ttc - Sans-serif, fixed-width terminal
+- SGr-IosevkaSlab.ttc - Slab-serif, variable width icons
+
+**Result**: 1 TTC file installed
 
 ### Special Cases
 
@@ -93,13 +129,7 @@ These fonts don't have Nerd Font variants, or don't have Mono versions:
 - Keeps: Regular, Bold
 - No italic variants exist (Fira Code doesn't have italic)
 
-**Victor Mono**:
-
-- Has many weight variants
-- Filter removes: ExtraLight, Light, Thin, Medium, SemiBold
-- Keeps: Regular, Bold, Italic, BoldItalic
-
-**TTC Collections** (Iosevka base, SGr-Iosevka):
+**TTC Collections** (SGr-Iosevka):
 
 - .ttc files contain all weights in single file
 - No weight filtering applied (would delete entire collection)
@@ -154,27 +184,18 @@ font-download -f firacode --standardize-only
 |-------------|--------------|-------------|---------------|
 | JetBrains Mono | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
 | Cascadia Code | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| Meslo | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| Monaspace | 60 files | 20 files | Mono: Regular, Bold, Italic, BoldItalic (5 families × 4) |
+| Meslo | 48 files | 8 files | MesloLGM Mono: Regular, Bold, Italic, BoldItalic (×2 for NL) |
+| Monaspace | 40 files | 8 files | MonaspiceNe Mono: Regular, Bold, Italic, BoldItalic (×2 for NL) |
 | Iosevka Nerd Font | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| Victor Mono | 20+ files | 4 files | Regular, Bold, Italic, BoldItalic |
 | Fira Code | 6 files | 2 files | Regular, Bold |
-| FiraCodeiScript | 3 files | 3 files | Regular, Bold, Italic (no pruning needed) |
-| Nimbus Mono | 4 files | 4 files | Regular, Bold, Italic, BoldItalic (no pruning needed) |
-| Droid Sans Mono | 3 files | 1 file | Mono: Regular |
 | Commit Mono | 8 files | 4 files | Regular, Bold, Italic, BoldItalic |
-| Comic Mono | 2 files | 2 files | Regular, Bold (no italic exists) |
-| SeriousShanns | 18 files | 6 files | Mono: Regular, Bold, Italic, BoldItalic, Light, LightItalic |
-| Source Code Pro | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| Terminess | 8 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
+| ComicShannsMono | 18 files | 6 files | Mono: Regular, Bold, Italic, BoldItalic, Light, LightItalic |
+| ComicMonoNF | 2 files | 2 files | Regular, Bold |
 | Hack | 12 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| 3270 | 6 files | 2 files | Mono: Regular, Bold |
 | RobotoMono | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| SpaceMono | 12 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
-| Iosevka base | 9 .ttc | 9 .ttc | No pruning (TTC collections) |
-| SGr-Iosevka (4) | 4 .ttc | 4 .ttc | No pruning (TTC collections) |
+| SGr-Iosevka | 1 .ttc | 1 .ttc | Term Slab only |
 
-**Total**: ~260 files → ~75-80 files
+**Total**: ~200 files → ~50 files
 
 ## Debugging Pruning Issues
 
@@ -244,10 +265,11 @@ font-download -f firacode --prune-only --dry-run -v
 
 The order matters:
 
-1. **Weight filter runs first** - Removes Light, Medium, Retina, etc.
-2. **Spacing filter runs second** - Checks remaining files for Mono variants
+1. **Weight filter runs first** (`prune_font_family`) - Removes Light, Medium, Retina, etc.
+2. **Variant filter runs second** (`prune_font_variants`) - Removes unwanted sub-families (e.g., MesloLGS, MonaspiceAr)
+3. **Spacing filter runs third** - Checks remaining files for Mono variants and removes Propo
 
-If spacing filter ran first, the Mono count would be wrong because weight variants haven't been filtered yet.
+If filters ran in wrong order, files would be incorrectly kept or removed.
 
 ## Testing Checklist
 
@@ -261,7 +283,7 @@ When modifying pruning logic:
 - [ ] Verify correct files remain: `ls -1 ~/fonts/FontFamily/`
 - [ ] Repeat for fonts with different characteristics:
   - Font with Mono variants (JetBrains, Cascadia)
-  - Font without Mono variants (Fira Code, Victor Mono)
-  - Font with many weights (Victor Mono, Monaspace)
-  - Font with few weights (Comic Mono, Droid)
-  - TTC collections (Iosevka base)
+  - Font without Mono variants (Fira Code, ComicMonoNF)
+  - Font with variant pruning (Meslo → MesloLGM only, Monaspace → MonaspiceNe only)
+  - Font with few weights (ComicShannsMono)
+  - TTC collection (SGr-Iosevka Term Slab)

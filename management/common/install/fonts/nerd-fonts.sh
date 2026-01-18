@@ -46,6 +46,7 @@ install_nerd_font() {
 
   # Process and install
   prune_font_family "$download_dir"
+  prune_font_variants "$download_dir" "$package"
   standardize_font_family "$download_dir"
   install_font_files "$download_dir" "$system_font_dir" "$platform"
 

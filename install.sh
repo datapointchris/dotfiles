@@ -47,15 +47,10 @@ install_fonts() {
   # GitHub Release Fonts
   run_installer "$common_install/fonts/firacode.sh" "firacode-font"
   run_installer "$common_install/fonts/commitmono.sh" "commitmono-font"
-  run_installer "$common_install/fonts/intelone.sh" "intelone-font"
   # Iosevka Variants
   run_installer "$common_install/fonts/sgr-iosevka.sh" "sgr-iosevka-font"
-  run_installer "$common_install/fonts/iosevka-base.sh" "iosevka-base-font"
   # Direct Download Fonts
-  run_installer "$common_install/fonts/firacodescript.sh" "firacodescript-font"
-  run_installer "$common_install/fonts/comicmono.sh" "comicmono-font"
-  # Source Zip Fonts
-  run_installer "$common_install/fonts/victor.sh" "victor-font"
+  run_installer "$common_install/fonts/comicmononf.sh" "comicmononf-font"
 }
 
 install_common_phases() {

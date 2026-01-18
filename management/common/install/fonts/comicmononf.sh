@@ -9,7 +9,7 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/font-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-font_name="FiraCodeiScript"
+font_name="ComicMonoNF"
 font_extension="ttf"
 
 platform=$(detect_platform)
@@ -17,32 +17,26 @@ system_font_dir=$(get_system_font_dir)
 download_dir="/tmp/fonts-${font_name// /}"
 trap 'rm -rf "$download_dir"' EXIT
 
-download_firacodescript() {
+download_comicmono() {
   mkdir -p "$download_dir"
 
-  local base_url="https://github.com/kencrocken/FiraCodeiScript/raw/master"
-  local files=("FiraCodeiScript-Regular.ttf" "FiraCodeiScript-Bold.ttf" "FiraCodeiScript-Italic.ttf")
+  # Using xtevenx/ComicMonoNF v1 - has proper PANOSE values for Ghostty compatibility
+  # and isFixedPitch=1 for Kitty compatibility
+  local base_url="https://raw.githubusercontent.com/xtevenx/ComicMonoNF/master/v1"
+  local files=("ComicMonoNF-Regular.ttf" "ComicMonoNF-Bold.ttf")
 
   for file in "${files[@]}"; do
     if ! curl -fsSL "$base_url/$file" -o "$download_dir/$file"; then
-      manual_steps="1. Download font files:
-   curl -fsSL ${base_url}/FiraCodeiScript-Regular.ttf -o FiraCodeiScript-Regular.ttf
-   curl -fsSL ${base_url}/FiraCodeiScript-Bold.ttf -o FiraCodeiScript-Bold.ttf
-   curl -fsSL ${base_url}/FiraCodeiScript-Italic.ttf -o FiraCodeiScript-Italic.ttf
+      manual_steps="Download manually from:
+   ${base_url}/${file}
 
-   Or download in browser:
-   https://github.com/kencrocken/FiraCodeiScript/tree/master
+Or browse the repo:
+   https://github.com/xtevenx/ComicMonoNF/tree/master/v1
 
-2. Install to system fonts:
-   cp FiraCodeiScript-*.ttf ${system_font_dir}/
+Save files to:
+   $system_font_dir/"
 
-3. Refresh font cache (Linux only):
-   fc-cache -fv
-
-4. Verify installation:
-   fc-list | grep -i 'FiraCodeiScript'"
-
-      output_failure_data "FiraCodeiScript" "${base_url}/${file}" "latest" "$manual_steps" "Download failed for $file"
+      output_failure_data "ComicMonoNF" "${base_url}/${file}" "latest" "$manual_steps" "Download failed for $file"
       exit 1
     fi
   done
@@ -54,13 +48,13 @@ download_firacodescript() {
 }
 
 
-if is_font_installed "$system_font_dir" "*FiraCodeiScript*.$font_extension"; then
+if is_font_installed "$system_font_dir" "*ComicMonoNF*.$font_extension"; then
   log_success "$font_name already installed: $system_font_dir"
   exit 0
 fi
 
-log_info "Downloading $font_name..."
-download_firacodescript
+log_info "Downloading $font_name (xtevenx v1)..."
+download_comicmono
 
 prune_font_family "$download_dir"
 

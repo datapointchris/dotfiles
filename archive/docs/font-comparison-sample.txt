@@ -1,0 +1,66 @@
+Font Comparison: Iosevka Slab vs Iosevka Term Slab
+==================================================
+
+Instructions:
+1. Open this file in your editor
+2. Run: font apply "Iosevka Slab"
+3. Observe the text below
+4. Run: font apply "Iosevka Term Slab"
+5. Compare the differences (especially icons and alignment)
+
+The main difference:
+- Iosevka Slab: Variable-width Nerd Font icons
+- Iosevka Term Slab: Fixed-width terminal icons (true monospace)
+
+---
+
+BASIC TEXT
+----------
+The quick brown fox jumps over the lazy dog.
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+
+ALIGNMENT TEST (columns should align in Term Slab)
+--------------------------------------------------
+|name      |age |city      |
+|----------|-----|----------|
+|Alice     |25   |New York  |
+|Bob       |30   |Chicago   |
+|Charlie   |35   |Seattle   |
+
+PROGRAMMING SYMBOLS
+-------------------
+-> => :: <= >= != == === !== && || ++ -- ** //
+{} [] () <> :: ... .. ## @@ $$ %% ^^ && ||
+fn main() { println!("Hello"); }
+const x = (a, b) => a + b;
+
+NERD FONT ICONS (watch spacing here)
+------------------------------------
+Files:
+Git:
+Arrows:      󰁔 󰁍
+Folders:     󰉋 󰉖 󰉓
+Languages:  󰌠     󰛦
+Tools:        󰒲  󱃾
+
+ICON + TEXT ALIGNMENT (should align in Term Slab)
+-------------------------------------------------
+ src/main.rs
+ package.json
+ README.md
+󰉋 node_modules/
+ .gitignore
+ Dockerfile
+
+MIXED CONTENT
+-------------
+ Error: Something went wrong
+ Warning: Check your config
+ Success: Build completed
+ Info: 42 tests passed
+
+LIGATURES (if enabled)
+----------------------
+<!-- --> === !== >= <= => -> <- :: ... www

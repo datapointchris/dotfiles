@@ -9,15 +9,14 @@ source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
 source "$DOTFILES_DIR/management/common/lib/font-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
-font_name="SGr-Iosevka Variants"
-font_extension="ttc"
+font_name="SGr-Iosevka Term Slab"
 
 platform=$(detect_platform)
 system_font_dir=$(get_system_font_dir)
 download_dir="/tmp/fonts-${font_name// /}"
 trap 'rm -rf "$download_dir"' EXIT
 
-download_sgriosevka() {
+download_sgriosevka_termslab() {
   local temp_dir
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || exit 1
@@ -25,76 +24,32 @@ download_sgriosevka() {
   local manual_steps="1. Visit GitHub releases page:
    https://github.com/be5invis/Iosevka/releases/latest
 
-2. Download these 4 files:
-   SuperTTC-SGr-Iosevka-*.zip
-   SuperTTC-SGr-IosevkaTerm-*.zip
-   SuperTTC-SGr-IosevkaSlab-*.zip
+2. Download:
    SuperTTC-SGr-IosevkaTermSlab-*.zip
 
-3. Extract and install each variant:
-   unzip SuperTTC-SGr-Iosevka-*.zip
+3. Extract and install:
+   unzip SuperTTC-SGr-IosevkaTermSlab-*.zip
    mkdir -p ${system_font_dir}
    mv *.ttc ${system_font_dir}/
-
-   (Repeat for each of the 4 variants)
 
 4. Refresh font cache (Linux only):
    fc-cache -fv
 
 5. Verify installation:
-   fc-list | grep -i 'SGr-Iosevka'"
+   fc-list | grep -i 'Iosevka.*Term.*Slab'"
 
   local release_json
   if ! release_json=$(curl -fsSL https://api.github.com/repos/be5invis/Iosevka/releases/latest); then
-    output_failure_data "SGr-Iosevka" "https://github.com/be5invis/Iosevka/releases/latest" "latest" "$manual_steps" "Failed to fetch release info"
+    output_failure_data "SGr-Iosevka Term Slab" "https://github.com/be5invis/Iosevka/releases/latest" "latest" "$manual_steps" "Failed to fetch release info"
     cd - > /dev/null
     rm -rf "$temp_dir"
     exit 1
   fi
 
-  # Extract download URLs for SGr variants
-  local sgr_iosevka_url
-  local sgr_term_url
-  local sgr_slab_url
   local sgr_termslab_url
-
-  sgr_iosevka_url=$(echo "$release_json" | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-Iosevka-[0-9.]*\.zip"' | grep -v "Term\|Slab" | head -1 | sed 's/.*": *"//' | sed 's/"$//')
-  sgr_term_url=$(echo "$release_json" | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-IosevkaTerm-[0-9.]*\.zip"' | grep -v "Slab" | head -1 | sed 's/.*": *"//' | sed 's/"$//')
-  sgr_slab_url=$(echo "$release_json" | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-IosevkaSlab-[0-9.]*\.zip"' | grep -v "Term" | head -1 | sed 's/.*": *"//' | sed 's/"$//')
   sgr_termslab_url=$(echo "$release_json" | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-IosevkaTermSlab-[0-9.]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
 
-  # Download and extract each variant
-  mkdir -p "$download_dir/SGr-Iosevka"
-  mkdir -p "$download_dir/SGr-IosevkaTerm"
-  mkdir -p "$download_dir/SGr-IosevkaSlab"
   mkdir -p "$download_dir/SGr-IosevkaTermSlab"
-
-  if ! curl -fsSL "$sgr_iosevka_url" -o SGr-Iosevka.zip; then
-    output_failure_data "SGr-Iosevka" "$sgr_iosevka_url" "latest" "$manual_steps" "Download failed"
-    cd - > /dev/null
-    rm -rf "$temp_dir"
-    exit 1
-  fi
-  unzip -qo SGr-Iosevka.zip || exit 1
-  find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-Iosevka/" \; 2>/dev/null || true
-
-  if ! curl -fsSL "$sgr_term_url" -o SGr-IosevkaTerm.zip; then
-    output_failure_data "SGr-IosevkaTerm" "$sgr_term_url" "latest" "$manual_steps" "Download failed"
-    cd - > /dev/null
-    rm -rf "$temp_dir"
-    exit 1
-  fi
-  unzip -qo SGr-IosevkaTerm.zip || exit 1
-  find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaTerm/" \; 2>/dev/null || true
-
-  if ! curl -fsSL "$sgr_slab_url" -o SGr-IosevkaSlab.zip; then
-    output_failure_data "SGr-IosevkaSlab" "$sgr_slab_url" "latest" "$manual_steps" "Download failed"
-    cd - > /dev/null
-    rm -rf "$temp_dir"
-    exit 1
-  fi
-  unzip -qo SGr-IosevkaSlab.zip || exit 1
-  find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaSlab/" \; 2>/dev/null || true
 
   if ! curl -fsSL "$sgr_termslab_url" -o SGr-IosevkaTermSlab.zip; then
     output_failure_data "SGr-IosevkaTermSlab" "$sgr_termslab_url" "latest" "$manual_steps" "Download failed"
@@ -111,18 +66,22 @@ download_sgriosevka() {
   local count
   count=$(count_font_files "$download_dir")
   [[ $count -eq 0 ]] && log_error "No fonts found after extraction" && exit 1
-  log_success "Downloaded $count files (4 TTC collections)"
+  log_success "Downloaded $count files (1 TTC collection)"
 }
 
+# Check if Term Slab is installed
+sgr_termslab_installed() {
+  local font_dir="$1"
+  [[ -f "$font_dir/SGr-IosevkaTermSlab.ttc" ]]
+}
 
-# Check if any variant is already installed
-if is_font_installed "$system_font_dir" "*SGr-Iosevka*.$font_extension"; then
+if sgr_termslab_installed "$system_font_dir"; then
   log_success "$font_name already installed: $system_font_dir"
   exit 0
 fi
 
 log_info "Downloading $font_name..."
-download_sgriosevka
+download_sgriosevka_termslab
 
 prune_font_family "$download_dir"
 

@@ -216,3 +216,50 @@ fetch_github_release_asset() {
   release_json=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest") || return 1
   echo "$release_json" | grep -o "\"browser_download_url\": *\"[^\"]*$pattern\"" | head -1 | sed 's/.*": *"//' | sed 's/"$//'
 }
+
+# Prune font-specific variants (runs AFTER prune_font_family for weight pruning)
+# This handles fonts with multiple sub-families where we only want specific ones
+prune_font_variants() {
+  local font_dir="$1"
+  local font_package="$2"
+  [[ ! -d "$font_dir" ]] && return 0
+
+  local before after pruned
+  before=$(count_font_files "$font_dir")
+  [[ $before -eq 0 ]] && return 0
+
+  case "$font_package" in
+    Meslo)
+      # Keep only MesloLGM (Medium line gap)
+      # Remove: MesloLGS (Small), MesloLGL (Large), *DZ* (Dotted Zero variants)
+      log_info "Pruning Meslo variants: keeping only MesloLGM"
+      find "$font_dir" -type f \( \
+        -name "*MesloLGS*" -o \
+        -name "*MesloLGL*" -o \
+        -name "*DZ*" \
+      \) -delete 2>/dev/null || true
+      ;;
+    Monaspace)
+      # Keep only MonaspiceNe (Neon variant)
+      # Remove: MonaspiceAr, MonaspiceXe, MonaspiceRn, MonaspiceKr
+      log_info "Pruning Monaspace variants: keeping only MonaspiceNe"
+      find "$font_dir" -type f \( \
+        -name "*MonaspiceAr*" -o \
+        -name "*MonaspiceXe*" -o \
+        -name "*MonaspiceRn*" -o \
+        -name "*MonaspiceKr*" \
+      \) -delete 2>/dev/null || true
+      ;;
+    *)
+      # No font-specific pruning for this package
+      return 0
+      ;;
+  esac
+
+  after=$(count_font_files "$font_dir")
+  pruned=$((before - after))
+
+  if [[ $pruned -gt 0 ]]; then
+    log_success "Pruned $pruned variant files (kept $after)"
+  fi
+}

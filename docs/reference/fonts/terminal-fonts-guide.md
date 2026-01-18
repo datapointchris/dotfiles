@@ -180,13 +180,7 @@ You might notice **Nerd Font Propo** variants exist. These are different.
 - Column-based tools fail
 - TUI applications render incorrectly
 
-**Exception**: Your current `SeriousShanns Nerd Font Propo` works in Ghostty, but:
-
-- Ghostty might be doing special handling
-- You're not using column-sensitive applications, or
-- You haven't encountered the breakage yet
-
-**Recommended**: Try `SeriousShanns Nerd Font Mono` or regular variant for proper monospace.
+**Note**: For comic-style fonts that work in both Ghostty and Kitty, use `ComicMonoNF` (xtevenx v1) or `ComicShannsMono Nerd Font Mono`. See [Font Terminal Compatibility](../../learnings/font-terminal-compatibility.md) for details on why some fonts work in one terminal but not another.
 
 ## Monospace Font Characteristics
 
@@ -416,8 +410,8 @@ fc-list "Font Name" | grep spacing
 
 **Priority**: Comic sans style, casual
 
-- SeriousShanns Nerd Font (your current!)
-- Comic Mono Nerd Font
+- ComicShannsMono Nerd Font
+- ComicMonoNF (xtevenx v1 - works in both Ghostty and Kitty)
 
 ## Converting a Proportional Font (Don't Do This)
 
