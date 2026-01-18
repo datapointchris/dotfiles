@@ -75,7 +75,6 @@ log "Setup" "History & Command Editing"
 # ------------------------------------------------------------------ #
 export EDITOR="nvim"
 export HOMEBREW_NO_AUTO_UPDATE=1
-export BAT_THEME="gruvbox-dark"
 
 # Tool directories
 export CARGO_HOME="$HOME/.cargo"
