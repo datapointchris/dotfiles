@@ -807,6 +807,11 @@ npm_globals:
     - name: markdownlint-cli
       description: Markdown linter
 
+  # Build Tools
+  build_tools:
+    - name: sass
+      description: Dart Sass CSS compiler
+
 # ================================================================
 # UV TOOLS (Python)
 # ================================================================
