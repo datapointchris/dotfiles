@@ -78,6 +78,7 @@ venv/
 ### DOTFILES SPECIFIC
 **/.aws/config
 **/.aws/credentials
+**/aerc/accounts.conf
 .gitsecret/keys/random_seed
 !*.secret
 
