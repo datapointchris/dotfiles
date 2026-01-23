@@ -470,10 +470,11 @@ system_packages:
     description: Terminal email client
     tags: [cli, communication]
 
-  - name: thunderbird
-    pacman: thunderbird
-    description: Email client (Arch only - macOS uses cask)
-    tags: [gui, communication]
+  - name: w3m
+    brew: w3m
+    pacman: w3m
+    description: Text-based web browser and HTML renderer for aerc
+    tags: [cli, communication]
 
   - name: librewolf
     aur: librewolf-bin
@@ -1113,9 +1114,6 @@ macos_casks:
     description: Privacy-focused Firefox fork with modern UI
     tags: [gui]
 
-  - name: thunderbird
-    description: Email client
-    tags: [gui, communication]
 # ================================================================
 # NOTES
 # ================================================================
