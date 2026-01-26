@@ -476,6 +476,12 @@ system_packages:
     description: Text-based web browser and HTML renderer for aerc
     tags: [cli, communication]
 
+  - name: newsboat
+    brew: newsboat
+    pacman: newsboat
+    description: RSS/Atom feed reader for the terminal
+    tags: [cli, communication]
+
   - name: librewolf
     aur: librewolf-bin
     description: Privacy-focused Firefox fork (Arch only - macOS uses cask)

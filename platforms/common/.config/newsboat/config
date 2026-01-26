@@ -1,0 +1,5 @@
+urls-source "freshrss"
+freshrss-url "http://10.0.20.17/api/greader.php"
+freshrss-login "chris"
+freshrss-passwordfile "~/.local/secrets/freshrss"
+refresh-on-startup yes
