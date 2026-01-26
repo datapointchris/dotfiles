@@ -10,8 +10,8 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
 print_section "Installing Arch Linux packages"
 
-log_info "Updating package database..."
-sudo pacman -Sy
+log_info "Performing full system upgrade (Arch best practice)..."
+sudo pacman -Syu --noconfirm
 
 # Bootstrap: Install python-yaml first (needed for parse_packages.py)
 log_info "Installing bootstrap packages..."
