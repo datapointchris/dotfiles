@@ -1,5 +1,5 @@
 urls-source "freshrss"
 freshrss-url "http://10.0.20.17/api/greader.php"
 freshrss-login "chris"
-freshrss-passwordfile "~/.local/secrets/freshrss"
+freshrss-passwordeval "echo $FRESHRSS_PASSWORD"
 refresh-on-startup yes

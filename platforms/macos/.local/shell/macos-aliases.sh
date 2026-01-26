@@ -56,6 +56,7 @@ alias symlink-hosts='sudo ln -sf $HOME/etc.hosts /etc/hosts'
 alias sshicb='ssh chris@10.0.20.11'
 alias sshlearn='ssh chris@10.0.20.12'
 alias sshops='ssh chris@10.0.20.15'
+alias sshrss='ssh chris@10.0.20.17'
 
 # Local Computers
 alias sshmbp='ssh chris@$mbp'
