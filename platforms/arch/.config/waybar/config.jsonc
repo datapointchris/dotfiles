@@ -11,17 +11,7 @@
     "hyprland/workspaces": {
         "format": "{name}",
         "on-click": "activate",
-        "sort-by-number": false,
-        "persistent-workspaces": {
-            "A": [],
-            "B": [],
-            "D": [],
-            "E": [],
-            "M": [],
-            "S": [],
-            "X": [],
-            "Z": []
-        }
+        "sort-by-number": false
     },
 
     "hyprland/submap": {
