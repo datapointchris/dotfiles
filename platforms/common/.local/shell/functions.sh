@@ -99,7 +99,7 @@ function git-old-branches() {
 #@pkill
 #--> Kill process by name
 function pkill() {
-  fzf --height 40% \
+  ps aux | fzf --height 40% \
     --layout=reverse \
     --header-lines=1 \
     --prompt="Select process to kill: " \
