@@ -99,20 +99,21 @@ function git-old-branches() {
 #@pkill
 #--> Kill process by name
 function pkill() {
-  ps aux | fzf --height 40% \
+  local pid
+  pid=$(ps aux | fzf --height 40% \
     --layout=reverse \
     --header-lines=1 \
     --prompt="Select process to kill: " \
     --preview 'echo {}' \
     --preview-window up:3:hidden:wrap \
-    --bind 'F2:toggle-preview' |
-    awk '{print $2}' |
-    xargs -r bash -c "
-    if ! kill \"$1\" 2>/dev/null; then
-        echo \"Regular kill failed. Attempting with sudo...\"
-        sudo kill \"$1\" || echo \"Failed to kill process $1\" >&2
-    fi
-  " --
+    --bind 'F2:toggle-preview' | awk '{print $2}')
+
+  [[ -z "$pid" ]] && return
+
+  if ! kill "$pid" 2>/dev/null; then
+    echo "Regular kill failed. Attempting with sudo..."
+    sudo kill "$pid" || echo "Failed to kill process $pid" >&2
+  fi
 }
 
 #@touchdate
