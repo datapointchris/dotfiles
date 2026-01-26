@@ -448,9 +448,9 @@ system_packages:
     aur: wlogout
     description: Logout menu for Wayland
 
-  - name: firefox
-    pacman: firefox
-    description: Web browser (Wayland native)
+  - name: zen-browser
+    aur: zen-browser-bin
+    description: Privacy-focused Firefox fork with modern UI
 
   - name: kitty
     pacman: kitty
@@ -1047,11 +1047,6 @@ flatpak_apps:
     flatpak_id: com.discordapp.Discord
     description: Chat platform
     tags: [gui, communication]
-
-  - name: zen-browser
-    flatpak_id: app.zen_browser.zen
-    description: Privacy-focused Firefox fork with modern UI
-    tags: [gui]
 
 # ================================================================
 # MACOS CASKS

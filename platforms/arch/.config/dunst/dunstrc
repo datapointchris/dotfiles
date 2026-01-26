@@ -58,7 +58,7 @@
     history_length = 20
 
     # Misc
-    browser = /usr/bin/firefox
+    browser = zen-browser
     always_run_script = true
     title = Dunst
     class = Dunst
