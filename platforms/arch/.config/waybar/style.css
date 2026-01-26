@@ -1,9 +1,10 @@
 /* Waybar Styling */
 /* Theme colors imported from themes/current.css */
 @import "themes/current.css";
+@import "fonts/current.css";
 
 * {
-    font-family: "JetBrainsMono Nerd Font", "Font Awesome 6 Free", monospace;
+    font-family: var(--mono-font), "Font Awesome 6 Free", monospace;
     font-size: 13px;
     border: none;
     border-radius: 0;
