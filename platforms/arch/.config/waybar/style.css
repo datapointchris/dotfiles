@@ -2,6 +2,7 @@
 /* Theme colors imported from themes/current.css */
 @import "themes/current.css";
 @import "fonts/current.css";
+@import "opacity/current.css";
 
 * {
     /* font-family set via @import "fonts/current.css" */
@@ -12,7 +13,7 @@
 }
 
 window#waybar {
-    background: @bg;
+    background: @waybar-bg;
     color: @fg;
 }
 
