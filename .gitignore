@@ -99,9 +99,18 @@ test-wsl-setup.log
 test-install.log
 test-wsl-docker.log
 test-arch-*
+test-offline-docker.log
+test-wsl-network-restricted.log
 .last-test-vm
 .tmp-transfer/
 .wsl-rootfs-cache/
+
+# Generated shell files (built by management/shell/build-shell.sh)
+platforms/common/.local/shell/aliases.sh
+platforms/common/.local/shell/functions.sh
+
+# Offline install bundles
+management/offline/dotfiles-offline-*.tar.gz
 
 ### GO BUILD ARTIFACTS
 
