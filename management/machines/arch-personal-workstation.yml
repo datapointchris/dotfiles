@@ -1,0 +1,64 @@
+machine: arch-personal-workstation
+platform: arch
+
+# Shell groups to concat into functions.sh / aliases.sh
+# platform-arch groups are added automatically based on platform field
+function_groups: [core, git, python, aws, docker, network, reference, node, fzf]
+alias_groups: [core]
+
+# Installation
+system_packages: true
+flatpak: true
+fonts: true
+
+go: true
+go_tools:
+  - task
+  - cheat
+  - terraform-docs
+  - gum
+  - lazydocker
+  - actionlint
+  - goose
+  - gofumpt
+  - golangci-lint
+  - gdu
+  - sess
+  - toolbox
+
+github_releases:
+  - fzf
+  - neovim
+  - lazygit
+  - yazi
+  - glow
+  - duf
+  - tflint
+  - terraformer
+  - terrascan
+  - trivy
+  - zk
+  - shellcheck
+
+custom_installers:
+  - bats
+  - awscli
+  - claude-code
+  - terraform-ls
+  - theme
+  - font
+
+rust: true
+cargo_packages: [bat, fd-find, eza, zoxide, git-delta, cargo-update]
+
+nvm: true
+npm_globals: true
+uv: true
+uv_tools: true
+local_uv_tools: true
+tenv: true
+
+shell_plugins: true
+tmux_plugins: true
+nvim_plugins: true
+configure_zsh: true

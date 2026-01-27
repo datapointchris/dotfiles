@@ -1,0 +1,40 @@
+machine: ubuntu-lxc-server
+platform: ubuntu
+
+# Shell groups to concat into functions.sh / aliases.sh
+# platform-ubuntu groups are added automatically based on platform field
+function_groups: [core, git, docker, network, reference, fzf]
+alias_groups: [core]
+
+# Installation
+system_packages: true
+flatpak: false
+fonts: false
+
+go: true
+go_tools:
+  - task
+  - toolbox
+
+github_releases:
+  - fzf
+  - neovim
+  - lazygit
+  - yazi
+
+custom_installers: []
+
+rust: true
+cargo_packages: [bat, fd-find, eza, zoxide, git-delta, cargo-update]
+
+nvm: false
+npm_globals: false
+uv: false
+uv_tools: false
+local_uv_tools: false
+tenv: false
+
+shell_plugins: true
+tmux_plugins: true
+nvim_plugins: true
+configure_zsh: true
