@@ -1,0 +1,6 @@
+[user]
+	name = Chris Birch
+	email = datapointchris@gmail.com
+
+[core]
+	autocrlf = input
