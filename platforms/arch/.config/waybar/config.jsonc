@@ -6,7 +6,7 @@
 
     "modules-left": ["hyprland/workspaces", "hyprland/submap", "mpris"],
     "modules-center": [],
-    "modules-right": ["pulseaudio", "temperature", "cpu", "memory", "network", "tray", "clock", "privacy"],
+    "modules-right": ["tray", "pulseaudio", "temperature", "cpu", "memory", "network", "clock", "privacy", "custom/spacer"],
 
     "hyprland/workspaces": {
         "format": "{name}",
@@ -90,5 +90,9 @@
             { "type": "audio-in", "tooltip": true },
             { "type": "audio-out", "tooltip": false }
         ]
+    },
+
+    "custom/spacer": {
+        "format": " "
     }
 }
