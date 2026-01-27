@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Learning
+Comment=Open learning app
+Exec=zen --new-window https://learning.ichrisbirch.com
+Icon=applications-education
+Terminal=false
+Type=Application
+Categories=Education;
+Keywords=learning;study;courses;

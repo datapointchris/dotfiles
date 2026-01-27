@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Bluetooth
+Comment=Connect/disconnect bluetooth devices
+Exec=/home/chris/.local/bin/rofi-bluetooth
+Icon=bluetooth
+Terminal=false
+Type=Application
+Categories=System;
+Keywords=bluetooth;connect;speakers;audio;

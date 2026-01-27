@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Audio Output
+Comment=Select audio output device
+Exec=/home/chris/.local/bin/rofi-audio
+Icon=audio-speakers
+Terminal=false
+Type=Application
+Categories=System;
+Keywords=audio;sound;speakers;output;volume;
