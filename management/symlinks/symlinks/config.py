@@ -36,7 +36,7 @@ class SymlinksSettings(BaseSettings):
 
     # Cleanup directories (relative to target_dir)
     cleanup_dirs: list[str] = Field(
-        default=[".config", ".local/shell", ".local/share/workflows"],
+        default=[".config", ".local/shell", ".local/share/workflows", ".local/share/applications"],
         description="Directories to clean up empty subdirectories",
     )
 
