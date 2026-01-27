@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# rofi-power - Quick system actions menu
+# Screen off, lock, suspend, reboot, shutdown
+
+set -euo pipefail
+
+declare -A actions=(
+    ["Screen Off"]="screen-off"
+    ["Lock"]="hyprlock"
+    ["Lock + Screen Off"]="hyprlock & sleep 1 && screen-off"
+    ["Suspend"]="systemctl suspend"
+    ["Reboot"]="systemctl reboot"
+    ["Shutdown"]="systemctl poweroff"
+)
+
+menu_items=(
+    "Screen Off"
+    "Lock"
+    "Lock + Screen Off"
+    "Suspend"
+    "Reboot"
+    "Shutdown"
+)
+
+show_menu() {
+    printf '%s\n' "${menu_items[@]}" | rofi -dmenu -i -p "Power" -no-custom
+}
+
+main() {
+    choice=$(show_menu) || exit 0
+
+    case "$choice" in
+        Reboot|Shutdown)
+            confirm=$(echo -e "No\nYes" | rofi -dmenu -i -p "Confirm $choice?")
+            [[ "$confirm" == "Yes" ]] || exit 0
+            ;;
+    esac
+
+    eval "${actions[$choice]}"
+}
+
+main

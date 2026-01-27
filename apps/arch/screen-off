@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# screen-off - Turn off display and wake on any input
+# Uses Hyprland IPC to detect input events for BT device compatibility
+
+set -euo pipefail
+
+SOCKET="/tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+
+# Turn off display
+hyprctl dispatch dpms off
+
+# Wait for any Hyprland event (mouse move, key press, etc.)
+# Read one line from the socket then exit
+socat -u UNIX-CONNECT:"$SOCKET" - | head -n 1 > /dev/null
+
+# Turn display back on
+hyprctl dispatch dpms on
