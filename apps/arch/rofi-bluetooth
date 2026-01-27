@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+# rofi-bluetooth - Manage bluetooth devices via rofi
+
+set -euo pipefail
+
+get_device_info() {
+    local mac="$1"
+    bluetoothctl info "$mac" 2>/dev/null
+}
+
+is_connected() {
+    local info="$1"
+    echo "$info" | grep -q "Connected: yes"
+}
+
+is_paired() {
+    local info="$1"
+    echo "$info" | grep -q "Paired: yes"
+}
+
+get_battery() {
+    local info="$1"
+    local battery
+    battery=$(echo "$info" | grep "Battery Percentage" | grep -oP '\(\K[0-9]+(?=\))') || true
+    echo "${battery:-}"
+}
+
+get_device_name() {
+    local mac="$1"
+    local name
+    # Try to get name from info
+    name=$(get_device_info "$mac" | grep "Name:" | sed 's/.*Name: //' | xargs)
+    if [[ -n "$name" ]]; then
+        echo "$name"
+    else
+        echo "$mac"
+    fi
+}
+
+build_device_menu() {
+    local show_new="$1"
+    local devices
+    devices=$(bluetoothctl devices 2>/dev/null)
+
+    declare -a macs=() display_names=()
+    local menu=""
+
+    while read -r _ mac name; do
+        [[ -z "$mac" ]] && continue
+
+        local info
+        info=$(get_device_info "$mac")
+
+        if ! is_paired "$info"; then
+            [[ "$show_new" != "true" ]] && continue
+        fi
+
+        # Get better name if needed
+        if [[ -z "$name" || "$name" == "$mac" ]]; then
+            name=$(get_device_name "$mac")
+        fi
+
+        macs+=("$mac")
+
+        local status_icon="" battery_str="" suffix=""
+
+        if is_connected "$info"; then
+            status_icon="●"
+        elif is_paired "$info"; then
+            status_icon="○"
+        else
+            status_icon="◇"
+            suffix=" [new]"
+        fi
+
+        local battery
+        battery=$(get_battery "$info")
+        if [[ -n "$battery" ]]; then
+            battery_str=" ($battery%)"
+        fi
+
+        local display="$status_icon $name$battery_str$suffix"
+        display_names+=("$display")
+        menu+="$display\n"
+    done <<< "$devices"
+
+    # Return via global arrays (bash limitation)
+    MENU_MACS=("${macs[@]}")
+    MENU_DISPLAYS=("${display_names[@]}")
+    MENU_TEXT="$menu"
+}
+
+scan_and_select() {
+    # Start scanning in background
+    bluetoothctl scan on &>/dev/null &
+    local scan_pid=$!
+
+    # Cleanup on exit
+    trap 'kill $scan_pid 2>/dev/null; bluetoothctl scan off &>/dev/null' EXIT
+
+    local choice=""
+    local rounds=0
+    local max_rounds=6  # 6 rounds × 2 seconds = 12 seconds max
+
+    while [[ -z "$choice" && $rounds -lt $max_rounds ]]; do
+        rounds=$((rounds + 1))
+
+        # Build menu with all devices including new ones
+        build_device_menu "true"
+
+        local header="Scanning... (${rounds}/${max_rounds}) - Select device or wait"
+        if [[ $rounds -ge $max_rounds ]]; then
+            header="Scan complete - Select device"
+        fi
+
+        # Show menu with timeout
+        choice=$(printf '%b' "↻ Refresh\n${MENU_TEXT}" | \
+            rofi -dmenu -i -p "Bluetooth" -no-custom \
+            -mesg "$header" \
+            -kb-custom-1 "" \
+            2>/dev/null) || {
+            # User cancelled
+            return
+        }
+
+        # If refresh selected, continue scanning
+        if [[ "$choice" == "↻ Refresh" ]]; then
+            choice=""
+            sleep 1
+            continue
+        fi
+    done
+
+    [[ -z "$choice" ]] && return
+
+    # Find selected device
+    for i in "${!MENU_DISPLAYS[@]}"; do
+        if [[ "${MENU_DISPLAYS[$i]}" == "$choice" ]]; then
+            local mac="${MENU_MACS[$i]}"
+            local info
+            info=$(get_device_info "$mac")
+
+            if is_connected "$info"; then
+                bluetoothctl disconnect "$mac"
+            else
+                if ! is_paired "$info"; then
+                    bluetoothctl pair "$mac" && \
+                    bluetoothctl trust "$mac"
+                fi
+                bluetoothctl connect "$mac"
+            fi
+            return
+        fi
+    done
+}
+
+show_main_menu() {
+    build_device_menu "false"
+
+    local menu="⟳ Scan for devices\n${MENU_TEXT}"
+
+    local choice
+    choice=$(printf '%b' "$menu" | rofi -dmenu -i -p "Bluetooth" -no-custom) || exit 0
+
+    if [[ "$choice" == "⟳ Scan for devices" ]]; then
+        scan_and_select
+        exit 0
+    fi
+
+    # Find selected device
+    for i in "${!MENU_DISPLAYS[@]}"; do
+        if [[ "${MENU_DISPLAYS[$i]}" == "$choice" ]]; then
+            local mac="${MENU_MACS[$i]}"
+            local info
+            info=$(get_device_info "$mac")
+
+            if is_connected "$info"; then
+                bluetoothctl disconnect "$mac"
+            else
+                bluetoothctl connect "$mac"
+            fi
+            exit 0
+        fi
+    done
+}
+
+# Global arrays for menu building
+declare -a MENU_MACS=() MENU_DISPLAYS=()
+MENU_TEXT=""
+
+show_main_menu
