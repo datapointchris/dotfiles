@@ -4647,6 +4647,7 @@
 <th>Method</th>
 <th>Tool</th>
 <th>Accuracy</th>
+<th>Machine Manifest</th>
 </tr>
 </thead>
 <tbody>
@@ -4655,18 +4656,28 @@
 <td>Docker</td>
 <td>Official WSL rootfs</td>
 <td>100% exact match</td>
+<td><code>wsl-work-workstation</code></td>
 </tr>
 <tr>
 <td>Arch Linux</td>
 <td>Docker</td>
 <td>Official Arch base image</td>
 <td>100% exact match</td>
+<td><code>arch-personal-workstation</code></td>
+</tr>
+<tr>
+<td>Ubuntu (Server)</td>
+<td>Docker</td>
+<td>Official Ubuntu image</td>
+<td>100% exact match</td>
+<td><code>ubuntu-lxc-server</code></td>
 </tr>
 <tr>
 <td>macOS</td>
 <td>Fresh user account</td>
 <td>Local testing</td>
 <td>Full</td>
+<td><code>macos-personal-workstation</code></td>
 </tr>
 </tbody>
 </table>
@@ -4718,13 +4729,16 @@
 <p>This is especially useful for CI/CD integration or when repeatedly testing installations.</p>
 <p>Scripts are located in <code>management/</code> directory alongside other testing tools.</p>
 <h3 id="platform-specific-test-scripts">Platform-Specific Test Scripts<a class="headerlink" href="#platform-specific-test-scripts" title="Permanent link">&para;</a></h3>
-<p>Located in <code>management/testing/</code>:</p>
+<p>Located in <code>tests/install/e2e/</code>:</p>
 <ul>
-<li><code>test-wsl-install-docker.sh</code> - WSL Ubuntu testing with Docker</li>
-<li><code>test-arch-install-docker.sh</code> - Arch Linux testing with Docker</li>
-<li><code>test-macos-install-user.sh</code> - macOS testing with fresh user account</li>
-<li><code>helpers.sh</code> - Shared utilities for formatting and timing</li>
+<li><code>wsl-docker.sh</code> - WSL Ubuntu testing with Docker</li>
+<li><code>arch-docker.sh</code> - Arch Linux testing with Docker</li>
+<li><code>offline-docker.sh</code> - Offline installation testing with Docker</li>
+<li><code>wsl-network-restricted.sh</code> - Network-restricted WSL testing</li>
+<li><code>macos-temp-user.sh</code> - macOS testing with fresh user account</li>
+<li><code>current-user.sh</code> - Test on current user (any platform)</li>
 </ul>
+<p>All test scripts pass <code>--machine &lt;manifest&gt;</code> to <code>install.sh</code> and forward the host's GitHub token for authenticated API calls inside containers.</p>
 <h3 id="why-docker-for-testing">Why Docker for Testing<a class="headerlink" href="#why-docker-for-testing" title="Permanent link">&para;</a></h3>
 <p>Docker provides <strong>100% exact match</strong> to real environments:</p>
 <p><strong>WSL Ubuntu</strong>:</p>
@@ -4749,12 +4763,12 @@
 <li>Automated cleanup (or keep with <code>-k</code> flag)</li>
 </ul>
 <h3 id="test-phases">Test Phases<a class="headerlink" href="#test-phases" title="Permanent link">&para;</a></h3>
-<p>Docker test scripts run 7 comprehensive phases:</p>
+<p>Docker test scripts run comprehensive phases:</p>
 <ol>
 <li><strong>Prepare Docker Image</strong> - Pull/update official platform image</li>
-<li><strong>Start Container</strong> - Launch container with dotfiles mounted</li>
-<li><strong>Prepare Environment</strong> - Create test user and copy dotfiles</li>
-<li><strong>Run Installation</strong> - Execute <code>install.sh</code> script</li>
+<li><strong>Start Container</strong> - Launch container with dotfiles mounted and GitHub token</li>
+<li><strong>Prepare Environment</strong> - Create test user, install bootstrap packages (python3, python-yaml), copy dotfiles</li>
+<li><strong>Run Installation</strong> - Execute <code>install.sh --machine &lt;manifest&gt;</code></li>
 <li><strong>Verify Installation</strong> - Run <code>verify-installation.sh</code> checks</li>
 <li><strong>Detect Alternates</strong> - Run <code>detect-alternate-installations.sh</code></li>
 <li><strong>Test Updates</strong> - Run platform-specific <code>update-all</code> task</li>

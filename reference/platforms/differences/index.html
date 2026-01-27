@@ -4619,14 +4619,15 @@
 
 
 <h1 id="platform-differences">Platform Differences<a class="headerlink" href="#platform-differences" title="Permanent link">&para;</a></h1>
-<p>Comprehensive reference for platform-specific differences across macOS, Ubuntu (WSL), and Arch Linux.</p>
+<p>Comprehensive reference for platform-specific differences across macOS, Ubuntu, WSL Ubuntu, and Arch Linux.</p>
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Aspect</th>
 <th>macOS</th>
-<th>Ubuntu/WSL</th>
+<th>Ubuntu (Server)</th>
+<th>WSL Ubuntu</th>
 <th>Arch Linux</th>
 </tr>
 </thead>
@@ -4635,11 +4636,13 @@
 <td><strong>Package Manager</strong></td>
 <td>brew</td>
 <td>apt</td>
+<td>apt</td>
 <td>pacman</td>
 </tr>
 <tr>
 <td><strong>Shell</strong></td>
 <td>zsh (default)</td>
+<td>bash (default)</td>
 <td>bash (default)</td>
 <td>bash</td>
 </tr>
@@ -4647,10 +4650,12 @@
 <td><strong>Binary Prefix</strong></td>
 <td>None</td>
 <td>Some (bat, fd)</td>
+<td>Some (bat, fd)</td>
 <td>None</td>
 </tr>
 <tr>
 <td><strong>User Binaries</strong></td>
+<td>~/.local/bin</td>
 <td>~/.local/bin</td>
 <td>~/.local/bin</td>
 <td>~/.local/bin</td>
@@ -4660,6 +4665,14 @@
 <td>/usr/local/bin</td>
 <td>/usr/bin</td>
 <td>/usr/bin</td>
+<td>/usr/bin</td>
+</tr>
+<tr>
+<td><strong>Machine Manifest</strong></td>
+<td>macos-personal-workstation</td>
+<td>ubuntu-lxc-server</td>
+<td>wsl-work-workstation</td>
+<td>arch-personal-workstation</td>
 </tr>
 </tbody>
 </table>

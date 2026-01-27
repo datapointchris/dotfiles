@@ -4584,21 +4584,26 @@
 <p>How the dotfiles repository is organized and why.</p>
 <h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── platforms/           # Platform configurations
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── platforms/           # Platform configurations (what gets deployed)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ├── common/          # Shared configs (all platforms)
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── macos/           # macOS-specific overrides
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── wsl/             # WSL Ubuntu overrides
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   └── arch/            # Arch Linux overrides
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── apps/                # Personal CLI applications (shell scripts)
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   ├── common/          # Cross-platform: menu, notes, backup-dirs, patterns
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   └── macos/           # macOS-specific tools
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── management/          # Repository management
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── symlinks/        # Symlinks manager (Python)
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── common/          # Shared installers and libraries
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── {platform}/      # Platform-specific install scripts
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   └── packages.yml     # Package definitions
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>├── Taskfile.yml         # Task automation
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>└── docs/                # MkDocs documentation
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── arch/            # Arch Linux overrides
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   └── ubuntu/          # Ubuntu server overrides
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── apps/                # Personal CLI applications (shell scripts)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   ├── common/          # Cross-platform: menu, notes, backup-dirs, patterns
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   └── macos/           # macOS-specific tools
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>├── management/          # Repository management
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── machines/        # Machine manifests (what to install per computer)
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── shell/           # Modular shell aliases and functions (build source)
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   │   ├── aliases/     # Alias group files (core.sh, platform-*.sh)
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   │   └── functions/   # Function group files (core.sh, git.sh, fzf.sh, ...)
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── symlinks/        # Symlinks manager (Python)
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── common/          # Shared installers and libraries
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   ├── {platform}/      # Platform-specific install scripts
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   └── packages.yml     # Package definitions
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>├── Taskfile.yml         # Task automation
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>└── docs/                # MkDocs documentation
 </span></code></pre></div>
 <p><strong>External tools</strong> (installed from GitHub, not in this repo):</p>
 <ul>
@@ -4610,8 +4615,9 @@
 <p><strong>How it works</strong>:</p>
 <ol>
 <li>Links <code>platforms/common/</code> configs to <code>$HOME</code></li>
-<li>Overlays platform-specific files (auto-detected: macos, wsl, or arch)</li>
+<li>Overlays platform-specific files (auto-detected: macos, wsl, arch, or ubuntu)</li>
 <li>Links apps from <code>apps/{platform}/</code> to <code>~/.local/bin/</code></li>
+<li>Excludes generated shell files (aliases.sh, functions.sh) -- these are built by <code>build-shell.sh</code></li>
 </ol>
 <p><strong>Common commands</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>symlinks:link<span class="w">      </span><span class="c1"># Deploy all symlinks</span>
@@ -4626,31 +4632,49 @@
 <li><code>apps/common/menu</code> → <code>~/.local/bin/menu</code></li>
 </ul>
 <h2 id="package-management">Package Management<a class="headerlink" href="#package-management" title="Permanent link">&para;</a></h2>
-<p><strong>System Packages</strong>: Homebrew (macOS), apt (Ubuntu), pacman (Arch)</p>
+<p><strong>System Packages</strong>: Homebrew (macOS), apt (Ubuntu/WSL), pacman (Arch)</p>
 <p><strong>Language Versions</strong>: uv (Python), nvm (Node.js)</p>
 <p><strong>Why separate</strong>: Version managers provide cross-platform consistency and project-specific versions without system conflicts.</p>
+<h2 id="machine-manifests">Machine Manifests<a class="headerlink" href="#machine-manifests" title="Permanent link">&para;</a></h2>
+<p>Installation is driven by machine manifests in <code>management/machines/</code>. Each manifest defines exactly what gets installed:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># management/machines/arch-personal-workstation.yml</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">machine</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arch-personal-workstation</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arch</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">function_groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">core</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">git</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">python</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">aws</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">docker</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">network</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">reference</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">node</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">fzf</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">alias_groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">core</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nt">system_packages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">go</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nt">go_tools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">task</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">cheat</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">terraform-docs</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nt">github_releases</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">fzf</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">neovim</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">lazygit</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">yazi</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nt">custom_installers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">bats</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">awscli</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">claude-code</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nt">rust</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nt">nvm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># ... etc</span>
+</span></code></pre></div>
+<p>Run installation with: <code>bash install.sh --machine arch-personal-workstation</code></p>
+<h2 id="shell-build-system">Shell Build System<a class="headerlink" href="#shell-build-system" title="Permanent link">&para;</a></h2>
+<p>Shell aliases and functions are modular source files in <code>management/shell/</code> that get concatenated into single output files based on the machine manifest:</p>
+<ul>
+<li><strong>Source</strong>: <code>management/shell/aliases/*.sh</code> and <code>management/shell/functions/*.sh</code></li>
+<li><strong>Builder</strong>: <code>management/shell/build-shell.sh</code></li>
+<li><strong>Output</strong>: <code>~/.local/shell/aliases.sh</code> and <code>~/.local/shell/functions.sh</code></li>
+</ul>
+<p>The manifest <code>function_groups</code> and <code>alias_groups</code> fields control which modules are included. Platform-specific groups (e.g., <code>platform-arch</code>) are added automatically based on the <code>platform</code> field.</p>
 <h2 id="platform-detection">Platform Detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h2>
 <p><strong>Shell</strong> (<code>platforms/common/.config/zsh/.zshrc</code>):</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="c1"># macOS</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/proc/version<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Microsoft<span class="w"> </span>/proc/version<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="c1"># WSL</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/etc/arch-release<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="c1"># Arch</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">fi</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="c1"># macOS</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/proc/version<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Microsoft<span class="w"> </span>/proc/version<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="c1"># WSL</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/etc/arch-release<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="c1"># Arch</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/etc/lsb-release<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Ubuntu<span class="w"> </span>/etc/lsb-release<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="c1"># Ubuntu</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="k">fi</span>
 </span></code></pre></div>
-<p><strong>Taskfile</strong> (<code>Taskfile.yml</code>):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">vars</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">PLATFORM</span><span class="p">:</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">sh</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="no">if [ &quot;$(uname)&quot; = &quot;Darwin&quot; ]; then</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="no">echo &quot;macos&quot;</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">      </span><span class="no">elif [ -f /etc/arch-release ]; then</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="no">echo &quot;arch&quot;</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="no">else</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="no">echo &quot;linux&quot;</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="no">fi</span>
-</span></code></pre></div>
+<p><strong>Install script</strong>: Platform is read from the machine manifest via <code>manifest_field "platform"</code> rather than auto-detected.</p>
 <h2 id="configuration-layers">Configuration Layers<a class="headerlink" href="#configuration-layers" title="Permanent link">&para;</a></h2>
 <p>Configurations use inheritance: shared base with platform overrides.</p>
 <p><strong>Example: Git Config</strong></p>
@@ -4678,7 +4702,7 @@
 <p><strong>Minimal Duplication</strong>: Only platform differences exist in platform directories.</p>
 <p><strong>Clear Separation</strong>: platforms/common/ for shared, platform dirs for quirks only, apps/ for tools, management/ for repo tooling.</p>
 <p><strong>Easy Maintenance</strong>: Update shared config once, all platforms benefit.</p>
-<p><strong>Testable</strong>: Each platform can be tested independently with VMs.</p>
+<p><strong>Testable</strong>: Each platform can be tested independently with Docker containers.</p>
 <h2 id="trade-offs">Trade-offs<a class="headerlink" href="#trade-offs" title="Permanent link">&para;</a></h2>
 <p><strong>Symlink Complexity</strong>: Two-layer system adds complexity, but <code>symlinks</code> tool handles it with clear errors.</p>
 <p><strong>Platform Knowledge</strong>: Need to know whether to edit <code>platforms/common/</code> or platform dir. Experience makes this clear.</p>
