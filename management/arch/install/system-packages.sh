@@ -45,44 +45,26 @@ else
   log_success "yay installed"
 fi
 
-# Install AUR packages
-log_info "Installing AUR packages from packages.yml..."
-
-# Ensure gnupg directory exists (required for AUR package signature verification)
-# Match XDG location set in .zshrc: GNUPGHOME="$XDG_DATA_HOME/gnupg"
-export GNUPGHOME="${XDG_DATA_HOME:-$HOME/.local/share}/gnupg"
-mkdir -p "$GNUPGHOME"
-chmod 700 "$GNUPGHOME"
-
-AUR_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=aur | tr '\n' ' ')
-if [[ -n "$AUR_PACKAGES" ]]; then
-  # shellcheck disable=SC2086
-  yay -S --needed --noconfirm $AUR_PACKAGES
-  log_success "AUR packages installed"
+# Install AUR packages (skip in Docker - AUR packages are GUI apps that require a display)
+if [[ "${DOTFILES_DOCKER_TEST:-}" == "true" ]]; then
+  log_info "Skipping AUR packages (Docker test mode)"
 else
-  log_info "No AUR packages to install"
+  log_info "Installing AUR packages from packages.yml..."
+
+  # Ensure gnupg directory exists (required for AUR package signature verification)
+  # Match XDG location set in .zshrc: GNUPGHOME="$XDG_DATA_HOME/gnupg"
+  export GNUPGHOME="${XDG_DATA_HOME:-$HOME/.local/share}/gnupg"
+  mkdir -p "$GNUPGHOME"
+  chmod 700 "$GNUPGHOME"
+
+  AUR_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=system --manager=aur | tr '\n' ' ')
+  if [[ -n "$AUR_PACKAGES" ]]; then
+    # shellcheck disable=SC2086
+    yay -S --needed --noconfirm $AUR_PACKAGES
+    log_success "AUR packages installed"
+  else
+    log_info "No AUR packages to install"
+  fi
 fi
 
 log_success "Arch packages installed"
-
-# Configure TTY1 auto-login for Hyprland
-print_section "Configuring TTY auto-login"
-
-# Disable GDM if enabled (has issues with Hyprland)
-if systemctl is-enabled gdm &>/dev/null; then
-  log_info "Disabling GDM (using TTY auto-login instead)..."
-  sudo systemctl disable gdm
-  log_success "GDM disabled"
-fi
-
-# Enable auto-login on TTY1
-log_info "Configuring auto-login on TTY1..."
-sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null << 'EOF'
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin chris %I $TERM
-EOF
-log_success "TTY1 auto-login configured"
-
-log_success "Arch system configuration complete"
