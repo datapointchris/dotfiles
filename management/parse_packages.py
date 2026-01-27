@@ -16,6 +16,11 @@ Usage:
     python parse_packages.py --taps
     python parse_packages.py --get=runtimes.node.version
 
+Manifest-filtered usage:
+    python parse_packages.py --type=go --manifest=ubuntu-lxc-server
+    python parse_packages.py --manifest-field=platform --manifest=arch-personal-workstation
+    python parse_packages.py --manifest-field=go_tools --manifest=ubuntu-lxc-server
+
 Note: This script requires PyYAML to be installed.
     - Install scripts use /usr/bin/python3 which has PyYAML installed
     - If running manually and getting "No module named 'yaml'", use:
@@ -46,6 +51,73 @@ def load_packages():
     packages_file = get_packages_file()
     with open(packages_file) as f:
         return yaml.safe_load(f)
+
+
+def get_manifest_file(machine_name):
+    """Find machine manifest YAML relative to script location."""
+    script_dir = Path(__file__).parent
+    manifest_file = script_dir / "machines" / f"{machine_name}.yml"
+    if not manifest_file.exists():
+        print(f"Error: manifest not found at {manifest_file}", file=sys.stderr)
+        sys.exit(1)
+    return manifest_file
+
+
+def load_manifest(machine_name):
+    """Load and parse a machine manifest."""
+    manifest_file = get_manifest_file(machine_name)
+    with open(manifest_file) as f:
+        return yaml.safe_load(f)
+
+
+def filter_go_packages_by_manifest(data, manifest):
+    """Filter go packages to only those named in the manifest."""
+    manifest_tools = manifest.get('go_tools', [])
+    if manifest_tools is True:
+        return get_go_packages(data)
+    if not manifest_tools:
+        return []
+    all_tools = data.get('go_tools', [])
+    return [pkg['package'] for pkg in all_tools if pkg['name'] in manifest_tools]
+
+
+def filter_github_releases_by_manifest(data, manifest):
+    """Filter github binary names to only those in the manifest."""
+    manifest_releases = manifest.get('github_releases', [])
+    if manifest_releases is True:
+        return get_github_packages(data)
+    if not manifest_releases:
+        return []
+    all_binaries = data.get('github_binaries', [])
+    return [pkg['name'] for pkg in all_binaries if pkg['name'] in manifest_releases]
+
+
+def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
+    """Filter cargo packages to only those named in the manifest."""
+    manifest_pkgs = manifest.get('cargo_packages', [])
+    if manifest_pkgs is True:
+        return get_cargo_packages(data, output_format)
+    if not manifest_pkgs:
+        return []
+    all_pkgs = data.get('cargo_packages', [])
+    filtered = [pkg for pkg in all_pkgs if pkg['name'] in manifest_pkgs]
+    if output_format == 'name_command':
+        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in filtered]
+    elif output_format == 'github_repos':
+        return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
+                for pkg in filtered if 'github_repo' in pkg]
+    elif output_format == 'binary_info':
+        results = []
+        for pkg in filtered:
+            if 'github_repo' in pkg and 'binary_pattern' in pkg:
+                cmd = pkg.get('command', pkg['name'])
+                repo = pkg['github_repo']
+                pattern = pkg['binary_pattern']
+                linux_target = pkg.get('linux_target', '')
+                results.append(f"{cmd}|{repo}|{pattern}|{linux_target}")
+        return results
+    else:
+        return [pkg['name'] for pkg in filtered]
 
 
 def get_value(data, path):
@@ -234,10 +306,32 @@ def main():
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
     parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
                         help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), github_repos/binary_info (cargo for offline), packages/full (nerd-fonts)')
+    parser.add_argument('--manifest', help='Machine manifest name (e.g., ubuntu-lxc-server) to filter packages')
+    parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
 
     args = parser.parse_args()
 
+    # Handle manifest-field extraction (no packages.yml needed)
+    if args.manifest_field:
+        if not args.manifest:
+            print("Error: --manifest required with --manifest-field", file=sys.stderr)
+            sys.exit(1)
+        manifest = load_manifest(args.manifest)
+        value = manifest.get(args.manifest_field)
+        if value is None:
+            print(f"Error: field '{args.manifest_field}' not found in manifest", file=sys.stderr)
+            sys.exit(1)
+        if isinstance(value, list):
+            for item in value:
+                print(item)
+        elif isinstance(value, bool):
+            print("true" if value else "false")
+        else:
+            print(value)
+        return
+
     data = load_packages()
+    manifest = load_manifest(args.manifest) if args.manifest else None
 
     if args.taps:
         taps = get_macos_taps(data)
@@ -274,19 +368,38 @@ def main():
             sys.exit(1)
         packages = get_system_packages(data, args.manager)
     elif args.type == 'cargo':
-        packages = get_cargo_packages(data, args.format if hasattr(args, 'format') and args.format else 'names')
+        fmt = args.format if hasattr(args, 'format') and args.format else 'names'
+        if manifest:
+            packages = filter_cargo_packages_by_manifest(data, manifest, fmt)
+        else:
+            packages = get_cargo_packages(data, fmt)
     elif args.type == 'npm':
-        packages = get_npm_packages(data)
+        if manifest and not manifest.get('npm_globals', True):
+            packages = []
+        else:
+            packages = get_npm_packages(data)
     elif args.type == 'uv':
-        packages = get_uv_packages(data)
+        if manifest and not manifest.get('uv_tools', True):
+            packages = []
+        else:
+            packages = get_uv_packages(data)
     elif args.type == 'local_uv':
-        packages = get_local_uv_packages(data)
+        if manifest and not manifest.get('local_uv_tools', True):
+            packages = []
+        else:
+            packages = get_local_uv_packages(data)
     elif args.type == 'go':
-        packages = get_go_packages(data)
+        if manifest:
+            packages = filter_go_packages_by_manifest(data, manifest)
+        else:
+            packages = get_go_packages(data)
     elif args.type == 'mas':
         packages = get_mas_apps(data)
     elif args.type == 'github':
-        packages = get_github_packages(data)
+        if manifest:
+            packages = filter_github_releases_by_manifest(data, manifest)
+        else:
+            packages = get_github_packages(data)
     elif args.type == 'shell-plugins':
         packages = get_shell_plugins(data, args.format)
     elif args.type == 'flatpak':
