@@ -1,28 +1,33 @@
 # Dotfiles
 
-Cross-platform dotfiles for macOS, WSL Ubuntu, and Arch Linux. Shared configurations with platform-specific overrides where needed.
+Cross-platform dotfiles for macOS, Ubuntu, WSL Ubuntu, and Arch Linux. Manifest-driven installation with shared configurations and platform-specific overrides.
 
 ## Getting Started
 
 ### Installation
 
-Clone the repository and run the platform-specific install script:
+Clone the repository and run the install script with a machine manifest:
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bash install.sh
+bash install.sh --machine arch-personal-workstation
 ```
 
-The script auto-detects your platform (macOS, WSL Ubuntu, or Arch Linux) and installs all packages, tools, and configurations. Installation takes 15-30 minutes depending on platform.
+Machine manifests define exactly what gets installed on each type of computer. Available manifests are in `management/machines/`:
+
+- `arch-personal-workstation` - Full Arch Linux development workstation
+- `macos-personal-workstation` - Full macOS development workstation
+- `wsl-work-workstation` - WSL Ubuntu for restricted work environment
+- `ubuntu-lxc-server` - Minimal Ubuntu server (LXC containers)
 
 **Platform-specific requirements:**
 
 - **macOS**: None (Homebrew installed automatically)
-- **WSL/Arch**: Set ZSHDOTDIR before running:
+- **WSL/Ubuntu/Arch**: Set ZDOTDIR before running:
 
   ```bash
-  echo 'export ZSHDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv
+  echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv
   ```
 
 After installation completes, restart your terminal or run `exec zsh`.
@@ -116,7 +121,7 @@ task symlinks:check      # Verify symlinks
 task symlinks:show       # Show mappings
 
 # Installation (use install.sh, not Task)
-bash install.sh          # Auto-detect platform and install
+bash install.sh --machine arch-personal-workstation
 
 # Documentation
 task docs:serve          # Start docs server (localhost:8000)
@@ -155,15 +160,18 @@ sess list | awk '{print $2}'
 
 ```text
 dotfiles/
-├── platforms/           # Platform configurations
+├── platforms/           # Platform configurations (what gets deployed)
 │   ├── common/          # Shared configs (all platforms)
 │   ├── macos/           # macOS-specific overrides
 │   ├── wsl/             # WSL Ubuntu overrides
-│   └── arch/            # Arch Linux overrides
+│   ├── arch/            # Arch Linux overrides
+│   └── ubuntu/          # Ubuntu server overrides
 ├── apps/                # Personal CLI applications (shell scripts)
 │   ├── common/          # Cross-platform: menu, notes, backup-dirs, patterns
 │   └── macos/           # macOS-specific tools
 ├── management/          # Repository management
+│   ├── machines/        # Machine manifests (what to install per computer)
+│   ├── shell/           # Modular shell aliases and functions (build source)
 │   ├── symlinks/        # Symlinks manager (Python)
 │   ├── common/          # Shared installers and libraries
 │   ├── {platform}/      # Platform-specific install scripts

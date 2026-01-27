@@ -1,16 +1,17 @@
 # Platform Differences
 
-Comprehensive reference for platform-specific differences across macOS, Ubuntu (WSL), and Arch Linux.
+Comprehensive reference for platform-specific differences across macOS, Ubuntu, WSL Ubuntu, and Arch Linux.
 
 ## Quick Reference
 
-| Aspect             | macOS          | Ubuntu/WSL        | Arch Linux |
-| ------------------ | -------------- | ----------------- | ---------- |
-| **Package Manager**| brew           | apt               | pacman     |
-| **Shell**          | zsh (default)  | bash (default)    | bash       |
-| **Binary Prefix**  | None           | Some (bat, fd)    | None       |
-| **User Binaries**  | ~/.local/bin   | ~/.local/bin      | ~/.local/bin |
-| **System Binaries**| /usr/local/bin | /usr/bin          | /usr/bin   |
+| Aspect             | macOS          | Ubuntu (Server)   | WSL Ubuntu        | Arch Linux |
+| ------------------ | -------------- | ----------------- | ----------------- | ---------- |
+| **Package Manager**| brew           | apt               | apt               | pacman     |
+| **Shell**          | zsh (default)  | bash (default)    | bash (default)    | bash       |
+| **Binary Prefix**  | None           | Some (bat, fd)    | Some (bat, fd)    | None       |
+| **User Binaries**  | ~/.local/bin   | ~/.local/bin      | ~/.local/bin      | ~/.local/bin |
+| **System Binaries**| /usr/local/bin | /usr/bin          | /usr/bin          | /usr/bin   |
+| **Machine Manifest**| macos-personal-workstation | ubuntu-lxc-server | wsl-work-workstation | arch-personal-workstation |
 
 ## Deep Dive
 

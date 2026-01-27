@@ -47,16 +47,23 @@ task docs:deploy        # Deploy documentation to GitHub Pages
 
 **Platform detection is automatic.** Tasks that need platform awareness detect it at runtime using system checks.
 
+### Shell Build
+
+```bash
+task shell:build         # Build shell files from machine manifest
+MACHINE=ubuntu-lxc-server task shell:build  # Build for specific machine
+```
+
 ## Installation
 
-Full installation is handled by `install.sh`, not Tasks:
+Full installation is handled by `install.sh` with a machine manifest, not Tasks:
 
 ```bash
 cd ~/dotfiles
-bash install.sh
+bash install.sh --machine arch-personal-workstation
 ```
 
-The install script auto-detects your platform and runs the appropriate installation scripts from `management/`.
+Machine manifests in `management/machines/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
 
 ## Direct Commands
 

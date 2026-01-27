@@ -62,11 +62,12 @@ Testing dotfiles installation across platforms using containers and virtual mach
 
 ## Testing Strategy
 
-| Platform | Method | Tool | Accuracy |
-|----------|--------|------|----------|
-| Ubuntu (WSL) | Docker | Official WSL rootfs | 100% exact match |
-| Arch Linux | Docker | Official Arch base image | 100% exact match |
-| macOS | Fresh user account | Local testing | Full |
+| Platform | Method | Tool | Accuracy | Machine Manifest |
+|----------|--------|------|----------|-----------------|
+| Ubuntu (WSL) | Docker | Official WSL rootfs | 100% exact match | `wsl-work-workstation` |
+| Arch Linux | Docker | Official Arch base image | 100% exact match | `arch-personal-workstation` |
+| Ubuntu (Server) | Docker | Official Ubuntu image | 100% exact match | `ubuntu-lxc-server` |
+| macOS | Fresh user account | Local testing | Full | `macos-personal-workstation` |
 
 ## Prerequisites
 
@@ -131,12 +132,16 @@ Scripts are located in `management/` directory alongside other testing tools.
 
 ### Platform-Specific Test Scripts
 
-Located in `management/testing/`:
+Located in `tests/install/e2e/`:
 
-- `test-wsl-install-docker.sh` - WSL Ubuntu testing with Docker
-- `test-arch-install-docker.sh` - Arch Linux testing with Docker
-- `test-macos-install-user.sh` - macOS testing with fresh user account
-- `helpers.sh` - Shared utilities for formatting and timing
+- `wsl-docker.sh` - WSL Ubuntu testing with Docker
+- `arch-docker.sh` - Arch Linux testing with Docker
+- `offline-docker.sh` - Offline installation testing with Docker
+- `wsl-network-restricted.sh` - Network-restricted WSL testing
+- `macos-temp-user.sh` - macOS testing with fresh user account
+- `current-user.sh` - Test on current user (any platform)
+
+All test scripts pass `--machine <manifest>` to `install.sh` and forward the host's GitHub token for authenticated API calls inside containers.
 
 ### Why Docker for Testing
 
@@ -165,12 +170,12 @@ Docker provides **100% exact match** to real environments:
 
 ### Test Phases
 
-Docker test scripts run 7 comprehensive phases:
+Docker test scripts run comprehensive phases:
 
 1. **Prepare Docker Image** - Pull/update official platform image
-2. **Start Container** - Launch container with dotfiles mounted
-3. **Prepare Environment** - Create test user and copy dotfiles
-4. **Run Installation** - Execute `install.sh` script
+2. **Start Container** - Launch container with dotfiles mounted and GitHub token
+3. **Prepare Environment** - Create test user, install bootstrap packages (python3, python-yaml), copy dotfiles
+4. **Run Installation** - Execute `install.sh --machine <manifest>`
 5. **Verify Installation** - Run `verify-installation.sh` checks
 6. **Detect Alternates** - Run `detect-alternate-installations.sh`
 7. **Test Updates** - Run platform-specific `update-all` task

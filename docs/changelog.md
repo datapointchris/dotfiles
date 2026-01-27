@@ -8,6 +8,31 @@ This file contains high-level summaries of changes to the dotfiles repository. F
 
 ---
 
+## 2026-01 {#2026-01-manifest-driven-installation}
+
+### Manifest-Driven Installation Architecture
+
+Converted from a platform-detection install to a manifest-driven system where each computer type has a YAML manifest defining exactly what gets installed.
+
+**Key Changes:**
+
+- Created machine manifests in `management/machines/` for each computer type (arch-personal-workstation, macos-personal-workstation, ubuntu-lxc-server, wsl-work-workstation)
+- `install.sh` now requires `--machine NAME` flag instead of auto-detecting platform
+- Added modular shell build system: source files in `management/shell/{aliases,functions}/` are concatenated by `build-shell.sh` based on manifest-defined groups
+- Removed old monolithic shell files from `platforms/` -- aliases and functions are now built per-machine
+- Added Ubuntu as a first-class platform (not just WSL Ubuntu)
+- Extracted Arch system configuration (TTY auto-login, GDM, Docker) into `management/arch/setup/system-config.sh`
+- Added manifest-aware filtering to `parse_packages.py` (--manifest, --manifest-field flags)
+- Added GitHub token authentication to version helpers for API rate limits
+- Added offline cache support to neovim installer
+- Updated all E2E test scripts to pass `--machine` flag and forward GitHub tokens into Docker containers
+- Added `shell:build` task to Taskfile
+- Simplified `.zshrc` to source single pre-built aliases.sh and functions.sh
+
+**Philosophy:** Each computer type defines its own manifest rather than relying on platform auto-detection. This enables minimal server installs alongside full workstation setups on the same platform, and makes the install explicit about what will be installed.
+
+---
+
 ## 2025-12 {#2025-12-taskfile-consolidation}
 
 ### Taskfile Consolidation

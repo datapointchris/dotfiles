@@ -10,15 +10,20 @@ How the dotfiles repository is organized and why.
 
 ```text
 dotfiles/
-├── platforms/           # Platform configurations
+├── platforms/           # Platform configurations (what gets deployed)
 │   ├── common/          # Shared configs (all platforms)
 │   ├── macos/           # macOS-specific overrides
 │   ├── wsl/             # WSL Ubuntu overrides
-│   └── arch/            # Arch Linux overrides
+│   ├── arch/            # Arch Linux overrides
+│   └── ubuntu/          # Ubuntu server overrides
 ├── apps/                # Personal CLI applications (shell scripts)
 │   ├── common/          # Cross-platform: menu, notes, backup-dirs, patterns
 │   └── macos/           # macOS-specific tools
 ├── management/          # Repository management
+│   ├── machines/        # Machine manifests (what to install per computer)
+│   ├── shell/           # Modular shell aliases and functions (build source)
+│   │   ├── aliases/     # Alias group files (core.sh, platform-*.sh)
+│   │   └── functions/   # Function group files (core.sh, git.sh, fzf.sh, ...)
 │   ├── symlinks/        # Symlinks manager (Python)
 │   ├── common/          # Shared installers and libraries
 │   ├── {platform}/      # Platform-specific install scripts
@@ -39,8 +44,9 @@ Two-layer approach: common base + platform overlay.
 **How it works**:
 
 1. Links `platforms/common/` configs to `$HOME`
-2. Overlays platform-specific files (auto-detected: macos, wsl, or arch)
+2. Overlays platform-specific files (auto-detected: macos, wsl, arch, or ubuntu)
 3. Links apps from `apps/{platform}/` to `~/.local/bin/`
+4. Excludes generated shell files (aliases.sh, functions.sh) -- these are built by `build-shell.sh`
 
 **Common commands**:
 
@@ -59,11 +65,45 @@ task symlinks:relink    # Complete refresh (remove and recreate)
 
 ## Package Management
 
-**System Packages**: Homebrew (macOS), apt (Ubuntu), pacman (Arch)
+**System Packages**: Homebrew (macOS), apt (Ubuntu/WSL), pacman (Arch)
 
 **Language Versions**: uv (Python), nvm (Node.js)
 
 **Why separate**: Version managers provide cross-platform consistency and project-specific versions without system conflicts.
+
+## Machine Manifests
+
+Installation is driven by machine manifests in `management/machines/`. Each manifest defines exactly what gets installed:
+
+```yaml
+# management/machines/arch-personal-workstation.yml
+machine: arch-personal-workstation
+platform: arch
+
+function_groups: [core, git, python, aws, docker, network, reference, node, fzf]
+alias_groups: [core]
+
+system_packages: true
+go: true
+go_tools: [task, cheat, terraform-docs, ...]
+github_releases: [fzf, neovim, lazygit, yazi, ...]
+custom_installers: [bats, awscli, claude-code, ...]
+rust: true
+nvm: true
+# ... etc
+```
+
+Run installation with: `bash install.sh --machine arch-personal-workstation`
+
+## Shell Build System
+
+Shell aliases and functions are modular source files in `management/shell/` that get concatenated into single output files based on the machine manifest:
+
+- **Source**: `management/shell/aliases/*.sh` and `management/shell/functions/*.sh`
+- **Builder**: `management/shell/build-shell.sh`
+- **Output**: `~/.local/shell/aliases.sh` and `~/.local/shell/functions.sh`
+
+The manifest `function_groups` and `alias_groups` fields control which modules are included. Platform-specific groups (e.g., `platform-arch`) are added automatically based on the `platform` field.
 
 ## Platform Detection
 
@@ -76,23 +116,12 @@ elif [[ -f /proc/version ]] && grep -q Microsoft /proc/version; then
     # WSL
 elif [[ -f /etc/arch-release ]]; then
     # Arch
+elif [[ -f /etc/lsb-release ]] && grep -q Ubuntu /etc/lsb-release; then
+    # Ubuntu
 fi
 ```
 
-**Taskfile** (`Taskfile.yml`):
-
-```yaml
-vars:
-  PLATFORM:
-    sh: |
-      if [ "$(uname)" = "Darwin" ]; then
-        echo "macos"
-      elif [ -f /etc/arch-release ]; then
-        echo "arch"
-      else
-        echo "linux"
-      fi
-```
+**Install script**: Platform is read from the machine manifest via `manifest_field "platform"` rather than auto-detected.
 
 ## Configuration Layers
 
@@ -142,7 +171,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Easy Maintenance**: Update shared config once, all platforms benefit.
 
-**Testable**: Each platform can be tested independently with VMs.
+**Testable**: Each platform can be tested independently with Docker containers.
 
 ## Trade-offs
 

@@ -128,7 +128,7 @@ See `docs/architecture/shell-libraries.md` for complete guide
 
 **Installation Script Testing Constraints**:
 
-- `install.sh` requires sudo at the beginning and CANNOT be run in autonomous testing loops
+- `install.sh` requires `--machine NAME` flag and sudo at the beginning
 - The script requests `sudo -v` upfront and maintains a background keep-alive loop
 - Claude Code cannot provide interactive password input, so the script will hang
 - For testing install phases:
@@ -136,6 +136,7 @@ See `docs/architecture/shell-libraries.md` for complete guide
   - Test in Docker containers with passwordless sudo configured
   - Use `management/test-install.sh` which handles sudo appropriately
 - Do NOT attempt to run `./install.sh` in background or in automated test loops
+- Machine manifests are in `management/machines/*.yml`
 
 ## Package Management Philosophy
 
@@ -168,7 +169,7 @@ This dotfiles setup maintains a clear separation between system package managers
 
 ## Project Overview
 
-A cross-platform dotfiles repository with shared configurations and platform-specific overrides for macOS and Ubuntu WSL. The repository emphasizes automation, documentation, and ergonomic developer workflows.
+A cross-platform dotfiles repository with manifest-driven installation and shared configurations with platform-specific overrides for macOS, Ubuntu, WSL Ubuntu, and Arch Linux. The repository emphasizes automation, documentation, and ergonomic developer workflows.
 
 **Directory Structure**:
 
@@ -177,10 +178,13 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
   - `macos/` - macOS-specific dotfiles and GUI app configs
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `arch/` - Arch Linux configurations
+  - `ubuntu/` - Ubuntu server configurations
 - `apps/` - Personal CLI applications (shell scripts only)
   - `common/` - Cross-platform: menu, notes, backup-dirs, patterns
   - `macos/` - macOS-specific tools
 - `management/` - Repository management tools
+  - `machines/` - Machine manifests (YAML defining what to install per computer)
+  - `shell/` - Modular shell aliases and functions (build source)
   - `symlinks/` - Symlinks manager (Python)
   - `{platform}/` - Platform-specific install scripts
   - `packages.yml` - Package definitions
@@ -190,6 +194,8 @@ A cross-platform dotfiles repository with shared configurations and platform-spe
 
 **Key Systems**:
 
+- **Machine Manifests** - YAML files in `management/machines/` defining what to install per computer type
+- **Shell Build** - `management/shell/build-shell.sh` concatenates modular shell files based on manifest groups
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring 30+ installed development tools
