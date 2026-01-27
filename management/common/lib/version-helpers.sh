@@ -37,7 +37,16 @@ fetch_github_latest_version() {
   local api_url="https://api.github.com/repos/${repo}/releases/latest"
   local version
 
-  version=$(curl -fsSL "$api_url" 2>/dev/null | jq -r '.tag_name')
+  local -a curl_opts=(-fsSL)
+  local token="${GITHUB_TOKEN:-}"
+  if [[ -z "$token" ]] && command -v gh &>/dev/null; then
+    token=$(gh auth token 2>/dev/null || true)
+  fi
+  if [[ -n "$token" ]]; then
+    curl_opts+=(-H "Authorization: token $token")
+  fi
+
+  version=$(curl "${curl_opts[@]}" "$api_url" 2>/dev/null | jq -r '.tag_name')
 
   if [[ -z "$version" || "$version" == "null" ]]; then
     return 1

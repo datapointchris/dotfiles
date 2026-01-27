@@ -298,7 +298,7 @@ check_failures() {
 create_tarball() {
   log_info "Creating tarball..."
 
-  local tarball_path="$SCRIPT_DIR/$BUNDLE_NAME.tar.gz"
+  local tarball_path="$DOTFILES_DIR/management/offline/$BUNDLE_NAME.tar.gz"
   (cd "$WORK_DIR" && tar -czf "$tarball_path" installers)
 
   local tarball_size

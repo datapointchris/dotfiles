@@ -51,7 +51,7 @@ fi
 NVIM_INSTALL_DIR="$HOME/.local/${NVIM_BINARY}"
 NVIM_BIN_LINK="$HOME/.local/bin/nvim"
 
-NVIM_VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+NVIM_VERSION=$(fetch_github_latest_version "$REPO" 2>/dev/null || true)
 if [[ -z "$NVIM_VERSION" ]]; then
   manual_steps="Failed to fetch latest version from GitHub API.
 
@@ -99,10 +99,18 @@ fi
 
 NVIM_URL="https://github.com/${REPO}/releases/download/${NVIM_VERSION}/${NVIM_BINARY}.tar.gz"
 NVIM_TARBALL="/tmp/${NVIM_BINARY}.tar.gz"
+OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
+CACHED_FILE="$OFFLINE_CACHE_DIR/$(basename "$NVIM_URL")"
 
-log_info "Download URL: $NVIM_URL"
-log_info "Downloading Neovim..."
-if ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
+if [[ -f "$CACHED_FILE" ]]; then
+  log_info "Using cached file: $CACHED_FILE"
+  cp "$CACHED_FILE" "$NVIM_TARBALL"
+else
+  log_info "Download URL: $NVIM_URL"
+  log_info "Downloading Neovim..."
+fi
+
+if [[ ! -f "$NVIM_TARBALL" ]] && ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
   manual_steps="1. Download in your browser (bypasses firewall):
    $NVIM_URL
 
