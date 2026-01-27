@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=iChrisBirch
+Comment=Personal website
+Exec=/home/chris/.cargo/bin/webviewrs -n ichrisbirch -t iChrisBirch --dark https://www.ichrisbirch.com
+Icon=web-browser
+Terminal=false
+Type=Application
+Categories=Network;
+Keywords=website;personal;

@@ -487,6 +487,40 @@ system_packages:
     description: Privacy-focused Firefox fork (Arch only - macOS uses cask)
     tags: [gui]
 
+  # ---- webviewrs dependencies ----
+  # Required for: cargo install --git https://github.com/datapointchris/webviewrs
+  # These packages enable webviewrs functionality but are optional if not using it
+
+  - name: webkit2gtk-4.1
+    pacman: webkit2gtk-4.1
+    description: WebKitGTK library (webviewrs core dependency)
+    tags: [gui, development, webview]
+
+  - name: noto-fonts-emoji
+    pacman: noto-fonts-emoji
+    description: Emoji fonts for proper icon rendering
+    tags: [fonts, gui]
+
+  - name: gst-plugins-base
+    pacman: gst-plugins-base
+    description: GStreamer base plugins (audio/video playback)
+    tags: [multimedia, webview]
+
+  - name: gst-plugins-good
+    pacman: gst-plugins-good
+    description: GStreamer good plugins (common codecs)
+    tags: [multimedia, webview]
+
+  - name: gst-plugins-bad
+    pacman: gst-plugins-bad
+    description: GStreamer bad plugins (additional codecs)
+    tags: [multimedia, webview]
+
+  - name: gst-libav
+    pacman: gst-libav
+    description: GStreamer FFmpeg plugin (broad format support)
+    tags: [multimedia, webview]
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================

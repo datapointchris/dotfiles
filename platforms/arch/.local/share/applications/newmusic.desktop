@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=New Music
+Comment=YouTube new music playlist
+Exec=/home/chris/.cargo/bin/webviewrs -n newmusic -t "New Music" --dark https://www.youtube.com/playlist?list=PLFvEt5egiBHf1Tt2YOMSoqR2hg1s74YIF
+Icon=audio-x-generic
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;
+Keywords=music;youtube;playlist;

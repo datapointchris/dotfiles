@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Learning
-Comment=Open learning app
-Exec=zen --new-window https://learning.ichrisbirch.com
+Comment=Learning app
+Exec=/home/chris/.cargo/bin/webviewrs -n learning -t Learning --dark https://learning.ichrisbirch.com
 Icon=applications-education
 Terminal=false
 Type=Application
