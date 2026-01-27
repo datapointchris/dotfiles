@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# rofi-audio - Select audio output device via rofi
+
+set -euo pipefail
+
+get_default_sink() {
+    pactl get-default-sink
+}
+
+main() {
+    default=$(get_default_sink)
+
+    # Get sinks as "name|description" pairs
+    mapfile -t sinks < <(pactl list sinks | awk '
+        /Name:/ { name=$2 }
+        /Description:/ {
+            sub(/^[[:space:]]*Description:[[:space:]]*/, "")
+            print name "|" $0
+        }
+    ')
+
+    # Build menu
+    menu=""
+    for sink in "${sinks[@]}"; do
+        name="${sink%%|*}"
+        desc="${sink#*|}"
+        if [[ "$name" == "$default" ]]; then
+            menu+="● $desc\n"
+        else
+            menu+="  $desc\n"
+        fi
+    done
+
+    # Show rofi menu
+    choice=$(echo -e "$menu" | sed '/^$/d' | rofi -dmenu -i -p "Audio Output" -no-custom) || exit 0
+
+    # Remove marker and find matching sink
+    choice_desc="${choice#● }"
+    choice_desc="${choice_desc#  }"
+
+    for sink in "${sinks[@]}"; do
+        name="${sink%%|*}"
+        desc="${sink#*|}"
+        if [[ "$desc" == "$choice_desc" ]]; then
+            pactl set-default-sink "$name"
+            exit 0
+        fi
+    done
+}
+
+main
