@@ -127,6 +127,14 @@ log_info "Container: ${CONTAINER_NAME}"
 log_info "Log file: ${LOG_FILE}"
 echo ""
 
+# Get GitHub token from host for authenticated API calls inside container
+GH_TOKEN_FOR_CONTAINER=""
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  GH_TOKEN_FOR_CONTAINER="$GITHUB_TOKEN"
+elif command -v gh &>/dev/null; then
+  GH_TOKEN_FOR_CONTAINER=$(gh auth token 2>/dev/null || true)
+fi
+
 # Track overall start time
 OVERALL_START=$(date +%s)
 
@@ -212,6 +220,7 @@ STEP_START=$(date +%s)
     --env PATH="$HOME_DIR/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     --env HOME="$HOME_DIR" \
     --env DOTFILES_DOCKER_TEST=true \
+    ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     $SKIP_FONTS_ENV \
     --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
     "$DOCKER_IMAGE" \
@@ -280,7 +289,7 @@ STEP_START=$(date +%s)
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
   # Continue even if install.sh exits with error (we expect failures)
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh" || {
+  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh" --machine wsl-work-workstation || {
     log_info "Installation completed with some failures (expected)"
   }
 } 2>&1 | tee -a "$LOG_FILE"
@@ -318,7 +327,7 @@ STEP_START=$(date +%s)
   if [[ -n "$FAILURE_LOG" ]]; then
     # Test 2: Count failures in log (expect 8-10 GitHub tools)
     echo "Test 2: Counting failures in log..."
-    FAILURE_COUNT=$(docker exec "$CONTAINER_NAME" bash -c "grep -c \"^---\$\" $FAILURE_LOG || echo 0")
+    FAILURE_COUNT=$(docker exec "$CONTAINER_NAME" bash -c "grep -c 'Installation Failed' $FAILURE_LOG || true")
     echo "  Found $FAILURE_COUNT tool failures"
     if [[ $FAILURE_COUNT -ge 7 ]]; then
       log_success "✓ Multiple GitHub tool failures logged (>= 7)"
@@ -348,7 +357,7 @@ STEP_START=$(date +%s)
 
     # Test 5: Verify installation log shows summary
     echo "Test 5: Checking that summary was displayed..."
-    if grep -q "Installation Summary" "$LOG_FILE"; then
+    if grep -q "Installation Failures" "$LOG_FILE"; then
       log_success "✓ Summary was displayed during installation"
     else
       log_error "✗ Summary was NOT displayed during installation"

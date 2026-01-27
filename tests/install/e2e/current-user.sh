@@ -16,14 +16,30 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 
+# Parse arguments
+MACHINE_FLAG=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --machine)
+      MACHINE_FLAG="--machine $2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $(basename "$0") [--machine NAME]"
+      exit 1
+      ;;
+  esac
+done
+
 # Timing arrays
 declare -a STEP_NAMES
 declare -a STEP_TIMES
 declare -a STEP_STATUS
 
 print_header "Testing Dotfiles Installation on Current User" "blue"
-log_warning "⚠️  This will modify your current environment!"
-log_warning "⚠️  Not isolated - changes affect your real setup"
+log_warning "This will modify your current environment!"
+log_warning "Not isolated - changes affect your real setup"
 echo ""
 log_info "User: $(whoami)"
 log_info "Home: $HOME"
@@ -41,7 +57,8 @@ print_header "STEP 1/4: Running Installation" "cyan"
 echo "Running: bash install.sh"
 echo ""
 
-if bash "$DOTFILES_DIR/install.sh"; then
+# shellcheck disable=SC2086  # MACHINE_FLAG intentionally unquoted (empty or flag pair)
+if bash "$DOTFILES_DIR/install.sh" $MACHINE_FLAG; then
   log_success "Installation completed"
 else
   EXIT_CODE=$?

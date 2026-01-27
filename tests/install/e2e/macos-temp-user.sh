@@ -167,7 +167,7 @@ STEP_START=$(date +%s)
   echo "Executing macOS installation as test user..."
   echo ""
 
-  sudo -u "$TEST_USER" bash "/Users/${TEST_USER}/dotfiles/install.sh"
+  sudo -u "$TEST_USER" bash "/Users/${TEST_USER}/dotfiles/install.sh" --machine macos-personal-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

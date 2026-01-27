@@ -98,6 +98,14 @@ else
   CONTAINER_NAME="dotfiles-arch-test-$(date '+%Y%m%d-%H%M%S')"
 fi
 
+# Get GitHub token from host for authenticated API calls inside container
+GH_TOKEN_FOR_CONTAINER=""
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  GH_TOKEN_FOR_CONTAINER="$GITHUB_TOKEN"
+elif command -v gh &>/dev/null; then
+  GH_TOKEN_FOR_CONTAINER=$(gh auth token 2>/dev/null || true)
+fi
+
 # Timing arrays
 declare -a STEP_NAMES
 declare -a STEP_TIMES
@@ -171,6 +179,7 @@ STEP_START=$(date +%s)
     --env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     --env HOME=/root \
     --env DOTFILES_DOCKER_TEST=true \
+    ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
     "$DOCKER_IMAGE" \
     /usr/bin/sleep infinity
@@ -193,9 +202,10 @@ STEP_START=$(date +%s)
 {
   log_section "STEP 3/8: Preparing Container Environment"
 
-  # Update package database and install sudo + git (required for fresh Arch containers)
-  echo "Updating package database and installing sudo and git..."
-  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo git
+  # Update package database and install bootstrap packages (required for fresh Arch containers)
+  # python + python-yaml are needed by install.sh to parse machine manifests before system packages are installed
+  echo "Updating package database and installing bootstrap packages..."
+  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo git python python-yaml
 
   # Create non-root user for realistic Arch testing
   echo "Creating test user 'archuser' for realistic testing..."
@@ -248,7 +258,7 @@ STEP_START=$(date +%s)
   echo "Executing Arch Linux installation in container..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/install.sh"
+  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/install.sh" --machine arch-personal-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

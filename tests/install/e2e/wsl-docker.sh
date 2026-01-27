@@ -131,6 +131,14 @@ esac
 
 DOCKER_IMAGE="wsl-ubuntu:${UBUNTU_VERSION}"
 
+# Get GitHub token from host for authenticated API calls inside container
+GH_TOKEN_FOR_CONTAINER=""
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  GH_TOKEN_FOR_CONTAINER="$GITHUB_TOKEN"
+elif command -v gh &>/dev/null; then
+  GH_TOKEN_FOR_CONTAINER=$(gh auth token 2>/dev/null || true)
+fi
+
 # Timing arrays
 declare -a STEP_NAMES
 declare -a STEP_TIMES
@@ -274,6 +282,7 @@ STEP_START=$(date +%s)
     --env PATH="$HOME_DIR/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     --env HOME="$HOME_DIR" \
     --env DOTFILES_DOCKER_TEST=true \
+    ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     $SKIP_FONTS_ENV \
     --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
     "$DOCKER_IMAGE" \
@@ -377,7 +386,7 @@ STEP_START=$(date +%s)
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh"
+  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh" --machine wsl-work-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

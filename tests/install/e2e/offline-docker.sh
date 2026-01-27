@@ -73,6 +73,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Get GitHub token from host for authenticated API calls inside container
+GH_TOKEN_FOR_CONTAINER=""
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  GH_TOKEN_FOR_CONTAINER="$GITHUB_TOKEN"
+elif command -v gh &>/dev/null; then
+  GH_TOKEN_FOR_CONTAINER=$(gh auth token 2>/dev/null || true)
+fi
+
 # Timing
 declare -a STEP_NAMES
 declare -a STEP_TIMES
@@ -167,6 +175,7 @@ STEP_START=$(date +%s)
     --add-host "raw.githubusercontent.com:127.0.0.1" \
     --env DOTFILES_DOCKER_TEST=true \
     --env SKIP_FONTS=1 \
+    ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     --env PATH="/home/testuser/.local/bin:/home/testuser/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     "$DOCKER_IMAGE" \
     sleep infinity >/dev/null
@@ -269,7 +278,7 @@ STEP_START=$(date +%s)
   log_info "This should use cached files from ~/installers/"
   echo ""
 
-  docker exec "$CONTAINER_NAME" bash -c "cd ~/dotfiles && ./install.sh --offline"
+  docker exec "$CONTAINER_NAME" bash -c "cd ~/dotfiles && ./install.sh --offline --machine wsl-work-workstation"
 
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -328,12 +337,12 @@ STEP_START=$(date +%s)
   fi
 
   # Save FAILED count to temp file to avoid subshell issue with tee
-  echo "$FAILED" > "$TMP_DIR/failed_count"
+  echo "$FAILED" > /tmp/offline-test-failed-count
 
 } 2>&1 | tee -a "$LOG_FILE"
 
-# Read FAILED count from temp file
-FAILED=$(cat "$TMP_DIR/failed_count")
+# Read FAILED count from temp file (subshell workaround for tee)
+FAILED=$(cat /tmp/offline-test-failed-count)
 STEP_END=$(date +%s)
 STEP_NAMES+=("Verification")
 STEP_TIMES+=($((STEP_END - STEP_START)))
