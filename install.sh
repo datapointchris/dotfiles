@@ -26,6 +26,23 @@ if [[ $EUID -eq 0 ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
   die "Do not run this script as root"
 fi
 
+# ================================================================
+# MANIFEST HELPERS
+# ================================================================
+
+# Read a manifest field via parse_packages.py
+manifest_field() {
+  local field="$1"
+  /usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" \
+    --manifest-field="$field" --manifest="$MACHINE"
+}
+
+# Check if a manifest boolean field is true
+manifest_enabled() {
+  local field="$1"
+  [[ "$(manifest_field "$field")" == "true" ]]
+}
+
 show_failures_summary() {
   [[ ! -f "$FAILURES_LOG" || ! -s "$FAILURES_LOG" ]] && return 0
 
@@ -54,7 +71,11 @@ install_fonts() {
   run_installer "$common_install/fonts/seriousshanns.sh" "seriousshanns-font"
 }
 
-install_common_phases() {
+# ================================================================
+# MANIFEST-DRIVEN INSTALLATION
+# ================================================================
+
+install_manifest_phases() {
   local common_install="$DOTFILES_DIR/management/common/install"
   local github_releases="$common_install/github-releases"
   local custom_installers="$common_install/custom-installers"
@@ -62,70 +83,112 @@ install_common_phases() {
   local lang_tools="$common_install/language-tools"
   local plugins="$common_install/plugins"
 
-  if [[ "${SKIP_FONTS:-}" != "1" ]]; then
+  # Fonts
+  if manifest_enabled "fonts" && [[ "${SKIP_FONTS:-}" != "1" ]]; then
     print_header "Coding Fonts"
     install_fonts
   else
-    log_info "Skipping font installation (SKIP_FONTS=1)"
+    log_info "Skipping font installation"
   fi
 
-  print_header "Go Toolchain"
-  run_installer "$lang_managers/go.sh" "go"
-  PATH="/usr/local/go/bin:$PATH" run_installer "$lang_tools/go-tools.sh" "go-tools"
+  # Go Toolchain
+  if manifest_enabled "go"; then
+    print_header "Go Toolchain"
+    run_installer "$lang_managers/go.sh" "go"
+    PATH="/usr/local/go/bin:$PATH" run_installer "$lang_tools/go-tools.sh" "go-tools"
+  fi
 
-  print_header "GitHub Release Tools"
-  run_installer "$github_releases/fzf.sh" "fzf"
-  run_installer "$github_releases/neovim.sh" "neovim"
-  run_installer "$github_releases/lazygit.sh" "lazygit"
-  run_installer "$github_releases/yazi.sh" "yazi"
-  run_installer "$github_releases/glow.sh" "glow"
-  run_installer "$github_releases/duf.sh" "duf"
-  run_installer "$github_releases/tflint.sh" "tflint"
-  run_installer "$github_releases/terraformer.sh" "terraformer"
-  run_installer "$github_releases/terrascan.sh" "terrascan"
-  run_installer "$github_releases/trivy.sh" "trivy"
-  run_installer "$github_releases/zk.sh" "zk"
-  run_installer "$github_releases/shellcheck.sh" "shellcheck"
+  # GitHub Release Tools
+  local gh_releases
+  gh_releases=$(manifest_field "github_releases" 2>/dev/null) || true
+  if [[ -n "$gh_releases" ]] && [[ "$gh_releases" != "false" ]]; then
+    print_header "GitHub Release Tools"
+    while IFS= read -r tool; do
+      [[ -z "$tool" ]] && continue
+      local script="$github_releases/${tool}.sh"
+      if [[ -f "$script" ]]; then
+        run_installer "$script" "$tool"
+      else
+        log_warning "No installer found for GitHub release: $tool"
+      fi
+    done <<< "$gh_releases"
+  fi
 
-  print_header "Custom Distribution Tools"
-  run_installer "$custom_installers/bats.sh" "bats"
-  run_installer "$custom_installers/awscli.sh" "awscli"
-  run_installer "$custom_installers/claude-code.sh" "claude-code"
-  run_installer "$custom_installers/terraform-ls.sh" "terraform-ls"
+  # Custom Distribution Tools
+  local custom_tools
+  custom_tools=$(manifest_field "custom_installers" 2>/dev/null) || true
+  if [[ -n "$custom_tools" ]] && [[ "$custom_tools" != "false" ]]; then
+    print_header "Custom Distribution Tools"
+    while IFS= read -r tool; do
+      [[ -z "$tool" ]] && continue
+      local script="$custom_installers/${tool}.sh"
+      if [[ -f "$script" ]]; then
+        run_installer "$script" "$tool"
+      else
+        log_warning "No installer found for custom tool: $tool"
+      fi
+    done <<< "$custom_tools"
+  fi
 
-  print_header "Personal CLI Tools"
-  run_installer "$custom_installers/theme.sh" "theme"
-  run_installer "$custom_installers/font.sh" "font"
+  # Rust/Cargo Tools
+  if manifest_enabled "rust"; then
+    print_header "Rust/Cargo Tools"
+    run_installer "$lang_managers/rust.sh" "rust"
+    run_installer "$lang_tools/cargo-binstall.sh" "cargo-binstall"
+    run_installer "$lang_tools/cargo-tools.sh" "cargo-tools"
+  fi
 
-  print_header "Rust/Cargo Tools"
-  run_installer "$lang_managers/rust.sh" "rust"
-  run_installer "$lang_tools/cargo-binstall.sh" "cargo-binstall"
-  run_installer "$lang_tools/cargo-tools.sh" "cargo-tools"
+  # Language Package Managers
+  if manifest_enabled "nvm" || manifest_enabled "uv" || manifest_enabled "tenv"; then
+    print_header "Language Package Managers"
+  fi
 
-  print_header "Language Package Managers"
-  run_installer "$lang_managers/nvm.sh" "nvm"
-  run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
-  run_installer "$lang_managers/uv.sh" "uv"
-  run_installer "$lang_tools/uv-tools.sh" "uv-tools"
-  run_installer "$github_releases/tenv.sh" "tenv"
+  if manifest_enabled "nvm"; then
+    run_installer "$lang_managers/nvm.sh" "nvm"
+  fi
+  if manifest_enabled "npm_globals"; then
+    run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
+  fi
+  if manifest_enabled "uv"; then
+    run_installer "$lang_managers/uv.sh" "uv"
+  fi
+  if manifest_enabled "uv_tools"; then
+    run_installer "$lang_tools/uv-tools.sh" "uv-tools"
+  fi
+  if manifest_enabled "tenv"; then
+    run_installer "$github_releases/tenv.sh" "tenv"
+  fi
 
-  print_header "Shell Plugins"
-  run_installer "$plugins/shell-plugins.sh" "shell-plugins"
+  # Shell Plugins
+  if manifest_enabled "shell_plugins"; then
+    print_header "Shell Plugins"
+    run_installer "$plugins/shell-plugins.sh" "shell-plugins"
+  fi
 
+  # Build shell files from manifest
+  print_header "Building Shell Files"
+  bash "$DOTFILES_DIR/management/shell/build-shell.sh" \
+    "$DOTFILES_DIR/management/machines/${MACHINE}.yml"
+
+  # Symlink Dotfiles
   print_header "Symlinking Dotfiles"
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink
 
-  print_header "Tmux Plugins"
-  run_installer "$plugins/tpm.sh" "tpm"
-  run_installer "$plugins/tmux-plugins.sh" "tmux-plugins"
+  # Tmux Plugins
+  if manifest_enabled "tmux_plugins"; then
+    print_header "Tmux Plugins"
+    run_installer "$plugins/tpm.sh" "tpm"
+    run_installer "$plugins/tmux-plugins.sh" "tmux-plugins"
+  fi
 
-  print_header "Neovim Plugins"
-  run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
+  # Neovim Plugins
+  if manifest_enabled "nvim_plugins"; then
+    print_header "Neovim Plugins"
+    run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
+  fi
 
   # Fix font metadata (requires uvx which is now installed)
-  # Nerd Fonts ship with broken isFixedPitch (Kitty rejects them on macOS)
-  # and some have incorrect usWeightClass for Bold variants
-  if [[ "${SKIP_FONTS:-}" != "1" ]]; then
+  if manifest_enabled "fonts" && [[ "${SKIP_FONTS:-}" != "1" ]]; then
     print_header "Font Metadata Fixes"
     source "$DOTFILES_DIR/management/common/lib/font-installer.sh"
     local font_dir
@@ -163,22 +226,27 @@ configure_zsh_default_shell() {
 }
 
 usage() {
-  echo "Usage: $(basename "$0") [OPTIONS]"
+  echo "Usage: $(basename "$0") --machine NAME [OPTIONS]"
   echo ""
   echo "Install dotfiles and development tools"
   echo ""
   echo "Options:"
-  echo "  --force, -f    Force reinstall of all tools even if already installed"
-  echo "  --offline      Use offline bundle (extracts ~/installers/ from tarball)"
-  echo "  --help, -h     Show this help message"
+  echo "  --machine NAME  Machine manifest to use (required)"
+  echo "  --force, -f     Force reinstall of all tools even if already installed"
+  echo "  --offline       Use offline bundle (extracts ~/installers/ from tarball)"
+  echo "  --help, -h      Show this help message"
+  echo ""
+  echo "Machine manifests: management/machines/*.yml"
   echo ""
   echo "Environment Variables:"
-  echo "  SKIP_FONTS=1   Skip font download and installation (Phase 2)"
+  echo "  MACHINE=name    Same as --machine (flag takes precedence)"
+  echo "  SKIP_FONTS=1    Skip font download and installation"
   echo ""
   echo "Examples:"
-  echo "  ./install.sh                    # Full installation"
-  echo "  SKIP_FONTS=1 ./install.sh       # Install without fonts"
-  echo "  ./install.sh --offline          # Use pre-downloaded offline bundle"
+  echo "  ./install.sh --machine arch-personal-workstation"
+  echo "  ./install.sh --machine ubuntu-lxc-server"
+  echo "  MACHINE=arch-personal-workstation ./install.sh"
+  echo "  SKIP_FONTS=1 ./install.sh --machine macos-personal-workstation"
   exit 0
 }
 
@@ -219,8 +287,14 @@ extract_offline_bundle() {
 parse_args() {
   FORCE_INSTALL=false
   OFFLINE_MODE=false
+  # --machine flag overrides MACHINE env var
+  local machine_from_flag=""
   while [[ $# -gt 0 ]]; do
     case $1 in
+    --machine)
+      machine_from_flag="$2"
+      shift 2
+      ;;
     --force | -f)
       FORCE_INSTALL=true
       shift
@@ -240,8 +314,36 @@ parse_args() {
     esac
   done
 
+  # Priority: --machine flag > MACHINE env var > fail
+  if [[ -n "$machine_from_flag" ]]; then
+    MACHINE="$machine_from_flag"
+  elif [[ -z "${MACHINE:-}" ]]; then
+    echo ""
+    log_error "MACHINE is required but not set"
+    echo ""
+    echo "Set via flag:         ./install.sh --machine <name>"
+    echo "Set via environment:  export MACHINE=<name>"
+    echo ""
+    echo "Available manifests:"
+    for f in "$DOTFILES_DIR"/management/machines/*.yml; do
+      echo "  $(basename "$f" .yml)"
+    done
+    exit 1
+  fi
+
+  if [[ ! -f "$DOTFILES_DIR/management/machines/${MACHINE}.yml" ]]; then
+    log_error "Machine manifest not found: management/machines/${MACHINE}.yml"
+    echo ""
+    echo "Available manifests:"
+    for f in "$DOTFILES_DIR"/management/machines/*.yml; do
+      echo "  $(basename "$f" .yml)"
+    done
+    exit 1
+  fi
+
   export FORCE_INSTALL
   export OFFLINE_MODE
+  export MACHINE
 
   if [[ "$FORCE_INSTALL" == "true" ]]; then
     log_warning "Force install mode enabled - will reinstall all tools"
@@ -258,20 +360,19 @@ parse_args() {
 main() {
   local platform
   local start_time
-  local end_time
-  local total_duration
 
   export TITLE_COLOR="blue"
   export HEADER_COLOR="brightblue"
   export SECTION_COLOR="orange"
 
-  platform=$(detect_platform)
+  platform=$(manifest_field "platform")
   start_time=$(date +%s)
 
-  print_title "Dotfiles Installation - $platform"
+  print_title "Dotfiles Installation - $MACHINE ($platform)"
 
   cd "$DOTFILES_DIR" || die "Could not change to dotfiles directory"
 
+  # Platform-specific system packages
   case "$platform" in
   macos)
     local macos_install="$DOTFILES_DIR/management/macos/install"
@@ -286,10 +387,6 @@ main() {
 
     print_header "System Preferences"
     bash "$macos_setup/preferences.sh"
-
-    install_common_phases
-
-    show_failures_summary
     ;;
   wsl)
     if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
@@ -297,39 +394,55 @@ main() {
       log_warning "Continuing anyway..."
     fi
 
-    print_header "System Packages (apt)"
-    bash "$DOTFILES_DIR/management/wsl/install/system-packages.sh"
-
-    install_common_phases
-
-    print_header "Post-Installation Configuration"
-    print_section "Configuring ZSH as default shell"
-    configure_zsh_default_shell
-
-    show_failures_summary
+    if manifest_enabled "system_packages"; then
+      print_header "System Packages (apt)"
+      bash "$DOTFILES_DIR/management/wsl/install/system-packages.sh"
+    fi
     ;;
   arch)
-    print_header "System Packages (pacman)"
-    bash "$DOTFILES_DIR/management/arch/install/system-packages.sh"
-    bash "$DOTFILES_DIR/management/arch/install/flatpak.sh"
+    local arch_setup="$DOTFILES_DIR/management/arch/setup"
 
-    install_common_phases
+    if manifest_enabled "system_packages"; then
+      print_header "System Packages (pacman)"
+      bash "$DOTFILES_DIR/management/arch/install/system-packages.sh"
+    fi
+    if manifest_enabled "flatpak"; then
+      bash "$DOTFILES_DIR/management/arch/install/flatpak.sh"
+    fi
 
-    print_header "Post-Installation Configuration"
-    print_section "Configuring ZSH as default shell"
-    configure_zsh_default_shell
-
-    show_failures_summary
+    print_header "System Configuration"
+    bash "$arch_setup/system-config.sh"
+    ;;
+  ubuntu)
+    if manifest_enabled "system_packages"; then
+      print_header "System Packages (apt)"
+      bash "$DOTFILES_DIR/management/ubuntu/install/system-packages.sh"
+    fi
     ;;
   *)
     die "Unsupported platform: $platform"
     ;;
   esac
+
+  # Manifest-driven common phases
+  install_manifest_phases
+
+  # Post-installation configuration
+  if manifest_enabled "configure_zsh"; then
+    if [[ "$platform" != "macos" ]]; then
+      print_header "Post-Installation Configuration"
+      print_section "Configuring ZSH as default shell"
+      configure_zsh_default_shell
+    fi
+  fi
+
+  show_failures_summary
+
   local end_time
   end_time=$(date +%s)
   local total_duration=$((end_time - start_time))
 
-  print_title_success "Dotfiles Installation - $platform COMPLETE (${total_duration})"
+  print_title_success "Dotfiles Installation - $MACHINE COMPLETE (${total_duration}s)"
 }
 
 parse_args "$@"
