@@ -8,6 +8,7 @@ configuration {
     display-run: "Run";
     display-window: "Windows";
     drun-display-format: "{name}";
+    drun-match-fields: "name,keywords";
     window-format: "{w} · {c} · {t}";
     font: "JetBrainsMono Nerd Font 12";
     terminal: "ghostty";
