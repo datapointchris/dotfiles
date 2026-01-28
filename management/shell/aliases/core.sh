@@ -21,6 +21,9 @@ alias base='z $(git rev-parse --show-toplevel)'
 
 alias y='yazi'
 
+# Open shared network todo with neovim
+alias pp='ssh chris@10.0.20.15 -t "nvim ~/todo.md"'
+
 # ---------- Directory Navigation ---------- #
 
 # Use zoxide for smart directory navigation
