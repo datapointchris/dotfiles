@@ -8,7 +8,6 @@
 
 return {
   'j-hui/fidget.nvim',
-  cond = not vim.g.vscode, -- VSCode has its own progress indicators
   opts = {
     progress = {
       display = {

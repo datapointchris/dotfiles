@@ -5,13 +5,9 @@ return {
   'saghen/blink.cmp',
   -- version = '0.*',
   build = 'cargo build --release',
-  cond = not vim.g.vscode,
   dependencies = {
     'rafamadriz/friendly-snippets',
-    {
-      'giuxtaposition/blink-cmp-copilot',
-      cond = not vim.g.vscode,
-    },
+    'giuxtaposition/blink-cmp-copilot',
   },
 
   opts = function()

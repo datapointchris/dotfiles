@@ -1,6 +1,5 @@
 return {
   'kdheepak/lazygit.nvim',
-  cond = not vim.g.vscode, -- VSCode has excellent built-in Git integration
   cmd = {
     'LazyGit',
     'LazyGitConfig',

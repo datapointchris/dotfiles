@@ -3,7 +3,6 @@ return {
   {
     'folke/lazydev.nvim',
     ft = 'lua', -- only load on lua files
-    cond = not vim.g.vscode, -- VSCode has Lua language server support
     opts = {
       library = {
         -- See the configuration section for more details

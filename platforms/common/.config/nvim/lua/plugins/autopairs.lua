@@ -2,7 +2,6 @@
 -- https://github.com/windwp/nvim-autopairs
 return {
   'windwp/nvim-autopairs',
-  cond = not vim.g.vscode, -- Autopairs depends on cmp, not compatible with VSCode
   event = 'InsertEnter',
   dependencies = { 'hrsh7th/nvim-cmp' },
   config = function()

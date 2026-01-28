@@ -1,7 +1,6 @@
 return {
   'folke/which-key.nvim',
   event = 'VeryLazy',
-  cond = not vim.g.vscode, -- VSCode doesn't need keymap popup hints
   opts = {
     -- Modern which-key v3 configuration
     preset = 'helix', -- Use modern preset for better appearance

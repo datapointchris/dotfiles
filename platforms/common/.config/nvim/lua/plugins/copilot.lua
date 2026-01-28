@@ -1,7 +1,6 @@
 return {
   {
     'zbirenbaum/copilot.lua',
-    cond = not vim.g.vscode,
     event = 'VimEnter', -- Load earlier to ensure it's ready before InsertEnter
     config = function()
       require('copilot').setup({
@@ -21,6 +20,5 @@ return {
   },
   {
     'AndreM222/copilot-lualine',
-    cond = not vim.g.vscode,
   },
 }

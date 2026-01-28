@@ -7,7 +7,6 @@ return {
     name = 'github-theme',
     lazy = false,
     priority = 1000,
-    cond = not vim.g.vscode,
     config = function()
       require('github-theme').setup()
     end,
@@ -16,7 +15,6 @@ return {
     'rose-pine/neovim',
     name = 'rose-pine',
     lazy = false,
-    cond = not vim.g.vscode,
     config = function()
       require('rose-pine').setup({
         variant = 'auto',
@@ -66,6 +64,9 @@ return {
               dir = neovim_dir,
               name = name,
               lazy = false,
+              cond = function()
+                return require('core.profiles').is_full
+              end,
             })
           end
         end
@@ -81,7 +82,6 @@ return {
     name = 'colorscheme-manager',
     lazy = false,
     priority = 999, -- Load after colorscheme plugins but before other plugins
-    cond = not vim.g.vscode,
     config = function()
       local themes_dir = vim.fn.expand('~/tools/theme/themes')
       local history_file = vim.fn.expand('~/.local/state/theme/history.jsonl')

@@ -1,6 +1,5 @@
 return {
   'nvim-lualine/lualine.nvim',
-  cond = not vim.g.vscode, -- VSCode has its own status bar
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   config = function()
     require('lualine').setup({

@@ -1,6 +1,5 @@
 return {
   'pwntester/octo.nvim',
-  cond = not vim.g.vscode, -- Depends on telescope (disabled in vscode)
   cmd = 'Octo',
   dependencies = {
     'nvim-lua/plenary.nvim',

@@ -1,6 +1,5 @@
 return {
   'folke/trouble.nvim',
-  cond = not vim.g.vscode, -- VSCode has native Problems panel
   dependencies = { 'nvim-tree/nvim-web-devicons', 'folke/todo-comments.nvim' },
   opts = {
     focus = true,

@@ -1,6 +1,5 @@
 return {
   'leath-dub/snipe.nvim',
-  cond = not vim.g.vscode, -- VSCode has native buffer/tab switching
   keys = {
     {
       'gb',

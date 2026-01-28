@@ -2,7 +2,6 @@ return { -- Fuzzy Finder (files, lsp, etc)
   'nvim-telescope/telescope.nvim',
   event = 'VimEnter',
   branch = '0.1.x',
-  cond = not vim.g.vscode, -- VSCode has native fuzzy finding
   dependencies = {
     'nvim-lua/plenary.nvim',
     'nvim-tree/nvim-web-devicons',

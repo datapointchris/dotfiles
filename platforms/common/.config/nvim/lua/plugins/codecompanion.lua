@@ -9,8 +9,6 @@
 return {
   {
     'olimorris/codecompanion.nvim',
-    cond = not vim.g.vscode, -- VS Code has GitHub Copilot Chat
-    enabled = true,
     dependencies = {
       'nvim-lua/plenary.nvim',
       'nvim-treesitter/nvim-treesitter',

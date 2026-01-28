@@ -1,6 +1,5 @@
 return {
   'zk-org/zk-nvim',
-  cond = not vim.g.vscode, -- Depends on telescope (disabled in vscode)
   config = function()
     require('zk').setup({
       -- Can be "telescope", "fzf", "fzf_lua", "minipick", "snacks_picker",

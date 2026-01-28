@@ -1,7 +1,6 @@
 return {
   {
     'stevearc/oil.nvim',
-    cond = not vim.g.vscode, -- VSCode has native file navigation
     dependencies = { 'nvim-tree/nvim-web-devicons' },
     config = function()
       require('oil').setup({

@@ -2,7 +2,6 @@
 return {
   {
     'lewis6991/gitsigns.nvim',
-    cond = not vim.g.vscode, -- VSCode has built-in Git gutter signs
     opts = {
       on_attach = function(bufnr)
         local gitsigns = require('gitsigns')
