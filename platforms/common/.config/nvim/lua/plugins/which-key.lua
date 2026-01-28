@@ -14,8 +14,9 @@ return {
       separator = '󰁕', -- Symbol used between key and description
     },
   },
-  config = function()
+  config = function(_, opts)
     local wk = require('which-key')
+    wk.setup(opts)
 
     -- Add clean, minimal group names without icons
     wk.add({

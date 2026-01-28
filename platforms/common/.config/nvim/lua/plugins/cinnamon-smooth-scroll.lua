@@ -5,7 +5,6 @@ return {
     keymaps = {
       basic = true,
       extra = true,
-      delay = 2,
     },
   },
 }
