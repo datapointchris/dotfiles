@@ -14,8 +14,13 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+local profiles = require('core.profiles')
+
 require('lazy').setup({
   change_detection = { notify = false },
+  defaults = {
+    cond = profiles.plugin_enabled,
+  },
   spec = {
     { import = 'plugins' },
   },

@@ -4,7 +4,6 @@
 -- Validate required environment variables for proper configuration
 local required_env_vars = {
   'PLATFORM',
-  'NVIM_AI_ENABLED',
 }
 
 local missing_vars = {}
@@ -22,15 +21,17 @@ if #missing_vars > 0 then
   )
 end
 
+local profiles = require('core.profiles')
+
 -- Always load core configuration
 require('core.options')
 require('core.lazy') -- Load lazy.nvim in both VSCode and Neovim
 require('core.keymaps')
 
--- Only load autocmds in regular Neovim
-if not vim.g.vscode then
+if not profiles.is_vscode then
   require('core.autocmds')
 end
 
--- Load LSP configuration
-require('lsp')
+if profiles.is_full then
+  require('lsp')
+end
