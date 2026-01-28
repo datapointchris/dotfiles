@@ -1027,33 +1027,17 @@ mas_apps:
     id: 1470584107
     description: Menu bar calendar and time zones
 
+  - name: Disk Space Analyzer
+    id: 446243721
+    description: Disk space analyzer
+
   - name: Forecast Bar
     id: 982710545
     description: Weather forecast in menu bar
 
-  - name: IPEVO Annotator
-    id: 1237562727
-    description: Screen annotation and drawing tool
-
-  - name: Microsoft Excel
-    id: 462058435
-    description: Spreadsheet application
-
-  - name: Microsoft PowerPoint
-    id: 462062816
-    description: Presentation software
-
-  - name: Microsoft Remote Desktop
-    id: 1295203466
-    description: Remote desktop client for macOS
-
-  - name: Microsoft Word
-    id: 462054704
-    description: Word processing application
-
-  - name: NiBoard
-    id: 1511409657
-    description: Whiteboard and sketching app
+  - name: Hush
+    id: 1544743900
+    description: Skip cookie accept on websites
 
   - name: Pixelstyle Photo Editor
     id: 1244649277
@@ -1063,9 +1047,9 @@ mas_apps:
     id: 585829637
     description: Task management and to-do list
 
-  - name: Xcode
-    id: 497799835
-    description: Apple's IDE for macOS and iOS development
+  - name: uBlock Origin Lite
+    id: 67545342698
+    description: Block ads on Safari
 
 # ================================================================
 # LINUX GUI APPLICATIONS
