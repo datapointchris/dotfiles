@@ -74,6 +74,8 @@ log "Setup" "History & Command Editing"
 # GENERAL SETTINGS
 # ------------------------------------------------------------------ #
 export EDITOR="nvim"
+export PAGER="bat --style=plain"
+export MANPAGER="bat --style=plain --language=man"
 export HOMEBREW_NO_AUTO_UPDATE=1
 
 # Tool directories
