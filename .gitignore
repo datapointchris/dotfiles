@@ -110,7 +110,7 @@ platforms/common/.local/shell/aliases.sh
 platforms/common/.local/shell/functions.sh
 
 # Offline install bundles
-management/offline/dotfiles-offline-*.tar.gz
+*.tar.gz
 
 ### GO BUILD ARTIFACTS
 
