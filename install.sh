@@ -148,8 +148,6 @@ install_manifest_phases() {
   fi
   if manifest_enabled "npm_globals"; then
     run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
-    # tree-sitter-cli moved from npm to GitHub release (npm post-install fails behind firewalls)
-    run_installer "$github_releases/tree-sitter.sh" "tree-sitter"
   fi
   if manifest_enabled "uv"; then
     run_installer "$lang_managers/uv.sh" "uv"

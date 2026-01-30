@@ -39,6 +39,7 @@ github_releases:
   - trivy
   - zk
   - shellcheck
+  - tree-sitter
 
 custom_installers:
   - bats
