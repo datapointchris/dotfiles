@@ -913,6 +913,9 @@ uv_tools:
     - name: pre-commit
       description: Git pre-commit hook framework
 
+    - name: git-filter-repo
+      description: Git history rewriting tool (recommended replacement for git-filter-branch and BFG)
+
     - name: tldr
       description: Collaborative cheatsheets for console commands
 
