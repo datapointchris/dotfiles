@@ -18,7 +18,7 @@ get_system_font_dir() {
   platform=$(detect_platform)
   case "$platform" in
     macos) echo "$HOME/Library/Fonts" ;;
-    wsl)   echo "/mnt/c/Windows/Fonts" ;;
+    wsl)   echo "$HOME/fonts" ;;
     linux|arch) echo "$HOME/.local/share/fonts" ;;
     *)
       log_error "Unsupported platform: $platform"
@@ -177,14 +177,8 @@ install_font_files() {
       continue
     fi
 
-    if [[ "$platform" == "wsl" ]]; then
-      if cp "$font_file" "$target_dir/" 2>/dev/null; then
-        installed=$((installed + 1))
-      fi
-    else
-      cp "$font_file" "$target_dir/"
-      installed=$((installed + 1))
-    fi
+    cp "$font_file" "$target_dir/"
+    installed=$((installed + 1))
   done < <(find_font_files "$source_dir" -print0)
 
   if [[ $installed -eq 0 ]] && [[ $skipped -eq 0 ]]; then
@@ -220,7 +214,7 @@ refresh_font_cache() {
       log_info "Font cache refresh not needed on macOS (automatic)"
       ;;
     wsl)
-      log_info "Font cache managed by Windows (restart applications to see new fonts)"
+      log_info "Fonts saved to ~/fonts/ — copy to Windows and install manually"
       ;;
   esac
 }
@@ -262,32 +256,47 @@ import os
 font_dir = "$font_dir"
 fixed_count = 0
 
-for ext in ['ttf', 'otf']:
-    for path in glob.glob(os.path.join(font_dir, f'*.{ext}')):
-        try:
-            font = TTFont(path)
-            modified = False
-            basename = os.path.basename(path)
+# Only target fonts we installed, not every font in the system directory
+# This is critical on WSL where the font dir is /mnt/c/Windows/Fonts
+our_font_patterns = [
+    '*NerdFont*', '*NerdFontMono*',
+    '*FiraCode*',
+    '*CommitMono*',
+    '*IosevkaTermSlab*',
+    '*ComicMonoNF*',
+    '*SeriousShanns*',
+]
 
-            # Fix 1: isFixedPitch should be 1 for monospace fonts
-            if 'post' in font and font['post'].isFixedPitch == 0:
-                font['post'].isFixedPitch = 1
+paths = []
+for ext in ['ttf', 'otf']:
+    for pattern in our_font_patterns:
+        paths.extend(glob.glob(os.path.join(font_dir, f'{pattern}.{ext}')))
+
+for path in sorted(set(paths)):
+    try:
+        font = TTFont(path)
+        modified = False
+        basename = os.path.basename(path)
+
+        # Fix 1: isFixedPitch should be 1 for monospace fonts
+        if 'post' in font and font['post'].isFixedPitch == 0:
+            font['post'].isFixedPitch = 1
+            modified = True
+
+        # Fix 2: Bold fonts should have usWeightClass=700, not 400
+        if 'OS/2' in font:
+            is_bold = 'Bold' in basename and 'SemiBold' not in basename
+            if is_bold and font['OS/2'].usWeightClass == 400:
+                font['OS/2'].usWeightClass = 700
                 modified = True
 
-            # Fix 2: Bold fonts should have usWeightClass=700, not 400
-            if 'OS/2' in font:
-                is_bold = 'Bold' in basename and 'SemiBold' not in basename
-                if is_bold and font['OS/2'].usWeightClass == 400:
-                    font['OS/2'].usWeightClass = 700
-                    modified = True
+        if modified:
+            font.save(path)
+            fixed_count += 1
 
-            if modified:
-                font.save(path)
-                fixed_count += 1
-
-            font.close()
-        except Exception as e:
-            print(f"Warning: Could not process {basename}: {e}", file=sys.stderr)
+        font.close()
+    except Exception as e:
+        print(f"Warning: Could not process {basename}: {e}", file=sys.stderr)
 
 print(fixed_count)
 EOF

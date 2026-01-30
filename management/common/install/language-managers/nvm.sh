@@ -83,7 +83,7 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
   log_success "nvm updated"
 else
   # Install mode: only install if not already installed
-  if [[ ! -d "$NVM_DIR" ]] || [[ "${FORCE_INSTALL:-false}" == "true" ]]; then
+  if [[ ! -s "$NVM_DIR/nvm.sh" ]] || [[ "${FORCE_INSTALL:-false}" == "true" ]]; then
     log_info "Installing nvm to $NVM_DIR..."
     mkdir -p "$NVM_DIR"
     if ! run_nvm_install; then
