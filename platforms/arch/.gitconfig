@@ -13,11 +13,19 @@ addIgnoredFile = false
 # show original change, incoming change, and unchanged
 conflictstyle = diff3
 
+[credential "https://github.com"]
+helper =
+helper = !/usr/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+helper =
+helper = !/usr/bin/gh auth git-credential
+
 [init]
 defaultBranch = main
 
 [pull]
-rebase = false
+rebase = true
 
 [push]
 autoSetupRemote = true
@@ -57,9 +65,3 @@ last-commit = log -1 HEAD
 
 # look at the changed files in commits
 changes = log --pretty='short' --name-status
-[credential "https://github.com"]
-	helper = 
-	helper = !/usr/bin/gh auth git-credential
-[credential "https://gist.github.com"]
-	helper = 
-	helper = !/usr/bin/gh auth git-credential

@@ -1,8 +1,11 @@
+[user]
+name = Chris Birch
+email = datapointchris@gmail.com
 
 [core]
 editor = nvim
 pager = delta
-	autoclrf = true
+autocrlf = true
 
 [advice]
 addIgnoredFile = false
@@ -11,11 +14,19 @@ addIgnoredFile = false
 # show original change, incoming change, and unchanged
 conflictstyle = diff3
 
+[credential "https://github.com"]
+helper =
+helper = !/usr/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+helper =
+helper = !/usr/bin/gh auth git-credential
+
 [init]
 defaultBranch = main
 
 [pull]
-rebase = false
+rebase = true
 
 [push]
 autoSetupRemote = true
@@ -57,10 +68,4 @@ last-commit = log -1 HEAD
 changes = log --pretty='short' --name-status
 
 [includeIf "gitdir:~/code/"]
-  path = ~/code/.gitconfig
-
-[credential "https://github.com"]
-	helper = !/usr/bin/gh auth git-credential
-
-[credential "https://gist.github.com"]
-	helper = !/usr/bin/gh auth git-credential
+path = ~/code/.gitconfig

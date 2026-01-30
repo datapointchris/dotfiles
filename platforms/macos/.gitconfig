@@ -13,14 +13,19 @@ addIgnoredFile = false
 # show original change, incoming change, and unchanged
 conflictstyle = diff3
 
-[credential]
-helper = osxkeychain
+[credential "https://github.com"]
+helper =
+helper = !/usr/local/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+helper =
+helper = !/usr/local/bin/gh auth git-credential
 
 [init]
 defaultBranch = main
 
 [pull]
-	rebase = true
+rebase = true
 
 [push]
 autoSetupRemote = true
