@@ -47,13 +47,13 @@ function external-ip() {
 #@local-ip
 #--> Local IP
 function local-ip() {
-  ifconfig | grep inet | grep -vE '(inet6|127.0.0.1)' | awk '{print $2}' | awk -F ':' '{print $2}'
+  ifconfig | awk '/inet / && !/127.0.0.1/ {print $2}'
 }
 
 #@all-local-ips
 #--> All local IPs
 function all-local-ips() {
-  ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[0-9]\+\)\|[a-fA-F0-9:]\+\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'
+  ifconfig -a | awk '/inet / {print $2} /inet6 / {print $2}'
 }
 
 #@ifactive
