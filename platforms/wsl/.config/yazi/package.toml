@@ -7,6 +7,3 @@ hash = "62251f94eb67648d42cdfcfb8be0fad2"
 use = "yazi-rs/plugins:git"
 rev = "8f1d971"
 hash = "3cce60031b27cbce80b50f68ca319c0a"
-
-[flavor]
-deps = []

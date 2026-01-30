@@ -122,14 +122,6 @@ export GIT_ASKPASS=/bin/true
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_SYSTEM=/dev/null
 
-log_info "Installing flavors..."
-ya pkg add BennyOe/tokyo-night || true
-ya pkg add dangooddd/kanagawa || true
-ya pkg add bennyyip/gruvbox-dark || true
-ya pkg add kmlupreti/ayu-dark || true
-ya pkg add Chromium-3-Oxide/everforest-medium || true
-ya pkg add gosxrgxx/flexoki-dark || true
-
 log_info "Installing plugins..."
 ya pkg add AnirudhG07/nbpreview || true
 ya pkg add pirafrank/what-size || true
