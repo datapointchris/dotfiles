@@ -5,7 +5,7 @@ email = datapointchris@gmail.com
 [core]
 editor = nvim
 pager = delta
-autocrlf = true
+autocrlf = input
 
 [advice]
 addIgnoredFile = false
