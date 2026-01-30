@@ -184,8 +184,10 @@ download_go_binaries() {
     if [[ "$expanded" == *.tar.gz ]] || [[ "$expanded" == *.tgz ]]; then
       tar -xf "$download_path" -C "$extract_dir"
       # Find the binary — may be at root or in a subdirectory
+      # Some archives name the binary with platform suffix (e.g. gdu_linux_amd64)
       local found_bin
       found_bin=$(find "$extract_dir" -name "$binary_name" -type f | head -1)
+      [[ -z "$found_bin" ]] && found_bin=$(find "$extract_dir" -name "${binary_name}_*" -type f | head -1)
       if [[ -n "$found_bin" ]]; then
         mv "$found_bin" "$final_binary"
       else
