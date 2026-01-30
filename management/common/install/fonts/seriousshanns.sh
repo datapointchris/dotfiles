@@ -41,7 +41,9 @@ download_seriousshanns() {
 5. Verify installation:
    fc-list | grep -i 'SeriousShanns'"
 
-  if ! curl -fsSL "$zip_url" -o "$download_dir/SeriousShannsNerdFontMono.zip"; then
+  if check_font_cache "SeriousShannsNerdFontMono.zip" "$download_dir/SeriousShannsNerdFontMono.zip"; then
+    log_info "Using offline cache for SeriousShannsNerdFontMono"
+  elif ! curl -fsSL "$zip_url" -o "$download_dir/SeriousShannsNerdFontMono.zip"; then
     output_failure_data "SeriousShanns" "$zip_url" "latest" "$manual_steps" "Download failed"
     exit 1
   fi

@@ -22,7 +22,9 @@ download_firacode() {
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || exit 1
 
-  if ! curl -fsSL "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip" -o FiraCode.zip; then
+  if check_font_cache "FiraCode.zip" "FiraCode.zip"; then
+    log_info "Using offline cache for FiraCode"
+  elif ! curl -fsSL "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip" -o FiraCode.zip; then
     manual_steps="Download manually from GitHub:
    https://github.com/tonsky/FiraCode/releases/latest
 

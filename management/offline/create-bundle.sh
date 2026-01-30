@@ -203,6 +203,56 @@ download_nerd_fonts() {
 }
 
 # ============================================================================
+# Other Fonts (non-Nerd Font families)
+# ============================================================================
+
+download_other_fonts() {
+  [[ "$INCLUDE_FONTS" != "true" ]] && return 0
+
+  log_info "Downloading other fonts..."
+
+  # FiraCode (pinned release)
+  log_info "  FiraCode (6.2)..."
+  download_file \
+    "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip" \
+    "$CACHE_DIR/fonts/FiraCode.zip" "FiraCode" || true
+
+  # CommitMono (latest release)
+  local commitmono_url
+  commitmono_url=$(curl -fsSL "https://api.github.com/repos/eigilnikolajsen/commit-mono/releases/latest" \
+    | grep -o '"browser_download_url": *"[^"]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
+  if [[ -n "$commitmono_url" ]]; then
+    log_info "  CommitMono (latest)..."
+    download_file "$commitmono_url" "$CACHE_DIR/fonts/CommitMono.zip" "CommitMono" || true
+  else
+    log_warning "  Could not fetch CommitMono release URL"
+  fi
+
+  # SGr-IosevkaTermSlab (latest release)
+  local iosevka_url
+  iosevka_url=$(curl -fsSL "https://api.github.com/repos/be5invis/Iosevka/releases/latest" \
+    | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-IosevkaTermSlab-[0-9.]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
+  if [[ -n "$iosevka_url" ]]; then
+    log_info "  SGr-IosevkaTermSlab (latest)..."
+    download_file "$iosevka_url" "$CACHE_DIR/fonts/SGr-IosevkaTermSlab.zip" "SGr-IosevkaTermSlab" || true
+  else
+    log_warning "  Could not fetch SGr-IosevkaTermSlab release URL"
+  fi
+
+  # ComicMonoNF (individual TTF files)
+  local comic_base="https://raw.githubusercontent.com/xtevenx/ComicMonoNF/master/v1"
+  log_info "  ComicMonoNF (v1)..."
+  download_file "$comic_base/ComicMonoNF-Regular.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Regular.ttf" "ComicMonoNF-Regular" || true
+  download_file "$comic_base/ComicMonoNF-Bold.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Bold.ttf" "ComicMonoNF-Bold" || true
+
+  # SeriousShannsNerdFontMono
+  log_info "  SeriousShannsNerdFontMono..."
+  download_file \
+    "https://kaBeech.github.io/serious-shanns/SeriousShanns/SeriousShannsNerdFontMono.zip" \
+    "$CACHE_DIR/fonts/SeriousShannsNerdFontMono.zip" "SeriousShannsNerdFontMono" || true
+}
+
+# ============================================================================
 # Setup and Teardown
 # ============================================================================
 
@@ -298,7 +348,7 @@ check_failures() {
 create_tarball() {
   log_info "Creating tarball..."
 
-  local tarball_path="$DOTFILES_DIR/management/offline/$BUNDLE_NAME.tar.gz"
+  local tarball_path="$DOTFILES_DIR/$BUNDLE_NAME.tar.gz"
   (cd "$WORK_DIR" && tar -czf "$tarball_path" installers)
 
   local tarball_size
@@ -314,10 +364,8 @@ create_tarball() {
   echo "  Downloads: $TOTAL_DOWNLOADS"
   echo ""
   echo "To use this bundle:"
-  echo "  1. Copy to target machine"
-  echo "  2. Extract: cd ~ && tar -xzf $BUNDLE_NAME.tar.gz"
-  echo "  3. Clone dotfiles: git clone https://github.com/datapointchris/dotfiles.git"
-  echo "  4. Install: cd dotfiles && ./install.sh --offline"
+  echo "  1. Copy tarball to ~/ or ~/dotfiles/ on the target machine"
+  echo "  2. Run: ./install.sh --machine <name> --offline"
 }
 
 # ============================================================================
@@ -338,6 +386,7 @@ main() {
   download_cargo_binaries
   download_install_scripts
   download_nerd_fonts
+  download_other_fonts
 
   check_failures
   create_readme

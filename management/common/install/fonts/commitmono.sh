@@ -22,6 +22,22 @@ download_commitmono() {
   temp_dir=$(mktemp -d)
   cd "$temp_dir" || exit 1
 
+  if check_font_cache "CommitMono.zip" "CommitMono.zip"; then
+    log_info "Using offline cache for CommitMono"
+    unzip -qo CommitMono.zip || exit 1
+    mkdir -p "$download_dir"
+    find . -type f -name "*.otf" -exec mv {} "$download_dir/" \; 2>/dev/null || true
+
+    cd - > /dev/null
+    rm -rf "$temp_dir"
+
+    local count
+    count=$(count_font_files "$download_dir")
+    [[ $count -eq 0 ]] && log_error "No fonts found after extraction" && exit 1
+    log_success "Downloaded $count files"
+    return
+  fi
+
   local release_url
   release_url=$(fetch_github_release_asset "eigilnikolajsen/commit-mono" "\.zip")
 

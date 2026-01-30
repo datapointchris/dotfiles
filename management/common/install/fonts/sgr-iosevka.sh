@@ -38,6 +38,22 @@ download_sgriosevka_termslab() {
 5. Verify installation:
    fc-list | grep -i 'Iosevka.*Term.*Slab'"
 
+  if check_font_cache "SGr-IosevkaTermSlab.zip" "SGr-IosevkaTermSlab.zip"; then
+    log_info "Using offline cache for SGr-IosevkaTermSlab"
+    mkdir -p "$download_dir/SGr-IosevkaTermSlab"
+    unzip -qo SGr-IosevkaTermSlab.zip || exit 1
+    find . -maxdepth 1 -name "*.ttc" -exec mv {} "$download_dir/SGr-IosevkaTermSlab/" \; 2>/dev/null || true
+
+    cd - > /dev/null
+    rm -rf "$temp_dir"
+
+    local count
+    count=$(count_font_files "$download_dir")
+    [[ $count -eq 0 ]] && log_error "No fonts found after extraction" && exit 1
+    log_success "Downloaded $count files (1 TTC collection)"
+    return
+  fi
+
   local release_json
   if ! release_json=$(curl -fsSL https://api.github.com/repos/be5invis/Iosevka/releases/latest); then
     output_failure_data "SGr-Iosevka Term Slab" "https://github.com/be5invis/Iosevka/releases/latest" "latest" "$manual_steps" "Failed to fetch release info"

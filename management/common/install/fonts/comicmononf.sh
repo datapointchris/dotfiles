@@ -26,6 +26,10 @@ download_comicmono() {
   local files=("ComicMonoNF-Regular.ttf" "ComicMonoNF-Bold.ttf")
 
   for file in "${files[@]}"; do
+    if check_font_cache "$file" "$download_dir/$file"; then
+      log_info "Using offline cache for $file"
+      continue
+    fi
     if ! curl -fsSL "$base_url/$file" -o "$download_dir/$file"; then
       manual_steps="Download manually from:
    ${base_url}/${file}

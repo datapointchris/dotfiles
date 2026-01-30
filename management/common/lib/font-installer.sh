@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+OFFLINE_FONT_CACHE="${HOME}/installers/fonts"
+
+check_font_cache() {
+  local filename="$1"
+  local dest="$2"
+  if [[ -f "$OFFLINE_FONT_CACHE/$filename" ]]; then
+    log_info "Using cached file: $OFFLINE_FONT_CACHE/$filename"
+    cp "$OFFLINE_FONT_CACHE/$filename" "$dest"
+    return 0
+  fi
+  return 1
+}
+
 get_system_font_dir() {
   local platform
   platform=$(detect_platform)
@@ -48,9 +61,12 @@ download_nerd_font() {
   local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${package}.tar.xz"
   local archive_file="${package}.tar.xz"
 
-  # Try download, fallback to home directory
-  log_info "Downloading from: $url"
-  if ! curl -fsSL "$url" -o "$archive_file"; then
+  # Try offline cache, then download, then fallback to home directory
+  if check_font_cache "$archive_file" "$archive_file"; then
+    log_info "Using offline cache for $package"
+  elif curl -fsSL "$url" -o "$archive_file"; then
+    log_info "Downloaded from: $url"
+  else
     # Download failed - check home directory for manual download
     log_warning "Download failed, checking home directory..."
     local home_file

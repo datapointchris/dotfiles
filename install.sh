@@ -227,14 +227,22 @@ configure_zsh_default_shell() {
 
 usage() {
   echo "Usage: $(basename "$0") --machine NAME [OPTIONS]"
+  echo "       $(basename "$0") --create-offline-bundle [BUNDLE OPTIONS]"
   echo ""
   echo "Install dotfiles and development tools"
   echo ""
   echo "Options:"
-  echo "  --machine NAME  Machine manifest to use (required)"
-  echo "  --force, -f     Force reinstall of all tools even if already installed"
-  echo "  --offline       Use offline bundle (extracts ~/installers/ from tarball)"
-  echo "  --help, -h      Show this help message"
+  echo "  --machine NAME             Machine manifest to use (required for installation)"
+  echo "  --force, -f                Force reinstall of all tools even if already installed"
+  echo "  --offline                  Use offline bundle (extracts ~/installers/ from tarball)"
+  echo "  --create-offline-bundle    Download all installers into an offline bundle tarball"
+  echo "  --help, -h                 Show this help message"
+  echo ""
+  echo "Offline Bundle Options (with --create-offline-bundle):"
+  echo "  --with-fonts               Include fonts in bundle (~400MB extra)"
+  echo "  --platform PLATFORM        Target platform (default: linux-x86_64)"
+  echo "                             Supported: linux-x86_64, linux-arm64,"
+  echo "                                        darwin-x86_64, darwin-arm64"
   echo ""
   echo "Machine manifests: management/machines/*.yml"
   echo ""
@@ -247,6 +255,11 @@ usage() {
   echo "  ./install.sh --machine ubuntu-lxc-server"
   echo "  MACHINE=arch-personal-workstation ./install.sh"
   echo "  SKIP_FONTS=1 ./install.sh --machine macos-personal-workstation"
+  echo ""
+  echo "  # Offline workflow:"
+  echo "  ./install.sh --create-offline-bundle --with-fonts       # On machine with internet"
+  echo "  scp dotfiles-offline-*.tar.gz user@restricted-host:~/   # Transfer bundle"
+  echo "  ./install.sh --machine wsl-workstation --offline        # On restricted machine"
   exit 0
 }
 
@@ -265,7 +278,7 @@ extract_offline_bundle() {
 
   if [[ -z "$bundle_file" ]]; then
     log_error "No offline bundle found. Expected: dotfiles-offline-*.tar.gz in ./ or ~/"
-    log_info "Create a bundle first: ./management/offline/create-bundle.sh"
+    log_info "Create a bundle first: ./install.sh --create-offline-bundle"
     exit 1
   fi
 
@@ -302,6 +315,10 @@ parse_args() {
     --offline)
       OFFLINE_MODE=true
       shift
+      ;;
+    --create-offline-bundle)
+      shift
+      exec bash "$DOTFILES_DIR/management/offline/create-bundle.sh" "$@"
       ;;
     --help | -h)
       usage
