@@ -72,7 +72,16 @@ while read -r tool; do
   else
     log_info "Installing $binary_name..."
   fi
-  go install "$tool@latest" 2>&1 | grep -v "go: downloading" || true
+
+  # Check offline cache before go install
+  cached_binary="$HOME/installers/go-binaries/$binary_name"
+  if [[ -f "$cached_binary" ]] && [[ "$UPDATE_MODE" != "true" ]]; then
+    log_info "Using cached binary: $cached_binary"
+    cp "$cached_binary" "$binary_path"
+    chmod +x "$binary_path"
+  else
+    go install "$tool@latest" 2>&1 | grep -v "go: downloading" || true
+  fi
 
   # Check if binary was actually created
   if [[ -f "$binary_path" ]]; then

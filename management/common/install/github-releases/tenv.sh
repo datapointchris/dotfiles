@@ -73,10 +73,23 @@ if [[ "$SKIP_TENV_INSTALL" == "false" ]]; then
 
   # Download and extract
   TEMP_TARBALL="/tmp/${BINARY_NAME}.tar.gz"
-  log_info "Download URL: $DOWNLOAD_URL"
-  log_info "Downloading tenv..."
-  if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
-    manual_steps="1. Download in your browser (bypasses firewall):
+  URL_FILENAME=$(basename "$DOWNLOAD_URL")
+
+  # Check offline cache first
+  if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
+    CACHED_FILE="$OFFLINE_CACHE_DIR/$URL_FILENAME"
+    if [[ -f "$CACHED_FILE" ]]; then
+      log_info "Using cached file: $CACHED_FILE"
+      cp "$CACHED_FILE" "$TEMP_TARBALL"
+    fi
+  fi
+
+  # Download if not found in cache
+  if [[ ! -f "$TEMP_TARBALL" ]]; then
+    log_info "Download URL: $DOWNLOAD_URL"
+    log_info "Downloading tenv..."
+    if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
+      manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, extract and install:
@@ -86,9 +99,10 @@ if [[ "$SKIP_TENV_INSTALL" == "false" ]]; then
 
 3. Verify installation:
    tenv --version"
-    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-    log_error "tenv installation failed"
-    exit 1
+      output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+      log_error "tenv installation failed"
+      exit 1
+    fi
   fi
 
   log_info "Extracting..."

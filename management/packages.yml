@@ -853,8 +853,8 @@ npm_globals:
     - name: sass
       description: Dart Sass CSS compiler
 
-    - name: tree-sitter-cli
-      description: Parser generator for tree-sitter grammars (required by nvim-treesitter)
+    # tree-sitter-cli moved to GitHub release installer (management/common/install/github-releases/tree-sitter.sh)
+    # npm install triggers post-install scripts that fail behind corporate firewalls
 
 # ================================================================
 # UV TOOLS (Python)

@@ -99,6 +99,7 @@ download_github_binaries() {
     "$github_releases/zk.sh"
     "$github_releases/shellcheck.sh"
     "$github_releases/tenv.sh"
+    "$github_releases/tree-sitter.sh"
   )
 
   local tool version url filename
@@ -112,6 +113,99 @@ download_github_binaries() {
     else
       log_warning "  Could not get URL for $(basename "$script" .sh)"
     fi
+  done
+}
+
+# ============================================================================
+# Go Tool Binaries (from GitHub releases - extracted to ready-to-use binaries)
+# ============================================================================
+
+download_go_binaries() {
+  log_info "Downloading Go tool binaries..."
+
+  # Each entry: binary_name|github_repo|asset_pattern (with {version} placeholder)
+  # sess and toolbox excluded (personal tools — build locally from ~/tools/)
+  local tools=(
+    "task|go-task/task|task_{os}_{go_arch}.tar.gz"
+    "cheat|cheat/cheat|cheat-{os}-{go_arch}.gz"
+    "terraform-docs|terraform-docs/terraform-docs|terraform-docs-{version}-{os}-{go_arch}.tar.gz"
+    "gum|charmbracelet/gum|gum_{version_num}_{Os}_{Arch}.tar.gz"
+    "lazydocker|jesseduffield/lazydocker|lazydocker_{version_num}_{Os}_{Arch}.tar.gz"
+    "actionlint|rhysd/actionlint|actionlint_{version_num}_{os}_{go_arch}.tar.gz"
+    "goose|pressly/goose|goose_{os}_{Arch}"
+    "gofumpt|mvdan/gofumpt|gofumpt_{version}_{os}_{go_arch}"
+    "golangci-lint|golangci/golangci-lint|golangci-lint-{version_num}-{os}-{go_arch}.tar.gz"
+    "gdu|dundee/gdu|gdu_{os}_{go_arch}.tgz"
+  )
+
+  # Platform mappings
+  local os arch go_arch Os Arch
+  os="$OS"
+  arch="$ARCH"
+  [[ "$arch" == "x86_64" ]] && go_arch="amd64" || go_arch="arm64"
+  # Capitalized variants used by some projects (gum, lazydocker)
+  [[ "$os" == "linux" ]] && Os="Linux" || Os="Darwin"
+  Arch="$arch"
+
+  local binary_name repo pattern version version_num asset_url filename
+  for entry in "${tools[@]}"; do
+    IFS='|' read -r binary_name repo pattern <<< "$entry"
+
+    if ! version=$(fetch_github_latest_version "$repo"); then
+      log_warning "  Could not fetch version for $binary_name ($repo)"
+      continue
+    fi
+    version_num="${version#v}"
+
+    # Expand pattern placeholders
+    local expanded="$pattern"
+    expanded="${expanded//\{version\}/$version}"
+    expanded="${expanded//\{version_num\}/$version_num}"
+    expanded="${expanded//\{os\}/$os}"
+    expanded="${expanded//\{arch\}/$arch}"
+    expanded="${expanded//\{go_arch\}/$go_arch}"
+    expanded="${expanded//\{Os\}/$Os}"
+    expanded="${expanded//\{Arch\}/$Arch}"
+
+    asset_url="https://github.com/${repo}/releases/download/${version}/${expanded}"
+
+    log_info "  $binary_name ($version)..."
+
+    local download_path="$CACHE_DIR/go-binaries/${expanded}"
+    if ! download_file "$asset_url" "$download_path" "$binary_name"; then
+      continue
+    fi
+
+    # Extract binary from archive and save as ready-to-use binary
+    local extract_dir="/tmp/go-binary-extract-$$"
+    mkdir -p "$extract_dir"
+    local final_binary="$CACHE_DIR/go-binaries/$binary_name"
+
+    if [[ "$expanded" == *.tar.gz ]] || [[ "$expanded" == *.tgz ]]; then
+      tar -xf "$download_path" -C "$extract_dir"
+      # Find the binary — may be at root or in a subdirectory
+      local found_bin
+      found_bin=$(find "$extract_dir" -name "$binary_name" -type f | head -1)
+      if [[ -n "$found_bin" ]]; then
+        mv "$found_bin" "$final_binary"
+      else
+        log_warning "  Could not find $binary_name binary in archive"
+        rm -rf "$extract_dir" "$download_path"
+        continue
+      fi
+    elif [[ "$expanded" == *.gz ]]; then
+      gunzip -c "$download_path" > "$final_binary"
+    else
+      # Raw binary (goose, gofumpt)
+      mv "$download_path" "$final_binary"
+    fi
+
+    chmod +x "$final_binary"
+    # Remove the archive now that we have the binary
+    [[ -f "$download_path" ]] && [[ "$download_path" != "$final_binary" ]] && rm -f "$download_path"
+    rm -rf "$extract_dir"
+
+    echo "go-binary|$binary_name|$version|$binary_name" >> "$MANIFEST_FILE"
   done
 }
 
@@ -299,7 +393,7 @@ setup_directories() {
   CACHE_DIR="$WORK_DIR/installers"
   MANIFEST_FILE="$CACHE_DIR/manifest.txt"
 
-  mkdir -p "$CACHE_DIR/binaries" "$CACHE_DIR/scripts"
+  mkdir -p "$CACHE_DIR/binaries" "$CACHE_DIR/scripts" "$CACHE_DIR/go-binaries"
   [[ "$INCLUDE_FONTS" == "true" ]] && mkdir -p "$CACHE_DIR/fonts"
 
   cat > "$MANIFEST_FILE" << EOF
@@ -330,6 +424,7 @@ Directory Structure:
   ├── manifest.txt    # List of included files with versions
   ├── README.txt      # This file
   ├── binaries/       # GitHub release binaries + cargo tools
+  ├── go-binaries/    # Pre-built Go tool binaries
   ├── scripts/        # Install scripts (nvm, uv, theme, font, claude-code)
   └── fonts/          # Nerd Fonts (only if --with-fonts was used)
 EOF
@@ -383,6 +478,7 @@ main() {
   echo ""
 
   download_github_binaries
+  download_go_binaries
   download_cargo_binaries
   download_install_scripts
   download_nerd_fonts
