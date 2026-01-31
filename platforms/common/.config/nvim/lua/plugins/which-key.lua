@@ -3,7 +3,7 @@ return {
   event = 'VeryLazy',
   opts = {
     -- Modern which-key v3 configuration
-    preset = 'helix', -- Use modern preset for better appearance
+    preset = 'modern', -- Use modern preset for better appearance
     delay = 5, -- Delay before showing which-key popup
     sort = { 'local', 'order', 'group', 'alphanum', 'mod' }, -- Sort order
     expand = 1, -- Always expand groups (show all items instead of "+X more")
