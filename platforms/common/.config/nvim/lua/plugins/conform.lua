@@ -6,6 +6,13 @@ return {
   config = function()
     local conform = require('conform')
 
+    -- Register .keymap filetype
+    vim.filetype.add({
+      extension = {
+        keymap = 'dts', -- devicetree syntax works well for ZMK keymaps
+      },
+    })
+
     conform.setup({
       formatters_by_ft = {
         lua = { 'stylua' },
@@ -24,10 +31,16 @@ return {
         go = { 'gofumpt' },
         rust = { 'rustfmt' },
         terraform = { 'terraform_fmt' },
+        dts = { 'keymap_align' },
       },
       formatters = {
         shfmt = {
           prepend_args = { '-i', '2' },
+        },
+        keymap_align = {
+          command = 'keymap-align',
+          args = { '-k', '$FILENAME' },
+          stdin = false,
         },
       },
       format_on_save = {
