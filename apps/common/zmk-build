@@ -6,7 +6,8 @@
 # Reads build.yaml from current directory (standard ZMK format).
 #
 # Usage:
-#   zmk-build              Build all targets in build.yaml
+#   zmk-build              Build all targets (incremental)
+#   zmk-build --pristine   Force clean rebuild of all targets
 #   zmk-build --update     Force update west dependencies
 #   zmk-build --help       Show this help
 # ================================================================
@@ -42,13 +43,19 @@ USAGE:
     zmk-build [OPTIONS]
 
 OPTIONS:
-    --clean     Remove shared workspace and exit (use when changing Docker images)
-    --update    Force update west dependencies before building
-    --help      Show this help message
+    --clean       Remove shared workspace and exit (use when changing Docker images)
+    --pristine    Force clean rebuild of all targets (ignore cached build artifacts)
+    --update      Force update west dependencies before building
+    --help        Show this help message
 
 DESCRIPTION:
     Builds ZMK firmware using a shared workspace at ~/.local/share/zmk/
     and configuration from the current directory.
+
+    Builds are incremental by default - only changed files are recompiled.
+    Use --pristine to force a full rebuild.
+
+    When multiple targets are defined, they are built in parallel.
 
     Reads build.yaml for build targets (standard ZMK GitHub Actions format):
 
@@ -75,7 +82,8 @@ REQUIREMENTS:
     - config/ directory with keymap and conf files
 
 EXAMPLES:
-    zmk-build              # Build all targets
+    zmk-build              # Incremental build of all targets
+    zmk-build --pristine   # Full clean rebuild
     zmk-build --update     # Update dependencies and build
 EOF
 }
@@ -154,6 +162,29 @@ get_output_name() {
   fi
 }
 
+# Initialize or update the shared workspace
+ensure_workspace() {
+  local force_update="$1"
+
+  mkdir -p "$ZMK_WORKSPACE"
+
+  docker run --rm \
+    -v "$ZMK_WORKSPACE":"$CONTAINER_WORKSPACE" \
+    -v "$(pwd)/$CONFIG_DIR":"$CONTAINER_CONFIG" \
+    -w "$CONTAINER_WORKSPACE" \
+    "$DOCKER_IMAGE" \
+    /bin/bash -c "
+      if [ ! -f .west/config ]; then
+        echo 'Initializing shared ZMK workspace...'
+        west init -l config/
+        west update
+      elif [ '$force_update' = 'true' ]; then
+        echo 'Updating west dependencies...'
+        west update
+      fi
+    "
+}
+
 # Build a single target
 build_target() {
   local board="$1"
@@ -161,21 +192,14 @@ build_target() {
   local output_name="$3"
   local snippet="$4"
   local cmake_args="$5"
-  local force_update="${6:-false}"
+  local pristine="$6"
   local build_dir="build/${output_name}"
 
-  print_info "Board: $board"
-  [[ -n "$shield" ]] && print_info "Shield: $shield"
-  [[ -n "$snippet" ]] && print_info "Snippet: $snippet"
-  [[ -n "$cmake_args" ]] && print_info "CMake args: $cmake_args"
-  print_info "Output: ${output_name}.uf2"
-
-  local update_cmd=""
-  if [[ "$force_update" == "true" ]]; then
-    update_cmd="west update && "
+  local pristine_arg=""
+  if [[ "$pristine" == "true" ]]; then
+    pristine_arg="-p"
   fi
 
-  # Build west build options
   local snippet_arg=""
   if [[ -n "$snippet" ]]; then
     snippet_arg="-S $snippet"
@@ -193,28 +217,14 @@ build_target() {
     -w "$CONTAINER_WORKSPACE" \
     "$DOCKER_IMAGE" \
     /bin/bash -c "
-      # Initialize west workspace if needed
-      if [ ! -f .west/config ]; then
-        echo 'Initializing shared ZMK workspace...'
-        west init -l config/
-        west update
-      fi
-
-      ${update_cmd}
-
       export ZEPHYR_BASE=${CONTAINER_WORKSPACE}/zephyr
 
-      # Clean previous build for this target
-      rm -rf ${build_dir}
-
-      # Build
-      west build -s zmk/app -d ${build_dir} -b ${board} ${snippet_arg} -- \
+      west build -s zmk/app -d ${build_dir} -b ${board} ${pristine_arg} ${snippet_arg} -- \
         ${shield_arg} \
         ${cmake_args} \
         -DZMK_CONFIG=${CONTAINER_CONFIG} \
         -DZephyr_DIR=${CONTAINER_WORKSPACE}/zephyr/share/zephyr-package/cmake
 
-      # Copy output
       cp ${build_dir}/zephyr/zmk.uf2 ${CONTAINER_OUTPUT}/${output_name}.uf2
     "
 }
@@ -226,12 +236,17 @@ build_target() {
 main() {
   local force_update=false
   local clean_workspace=false
+  local pristine=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --clean)
         clean_workspace=true
+        shift
+        ;;
+      --pristine|-p)
+        pristine=true
         shift
         ;;
       --update)
@@ -267,15 +282,12 @@ main() {
   print_header "ZMK Build" "blue"
   print_info "Workspace: $ZMK_WORKSPACE"
   print_info "Config: $(pwd)/$CONFIG_DIR"
+  [[ "$pristine" == "true" ]] && print_info "Mode: pristine (full rebuild)"
   echo ""
 
-  # Create shared workspace directory if needed
-  if [[ ! -d "$ZMK_WORKSPACE" ]]; then
-    print_warning "Creating shared workspace at $ZMK_WORKSPACE"
-    mkdir -p "$ZMK_WORKSPACE"
-  fi
+  # Ensure workspace is initialized/updated before building
+  ensure_workspace "$force_update"
 
-  # Get target count
   local total
   total=$(get_target_count)
 
@@ -284,14 +296,19 @@ main() {
     exit 1
   fi
 
-  print_info "Found $total target(s)"
+  if (( total > 1 )); then
+    print_info "Building $total targets in parallel"
+  else
+    print_info "Building $total target"
+  fi
   echo ""
 
-  # Build each target
   local start_time=$SECONDS
+  local pids=()
+  local log_files=()
+  local output_names=()
 
   for ((i = 0; i < total; i++)); do
-    local count=$((i + 1))
     local board shield snippet cmake_args artifact_name output_name
     board=$(get_board "$i")
     shield=$(get_shield "$i")
@@ -299,25 +316,47 @@ main() {
     cmake_args=$(get_cmake_args "$i")
     artifact_name=$(get_artifact_name "$i")
     output_name=$(get_output_name "$board" "$shield" "$artifact_name")
+    output_names+=("$output_name")
 
-    print_section "[$count/$total] Building $output_name" "cyan"
+    print_info "Starting: $output_name (board=$board${shield:+ shield=$shield})"
 
-    # Only force update on first target
-    local do_update="false"
-    if [[ "$force_update" == "true" && $i -eq 0 ]]; then
-      do_update="true"
-    fi
+    local log_file
+    log_file=$(mktemp "/tmp/zmk-build-${output_name}-XXXX.log")
+    log_files+=("$log_file")
 
-    if build_target "$board" "$shield" "$output_name" "$snippet" "$cmake_args" "$do_update"; then
-      local size
-      size=$(du -h "${output_name}.uf2" 2>/dev/null | cut -f1)
-      print_success "${output_name}.uf2 ($size)"
-    else
-      print_error "Failed to build $output_name"
-      exit 1
-    fi
-    echo ""
+    build_target "$board" "$shield" "$output_name" "$snippet" "$cmake_args" "$pristine" > "$log_file" 2>&1 &
+    pids+=($!)
   done
+
+  echo ""
+
+  # Wait for all builds and collect results
+  local failed=0
+  for ((i = 0; i < ${#pids[@]}; i++)); do
+    if wait "${pids[$i]}"; then
+      local size
+      size=$(du -h "${output_names[$i]}.uf2" 2>/dev/null | cut -f1)
+      print_success "${output_names[$i]}.uf2 ($size)"
+    else
+      print_error "${output_names[$i]} failed — log: ${log_files[$i]}"
+      tail -20 "${log_files[$i]}" 2>/dev/null
+      failed=1
+    fi
+  done
+
+  # Clean up log files on success, preserve on failure for debugging
+  for ((i = 0; i < ${#log_files[@]}; i++)); do
+    if [[ "$failed" -eq 0 ]]; then
+      rm -f "${log_files[$i]}"
+    fi
+  done
+
+  echo ""
+
+  if [[ "$failed" -ne 0 ]]; then
+    print_error "Some builds failed"
+    exit 1
+  fi
 
   local elapsed=$((SECONDS - start_time))
   local minutes=$((elapsed / 60))
