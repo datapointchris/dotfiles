@@ -4591,32 +4591,24 @@
 <h1 id="docker-configuration">Docker Configuration<a class="headerlink" href="#docker-configuration" title="Permanent link">&para;</a></h1>
 <p>Docker setup varies significantly across platforms due to architectural differences between macOS and Linux. This guide explains the configuration used in this dotfiles repository.</p>
 <h2 id="platform-differences">Platform Differences<a class="headerlink" href="#platform-differences" title="Permanent link">&para;</a></h2>
-<h3 id="macos-colima">macOS (Colima)<a class="headerlink" href="#macos-colima" title="Permanent link">&para;</a></h3>
-<p>macOS cannot run containers natively and requires a Linux VM. This setup uses <strong>Colima</strong> instead of Docker Desktop.</p>
-<p><strong>Container Runtime</strong>: Colima (Lima-based VM running containerd)</p>
-<p>Colima creates a lightweight Linux VM to run containers. The Docker CLI communicates with the VM to manage containers.</p>
+<h3 id="macos-orbstack">macOS (OrbStack)<a class="headerlink" href="#macos-orbstack" title="Permanent link">&para;</a></h3>
+<p>macOS cannot run containers natively and requires a Linux VM. This setup uses <strong>OrbStack</strong> instead of Docker Desktop.</p>
+<p><strong>Container Runtime</strong>: OrbStack (optimized lightweight VM with Docker integration)</p>
+<p>OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, and container management — no separate installs needed.</p>
 <p><strong>Installation</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>docker<span class="w"> </span>docker-compose<span class="w"> </span>colima
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>orbstack
 </span></code></pre></div>
-<p><strong>Start Colima</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>colima<span class="w"> </span>start
-</span></code></pre></div>
-<p><strong>docker-compose Plugin Setup</strong>:
-The macOS installation automatically configures docker-compose as a CLI plugin via symlink:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOCKER_CONFIG</span><span class="s2">/cli-plugins&quot;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ln<span class="w"> </span>-sfn<span class="w"> </span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="k">)</span>/opt/docker-compose/bin/docker-compose<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="s2">&quot;</span><span class="nv">$DOCKER_CONFIG</span><span class="s2">/cli-plugins/docker-compose&quot;</span>
-</span></code></pre></div>
-<p>This enables the modern <code>docker compose</code> command (without hyphen).</p>
+<p><strong>Start OrbStack</strong>:</p>
+<p>Open the OrbStack app. Docker is available immediately — no manual daemon start required. OrbStack runs in the menu bar and starts automatically on login.</p>
 <h3 id="linux-wslarch">Linux (WSL/Arch)<a class="headerlink" href="#linux-wslarch" title="Permanent link">&para;</a></h3>
 <p>Linux runs containers natively without virtualization.</p>
 <p><strong>Container Runtime</strong>: Docker Engine (native)</p>
 <p>Linux uses the Docker daemon directly without VM overhead.</p>
 <p><strong>Installation (WSL)</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker.io<span class="w"> </span>docker-compose-plugin
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker.io<span class="w"> </span>docker-compose-plugin
 </span></code></pre></div>
 <p><strong>Installation (Arch)</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker<span class="w"> </span>docker-compose
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker<span class="w"> </span>docker-compose
 </span></code></pre></div>
 <p><strong>docker-compose Plugin</strong>:
 Linux package managers install docker-compose-plugin automatically with proper integration. No manual symlink needed.</p>
@@ -4635,15 +4627,14 @@ Linux package managers install docker-compose-plugin automatically with proper i
 </ul>
 <p><strong>This dotfiles setup uses V2</strong> across all platforms:</p>
 <ul>
-<li>macOS: <code>brew install docker-compose</code> installs V2 as plugin</li>
+<li>macOS: OrbStack includes docker compose built-in</li>
 <li>Linux: Package repos provide <code>docker-compose-plugin</code> or equivalent</li>
 </ul>
 <h2 id="docker-completions">Docker Completions<a class="headerlink" href="#docker-completions" title="Permanent link">&para;</a></h2>
-<p>Docker completions are installed automatically as dependencies:</p>
+<p>Docker completions are installed automatically:</p>
 <p><strong>macOS</strong>:</p>
 <ul>
-<li><code>docker-completion</code> is a Homebrew dependency of <code>docker</code></li>
-<li>Installed automatically when you install Docker</li>
+<li>OrbStack provides Docker CLI completions automatically</li>
 </ul>
 <p><strong>Linux</strong>:</p>
 <ul>
@@ -4654,7 +4645,7 @@ Linux package managers install docker-compose-plugin automatically with proper i
 <h2 id="xdg-base-directory-compliance">XDG Base Directory Compliance<a class="headerlink" href="#xdg-base-directory-compliance" title="Permanent link">&para;</a></h2>
 <p>Docker configuration is kept in <code>~/.config/docker</code> instead of <code>~/.docker</code>:</p>
 <p><strong>zshrc configuration</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DOCKER_CONFIG</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$XDG_CONFIG_HOME</span><span class="s2">/docker&quot;</span><span class="w">  </span><span class="c1"># ~/.config/docker</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DOCKER_CONFIG</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$XDG_CONFIG_HOME</span><span class="s2">/docker&quot;</span><span class="w">  </span><span class="c1"># ~/.config/docker</span>
 </span></code></pre></div>
 <p>This ensures:</p>
 <ul>
@@ -4663,15 +4654,13 @@ Linux package managers install docker-compose-plugin automatically with proper i
 <li>Plugin directory at <code>$DOCKER_CONFIG/cli-plugins/</code></li>
 </ul>
 <h2 id="gui-alternative-lazydocker">GUI Alternative: lazydocker<a class="headerlink" href="#gui-alternative-lazydocker" title="Permanent link">&para;</a></h2>
-<p>Instead of Docker Desktop GUI, this setup uses <strong>lazydocker</strong> - a terminal UI for Docker management.</p>
+<p>For a terminal-based Docker management UI, this setup uses <strong>lazydocker</strong>.</p>
 <p><strong>Installation</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Already included in packages.yml</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>brew<span class="w"> </span>install<span class="w"> </span>lazydocker<span class="w">      </span><span class="c1"># macOS</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>lazydocker<span class="w">  </span><span class="c1"># WSL</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>lazydocker<span class="w">    </span><span class="c1"># Arch</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Already included in packages.yml</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/jesseduffield/lazydocker@latest
 </span></code></pre></div>
 <p><strong>Usage</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>lazydocker
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>lazydocker
 </span></code></pre></div>
 <p><strong>Features</strong>:</p>
 <ul>
@@ -4684,60 +4673,54 @@ Linux package managers install docker-compose-plugin automatically with proper i
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
 <h3 id="start-docker">Start Docker<a class="headerlink" href="#start-docker" title="Permanent link">&para;</a></h3>
 <p><strong>macOS</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>colima<span class="w"> </span>start
-</span></code></pre></div>
+<p>Open OrbStack (runs in menu bar, starts on login by default).</p>
 <p><strong>Linux</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>docker
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>docker
 </span></code></pre></div>
 <h3 id="verify-installation">Verify Installation<a class="headerlink" href="#verify-installation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>--version
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>version<span class="w">  </span><span class="c1"># V2 command</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>lazydocker<span class="w"> </span>--version
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>--version
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>version<span class="w">  </span><span class="c1"># V2 command</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>orbctl<span class="w"> </span>version<span class="w">          </span><span class="c1"># macOS only</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>lazydocker<span class="w"> </span>--version
 </span></code></pre></div>
 <h3 id="common-commands">Common Commands<a class="headerlink" href="#common-commands" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># List containers</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>docker<span class="w"> </span>ps
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># View logs</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Clean up</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>docker<span class="w"> </span>system<span class="w"> </span>prune
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># lazydocker TUI</span>
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>lazydocker
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># List containers</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>docker<span class="w"> </span>ps
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># View logs</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Clean up</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>docker<span class="w"> </span>system<span class="w"> </span>prune
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># lazydocker TUI</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>lazydocker
 </span></code></pre></div>
 <h2 id="why-not-docker-desktop">Why Not Docker Desktop?<a class="headerlink" href="#why-not-docker-desktop" title="Permanent link">&para;</a></h2>
-<p>Docker Desktop was removed in favor of Colima + lazydocker because:</p>
+<p>Docker Desktop was replaced with OrbStack + lazydocker because:</p>
 <ol>
-<li><strong>Licensing</strong>: Docker Desktop requires license for commercial use</li>
-<li><strong>Resource usage</strong>: Colima is more lightweight</li>
+<li><strong>Licensing</strong>: Docker Desktop requires a paid license for commercial use</li>
+<li><strong>Performance</strong>: OrbStack uses less memory and CPU than Docker Desktop</li>
+<li><strong>Simplicity</strong>: OrbStack integrates Docker CLI seamlessly with zero configuration</li>
 <li><strong>XDG compliance</strong>: Docker Desktop creates files in home directory</li>
-<li><strong>Simplicity</strong>: CLI + lazydocker provides all needed functionality</li>
-<li><strong>Cross-platform</strong>: Same CLI experience across macOS and Linux</li>
+<li><strong>Cross-platform</strong>: Same Docker CLI experience across macOS and Linux</li>
 </ol>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="macos-cannot-connect-to-docker-daemon">macOS: Cannot connect to Docker daemon<a class="headerlink" href="#macos-cannot-connect-to-docker-daemon" title="Permanent link">&para;</a></h3>
-<p>Ensure Colima is running:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>colima<span class="w"> </span>status
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>colima<span class="w"> </span>start
+<p>Ensure OrbStack is running (check the menu bar icon):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>orbctl<span class="w"> </span>status
 </span></code></pre></div>
+<p>If the Docker socket is not found, OrbStack may need to be restarted from the menu bar.</p>
 <h3 id="linux-permission-denied">Linux: Permission denied<a class="headerlink" href="#linux-permission-denied" title="Permanent link">&para;</a></h3>
 <p>Add user to docker group:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="nv">$USER</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>newgrp<span class="w"> </span>docker
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="nv">$USER</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>newgrp<span class="w"> </span>docker
 </span></code></pre></div>
-<h3 id="docker-compose-not-found">docker-compose not found<a class="headerlink" href="#docker-compose-not-found" title="Permanent link">&para;</a></h3>
-<p>Verify plugin installation:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Check if plugin exists</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>ls<span class="w"> </span><span class="nv">$DOCKER_CONFIG</span>/cli-plugins/
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># macOS: Re-run setup</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>task<span class="w"> </span>macos:setup-docker-compose
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Linux: Install docker-compose-plugin</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker-compose-plugin<span class="w">  </span><span class="c1"># WSL</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker-compose<span class="w">            </span><span class="c1"># Arch</span>
+<h3 id="docker-compose-not-found">docker compose not found<a class="headerlink" href="#docker-compose-not-found" title="Permanent link">&para;</a></h3>
+<p><strong>macOS</strong>: Restart OrbStack — docker compose is built-in.</p>
+<p><strong>Linux</strong>: Install docker-compose-plugin:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker-compose-plugin<span class="w">  </span><span class="c1"># WSL</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker-compose<span class="w">            </span><span class="c1"># Arch</span>
 </span></code></pre></div>
 
 
