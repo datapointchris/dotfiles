@@ -12,7 +12,6 @@
 # These provide packages not in the main Homebrew repository
 
 macos_taps:
-  - docker/docker # Docker official tap for latest versions
   - FelixKratz/formulae # JankyBorders
 
 # ================================================================
@@ -136,20 +135,15 @@ system_packages:
   # Docker (cross-platform via official repos - WSL uses Windows Docker Desktop)
   # Ubuntu: requires running setup-docker-official-repo-ubuntu.sh first
   # Arch: official repos already up-to-date
-  # macOS: uses docker/docker tap (see macos_taps section)
+  # macOS: OrbStack provides Docker CLI (see macos_casks)
   - name: docker
     apt: docker-ce
     pacman: docker
-    brew: docker
     description: Docker CLI (official repositories)
 
   - name: docker-cli
     apt: docker-ce-cli
     description: Docker CLI (Ubuntu official repo - separate package)
-
-  - name: colima
-    brew: colima
-    description: Container runtime for macOS (Docker Desktop alternative)
 
   - name: containerd
     apt: containerd.io
@@ -164,13 +158,8 @@ system_packages:
   - name: docker-compose-plugin
     apt: docker-compose-plugin
     pacman: docker-compose
-    brew: docker-compose
     description: Docker Compose V2 plugin
-    # Post-install setup (macOS with colima):
-    #   mkdir -p "$DOCKER_CONFIG/cli-plugins"
-    #   ln -sfn $(brew --prefix)/opt/docker-compose/bin/docker-compose "$DOCKER_CONFIG/cli-plugins/docker-compose"
-    # This enables the modern 'docker compose' command (without hyphen)
-    # DOCKER_CONFIG is already set to $XDG_CONFIG_HOME/docker in zshrc
+    # macOS: OrbStack includes docker compose built-in, no separate install needed
 
   # Note: docker-completion is automatically installed as a dependency of docker on macOS
   # On Linux (apt/pacman), completions are included with docker packages
@@ -1109,6 +1098,10 @@ macos_casks:
 
   - name: michaelvillar-timer
     description: Timer app
+    tags: [gui]
+
+  - name: orbstack
+    description: Container runtime (lightweight Docker Desktop alternative)
     tags: [gui]
 
   - name: multipass

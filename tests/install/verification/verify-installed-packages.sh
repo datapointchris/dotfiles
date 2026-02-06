@@ -258,9 +258,9 @@ check_command_at_path "terrascan" "$HOME/.local/bin/terrascan"
 if [[ "$DETECTED_PLATFORM" != "wsl" ]]; then
   print_section "Docker (Skip on WSL - uses Windows Docker Desktop)"
 
-  # Colima (macOS only)
+  # OrbStack (macOS only)
   if [[ "$DETECTED_PLATFORM" == "macos" ]]; then
-    check_command "colima"
+    check_command "orbctl"
   fi
 
   # Docker CLI and compose (all non-WSL platforms)

@@ -32,11 +32,11 @@ show_help() {
 
   print_section "Examples" "brightyellow"
   echo "  $(print_green "workflows")                     # Show this help"
-  echo "  $(print_green "workflows colima")              # Search for 'colima'"
+  echo "  $(print_green "workflows git")                # Search for 'git'"
   echo "  $(print_green "workflows search docker")       # Search for 'docker'"
   echo "  $(print_green "workflows list")                # List all workflow names"
   echo "  $(print_green "workflows learn")               # Show random workflow (for shell startup)"
-  echo "  $(print_green "workflows show colima-use-profiles")  # Show specific workflow"
+  echo "  $(print_green "workflows show tmux-sessions")  # Show specific workflow"
   echo ""
 
   print_section "Location" "brightblue"
@@ -209,7 +209,7 @@ case "${1:-}" in
 
   *)
     # Any unknown command is treated as a search query
-    # This allows: workflows colima, workflows docker logs, etc.
+    # This allows: workflows git, workflows docker logs, etc.
     cmd_search "$@"
     ;;
 esac

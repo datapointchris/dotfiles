@@ -4,36 +4,23 @@ Docker setup varies significantly across platforms due to architectural differen
 
 ## Platform Differences
 
-### macOS (Colima)
+### macOS (OrbStack)
 
-macOS cannot run containers natively and requires a Linux VM. This setup uses **Colima** instead of Docker Desktop.
+macOS cannot run containers natively and requires a Linux VM. This setup uses **OrbStack** instead of Docker Desktop.
 
-**Container Runtime**: Colima (Lima-based VM running containerd)
+**Container Runtime**: OrbStack (optimized lightweight VM with Docker integration)
 
-Colima creates a lightweight Linux VM to run containers. The Docker CLI communicates with the VM to manage containers.
+OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, and container management — no separate installs needed.
 
 **Installation**:
 
 ```bash
-brew install docker docker-compose colima
+brew install --cask orbstack
 ```
 
-**Start Colima**:
+**Start OrbStack**:
 
-```bash
-colima start
-```
-
-**docker-compose Plugin Setup**:
-The macOS installation automatically configures docker-compose as a CLI plugin via symlink:
-
-```bash
-mkdir -p "$DOCKER_CONFIG/cli-plugins"
-ln -sfn $(brew --prefix)/opt/docker-compose/bin/docker-compose \
-  "$DOCKER_CONFIG/cli-plugins/docker-compose"
-```
-
-This enables the modern `docker compose` command (without hyphen).
+Open the OrbStack app. Docker is available immediately — no manual daemon start required. OrbStack runs in the menu bar and starts automatically on login.
 
 ### Linux (WSL/Arch)
 
@@ -74,17 +61,16 @@ Linux package managers install docker-compose-plugin automatically with proper i
 
 **This dotfiles setup uses V2** across all platforms:
 
-- macOS: `brew install docker-compose` installs V2 as plugin
+- macOS: OrbStack includes docker compose built-in
 - Linux: Package repos provide `docker-compose-plugin` or equivalent
 
 ## Docker Completions
 
-Docker completions are installed automatically as dependencies:
+Docker completions are installed automatically:
 
 **macOS**:
 
-- `docker-completion` is a Homebrew dependency of `docker`
-- Installed automatically when you install Docker
+- OrbStack provides Docker CLI completions automatically
 
 **Linux**:
 
@@ -111,15 +97,13 @@ This ensures:
 
 ## GUI Alternative: lazydocker
 
-Instead of Docker Desktop GUI, this setup uses **lazydocker** - a terminal UI for Docker management.
+For a terminal-based Docker management UI, this setup uses **lazydocker**.
 
 **Installation**:
 
 ```bash
 # Already included in packages.yml
-brew install lazydocker      # macOS
-sudo apt install lazydocker  # WSL
-sudo pacman -S lazydocker    # Arch
+go install github.com/jesseduffield/lazydocker@latest
 ```
 
 **Usage**:
@@ -142,9 +126,7 @@ lazydocker
 
 **macOS**:
 
-```bash
-colima start
-```
+Open OrbStack (runs in menu bar, starts on login by default).
 
 **Linux**:
 
@@ -157,6 +139,7 @@ sudo systemctl start docker
 ```bash
 docker --version
 docker compose version  # V2 command
+orbctl version          # macOS only
 lazydocker --version
 ```
 
@@ -178,24 +161,25 @@ lazydocker
 
 ## Why Not Docker Desktop?
 
-Docker Desktop was removed in favor of Colima + lazydocker because:
+Docker Desktop was replaced with OrbStack + lazydocker because:
 
-1. **Licensing**: Docker Desktop requires license for commercial use
-2. **Resource usage**: Colima is more lightweight
-3. **XDG compliance**: Docker Desktop creates files in home directory
-4. **Simplicity**: CLI + lazydocker provides all needed functionality
-5. **Cross-platform**: Same CLI experience across macOS and Linux
+1. **Licensing**: Docker Desktop requires a paid license for commercial use
+2. **Performance**: OrbStack uses less memory and CPU than Docker Desktop
+3. **Simplicity**: OrbStack integrates Docker CLI seamlessly with zero configuration
+4. **XDG compliance**: Docker Desktop creates files in home directory
+5. **Cross-platform**: Same Docker CLI experience across macOS and Linux
 
 ## Troubleshooting
 
 ### macOS: Cannot connect to Docker daemon
 
-Ensure Colima is running:
+Ensure OrbStack is running (check the menu bar icon):
 
 ```bash
-colima status
-colima start
+orbctl status
 ```
+
+If the Docker socket is not found, OrbStack may need to be restarted from the menu bar.
 
 ### Linux: Permission denied
 
@@ -206,18 +190,13 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-### docker-compose not found
+### docker compose not found
 
-Verify plugin installation:
+**macOS**: Restart OrbStack — docker compose is built-in.
+
+**Linux**: Install docker-compose-plugin:
 
 ```bash
-# Check if plugin exists
-ls $DOCKER_CONFIG/cli-plugins/
-
-# macOS: Re-run setup
-task macos:setup-docker-compose
-
-# Linux: Install docker-compose-plugin
 sudo apt install docker-compose-plugin  # WSL
 sudo pacman -S docker-compose            # Arch
 ```

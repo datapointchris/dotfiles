@@ -1975,7 +1975,7 @@ tools:
     examples:
       - cmd: "ubuntu-docker"
         desc: "Launch and enter Ubuntu container"
-    see_also: [docker, colima]
+    see_also: [docker, orbstack]
     tags: [docker, ubuntu, testing]
 
   pkill:
