@@ -1,0 +1,332 @@
+#!/usr/bin/env bash
+# ================================================================
+# zmk-build - Shared ZMK Firmware Builder
+# ================================================================
+# Builds ZMK firmware using a shared workspace and per-repo config.
+# Reads build.yaml from current directory (standard ZMK format).
+#
+# Usage:
+#   zmk-build              Build all targets in build.yaml
+#   zmk-build --update     Force update west dependencies
+#   zmk-build --help       Show this help
+# ================================================================
+
+set -euo pipefail
+
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
+
+# ================================================================
+# Configuration
+# ================================================================
+
+ZMK_WORKSPACE="${XDG_DATA_HOME:-$HOME/.local/share}/zmk"
+DOCKER_IMAGE="zmkfirmware/zmk-build-arm:stable"
+BUILD_YAML="build.yaml"
+CONFIG_DIR="config"
+
+# Container paths
+CONTAINER_WORKSPACE="/workspaces/zmk"
+CONTAINER_CONFIG="/workspaces/zmk/config"
+CONTAINER_OUTPUT="/workspaces/output"
+
+# ================================================================
+# Functions
+# ================================================================
+
+show_help() {
+  cat << 'EOF'
+zmk-build - Shared ZMK Firmware Builder
+
+USAGE:
+    zmk-build [OPTIONS]
+
+OPTIONS:
+    --clean     Remove shared workspace and exit (use when changing Docker images)
+    --update    Force update west dependencies before building
+    --help      Show this help message
+
+DESCRIPTION:
+    Builds ZMK firmware using a shared workspace at ~/.local/share/zmk/
+    and configuration from the current directory.
+
+    Reads build.yaml for build targets (standard ZMK GitHub Actions format):
+
+        include:
+          - board: nice_nano
+            shield: corne_left nice_view_adapter nice_view
+          - board: piantor_pro_bt_left
+            snippet: studio-rpc-usb-uart
+            cmake-args: -DCONFIG_ZMK_STUDIO=y
+
+    Supported build.yaml fields:
+        board         - Required. The board name.
+        shield        - Optional. Shield name(s).
+        snippet       - Optional. Zephyr snippet to include.
+        cmake-args    - Optional. Extra CMake arguments.
+        artifact-name - Optional. Custom output filename.
+
+    Output files are named: artifact-name > shield (first word) > board
+
+REQUIREMENTS:
+    - Docker
+    - yq (YAML processor)
+    - build.yaml in current directory
+    - config/ directory with keymap and conf files
+
+EXAMPLES:
+    zmk-build              # Build all targets
+    zmk-build --update     # Update dependencies and build
+EOF
+}
+
+check_requirements() {
+  if ! command -v docker &>/dev/null; then
+    print_error "Docker not found. Please install Docker."
+    exit 1
+  fi
+
+  if ! command -v yq &>/dev/null; then
+    print_error "yq not found. Please install yq."
+    exit 1
+  fi
+
+  if [[ ! -f "$BUILD_YAML" ]]; then
+    print_error "No $BUILD_YAML found in current directory."
+    print_info "Create a build.yaml with your board/shield configuration."
+    exit 1
+  fi
+
+  if [[ ! -d "$CONFIG_DIR" ]]; then
+    print_error "No $CONFIG_DIR/ directory found."
+    print_info "Your keymap and conf files should be in config/"
+    exit 1
+  fi
+}
+
+# Get number of build targets
+get_target_count() {
+  yq '.include | length' "$BUILD_YAML"
+}
+
+# Get board for target index (0-based)
+get_board() {
+  local index="$1"
+  yq -r ".include[$index].board" "$BUILD_YAML"
+}
+
+# Get shield for target index (0-based)
+get_shield() {
+  local index="$1"
+  yq -r ".include[$index].shield // \"\"" "$BUILD_YAML"
+}
+
+# Get snippet for target index (0-based)
+get_snippet() {
+  local index="$1"
+  yq -r ".include[$index].snippet // \"\"" "$BUILD_YAML"
+}
+
+# Get cmake-args for target index (0-based)
+get_cmake_args() {
+  local index="$1"
+  yq -r ".include[$index][\"cmake-args\"] // \"\"" "$BUILD_YAML"
+}
+
+# Get artifact-name for target index (0-based)
+get_artifact_name() {
+  local index="$1"
+  yq -r ".include[$index][\"artifact-name\"] // \"\"" "$BUILD_YAML"
+}
+
+# Extract output filename: artifact-name > first word of shield > board
+get_output_name() {
+  local board="$1"
+  local shield="$2"
+  local artifact_name="$3"
+
+  if [[ -n "$artifact_name" ]]; then
+    echo "$artifact_name"
+  elif [[ -n "$shield" ]]; then
+    echo "${shield%% *}"
+  else
+    echo "$board"
+  fi
+}
+
+# Build a single target
+build_target() {
+  local board="$1"
+  local shield="$2"
+  local output_name="$3"
+  local snippet="$4"
+  local cmake_args="$5"
+  local force_update="${6:-false}"
+  local build_dir="build/${output_name}"
+
+  print_info "Board: $board"
+  [[ -n "$shield" ]] && print_info "Shield: $shield"
+  [[ -n "$snippet" ]] && print_info "Snippet: $snippet"
+  [[ -n "$cmake_args" ]] && print_info "CMake args: $cmake_args"
+  print_info "Output: ${output_name}.uf2"
+
+  local update_cmd=""
+  if [[ "$force_update" == "true" ]]; then
+    update_cmd="west update && "
+  fi
+
+  # Build west build options
+  local snippet_arg=""
+  if [[ -n "$snippet" ]]; then
+    snippet_arg="-S $snippet"
+  fi
+
+  local shield_arg=""
+  if [[ -n "$shield" ]]; then
+    shield_arg="-DSHIELD='${shield}'"
+  fi
+
+  docker run --rm \
+    -v "$ZMK_WORKSPACE":"$CONTAINER_WORKSPACE" \
+    -v "$(pwd)/$CONFIG_DIR":"$CONTAINER_CONFIG" \
+    -v "$(pwd)":"$CONTAINER_OUTPUT" \
+    -w "$CONTAINER_WORKSPACE" \
+    "$DOCKER_IMAGE" \
+    /bin/bash -c "
+      # Initialize west workspace if needed
+      if [ ! -f .west/config ]; then
+        echo 'Initializing shared ZMK workspace...'
+        west init -l config/
+        west update
+      fi
+
+      ${update_cmd}
+
+      export ZEPHYR_BASE=${CONTAINER_WORKSPACE}/zephyr
+
+      # Clean previous build for this target
+      rm -rf ${build_dir}
+
+      # Build
+      west build -s zmk/app -d ${build_dir} -b ${board} ${snippet_arg} -- \
+        ${shield_arg} \
+        ${cmake_args} \
+        -DZMK_CONFIG=${CONTAINER_CONFIG} \
+        -DZephyr_DIR=${CONTAINER_WORKSPACE}/zephyr/share/zephyr-package/cmake
+
+      # Copy output
+      cp ${build_dir}/zephyr/zmk.uf2 ${CONTAINER_OUTPUT}/${output_name}.uf2
+    "
+}
+
+# ================================================================
+# Main
+# ================================================================
+
+main() {
+  local force_update=false
+  local clean_workspace=false
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --clean)
+        clean_workspace=true
+        shift
+        ;;
+      --update)
+        force_update=true
+        shift
+        ;;
+      --help|-h)
+        show_help
+        exit 0
+        ;;
+      *)
+        print_error "Unknown option: $1"
+        show_help
+        exit 1
+        ;;
+    esac
+  done
+
+  # Handle --clean (doesn't require build.yaml)
+  if [[ "$clean_workspace" == "true" ]]; then
+    if [[ -d "$ZMK_WORKSPACE" ]]; then
+      print_warning "Removing shared workspace at $ZMK_WORKSPACE (4.5GB+)"
+      rm -rf "$ZMK_WORKSPACE"
+      print_success "Workspace cleared. Next build will reinitialize."
+    else
+      print_info "No workspace to clean at $ZMK_WORKSPACE"
+    fi
+    exit 0
+  fi
+
+  check_requirements
+
+  print_header "ZMK Build" "blue"
+  print_info "Workspace: $ZMK_WORKSPACE"
+  print_info "Config: $(pwd)/$CONFIG_DIR"
+  echo ""
+
+  # Create shared workspace directory if needed
+  if [[ ! -d "$ZMK_WORKSPACE" ]]; then
+    print_warning "Creating shared workspace at $ZMK_WORKSPACE"
+    mkdir -p "$ZMK_WORKSPACE"
+  fi
+
+  # Get target count
+  local total
+  total=$(get_target_count)
+
+  if [[ "$total" -eq 0 ]]; then
+    print_error "No build targets found in $BUILD_YAML"
+    exit 1
+  fi
+
+  print_info "Found $total target(s)"
+  echo ""
+
+  # Build each target
+  local start_time=$SECONDS
+
+  for ((i = 0; i < total; i++)); do
+    local count=$((i + 1))
+    local board shield snippet cmake_args artifact_name output_name
+    board=$(get_board "$i")
+    shield=$(get_shield "$i")
+    snippet=$(get_snippet "$i")
+    cmake_args=$(get_cmake_args "$i")
+    artifact_name=$(get_artifact_name "$i")
+    output_name=$(get_output_name "$board" "$shield" "$artifact_name")
+
+    print_section "[$count/$total] Building $output_name" "cyan"
+
+    # Only force update on first target
+    local do_update="false"
+    if [[ "$force_update" == "true" && $i -eq 0 ]]; then
+      do_update="true"
+    fi
+
+    if build_target "$board" "$shield" "$output_name" "$snippet" "$cmake_args" "$do_update"; then
+      local size
+      size=$(du -h "${output_name}.uf2" 2>/dev/null | cut -f1)
+      print_success "${output_name}.uf2 ($size)"
+    else
+      print_error "Failed to build $output_name"
+      exit 1
+    fi
+    echo ""
+  done
+
+  local elapsed=$((SECONDS - start_time))
+  local minutes=$((elapsed / 60))
+  local seconds=$((elapsed % 60))
+
+  print_header "Build Complete" "green"
+  print_success "$total target(s) built in ${minutes}m ${seconds}s"
+  echo ""
+  ls -lh ./*.uf2 2>/dev/null || true
+}
+
+main "$@"
