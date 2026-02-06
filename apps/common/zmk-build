@@ -162,11 +162,32 @@ get_output_name() {
   fi
 }
 
+# Check if west.yml changed since last build (different repo or updated manifest)
+manifest_changed() {
+  local current_hash
+  current_hash=$(md5sum "$(pwd)/$CONFIG_DIR/west.yml" 2>/dev/null | cut -d' ' -f1)
+  local stored_hash=""
+  if [[ -f "$ZMK_WORKSPACE/.last_manifest_hash" ]]; then
+    stored_hash=$(cat "$ZMK_WORKSPACE/.last_manifest_hash")
+  fi
+  [[ "$current_hash" != "$stored_hash" ]]
+}
+
+save_manifest_hash() {
+  md5sum "$(pwd)/$CONFIG_DIR/west.yml" 2>/dev/null | cut -d' ' -f1 > "$ZMK_WORKSPACE/.last_manifest_hash"
+}
+
 # Initialize or update the shared workspace
 ensure_workspace() {
   local force_update="$1"
 
   mkdir -p "$ZMK_WORKSPACE"
+
+  # Auto-detect when switching between repos with different manifests
+  if [[ "$force_update" != "true" ]] && manifest_changed; then
+    print_info "Manifest changed — updating west dependencies"
+    force_update=true
+  fi
 
   docker run --rm \
     -v "$ZMK_WORKSPACE":"$CONTAINER_WORKSPACE" \
@@ -183,6 +204,9 @@ ensure_workspace() {
         west update
       fi
     "
+
+  # Save hash after successful workspace setup
+  save_manifest_hash
 }
 
 # Build a single target
@@ -210,6 +234,12 @@ build_target() {
     shield_arg="-DSHIELD='${shield}'"
   fi
 
+  # If boards/ or boards/shields/ exist, tell CMake where to find them
+  local board_root_arg=""
+  if [[ -d "$(pwd)/boards" ]]; then
+    board_root_arg="-DBOARD_ROOT=${CONTAINER_OUTPUT}"
+  fi
+
   docker run --rm \
     -v "$ZMK_WORKSPACE":"$CONTAINER_WORKSPACE" \
     -v "$(pwd)/$CONFIG_DIR":"$CONTAINER_CONFIG" \
@@ -222,6 +252,7 @@ build_target() {
       west build -s zmk/app -d ${build_dir} -b ${board} ${pristine_arg} ${snippet_arg} -- \
         ${shield_arg} \
         ${cmake_args} \
+        ${board_root_arg} \
         -DZMK_CONFIG=${CONTAINER_CONFIG} \
         -DZephyr_DIR=${CONTAINER_WORKSPACE}/zephyr/share/zephyr-package/cmake
 
