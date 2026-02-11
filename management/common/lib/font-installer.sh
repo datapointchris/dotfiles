@@ -13,12 +13,37 @@ check_font_cache() {
   return 1
 }
 
+# Get Windows username for WSL font installation
+get_windows_username() {
+  cmd.exe /C 'echo %USERNAME%' 2>/dev/null | tr -d '\r\n' | xargs
+}
+
+# Get the Windows user fonts directory path (WSL only)
+get_windows_fonts_dir() {
+  local windows_user
+  windows_user=$(get_windows_username)
+  if [[ -z "$windows_user" ]]; then
+    return 1
+  fi
+  echo "/mnt/c/Users/$windows_user/AppData/Local/Microsoft/Windows/Fonts"
+}
+
 get_system_font_dir() {
   local platform
   platform=$(detect_platform)
   case "$platform" in
     macos) echo "$HOME/Library/Fonts" ;;
-    wsl)   echo "$HOME/fonts" ;;
+    wsl)
+      # Return Windows fonts directory for direct installation
+      local win_fonts
+      win_fonts=$(get_windows_fonts_dir)
+      if [[ -n "$win_fonts" ]]; then
+        echo "$win_fonts"
+      else
+        # Fallback to local copy if Windows username detection fails
+        echo "$HOME/fonts"
+      fi
+      ;;
     linux|arch) echo "$HOME/.local/share/fonts" ;;
     *)
       log_error "Unsupported platform: $platform"
@@ -179,6 +204,11 @@ install_font_files() {
 
     cp "$font_file" "$target_dir/"
     installed=$((installed + 1))
+
+    # On WSL, also register the font in Windows registry
+    if [[ "$platform" == "wsl" ]]; then
+      _register_windows_font "$target_file" "$filename"
+    fi
   done < <(find_font_files "$source_dir" -print0)
 
   if [[ $installed -eq 0 ]] && [[ $skipped -eq 0 ]]; then
@@ -193,6 +223,46 @@ install_font_files() {
   elif [[ $skipped -gt 0 ]]; then
     log_success "All $skipped fonts already installed in $target_dir"
   fi
+}
+
+# Register a font in Windows registry (WSL only)
+# This makes Windows recognize fonts copied to the user fonts directory
+_register_windows_font() {
+  local font_path="$1"
+  local font_filename="$2"
+
+  local win_path
+  win_path=$(wslpath -w "$font_path" 2>/dev/null) || return 1
+
+  # Use PowerShell to get font name and register in registry
+  # Note: </dev/null prevents PowerShell from consuming stdin (which breaks while-read loops)
+  powershell.exe -NoProfile -Command "
+    \$ErrorActionPreference = 'SilentlyContinue'
+    \$fontPath = '$win_path'
+    \$fontFileName = '$font_filename'
+
+    try {
+      Add-Type -AssemblyName System.Drawing
+      \$fontCollection = New-Object System.Drawing.Text.PrivateFontCollection
+      \$fontCollection.AddFontFile(\$fontPath)
+      \$fontFamily = \$fontCollection.Families[0].Name
+
+      \$style = ''
+      if (\$fontFileName -match 'Bold' -and \$fontFileName -match 'Italic') {
+        \$style = ' Bold Italic'
+      } elseif (\$fontFileName -match 'Bold') {
+        \$style = ' Bold'
+      } elseif (\$fontFileName -match 'Italic') {
+        \$style = ' Italic'
+      }
+      \$fontName = \"\$fontFamily\$style (TrueType)\"
+    } catch {
+      \$fontName = [System.IO.Path]::GetFileNameWithoutExtension(\$fontFileName) + ' (TrueType)'
+    }
+
+    \$regPath = 'HKCU:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'
+    Set-ItemProperty -Path \$regPath -Name \$fontName -Value \$fontPath
+  " </dev/null 2>/dev/null || true
 }
 
 refresh_font_cache() {
@@ -214,7 +284,14 @@ refresh_font_cache() {
       log_info "Font cache refresh not needed on macOS (automatic)"
       ;;
     wsl)
-      log_info "Fonts saved to ~/fonts/ — copy to Windows and install manually"
+      # Refresh fontconfig cache so fc-list sees the new fonts
+      if command -v fc-cache &> /dev/null; then
+        log_info "Refreshing fontconfig cache..."
+        fc-cache -f 2>/dev/null
+        log_success "Fonts installed to Windows and registered"
+      else
+        log_success "Fonts installed to Windows"
+      fi
       ;;
   esac
 }

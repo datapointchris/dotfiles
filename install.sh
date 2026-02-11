@@ -415,6 +415,9 @@ main() {
       print_header "System Packages (apt)"
       bash "$DOTFILES_DIR/management/wsl/install/system-packages.sh"
     fi
+
+    print_section "WSL fontconfig setup"
+    bash "$DOTFILES_DIR/management/wsl/install/fontconfig-setup.sh"
     ;;
   arch)
     local arch_setup="$DOTFILES_DIR/management/arch/setup"

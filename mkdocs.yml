@@ -224,6 +224,7 @@ nav:
       - Idempotent Installation Patterns: learnings/idempotent-installation-patterns.md
       - Testing Bootstrap Dependencies: learnings/testing-bootstrap-dependencies.md
       - WSL Ubuntu Package Versions: learnings/wsl-ubuntu-package-versions.md
+      - WSL PowerShell Stdin Consumption: learnings/wsl-powershell-stdin-consumption.md
       - Package Version Analysis: learnings/package-version-analysis.md
       - Bash Testing Frameworks: learnings/bash-testing-frameworks-guide.md
       - Bash Script Testing: learnings/bash-script-testing.md

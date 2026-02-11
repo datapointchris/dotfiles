@@ -140,6 +140,16 @@ theme upgrade               # Update to latest version
     - `batcat` → `bat` (created during install)
     - `fdfind` → `fd` (created during install)
 
+    **Font Installation**:
+
+    Fonts are installed to Windows automatically (no manual steps):
+
+    - Directory: `%LOCALAPPDATA%\Microsoft\Windows\Fonts` (user fonts, no admin)
+    - Registry: `HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`
+    - Fontconfig: Configured to see Windows fonts via `fontconfig-setup.sh`
+
+    The `font` CLI and `fc-list` both see Windows-installed fonts.
+
     **Snap Packages**:
 
     - Some tools only available via snap
@@ -184,6 +194,8 @@ When testing installations, verify these platform-specific items:
     - [ ] ~/.local/bin in PATH
     - [ ] WSL-specific config applied (/etc/wsl.conf)
     - [ ] systemd enabled if needed
+    - [ ] Fonts installed to Windows user fonts directory
+    - [ ] `font list` shows installed fonts
 
 === "Arch Linux"
 
