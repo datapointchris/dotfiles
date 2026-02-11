@@ -3682,6 +3682,8 @@
       
         
       
+        
+      
     
     
     
@@ -3923,6 +3925,34 @@
     
   
     WSL Ubuntu Package Versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learnings/wsl-powershell-stdin-consumption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSL PowerShell Stdin Consumption
   
 
     
@@ -4824,6 +4854,14 @@
 <li><code>batcat</code> → <code>bat</code> (created during install)</li>
 <li><code>fdfind</code> → <code>fd</code> (created during install)</li>
 </ul>
+<p><strong>Font Installation</strong>:</p>
+<p>Fonts are installed to Windows automatically (no manual steps):</p>
+<ul>
+<li>Directory: <code>%LOCALAPPDATA%\Microsoft\Windows\Fonts</code> (user fonts, no admin)</li>
+<li>Registry: <code>HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts</code></li>
+<li>Fontconfig: Configured to see Windows fonts via <code>fontconfig-setup.sh</code></li>
+</ul>
+<p>The <code>font</code> CLI and <code>fc-list</code> both see Windows-installed fonts.</p>
 <p><strong>Snap Packages</strong>:</p>
 <ul>
 <li>Some tools only available via snap</li>
@@ -4872,6 +4910,8 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ~/.local/bin in PATH</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> WSL-specific config applied (/etc/wsl.conf)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> systemd enabled if needed</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Fonts installed to Windows user fonts directory</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>font list</code> shows installed fonts</li>
 </ul>
 </div>
 <div class="tabbed-block">
