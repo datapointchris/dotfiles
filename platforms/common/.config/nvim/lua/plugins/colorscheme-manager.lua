@@ -45,10 +45,10 @@ return {
     end,
   },
 
-  -- Generated themes from theme system (~/tools/theme)
+  -- Generated themes from theme system (~/.local/share/theme)
   -- Dynamically load all themes that have a neovim/ directory
   (function()
-    local themes_dir = vim.fn.expand('~/tools/theme/themes')
+    local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
     local generated_themes = {}
     local handle = vim.loop.fs_scandir(themes_dir)
     if handle then
@@ -83,7 +83,7 @@ return {
     lazy = false,
     priority = 999, -- Load after colorscheme plugins but before other plugins
     config = function()
-      local themes_dir = vim.fn.expand('~/tools/theme/themes')
+      local themes_dir = vim.fn.expand('~/.local/share/theme/themes')
       local history_file = vim.fn.expand('~/.local/state/theme/history.jsonl')
 
       -- Configuration
