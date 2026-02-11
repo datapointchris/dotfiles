@@ -62,7 +62,6 @@ install_fonts() {
   run_installer "$common_install/fonts/nerd-fonts.sh" "nerd-fonts"
 
   # GitHub Release Fonts
-  run_installer "$common_install/fonts/firacode.sh" "firacode-font"
   run_installer "$common_install/fonts/commitmono.sh" "commitmono-font"
   # Iosevka Variants
   run_installer "$common_install/fonts/sgr-iosevka.sh" "sgr-iosevka-font"

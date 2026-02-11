@@ -20,13 +20,12 @@ bash management/common/install/fonts/nerd-fonts.sh
 bash management/common/install/fonts/nerd-fonts.sh Hack
 ```
 
-**Nerd Fonts installed**: CascadiaCode, ComicShannsMono, Hack, Iosevka, JetBrainsMono, Meslo, Monaspace, RobotoMono
+**Nerd Fonts installed**: CascadiaCode, ComicShannsMono, FiraCode, Hack, Iosevka, JetBrainsMono, Meslo, Monaspace, RobotoMono
 
 ### Individual Font Installers
 
 Each font has its own installer for fonts not in the Nerd Fonts collection:
 
-- `firacode.sh` - Fira Code (GitHub release)
 - `commitmono.sh` - Commit Mono (GitHub release)
 - `comicmononf.sh` - ComicMonoNF (xtevenx variant)
 - `seriousshanns.sh` - SeriousShanns Nerd Font Mono

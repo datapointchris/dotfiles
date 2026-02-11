@@ -126,7 +126,6 @@ echo ""
 
 # --- Other Fonts ---
 echo -e "${YELLOW}Other Font Sources:${NC}"
-test_url "firacode" "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip"
 test_url "victor-mono" "https://github.com/rubjo/victor-mono/releases/latest"
 test_url "iosevka" "https://github.com/be5invis/Iosevka/releases/latest"
 echo ""
