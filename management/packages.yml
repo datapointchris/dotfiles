@@ -698,6 +698,13 @@ nerd_fonts:
     description: Iosevka font with icons
     tags: [font]
 
+  - name: FiraCode Nerd Font
+    package: FiraCode
+    check_pattern: "*FiraCode*NerdFont*"
+    extension: ttf
+    description: Fira Code with icons
+    tags: [font]
+
   - name: JetBrainsMono Nerd Font
     package: JetBrainsMono
     check_pattern: "*JetBrains*NerdFont*"
