@@ -103,6 +103,8 @@ prune_font_family "$download_dir"
 
 standardize_font_family "$download_dir"
 
+fix_font_metadata "$download_dir"
+
 install_font_files "$download_dir" "$system_font_dir" "$platform"
 
 refresh_font_cache "$platform" "$system_font_dir"

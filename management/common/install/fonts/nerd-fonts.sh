@@ -48,6 +48,7 @@ install_nerd_font() {
   prune_font_family "$download_dir"
   prune_font_variants "$download_dir" "$package"
   standardize_font_family "$download_dir"
+  fix_font_metadata "$download_dir"  # Fix before install (WSL locks files after install)
   install_font_files "$download_dir" "$system_font_dir" "$platform"
 
   log_success "$font_name installed: $system_font_dir"

@@ -185,15 +185,6 @@ install_manifest_phases() {
     print_header "Neovim Plugins"
     run_installer "$plugins/nvim-plugins.sh" "nvim-plugins"
   fi
-
-  # Fix font metadata (requires uvx which is now installed)
-  if manifest_enabled "fonts" && [[ "${SKIP_FONTS:-}" != "1" ]]; then
-    print_header "Font Metadata Fixes"
-    source "$DOTFILES_DIR/management/common/lib/font-installer.sh"
-    local font_dir
-    font_dir=$(get_system_font_dir)
-    fix_font_metadata "$font_dir"
-  fi
 }
 
 configure_zsh_default_shell() {
