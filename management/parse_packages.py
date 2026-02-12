@@ -81,6 +81,10 @@ def filter_go_packages_by_manifest(data, manifest, output_format='packages'):
     filtered = [pkg for pkg in all_tools if pkg['name'] in manifest_tools]
     if output_format == 'name_package':
         return [f"{pkg['name']}|{pkg['package']}" for pkg in filtered]
+    elif output_format == 'binary_info':
+        return [f"{pkg['name']}|{pkg['github_repo']}|{pkg['binary_pattern']}"
+                for pkg in filtered
+                if 'github_repo' in pkg and 'binary_pattern' in pkg]
     return [pkg['package'] for pkg in filtered]
 
 
@@ -215,12 +219,17 @@ def get_go_packages(data, output_format='packages'):
 
     Args:
         output_format: 'packages' returns just package paths,
-                      'name_package' returns 'name|package' pairs
+                      'name_package' returns 'name|package' pairs,
+                      'binary_info' returns 'name|github_repo|binary_pattern' for offline bundling
     """
     if 'go_tools' not in data:
         return []
     if output_format == 'name_package':
         return [f"{pkg['name']}|{pkg['package']}" for pkg in data['go_tools']]
+    elif output_format == 'binary_info':
+        return [f"{pkg['name']}|{pkg['github_repo']}|{pkg['binary_pattern']}"
+                for pkg in data['go_tools']
+                if 'github_repo' in pkg and 'binary_pattern' in pkg]
     return [pkg['package'] for pkg in data['go_tools']]
 
 
@@ -315,7 +324,7 @@ def main():
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
     parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo for offline), packages/full (nerd-fonts)')
+                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline), packages/full (nerd-fonts)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., ubuntu-lxc-server) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
 
@@ -399,7 +408,7 @@ def main():
         else:
             packages = get_local_uv_packages(data)
     elif args.type == 'go':
-        fmt = args.format if args.format in ('packages', 'name_package') else 'packages'
+        fmt = args.format if args.format in ('packages', 'name_package', 'binary_info') else 'packages'
         if manifest:
             packages = filter_go_packages_by_manifest(data, manifest, fmt)
         else:

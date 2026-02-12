@@ -936,42 +936,62 @@ local_uv_tools:
 go_tools:
   - name: task
     package: github.com/go-task/task/v3/cmd/task
+    github_repo: go-task/task
+    binary_pattern: "task_{os}_{go_arch}.tar.gz"
     description: Task runner / build tool (Taskfile.yml)
 
   - name: cheat
     package: github.com/cheat/cheat/cmd/cheat
+    github_repo: cheat/cheat
+    binary_pattern: "cheat-{os}-{go_arch}.gz"
     description: Interactive cheatsheet CLI
 
   - name: terraform-docs
     package: github.com/terraform-docs/terraform-docs
+    github_repo: terraform-docs/terraform-docs
+    binary_pattern: "terraform-docs-{version}-{os}-{go_arch}.tar.gz"
     description: Generate terraform documentation
 
   - name: gum
     package: github.com/charmbracelet/gum
+    github_repo: charmbracelet/gum
+    binary_pattern: "gum_{version_num}_{Os}_{Arch}.tar.gz"
     description: Tool for glamorous shell scripts (used by menu/notes apps)
 
   - name: lazydocker
     package: github.com/jesseduffield/lazydocker
+    github_repo: jesseduffield/lazydocker
+    binary_pattern: "lazydocker_{version_num}_{Os}_{Arch}.tar.gz"
     description: Terminal UI for Docker with compose support
 
   - name: actionlint
     package: github.com/rhysd/actionlint/cmd/actionlint
+    github_repo: rhysd/actionlint
+    binary_pattern: "actionlint_{version_num}_{os}_{go_arch}.tar.gz"
     description: GitHub Actions workflow linter
 
   - name: goose
     package: github.com/pressly/goose/v3/cmd/goose
+    github_repo: pressly/goose
+    binary_pattern: "goose_{os}_{Arch}"
     description: Database migration tool
 
   - name: gofumpt
     package: mvdan.cc/gofumpt
+    github_repo: mvdan/gofumpt
+    binary_pattern: "gofumpt_{version}_{os}_{go_arch}"
     description: Stricter gofmt formatter for Go code
 
   - name: golangci-lint
     package: github.com/golangci/golangci-lint/cmd/golangci-lint
+    github_repo: golangci/golangci-lint
+    binary_pattern: "golangci-lint-{version_num}-{os}-{go_arch}.tar.gz"
     description: Comprehensive Go linter aggregating 100+ linters
 
   - name: gdu
     package: github.com/dundee/gdu/v5/cmd/gdu
+    github_repo: dundee/gdu
+    binary_pattern: "gdu_{os}_{go_arch}.tgz"
     description: Fast disk usage analyzer with interactive TUI
 
   - name: sess
@@ -980,6 +1000,8 @@ go_tools:
 
   - name: sesh
     package: github.com/joshmedeski/sesh/v2
+    github_repo: joshmedeski/sesh
+    binary_pattern: "sesh_{Os}_{Arch}.tar.gz"
     description: Smart tmux session manager with zoxide integration
 
   - name: toolbox

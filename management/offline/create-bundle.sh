@@ -117,26 +117,11 @@ download_github_binaries() {
 }
 
 # ============================================================================
-# Go Tool Binaries (from GitHub releases - extracted to ready-to-use binaries)
+# Go Tool Binaries (from packages.yml - data-driven, extracted to binaries)
 # ============================================================================
 
 download_go_binaries() {
   log_info "Downloading Go tool binaries..."
-
-  # Each entry: binary_name|github_repo|asset_pattern (with {version} placeholder)
-  # sess and toolbox excluded (personal tools — build locally from ~/tools/)
-  local tools=(
-    "task|go-task/task|task_{os}_{go_arch}.tar.gz"
-    "cheat|cheat/cheat|cheat-{os}-{go_arch}.gz"
-    "terraform-docs|terraform-docs/terraform-docs|terraform-docs-{version}-{os}-{go_arch}.tar.gz"
-    "gum|charmbracelet/gum|gum_{version_num}_{Os}_{Arch}.tar.gz"
-    "lazydocker|jesseduffield/lazydocker|lazydocker_{version_num}_{Os}_{Arch}.tar.gz"
-    "actionlint|rhysd/actionlint|actionlint_{version_num}_{os}_{go_arch}.tar.gz"
-    "goose|pressly/goose|goose_{os}_{Arch}"
-    "gofumpt|mvdan/gofumpt|gofumpt_{version}_{os}_{go_arch}"
-    "golangci-lint|golangci/golangci-lint|golangci-lint-{version_num}-{os}-{go_arch}.tar.gz"
-    "gdu|dundee/gdu|gdu_{os}_{go_arch}.tgz"
-  )
 
   # Platform mappings
   local os arch go_arch Os Arch
@@ -148,8 +133,8 @@ download_go_binaries() {
   Arch="$arch"
 
   local binary_name repo pattern version version_num asset_url filename
-  for entry in "${tools[@]}"; do
-    IFS='|' read -r binary_name repo pattern <<< "$entry"
+  while IFS='|' read -r binary_name repo pattern; do
+    [[ -z "$binary_name" ]] && continue
 
     if ! version=$(fetch_github_latest_version "$repo"); then
       log_warning "  Could not fetch version for $binary_name ($repo)"
@@ -208,7 +193,7 @@ download_go_binaries() {
     rm -rf "$extract_dir"
 
     echo "go-binary|$binary_name|$version|$binary_name" >> "$MANIFEST_FILE"
-  done
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=go --format=binary_info)
 }
 
 # ============================================================================
