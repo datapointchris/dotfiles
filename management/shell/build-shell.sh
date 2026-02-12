@@ -18,6 +18,8 @@ DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-topleve
 SHELL_SRC="$DOTFILES_DIR/management/shell"
 DEFAULT_OUTPUT_DIR="$HOME/.local/shell"
 
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+
 usage() {
   echo "Usage: $(basename "$0") <manifest-file> [output-dir]"
   echo ""
@@ -95,7 +97,7 @@ concat_groups() {
   for group in "${groups[@]}"; do
     local src_file="$src_dir/${group}.sh"
     if [[ ! -f "$src_file" ]]; then
-      echo "WARNING: Group file not found: $src_file" >&2
+      log_warning "Group file not found: $src_file"
       continue
     fi
 
@@ -128,8 +130,7 @@ main() {
     # Try relative to dotfiles dir
     manifest="$DOTFILES_DIR/$manifest"
     if [[ ! -f "$manifest" ]]; then
-      echo "ERROR: Manifest file not found: $1" >&2
-      exit 1
+      log_fatal "Manifest file not found: $1"
     fi
   fi
 
@@ -137,8 +138,7 @@ main() {
   local platform
   platform=$(parse_yaml_scalar "$manifest" "platform")
   if [[ -z "$platform" ]]; then
-    echo "ERROR: No 'platform' field found in manifest" >&2
-    exit 1
+    log_fatal "No 'platform' field found in manifest"
   fi
 
   # Parse function groups
@@ -159,25 +159,25 @@ main() {
   local func_output="$output_dir/functions.sh"
   local alias_output="$output_dir/aliases.sh"
 
-  echo "Building shell files from manifest: $(basename "$manifest")"
-  echo "  Platform: $platform"
-  echo "  Function groups: ${function_groups[*]}"
-  echo "  Alias groups: ${alias_groups[*]}"
-  echo "  Output: $output_dir"
+  log_info "Building shell files from manifest: $(basename "$manifest")"
+  log_info "Platform: $platform"
+  log_info "Function groups: ${function_groups[*]}"
+  log_info "Alias groups: ${alias_groups[*]}"
+  log_info "Output: $output_dir"
 
   # Build functions.sh
   # Add specified groups, then auto-add platform group
   local all_func_groups=("${function_groups[@]}" "platform-${platform}")
   concat_groups "$SHELL_SRC/functions" "$func_output" "${all_func_groups[@]}"
-  echo "  Generated: functions.sh ($(wc -l < "$func_output") lines)"
+  log_success "Generated: functions.sh ($(wc -l < "$func_output") lines)"
 
   # Build aliases.sh
   # Add specified groups, then auto-add platform group
   local all_alias_groups=("${alias_groups[@]}" "platform-${platform}")
   concat_groups "$SHELL_SRC/aliases" "$alias_output" "${all_alias_groups[@]}"
-  echo "  Generated: aliases.sh ($(wc -l < "$alias_output") lines)"
+  log_success "Generated: aliases.sh ($(wc -l < "$alias_output") lines)"
 
-  echo "Done."
+  log_success "Shell build complete"
 }
 
 main "$@"
