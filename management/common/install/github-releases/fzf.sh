@@ -56,3 +56,16 @@ ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/;s/arm64/arm64/')
 DOWNLOAD_URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
 
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "fzf" "$VERSION"
+
+# fzf-tmux is a companion script not included in the release tarball
+FZF_TMUX_TARGET="$HOME/.local/bin/fzf-tmux"
+FZF_TMUX_URL="https://raw.githubusercontent.com/junegunn/fzf/${VERSION}/bin/fzf-tmux"
+if [[ "$UPDATE_MODE" == "true" ]] || [[ ! -f "$FZF_TMUX_TARGET" ]]; then
+  log_info "Downloading fzf-tmux script..."
+  if curl -fsSL "$FZF_TMUX_URL" -o "$FZF_TMUX_TARGET"; then
+    chmod +x "$FZF_TMUX_TARGET"
+    log_success "fzf-tmux installed to: $FZF_TMUX_TARGET"
+  else
+    log_warning "Failed to download fzf-tmux (non-critical)"
+  fi
+fi
