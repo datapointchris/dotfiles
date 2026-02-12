@@ -1,0 +1,43 @@
+[default_session]
+startup_command = "nvim -c ':Telescope find_files'"
+preview_command = "eza --all --git --icons --color=always {}"
+
+[[session]]
+name = "dotfiles"
+path = "~/dotfiles"
+startup_command = "nvim -c ':Telescope find_files'"
+
+[[session]]
+name = "ichrisbirch"
+path = "~/webapps/ichrisbirch"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "theme"
+path = "~/tools/theme"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "font"
+path = "~/tools/font"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "todoui"
+path = "~/tools/todoui"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "homelab"
+path = "~/homelab"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "learning"
+path = "~/webapps/learning"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "zmk"
+path = "~/code/zmk"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
