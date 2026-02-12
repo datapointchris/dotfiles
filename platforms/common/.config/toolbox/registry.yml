@@ -1047,9 +1047,28 @@ tools:
         desc: "List all sessions (active, tmuxinator, defaults)"
       - cmd: "sess last"
         desc: "Switch to previously active session"
-    see_also: [menu, tmux, tmuxinator]
+    see_also: [menu, tmux, tmuxinator, sesh]
     tags: [dotfiles, tmux, workflow, tui, go]
     docs_url: "tools/sess/README.md"
+
+  sesh:
+    category: session-management
+    description: "Smart tmux session manager with zoxide integration and fzf picker"
+    installed_via: go-install
+    usage: "sesh connect [session-name]"
+    why_use: "Quick tmux session switching with zoxide directory tracking, fzf-based interactive picker, named session configs"
+    examples:
+      - cmd: "prefix + s"
+        desc: "Open fzf session picker in tmux popup"
+      - cmd: "sesh connect dotfiles"
+        desc: "Connect to or create dotfiles session"
+      - cmd: "sesh list"
+        desc: "List all available sessions"
+      - cmd: "sesh last"
+        desc: "Switch to previously active session"
+    see_also: [sess, menu, tmux]
+    tags: [tmux, workflow, tui, go, zoxide]
+    docs_url: "https://github.com/joshmedeski/sesh"
 
   notes:
     category: custom-tools

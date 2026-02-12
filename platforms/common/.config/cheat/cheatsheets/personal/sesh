@@ -1,0 +1,30 @@
+# Session picker (fzf in tmux popup)
+prefix + s
+
+# Switch to last session
+prefix + L
+sesh last
+
+# Connect to session by name
+sesh connect <name>
+
+# List sessions
+sesh list            # all sources
+sesh list -t         # tmux sessions only
+sesh list -c         # configured sessions only
+sesh list -z         # zoxide directories only
+sesh list --icons    # with nerd font icons
+
+# Preview session
+sesh preview <name>
+
+# Picker filter keybindings (inside fzf popup)
+# Ctrl-a  all sources
+# Ctrl-t  tmux sessions
+# Ctrl-g  configured sessions
+# Ctrl-x  zoxide directories
+# Ctrl-f  find directories (fd)
+# Ctrl-d  kill selected tmux session
+
+# Configuration
+# ~/.config/sesh/sesh.toml

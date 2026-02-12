@@ -48,9 +48,7 @@ get_tool_version() {
   echo "$ver"
 }
 
-while read -r tool; do
-  # Extract binary name from tool path (last segment after /)
-  binary_name="${tool##*/}"
+while IFS='|' read -r binary_name tool; do
   binary_path="$GOBIN/$binary_name"
 
   # Check if already installed (unless --force or --update)
@@ -122,7 +120,7 @@ Tool will be installed to:
     log_warning "Failed to install $binary_name (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=go)
+done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=go --format=name_package)
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT tool(s) failed to install"

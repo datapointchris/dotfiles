@@ -978,6 +978,10 @@ go_tools:
     package: github.com/datapointchris/sess/cmd/sess
     description: Terminal session manager
 
+  - name: sesh
+    package: github.com/joshmedeski/sesh/v2
+    description: Smart tmux session manager with zoxide integration
+
   - name: toolbox
     package: github.com/datapointchris/toolbox
     description: CLI for discovering installed development tools

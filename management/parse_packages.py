@@ -70,15 +70,18 @@ def load_manifest(machine_name):
         return yaml.safe_load(f)
 
 
-def filter_go_packages_by_manifest(data, manifest):
+def filter_go_packages_by_manifest(data, manifest, output_format='packages'):
     """Filter go packages to only those named in the manifest."""
     manifest_tools = manifest.get('go_tools', [])
     if manifest_tools is True:
-        return get_go_packages(data)
+        return get_go_packages(data, output_format)
     if not manifest_tools:
         return []
     all_tools = data.get('go_tools', [])
-    return [pkg['package'] for pkg in all_tools if pkg['name'] in manifest_tools]
+    filtered = [pkg for pkg in all_tools if pkg['name'] in manifest_tools]
+    if output_format == 'name_package':
+        return [f"{pkg['name']}|{pkg['package']}" for pkg in filtered]
+    return [pkg['package'] for pkg in filtered]
 
 
 def filter_github_releases_by_manifest(data, manifest):
@@ -207,10 +210,17 @@ def get_local_uv_packages(data):
     return [f"{pkg['name']}:{pkg['path']}" for pkg in data['local_uv_tools']]
 
 
-def get_go_packages(data):
-    """Extract go tool package paths."""
+def get_go_packages(data, output_format='packages'):
+    """Extract go tool package paths.
+
+    Args:
+        output_format: 'packages' returns just package paths,
+                      'name_package' returns 'name|package' pairs
+    """
     if 'go_tools' not in data:
         return []
+    if output_format == 'name_package':
+        return [f"{pkg['name']}|{pkg['package']}" for pkg in data['go_tools']]
     return [pkg['package'] for pkg in data['go_tools']]
 
 
@@ -304,8 +314,8 @@ def main():
                         help='Get macOS Homebrew taps')
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
-    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), github_repos/binary_info (cargo for offline), packages/full (nerd-fonts)')
+    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
+                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo for offline), packages/full (nerd-fonts)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., ubuntu-lxc-server) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
 
@@ -389,10 +399,11 @@ def main():
         else:
             packages = get_local_uv_packages(data)
     elif args.type == 'go':
+        fmt = args.format if args.format in ('packages', 'name_package') else 'packages'
         if manifest:
-            packages = filter_go_packages_by_manifest(data, manifest)
+            packages = filter_go_packages_by_manifest(data, manifest, fmt)
         else:
-            packages = get_go_packages(data)
+            packages = get_go_packages(data, fmt)
     elif args.type == 'mas':
         packages = get_mas_apps(data)
     elif args.type == 'github':

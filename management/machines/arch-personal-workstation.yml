@@ -24,6 +24,7 @@ go_tools:
   - golangci-lint
   - gdu
   - sess
+  - sesh
   - toolbox
 
 github_releases:

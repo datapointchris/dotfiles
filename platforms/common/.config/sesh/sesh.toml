@@ -3,12 +3,16 @@ startup_command = "nvim -c ':Telescope find_files'"
 preview_command = "eza --all --git --icons --color=always {}"
 
 [[session]]
-name = "Downloads 📥"
+name = "dotfiles"
+path = "~/dotfiles"
+startup_command = "nvim -c ':Telescope find_files'"
+
+[[session]]
+name = "Downloads"
 path = "~/Downloads"
 startup_command = "ls"
 
 [[session]]
 name = "tmux config"
-path = "~/dotfiles/common/.config/tmux"
+path = "~/dotfiles/platforms/common/.config/tmux"
 startup_command = "nvim tmux.conf"
-preview_command = "bat --color=always ~/c/dotfiles/.config/tmux/tmux.conf"
