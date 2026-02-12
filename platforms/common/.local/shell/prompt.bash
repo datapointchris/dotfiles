@@ -58,6 +58,14 @@ _bash_prompt_config() {
 }
 
 # ================================================================
+# DETECT GIT BASH (Windows)
+# ================================================================
+# MSYSTEM is set in Git Bash/MSYS2/MinGW environments
+_is_git_bash() {
+  [[ -n "$MSYSTEM" ]]
+}
+
+# ================================================================
 # PROMPT COMPONENT FUNCTIONS
 # ================================================================
 
@@ -84,7 +92,31 @@ _prompt_directory() {
   prompt_truncate_dir 45
 }
 
-_prompt_git_info() {
+# Fast git info for Git Bash (Windows) - only branch + dirty status
+# Optimized to minimize git calls due to Windows process spawn overhead
+_prompt_git_info_fast() {
+  local branch_name
+  branch_name=$(git symbolic-ref --short HEAD 2>/dev/null) || return
+
+  # Check for any changes: tracked (diff-index) or untracked (ls-files)
+  local dirty=""
+  git diff-index --quiet HEAD -- 2>/dev/null || dirty=1
+  if [[ -z "$dirty" ]]; then
+    local untracked
+    read -r untracked < <(git ls-files --others --exclude-standard 2>/dev/null)
+    [[ -n "$untracked" ]] && dirty=1
+  fi
+
+  # Color branch: red if dirty, green if clean
+  if [[ -n "$dirty" ]]; then
+    printf '%s' "${RC_RED}${PROMPT_ICON_BRANCH} ${branch_name}${RC_RESET} "
+  else
+    printf '%s' "${RC_GREEN}${PROMPT_ICON_BRANCH} ${branch_name}${RC_RESET} "
+  fi
+}
+
+# Full git info for Linux/macOS - detailed status with icons
+_prompt_git_info_full() {
   if ! prompt_in_git_repo; then
     return
   fi
@@ -115,7 +147,19 @@ _prompt_git_info() {
   printf '%s' "${RC_GREEN}${PROMPT_ICON_BRANCH} ${branch_name}${RC_RESET} ${git_status}"
 }
 
+# Wrapper that picks fast or full based on environment
+_prompt_git_info() {
+  if _is_git_bash; then
+    _prompt_git_info_fast
+  else
+    _prompt_git_info_full
+  fi
+}
+
 _prompt_git_remote_status() {
+  # Skip on Git Bash - too slow due to Windows process overhead
+  _is_git_bash && return
+
   if ! prompt_in_git_repo; then
     return
   fi
@@ -124,8 +168,8 @@ _prompt_git_remote_status() {
   ahead_behind=$(prompt_git_ahead_behind)
 
   if [[ -n "$ahead_behind" ]]; then
-    behind=$(echo "$ahead_behind" | cut -f1)
-    ahead=$(echo "$ahead_behind" | cut -f2)
+    # Use read to split tab-separated values (avoids pipe overhead)
+    IFS=$'\t' read -r behind ahead <<< "$ahead_behind"
 
     remote_status=""
     [[ "$ahead" != "0" ]] && remote_status+="${RC_GREEN}${PROMPT_ICON_UP}${ahead}${RC_RESET} "
@@ -147,7 +191,48 @@ _prompt_caret() {
 # MAIN PROMPT COMMAND
 # ================================================================
 
-_bash_prompt_command() {
+# Fast prompt for Git Bash - fully inlined to avoid subshell overhead
+# On Windows, each subshell adds ~200-500ms due to process spawn cost
+_bash_prompt_command_fast() {
+  local exit_code=$?
+
+  # Directory (inline, no subshell)
+  local dir="${PWD/#$HOME/\~}"
+  if [[ ${#dir} -gt 45 ]]; then
+    dir="${dir:0:15}...${dir: -25}"
+  fi
+
+  # Git info (inline) - branch colored red if dirty, green if clean
+  local git_info=""
+  local branch
+  if branch=$(git symbolic-ref --short HEAD 2>/dev/null); then
+    local dirty=""
+    git diff-index --quiet HEAD -- 2>/dev/null || dirty=1
+    if [[ -z "$dirty" ]]; then
+      local untracked
+      read -r untracked < <(git ls-files --others --exclude-standard 2>/dev/null)
+      [[ -n "$untracked" ]] && dirty=1
+    fi
+    if [[ -n "$dirty" ]]; then
+      git_info=" \033[31m${PROMPT_ICON_BRANCH} ${branch}\033[0m"
+    else
+      git_info=" \033[32m${PROMPT_ICON_BRANCH} ${branch}\033[0m"
+    fi
+  fi
+
+  # Exit status (inline)
+  local exit_status=""
+  [[ $exit_code -ne 0 ]] && exit_status=" \033[31m${exit_code} ⚠️\033[0m"
+
+  # Update terminal title
+  printf '\033]0;%s\007' "$dir"
+
+  # Build prompt: directory git_info exit_status
+  PS1="\n\[\033[1;37m\]${dir}\[\033[0m\]${git_info}${exit_status}\n\[\033[32m\]❯\[\033[0m\] "
+}
+
+# Full prompt for Linux/macOS - modular with rich git info
+_bash_prompt_command_full() {
   local exit_code=$?
   local exit_status=""
 
@@ -183,6 +268,15 @@ _bash_prompt_command() {
   PS1+="${exit_status}"
   PS1+="\n"
   PS1+="$(_prompt_caret)"
+}
+
+# Wrapper that picks fast or full based on environment
+_bash_prompt_command() {
+  if _is_git_bash; then
+    _bash_prompt_command_fast
+  else
+    _bash_prompt_command_full
+  fi
 }
 
 # ================================================================

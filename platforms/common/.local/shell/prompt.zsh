@@ -89,8 +89,8 @@ function git_remote_status() {
   ahead_behind=$(prompt_git_ahead_behind)
 
   if [[ -n "$ahead_behind" ]]; then
-    behind=$(echo "$ahead_behind" | cut -f1)
-    ahead=$(echo "$ahead_behind" | cut -f2)
+    # Use read to split tab-separated values (avoids pipe overhead)
+    IFS=$'\t' read -r behind ahead <<< "$ahead_behind"
 
     remote_status=""
     [[ "$ahead" != "0" ]] && remote_status+="%F{green}${PROMPT_ICON_UP} ${ahead}%f  "

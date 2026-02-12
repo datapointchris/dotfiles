@@ -46,6 +46,7 @@ prompt_git_has_stash() {
 
 # Get git status flags (returns space-separated words)
 # Possible values: clean, untracked, staged, modified, deleted, renamed, unmerged
+# Uses while loop instead of grep pipes for performance (critical on Windows/VPN)
 prompt_git_status_flags() {
   local out
   out=$(git status --porcelain 2>/dev/null)
@@ -55,13 +56,28 @@ prompt_git_status_flags() {
     return
   fi
 
-  local flags=""
-  echo "$out" | grep -q "^??" && flags+="untracked "
-  echo "$out" | grep -q "^A" && flags+="staged "
-  echo "$out" | grep -qE "^M|^ M" && flags+="modified "
-  echo "$out" | grep -qE "^D|^ D" && flags+="deleted "
-  echo "$out" | grep -q "^R" && flags+="renamed "
-  echo "$out" | grep -q "^UU" && flags+="unmerged "
+  local flags="" code
+  local has_untracked="" has_staged="" has_modified="" has_deleted="" has_renamed="" has_unmerged=""
+
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    code="${line:0:2}"
+    case "$code" in
+      "??") has_untracked=1 ;;
+      "A "|"A"?) has_staged=1 ;;
+      "M "|" M"|"MM") has_modified=1 ;;
+      "D "|" D") has_deleted=1 ;;
+      "R ") has_renamed=1 ;;
+      "UU") has_unmerged=1 ;;
+    esac
+  done <<< "$out"
+
+  [[ $has_untracked ]] && flags+="untracked "
+  [[ $has_staged ]] && flags+="staged "
+  [[ $has_modified ]] && flags+="modified "
+  [[ $has_deleted ]] && flags+="deleted "
+  [[ $has_renamed ]] && flags+="renamed "
+  [[ $has_unmerged ]] && flags+="unmerged "
   echo "$flags"
 }
 
