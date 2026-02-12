@@ -159,6 +159,9 @@ tasks:
         bash "{{.DOTFILES_DIR}}/management/shell/build-shell.sh" \
           "{{.DOTFILES_DIR}}/management/machines/${MACHINE}.yml"
 
+        # Sync to Windows Git Bash (only runs in WSL, skips otherwise)
+        bash "{{.DOTFILES_DIR}}/management/shell/sync-windows-shell.sh" || true
+
   # ================================================================
   # TESTING
   # ================================================================
@@ -206,3 +209,12 @@ tasks:
     desc: Deploy documentation to GitHub Pages
     cmds:
       - cd docs && mkdocs gh-deploy --force
+
+  # ================================================================
+  # WINDOWS (WSL only)
+  # ================================================================
+
+  windows:setup:
+    desc: One-time Windows Git Bash setup (run from WSL)
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/management/shell/setup-windows.sh"
