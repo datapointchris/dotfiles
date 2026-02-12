@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # ================================================================
-# zmk-build - Shared ZMK Firmware Builder
+# zmk-build - ZMK Firmware Builder
 # ================================================================
-# Builds ZMK firmware using a shared workspace and per-repo config.
+# Builds ZMK firmware using per-repo workspaces and config.
 # Reads build.yaml from current directory (standard ZMK format).
 #
 # Usage:
 #   zmk-build              Build all targets (incremental)
 #   zmk-build --pristine   Force clean rebuild of all targets
 #   zmk-build --update     Force update west dependencies
+#   zmk-build --clean      Remove current repo's workspace
+#   zmk-build --clean-all  Remove all repo workspaces
 #   zmk-build --help       Show this help
 # ================================================================
 
@@ -21,7 +23,8 @@ source "$SHELL_DIR/formatting.sh"
 # Configuration
 # ================================================================
 
-ZMK_WORKSPACE="${XDG_DATA_HOME:-$HOME/.local/share}/zmk"
+ZMK_WORKSPACE_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/zmk"
+ZMK_WORKSPACE="${ZMK_WORKSPACE:-${ZMK_WORKSPACE_BASE}/$(basename "$(pwd)")}"
 DOCKER_IMAGE="zmkfirmware/zmk-build-arm:stable"
 BUILD_YAML="build.yaml"
 CONFIG_DIR="config"
@@ -37,20 +40,22 @@ CONTAINER_OUTPUT="/workspaces/output"
 
 show_help() {
   cat << 'EOF'
-zmk-build - Shared ZMK Firmware Builder
+zmk-build - ZMK Firmware Builder
 
 USAGE:
     zmk-build [OPTIONS]
 
 OPTIONS:
-    --clean       Remove shared workspace and exit (use when changing Docker images)
+    --clean       Remove current repo's workspace and exit
+    --clean-all   Remove all repo workspaces and exit
     --pristine    Force clean rebuild of all targets (ignore cached build artifacts)
     --update      Force update west dependencies before building
     --help        Show this help message
 
 DESCRIPTION:
-    Builds ZMK firmware using a shared workspace at ~/.local/share/zmk/
-    and configuration from the current directory.
+    Builds ZMK firmware using a per-repo workspace under ~/.local/share/zmk/<repo>/
+    and configuration from the current directory. Each repo gets its own isolated
+    workspace, so different ZMK versions don't interfere with each other.
 
     Builds are incremental by default - only changed files are recompiled.
     Use --pristine to force a full rebuild.
@@ -60,7 +65,7 @@ DESCRIPTION:
     Reads build.yaml for build targets (standard ZMK GitHub Actions format):
 
         include:
-          - board: nice_nano
+          - board: nice_nano//zmk
             shield: corne_left nice_view_adapter nice_view
           - board: piantor_pro_bt_left
             snippet: studio-rpc-usb-uart
@@ -267,6 +272,7 @@ build_target() {
 main() {
   local force_update=false
   local clean_workspace=false
+  local clean_all=false
   local pristine=false
 
   # Parse arguments
@@ -274,6 +280,10 @@ main() {
     case "$1" in
       --clean)
         clean_workspace=true
+        shift
+        ;;
+      --clean-all)
+        clean_all=true
         shift
         ;;
       --pristine|-p)
@@ -296,10 +306,25 @@ main() {
     esac
   done
 
-  # Handle --clean (doesn't require build.yaml)
+  # Handle --clean-all (remove all repo workspaces)
+  if [[ "$clean_all" == "true" ]]; then
+    if [[ -d "$ZMK_WORKSPACE_BASE" ]]; then
+      print_warning "Removing all workspaces at $ZMK_WORKSPACE_BASE"
+      find "$ZMK_WORKSPACE_BASE" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | while read -r dir; do
+        print_info "  Removing $dir"
+      done
+      rm -rf "$ZMK_WORKSPACE_BASE"
+      print_success "All workspaces cleared. Next build will reinitialize."
+    else
+      print_info "No workspaces to clean at $ZMK_WORKSPACE_BASE"
+    fi
+    exit 0
+  fi
+
+  # Handle --clean (remove current repo's workspace)
   if [[ "$clean_workspace" == "true" ]]; then
     if [[ -d "$ZMK_WORKSPACE" ]]; then
-      print_warning "Removing shared workspace at $ZMK_WORKSPACE (4.5GB+)"
+      print_warning "Removing workspace at $ZMK_WORKSPACE"
       rm -rf "$ZMK_WORKSPACE"
       print_success "Workspace cleared. Next build will reinitialize."
     else
