@@ -211,9 +211,11 @@ fzf-man-widget() {
       --bind "alt-c:+change-preview(cht.sh {1})+change-prompt(ﯽ Cheat > )" \
       --bind "alt-m:+change-preview(${batman})+change-prompt( Man > )" \
       --bind "alt-t:+change-preview(tldr --color=always {1})+change-prompt(ﳁ TLDR > )"
-  zle reset-prompt
+  [[ -n "$ZSH_VERSION" ]] && zle reset-prompt
 }
-# `Ctrl-H` keybinding to launch the widget (this widget works only on zsh, don't know how to do it on bash and fish (additionaly pressing`ctrl-backspace` will trigger the widget to be executed too because both share the same keycode)
-bindkey '^h' fzf-man-widget
-zle -N fzf-man-widget
+# `Ctrl-H` keybinding to launch the widget (zsh only)
+if [[ -n "$ZSH_VERSION" ]]; then
+  bindkey '^h' fzf-man-widget
+  zle -N fzf-man-widget
+fi
 # Icon used is nerdfont
