@@ -77,7 +77,15 @@ update-tldr() {
 aws-login() {
   local environment="${1:-dev}"
   local profile
-  local okta_script="$winchris/AppData/Local/Programs/Python/Python312/Scripts/okta-awscli.exe"
+  local win_home
+
+  # Use $HOME on Git Bash, $winchris on WSL
+  if [[ -n "$MSYSTEM" ]]; then
+    win_home="$HOME"
+  else
+    win_home="$winchris"
+  fi
+  local okta_script="$win_home/AppData/Local/Programs/Python/Python312/Scripts/okta-awscli.exe"
 
   case $environment in
   dev)
@@ -92,7 +100,7 @@ aws-login() {
     ;;
   esac
 
-  $okta_script --profile $profile --okta-profile $profile --force --verbose
+  "$okta_script" --profile "$profile" --okta-profile "$profile" --force --verbose
   export AWS_PROFILE=$profile
   date
 }
