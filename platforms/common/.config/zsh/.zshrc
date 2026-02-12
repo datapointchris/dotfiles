@@ -25,6 +25,10 @@ formatting_file="$HOME/.local/shell/formatting.sh"
 [[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
 [[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
 
+# Shared prompt utilities (used by prompt.zsh)
+prompt_lib_file="$HOME/.local/shell/prompt-lib.sh"
+[[ -f $prompt_lib_file ]] && source $prompt_lib_file && log "Load" "$prompt_lib_file" || log_error "Load" "$prompt_lib_file"
+
 # Validate required environment variables
 if [[ -n "$PLATFORM" ]]; then
   log "Env" "$(color_cyan "PLATFORM")=$(color_green "$PLATFORM")"
@@ -177,7 +181,7 @@ log "Setup" "Completions"
 # ------------------------------------------------------------------ #
 # PROMPT
 # ------------------------------------------------------------------ #
-my_prompt="$HOME/.config/zsh/prompt.zsh"
+my_prompt="$HOME/.local/shell/prompt.zsh"
 [[ -f $my_prompt ]] && source $my_prompt && log "Load" $my_prompt || log_error "Load" $my_prompt
 
 # ------------------------------------------------------------------ #
