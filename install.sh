@@ -247,9 +247,14 @@ usage() {
   echo "  SKIP_FONTS=1 ./install.sh --machine macos-personal-workstation"
   echo ""
   echo "  # Offline workflow:"
-  echo "  ./install.sh --create-offline-bundle --with-fonts       # On machine with internet"
-  echo "  scp dotfiles-offline-*.tar.gz user@restricted-host:~/   # Transfer bundle"
-  echo "  ./install.sh --machine wsl-workstation --offline        # On restricted machine"
+  echo "  ./install.sh --create-offline-bundle --with-fonts       # 1. Create bundle (internet machine)"
+  echo ""
+  echo "  # Transfer bundle to target machine (pick one):"
+  echo "  python3 -m http.server 8000                             # 2a. Serve from source machine"
+  echo "  curl -O http://<source-ip>:8000/dotfiles-offline-*.tar.gz  # 2a. Download on target (run from ~/)"
+  echo "  scp dotfiles-offline-*.tar.gz user@target-host:~/       # 2b. Or use scp instead"
+  echo ""
+  echo "  ./install.sh --machine wsl-work-workstation --offline   # 3. Install on target machine"
   exit 0
 }
 
