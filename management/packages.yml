@@ -183,6 +183,12 @@ system_packages:
     brew: shfmt
     description: Shell script formatter
 
+  - name: rclone
+    apt: rclone
+    pacman: rclone
+    brew: rclone
+    description: Cloud storage sync and management
+
   - name: direnv
     apt: direnv
     pacman: direnv
