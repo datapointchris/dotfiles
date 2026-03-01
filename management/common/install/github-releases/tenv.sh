@@ -41,7 +41,7 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 UPDATE_MODE=false
 [[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
-VERSION=$(get_latest_version "$REPO")
+VERSION=$(get_latest_version "$REPO") || exit 1
 log_info "Latest tenv version: $VERSION"
 
 SKIP_TENV_INSTALL=false

@@ -105,7 +105,7 @@ else
   fi
 fi
 
-log_info "Platform: $PLATFORM/$ARCH → $GO_OS/$GO_ARCH"
+log_info "Platform: $OS/$ARCH → $GO_OS/$GO_ARCH"
 
 # Download URL
 GO_URL="https://go.dev/dl/${GO_VERSION}.${GO_OS}-${GO_ARCH}.tar.gz"

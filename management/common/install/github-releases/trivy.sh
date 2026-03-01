@@ -38,7 +38,7 @@ TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 UPDATE_MODE=false
 [[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
 
-VERSION=$(get_latest_version "$REPO")
+VERSION=$(get_latest_version "$REPO") || exit 1
 log_info "Latest $BINARY_NAME version: $VERSION"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then

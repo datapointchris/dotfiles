@@ -102,6 +102,48 @@ setup() {
   [[ "$output" =~ "already at latest"|"update available"|"Could not determine" ]]
 }
 
+# version fetch failure tests
+
+@test "installer exits on version fetch failure instead of continuing with empty version" {
+  # This test catches the bug where scripts continued with VERSION="" after
+  # get_latest_version failed, producing malformed download URLs like:
+  #   .../releases/download//tool__macOS-64bit.tar.gz
+  local test_script
+  test_script=$(mktemp)
+  cat > "$test_script" << SCRIPT
+#!/usr/bin/env bash
+set -uo pipefail
+DOTFILES_DIR="$DOTFILES_DIR"
+source "\$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+source "\$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "\$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "\$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "\$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+source "\$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+
+# Override to simulate GitHub API failure
+fetch_github_latest_version() { return 1; }
+
+REPO="fake/repo"
+VERSION=\$(get_latest_version "\$REPO") || exit 1
+echo "SHOULD_NOT_REACH version=\$VERSION"
+SCRIPT
+
+  run bash "$test_script"
+  rm -f "$test_script"
+  assert_failure
+  refute_output --partial "SHOULD_NOT_REACH"
+}
+
+@test "installer with empty version produces malformed URL without exit guard" {
+  # Demonstrates what happens WITHOUT the || exit 1 guard:
+  # an empty VERSION creates a broken download URL
+  local version=""
+  local url="https://github.com/org/tool/releases/download/${version}/tool_${version#v}_macOS.tar.gz"
+  # The URL contains double slash and empty version components
+  [[ "$url" == *"/download//tool_"* ]]
+}
+
 # Helper functions
 
 skip_if_not_macos() {

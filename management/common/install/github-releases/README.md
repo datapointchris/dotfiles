@@ -53,7 +53,7 @@ if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
   exit 0
 fi
 
-VERSION=$(get_latest_version "$REPO")
+VERSION=$(get_latest_version "$REPO") || exit 1
 log_info "Latest version: $VERSION"
 
 PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
@@ -134,7 +134,7 @@ install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "toolname" "$VERSION"
 ```bash
 BINARY_NAME="lazygit"
 REPO="jesseduffield/lazygit"
-VERSION=$(get_latest_version "$REPO")
+VERSION=$(get_latest_version "$REPO") || exit 1
 PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
 install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit" "$VERSION"
@@ -145,7 +145,7 @@ install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "lazygit" "$VERSION"
 ```bash
 BINARY_NAME="glow"
 REPO="charmbracelet/glow"
-VERSION=$(get_latest_version "$REPO")
+VERSION=$(get_latest_version "$REPO") || exit 1
 PLATFORM_ARCH=$(get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64")
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/glow_${VERSION#v}_${PLATFORM_ARCH}.tar.gz"
 # Binary is in subdirectory with platform name
@@ -157,7 +157,7 @@ install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "glow_*_${PLATFORM_ARCH}/glo
 ```bash
 BINARY_NAME="yazi"
 REPO="sxyazi/yazi"
-VERSION=$(get_latest_version "$REPO")
+VERSION=$(get_latest_version "$REPO") || exit 1
 PLATFORM_ARCH=$(get_platform_arch "x86_64-apple-darwin" "aarch64-apple-darwin" "x86_64-unknown-linux-gnu")
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/yazi-${PLATFORM_ARCH}.zip"
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "yazi-${PLATFORM_ARCH}/yazi" "$VERSION"

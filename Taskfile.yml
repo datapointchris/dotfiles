@@ -167,17 +167,17 @@ tasks:
   # ================================================================
 
   test:
-    desc: Run all BATS tests
+    desc: Run all BATS tests (library + integration)
     cmds:
-      - bats tests/install/integration/*.bats
+      - bats tests/libraries/*.bats tests/install/integration/*.bats
 
   test:unit:
-    desc: Run unit tests
+    desc: Run library unit tests (fast, no Docker)
     cmds:
-      - echo "No unit tests yet"
+      - bats tests/libraries/*.bats
 
   test:integration:
-    desc: Run integration tests
+    desc: Run integration tests (includes Docker tests if image is built)
     cmds:
       - bats tests/install/integration/*.bats
 
@@ -189,7 +189,7 @@ tasks:
           echo "entr not installed. Install with: brew install entr (macOS) or apt install entr (Linux)"
           exit 1
         fi
-        find tests -name '*.bats' | entr -c bats tests/install/integration/*.bats
+        find tests -name '*.bats' | entr -c bats tests/libraries/*.bats tests/install/integration/*.bats
 
   # ================================================================
   # DOCUMENTATION
