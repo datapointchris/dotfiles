@@ -24,11 +24,3 @@ alias archinfo='cat /etc/os-release'
 
 # Cleanup
 alias pacclean='sudo pacman -Sc' # Clean package cache
-
-# ---------- Network ---------- #
-
-# Homelab
-alias sshicb='ssh chris@10.0.20.11'
-alias sshlearn='ssh chris@10.0.20.12'
-alias sshops='ssh chris@10.0.20.15'
-alias sshrss='ssh chris@10.0.20.17'

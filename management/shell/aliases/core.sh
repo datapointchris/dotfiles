@@ -25,7 +25,7 @@ alias y='yazi'
 alias tree='tree --gitignore'
 
 # Open shared network todo with neovim
-alias pp='ssh chris@10.0.20.15 -t "nvim ~/todo.md"'
+alias pp='ssh ops -t "nvim ~/todo.md"'
 
 # ---------- Directory Navigation ---------- #
 

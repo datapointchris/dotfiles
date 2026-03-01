@@ -47,20 +47,6 @@ alias reload-dev='sudo nginx -s reload && sudo supervisorctl reload'
 # Symlink /etc/hosts to etc.hosts
 alias symlink-hosts='sudo ln -sf $HOME/etc.hosts /etc/hosts'
 
-# ---------- Network ---------- #
-
-# Homelab
-alias sshicb='ssh chris@10.0.20.11'
-alias sshlearn='ssh chris@10.0.20.12'
-alias sshops='ssh chris@10.0.20.15'
-alias sshrss='ssh chris@10.0.20.17'
-
-# Local Computers
-alias sshmbp='ssh chris@$mbp'
-alias sshmacmini='ssh chris@$macmini'
-alias sshgreenpi='ssh chris@$greenpi'
-alias sshpython='ssh chris@$python'
-
 # ---------- Miscellaneous ---------- #
 
 # Audio control for greenpi
