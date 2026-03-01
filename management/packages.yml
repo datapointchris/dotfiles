@@ -782,9 +782,13 @@ cargo_packages:
     binary_pattern: "delta-{version}-{target}.tar.gz"
     tags: [cli, git]
 
-  - name: cargo-update
-    command: cargo-install-update
-    description: update installed cargo packages
+  - name: oxker
+    command: oxker
+    description: Docker container TUI
+    github_repo: mrjackwills/oxker
+    binary_pattern: "oxker_{platform}_{arch}.tar.gz"
+    tags: [cli, tui, containers]
+
 
 # ================================================================
 # TMUX PLUGINS

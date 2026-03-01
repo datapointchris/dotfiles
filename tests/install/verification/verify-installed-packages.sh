@@ -349,7 +349,7 @@ check_command "shfmt"
 # ================================================================
 print_section "Cargo Tools (Universal)"
 # Already checked: bat, fd, eza, zoxide, delta
-check_command "cargo-install-update" "--version"
+check_command "oxker" "--version"
 
 # ================================================================
 # UV Tools (Python)

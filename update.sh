@@ -61,11 +61,22 @@ update_common_tools() {
     log_warning "Rust toolchain update failed"
   fi
 
-  print_section "Updating Rust packages via $(print_green "cargo install-update -a")"
-  if cargo install-update -a; then
+  print_section "Updating Rust packages via $(print_green "cargo binstall")"
+  local cargo_failures=0
+  while IFS='|' read -r package binary_name; do
+    if cargo binstall -y "$package" 2>&1 | grep -q "already installed"; then
+      log_success "$package already up-to-date"
+    elif command -v "$binary_name" >/dev/null 2>&1; then
+      log_success "$package updated"
+    else
+      log_warning "$package update failed"
+      cargo_failures=$((cargo_failures + 1))
+    fi
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=name_command)
+  if [[ $cargo_failures -eq 0 ]]; then
     log_success "Rust packages updated"
   else
-    log_warning "Rust packages update failed"
+    log_warning "$cargo_failures Rust package(s) failed to update"
   fi
 
   print_section "Updating uv package manager via $(print_green "uv self update")"

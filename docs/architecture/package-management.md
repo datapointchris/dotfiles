@@ -64,7 +64,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 - `zoxide` - cd alternative
 - `eza` - ls alternative
 - `git-delta` - Git diff viewer
-- `cargo-update` - Keep cargo tools updated
+- `oxker` - Docker container TUI
 
 **Advantages**:
 
@@ -287,7 +287,7 @@ cargo_packages:
   - eza
   - zoxide
   - git-delta
-  - cargo-update
+  - oxker
 
 uv_tools:
   - name: ruff
@@ -368,8 +368,8 @@ See [Task Reference](../reference/tools/tasks.md) for all available tasks.
 **Updating tools**:
 
 ```bash
-# Rust tools
-cargo install-update -a
+# Rust tools (updates via cargo binstall in update.sh)
+cargo binstall -y <package>
 
 # Manually check GitHub releases
 task wsl:install-go        # Updates if new version available

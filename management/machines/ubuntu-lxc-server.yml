@@ -25,7 +25,7 @@ github_releases:
 custom_installers: []
 
 rust: true
-cargo_packages: [bat, fd-find, eza, zoxide, git-delta, cargo-update]
+cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker]
 
 nvm: false
 npm_globals: false
