@@ -30,7 +30,7 @@ PACKAGE_SECTIONS = (
     "cargo_packages",
     "npm_globals",
     "uv_tools",
-    "local_uv_tools",
+    "git_uv_tools",
     "go_tools",
     "nerd_fonts",
     "shell_plugins",

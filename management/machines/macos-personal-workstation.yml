@@ -56,7 +56,7 @@ nvm: true
 npm_globals: true
 uv: true
 uv_tools: true
-local_uv_tools: true
+git_uv_tools: true
 tenv: true
 
 shell_plugins: true

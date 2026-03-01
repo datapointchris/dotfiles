@@ -922,15 +922,19 @@ uv_tools:
       description: Collaborative cheatsheets for console commands
 
 # ================================================================
-# LOCAL UV TOOLS
+# GIT UV TOOLS
 # ================================================================
-# Installed via: uv tool install -e <path>
-# Local Python tools installed in editable mode from ~/tools/
+# Installed via: uv tool install <repo_url>
+# Python tools installed from GitHub repositories
 
-local_uv_tools:
+git_uv_tools:
   - name: refcheck
-    path: ~/tools/refcheck
+    repo: https://github.com/datapointchris/refcheck.git
     description: Find broken file references and fragile path patterns
+
+  - name: syncer
+    repo: https://github.com/datapointchris/syncer.git
+    description: Sync files and directories
 
 # ================================================================
 # GO TOOLS
