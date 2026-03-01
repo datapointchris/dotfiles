@@ -59,12 +59,22 @@ setopt HIST_REDUCE_BLANKS
 setopt SHARE_HISTORY
 
 # History search: up/down arrows search history based on current line
+# These are autoloaded here but bound in zvm_after_init (below) because
+# zsh-vi-mode overwrites all keybindings when it initializes.
 autoload -U up-line-or-beginning-search
 autoload -U down-line-or-beginning-search
 zle -N up-line-or-beginning-search
 zle -N down-line-or-beginning-search
-bindkey "^[[A" up-line-or-beginning-search    # Up arrow
-bindkey "^[[B" down-line-or-beginning-search  # Down arrow
+
+# zsh-vi-mode hook: re-apply bindings after vi-mode overwrites the keymap
+zvm_after_init() {
+  bindkey "^[[A" up-line-or-beginning-search    # Up arrow
+  bindkey "^[[B" down-line-or-beginning-search  # Down arrow
+  # Re-source fzf keybindings (Ctrl+R, Ctrl+T, Alt+C) after vi-mode
+  if command -v fzf >/dev/null 2>&1; then
+    source <(fzf --zsh)
+  fi
+}
 
 # Create history directory if needed
 if [[ ! -d "$HOME/.local/state/zsh" ]]; then
