@@ -81,11 +81,24 @@ docker_test_setup() {
   fi
 }
 
-# Cleanup function for Bats tests
+# Cleanup function for per-test containers
 # Call this in teardown() to ensure container is removed
 docker_test_teardown() {
   if [[ -n "${BATS_TEST_CONTAINER:-}" ]]; then
     cleanup_test_container "$BATS_TEST_CONTAINER"
     unset BATS_TEST_CONTAINER
+  fi
+}
+
+# Cleanup function for per-file shared containers
+# Call this in teardown_file() when using BATS_SHARED_CONTAINER
+#
+# Shared container pattern: start one container in setup_file() with
+#   BATS_SHARED_CONTAINER=$(start_test_container)
+# All tests in the file reuse it, then teardown_file() cleans up.
+docker_shared_test_teardown() {
+  if [[ -n "${BATS_SHARED_CONTAINER:-}" ]]; then
+    cleanup_test_container "$BATS_SHARED_CONTAINER"
+    unset BATS_SHARED_CONTAINER
   fi
 }

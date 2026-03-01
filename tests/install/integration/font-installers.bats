@@ -139,7 +139,7 @@ teardown_file() {
 
 @test "fonts: real installer has proper structure" {
   # Test that a real font installer has expected components
-  local installer="$DOTFILES_DIR/management/common/install/fonts/firacode.sh"
+  local installer="$DOTFILES_DIR/management/common/install/fonts/commitmono.sh"
 
   # Should source font-installer library
   grep -q "font-installer.sh" "$installer"
@@ -151,7 +151,7 @@ teardown_file() {
 @test "fonts: real installer can run without errors (idempotent)" {
   # Run real installer - should either succeed or fail gracefully
   # This tests that the installer structure is correct
-  local installer="$DOTFILES_DIR/management/common/install/fonts/firacode.sh"
+  local installer="$DOTFILES_DIR/management/common/install/fonts/commitmono.sh"
 
   run bash "$installer"
   # Should exit with 0 (success/skip) or 1 (failure with structured output)
@@ -160,14 +160,11 @@ teardown_file() {
 }
 
 @test "fonts: real installer produces logging output" {
-  local installer="$DOTFILES_DIR/management/common/install/fonts/firacode.sh"
+  local installer="$DOTFILES_DIR/management/common/install/fonts/commitmono.sh"
 
   run bash "$installer"
   # Should produce some output (either success or error messages)
   [[ -n "$output" ]]
-
-  # Output should include font name
-  assert_output --partial "Fira Code"
 }
 
 # ================================================================

@@ -11,6 +11,10 @@ setup_file() {
   # Source Docker helpers and verify environment
   source "$DOTFILES_DIR/tests/install/integration/docker-helpers.sh"
   docker_test_setup
+
+  # Start one shared container for Docker tests in this file
+  BATS_SHARED_CONTAINER=$(start_test_container)
+  export BATS_SHARED_CONTAINER
 }
 
 setup() {
@@ -19,17 +23,11 @@ setup() {
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
   source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
-
-  # Source Docker helpers for network-dependent tests
   source "$DOTFILES_DIR/tests/install/integration/docker-helpers.sh"
-
-  # Start fresh container for each test
-  BATS_TEST_CONTAINER=$(start_test_container)
 }
 
-teardown() {
-  # Clean up container after each test
-  docker_test_teardown
+teardown_file() {
+  docker_shared_test_teardown
 }
 
 # version_compare tests
@@ -168,14 +166,14 @@ Extra: 7.8.9"
 # fetch_github_latest_version tests
 
 @test "fetch_github_latest_version: fetches neovim latest version" {
-  run docker_exec "$BATS_TEST_CONTAINER" \
+  run docker_exec "$BATS_SHARED_CONTAINER" \
     "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'neovim/neovim'"
   assert_success
   assert_output --regexp '^v[0-9]+\.[0-9]+\.[0-9]+$'
 }
 
 @test "fetch_github_latest_version: fetches lazygit latest version" {
-  run docker_exec "$BATS_TEST_CONTAINER" \
+  run docker_exec "$BATS_SHARED_CONTAINER" \
     "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'jesseduffield/lazygit'"
   assert_success
   assert_output --regexp '^v[0-9]+\.[0-9]+(\.[0-9]+)?$'
@@ -200,13 +198,13 @@ Extra: 7.8.9"
 
 @test "integration: check if neovim update available" {
   # Fetch latest version from GitHub
-  run docker_exec "$BATS_TEST_CONTAINER" \
+  run docker_exec "$BATS_SHARED_CONTAINER" \
     "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'neovim/neovim'"
   assert_success
   latest="$output"
 
   # Compare older version with latest
-  run docker_exec "$BATS_TEST_CONTAINER" \
+  run docker_exec "$BATS_SHARED_CONTAINER" \
     "source management/common/lib/version-helpers.sh && version_compare 'v0.9.0' '$latest'"
 
   # Should indicate update available (return 1)
@@ -226,13 +224,13 @@ Extra: 7.8.9"
 
 @test "integration: detect already at latest" {
   # Fetch real latest version from GitHub
-  run docker_exec "$BATS_TEST_CONTAINER" \
+  run docker_exec "$BATS_SHARED_CONTAINER" \
     "source management/common/lib/version-helpers.sh && fetch_github_latest_version 'neovim/neovim'"
   assert_success
   latest="$output"
 
   # Compare with itself
-  run docker_exec "$BATS_TEST_CONTAINER" \
+  run docker_exec "$BATS_SHARED_CONTAINER" \
     "source management/common/lib/version-helpers.sh && version_compare '$latest' '$latest'"
   assert_success
 }
