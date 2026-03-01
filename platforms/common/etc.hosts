@@ -1,0 +1,27 @@
+# Homelab hosts
+# NOTE: Manually copy to /etc/hosts (requires sudo). Not for WSL.
+# sudo cp ~/dotfiles/platforms/common/etc.hosts /etc/hosts
+
+127.0.0.1       localhost
+255.255.255.255 broadcasthost
+::1             localhost
+
+# Homelab VLAN (10.0.20.x)
+10.0.20.10  pve
+10.0.20.11  icb
+10.0.20.12  learning
+10.0.20.13  timeline
+10.0.20.14  nomad
+10.0.20.15  ops
+10.0.20.16  backup
+10.0.20.17  rss
+10.0.20.18  immich
+10.0.20.19  syncthing
+10.0.20.20  files
+10.0.20.50  nas
+
+# Trusted VLAN (10.0.10.x)
+10.0.10.10  archlinux
+10.0.10.11  macmini
+10.0.10.12  mbp
+10.0.10.13  work
