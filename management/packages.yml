@@ -306,6 +306,11 @@ system_packages:
     description: Execute program periodically (used in watchports alias)
 
   # Network Tools
+  - name: syncthing
+    pacman: syncthing
+    brew: syncthing
+    description: Continuous file synchronization
+
   - name: nmap
     apt: nmap
     pacman: nmap
