@@ -74,6 +74,11 @@ system_packages:
     brew: curl
     description: Transfer data with URLs
 
+  - name: man-db
+    apt: man-db
+    pacman: man-db
+    description: Manual page viewer (macOS has it built-in)
+
   - name: wget
     apt: wget
     pacman: wget
