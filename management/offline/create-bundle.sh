@@ -32,7 +32,6 @@ WORK_DIR=""
 CACHE_DIR=""
 MANIFEST_FILE=""
 TOTAL_DOWNLOADS=0
-FAILED_DOWNLOADS=()
 
 # ============================================================================
 # Helpers
@@ -58,22 +57,25 @@ expand_pattern() {
 
 download_file() {
   local url="$1" output="$2" name="$3"
-  local max_retries=3 retry=0
+  local max_retries=3 retry=0 curl_error=""
 
   TOTAL_DOWNLOADS=$((TOTAL_DOWNLOADS + 1))
 
   while [[ $retry -lt $max_retries ]]; do
-    if curl -fsSL --connect-timeout 30 --max-time 300 "$url" -o "$output" 2>/dev/null; then
+    if curl_error=$(curl -fsSL --connect-timeout 30 --max-time 300 "$url" -o "$output" 2>&1); then
       return 0
     fi
     retry=$((retry + 1))
-    [[ $retry -lt $max_retries ]] && log_warning "Retry $retry/$max_retries for $name..."
+    if [[ $retry -lt $max_retries ]]; then
+      log_warning "Retry $retry/$max_retries for $name ($curl_error)"
+    fi
     sleep 2
   done
 
-  FAILED_DOWNLOADS+=("$name")
   log_error "Failed to download: $name"
-  return 1
+  log_error "  url: $url"
+  log_error "  error: $curl_error"
+  exit 1
 }
 
 # ============================================================================
@@ -104,15 +106,14 @@ download_github_binaries() {
 
   local tool version url filename
   for script in "${installers[@]}"; do
-    if IFS='|' read -r tool version url < <(bash "$script" --print-url "$OS" "$ARCH" 2>/dev/null); then
-      filename=$(basename "$url")
-      log_info "  $tool ($version)..."
-      if download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"; then
-        echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
-      fi
-    else
-      log_warning "  Could not get URL for $(basename "$script" .sh)"
+    if ! IFS='|' read -r tool version url < <(bash "$script" --print-url "$OS" "$ARCH"); then
+      log_error "Could not get URL for $(basename "$script" .sh)"
+      exit 1
     fi
+    filename=$(basename "$url")
+    log_info "  $tool ($version)..."
+    download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
+    echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
   done
 }
 
@@ -137,8 +138,8 @@ download_go_binaries() {
     [[ -z "$binary_name" ]] && continue
 
     if ! version=$(fetch_github_latest_version "$repo"); then
-      log_warning "  Could not fetch version for $binary_name ($repo)"
-      continue
+      log_error "Could not fetch version for $binary_name ($repo)"
+      exit 1
     fi
     version_num="${version#v}"
 
@@ -157,9 +158,7 @@ download_go_binaries() {
     log_info "  $binary_name ($version)..."
 
     local download_path="$CACHE_DIR/go-binaries/${expanded}"
-    if ! download_file "$asset_url" "$download_path" "$binary_name"; then
-      continue
-    fi
+    download_file "$asset_url" "$download_path" "$binary_name"
 
     # Extract binary from archive and save as ready-to-use binary
     local extract_dir="/tmp/go-binary-extract-$$"
@@ -173,13 +172,11 @@ download_go_binaries() {
       local found_bin
       found_bin=$(find "$extract_dir" -name "$binary_name" -type f | head -1)
       [[ -z "$found_bin" ]] && found_bin=$(find "$extract_dir" -name "${binary_name}_*" -type f | head -1)
-      if [[ -n "$found_bin" ]]; then
-        mv "$found_bin" "$final_binary"
-      else
-        log_warning "  Could not find $binary_name binary in archive"
-        rm -rf "$extract_dir" "$download_path"
-        continue
+      if [[ -z "$found_bin" ]]; then
+        log_error "Could not find $binary_name binary in archive"
+        exit 1
       fi
+      mv "$found_bin" "$final_binary"
     elif [[ "$expanded" == *.gz ]]; then
       gunzip -c "$download_path" > "$final_binary"
     else
@@ -216,15 +213,14 @@ download_install_scripts() {
 
   local name version url filename
   for script in "${installers[@]}"; do
-    if IFS='|' read -r name version url < <(bash "$script" --print-url 2>/dev/null); then
-      filename="${name}-install.sh"
-      log_info "  $name..."
-      if download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"; then
-        echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
-      fi
-    else
-      log_warning "  Could not get URL for $(basename "$script" .sh)"
+    if ! IFS='|' read -r name version url < <(bash "$script" --print-url); then
+      log_error "Could not get URL for $(basename "$script" .sh)"
+      exit 1
     fi
+    filename="${name}-install.sh"
+    log_info "  $name..."
+    download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
+    echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
   done
 }
 
@@ -240,8 +236,8 @@ download_cargo_binaries() {
     [[ -z "$tool" ]] && continue
 
     if ! version=$(fetch_github_latest_version "$repo"); then
-      log_warning "  Could not fetch version for $tool"
-      continue
+      log_error "Could not fetch version for $tool"
+      exit 1
     fi
 
     target=$(get_cargo_target "$OS" "$ARCH" "$linux_target")
@@ -249,9 +245,8 @@ download_cargo_binaries() {
     url="https://github.com/${repo}/releases/download/${version}/${filename}"
 
     log_info "  $tool ($version)..."
-    if download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"; then
-      echo "cargo|$tool|$version|$filename" >> "$MANIFEST_FILE"
-    fi
+    download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
+    echo "cargo|$tool|$version|$filename" >> "$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=binary_info)
 }
 
@@ -267,7 +262,7 @@ download_nerd_fonts() {
   local version package filename url
   if ! version=$(fetch_github_latest_version "ryanoasis/nerd-fonts"); then
     log_error "Could not fetch Nerd Fonts version"
-    return 1
+    exit 1
   fi
 
   while IFS= read -r package; do
@@ -277,9 +272,8 @@ download_nerd_fonts() {
     url="https://github.com/ryanoasis/nerd-fonts/releases/download/${version}/${filename}"
 
     log_info "  $package ($version)..."
-    if download_file "$url" "$CACHE_DIR/fonts/$filename" "$package"; then
-      echo "font|$package|$version|$filename" >> "$MANIFEST_FILE"
-    fi
+    download_file "$url" "$CACHE_DIR/fonts/$filename" "$package"
+    echo "font|$package|$version|$filename" >> "$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=nerd-fonts --format=packages)
 }
 
@@ -296,41 +290,41 @@ download_other_fonts() {
   log_info "  FiraCode (6.2)..."
   download_file \
     "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip" \
-    "$CACHE_DIR/fonts/FiraCode.zip" "FiraCode" || true
+    "$CACHE_DIR/fonts/FiraCode.zip" "FiraCode"
 
   # CommitMono (latest release)
   local commitmono_url
   commitmono_url=$(curl -fsSL "https://api.github.com/repos/eigilnikolajsen/commit-mono/releases/latest" \
     | grep -o '"browser_download_url": *"[^"]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
-  if [[ -n "$commitmono_url" ]]; then
-    log_info "  CommitMono (latest)..."
-    download_file "$commitmono_url" "$CACHE_DIR/fonts/CommitMono.zip" "CommitMono" || true
-  else
-    log_warning "  Could not fetch CommitMono release URL"
+  if [[ -z "$commitmono_url" ]]; then
+    log_error "Could not fetch CommitMono release URL"
+    exit 1
   fi
+  log_info "  CommitMono (latest)..."
+  download_file "$commitmono_url" "$CACHE_DIR/fonts/CommitMono.zip" "CommitMono"
 
   # SGr-IosevkaTermSlab (latest release)
   local iosevka_url
   iosevka_url=$(curl -fsSL "https://api.github.com/repos/be5invis/Iosevka/releases/latest" \
     | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-IosevkaTermSlab-[0-9.]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
-  if [[ -n "$iosevka_url" ]]; then
-    log_info "  SGr-IosevkaTermSlab (latest)..."
-    download_file "$iosevka_url" "$CACHE_DIR/fonts/SGr-IosevkaTermSlab.zip" "SGr-IosevkaTermSlab" || true
-  else
-    log_warning "  Could not fetch SGr-IosevkaTermSlab release URL"
+  if [[ -z "$iosevka_url" ]]; then
+    log_error "Could not fetch SGr-IosevkaTermSlab release URL"
+    exit 1
   fi
+  log_info "  SGr-IosevkaTermSlab (latest)..."
+  download_file "$iosevka_url" "$CACHE_DIR/fonts/SGr-IosevkaTermSlab.zip" "SGr-IosevkaTermSlab"
 
   # ComicMonoNF (individual TTF files)
   local comic_base="https://raw.githubusercontent.com/xtevenx/ComicMonoNF/master/v1"
   log_info "  ComicMonoNF (v1)..."
-  download_file "$comic_base/ComicMonoNF-Regular.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Regular.ttf" "ComicMonoNF-Regular" || true
-  download_file "$comic_base/ComicMonoNF-Bold.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Bold.ttf" "ComicMonoNF-Bold" || true
+  download_file "$comic_base/ComicMonoNF-Regular.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Regular.ttf" "ComicMonoNF-Regular"
+  download_file "$comic_base/ComicMonoNF-Bold.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Bold.ttf" "ComicMonoNF-Bold"
 
   # SeriousShannsNerdFontMono
   log_info "  SeriousShannsNerdFontMono..."
   download_file \
     "https://kaBeech.github.io/serious-shanns/SeriousShanns/SeriousShannsNerdFontMono.zip" \
-    "$CACHE_DIR/fonts/SeriousShannsNerdFontMono.zip" "SeriousShannsNerdFontMono" || true
+    "$CACHE_DIR/fonts/SeriousShannsNerdFontMono.zip" "SeriousShannsNerdFontMono"
 }
 
 # ============================================================================
@@ -377,6 +371,7 @@ parse_platform() {
 setup_directories() {
   BUNDLE_NAME="dotfiles-offline-v$(date +%Y%m%d)-${OS}-${ARCH}"
   WORK_DIR=$(mktemp -d)
+  trap 'rm -rf "${WORK_DIR:-}"' EXIT
   CACHE_DIR="$WORK_DIR/installers"
   MANIFEST_FILE="$CACHE_DIR/manifest.txt"
 
@@ -417,16 +412,6 @@ Directory Structure:
 EOF
 }
 
-check_failures() {
-  if [[ ${#FAILED_DOWNLOADS[@]} -gt 0 ]]; then
-    echo ""
-    log_error "Bundle creation FAILED - ${#FAILED_DOWNLOADS[@]} download(s) failed:"
-    printf '  - %s\n' "${FAILED_DOWNLOADS[@]}"
-    rm -rf "$WORK_DIR"
-    exit 1
-  fi
-}
-
 create_tarball() {
   log_info "Creating tarball..."
 
@@ -435,8 +420,6 @@ create_tarball() {
 
   local tarball_size
   tarball_size=$(du -h "$tarball_path" | cut -f1)
-
-  rm -rf "$WORK_DIR"
 
   echo ""
   log_success "Bundle created successfully!"
@@ -471,7 +454,6 @@ main() {
   download_nerd_fonts
   download_other_fonts
 
-  check_failures
   create_readme
   create_tarball
 }
