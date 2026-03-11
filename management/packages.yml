@@ -1020,6 +1020,8 @@ go_tools:
 
   - name: sess
     package: github.com/datapointchris/sess/cmd/sess
+    github_repo: datapointchris/sess
+    binary_pattern: "sess_{Os}_{Arch}.tar.gz"
     description: Terminal session manager
 
   - name: sesh
@@ -1030,6 +1032,8 @@ go_tools:
 
   - name: toolbox
     package: github.com/datapointchris/toolbox
+    github_repo: datapointchris/toolbox
+    binary_pattern: "toolbox_{Os}_{Arch}.tar.gz"
     description: CLI for discovering installed development tools
 
 # ================================================================

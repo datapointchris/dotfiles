@@ -29,9 +29,9 @@
 
 **App Installation Patterns** (⚠️ CRITICAL - Three distinct patterns):
 
-1. **Go Apps** (sess, toolbox): Installed from GitHub via `go install`
-   - Defined in `packages.yml` under `go_tools`
-   - Development in `~/tools/{app}/`, push to GitHub for deployment
+1. **Go Apps** (sess, toolbox): Published via GoReleaser, installed from GitHub releases
+   - Defined in `packages.yml` under `go_tools` with `github_repo` + `binary_pattern`
+   - Development in `~/tools/{app}/`, tag + push to GitHub triggers release
    - Binary location: `~/go/bin/`
 
 2. **Shell Script Apps** (menu, notes): Symlinked from repo
@@ -46,68 +46,29 @@
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 
+**Standards First**: Always prefer industry-standard defaults (e.g., GoReleaser naming, conventional commits). Do not deviate unless there is a documented reason.
+
 **Critical Bash Gotcha - Arithmetic with set -e** (⚠️ This has caught us 4+ times):
 
 - `((COUNTER++))` returns 0 (false) when COUNTER is 0, causing `set -e` to exit the script
 - **Always use:** `COUNTER=$((COUNTER + 1))` instead of `((COUNTER++))`
 - **Or use:** `((COUNTER++)) || true` to prevent exit
 - This affects any arithmetic expression that evaluates to 0: `((VAR--))`, `((VAR *= 0))`, etc.
-- Example that fails:
 
-  ```bash
-  set -e
-  COUNT=0
-  ((COUNT++))  # Exits here! Returns 0 before incrementing
-  echo "This never runs"
-  ```
-
-- Example that works:
-
-  ```bash
-  set -e
-  COUNT=0
-  COUNT=$((COUNT + 1))  # Safe
-  echo "This runs: COUNT=$COUNT"
-  ```
-
-**Shell Libraries** (⚠️ Three system-wide libraries for all scripts):
-
-The dotfiles provide three shell libraries in `~/.local/shell/`:
-
-1. **logging.sh** - Status messages with [LEVEL] prefixes for parseability
-   - Use `log_info/success/warning/error/fatal()` for scripts that need logging
-   - Always includes [LEVEL] prefix for log parsers (logsift, Grafana)
-   - Use for: installation scripts, update scripts, CI/CD, any logged output
-
-2. **formatting.sh** - Visual structure and purely visual status
-   - Use `print_header/section/banner/title()` for visual structure
-   - Use `print_success/error/warning/info()` ONLY for purely visual scripts
-   - Use for: interactive menus, visual-only tools (never logged)
-
-3. **error-handling.sh** - Error traps, cleanup, verification helpers
-   - Source when scripts need: cleanup on exit, error trapping, retry logic
-   - Functions: `enable_error_traps()`, `register_cleanup()`, `require_commands()`, etc.
-   - Use for: complex installers, download scripts, anything creating temp files
-
-**Decision Guide**:
+**Shell Libraries** (`~/.local/shell/`) — see `docs/architecture/shell-libraries.md`:
 
 | Scenario | Library | Functions |
 |----------|---------|-----------|
-| Script will be logged/monitored | logging.sh | log_info/success/warning/error/fatal |
-| Script is purely visual/interactive | formatting.sh | print_success/error/warning/info |
-| Script needs visual structure | formatting.sh | print_header/section/banner/title |
-| Script needs cleanup/traps | error-handling.sh | enable_error_traps, register_cleanup |
-
-See `docs/architecture/shell-libraries.md` for complete guide
+| Logged/monitored scripts | logging.sh | `log_info/success/warning/error/fatal` |
+| Visual/interactive scripts | formatting.sh | `print_success/error/warning/info` |
+| Visual structure | formatting.sh | `print_header/section/banner/title` |
+| Cleanup/error traps | error-handling.sh | `enable_error_traps`, `register_cleanup` |
 
 **GitHub Release Installers** (⚠️ Use library for new installers):
 
-- Use `management/common/lib/github-release-installer.sh` for installing binaries from GitHub releases
-- Medium abstraction: 5 focused functions (platform detection, version fetching, idempotency, install from tarball/zip)
-- Configuration stays inline in each script (explicit and traceable, no YAML parsing)
-- Pattern reduces installer scripts from ~90-120 lines to ~40-50 lines
+- Use `management/common/lib/github-release-installer.sh` for new GitHub release installers
 - Examples: `management/common/install/github-releases/{lazygit,duf,glow}.sh`
-- Full documentation: `docs/architecture/github-release-installer.md`
+- See `docs/architecture/github-release-installer.md`
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
 
@@ -117,26 +78,11 @@ See `docs/architecture/shell-libraries.md` for complete guide
 - This XDG-compliant setup is intentional and correct
 - Standalone shell scripts in `apps/` must source logging.sh library if they need logging (they run in their own bash process, not in the shell environment)
 
-**run-and-summarize.sh Usage** (⚠️ Legacy - prefer logsift for new code):
+**Installation Script Testing**:
 
-- **Note**: This script predates logsift. For new code, use logsift instead (see universal CLAUDE.md)
-- If using run-and-summarize.sh for existing code:
-  - NEVER use `run_in_background: true` when calling it
-  - NEVER add `&` to the end of the command
-  - This script handles backgrounding internally and shows periodic updates
-  - Correct usage: `bash management/run-and-summarize.sh "task install" /tmp/log.txt 30`
-
-**Installation Script Testing Constraints**:
-
-- `install.sh` requires `--machine NAME` flag and sudo at the beginning
-- The script requests `sudo -v` upfront and maintains a background keep-alive loop
-- Claude Code cannot provide interactive password input, so the script will hang
-- For testing install phases:
-  - Run individual phase scripts directly (they handle their own sudo if needed)
-  - Test in Docker containers with passwordless sudo configured
-  - Use `management/test-install.sh` which handles sudo appropriately
-- Do NOT attempt to run `./install.sh` in background or in automated test loops
-- Machine manifests are in `management/machines/*.yml`
+- `install.sh` requires `--machine NAME` and sudo — Claude Code cannot provide interactive sudo
+- Test individual phase scripts directly, or use Docker containers with passwordless sudo
+- Do NOT run `./install.sh` directly in Claude Code sessions
 
 ## Package Management Philosophy
 
@@ -239,51 +185,13 @@ docs/
 
 ## Key Custom Tools
 
-**Symlinks Manager**:
-
-- Deploy/verify dotfiles from repo to home directory
-- Platform-aware with platforms/common and platforms/{platform} configs
-- Handles apps/ → ~/.local/bin/ symlinking
-- Run via Task: `task symlinks:link`, `task symlinks:check`, `task symlinks:show`
-- Location: `management/symlinks/`
-- See `.claude/skills/symlinks-developer` for detailed documentation
-
-**Theme System** (`theme`):
-
-- Unified theme generation from `theme.yml` source files
-- Applies themes across ghostty, tmux, btop, and Neovim
-- Commands: `apply`, `current`, `list`, `preview`, `random`, `like`, `dislike`
-- Themes stored in `apps/common/theme/themes/` with generated configs
-
-**Tools Discovery** (`toolbox`):
-
-- CLI for exploring 30+ installed development tools
-- Registry at `docs/tools/registry.yml` with descriptions, examples, docs
-- Commands: `list`, `show <name>`, `search <query>`, `random`, `installed`
-
-**Task Automation**:
-
-- Minimal Taskfile.yml in root directory for orchestration
-- Complex installation logic in shell scripts under `management/`
-- Run `task --list-all` to see available tasks
+- **Symlinks Manager** — `task symlinks:{link,check,show}` — see `.claude/skills/symlinks-developer`
+- **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `docs/tools/registry.yml`
+- **Task** — `task --list-all` for available tasks; complex logic lives in `management/` scripts
 
 ## Learnings Directory
 
-Document critical lessons learned in `docs/learnings/` as we encounter them. Learnings are quick-reference extracted wisdom - concise, skimmable, focused.
-
-**When to create a learning**: Critical bugs, best practices to follow consistently, common pitfalls, tool gotchas
-
-**Format (30-50 lines max)**:
-
-1. Title and context (1-2 lines)
-2. The Problem (2-4 lines + minimal code)
-3. The Solution (2-4 lines + code)
-4. Key Learnings (3-5 actionable bullets)
-5. Testing (optional, 5-10 lines)
-6. Related links (1-2 lines)
-
-**Workflow**: Create `docs/learnings/descriptive-name.md`, add to `mkdocs.yml` navigation
-
-Focus on what future you needs to remember, not comprehensive guides (that's what `docs/` is for).
+Document critical lessons in `docs/learnings/descriptive-name.md` (30-50 lines max). Add to `mkdocs.yml` navigation. Format: Problem → Solution → Key Learnings (actionable bullets).
 
 - todo.md is for creating future work items, not to be used for planning, moved to .planning, or changed in any way
