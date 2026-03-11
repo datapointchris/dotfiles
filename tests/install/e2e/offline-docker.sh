@@ -17,7 +17,8 @@ source "$DOTFILES_DIR/tests/install/helpers.sh"
 # Configuration
 DOCKER_IMAGE="dotfiles-test-base:ubuntu-24.04"
 CONTAINER_NAME="dotfiles-offline-test-$(date '+%Y%m%d-%H%M%S')"
-BUNDLE_DIR="$DOTFILES_DIR/management/offline"
+BUNDLE_SCRIPT_DIR="$DOTFILES_DIR/management/offline"
+BUNDLE_OUTPUT_DIR="$DOTFILES_DIR"
 LOG_FILE="$DOTFILES_DIR/test-offline-docker.log"
 
 # Options
@@ -125,25 +126,25 @@ BUNDLE_FILE=""
 
 if [[ "$SKIP_BUNDLE" == true ]]; then
   log_info "Skipping bundle creation (--skip-bundle)" 2>&1 | tee -a "$LOG_FILE"
-  BUNDLE_FILE=$(find "$BUNDLE_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1 || true)
+  BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1 || true)
   if [[ -z "$BUNDLE_FILE" || ! -f "$BUNDLE_FILE" ]]; then
     die "No existing bundle found. Run without --skip-bundle first."
   fi
 
 elif [[ "$REUSE_BUNDLE" == true ]]; then
-  BUNDLE_FILE=$(find "$BUNDLE_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1 || true)
+  BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1 || true)
   if [[ -n "$BUNDLE_FILE" && -f "$BUNDLE_FILE" ]]; then
     log_info "Reusing existing bundle: $(basename "$BUNDLE_FILE")" 2>&1 | tee -a "$LOG_FILE"
   else
     log_info "No existing bundle, creating new one..." 2>&1 | tee -a "$LOG_FILE"
-    bash "$BUNDLE_DIR/create-bundle.sh" --platform linux-x86_64 2>&1 | tee -a "$LOG_FILE"
-    BUNDLE_FILE=$(find "$BUNDLE_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+    bash "$BUNDLE_SCRIPT_DIR/create-bundle.sh" --platform linux-x86_64 2>&1 | tee -a "$LOG_FILE"
+    BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
   fi
 
 else
   log_info "Creating fresh offline bundle..." 2>&1 | tee -a "$LOG_FILE"
-  bash "$BUNDLE_DIR/create-bundle.sh" --platform linux-x86_64 2>&1 | tee -a "$LOG_FILE"
-  BUNDLE_FILE=$(find "$BUNDLE_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+  bash "$BUNDLE_SCRIPT_DIR/create-bundle.sh" --platform linux-x86_64 2>&1 | tee -a "$LOG_FILE"
+  BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
 fi
 
 if [[ -z "$BUNDLE_FILE" || ! -f "$BUNDLE_FILE" ]]; then

@@ -75,6 +75,7 @@ while IFS='|' read -r binary_name tool; do
   cached_binary="$HOME/installers/go-binaries/$binary_name"
   if [[ -f "$cached_binary" ]] && [[ "$UPDATE_MODE" != "true" ]]; then
     log_info "Using cached binary: $cached_binary"
+    mkdir -p "$GOBIN"
     cp "$cached_binary" "$binary_path"
     chmod +x "$binary_path"
   else

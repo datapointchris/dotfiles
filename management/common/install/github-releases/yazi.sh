@@ -71,10 +71,22 @@ if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
   TEMP_ZIP="/tmp/${BINARY_NAME}.zip"
   EXTRACT_DIR="/tmp/yazi-extract"
 
-  log_info "Download URL: $DOWNLOAD_URL"
-  log_info "Downloading yazi..."
-  if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_ZIP"; then
-    manual_steps="1. Download in your browser (bypasses firewall):
+  # Check offline cache first
+  OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
+  url_filename=$(basename "$DOWNLOAD_URL")
+  if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
+    cached_file="$OFFLINE_CACHE_DIR/$url_filename"
+    if [[ -f "$cached_file" ]]; then
+      log_info "Using cached file: $cached_file"
+      cp "$cached_file" "$TEMP_ZIP"
+    fi
+  fi
+
+  if [[ ! -f "$TEMP_ZIP" ]]; then
+    log_info "Download URL: $DOWNLOAD_URL"
+    log_info "Downloading yazi..."
+    if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_ZIP"; then
+      manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, extract and install:
@@ -85,9 +97,10 @@ if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
 
 3. Verify installation:
    yazi --version"
-    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-    log_error "Failed to download from $DOWNLOAD_URL"
-    exit 1
+      output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+      log_error "Failed to download from $DOWNLOAD_URL"
+      exit 1
+    fi
   fi
 
   log_info "Extracting..."

@@ -46,10 +46,25 @@ fi
 
 log_info "Installing via official installer..."
 
-# Download and run official installer
+# Offline cache
+OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
+CACHED_SCRIPT="$OFFLINE_CACHE_DIR/claude-code-install.sh"
+
+run_claude_install() {
+  # Check offline cache first
+  if [[ -f "$CACHED_SCRIPT" ]]; then
+    log_info "Using cached install script: $CACHED_SCRIPT"
+    bash "$CACHED_SCRIPT"
+    return $?
+  fi
+
+  # Try to download
+  curl -fsSL "$CLAUDE_CODE_INSTALL_URL" | bash
+}
+
 # The installer script handles platform detection and installs to ~/.local/bin
 # If it fails due to Claude running, skip gracefully
-INSTALLER_OUTPUT=$(curl -fsSL "$CLAUDE_CODE_INSTALL_URL" | bash 2>&1)
+INSTALLER_OUTPUT=$(run_claude_install 2>&1)
 INSTALLER_EXIT=$?
 
 if [[ $INSTALLER_EXIT -eq 0 ]]; then

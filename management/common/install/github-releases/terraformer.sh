@@ -57,11 +57,22 @@ ARCH=$(detect_arch)
 
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/terraformer-${PROVIDER}-${OS}-${ARCH}"
 
-log_info "Download URL: $DOWNLOAD_URL"
-log_info "Downloading terraformer..."
-mkdir -p "$HOME/.local/bin"
-if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
-  manual_steps="1. Download in your browser (bypasses firewall):
+# Check offline cache first
+OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
+url_filename=$(basename "$DOWNLOAD_URL")
+cached_file="$OFFLINE_CACHE_DIR/$url_filename"
+if [[ -d "$OFFLINE_CACHE_DIR" ]] && [[ -f "$cached_file" ]]; then
+  log_info "Using cached file: $cached_file"
+  mkdir -p "$HOME/.local/bin"
+  cp "$cached_file" "$TARGET_BIN"
+fi
+
+if [[ ! -f "$TARGET_BIN" ]] || [[ ! -s "$TARGET_BIN" ]]; then
+  log_info "Download URL: $DOWNLOAD_URL"
+  log_info "Downloading terraformer..."
+  mkdir -p "$HOME/.local/bin"
+  if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
+    manual_steps="1. Download in your browser (bypasses firewall):
    $DOWNLOAD_URL
 
 2. After downloading, install:
@@ -71,9 +82,10 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
 3. Verify installation:
    terraformer --version"
 
-  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
-  log_error "Failed to download from $DOWNLOAD_URL"
-  exit 1
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+    log_error "Failed to download from $DOWNLOAD_URL"
+    exit 1
+  fi
 fi
 
 chmod +x "$TARGET_BIN"
