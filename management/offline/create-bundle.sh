@@ -231,6 +231,15 @@ download_install_scripts() {
 download_cargo_binaries() {
   log_info "Downloading Cargo tool binaries..."
 
+  # Platform/arch names for tools that don't use Rust target triples (e.g. oxker)
+  local platform arch_name
+  if [[ "$OS" == "darwin" ]]; then
+    platform="apple_darwin"
+  else
+    platform="linux"
+  fi
+  [[ "$ARCH" == "arm64" ]] && arch_name="aarch64" || arch_name="$ARCH"
+
   local tool repo pattern linux_target version target filename url
   while IFS='|' read -r tool repo pattern linux_target; do
     [[ -z "$tool" ]] && continue
@@ -242,6 +251,8 @@ download_cargo_binaries() {
 
     target=$(get_cargo_target "$OS" "$ARCH" "$linux_target")
     filename=$(expand_pattern "$pattern" "$version" "$target")
+    filename="${filename//\{platform\}/$platform}"
+    filename="${filename//\{arch\}/$arch_name}"
     url="https://github.com/${repo}/releases/download/${version}/${filename}"
 
     log_info "  $tool ($version)..."
