@@ -85,7 +85,7 @@ aws-login() {
   else
     win_home="$winchris"
   fi
-  local okta_script="$win_home/AppData/Local/Programs/Python/Python312/Scripts/okta-awscli.exe"
+  local okta_script="$win_home/.local/bin/okta-awscli.exe"
 
   case $environment in
   dev)
