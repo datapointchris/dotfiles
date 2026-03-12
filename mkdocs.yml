@@ -143,6 +143,7 @@ nav:
       - Toolbox: apps/toolbox.md
       - Refcheck: apps/refcheck.md
       - Backmeup: apps/backmeup.md
+      - Safekeep: apps/safekeep.md
       - Backup Incremental: apps/backup-incremental.md
   - Architecture:
       - architecture/index.md

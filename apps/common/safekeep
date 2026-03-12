@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""safekeep - Config-driven file preservation with dated snapshots and retention.
+
+Rsync-copies files and directories to a destination with dated snapshots and
+automatic retention pruning. Primary use case: backing up scattered config files,
+local scripts, and git-untracked WIP to a network drive for crash protection.
+
+Config: ~/.config/safekeep/<name>.json
+Usage: safekeep [--config NAME] [--dry-run] [--help]
+"""
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from datetime import datetime
+from fnmatch import fnmatch
+from pathlib import Path
+
+# ANSI color helpers — no dependencies needed, every modern terminal supports these
+def _color(code, text):
+    return f"\033[{code}m{text}\033[0m"
+
+def cyan(text): return _color("36", text)
+def green(text): return _color("32", text)
+def yellow(text): return _color("33", text)
+def red(text): return _color("31", text)
+def bold(text): return _color("1", text)
+
+
+RESERVED_KEYS = {"dest", "keep", "exclude"}
+
+DEFAULT_EXCLUDES = [
+    ".venv", "node_modules", "__pycache__", ".mypy_cache", ".ruff_cache",
+    ".pytest_cache", "build", "dist", "*.pyc", ".DS_Store",
+]
+
+CONFIG_DIR = Path.home() / ".config" / "safekeep"
+
+
+def resolve_config(name):
+    """Resolve config by name, absolute path, or auto-detect single config."""
+    if name:
+        path = Path(name)
+        if path.is_absolute() and path.exists():
+            return path
+        config_path = CONFIG_DIR / f"{name}.json"
+        if config_path.exists():
+            return config_path
+        print(f"{red('safekeep:')} config not found: {yellow(name)}", file=sys.stderr)
+        print(f"  looked in: {cyan(str(config_path))}", file=sys.stderr)
+        sys.exit(1)
+
+    # Auto-detect: list configs in CONFIG_DIR
+    if not CONFIG_DIR.exists():
+        print(f"{red('safekeep:')} no config directory at {cyan(str(CONFIG_DIR))}", file=sys.stderr)
+        print(f"  create a config: {cyan('~/.config/safekeep/<name>.json')}", file=sys.stderr)
+        sys.exit(1)
+
+    configs = sorted(CONFIG_DIR.glob("*.json"))
+    if not configs:
+        print(f"{red('safekeep:')} no configs found in {cyan(str(CONFIG_DIR))}", file=sys.stderr)
+        sys.exit(1)
+    if len(configs) == 1:
+        return configs[0]
+
+    print(f"{yellow('safekeep:')} multiple configs found, specify one with {cyan('--config')}:", file=sys.stderr)
+    for c in configs:
+        print(f"  {green(c.stem)}", file=sys.stderr)
+    sys.exit(1)
+
+
+def load_config(config_path):
+    """Load and validate config file."""
+    with open(config_path) as f:
+        config = json.load(f)
+
+    for key in ("dest", "keep"):
+        if key not in config:
+            print(f"{red('safekeep:')} config missing required key {yellow(repr(key))}: {cyan(str(config_path))}", file=sys.stderr)
+            sys.exit(1)
+
+    return config
+
+
+def get_sections(config):
+    """Yield (name, section_dict) for all non-reserved top-level keys."""
+    for key, value in config.items():
+        if key not in RESERVED_KEYS and isinstance(value, dict):
+            yield key, value
+
+
+def git_ls_untracked(repo_path):
+    """Get list of untracked files from a git repository."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return [repo_path / line for line in result.stdout.strip().splitlines() if line]
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"  {yellow('warning:')} could not list untracked files in {cyan(str(repo_path))}")
+        return []
+
+
+def matches_exclude(rel_path, excludes):
+    """Check if any path component matches an exclude pattern."""
+    for part in Path(rel_path).parts:
+        for pattern in excludes:
+            if fnmatch(part, pattern):
+                return True
+    return False
+
+
+def rsync_relative(base, rel_paths, dest_base, excludes, dry_run=False):
+    """Rsync paths relative to base into dest_base, preserving directory structure.
+
+    Uses rsync --relative so that 'notes' becomes dest_base/notes/ and
+    '.ssh/config' becomes dest_base/.ssh/config.
+    """
+    valid = []
+    for p in rel_paths:
+        source = base / p
+        if source.exists():
+            valid.append(str(p))
+        else:
+            print(f"  {yellow('skip:')} {source} {yellow('(not found)')}")
+
+    if not valid:
+        return 0
+
+    if not dry_run:
+        dest_base.mkdir(parents=True, exist_ok=True)
+
+    cmd = ["rsync", "-a", "--relative"]
+    for pattern in excludes:
+        cmd.extend(["--exclude", pattern])
+    if dry_run:
+        cmd.append("-n")
+    cmd.extend(valid)
+    cmd.append(str(dest_base) + "/")
+
+    subprocess.run(cmd, cwd=str(base), check=True)
+    return len(valid)
+
+
+def rsync_untracked(files, base, dest_base, dry_run=False):
+    """Rsync individual untracked files preserving path structure relative to base.
+
+    Uses --files-from for efficiency when copying many small files.
+    """
+    rel_paths = []
+    for f in files:
+        try:
+            rel_paths.append(str(f.relative_to(base)))
+        except ValueError:
+            continue
+
+    if not rel_paths:
+        return 0
+
+    if not dry_run:
+        dest_base.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp:
+        tmp.write("\n".join(rel_paths) + "\n")
+        tmp_path = tmp.name
+
+    try:
+        cmd = ["rsync", "-a", "--files-from", tmp_path, str(base) + "/", str(dest_base) + "/"]
+        if dry_run:
+            cmd.append("-n")
+        subprocess.run(cmd, check=True)
+    finally:
+        os.unlink(tmp_path)
+
+    return len(rel_paths)
+
+
+def update_latest_symlink(dest, date_dir):
+    """Update the 'latest' symlink to point to the newest backup."""
+    latest = dest / "latest"
+    if latest.is_symlink() or latest.exists():
+        latest.unlink()
+    latest.symlink_to(date_dir)
+
+
+def prune_old_backups(dest, keep):
+    """Remove dated backup directories beyond the keep count."""
+    dated = sorted(
+        [d for d in dest.iterdir()
+         if d.is_dir() and not d.is_symlink()
+         and len(d.name) == 10 and d.name[4] == "-" and d.name[7] == "-"],
+        reverse=True,
+    )
+    removed = dated[keep:]
+    for d in removed:
+        shutil.rmtree(d)
+    return removed
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="safekeep",
+        description="Config-driven file preservation with dated snapshots and retention",
+    )
+    parser.add_argument(
+        "-c", "--config",
+        help="Config name or absolute path (default: auto-detect)",
+    )
+    parser.add_argument(
+        "-n", "--dry-run",
+        action="store_true",
+        help="Show what would be copied without doing it",
+    )
+    args = parser.parse_args()
+
+    # Resolve and load config
+    config_path = resolve_config(args.config)
+    config = load_config(config_path)
+    print(f"{bold('safekeep:')} using config {cyan(config_path.name)}", flush=True)
+
+    dest = Path(config["dest"]).expanduser()
+    keep = config["keep"]
+    excludes = config.get("exclude", DEFAULT_EXCLUDES)
+
+    # Fail fast if destination not available
+    if not dest.exists():
+        print(
+            f"{red('safekeep:')} destination {yellow(str(dest))} not found — is the network drive connected?",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if not os.access(dest, os.W_OK):
+        print(f"{red('safekeep:')} destination {yellow(str(dest))} is not writable", file=sys.stderr)
+        sys.exit(1)
+
+    date_dir = datetime.now().strftime("%Y-%m-%d")
+    total = 0
+
+    for section_name, section in get_sections(config):
+        base = Path(section["base"]).expanduser()
+        dest_base = dest / date_dir / section_name
+        print(f"\n{bold('[' + section_name + ']')} base: {cyan(str(base))}")
+
+        if not base.exists():
+            print(f"  {yellow('skip:')} base path {yellow(str(base))} does not exist")
+            continue
+
+        # Static paths
+        static = section.get("paths", [])
+        if static:
+            count = rsync_relative(base, static, dest_base, excludes, args.dry_run)
+            label = yellow("would copy") if args.dry_run else green("copied")
+            print(f"  {label} {bold(str(count))} static paths")
+            total += count
+
+        # Git untracked (dynamic)
+        for repo in section.get("git_untracked", []):
+            repo_path = base / repo
+            if not repo_path.exists():
+                print(f"  {yellow('skip:')} repo {yellow(str(repo_path))} does not exist")
+                continue
+            untracked = git_ls_untracked(repo_path)
+            filtered = [
+                f for f in untracked
+                if not matches_exclude(str(f.relative_to(base)), excludes)
+            ]
+            count = rsync_untracked(filtered, base, dest_base, args.dry_run)
+            label = yellow("would copy") if args.dry_run else green("copied")
+            print(f"  {label} {bold(str(count))} untracked files from {cyan(repo)}")
+            total += count
+
+    if not args.dry_run:
+        # Update latest symlink
+        update_latest_symlink(dest, date_dir)
+        print(f"\n{green('updated')} latest -> {cyan(date_dir)}")
+
+        # Prune old backups
+        removed = prune_old_backups(dest, keep)
+        if removed:
+            print(f"{yellow('pruned')} {bold(str(len(removed)))} old backups: {', '.join(d.name for d in removed)}")
+
+    label = yellow("would back up") if args.dry_run else green("backed up")
+    print(f"\n{bold('safekeep:')} {label} {bold(str(total))} items to {cyan(str(dest / date_dir))}")
+
+
+if __name__ == "__main__":
+    main()

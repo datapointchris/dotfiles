@@ -29,6 +29,7 @@ choice=$(gum choose --height=20 \
   "patterns - Log an event" \
   "refcheck - Check references" \
   "backmeup - Backup directories" \
+  "safekeep - Preserve files to network" \
   "backup-incremental - Incremental backup" \
   "open docs - Open documentation")
 
@@ -42,6 +43,7 @@ case "$choice" in
 "patterns"*) patterns --help ;;
 "refcheck"*) refcheck ;;
 "backmeup"*) backmeup --help ;;
+"safekeep"*) safekeep --help ;;
 "backup-incremental"*) backup-incremental --help ;;
 "open docs"*)
   print_green "Opening documentation..."

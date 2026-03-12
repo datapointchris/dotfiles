@@ -2244,7 +2244,7 @@ tools:
         desc: "Create named backup"
       - cmd: "backmeup -n configs -d ~/Backups .config dotfiles"
         desc: "Backup to custom destination"
-    see_also: [backup-incremental, tar, fd]
+    see_also: [safekeep, backup-incremental, tar, fd]
     tags: [backup, compression, progress, one-off]
     notes: "Excludes .venv, node_modules, caches but keeps .git. Uses multi-threaded zstd compression by default."
     docs_url: "docs/apps/backmeup.md"
@@ -2268,6 +2268,24 @@ tools:
     tags: [backup, incremental, hard-links, deduplication, homelab]
     notes: "Each backup appears as complete snapshot but uses hard links for unchanged files. Network-ready for homelab backups."
     docs_url: "docs/apps/backup-incremental.md"
+
+  safekeep:
+    category: custom-tools
+    description: "Config-driven file preservation with dated snapshots and retention - rsync-based with automatic pruning"
+    installed_via: dotfiles
+    usage: "safekeep [--config NAME] [--dry-run]"
+    why_use: "Back up scattered config files, scripts, and git-untracked WIP to a network drive with dated snapshots and automatic retention"
+    examples:
+      - cmd: "safekeep"
+        desc: "Run backup using auto-detected config"
+      - cmd: "safekeep --config work"
+        desc: "Use specific config profile"
+      - cmd: "safekeep --dry-run"
+        desc: "Preview what would be copied"
+    see_also: [backmeup, backup-incremental, rsync]
+    tags: [backup, rsync, config-driven, snapshots, retention, network]
+    notes: "Zero dependencies (Python stdlib only). Config at ~/.config/safekeep/<name>.json. Supports static paths and dynamic git-untracked file collection."
+    docs_url: "docs/apps/safekeep.md"
 
   refcheck:
     category: custom-tools
