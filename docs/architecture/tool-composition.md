@@ -264,7 +264,7 @@ Flow:
 ```bash
 # After task symlinks:link
 ls ~/.local/bin/
-# menu notes backup-dirs patterns printcolors
+# menu notes backmeup patterns printcolors
 ```
 
 **Go binaries** are in `~/go/bin/` (installed via `go install`):

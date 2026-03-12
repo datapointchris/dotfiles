@@ -1,0 +1,619 @@
+#!/usr/bin/env bash
+#
+# backmeup - Create compressed backup archive of specified paths
+#
+# Usage: backmeup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]
+#
+# Creates a timestamped zstd-compressed archive with smart exclusions, live progress
+# tracking, and comprehensive statistics.
+#
+# Options:
+#   -n, --name <name>       Backup name (required)
+#   -d, --dest <path>       Destination directory (required)
+#   -e, --exclude <pattern> Additional exclusion pattern (repeatable)
+#   -h, --help              Show this help message
+#
+# Examples:
+#   backmeup -n dotfiles -d ~/Documents dotfiles .config
+#   backmeup -n learning -d ~/Backups learning
+#   backmeup -n code -d ~/Documents --exclude .git dotfiles
+#   backmeup -n snapshot -d /tmp dotfiles ~/.zshrc
+#
+# Technical Implementation Notes:
+#
+# Why zstd compression?
+# zstd provides 2-3x faster compression than gzip while achieving better compression
+# ratios. It supports multi-threading (via -T flag), utilizing all available CPU cores.
+# Level 3 provides excellent balance: fast enough for interactive use, good compression.
+# Auto-threading (T0) means it uses all available cores automatically.
+#
+# Why keep .git directories despite their size?
+# Git history is essential for disaster recovery. If you're backing up a project, being
+# able to recover the full git history (branches, tags, commit messages, authorship) is
+# often more valuable than the disk space saved by excluding it. Other artifacts like
+# node_modules and .venv can be regenerated from package manifests, but git history cannot.
+#
+# Critical Gotcha #1: Trap Handlers and Exit Codes with set -e
+# When a trap handler runs on EXIT, its return value can override the script's intended
+# exit code. With 'set -e', any command returning non-zero causes immediate exit. The
+# cleanup trap must ensure every operation succeeds (via || true) or it will turn a
+# successful backup (exit 0) into a failure (exit 1). This is non-obvious because the
+# trap runs AFTER the main code exits successfully.
+#
+# Example of the bug: The line `[[ -n "$VAR" ]] && rm -f "$VAR"` returns 1 if VAR is
+# unset (the test fails). Without || true at the end, this non-zero return becomes the
+# trap's exit code, which becomes the script's exit code, overriding the explicit
+# `exit 0` from successful completion.
+#
+# Critical Gotcha #2: wait Command Behavior with set -e
+# The wait builtin returns the exit status of the waited-for process. If the process has
+# already exited or doesn't exist, wait returns non-zero. With 'set -e', this causes
+# immediate script exit. This is particularly problematic with background spinner processes
+# that may finish microseconds before wait is called. Adding || true makes wait safe to
+# call regardless of process state.
+#
+# Critical Gotcha #3: Cross-Platform File Size Detection
+# GNU stat --format='%s' works correctly on macOS (outputs file size as expected), but
+# returns exit code 1 instead of 0. This breaks scripts using 'set -e' even though the
+# command succeeded functionally. The solution is `wc -c < file` which works identically
+# across macOS, Linux, and BSD with consistent exit codes. The < redirection is critical -
+# without it, wc includes the filename in output.
+#
+# Critical Gotcha #4: tar Exit Codes Don't Indicate Failure
+# tar returns exit code 1 for non-fatal warnings like "file changed while reading" even
+# when the archive was created successfully and is perfectly valid. This means you cannot
+# rely on tar's exit code to determine success. Instead, validate the archive exists and
+# is non-empty after creation. This is why we disable pipefail during archiving - a tar
+# warning would otherwise fail the entire pipeline despite producing a valid archive.
+#
+# Note: Excludes .venv, node_modules, __pycache__, and various cache directories that can
+# be regenerated from manifests. These patterns reduce backup size by 50-90% typically.
+
+set -euo pipefail
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+
+# Source required shell libraries
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/colors.sh"
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Progress display tuning
+# UPDATE_INTERVAL_NS (90ms): Balances visual feedback vs CPU overhead. Too fast thrashes
+#   terminal rendering, too slow feels unresponsive. 90ms hits sweet spot.
+# COLOR_CYCLE_FILES (20): Changes color frequently enough to show progress but not so
+#   fast it's distracting or induces seizures.
+readonly COLOR_CYCLE_FILES=20           # Files per color change (visual rhythm)
+readonly UPDATE_INTERVAL_NS=90000000    # 90ms update interval (smooth without thrashing)
+readonly ARCHIVE_SPINNER_SLEEP=0.02     # 20ms: Responsive animation during archiving
+
+# Spinner animation characters - Braille dot patterns
+# These Unicode characters create a smooth circular animation that works in all modern
+# terminals. Braille dots are compact and don't disrupt the progress line layout.
+readonly SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+# Rainbow colors - ANSI color codes for visual variety
+# Cycles through warm-to-cool spectrum. Avoids pure red/green to reduce eye strain.
+# Order: Red -> Yellow -> Green -> Cyan -> Blue -> Magenta -> repeat
+readonly COLORS=("91" "93" "92" "96" "94" "95")
+
+# Colors for path display (Green, Cyan, Yellow, Magenta, Blue)
+readonly PATH_COLORS=("92" "96" "93" "95" "94")
+
+# Default exclusion patterns for tar (common bloat to skip)
+readonly DEFAULT_EXCLUDE_PATTERNS=(
+  '.venv'
+  'node_modules'
+  '__pycache__'
+  '.mypy_cache'
+  '.ruff_cache'
+  '.pytest_cache'
+  'build'
+  'dist'
+  'modules'
+  'zephyr'
+  '*.pyc'
+  '.DS_Store'
+)
+
+# ============================================================================
+# Global Variables
+# ============================================================================
+
+# Command line arguments (name and dest are required, no defaults)
+BACKUP_NAME=""
+DEST_DIR=""
+PATHS_TO_BACKUP=()
+EXTRA_EXCLUDES=()
+
+# Timing
+OVERALL_START_TIME=""
+ARCHIVE_START_TIME=""
+
+# Progress tracking
+ARCHIVE_SPINNER_PID=""
+PROGRESS_FILE=""
+
+# ============================================================================
+# Usage and Help
+# ============================================================================
+
+usage() {
+  color_bright_white "Create timestamped compressed backup archives with progress tracking"
+  echo ""
+  echo "$(color_bright_white "Usage:") $(color_bright_yellow "backmeup") $(color_bright_magenta "-n <name> -d <dest>") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<path1>") [path2] [path3...]"
+  print_section "Options" "brightcyan"
+  echo "  $(color_bright_magenta "-n, --name") $(color_cyan "<name>")        Backup name $(color_bright_black "(required)")"
+  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")        Destination directory $(color_bright_black "(required)")"
+  echo "  $(color_bright_magenta "-e, --exclude") $(color_cyan "<pattern>")  Additional exclusion pattern $(color_bright_black "(repeatable)")"
+  echo "  $(color_bright_magenta "-h, --help")              Show this help message"
+  echo ""
+  print_section "Examples" "brightcyan"
+  echo "  $(color_bright_black "# Backup dotfiles to Documents")"
+  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n dotfiles -d ~/Documents") $(color_green "dotfiles .config")"
+  echo "  $(color_bright_black "# Backup to external drive")"
+  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n code -d /Volumes/External") $(color_green "code")"
+  echo "  $(color_bright_black "# Exclude additional patterns")"
+  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n dotfiles -d ~/Documents --exclude .git") $(color_green "dotfiles")"
+  echo "  $(color_bright_black "# Mix directories and individual files")"
+  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n snapshot -d /tmp") $(color_green "dotfiles ~/.zshrc")"
+  echo ""
+  print_section "Restore" "brightcyan"
+  echo "  $(color_bright_black "# Extract archive to current directory")"
+  echo "  $(color_bright_yellow "tar") $(color_magenta "-xf") $(color_green "backup.tar.zst")"
+  echo "  $(color_bright_black "# Extract to specific directory")"
+  # shellcheck disable=SC2088
+  echo "  $(color_bright_yellow "tar") $(color_magenta "-xf") $(color_green "backup.tar.zst") $(color_magenta "-C") $(color_cyan "~/restore")"
+  echo "  $(color_bright_black "# List contents without extracting")"
+  echo "  $(color_bright_yellow "tar") $(color_magenta "-tf") $(color_green "backup.tar.zst") $(color_magenta "| head")"
+  echo ""
+}
+
+# ============================================================================
+# Cleanup Handler
+# ============================================================================
+#
+# CRITICAL: This function runs on EXIT/INT/TERM via trap. It must NEVER fail or it will
+# override the script's exit code. Every command must succeed even in unexpected states.
+#
+# Why all the || true?
+# With 'set -e', any command returning non-zero causes immediate exit. In a trap handler,
+# this can override a successful script exit (exit 0) with failure (exit 1). Examples:
+#   - kill: Returns 1 if process doesn't exist (common if already finished)
+#   - [[ test ]] && command: Returns 1 if test is false (breaks set -e)
+#   - rm -f: Safe alone, but [[ test ]] && rm -f fails if test is false!
+#
+# The Fix: Add || true to every operation that might fail in normal operation.
+#
+# Real bug we hit: Script exited with code 1 despite successful backup because cleanup
+# trap's `[[ -n "$VAR" ]] && rm -f "$VAR"` returned 1 when VAR was unset. The `|| true`
+# at the end ensures the line always succeeds.
+
+cleanup() {
+  # Kill background spinner process
+  if [[ -n "${ARCHIVE_SPINNER_PID:-}" ]]; then
+    kill "$ARCHIVE_SPINNER_PID" 2>/dev/null || true  # May already be dead
+  fi
+
+  # Remove temporary IPC files
+  if [[ -n "${PROGRESS_FILE:-}" ]]; then
+    rm -f "$PROGRESS_FILE"
+  fi
+
+  # Clear progress line (cosmetic, can't fail)
+  printf "\r\033[K"
+
+  # Explicitly return success to preserve script's actual exit code
+  return 0
+}
+
+# Install cleanup trap for normal exit, interrupts (Ctrl-C), and termination signals
+# This ensures temp files and background processes are always cleaned up
+trap cleanup EXIT INT TERM
+
+# ============================================================================
+# Argument Parsing
+# ============================================================================
+
+parse_arguments() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -n|--name)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --name requires a name" >&2
+          exit 1
+        fi
+        BACKUP_NAME="$2"
+        shift 2
+        ;;
+      -d|--dest)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --dest requires a directory path" >&2
+          exit 1
+        fi
+        DEST_DIR="$2"
+        shift 2
+        ;;
+      -e|--exclude)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --exclude requires a pattern" >&2
+          exit 1
+        fi
+        EXTRA_EXCLUDES+=("$2")
+        shift 2
+        ;;
+      -*)
+        echo "Error: Unknown option: $1" >&2
+        usage
+        exit 1
+        ;;
+      *)
+        PATHS_TO_BACKUP+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Show usage if no paths specified
+  if [[ ${#PATHS_TO_BACKUP[@]} -eq 0 ]]; then
+    usage
+    exit 0
+  fi
+
+  # Validate required arguments
+  if [[ -z "$BACKUP_NAME" ]]; then
+    echo "Error: --name is required" >&2
+    exit 1
+  fi
+  if [[ -z "$DEST_DIR" ]]; then
+    echo "Error: --dest is required" >&2
+    exit 1
+  fi
+}
+
+# ============================================================================
+# Path Validation
+# ============================================================================
+
+validate_paths() {
+  local existing_paths=()
+  local missing_paths=()
+  local path_idx=0
+
+  echo ""
+  print_banner "Backup Paths" "orange"
+
+  # Check each path
+  for path in "${PATHS_TO_BACKUP[@]}"; do
+    # Normalize path: if absolute, use as-is; if relative, prepend HOME
+    local full_path
+    if [[ "$path" = /* ]]; then
+      full_path="$path"
+    else
+      full_path="$HOME/$path"
+    fi
+
+    # Convert to relative path from HOME for tar (if inside HOME)
+    local relative_path="$path"
+    if [[ "$path" = /* ]]; then
+      if [[ "$path" = "$HOME"* ]]; then
+        relative_path="${path#"$HOME"/}"
+      else
+        relative_path="$path"
+      fi
+    fi
+
+    if [[ -e "$full_path" ]]; then
+      existing_paths+=("$relative_path")
+      local color_code="${PATH_COLORS[$path_idx]}"
+      echo -e "  ✓ Found: \033[${color_code}m$full_path\033[0m"
+      path_idx=$(( (path_idx + 1) % ${#PATH_COLORS[@]} ))
+    else
+      missing_paths+=("$relative_path")
+      echo -e "  ⊘ Skipping: \033[90m$full_path\033[0m \033[33m(not found)\033[0m"
+    fi
+  done
+
+  echo ""
+
+  # Check if we have anything to backup
+  if [[ ${#existing_paths[@]} -eq 0 ]]; then
+    color_red "Error: No paths found to backup"
+    exit 1
+  fi
+
+  # Check if destination directory exists
+  if [[ ! -d "$DEST_DIR" ]]; then
+    color_red "Error: Destination directory not found: $DEST_DIR"
+    exit 1
+  fi
+
+  # Return the lists via globals (caller reads from these globals)
+  EXISTING_PATHS=("${existing_paths[@]}")
+  if [[ ${#missing_paths[@]} -gt 0 ]]; then
+    MISSING_PATHS=("${missing_paths[@]}")
+  else
+    MISSING_PATHS=()
+  fi
+}
+
+# ============================================================================
+# Progress Display
+# ============================================================================
+
+start_progress_count_only() {
+  local progress_file="$1"
+  local start_time="$2"
+
+  set +m  # Disable job control messages
+  (
+    local spinner_idx=0
+    while [[ -f "$progress_file" ]]; do
+      if [[ -r "$progress_file" ]]; then
+        local count=$(cat "$progress_file" 2>/dev/null || echo "0")
+
+        # Calculate elapsed time
+        local now=$(date +%s)
+        local elapsed=$((now - start_time))
+        local time_str=$(printf "%02d:%02d" $((elapsed/60)) $((elapsed%60)))
+
+        # Rainbow color based on count
+        local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
+        local color_code="${COLORS[$color_idx]}"
+
+        local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
+        # Count and time display
+        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m    " \
+          "$spinner_char" "$time_str" "$count"
+        spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
+      fi
+      sleep "$ARCHIVE_SPINNER_SLEEP"
+    done
+  ) &
+  ARCHIVE_SPINNER_PID=$!
+  disown 2>/dev/null || true  # Prevent job control messages (allow to fail silently)
+  set -m  # Re-enable job control
+}
+
+# ============================================================================
+# Archive Phase - Create compressed archive with progress
+# ============================================================================
+
+create_archive() {
+  local backup_dest="$1"
+  shift
+  local existing_paths=("$@")
+
+  print_info "Creating backup archive..."
+  echo "  Destination: $(color_bright_magenta "$backup_dest")"
+  echo ""
+
+  # Start timing
+  ARCHIVE_START_TIME=$(date +%s)
+
+  # Determine working directory for tar:
+  # - If all paths are relative or inside HOME: cd to HOME, use relative paths
+  # - If any path is absolute outside HOME: use absolute paths from current dir
+  local use_home=true
+  local tar_paths=()
+
+  for path in "${existing_paths[@]}"; do
+    if [[ "$path" = /* ]]; then
+      if [[ "$path" != "$HOME"/* ]]; then
+        use_home=false
+      fi
+    fi
+  done
+
+  if [[ "$use_home" == true ]]; then
+    cd "$HOME" || exit 1
+    for path in "${existing_paths[@]}"; do
+      if [[ "$path" = /* ]]; then
+        tar_paths+=("${path#"$HOME"/}")
+      else
+        tar_paths+=("$path")
+      fi
+    done
+  else
+    for path in "${existing_paths[@]}"; do
+      if [[ "$path" = /* ]]; then
+        tar_paths+=("$path")
+      else
+        tar_paths+=("$HOME/$path")
+      fi
+    done
+  fi
+
+  # Initialize progress tracking
+  PROGRESS_FILE="/tmp/backup_dirs_$$_progress"
+  echo "0" > "$PROGRESS_FILE"
+
+  start_progress_count_only "$PROGRESS_FILE" "$ARCHIVE_START_TIME"
+
+  # Build tar exclude arguments from defaults + extras
+  local exclude_args=()
+  for pattern in "${DEFAULT_EXCLUDE_PATTERNS[@]}"; do
+    exclude_args+=("--exclude=$pattern")
+  done
+  for pattern in "${EXTRA_EXCLUDES[@]}"; do
+    exclude_args+=("--exclude=$pattern")
+  done
+
+  # ==========================================================================
+  # Archive Creation - The Critical Section
+  # ==========================================================================
+  #
+  # CRITICAL CONCEPT: Separating tar's archive data from verbose output
+  #
+  # tar's I/O streams:
+  #   stdout: Archive data (binary tar stream)
+  #   stderr: Verbose output with -v flag (one filename per line)
+  #
+  # Solution Pattern:
+  #   {
+  #     tar -cv ... | zstd ... > file    # Archive pipeline in grouped command
+  #   } 2>&1 | {                          # Redirect stderr (verbose) to pipeline
+  #     count lines                       # Count filenames for progress
+  #   }
+  #
+  # Why the curly braces?
+  #   Grouping { commands; } lets us redirect stderr of the ENTIRE pipeline.
+  #   Without grouping, `tar | zstd 2>&1` would mix tar's verbose with zstd's output.
+  #
+  # Why `set +o pipefail`?
+  #   tar returns exit code 1 for warnings (e.g., "file changed while reading")
+  #   even when archive is successfully created. With pipefail, this would fail
+  #   the entire script. We check archive validity after creation instead.
+
+  set +o pipefail  # Disable pipefail: tar warnings shouldn't fail the script
+
+  {
+    tar -cv "${exclude_args[@]}" "${tar_paths[@]}" | \
+      zstd -T0 -3 > "$backup_dest"
+  } 2>&1 | \
+  {
+    # Count loop: Read tar's verbose output (filenames) and update progress file
+    local processed=0
+    local last_update=$(date +%s%N)
+    while IFS= read -r _line; do
+      processed=$((processed + 1))
+      # Throttle updates to UPDATE_INTERVAL_NS (90ms) to avoid thrashing
+      local now=$(date +%s%N)
+      if [[ $((now - last_update)) -ge $UPDATE_INTERVAL_NS ]]; then
+        echo "$processed" > "$PROGRESS_FILE"  # Background spinner reads this
+        last_update=$now
+      fi
+    done
+    echo "$processed" > "$PROGRESS_FILE"  # Final count
+  }
+
+  # Re-enable pipefail now that archiving is complete
+  set -o pipefail
+
+  # ==========================================================================
+  # Post-Archive Cleanup and Validation
+  # ==========================================================================
+
+  # Read final file count BEFORE deleting the progress file
+  # The count loop writes final value after tar completes, but there's a race condition
+  # where we might read before the final write. Brief sleep ensures we get accurate count.
+  sleep 0.1  # Let final echo "$processed" > "$PROGRESS_FILE" complete
+  PROCESSED_FILES=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
+
+  # Stop the background spinner process
+  rm -f "$PROGRESS_FILE"  # Spinner checks for this file, removing it stops the loop
+
+  # Wait for spinner to exit cleanly
+  # CRITICAL GOTCHA: wait returns non-zero if process already exited or doesn't exist!
+  # With 'set -e', this would cause function to return 1 despite successful archive.
+  # The '|| true' ensures wait failure doesn't fail the function.
+  wait "$ARCHIVE_SPINNER_PID" 2>/dev/null || true  # Don't fail if already exited
+
+  # Clear the progress line (cosmetic cleanup)
+  printf "\r\033[K"
+
+  # Archive validation - More reliable than checking tar's exit code
+  # Why not trust tar's exit code? tar returns 1 for non-fatal warnings like
+  # "file changed while reading" even when archive is valid and complete.
+  # Instead, verify the file exists and has content (not 0 bytes).
+  if [[ ! -f "$backup_dest" ]] || [[ ! -s "$backup_dest" ]]; then
+    return 1  # Archive creation failed
+  fi
+
+  return 0  # Success!
+}
+
+# ============================================================================
+# Statistics Display
+# ============================================================================
+
+display_statistics() {
+  local backup_dest="$1"
+  local num_items="$2"
+  local num_missing="$3"
+
+  # Calculate timing
+  local end_time=$(date +%s)
+  local total_elapsed=$((end_time - OVERALL_START_TIME))
+  local total_time_str=$(printf "%02d:%02d" $((total_elapsed / 60)) $((total_elapsed % 60)))
+
+  # Get compressed archive size (using wc -c for cross-platform reliability)
+  # tr -d ' ' removes any leading spaces that wc might output on some platforms
+  local compressed_size=$(wc -c < "$backup_dest" 2>/dev/null | tr -d ' ' || echo 0)
+  local compressed_size_hr=$(numfmt --to=iec-i --suffix=B "$compressed_size" 2>/dev/null || echo "$((compressed_size / 1048576))M")
+
+  # Display statistics
+  echo ""
+  print_section "Backup Statistics" "brightcyan"
+  echo ""
+  echo "  Location:        $(color_bright_blue "$backup_dest")"
+  echo "  Entries:         $(color_bright_green "$PROCESSED_FILES")"
+  echo "  Compressed size: $(color_bright_green "$compressed_size_hr")"
+  echo "  Items:           $(color_bright_green "$num_items") backed up"
+  echo ""
+  echo "  Time - Total:    $(color_bright_green "$total_time_str")"
+
+  if [[ $num_missing -gt 0 ]]; then
+    echo "  Skipped:         $(color_orange "$num_missing")"
+  fi
+
+  echo ""
+  print_section "Notes" "brightyellow"
+  echo ""
+  local all_excludes=("${DEFAULT_EXCLUDE_PATTERNS[@]}" "${EXTRA_EXCLUDES[@]}")
+  echo "  $(color_cyan "•") Excludes: $(color_bright_black "${all_excludes[*]:0:3}, ...")"
+  echo "  $(color_cyan "•") Git history $(color_bright_black "(.git)") included for recovery"
+  echo "  $(color_cyan "•") Backup saved to: $(color_bright_blue "$DEST_DIR")"
+  echo ""
+
+  # Success message
+  echo ""
+  echo -e "  \033[92m✓ Backup completed successfully!\033[0m"
+  echo ""
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+main() {
+  # Start timing
+  OVERALL_START_TIME=$(date +%s)
+
+  # Parse command line arguments
+  parse_arguments "$@"
+
+  # Validate paths exist and build lists
+  validate_paths
+
+  # Create backup filename (always zstd)
+  local date_stamp=$(date '+%Y-%m-%d_%H%M%S')
+  local backup_name="${BACKUP_NAME}_${date_stamp}.tar.zst"
+  local backup_dest="$DEST_DIR/$backup_name"
+
+  # Archive phase - create compressed backup
+  if create_archive "$backup_dest" "${EXISTING_PATHS[@]}"; then
+    # Display final statistics
+    display_statistics "$backup_dest" "${#EXISTING_PATHS[@]}" "${#MISSING_PATHS[@]}"
+    exit 0
+  else
+    echo ""
+    color_red "✗ Backup failed"
+    exit 1
+  fi
+}
+
+# Run main if executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

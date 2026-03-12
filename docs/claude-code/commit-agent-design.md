@@ -393,7 +393,7 @@ Task(subagent_type="commit-agent",
 
 ✅ **DO**: Pass relevant context about what was worked on
 
-- Example: "Context: fixed backup-dirs sourcing error"
+- Example: "Context: fixed backmeup sourcing error"
 - Example: "Context: added metrics tracking and testing"
 - Helps commit agent understand changes without extra research
 

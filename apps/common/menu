@@ -28,7 +28,7 @@ choice=$(gum choose --height=20 \
   "workflows - Browse workflows" \
   "patterns - Log an event" \
   "refcheck - Check references" \
-  "backup-dirs - Backup directories" \
+  "backmeup - Backup directories" \
   "backup-incremental - Incremental backup" \
   "open docs - Open documentation")
 
@@ -41,7 +41,7 @@ case "$choice" in
 "workflows"*) workflows --help ;;
 "patterns"*) patterns --help ;;
 "refcheck"*) refcheck ;;
-"backup-dirs"*) backup-dirs --help ;;
+"backmeup"*) backmeup --help ;;
 "backup-incremental"*) backup-incremental --help ;;
 "open docs"*)
   print_green "Opening documentation..."

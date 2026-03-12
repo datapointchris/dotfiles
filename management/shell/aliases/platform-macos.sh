@@ -61,11 +61,6 @@ alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
 # Source aws-profiles script to set profile (must be sourced for environment variables to persist)
 alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
 
-# ---------- Backup ---------- #
-
-# Backup important directories to iCloud Documents
-alias backup-important='backup-dirs --fast .claude learning notes obsession code'
-
 # ---------- Environment ---------- #
 
 # Set ENVIRONMENT variable (formerly functions in macos-functions.sh)

@@ -126,7 +126,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `arch/` - Arch Linux configurations
   - `ubuntu/` - Ubuntu server configurations
 - `apps/` - Personal CLI applications (shell scripts only)
-  - `common/` - Cross-platform: menu, notes, backup-dirs, patterns
+  - `common/` - Cross-platform: menu, notes, backmeup, patterns
   - `macos/` - macOS-specific tools
 - `management/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)

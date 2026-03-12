@@ -24,9 +24,9 @@ backup-incremental --name learning --exclude books ~/learning
 
 **Key point**: You don't need to exclude anything. Unchanged files (like your books) are automatically hard-linked and consume zero additional space.
 
-## Why Use This Instead of backup-dirs?
+## Why Use This Instead of backmeup?
 
-**backup-dirs** creates full compressed archives every time - great for one-off backups:
+**backmeup** creates full compressed archives every time - great for one-off backups:
 
 - 5GB backup → 5GB archive
 - Another 5GB backup → another 5GB archive
@@ -252,9 +252,9 @@ ls -lh
 cp ~/Documents/backups/learning/learning_2025-12-11_140000/docs/important.md ~/learning/docs/
 ```
 
-## Comparison with backup-dirs
+## Comparison with backmeup
 
-| Feature | backup-dirs | backup-incremental |
+| Feature | backmeup | backup-incremental |
 |---------|-------------|-------------------|
 | **Storage** | Full compressed archive each time | Only stores changes |
 | **Speed** | Slower (compression) | Faster (rsync) |
@@ -263,7 +263,7 @@ cp ~/Documents/backups/learning/learning_2025-12-11_140000/docs/important.md ~/l
 | **Network** | Manual copy after creation | Built-in SSH support |
 | **Best for** | One-off backups, archival | Frequent backups, large datasets |
 
-**Use backup-dirs when**:
+**Use backmeup when**:
 
 - Creating archives to share or move
 - One-off backups before risky operations
@@ -278,5 +278,5 @@ cp ~/Documents/backups/learning/learning_2025-12-11_140000/docs/important.md ~/l
 
 ## See Also
 
-- [backup-dirs](backup-dirs.md) - Compressed full backups
+- [backmeup](backmeup.md) - Compressed full backups
 - [Tool Composition](../architecture/tool-composition.md) - How tools work together

@@ -91,7 +91,7 @@ usage() {
   echo ""
   print_section "Identifying Backups" "brightcyan"
   echo "  $(color_bright_white "Directories with 'latest' symlink")  Incremental backup $(color_bright_black "(this tool)")"
-  echo "  $(color_bright_white "*.tar.zst/*.tar.gz/*.tar.xz")        Compressed archive $(color_bright_black "(backup-dirs)")"
+  echo "  $(color_bright_white "*.tar.zst/*.tar.gz/*.tar.xz")        Compressed archive $(color_bright_black "(backmeup)")"
   echo ""
   print_section "How It Works" "brightcyan"
   echo "  $(color_cyan "•") First backup: Full copy of all files"

@@ -182,7 +182,7 @@ exit_success
 ✅ Script is a menu system or interactive tool
 ✅ Logging overhead not needed
 
-**Examples**: backup-dirs, interactive menus, demo scripts, dev tools
+**Examples**: backmeup, interactive menus, demo scripts, dev tools
 
 ### Use both when
 

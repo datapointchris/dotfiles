@@ -38,7 +38,7 @@ dotfiles/
 │   ├── wsl/          # WSL Ubuntu-specific overrides
 │   └── arch/         # Arch Linux-specific overrides
 ├── apps/             # Personal CLI applications (shell scripts)
-│   ├── common/       # Cross-platform: menu, notes, backup-dirs, patterns
+│   ├── common/       # Cross-platform: menu, notes, backmeup, patterns
 │   └── macos/        # macOS-specific tools
 ├── management/       # Repository management
 │   ├── symlinks/     # Symlinks manager (Python)

@@ -115,10 +115,8 @@ theme upgrade               # Update to latest version
 
     **macOS-Specific Aliases**:
 
-    - `backup-important` - Backs up critical directories to ~/Documents (iCloud synced)
-      - Directories: .claude, learning, notes, obsession, code
-      - Uses the universal `backup-dirs` utility
-      - See [Backup Dirs](../../apps/backup-dirs.md) for details
+    - `backmeup` - Creates timestamped compressed backup archives
+      - See [Backmeup](../../apps/backmeup.md) for details
 
 === "Ubuntu/WSL"
 

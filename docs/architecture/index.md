@@ -17,7 +17,7 @@ dotfiles/
 │   ├── arch/            # Arch Linux overrides
 │   └── ubuntu/          # Ubuntu server overrides
 ├── apps/                # Personal CLI applications (shell scripts)
-│   ├── common/          # Cross-platform: menu, notes, backup-dirs, patterns
+│   ├── common/          # Cross-platform: menu, notes, backmeup, patterns
 │   └── macos/           # macOS-specific tools
 ├── management/          # Repository management
 │   ├── machines/        # Machine manifests (what to install per computer)

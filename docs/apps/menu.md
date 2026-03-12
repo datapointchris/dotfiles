@@ -25,7 +25,7 @@ menu                    # Launch interactive menu
 | Find a tool | `toolbox categories` | CLI tools discovery |
 | Browse workflows | `workflows search` | Multi-step workflow reference |
 | Check references | `refcheck` | Find broken file references |
-| Backup directories | `backup-dirs` | Compressed archive backup |
+| Backup directories | `backmeup` | Compressed archive backup |
 | Incremental backup | `backup-incremental` | Rsync hard-link incremental backup |
 | Deploy symlinks | `task symlinks:link` | Deploy dotfiles to home |
 | Check symlinks | `task symlinks:check` | Verify symlink integrity |
@@ -43,7 +43,7 @@ notes                   # Interactive note menu
 toolbox search git      # Find git tools
 workflows search        # Search workflow docs
 refcheck                # Check for broken references
-backup-dirs ~/projects  # Backup directories
+backmeup -n projects -d ~/Documents ~/projects  # Backup directories
 backup-incremental -n mybackup ~/data  # Incremental backup
 ```
 
@@ -70,6 +70,6 @@ Uses `gum choose --height=20` to display all options without pagination.
 - [Toolbox](toolbox.md) - Tool discovery
 - [Notes](notes.md) - Note-taking
 - [Session Manager](sess.md) - Session manager
-- [Backup Dirs](backup-dirs.md) - Directory backup
+- [Backmeup](backmeup.md) - Directory backup
 - [Backup Incremental](backup-incremental.md) - Incremental backup
 - [Refcheck](refcheck.md) - Reference checker

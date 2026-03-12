@@ -2231,25 +2231,23 @@ tools:
         desc: "Display full color palette"
     tags: [dotfiles, terminal, colors]
 
-  backup-dirs:
+  backmeup:
     category: custom-tools
     description: "Create compressed backup archive of specified directories with progress tracking"
     installed_via: dotfiles
-    usage: "backup-dirs [OPTIONS] <dir1> [dir2...]"
+    usage: "backmeup -n <name> -d <dest> <dir1> [dir2...]"
     why_use: "One-off compressed backups with smart exclusions, rainbow progress, and comprehensive statistics"
     examples:
-      - cmd: "backup-dirs .claude notes learning"
+      - cmd: "backmeup -n dotfiles -d ~/Documents .claude notes learning"
         desc: "Backup directories to ~/Documents"
-      - cmd: "backup-dirs --name learning-docs learning"
+      - cmd: "backmeup -n learning-docs -d ~/Documents learning"
         desc: "Create named backup"
-      - cmd: "backup-dirs --dest ~/Backups .config dotfiles"
+      - cmd: "backmeup -n configs -d ~/Backups .config dotfiles"
         desc: "Backup to custom destination"
-      - cmd: "backup-dirs --analyze learning"
-        desc: "Show percentage progress during backup"
     see_also: [backup-incremental, tar, fd]
     tags: [backup, compression, progress, one-off]
     notes: "Excludes .venv, node_modules, caches but keeps .git. Uses multi-threaded zstd compression by default."
-    docs_url: "docs/apps/backup-dirs.md"
+    docs_url: "docs/apps/backmeup.md"
 
   backup-incremental:
     category: custom-tools
@@ -2266,7 +2264,7 @@ tools:
         desc: "Optionally exclude specific directories"
       - cmd: "backup-incremental --name learning --network homelab:/backups ~/learning"
         desc: "Backup to network storage via SSH"
-    see_also: [backup-dirs, rsync]
+    see_also: [backmeup, rsync]
     tags: [backup, incremental, hard-links, deduplication, homelab]
     notes: "Each backup appears as complete snapshot but uses hard links for unchanged files. Network-ready for homelab backups."
     docs_url: "docs/apps/backup-incremental.md"
@@ -2295,18 +2293,6 @@ tools:
     notes: "Resolves variable paths ($SCRIPT_DIR, $DOTFILES_DIR). Learns from git history to suggest correct paths. Config at ~/.config/refcheck/config.toml."
     docs_url: "docs/apps/refcheck.md"
 
-backup-important:
-    category: custom-tools
-    description: "Backup critical home directories to Documents (iCloud synced) - alias for backup-dirs"
-    installed_via: dotfiles
-    usage: "backup-important"
-    why_use: "Quick safety backup of important files before potentially destructive operations"
-    examples:
-      - cmd: "backup-important"
-        desc: "Backup .claude, learning, notes, obsession to ~/Documents"
-    see_also: [backup-dirs, tar]
-    tags: [backup, safety, icloud, macOS, alias]
-    notes: "Alias that calls: backup-dirs .claude learning notes obsession. macOS-specific for iCloud Documents sync."
 
 # =================================================================
 # Metadata

@@ -36,7 +36,7 @@ Personal CLI tools for enhanced workflows.
 
     Tool discovery CLI
 
-- :material-backup-restore: __[Backup Dirs](backup-dirs.md)__
+- :material-backup-restore: __[Backmeup](backmeup.md)__
 
     Compressed archive backup
 

@@ -1,8 +1,8 @@
-# Bash Script Testing - Lessons from backup-dirs
+# Bash Script Testing - Lessons from backmeup
 
 ## Context
 
-Developed a complex bash script (`backup-dirs`) with progress tracking, path handling, and background processes. Passed shellcheck and appeared production-ready, but had multiple critical bugs that only surfaced during real-world testing.
+Developed a complex bash script (`backmeup`) with progress tracking, path handling, and background processes. Passed shellcheck and appeared production-ready, but had multiple critical bugs that only surfaced during real-world testing.
 
 ## The Problem
 
@@ -148,6 +148,6 @@ Passing shellcheck and looking correct doesn't mean it works. The only way to kn
 
 ## Related
 
-- `apps/common/backup-dirs` - The script that taught us these lessons
+- `apps/common/backmeup` - The script that taught us these lessons
 - [Shellcheck Wiki](https://www.shellcheck.net/wiki/)
 - `docs/development/testing.md` - General testing documentation
