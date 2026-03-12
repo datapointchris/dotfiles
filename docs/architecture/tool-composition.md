@@ -59,8 +59,8 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 **menu** (`apps/common/menu`) - Bash launcher
 
 - Shows available tools and workflows
-- Interactive gum menu with `menu launch`
-- Documentation in executable form
+- Interactive gum menu for quick access
+- Runs `--help` for selected tool
 
 ## Composition Patterns
 

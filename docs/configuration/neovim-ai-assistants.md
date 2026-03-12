@@ -7,14 +7,12 @@ Clean, focused AI assistance using existing paid services. Separate tools for se
 | Tool | Provider | Purpose | Keybindings |
 |------|----------|---------|-------------|
 | **codecompanion.nvim** | GitHub Copilot | Chat, questions, explanations | `<leader>ca` (ask), `<leader>cc` (toggle), `<leader>cq` (quick actions) |
-| **sidekick.nvim** | GitHub Copilot | Multi-line code completions (NES) | `<Tab>` (accept), `<leader>ne` (toggle) |
+| **copilot.lua** | GitHub Copilot | Copilot backend for CodeCompanion | Suggestions disabled (uses blink-cmp integration) |
 | **Claude Code** | Claude (via terminal) | Large refactors, multi-file changes | `Ctrl-g` (tmux popup), `<leader>tt` (floaterminal) |
 
 ## Workflow
 
 **Quick questions:** `<leader>ca` → Ask Copilot → Get answer in chat window
-
-**Code completions:** Type code → See NES ghost text → `<Tab>` to accept
 
 **Large refactors:** `Ctrl-g` (tmux) or `<leader>tt` (neovim) → Claude Code CLI
 
@@ -25,5 +23,5 @@ Each tool operates in its optimal environment - no integration complexity, no ty
 ## Configuration
 
 - `platforms/common/.config/nvim/lua/plugins/codecompanion.lua` - Copilot chat
-- `platforms/common/.config/nvim/lua/plugins/sidekick.lua` - NES completions
+- `platforms/common/.config/nvim/lua/plugins/copilot.lua` - Copilot backend
 - `platforms/common/.config/nvim/lua/core/keymaps.lua` - AI keybindings

@@ -44,6 +44,10 @@ Personal CLI tools for enhanced workflows.
 
     Rsync hard-link incremental backup
 
+- :material-safe-square-outline: __[Safekeep](safekeep.md)__
+
+    Config-driven file preservation with retention
+
 </div>
 
 ## Theming & Fonts

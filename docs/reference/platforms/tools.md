@@ -4,22 +4,22 @@ Tool support, version managers, and platform-specific quirks.
 
 ## Tool Availability by Platform
 
-| Tool           | macOS   | Ubuntu    | Arch      | Installation Method                 |
-| -------------- | ------- | --------- | --------- | ----------------------------------- |
-| **bat**        | ✅ brew | ✅ apt    | ✅ pacman | Native package managers             |
-| **eza**        | ✅ brew | ⚠️ cargo  | ✅ pacman | Ubuntu needs Rust                   |
-| **fd**         | ✅ brew | ✅ apt    | ✅ pacman | Different package name on Ubuntu    |
-| **ripgrep**    | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
-| **fzf**        | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
-| **zoxide**     | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
-| **neovim**     | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
-| **tmux**       | ✅ brew | ✅ apt    | ✅ pacman | Consistent across platforms         |
-| **lazygit**    | ✅ brew | ⚠️ manual | ✅ pacman | Ubuntu needs snap or manual install |
-| **yazi**       | ✅ brew | ⚠️ cargo  | ✅ pacman | Ubuntu needs Rust                   |
-| **git-delta**  | ✅ brew | ⚠️ cargo  | ✅ pacman | Ubuntu needs Rust                   |
-| **aerospace**  | ✅ cask | ❌        | ❌        | macOS-only window manager           |
-| **borders**    | ✅ brew | ❌        | ❌        | macOS-only                          |
-| **sketchybar** | ✅ brew | ❌        | ❌        | macOS-only                          |
+| Tool           | macOS | Ubuntu | Arch | Installation Method                     |
+| -------------- | ----- | ------ | ---- | --------------------------------------- |
+| **bat**        | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **eza**        | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **fd**         | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **zoxide**     | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **git-delta**  | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **oxker**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **neovim**     | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
+| **lazygit**    | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
+| **yazi**       | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
+| **fzf**        | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
+| **ripgrep**    | ✅    | ✅     | ✅   | System package manager                  |
+| **tmux**       | ✅    | ✅     | ✅   | System package manager                  |
+| **aerospace**  | ✅    | ❌     | ❌   | macOS-only window manager (cask)        |
+| **borders**    | ✅    | ❌     | ❌   | macOS-only (JankyBorders)               |
 
 **Legend**:
 
@@ -103,9 +103,9 @@ theme upgrade               # Update to latest version
 
     **GNU Coreutils**:
 
-    - Installed with `g` prefix: `gls`, `gsed`, `gtar`, `ggrep`
-    - Prevents conflicts with BSD utils
-    - NOT added to PATH by default (follows Homebrew best practices)
+    - Installed via Homebrew with unprefixed names prepended to PATH
+    - GNU takes precedence over BSD in both interactive shells and scripts
+    - Use GNU syntax: `sed -i` NOT `sed -i ''`
 
     **Homebrew Location**:
 
@@ -113,10 +113,10 @@ theme upgrade               # Update to latest version
     - Apple Silicon: `/opt/homebrew`
     - Scripts should detect automatically
 
-    **macOS-Specific Aliases**:
+    **macOS-Specific Tools**:
 
-    - `backmeup` - Creates timestamped compressed backup archives
-      - See [Backmeup](../../apps/backmeup.md) for details
+    - `aerospace` - Tiling window manager
+    - `borders` - Window border highlights (JankyBorders)
 
 === "Ubuntu/WSL"
 
@@ -180,15 +180,15 @@ When testing installations, verify these platform-specific items:
 === "macOS"
 
     - [ ] Homebrew location correct for architecture
-    - [ ] All Brewfile packages install
+    - [ ] All system packages install
     - [ ] Casks install correctly
     - [ ] Symlinks created in expected locations
-    - [ ] GNU coreutils NOT in PATH by default
+    - [ ] GNU coreutils prepended to PATH (unprefixed)
 
 === "Ubuntu/WSL"
 
-    - [ ] bat and fd symlinks created
-    - [ ] Cargo tools install (eza, yazi, git-delta)
+    - [ ] Cargo-binstall tools installed (bat, fd, eza, zoxide, delta)
+    - [ ] GitHub release tools installed (neovim, lazygit, yazi, fzf)
     - [ ] ~/.local/bin in PATH
     - [ ] WSL-specific config applied (/etc/wsl.conf)
     - [ ] systemd enabled if needed

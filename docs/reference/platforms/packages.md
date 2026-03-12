@@ -8,17 +8,17 @@ Many tools have different package names across platforms. This table maps the to
 
 | Tool Name     | macOS (brew) | Ubuntu (apt)     | Arch (pacman) | Notes                              |
 | ------------- | ------------ | ---------------- | ------------- | ---------------------------------- |
-| **bat**       | `bat`        | `bat`            | `bat`         | Ubuntu installs as `batcat` binary |
-| **eza**       | `eza`        | via cargo        | `eza`         | Not in Ubuntu apt repos            |
-| **fd**        | `fd`         | `fd-find`        | `fd`          | Ubuntu installs as `fdfind` binary |
+| **bat**       | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **eza**       | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **fd**        | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **ripgrep**   | `ripgrep`    | `ripgrep`        | `ripgrep`     | All platforms use `rg` binary      |
 | **fzf**       | `fzf`        | `fzf`            | `fzf`         | ✅ Consistent                      |
-| **zoxide**    | `zoxide`     | `zoxide`         | `zoxide`      | ✅ Consistent                      |
+| **zoxide**    | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **neovim**    | `neovim`     | `neovim`         | `neovim`      | All use `nvim` binary              |
 | **tmux**      | `tmux`       | `tmux`           | `tmux`        | ✅ Consistent                      |
 | **lazygit**   | `lazygit`    | via snap/release | `lazygit`     | Ubuntu needs manual install        |
 | **yazi**      | `yazi`       | via cargo        | `yazi`        | Ubuntu needs Rust                  |
-| **git-delta** | `git-delta`  | via cargo        | `git-delta`   | Ubuntu needs Rust                  |
+| **git-delta** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **jq**        | `jq`         | `jq`             | `jq`          | ✅ Consistent                      |
 | **yq**        | `yq`         | snap or binary   | `yq`          | Ubuntu via snap or manual          |
 | **htop**      | `htop`       | `htop`           | `htop`        | ✅ Consistent                      |
@@ -27,61 +27,27 @@ Many tools have different package names across platforms. This table maps the to
 
 ## Binary Name Differences
 
-Some packages install with different binary names.
-
-=== "Ubuntu/WSL"
-
-    **Different binary names**:
-
-    - `bat` package → `batcat` binary (needs symlink to `bat`)
-    - `fd-find` package → `fdfind` binary (needs symlink to `fd`)
-
-    **Solution** (implemented in `taskfiles/wsl.yml`):
-
-    ```bash
-    # Create symlinks for differently-named packages
-    mkdir -p ~/.local/bin
-    ln -sf /usr/bin/batcat ~/.local/bin/bat
-    ln -sf /usr/bin/fdfind ~/.local/bin/fd
-    ```
-
-=== "macOS"
-
-    No binary name differences. All packages install with expected binary names.
-
-=== "Arch Linux"
-
-    No binary name differences. All packages install with expected binary names.
+With the current installation strategy (cargo-binstall for Rust tools, GitHub releases for others), binary names are consistent across all platforms. No symlinks or workarounds needed.
 
 ## Rust/Cargo Installation
 
-Some tools require Rust/Cargo, especially on Ubuntu where they're not available via apt.
-
-**All Platforms**:
+Rust and cargo-binstall are installed on **all platforms** for consistent Rust tool management:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source "$HOME/.cargo/env"
+cargo install cargo-binstall
 ```
 
-### Cargo-Installed Tools
+### Cargo-Installed Tools (All Platforms)
 
-=== "Ubuntu/WSL"
+These tools are installed via `cargo-binstall` (pre-compiled binaries, fast) on all platforms:
 
-    These tools need cargo install:
+- `bat` - cat alternative
+- `fd-find` - find alternative
+- `eza` - ls alternative
+- `zoxide` - cd alternative
+- `git-delta` - git diff viewer
+- `oxker` - Docker container TUI
 
-    - `eza` (modern ls)
-    - `yazi` (file manager)
-    - `git-delta` (git diff viewer)
-
-    ```bash
-    cargo install eza yazi-fm git-delta
-    ```
-
-=== "macOS"
-
-    All tools available via Homebrew. Cargo not required for standard toolset.
-
-=== "Arch Linux"
-
-    All tools available via pacman. Cargo not required for standard toolset.
+Installation is handled by `management/common/install/language-tools/cargo-tools.sh`.

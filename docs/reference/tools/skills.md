@@ -10,7 +10,7 @@ The UserPromptSubmit hook analyzes your prompts and recently modified files, the
 
 - **Keyword matching** - Prompt contains skill keywords (e.g., "symlink", "install", "docs")
 - **Intent patterns** - Regex matches on user intent like `"(fix|debug).*symlink"`
-- **File patterns** - Editing files matching pathPatterns (e.g., `tools/symlinks/**/*.py`)
+- **File patterns** - Editing files matching pathPatterns (e.g., `management/symlinks/**/*.py`)
 
 **Configuration**: `.claude/skill-rules.json`
 
@@ -24,7 +24,7 @@ Expertise in the dotfiles symlink management system.
 
 - Keywords: symlink, symlinks, relink
 - Intent: `(fix|debug|update).*symlink`, `symlink.*(broken|missing|error)`
-- Files: `tools/symlinks/**/*.py`
+- Files: `management/symlinks/**/*.py`
 
 **Provides**:
 
@@ -144,7 +144,7 @@ Test the UserPromptSubmit hook directly:
 echo '{"prompt": "fix symlink issue"}' | python .claude/hooks/user-prompt-submit-skill-activation
 
 # Test file trigger (modify file first)
-touch tools/symlinks/test.py
+touch management/symlinks/test.py
 echo '{"prompt": "test"}' | python .claude/hooks/user-prompt-submit-skill-activation
 ```
 

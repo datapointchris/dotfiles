@@ -86,9 +86,9 @@ These paths are added by version managers (nvm, uv) and take precedence:
 | **Ubuntu** | zsh   | `~/.config/zsh/.zshrc` |
 | **Arch**   | zsh   | `~/.config/zsh/.zshrc` |
 
-### ZSHDOTDIR Configuration
+### ZDOTDIR Configuration
 
-All platforms use `~/.config/zsh/.zshrc` via ZSHDOTDIR.
+All platforms use `~/.config/zsh/.zshrc` via ZDOTDIR.
 
 === "macOS"
 
@@ -100,7 +100,7 @@ All platforms use `~/.config/zsh/.zshrc` via ZSHDOTDIR.
 
     ```bash
     # /etc/zsh/zshenv
-    export ZSHDOTDIR="$HOME/.config/zsh"
+    export ZDOTDIR="$HOME/.config/zsh"
     ```
 
 ## Installation Prerequisites

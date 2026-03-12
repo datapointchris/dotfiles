@@ -18,7 +18,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 - ✅ Same versions on macOS and Linux
 - ✅ Latest features and fixes
 - ✅ Consistent binary names
-- ✅ User-space installation (no sudo needed except for Go)
+- ✅ User-space installation (no sudo needed)
 
 ## Three-Tier Strategy
 
@@ -34,7 +34,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 
 - `yq` - YAML processor (single binary)
 - `go` - Build toolchain (extract to `/usr/local/go` per official docs)
-- `fzf` - Fuzzy finder (build from source with Go)
+- `fzf` - Fuzzy finder (pre-built binary)
 - `neovim` - Editor (extract to `~/.local/nvim-linux-x86_64/`, symlink binary)
 - `lazygit` - Git TUI (single binary)
 - `yazi` - File manager (single binary + plugins)
@@ -45,7 +45,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 **Advantages**:
 
 - Latest stable releases
-- No compilation required (except fzf)
+- No compilation required
 - Universal across platforms
 - Predictable versions
 
@@ -89,7 +89,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 
 **Tools**:
 
-**Shell**:
+**Shell & Terminal**:
 
 - `zsh` - Shell itself
 - `tmux` - Version 3.4 is acceptable (3.5a is only bugfixes)
@@ -97,7 +97,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 **System utilities**:
 
 - `ripgrep` - Currently up-to-date in apt (14.1.0)
-- `tree`, `htop`, `jq` - Stable tools, version doesn't matter
+- `tree`, `htop`, `jq`, `yq` - Stable tools, version doesn't matter
 
 **Build tools**:
 
@@ -248,7 +248,7 @@ See [Package Version Analysis](../learnings/package-version-analysis.md) for det
 
 | Tool | Ubuntu 24.04 apt | Latest | Installation Method |
 |------|-----------------|--------|---------------------|
-| fzf | 0.44.1 | 0.66.1 | Build from source (22 versions ahead!) |
+| fzf | 0.44.1 | 0.66.1 | GitHub releases (22 versions ahead!) |
 | neovim | 0.9.5 | 0.11+ | GitHub releases (major version ahead) |
 | go | 1.22 | 1.23+ | GitHub releases (official method) |
 | bat | 0.24.0 | 0.26.0 | cargo-binstall |

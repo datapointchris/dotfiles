@@ -107,7 +107,7 @@ Implemented comprehensive hooks system combining Claude Code hooks (AI workflow 
 **Claude Code Hooks (Phase 1):**
 
 - `session-start` - Auto-loads git status, recent commits, directory structure on session start
-- `stop-build-check` - Runs pytest when tools/symlinks modified
+- `stop-build-check` - Runs pytest when management/symlinks modified
 - `stop-commit-reminder` - Reminds about commits needing changelog
 
 **Git Automation (Phase 2):**
@@ -144,7 +144,7 @@ Skills activate based on three trigger types:
 
 - **Prompt keywords**: "symlink", "install", "docs" → suggest relevant skill
 - **Intent patterns**: Regex matching user intent like "(fix|debug).*symlink"
-- **File patterns**: Editing `tools/symlinks/**/*.py` → suggest symlinks-developer skill
+- **File patterns**: Editing `management/symlinks/**/*.py` → suggest symlinks-developer skill
 
 **Skills Configured:**
 
@@ -263,9 +263,9 @@ Added Python-based symlinks manager for cross-platform dotfiles deployment with 
 
 **Files Changed:**
 
-- Created: `tools/symlinks/` package with cli, config, manager, utils modules
-- Created: `tools/symlinks/tests/` comprehensive test suite
-- Created: `tools/symlinks/pyproject.toml` uv tool configuration
+- Created: `management/symlinks/` package with cli, config, manager, utils modules
+- Created: `management/symlinks/tests/` comprehensive test suite
+- Created: `management/symlinks/pyproject.toml` uv tool configuration
 
 See repository history for full details.
 
@@ -302,7 +302,7 @@ Documentation already exists in Phase 5 changelog and docs/reference/tools.md.
 
 - Disabled blink-cmp autocomplete for markdown and text filetypes (Neovim)
 - Integrated tinty Base16 theme management for tmux
-- Disabled GNU coreutils PATH addition (macOS) - kept as g-prefixed commands
+- GNU coreutils prepended to PATH (macOS) with unprefixed names
 - Added nvm initialization to profile
 - Added dotfiles/scripts/utils to PATH
 

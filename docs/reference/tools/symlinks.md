@@ -60,10 +60,10 @@ task symlinks:check-clean    # Check and remove broken symlinks
 If needed, run the tool directly from dotfiles root:
 
 ```bash
-uv run tools/symlinks link common
-uv run tools/symlinks link macos
-uv run tools/symlinks relink macos
-uv run tools/symlinks check
+uv run symlinks link common
+uv run symlinks link macos
+uv run symlinks relink macos
+uv run symlinks check
 ```
 
 ## Architecture
@@ -147,7 +147,7 @@ No installation required - `uv run` executes the tool in-place.
 The symlinks tool has comprehensive pytest test suite.
 
 ```bash
-cd ~/dotfiles/tools/symlinks
+cd ~/dotfiles/management/symlinks
 pytest -v                              # Run all tests
 pytest tests/test_manager.py           # Manager tests
 pytest tests/test_integration.py       # Integration tests
@@ -164,7 +164,7 @@ Tests cover:
 
 ## Configuration
 
-Exclusion patterns in `tools/symlinks/symlinks/config.py`:
+Exclusion patterns in `management/symlinks/symlinks/config.py`:
 
 **Excluded by default**:
 
@@ -206,7 +206,7 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 
 **Symlinks not created**:
 
-- Run with verbose flag: `uv run tools/symlinks link macos -v`
+- Run with verbose flag: `uv run symlinks link macos -v`
 - Check for permission errors
 - Verify source files exist in dotfiles repo
 
@@ -234,9 +234,9 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 **Project structure**:
 
 ```text
-tools/symlinks/
+management/symlinks/
 ├── symlinks/               # Main package
-│   ├── cli.py             # Click CLI
+│   ├── cli.py             # Typer CLI
 │   ├── config.py          # Configuration
 │   ├── manager.py         # Core logic
 │   └── utils.py           # Helper functions
@@ -250,7 +250,7 @@ tools/symlinks/
 └── README.md              # Implementation docs
 ```
 
-**Dependencies**: click (CLI framework)
+**Dependencies**: typer (CLI framework), rich (console output)
 
 **Python version**: 3.12+ (requires `Path.relative_to(walk_up=True)`)
 
