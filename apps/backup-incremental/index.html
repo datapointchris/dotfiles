@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://datapointchris.github.io/dotfiles/apps/backup-incremental/">
       
       
-        <link rel="prev" href="../backup-dirs/">
+        <link rel="prev" href="../safekeep/">
       
       
         <link rel="next" href="../../architecture/">
@@ -626,6 +626,8 @@
       
         
       
+        
+      
     
     
     
@@ -930,7 +932,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../backup-dirs/" class="md-nav__link">
+      <a href="../backmeup/" class="md-nav__link">
         
   
   
@@ -939,7 +941,37 @@
   <span class="md-ellipsis">
     
   
-    Backup Dirs
+    Backmeup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../safekeep/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2m-2.2 5.7-1.5-1.4 1.5-1.5C7.3 14 7 13 7 12s.3-2 .8-2.7L6.3 7.8l1.5-1.5 1.4 1.5C10 7.3 11 7 12 7s2 .3 2.8.8l1.5-1.5 1.4 1.4-1.5 1.5c.5.8.8 1.8.8 2.8s-.3 2-.8 2.8l1.5 1.5-1.4 1.4-1.5-1.5c-.8.5-1.8.8-2.8.8s-2-.3-2.7-.8zM12 9c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3m8-7c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2h-1v1h-4v-1H9v1H5v-1H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 18V4H4v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Safekeep
   
 
     
@@ -4634,8 +4666,8 @@
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>backup-incremental<span class="w"> </span>--name<span class="w"> </span>learning<span class="w"> </span>--exclude<span class="w"> </span>books<span class="w"> </span>~/learning
 </span></code></pre></div>
 <p><strong>Key point</strong>: You don't need to exclude anything. Unchanged files (like your books) are automatically hard-linked and consume zero additional space.</p>
-<h2 id="why-use-this-instead-of-backup-dirs">Why Use This Instead of backup-dirs?<a class="headerlink" href="#why-use-this-instead-of-backup-dirs" title="Permanent link">&para;</a></h2>
-<p><strong>backup-dirs</strong> creates full compressed archives every time - great for one-off backups:</p>
+<h2 id="why-use-this-instead-of-backmeup">Why Use This Instead of backmeup?<a class="headerlink" href="#why-use-this-instead-of-backmeup" title="Permanent link">&para;</a></h2>
+<p><strong>backmeup</strong> creates full compressed archives every time - great for one-off backups:</p>
 <ul>
 <li>5GB backup → 5GB archive</li>
 <li>Another 5GB backup → another 5GB archive</li>
@@ -4843,12 +4875,12 @@
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># Restore a specific file</span>
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>cp<span class="w"> </span>~/Documents/backups/learning/learning_2025-12-11_140000/docs/important.md<span class="w"> </span>~/learning/docs/
 </span></code></pre></div>
-<h2 id="comparison-with-backup-dirs">Comparison with backup-dirs<a class="headerlink" href="#comparison-with-backup-dirs" title="Permanent link">&para;</a></h2>
+<h2 id="comparison-with-backmeup">Comparison with backmeup<a class="headerlink" href="#comparison-with-backmeup" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Feature</th>
-<th>backup-dirs</th>
+<th>backmeup</th>
 <th>backup-incremental</th>
 </tr>
 </thead>
@@ -4885,7 +4917,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Use backup-dirs when</strong>:</p>
+<p><strong>Use backmeup when</strong>:</p>
 <ul>
 <li>Creating archives to share or move</li>
 <li>One-off backups before risky operations</li>
@@ -4900,7 +4932,7 @@
 </ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../backup-dirs/">backup-dirs</a> - Compressed full backups</li>
+<li><a href="../backmeup/">backmeup</a> - Compressed full backups</li>
 <li><a href="../../architecture/tool-composition/">Tool Composition</a> - How tools work together</li>
 </ul>
 

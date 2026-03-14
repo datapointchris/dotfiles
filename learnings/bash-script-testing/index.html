@@ -624,6 +624,8 @@
       
         
       
+        
+      
     
     
     
@@ -927,7 +929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../apps/backup-dirs/" class="md-nav__link">
+      <a href="../../apps/backmeup/" class="md-nav__link">
         
   
   
@@ -936,7 +938,37 @@
   <span class="md-ellipsis">
     
   
-    Backup Dirs
+    Backmeup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/safekeep/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2m-2.2 5.7-1.5-1.4 1.5-1.5C7.3 14 7 13 7 12s.3-2 .8-2.7L6.3 7.8l1.5-1.5 1.4 1.5C10 7.3 11 7 12 7s2 .3 2.8.8l1.5-1.5 1.4 1.4-1.5 1.5c.5.8.8 1.8.8 2.8s-.3 2-.8 2.8l1.5 1.5-1.4 1.4-1.5-1.5c-.8.5-1.8.8-2.8.8s-2-.3-2.7-.8zM12 9c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3m8-7c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2h-1v1h-4v-1H9v1H5v-1H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 18V4H4v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Safekeep
   
 
     
@@ -4618,9 +4650,9 @@
   
 
 
-<h1 id="bash-script-testing-lessons-from-backup-dirs">Bash Script Testing - Lessons from backup-dirs<a class="headerlink" href="#bash-script-testing-lessons-from-backup-dirs" title="Permanent link">&para;</a></h1>
+<h1 id="bash-script-testing-lessons-from-backmeup">Bash Script Testing - Lessons from backmeup<a class="headerlink" href="#bash-script-testing-lessons-from-backmeup" title="Permanent link">&para;</a></h1>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Developed a complex bash script (<code>backup-dirs</code>) with progress tracking, path handling, and background processes. Passed shellcheck and appeared production-ready, but had multiple critical bugs that only surfaced during real-world testing.</p>
+<p>Developed a complex bash script (<code>backmeup</code>) with progress tracking, path handling, and background processes. Passed shellcheck and appeared production-ready, but had multiple critical bugs that only surfaced during real-world testing.</p>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
 <p>Shellcheck passing does not mean a bash script works correctly. We encountered:</p>
 <ol>
@@ -4737,7 +4769,7 @@
 <p>Passing shellcheck and looking correct doesn't mean it works. The only way to know: run it with real data, all flag combinations, and edge cases. Thorough testing is especially critical for bash where the syntax is terse and errors are often silent.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>apps/common/backup-dirs</code> - The script that taught us these lessons</li>
+<li><code>apps/common/backmeup</code> - The script that taught us these lessons</li>
 <li><a href="https://www.shellcheck.net/wiki/">Shellcheck Wiki</a></li>
 <li><code>docs/development/testing.md</code> - General testing documentation</li>
 </ul>

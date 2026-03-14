@@ -626,6 +626,8 @@
       
         
       
+        
+      
     
     
     
@@ -938,7 +940,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../backup-dirs/" class="md-nav__link">
+      <a href="../backmeup/" class="md-nav__link">
         
   
   
@@ -947,7 +949,37 @@
   <span class="md-ellipsis">
     
   
-    Backup Dirs
+    Backmeup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../safekeep/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2m-2.2 5.7-1.5-1.4 1.5-1.5C7.3 14 7 13 7 12s.3-2 .8-2.7L6.3 7.8l1.5-1.5 1.4 1.5C10 7.3 11 7 12 7s2 .3 2.8.8l1.5-1.5 1.4 1.4-1.5 1.5c.5.8.8 1.8.8 2.8s-.3 2-.8 2.8l1.5 1.5-1.4 1.4-1.5-1.5c-.8.5-1.8.8-2.8.8s-2-.3-2.7-.8zM12 9c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3m8-7c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2h-1v1h-4v-1H9v1H5v-1H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 18V4H4v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Safekeep
   
 
     
@@ -4641,13 +4673,13 @@
 </tr>
 <tr>
 <td>Change theme</td>
-<td><code>theme preview</code></td>
-<td>Theme picker with live preview</td>
+<td><code>theme</code></td>
+<td>Theme management</td>
 </tr>
 <tr>
 <td>Change font</td>
-<td><code>font change</code></td>
-<td>Font picker with preview</td>
+<td><code>font</code></td>
+<td>Font management</td>
 </tr>
 <tr>
 <td>Take notes</td>
@@ -4656,13 +4688,18 @@
 </tr>
 <tr>
 <td>Find a tool</td>
-<td><code>toolbox categories</code></td>
+<td><code>toolbox</code></td>
 <td>CLI tools discovery</td>
 </tr>
 <tr>
 <td>Browse workflows</td>
-<td><code>workflows search</code></td>
+<td><code>workflows</code></td>
 <td>Multi-step workflow reference</td>
+</tr>
+<tr>
+<td>Log an event</td>
+<td><code>patterns</code></td>
+<td>Timestamped event logging</td>
 </tr>
 <tr>
 <td>Check references</td>
@@ -4671,23 +4708,18 @@
 </tr>
 <tr>
 <td>Backup directories</td>
-<td><code>backup-dirs</code></td>
+<td><code>backmeup</code></td>
 <td>Compressed archive backup</td>
+</tr>
+<tr>
+<td>Preserve files</td>
+<td><code>safekeep</code></td>
+<td>Config-driven file preservation</td>
 </tr>
 <tr>
 <td>Incremental backup</td>
 <td><code>backup-incremental</code></td>
 <td>Rsync hard-link incremental backup</td>
-</tr>
-<tr>
-<td>Deploy symlinks</td>
-<td><code>task symlinks:link</code></td>
-<td>Deploy dotfiles to home</td>
-</tr>
-<tr>
-<td>Check symlinks</td>
-<td><code>task symlinks:check</code></td>
-<td>Verify symlink integrity</td>
 </tr>
 <tr>
 <td>Open documentation</td>
@@ -4704,13 +4736,11 @@
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>notes<span class="w">                   </span><span class="c1"># Interactive note menu</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>toolbox<span class="w"> </span>search<span class="w"> </span>git<span class="w">      </span><span class="c1"># Find git tools</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>workflows<span class="w"> </span>search<span class="w">        </span><span class="c1"># Search workflow docs</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>refcheck<span class="w">                </span><span class="c1"># Check for broken references</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>backup-dirs<span class="w"> </span>~/projects<span class="w">  </span><span class="c1"># Backup directories</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>backup-incremental<span class="w"> </span>-n<span class="w"> </span>mybackup<span class="w"> </span>~/data<span class="w">  </span><span class="c1"># Incremental backup</span>
-</span></code></pre></div>
-<h2 id="other-tools">Other Tools<a class="headerlink" href="#other-tools" title="Permanent link">&para;</a></h2>
-<p>Not in menu but available directly:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>patterns<span class="w">                </span><span class="c1"># Lifestyle patterns journal (append-only log)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>patterns<span class="w"> </span><span class="s1">&#39;had coffee&#39;</span><span class="w">   </span><span class="c1"># Log an event</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>refcheck<span class="w">                </span><span class="c1"># Check for broken references</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>backmeup<span class="w"> </span>-n<span class="w"> </span>projects<span class="w"> </span>-d<span class="w"> </span>~/Documents<span class="w"> </span>~/projects<span class="w">  </span><span class="c1"># Backup directories</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>safekeep<span class="w">                </span><span class="c1"># Preserve files to network</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>backup-incremental<span class="w"> </span>-n<span class="w"> </span>mybackup<span class="w"> </span>~/data<span class="w">  </span><span class="c1"># Incremental backup</span>
 </span></code></pre></div>
 <h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h2>
 <p><strong>Location</strong>: <code>apps/common/menu</code> (~65 lines of bash)</p>
@@ -4723,7 +4753,8 @@
 <li><a href="../toolbox/">Toolbox</a> - Tool discovery</li>
 <li><a href="../notes/">Notes</a> - Note-taking</li>
 <li><a href="../sess/">Session Manager</a> - Session manager</li>
-<li><a href="../backup-dirs/">Backup Dirs</a> - Directory backup</li>
+<li><a href="../backmeup/">Backmeup</a> - Directory backup</li>
+<li><a href="../safekeep/">Safekeep</a> - File preservation</li>
 <li><a href="../backup-incremental/">Backup Incremental</a> - Incremental backup</li>
 <li><a href="../refcheck/">Refcheck</a> - Reference checker</li>
 </ul>
