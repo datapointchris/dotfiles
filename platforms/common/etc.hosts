@@ -20,6 +20,10 @@
 10.0.20.20  files
 10.0.20.50  nas
 
+# Docker local development (ichrisbirch)
+127.0.0.1  app.docker.localhost api.docker.localhost vue.docker.localhost chat.docker.localhost dashboard.docker.localhost
+127.0.0.1  app.test.localhost api.test.localhost vue.test.localhost chat.test.localhost dashboard.test.localhost
+
 # Trusted VLAN (10.0.10.x)
 10.0.10.10  archlinux
 10.0.10.11  macmini
