@@ -492,6 +492,11 @@ system_packages:
     description: Privacy-focused Firefox fork (Arch only - macOS uses cask)
     tags: [gui]
 
+  - name: sioyek
+    aur: sioyek
+    description: Keyboard-driven PDF viewer for technical documents
+    tags: [gui]
+
   # ---- webviewrs dependencies ----
   # Required for: cargo install --git https://github.com/datapointchris/webviewrs
   # These packages enable webviewrs functionality but are optional if not using it
@@ -1187,6 +1192,10 @@ macos_casks:
 
   - name: librewolf
     description: Privacy-focused Firefox fork
+    tags: [gui]
+
+  - name: sioyek
+    description: Keyboard-driven PDF viewer for technical documents
     tags: [gui]
 
   - name: zen
