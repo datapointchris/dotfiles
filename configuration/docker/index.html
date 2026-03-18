@@ -4656,10 +4656,11 @@
 <h3 id="macos-orbstack">macOS (OrbStack)<a class="headerlink" href="#macos-orbstack" title="Permanent link">&para;</a></h3>
 <p>macOS cannot run containers natively and requires a Linux VM. This setup uses <strong>OrbStack</strong> instead of Docker Desktop.</p>
 <p><strong>Container Runtime</strong>: OrbStack (optimized lightweight VM with Docker integration)</p>
-<p>OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, and container management — no separate installs needed.</p>
+<p>OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, Docker Buildx, kubectl, and shell completions — no Homebrew docker packages needed.</p>
 <p><strong>Installation</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>orbstack
 </span></code></pre></div>
+<p><strong>Plugin Discovery</strong>: OrbStack installs its binaries at <code>/Applications/OrbStack.app/Contents/MacOS/xbin/</code>. To make <code>docker compose</code> and <code>docker buildx</code> work as CLI plugins, the Docker config needs <code>cliPluginsExtraDirs</code> pointing to that directory. This is configured automatically by the dotfiles install script (<code>management/macos/install/system-packages.sh</code>).</p>
 <p><strong>Start OrbStack</strong>:</p>
 <p>Open the OrbStack app. Docker is available immediately — no manual daemon start required. OrbStack runs in the menu bar and starts automatically on login.</p>
 <h3 id="linux-wslarch">Linux (WSL/Arch)<a class="headerlink" href="#linux-wslarch" title="Permanent link">&para;</a></h3>
@@ -4689,21 +4690,11 @@ Linux package managers install docker-compose-plugin automatically with proper i
 </ul>
 <p><strong>This dotfiles setup uses V2</strong> across all platforms:</p>
 <ul>
-<li>macOS: OrbStack includes docker compose built-in</li>
+<li>macOS: OrbStack provides compose via <code>cliPluginsExtraDirs</code> in Docker config</li>
 <li>Linux: Package repos provide <code>docker-compose-plugin</code> or equivalent</li>
 </ul>
 <h2 id="docker-completions">Docker Completions<a class="headerlink" href="#docker-completions" title="Permanent link">&para;</a></h2>
-<p>Docker completions are installed automatically:</p>
-<p><strong>macOS</strong>:</p>
-<ul>
-<li>OrbStack provides Docker CLI completions automatically</li>
-</ul>
-<p><strong>Linux</strong>:</p>
-<ul>
-<li>Completions included in Docker packages</li>
-<li>Activated via shell completion frameworks</li>
-</ul>
-<p>No separate installation needed.</p>
+<p>Completions are provided automatically by OrbStack (macOS) and docker packages (Linux). No separate installation needed.</p>
 <h2 id="xdg-base-directory-compliance">XDG Base Directory Compliance<a class="headerlink" href="#xdg-base-directory-compliance" title="Permanent link">&para;</a></h2>
 <p>Docker configuration is kept in <code>~/.config/docker</code> instead of <code>~/.docker</code>:</p>
 <p><strong>zshrc configuration</strong>:</p>
@@ -4715,6 +4706,7 @@ Linux package managers install docker-compose-plugin automatically with proper i
 <li>Follows XDG Base Directory specification</li>
 <li>Plugin directory at <code>$DOCKER_CONFIG/cli-plugins/</code></li>
 </ul>
+<p><strong>Important</strong>: Do not install Homebrew's <code>docker</code>, <code>docker-completion</code>, <code>docker-buildx</code>, or <code>docker-compose</code> formulas on macOS — OrbStack provides all of these. Installing them creates version conflicts and fragile symlinks.</p>
 <h2 id="gui-alternative-lazydocker">GUI Alternative: lazydocker<a class="headerlink" href="#gui-alternative-lazydocker" title="Permanent link">&para;</a></h2>
 <p>For a terminal-based Docker management UI, this setup uses <strong>lazydocker</strong>.</p>
 <p><strong>Installation</strong>:</p>
@@ -4779,10 +4771,17 @@ Linux package managers install docker-compose-plugin automatically with proper i
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>newgrp<span class="w"> </span>docker
 </span></code></pre></div>
 <h3 id="docker-compose-not-found">docker compose not found<a class="headerlink" href="#docker-compose-not-found" title="Permanent link">&para;</a></h3>
-<p><strong>macOS</strong>: Restart OrbStack — docker compose is built-in.</p>
+<p><strong>macOS</strong>: Ensure <code>cliPluginsExtraDirs</code> is set in <code>~/.config/docker/config.json</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">&quot;cliPluginsExtraDirs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="s2">&quot;/Applications/OrbStack.app/Contents/MacOS/xbin&quot;</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>If missing, re-run <code>management/macos/install/system-packages.sh</code> or add it manually.</p>
 <p><strong>Linux</strong>: Install docker-compose-plugin:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker-compose-plugin<span class="w">  </span><span class="c1"># WSL</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker-compose<span class="w">            </span><span class="c1"># Arch</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker-compose-plugin<span class="w">  </span><span class="c1"># WSL</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker-compose<span class="w">            </span><span class="c1"># Arch</span>
 </span></code></pre></div>
 
 
