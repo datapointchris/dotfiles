@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Email
+Comment=Terminal email client
+Exec=ghostty -e aerc %u
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Office;Network;Email;
+Keywords=email;mail;
+MimeType=x-scheme-handler/mailto
