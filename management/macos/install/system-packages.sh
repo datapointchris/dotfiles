@@ -28,21 +28,29 @@ else
   log_warning "Some packages may have failed to install"
 fi
 
-# Step 3: Setup docker-compose as Docker CLI plugin
-if ! command -v docker-compose >/dev/null 2>&1; then
-  log_warning "docker-compose not installed (run: brew install docker-compose)"
+# Step 3: Configure Docker CLI to discover OrbStack plugins
+# OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed.
+# We add OrbStack's xbin dir to cliPluginsExtraDirs so 'docker compose' and 'docker buildx' work.
+DOCKER_CFG="${DOCKER_CONFIG:-$HOME/.config/docker}"
+DOCKER_CFG_FILE="$DOCKER_CFG/config.json"
+ORBSTACK_PLUGINS="/Applications/OrbStack.app/Contents/MacOS/xbin"
+
+if [[ -d "$ORBSTACK_PLUGINS" ]]; then
+  mkdir -p "$DOCKER_CFG"
+  if [[ -f "$DOCKER_CFG_FILE" ]] && command -v jq >/dev/null 2>&1; then
+    if ! jq -e '.cliPluginsExtraDirs' "$DOCKER_CFG_FILE" >/dev/null 2>&1; then
+      log_info "Adding OrbStack plugin directory to Docker config..."
+      jq --arg dir "$ORBSTACK_PLUGINS" '. + {cliPluginsExtraDirs: [$dir]}' "$DOCKER_CFG_FILE" > "$DOCKER_CFG_FILE.tmp" \
+        && mv "$DOCKER_CFG_FILE.tmp" "$DOCKER_CFG_FILE"
+      log_success "Docker CLI configured to use OrbStack plugins"
+    else
+      log_info "Docker CLI already configured with cliPluginsExtraDirs"
+    fi
+  else
+    log_warning "Docker config not found or jq not available — configure cliPluginsExtraDirs manually"
+  fi
 else
-  log_info "Setting up docker-compose as Docker CLI plugin..."
-
-  # Create plugin directory (DOCKER_CONFIG is set in zshrc to $XDG_CONFIG_HOME/docker)
-  mkdir -p "${DOCKER_CONFIG:-$HOME/.config/docker}/cli-plugins"
-
-  # Create symlink to enable 'docker compose' command
-  ln -sfn "$(brew --prefix)/opt/docker-compose/bin/docker-compose" \
-    "${DOCKER_CONFIG:-$HOME/.config/docker}/cli-plugins/docker-compose"
-
-  log_success "docker-compose plugin configured"
-  log_info "You can now use 'docker compose' (modern) instead of 'docker-compose' (legacy)"
+  log_warning "OrbStack not found — install via: brew install --cask orbstack"
 fi
 
 # Step 4: Link libpq to make psql available in PATH

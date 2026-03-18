@@ -10,13 +10,15 @@ macOS cannot run containers natively and requires a Linux VM. This setup uses **
 
 **Container Runtime**: OrbStack (optimized lightweight VM with Docker integration)
 
-OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, and container management — no separate installs needed.
+OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, Docker Buildx, kubectl, and shell completions — no Homebrew docker packages needed.
 
 **Installation**:
 
 ```bash
 brew install --cask orbstack
 ```
+
+**Plugin Discovery**: OrbStack installs its binaries at `/Applications/OrbStack.app/Contents/MacOS/xbin/`. To make `docker compose` and `docker buildx` work as CLI plugins, the Docker config needs `cliPluginsExtraDirs` pointing to that directory. This is configured automatically by the dotfiles install script (`management/macos/install/system-packages.sh`).
 
 **Start OrbStack**:
 
@@ -61,23 +63,12 @@ Linux package managers install docker-compose-plugin automatically with proper i
 
 **This dotfiles setup uses V2** across all platforms:
 
-- macOS: OrbStack includes docker compose built-in
+- macOS: OrbStack provides compose via `cliPluginsExtraDirs` in Docker config
 - Linux: Package repos provide `docker-compose-plugin` or equivalent
 
 ## Docker Completions
 
-Docker completions are installed automatically:
-
-**macOS**:
-
-- OrbStack provides Docker CLI completions automatically
-
-**Linux**:
-
-- Completions included in Docker packages
-- Activated via shell completion frameworks
-
-No separate installation needed.
+Completions are provided automatically by OrbStack (macOS) and docker packages (Linux). No separate installation needed.
 
 ## XDG Base Directory Compliance
 
@@ -94,6 +85,8 @@ This ensures:
 - Clean home directory (no `~/.docker` pollution)
 - Follows XDG Base Directory specification
 - Plugin directory at `$DOCKER_CONFIG/cli-plugins/`
+
+**Important**: Do not install Homebrew's `docker`, `docker-completion`, `docker-buildx`, or `docker-compose` formulas on macOS — OrbStack provides all of these. Installing them creates version conflicts and fragile symlinks.
 
 ## GUI Alternative: lazydocker
 
@@ -192,7 +185,17 @@ newgrp docker
 
 ### docker compose not found
 
-**macOS**: Restart OrbStack — docker compose is built-in.
+**macOS**: Ensure `cliPluginsExtraDirs` is set in `~/.config/docker/config.json`:
+
+```json
+{
+  "cliPluginsExtraDirs": [
+    "/Applications/OrbStack.app/Contents/MacOS/xbin"
+  ]
+}
+```
+
+If missing, re-run `management/macos/install/system-packages.sh` or add it manually.
 
 **Linux**: Install docker-compose-plugin:
 

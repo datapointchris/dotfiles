@@ -13,6 +13,7 @@
 
 macos_taps:
   - FelixKratz/formulae # JankyBorders
+  - TheZoraiz/ascii-image-converter # ASCII art from images
 
 # ================================================================
 # SYSTEM PACKAGES
@@ -99,6 +100,13 @@ system_packages:
     description: Fast grep alternative
     tags: [cli, search]
 
+  - name: tokei
+    apt: tokei
+    pacman: tokei
+    brew: tokei
+    description: Code statistics (lines of code, language breakdown)
+    tags: [cli, development]
+
   - name: tmux
     apt: tmux
     pacman: tmux
@@ -164,10 +172,7 @@ system_packages:
     apt: docker-compose-plugin
     pacman: docker-compose
     description: Docker Compose V2 plugin
-    # macOS: OrbStack includes docker compose built-in, no separate install needed
-
-  # Note: docker-completion is automatically installed as a dependency of docker on macOS
-  # On Linux (apt/pacman), completions are included with docker packages
+    # macOS: OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed
 
   # Programming Languages
   - name: ruby
@@ -208,6 +213,18 @@ system_packages:
     command: gpg
     description: GPG encryption
 
+  - name: age
+    apt: age
+    pacman: age
+    brew: age
+    description: Modern file encryption tool (used by sops)
+
+  - name: sops
+    apt: sops
+    pacman: sops
+    brew: sops
+    description: Secrets manager for config files (encrypts with age/GPG/KMS)
+
   # Media Processing
   - name: ffmpeg
     apt: ffmpeg
@@ -234,6 +251,12 @@ system_packages:
     pacman: chafa
     brew: chafa
     description: Image to ASCII converter (used by Yazi for image preview)
+
+  - name: ascii-image-converter
+    brew: thezoraiz/ascii-image-converter/ascii-image-converter
+    aur: ascii-image-converter
+    description: Convert images to ASCII art (used by theme tool)
+    tags: [cli, media]
 
   # Note: resvg removed - now embedded in Yazi as a Rust crate (not needed separately)
 
@@ -276,6 +299,11 @@ system_packages:
     brew: findutils
     command: gfind
     description: GNU find utilities (macOS only)
+
+  - name: gawk
+    brew: gawk
+    command: gawk
+    description: GNU awk (macOS only, default awk is nawk)
 
   - name: mas
     brew: mas
