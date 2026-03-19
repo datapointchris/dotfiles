@@ -1,5 +1,5 @@
 [default_session]
-startup_command = "nvim -c ':Telescope find_files'"
+startup_command = "git status"
 preview_command = "eza --all --git --icons --color=always {}"
 
 [[session]]
@@ -40,4 +40,19 @@ startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \
 [[session]]
 name = "zmk"
 path = "~/code/zmk"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "dev"
+path = "~/dev"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "claude"
+path = "~/.claude"
+startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
+
+[[session]]
+name = "obsession"
+path = "~/obsession"
 startup_command = "tmux split-window -h \\; send-keys 'ls' Enter \\; last-pane \\; send-keys 'git status' Enter"
