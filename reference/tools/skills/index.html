@@ -4681,6 +4681,10 @@
 
 
 <h1 id="skills-system">Skills System<a class="headerlink" href="#skills-system" title="Permanent link">&para;</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Deprecated</p>
+<p>This document describes a custom skills system that was designed but never fully implemented in this repository. The <code>.claude/skill-rules.json</code>, <code>.claude/skills/</code> directory, and <code>SKILL.md</code> files referenced below do not exist. Skills are now managed globally via <code>~/.claude/skills/</code> (Syncthing-synced) and Claude Code's built-in skill system. This page is retained for historical reference only.</p>
+</div>
 <p>Claude Code skills provide domain-specific expertise that auto-activates based on prompt keywords, intent patterns, and file context.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>The UserPromptSubmit hook analyzes your prompts and recently modified files, then suggests relevant skills before Claude sees your message.</p>

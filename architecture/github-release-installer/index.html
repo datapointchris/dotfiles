@@ -4767,91 +4767,8 @@
 </ul>
 <p>These scripts use library helpers where applicable but handle their unique requirements inline.</p>
 <h2 id="code-savings">Code Savings<a class="headerlink" href="#code-savings" title="Permanent link">&para;</a></h2>
-<h3 id="converted-scripts-11-tools">Converted Scripts (11 tools)<a class="headerlink" href="#converted-scripts-11-tools" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Tool</th>
-<th>Before</th>
-<th>After</th>
-<th>Savings</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>lazygit</td>
-<td>95</td>
-<td>50</td>
-<td>-45</td>
-</tr>
-<tr>
-<td>yazi</td>
-<td>119</td>
-<td>104</td>
-<td>-15</td>
-</tr>
-<tr>
-<td>duf</td>
-<td>89</td>
-<td>40</td>
-<td>-49</td>
-</tr>
-<tr>
-<td>glow</td>
-<td>89</td>
-<td>41</td>
-<td>-48</td>
-</tr>
-<tr>
-<td>tenv</td>
-<td>98</td>
-<td>73</td>
-<td>-25</td>
-</tr>
-<tr>
-<td>terraform-ls</td>
-<td>91</td>
-<td>37</td>
-<td>-54</td>
-</tr>
-<tr>
-<td>terrascan</td>
-<td>91</td>
-<td>37</td>
-<td>-54</td>
-</tr>
-<tr>
-<td>tflint</td>
-<td>91</td>
-<td>37</td>
-<td>-54</td>
-</tr>
-<tr>
-<td>trivy</td>
-<td>94</td>
-<td>37</td>
-<td>-57</td>
-</tr>
-<tr>
-<td>zk</td>
-<td>97</td>
-<td>40</td>
-<td>-57</td>
-</tr>
-<tr>
-<td>terraformer</td>
-<td>85</td>
-<td>51</td>
-<td>-34</td>
-</tr>
-<tr>
-<td><strong>Total</strong></td>
-<td><strong>1,039</strong></td>
-<td><strong>547</strong></td>
-<td><strong>-492 (47%)</strong></td>
-</tr>
-</tbody>
-</table>
+<h3 id="converted-scripts">Converted Scripts<a class="headerlink" href="#converted-scripts" title="Permanent link">&para;</a></h3>
+<p>See <code>management/common/install/github-releases/</code> for all current scripts. At time of library creation, converting 11 tools saved ~47% of boilerplate (from ~1,039 lines to ~547).</p>
 <h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Size:</strong> 181 lines</li>
@@ -4984,20 +4901,7 @@
 <ul>
 <li><code>management/common/lib/github-release-installer.sh</code> (181 lines)</li>
 </ul>
-<p><strong>Converted Scripts:</strong></p>
-<ul>
-<li><code>management/common/install/github-releases/lazygit.sh</code></li>
-<li><code>management/common/install/github-releases/yazi.sh</code></li>
-<li><code>management/common/install/github-releases/duf.sh</code></li>
-<li><code>management/common/install/github-releases/glow.sh</code></li>
-<li><code>management/common/install/github-releases/fzf.sh</code> (converted from build-from-source)</li>
-<li><code>management/common/install/github-releases/neovim.sh</code> (extracts directory + symlinks binary)</li>
-<li><code>management/common/install/github-releases/terrascan.sh</code></li>
-<li><code>management/common/install/github-releases/tflint.sh</code></li>
-<li><code>management/common/install/github-releases/trivy.sh</code></li>
-<li><code>management/common/install/github-releases/zk.sh</code></li>
-<li><code>management/common/install/github-releases/terraformer.sh</code></li>
-</ul>
+<p><strong>Converted Scripts:</strong> See <code>management/common/install/github-releases/</code> for the full current listing.</p>
 <p><strong>Moved to Custom Installers:</strong></p>
 <ul>
 <li><code>management/common/install/custom-installers/awscli.sh</code> - Uses AWS custom installer</li>
