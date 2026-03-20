@@ -198,6 +198,12 @@ system_packages:
     brew: rclone
     description: Cloud storage sync and management
 
+  - name: rsync
+    apt: rsync
+    pacman: rsync
+    brew: rsync
+    description: Fast incremental file transfer
+
   - name: direnv
     apt: direnv
     pacman: direnv
