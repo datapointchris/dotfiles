@@ -92,7 +92,8 @@ venv/
 # Do not commit neovim lazy plugin because different os conflict
 **/lazy-lock.json
 .claude/sessions/
-.planning/
+.planning
+.discussion
 
 # Test artifacts
 test-wsl-setup.log
