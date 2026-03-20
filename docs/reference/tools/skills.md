@@ -1,5 +1,8 @@
 # Skills System
 
+!!! warning "Deprecated"
+    This document describes a custom skills system that was designed but never fully implemented in this repository. The `.claude/skill-rules.json`, `.claude/skills/` directory, and `SKILL.md` files referenced below do not exist. Skills are now managed globally via `~/.claude/skills/` (Syncthing-synced) and Claude Code's built-in skill system. This page is retained for historical reference only.
+
 Claude Code skills provide domain-specific expertise that auto-activates based on prompt keywords, intent patterns, and file context.
 
 ## How It Works

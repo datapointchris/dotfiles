@@ -162,22 +162,9 @@ These scripts use library helpers where applicable but handle their unique requi
 
 ## Code Savings
 
-### Converted Scripts (11 tools)
+### Converted Scripts
 
-| Tool | Before | After | Savings |
-|------|--------|-------|---------|
-| lazygit | 95 | 50 | -45 |
-| yazi | 119 | 104 | -15 |
-| duf | 89 | 40 | -49 |
-| glow | 89 | 41 | -48 |
-| tenv | 98 | 73 | -25 |
-| terraform-ls | 91 | 37 | -54 |
-| terrascan | 91 | 37 | -54 |
-| tflint | 91 | 37 | -54 |
-| trivy | 94 | 37 | -57 |
-| zk | 97 | 40 | -57 |
-| terraformer | 85 | 51 | -34 |
-| **Total** | **1,039** | **547** | **-492 (47%)** |
+See `management/common/install/github-releases/` for all current scripts. At time of library creation, converting 11 tools saved ~47% of boilerplate (from ~1,039 lines to ~547).
 
 ### Library
 
@@ -360,19 +347,7 @@ bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 
 - `management/common/lib/github-release-installer.sh` (181 lines)
 
-**Converted Scripts:**
-
-- `management/common/install/github-releases/lazygit.sh`
-- `management/common/install/github-releases/yazi.sh`
-- `management/common/install/github-releases/duf.sh`
-- `management/common/install/github-releases/glow.sh`
-- `management/common/install/github-releases/fzf.sh` (converted from build-from-source)
-- `management/common/install/github-releases/neovim.sh` (extracts directory + symlinks binary)
-- `management/common/install/github-releases/terrascan.sh`
-- `management/common/install/github-releases/tflint.sh`
-- `management/common/install/github-releases/trivy.sh`
-- `management/common/install/github-releases/zk.sh`
-- `management/common/install/github-releases/terraformer.sh`
+**Converted Scripts:** See `management/common/install/github-releases/` for the full current listing.
 
 **Moved to Custom Installers:**
 

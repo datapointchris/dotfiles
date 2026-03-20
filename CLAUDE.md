@@ -6,7 +6,6 @@
 
 - System Environment (GNU tools)
 - Git Safety Protocol, Git Commit Messages, Git Hygiene
-- Commit Agent Workflow
 - Never Commit Untested Fixes
 - Problem Solving Philosophy (including "never repeat same test")
 - Code Comments Philosophy
@@ -67,7 +66,7 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 **GitHub Release Installers** (⚠️ Use library for new installers):
 
 - Use `management/common/lib/github-release-installer.sh` for new GitHub release installers
-- Examples: `management/common/install/github-releases/{lazygit,duf,glow}.sh`
+- See `management/common/install/github-releases/` for all current scripts
 - See `docs/architecture/github-release-installer.md`
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
@@ -125,9 +124,10 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `arch/` - Arch Linux configurations
   - `ubuntu/` - Ubuntu server configurations
-- `apps/` - Personal CLI applications (shell scripts only)
-  - `common/` - Cross-platform: menu, notes, backmeup, patterns
+- `apps/` - Personal CLI applications (shell scripts only, see `apps/` for full listing)
+  - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
+  - `arch/` - Arch Linux-specific tools (rofi menus, screen control)
 - `management/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `shell/` - Modular shell aliases and functions (build source)
@@ -144,7 +144,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - **Shell Build** - `management/shell/build-shell.sh` concatenates modular shell files based on manifest groups
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
-- **Tools Discovery** (`toolbox`) - CLI for exploring 30+ installed development tools
+- **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
 - **Pre-commit Hooks** - Quality control with markdownlint, shellcheck, yamllint, prettier
 
@@ -162,11 +162,14 @@ Documentation in this repository serves as a technical reference for future me (
 
 ```text
 docs/
-├── {topic.md}           # High level or top level topics that do not need a directory for organization
+├── {topic.md}           # High-level topics that don't need a subdirectory
+├── apps/                # Personal CLI application docs
 ├── architecture/        # HOW and WHY everything works
+├── claude-code/         # Claude Code integration, agents, hooks
 ├── configuration/       # Customization guides
 ├── development/         # Testing and contributing
 ├── reference/           # Quick lookup (platforms, tools, tasks)
+├── research/            # Technical research and exploration
 ├── learnings/           # Extracted wisdom from bugs and discoveries
 └── changelog/           # Historical record
 ```
@@ -185,9 +188,9 @@ docs/
 
 ## Key Custom Tools
 
-- **Symlinks Manager** — `task symlinks:{link,check,show}` — see `.claude/skills/symlinks-developer`
+- **Symlinks Manager** — `task symlinks:{link,check,show}`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `docs/tools/registry.yml`
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `platforms/common/.config/toolbox/registry.yml`
 - **Task** — `task --list-all` for available tasks; complex logic lives in `management/` scripts
 
 ## Learnings Directory

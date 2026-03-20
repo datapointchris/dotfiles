@@ -10,41 +10,46 @@ Quick stats: ~100 CLI tools, shared zsh/tmux/neovim configs, automated theme swi
 
 ## Quick Start
 
-Clone and run the setup script:
+Clone and run the setup script with a machine manifest:
 
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./install.sh    # Automatically detects your platform
+bash install.sh --machine arch-personal-workstation
 ```
 
 Skip font installation if needed:
 
 ```bash
-SKIP_FONTS=1 ./install.sh
+SKIP_FONTS=1 bash install.sh --machine arch-personal-workstation
 ```
+
+Available manifests are in `management/machines/` (arch, macOS, WSL, Ubuntu server).
 
 **Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
 
-See the [quickstart guide](https://datapointchris.github.io/dotfiles/getting-started/quickstart/) for details.
+See the [full documentation](https://datapointchris.github.io/dotfiles/) for details.
 
 ## Structure
 
 ```text
 dotfiles/
-├── platforms/        # System configurations (deployed to $HOME)
-│   ├── common/       # Shared configs (zsh, nvim, tmux, git)
+├── platforms/        # Dotfiles deployed to $HOME
+│   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
 │   ├── macos/        # macOS-specific overrides
-│   ├── wsl/          # WSL Ubuntu-specific overrides
-│   └── arch/         # Arch Linux-specific overrides
+│   ├── wsl/          # WSL Ubuntu overrides
+│   ├── arch/         # Arch Linux overrides
+│   └── ubuntu/       # Ubuntu server overrides
 ├── apps/             # Personal CLI applications (shell scripts)
-│   ├── common/       # Cross-platform: menu, notes, backmeup, patterns
-│   └── macos/        # macOS-specific tools
+│   ├── common/       # Cross-platform tools
+│   ├── macos/        # macOS-specific tools
+│   └── arch/         # Arch-specific tools (rofi menus)
 ├── management/       # Repository management
+│   ├── machines/     # Machine manifests (what to install per computer)
+│   ├── shell/        # Modular shell aliases and functions
 │   ├── symlinks/     # Symlinks manager (Python)
-│   ├── packages.yml  # Package definitions
-│   └── {platform}/   # Platform-specific install scripts
-└── docs/             # Documentation (because future you will forget)
+│   └── packages.yml  # Package definitions
+└── docs/             # MkDocs documentation site
 ```
 
 **External tools** (installed from GitHub, not in this repo):
@@ -128,7 +133,7 @@ toolbox search git        # Find git-related tools
 toolbox random            # Discover something you forgot existed
 ```
 
-Currently 31 tools documented in the registry with usage examples and tips. More getting added as I remember they exist.
+Tools documented in the registry with usage examples and tips. See `platforms/common/.config/toolbox/registry.yml` for the full list.
 
 ## Common Tasks
 
@@ -172,17 +177,15 @@ Theme persists across sessions. Neovim uses either generated colorschemes or ori
 
 Full docs are available at [datapointchris.github.io/dotfiles](https://datapointchris.github.io/dotfiles):
 
-- [Quickstart](https://datapointchris.github.io/dotfiles/getting-started/quickstart/) - Get running in 15 minutes
-- [Installation](https://datapointchris.github.io/dotfiles/getting-started/installation/) - Detailed install guide
 - [Architecture](https://datapointchris.github.io/dotfiles/architecture/) - How everything fits together
-- [Tool Reference](https://datapointchris.github.io/dotfiles/reference/tools/) - All the tools
-- [Troubleshooting](https://datapointchris.github.io/dotfiles/reference/troubleshooting/) - When things break
+- [Reference](https://datapointchris.github.io/dotfiles/reference/) - Platforms, tools, fonts
+- [Troubleshooting](https://datapointchris.github.io/dotfiles/reference/support/troubleshooting/) - When things break
 
 There's also a [learnings](https://datapointchris.github.io/dotfiles/learnings/) section with extracted wisdom from bugs I've fixed and things I've figured out.
 
 ## Some Highlights
 
-**Neovim**: Native LSP with 10+ language servers, CodeCompanion for Claude integration, custom colorscheme manager with 17 themes.
+**Neovim**: Native LSP with 10+ language servers, CodeCompanion for Claude integration, custom colorscheme manager with generated and plugin themes.
 
 **Shell**: Custom ZSH prompt with git status, zoxide for smart directory jumping, fzf with preview, syntax highlighting, vi-mode.
 

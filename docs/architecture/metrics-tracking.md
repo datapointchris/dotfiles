@@ -2,8 +2,8 @@
 
 Technical documentation for the unified Claude Code workflow metrics system.
 
-!!! info "User Guide"
-    For usage instructions, see [Working with Claude Code](../claude-code/working-with-claude.md#metrics-quality-tracking)
+!!! info "Related Documentation"
+    For usage instructions, see [Working with Claude Code](../claude-code/working-with-claude.md#metrics-quality-tracking). For extraction details and hook implementation, see [Agent Metrics Tracking](../claude-code/metrics-tracking.md).
 
 ## Overview
 

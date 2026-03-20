@@ -3,7 +3,6 @@
 # ================================================================
 # Single source of truth for ALL packages across ALL platforms
 # Parsed by management/parse_packages.py
-# Last updated: 2025-11-27
 
 # ================================================================
 # MACOS HOMEBREW TAPS

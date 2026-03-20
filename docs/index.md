@@ -160,25 +160,23 @@ sess list | awk '{print $2}'
 
 ```text
 dotfiles/
-├── platforms/           # Platform configurations (what gets deployed)
-│   ├── common/          # Shared configs (all platforms)
-│   ├── macos/           # macOS-specific overrides
-│   ├── wsl/             # WSL Ubuntu overrides
-│   ├── arch/            # Arch Linux overrides
-│   └── ubuntu/          # Ubuntu server overrides
-├── apps/                # Personal CLI applications (shell scripts)
-│   ├── common/          # Cross-platform: menu, notes, backmeup, safekeep, patterns, ...
-│   ├── macos/           # macOS-specific tools
-│   └── arch/            # Arch Linux-specific tools (rofi menus, etc.)
-├── management/          # Repository management
-│   ├── machines/        # Machine manifests (what to install per computer)
-│   ├── shell/           # Modular shell aliases and functions (build source)
-│   ├── symlinks/        # Symlinks manager (Python)
-│   ├── common/          # Shared installers and libraries
-│   ├── {platform}/      # Platform-specific install scripts
-│   └── packages.yml     # Package definitions
-├── Taskfile.yml         # Task automation
-└── docs/                # MkDocs documentation
+├── platforms/        # Dotfiles deployed to $HOME
+│   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
+│   ├── macos/        # macOS-specific overrides
+│   ├── wsl/          # WSL Ubuntu overrides
+│   ├── arch/         # Arch Linux overrides
+│   └── ubuntu/       # Ubuntu server overrides
+├── apps/             # Personal CLI applications (shell scripts)
+│   ├── common/       # Cross-platform tools
+│   ├── macos/        # macOS-specific tools
+│   └── arch/         # Arch-specific tools (rofi menus)
+├── management/       # Repository management
+│   ├── machines/     # Machine manifests (what to install per computer)
+│   ├── shell/        # Modular shell aliases and functions
+│   ├── symlinks/     # Symlinks manager (Python)
+│   ├── common/       # Shared installers and libraries
+│   └── packages.yml  # Package definitions
+└── docs/             # MkDocs documentation site
 ```
 
 **External tools** (installed from GitHub, not in this repo):
