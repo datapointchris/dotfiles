@@ -37,12 +37,6 @@ function openhands() {
     docker.all-hands.dev/all-hands-ai/openhands:0.32
 }
 
-#@toichrisbirch
-#--> scp file or directory to ichrisbirch home dir
-function toichrisbirch() {
-  scp -i ~/.ssh/apps.pem "$@" ubuntu@ichrisbirch:~
-}
-
 #@reload-dev-forever
 #--> Reload nginx and supervisor in a loop forever
 function reload-dev-forever() {
