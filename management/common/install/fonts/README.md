@@ -26,7 +26,6 @@ bash management/common/install/fonts/nerd-fonts.sh Hack
 
 Each font has its own installer for fonts not in the Nerd Fonts collection:
 
-- `commitmono.sh` - Commit Mono (GitHub release)
 - `comicmononf.sh` - ComicMonoNF (xtevenx variant)
 - `seriousshanns.sh` - SeriousShanns Nerd Font Mono
 - `sgr-iosevka.sh` - SGr-Iosevka Term Slab (TTC collection)

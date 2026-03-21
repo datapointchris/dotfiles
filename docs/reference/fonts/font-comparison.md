@@ -15,7 +15,6 @@ You have approximately **20 font families** in `~/Documents/code_fonts/`. This g
 | **Iosevka** | Narrow | ★★ Optional | Dense code, small screens | Technical | High |
 | **Source Code Pro** | Normal | ★ Optional | Professional work, Adobe | Classic | High |
 | **Meslo** | Normal | ✗ None | Terminal work, macOS feel | Reliable | Medium |
-| **CommitMono** | Normal | ★★ Good | Modern, neutral | Contemporary | Medium |
 | **SeriousShanns** | Normal | ✗ None | Fun, daily use | Comic Sans | High* |
 | **ComicMono** | Normal | ✗ None | Comic Sans style | Casual | Low |
 | **Terminess** | Normal | ✗ None | Retro, bitmap feel | Classic | Low |
@@ -268,47 +267,6 @@ These fonts are battle-tested by millions of developers worldwide.
 
 Newer fonts with specific design philosophies.
 
-#### CommitMono Nerd Font
-
-**Origin**: Modern open source (2023)
-**Designer**: Community project
-
-**Characteristics**:
-
-- **Ligatures**: Moderate, tasteful
-- **Width**: Standard monospace
-- **Weight options**: Regular, Bold, Italic
-- **Character**: Contemporary, neutral
-
-**Strengths**:
-
-- Very modern design
-- Optimized for Git commit messages
-- Clean, minimal aesthetics
-- Good balance of features
-
-**Trade-offs**:
-
-- Newer, less battle-tested
-- Smaller community
-- Limited weight options
-
-**Best for**:
-
-- Modern workflows
-- Git-heavy development
-- Minimalist preferences
-- Trying something new
-
-**When to skip**:
-
-- Want proven track record
-- Need extensive weight options
-
-**Testing priority**: ⭐⭐⭐ Try if you like modern fonts
-
----
-
 ### Tier 3: Personality Fonts
 
 Fonts with unique character and style.
@@ -472,7 +430,7 @@ Fonts with unique character and style.
 Do you want ligatures?
 ├─ Yes
 │  ├─ Extensive ligatures → FiraCode
-│  └─ Moderate ligatures → JetBrains Mono or CommitMono
+│  └─ Moderate ligatures → JetBrains Mono
 └─ No
    ├─ Want personality → SeriousShanns (you have this!)
    ├─ Want density → Iosevka
@@ -549,9 +507,8 @@ Based on popularity, features, and your preferences:
 
 ### Week 6-8: The Alternatives
 
-1. **CommitMono** - Modern alternative
-2. **SeriousShanns** (re-test your current favorite)
-3. **Any wildcard** that caught your eye
+1. **SeriousShanns** (re-test your current favorite)
+2. **Any wildcard** that caught your eye
 
 ### Skip Unless Curious
 
@@ -697,7 +654,7 @@ Fonts you're unsure about, save for 6 months then delete.
 | Long sessions | JetBrains Mono | Source Code Pro |
 | Personality | SeriousShanns | ComicMono |
 | Professional | Source Code Pro | JetBrains Mono |
-| Modern | CommitMono | FiraCode |
+| Modern | FiraCode | JetBrains Mono |
 
 ### By Priority
 
@@ -705,7 +662,6 @@ Fonts you're unsure about, save for 6 months then delete.
 |----------|-------|-----|
 | Must Test | FiraCode, JetBrains, Source Code Pro | Industry standards, proven |
 | Should Test | Iosevka, Meslo | Excellent, specific strengths |
-| Optional | CommitMono | Newer, interesting |
 | Keep | SeriousShanns | You already like it! |
 | Skip | ComicMono, Terminess, DroidSans | Better alternatives exist |
 

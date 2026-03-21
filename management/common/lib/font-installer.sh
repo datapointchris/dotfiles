@@ -338,7 +338,6 @@ fixed_count = 0
 our_font_patterns = [
     '*NerdFont*', '*NerdFontMono*',
     '*FiraCode*',
-    '*CommitMono*',
     '*IosevkaTermSlab*',
     '*ComicMonoNF*',
     '*SeriousShanns*',

@@ -303,17 +303,6 @@ download_other_fonts() {
     "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip" \
     "$CACHE_DIR/fonts/FiraCode.zip" "FiraCode"
 
-  # CommitMono (latest release)
-  local commitmono_url
-  commitmono_url=$(curl -fsSL "https://api.github.com/repos/eigilnikolajsen/commit-mono/releases/latest" \
-    | grep -o '"browser_download_url": *"[^"]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
-  if [[ -z "$commitmono_url" ]]; then
-    log_error "Could not fetch CommitMono release URL"
-    exit 1
-  fi
-  log_info "  CommitMono (latest)..."
-  download_file "$commitmono_url" "$CACHE_DIR/fonts/CommitMono.zip" "CommitMono"
-
   # SGr-IosevkaTermSlab (latest release)
   local iosevka_url
   iosevka_url=$(curl -fsSL "https://api.github.com/repos/be5invis/Iosevka/releases/latest" \
