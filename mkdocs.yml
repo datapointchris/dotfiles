@@ -243,6 +243,11 @@ nav:
       - PreToolUse Hooks Task Limitation: learnings/pretooluse-hooks-task-limitation.md
       - Tools Over Instructions: learnings/tools-over-instructions.md
       - Font Terminal Compatibility: learnings/font-terminal-compatibility.md
+      - Library Flag Pollution: learnings/library-flag-pollution.md
+      - Resilient Installation Patterns: learnings/resilient-installation-patterns.md
+      - Centralized Failure Registry: learnings/centralized-failure-registry.md
+      - GitHub Releases vs System Packages: learnings/github-releases-vs-system-packages.md
+      - Version Comparison in Shell: learnings/version-comparison-in-shell.md
   - Changelog:
       - Summary: changelog.md
 
