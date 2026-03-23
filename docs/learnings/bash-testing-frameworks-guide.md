@@ -1,6 +1,8 @@
 # Bash Testing Frameworks and Best Practices Guide (2025)
 
 > **Note**: This dotfiles project has **adopted BATS** as the official testing framework. See [testing.md](../development/testing.md) for usage examples and `tests/install/integration/` for test files.
+>
+> **Evaluation reversal**: The initial evaluation rejected BATS (10x slower than plain bash, no readability benefit with raw assertions). A re-evaluation with `bats-assert` and `bats-support` reversed the decision — `assert_output --partial`, `assert_failure`, and TAP output for CI make the performance cost worthwhile. Lesson: evaluate tools with their proper ecosystem, not in isolation.
 
 ## Executive Summary
 
