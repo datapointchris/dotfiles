@@ -14,7 +14,7 @@
         <link rel="prev" href="../tools-over-instructions/">
       
       
-        <link rel="next" href="../../changelog/">
+        <link rel="next" href="../library-flag-pollution/">
       
       
         
@@ -2950,8 +2950,6 @@
       
         
       
-        
-      
     
     
     
@@ -3014,34 +3012,6 @@
     
   
     Hook Registration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../claude-code/metrics-tracking/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Metrics Tracking
   
 
     
@@ -3643,6 +3613,16 @@
       
         
           
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
         
       
         
@@ -4462,6 +4442,146 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library-flag-pollution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library Flag Pollution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resilient-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilient Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../centralized-failure-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Centralized Failure Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../github-releases-vs-system-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Releases vs System Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../version-comparison-in-shell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Version Comparison in Shell
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4747,8 +4867,8 @@
 </span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
 </span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="n">font</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;FontName.ttf&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<h2 id="automated-fix-in-installer">Automated Fix in Installer<a class="headerlink" href="#automated-fix-in-installer" title="Permanent link">&para;</a></h2>
-<p>The dotfiles installer automatically fixes Nerd Font metadata via <code>fix_font_metadata()</code> in <code>font-installer.sh</code>. This runs at the end of <code>install.sh</code> after uvx/fonttools is available.</p>
+<h2 id="automated-fix">Automated Fix<a class="headerlink" href="#automated-fix" title="Permanent link">&para;</a></h2>
+<p>Font installation and metadata fixes are handled by the <code>font</code> tool (<code>font install</code>). The dotfiles repo no longer manages font installation directly.</p>
 <h2 id="macos-coretext-cache">macOS CoreText Cache<a class="headerlink" href="#macos-coretext-cache" title="Permanent link">&para;</a></h2>
 <p><strong>Critical</strong>: macOS caches font metadata at the system level. After fixing font files, the cache may still report old values. A <strong>system restart</strong> is required to flush the CoreText cache.</p>
 <p>Verify cache status with Swift:</p>

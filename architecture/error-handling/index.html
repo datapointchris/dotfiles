@@ -2961,8 +2961,6 @@
       
         
       
-        
-      
     
     
     
@@ -3025,34 +3023,6 @@
     
   
     Hook Registration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../claude-code/metrics-tracking/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Metrics Tracking
   
 
     
@@ -3652,6 +3622,16 @@
       
         
           
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
         
       
         
@@ -4462,6 +4442,146 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/library-flag-pollution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library Flag Pollution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/resilient-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilient Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/centralized-failure-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Centralized Failure Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/github-releases-vs-system-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Releases vs System Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learnings/version-comparison-in-shell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Version Comparison in Shell
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4662,6 +4782,14 @@
 <li><strong>Trap-based handling</strong> - ERR and EXIT traps ensure consistent behavior</li>
 <li><strong>Simple patterns</strong> - Reusable library with straightforward usage</li>
 </ul>
+<h2 id="library-sourcing-rules">Library Sourcing Rules<a class="headerlink" href="#library-sourcing-rules" title="Permanent link">&para;</a></h2>
+<p>Libraries loaded via <code>source</code> execute in the caller's shell. Any shell option they set (<code>set -euo pipefail</code>, <code>shopt</code>) persists in the calling script. This means libraries must never modify shell options — only the calling script decides its error handling strategy.</p>
+<ul>
+<li>Libraries should contain only function definitions, variable assignments, and conditional logic</li>
+<li><code>error-handling.sh</code> follows this correctly: it provides <code>enable_error_traps</code> as an explicit opt-in function</li>
+<li>All 7 shell libraries are tested for this via <code>tests/install/unit/library-flag-pollution.bats</code></li>
+</ul>
+<p>See <a href="../../learnings/library-flag-pollution/">Library Flag Pollution</a> for the full incident.</p>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <h3 id="library-chain">Library Chain<a class="headerlink" href="#library-chain" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>script.sh
@@ -4942,7 +5070,8 @@
 <ul>
 <li><a href="../shell-libraries/">Shell Libraries</a></li>
 <li><a href="../github-release-installer/">GitHub Release Installer</a></li>
-<li>Production-Grade Management Enhancements (planning doc)</li>
+<li><a href="../../learnings/library-flag-pollution/">Library Flag Pollution</a></li>
+<li><a href="../../learnings/resilient-installation-patterns/">Resilient Installation Patterns</a></li>
 </ul>
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
 <p><strong>Library:</strong></p>

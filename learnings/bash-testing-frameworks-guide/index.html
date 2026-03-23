@@ -2950,8 +2950,6 @@
       
         
       
-        
-      
     
     
     
@@ -3014,34 +3012,6 @@
     
   
     Hook Registration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../claude-code/metrics-tracking/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Metrics Tracking
   
 
     
@@ -3643,6 +3613,16 @@
       
         
           
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
         
       
         
@@ -4462,6 +4442,146 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library-flag-pollution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library Flag Pollution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resilient-installation-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilient Installation Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../centralized-failure-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Centralized Failure Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../github-releases-vs-system-packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Releases vs System Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../version-comparison-in-shell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Version Comparison in Shell
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4653,6 +4773,7 @@
 <h1 id="bash-testing-frameworks-and-best-practices-guide-2025">Bash Testing Frameworks and Best Practices Guide (2025)<a class="headerlink" href="#bash-testing-frameworks-and-best-practices-guide-2025" title="Permanent link">&para;</a></h1>
 <blockquote>
 <p><strong>Note</strong>: This dotfiles project has <strong>adopted BATS</strong> as the official testing framework. See <a href="../../development/testing/">testing.md</a> for usage examples and <code>tests/install/integration/</code> for test files.</p>
+<p><strong>Evaluation reversal</strong>: The initial evaluation rejected BATS (10x slower than plain bash, no readability benefit with raw assertions). A re-evaluation with <code>bats-assert</code> and <code>bats-support</code> reversed the decision — <code>assert_output --partial</code>, <code>assert_failure</code>, and TAP output for CI make the performance cost worthwhile. Lesson: evaluate tools with their proper ecosystem, not in isolation.</p>
 </blockquote>
 <h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
 <p>This guide provides a comprehensive overview of bash testing frameworks available in 2025, with detailed comparisons, installation instructions, and best practices for testing shell scripts. The research focuses on four main frameworks: <strong>Bats-core</strong>, <strong>ShellSpec</strong>, <strong>shunit2</strong>, and <strong>Bach</strong>.</p>
