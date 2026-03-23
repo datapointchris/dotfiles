@@ -14,6 +14,16 @@ Error handling in this repository follows the "fail fast and loud" principle:
 - **Trap-based handling** - ERR and EXIT traps ensure consistent behavior
 - **Simple patterns** - Reusable library with straightforward usage
 
+## Library Sourcing Rules
+
+Libraries loaded via `source` execute in the caller's shell. Any shell option they set (`set -euo pipefail`, `shopt`) persists in the calling script. This means libraries must never modify shell options — only the calling script decides its error handling strategy.
+
+- Libraries should contain only function definitions, variable assignments, and conditional logic
+- `error-handling.sh` follows this correctly: it provides `enable_error_traps` as an explicit opt-in function
+- All 7 shell libraries are tested for this via `tests/install/unit/library-flag-pollution.bats`
+
+See [Library Flag Pollution](../learnings/library-flag-pollution.md) for the full incident.
+
 ## Architecture
 
 ### Library Chain
@@ -385,7 +395,8 @@ DOTFILES_DEBUG=true bash script.sh
 
 - [Shell Libraries](shell-libraries.md)
 - [GitHub Release Installer](github-release-installer.md)
-- Production-Grade Management Enhancements (planning doc)
+- [Library Flag Pollution](../learnings/library-flag-pollution.md)
+- [Resilient Installation Patterns](../learnings/resilient-installation-patterns.md)
 
 ## Files
 
