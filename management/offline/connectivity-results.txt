@@ -29,11 +29,6 @@ YES | github-theme | https://github.com/datapointchris/theme.git
 YES | github-tpm | https://github.com/tmux-plugins/tpm.git
 YES | github-zsh-syntax | https://github.com/zsh-users/zsh-syntax-highlighting.git
 YES | github-bats-core | https://github.com/bats-core/bats-core.git
-YES | nerd-fonts-releases | https://github.com/ryanoasis/nerd-fonts/releases/latest
-NO  | nerd-fonts-jetbrains | https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/JetBrainsMono.tar.xz
-NO  | firacode | https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip
-YES | victor-mono | https://github.com/rubjo/victor-mono/releases/latest
-YES | iosevka | https://github.com/be5invis/Iosevka/releases/latest
 YES | go-download | https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
 YES | go-version-api | https://go.dev/VERSION?m=text
 YES | rustup | https://sh.rustup.rs

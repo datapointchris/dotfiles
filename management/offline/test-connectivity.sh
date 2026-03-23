@@ -118,18 +118,6 @@ test_git_clone "github-zsh-syntax" "https://github.com/zsh-users/zsh-syntax-high
 test_git_clone "github-bats-core" "https://github.com/bats-core/bats-core.git"
 echo ""
 
-# --- Nerd Fonts ---
-echo -e "${YELLOW}Nerd Fonts:${NC}"
-test_url "nerd-fonts-releases" "https://github.com/ryanoasis/nerd-fonts/releases/latest"
-test_url "nerd-fonts-jetbrains" "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/JetBrainsMono.tar.xz"
-echo ""
-
-# --- Other Fonts ---
-echo -e "${YELLOW}Other Font Sources:${NC}"
-test_url "victor-mono" "https://github.com/rubjo/victor-mono/releases/latest"
-test_url "iosevka" "https://github.com/be5invis/Iosevka/releases/latest"
-echo ""
-
 # --- Language Installers ---
 echo -e "${YELLOW}Language Runtime Installers:${NC}"
 test_url "go-download" "https://go.dev/dl/go1.22.0.linux-amd64.tar.gz"

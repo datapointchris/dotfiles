@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # Create offline installation bundle for dotfiles
 #
-# Downloads all GitHub release binaries, Cargo tool binaries, install scripts,
-# and optionally Nerd Fonts for offline installation on restricted networks.
+# Downloads all GitHub release binaries, Cargo tool binaries, and install scripts
+# for offline installation on restricted networks.
 #
 # Usage:
-#   ./create-bundle.sh                          # Standard bundle (no fonts)
-#   ./create-bundle.sh --with-fonts             # Include Nerd Fonts (~400MB extra)
+#   ./create-bundle.sh                          # Standard bundle
 #   ./create-bundle.sh --platform linux-arm64   # Different platform
 #
 # Output:
@@ -23,7 +22,6 @@ source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 # Configuration
 # ============================================================================
 
-INCLUDE_FONTS=false
 TARGET_PLATFORM="linux-x86_64"
 OS=""
 ARCH=""
@@ -262,72 +260,6 @@ download_cargo_binaries() {
 }
 
 # ============================================================================
-# Nerd Fonts (from packages.yml - data-driven)
-# ============================================================================
-
-download_nerd_fonts() {
-  [[ "$INCLUDE_FONTS" != "true" ]] && return 0
-
-  log_info "Downloading Nerd Fonts..."
-
-  local version package filename url
-  if ! version=$(fetch_github_latest_version "ryanoasis/nerd-fonts"); then
-    log_error "Could not fetch Nerd Fonts version"
-    exit 1
-  fi
-
-  while IFS= read -r package; do
-    [[ -z "$package" ]] && continue
-
-    filename="${package}.tar.xz"
-    url="https://github.com/ryanoasis/nerd-fonts/releases/download/${version}/${filename}"
-
-    log_info "  $package ($version)..."
-    download_file "$url" "$CACHE_DIR/fonts/$filename" "$package"
-    echo "font|$package|$version|$filename" >> "$MANIFEST_FILE"
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=nerd-fonts --format=packages)
-}
-
-# ============================================================================
-# Other Fonts (non-Nerd Font families)
-# ============================================================================
-
-download_other_fonts() {
-  [[ "$INCLUDE_FONTS" != "true" ]] && return 0
-
-  log_info "Downloading other fonts..."
-
-  # FiraCode (pinned release)
-  log_info "  FiraCode (6.2)..."
-  download_file \
-    "https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip" \
-    "$CACHE_DIR/fonts/FiraCode.zip" "FiraCode"
-
-  # SGr-IosevkaTermSlab (latest release)
-  local iosevka_url
-  iosevka_url=$(curl -fsSL "https://api.github.com/repos/be5invis/Iosevka/releases/latest" \
-    | grep -o '"browser_download_url": *"[^"]*SuperTTC-SGr-IosevkaTermSlab-[0-9.]*\.zip"' | head -1 | sed 's/.*": *"//' | sed 's/"$//')
-  if [[ -z "$iosevka_url" ]]; then
-    log_error "Could not fetch SGr-IosevkaTermSlab release URL"
-    exit 1
-  fi
-  log_info "  SGr-IosevkaTermSlab (latest)..."
-  download_file "$iosevka_url" "$CACHE_DIR/fonts/SGr-IosevkaTermSlab.zip" "SGr-IosevkaTermSlab"
-
-  # ComicMonoNF (individual TTF files)
-  local comic_base="https://raw.githubusercontent.com/xtevenx/ComicMonoNF/master/v1"
-  log_info "  ComicMonoNF (v1)..."
-  download_file "$comic_base/ComicMonoNF-Regular.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Regular.ttf" "ComicMonoNF-Regular"
-  download_file "$comic_base/ComicMonoNF-Bold.ttf" "$CACHE_DIR/fonts/ComicMonoNF-Bold.ttf" "ComicMonoNF-Bold"
-
-  # SeriousShannsNerdFontMono
-  log_info "  SeriousShannsNerdFontMono..."
-  download_file \
-    "https://kaBeech.github.io/serious-shanns/SeriousShanns/SeriousShannsNerdFontMono.zip" \
-    "$CACHE_DIR/fonts/SeriousShannsNerdFontMono.zip" "SeriousShannsNerdFontMono"
-}
-
-# ============================================================================
 # Setup and Teardown
 # ============================================================================
 
@@ -335,7 +267,6 @@ usage() {
   echo "Usage: $0 [options]"
   echo ""
   echo "Options:"
-  echo "  --with-fonts           Include Nerd Fonts in bundle (~400MB extra)"
   echo "  --platform PLATFORM    Target platform (default: linux-x86_64)"
   echo "                         Supported: linux-x86_64, linux-arm64,"
   echo "                                    darwin-x86_64, darwin-arm64"
@@ -346,7 +277,6 @@ usage() {
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --with-fonts) INCLUDE_FONTS=true; shift ;;
       --platform)   TARGET_PLATFORM="$2"; shift 2 ;;
       --help|-h)    usage ;;
       *)            log_error "Unknown option: $1"; exit 1 ;;
@@ -376,13 +306,11 @@ setup_directories() {
   MANIFEST_FILE="$CACHE_DIR/manifest.txt"
 
   mkdir -p "$CACHE_DIR/binaries" "$CACHE_DIR/scripts" "$CACHE_DIR/go-binaries"
-  [[ "$INCLUDE_FONTS" == "true" ]] && mkdir -p "$CACHE_DIR/fonts"
 
   cat > "$MANIFEST_FILE" << EOF
 # Dotfiles Offline Bundle
 # Created: $(date)
 # Platform: $OS/$ARCH
-# Include fonts: $INCLUDE_FONTS
 #
 # Format: category|name|version|filename
 EOF
@@ -407,8 +335,7 @@ Directory Structure:
   ├── README.txt      # This file
   ├── binaries/       # GitHub release binaries + cargo tools
   ├── go-binaries/    # Pre-built Go tool binaries
-  ├── scripts/        # Install scripts (nvm, uv, theme, font, claude-code)
-  └── fonts/          # Nerd Fonts (only if --with-fonts was used)
+  └── scripts/        # Install scripts (nvm, uv, theme, font, claude-code)
 EOF
 }
 
@@ -444,15 +371,12 @@ main() {
 
   log_info "Creating offline bundle: $BUNDLE_NAME"
   log_info "Target platform: $OS/$ARCH"
-  log_info "Include fonts: $INCLUDE_FONTS"
   echo ""
 
   download_github_binaries
   download_go_binaries
   download_cargo_binaries
   download_install_scripts
-  download_nerd_fonts
-  download_other_fonts
 
   create_readme
   create_tarball

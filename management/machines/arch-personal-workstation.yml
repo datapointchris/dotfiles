@@ -9,7 +9,6 @@ alias_groups: [core]
 # Installation
 system_packages: true
 flatpak: true
-fonts: true
 
 go: true
 go_tools:

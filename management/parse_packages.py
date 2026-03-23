@@ -292,29 +292,9 @@ def get_macos_casks(data):
     return [cask['name'] for cask in data['macos_casks']]
 
 
-def get_nerd_fonts(data, output_format='names'):
-    """Extract Nerd Font information.
-
-    Args:
-        output_format: 'names' returns just names,
-                      'packages' returns just package names (for download),
-                      'full' returns 'name|package|check_pattern|extension' tuples
-    """
-    if 'nerd_fonts' not in data:
-        return []
-
-    fonts = data['nerd_fonts']
-    if output_format == 'packages':
-        return [font['package'] for font in fonts]
-    elif output_format == 'full':
-        return [f"{font['name']}|{font['package']}|{font['check_pattern']}|{font['extension']}" for font in fonts]
-    else:  # names
-        return [font['name'] for font in fonts]
-
-
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'shell-plugins', 'flatpak', 'macos-casks', 'nerd-fonts'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'shell-plugins', 'flatpak', 'macos-casks'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
@@ -324,7 +304,7 @@ def main():
     parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
     parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
     parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline), packages/full (nerd-fonts)')
+                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., ubuntu-lxc-server) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
 
@@ -426,8 +406,6 @@ def main():
         packages = get_flatpak_apps(data)
     elif args.type == 'macos-casks':
         packages = get_macos_casks(data)
-    elif args.type == 'nerd-fonts':
-        packages = get_nerd_fonts(data, args.format)
 
     for pkg in packages:
         print(pkg)

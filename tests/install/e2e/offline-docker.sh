@@ -175,7 +175,6 @@ STEP_START=$(date +%s)
     --add-host "github-releases.githubusercontent.com:127.0.0.1" \
     --add-host "raw.githubusercontent.com:127.0.0.1" \
     --env DOTFILES_DOCKER_TEST=true \
-    --env SKIP_FONTS=1 \
     ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     --env PATH="/home/testuser/.local/bin:/home/testuser/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     "$DOCKER_IMAGE" \

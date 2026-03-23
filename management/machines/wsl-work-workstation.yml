@@ -8,7 +8,6 @@ alias_groups: [core]
 
 # Installation
 system_packages: true
-fonts: true
 
 go: true
 go_tools:

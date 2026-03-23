@@ -81,11 +81,6 @@ TESTEOF
   assert_success
 }
 
-@test "library_flags: font-installer.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/management/common/lib/font-installer.sh"
-  assert_success
-}
-
 @test "library_flags: version-helpers.sh does not add -e flag" {
   run test_library_flags "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
   assert_success

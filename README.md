@@ -18,12 +18,6 @@ cd ~/dotfiles
 bash install.sh --machine arch-personal-workstation
 ```
 
-Skip font installation if needed:
-
-```bash
-SKIP_FONTS=1 bash install.sh --machine arch-personal-workstation
-```
-
 Available manifests are in `management/machines/` (arch, macOS, WSL, Ubuntu server).
 
 **Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.

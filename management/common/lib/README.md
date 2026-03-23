@@ -63,23 +63,6 @@ Helper functions for installing binaries from GitHub releases.
 **Usage:**
 See `docs/architecture/github-release-installer.md` for detailed documentation.
 
-### font-installer.sh
-
-Complete font installation workflow for Nerd Fonts and other font families.
-
-**Functions:**
-
-- `get_system_font_dir()` - Platform-specific font directory
-- `is_font_installed(font_name, font_dir)` - Check if font exists
-- `download_nerd_font(package, download_dir, font_ext)` - Download and extract
-- `prune_font_family(download_dir, prune_patterns)` - Remove unwanted variants
-- `standardize_font_family(download_dir)` - Rename spaces to dashes
-- `install_font_files(download_dir, font_ext, system_font_dir)` - Copy to system
-- `refresh_font_cache(platform, font_name)` - Run fc-cache on Linux
-
-**Usage:**
-All 25+ font installer scripts use this library for consistent font installation. See `management/common/install/fonts/` for examples.
-
 ## Architecture
 
 These libraries provide utilities FOR installer scripts:
@@ -90,7 +73,6 @@ installer script (github-releases/lazygit.sh)
 common/lib/ utilities
     - failure-logging.sh (error reporting)
     - github-release-installer.sh (GitHub release helpers)
-    - font-installer.sh (font installation workflow)
 ```
 
 **Key distinction:**

@@ -114,9 +114,9 @@ if "Bold" in filename and font["OS/2"].usWeightClass == 400:
 font.save("FontName.ttf")
 ```
 
-## Automated Fix in Installer
+## Automated Fix
 
-The dotfiles installer automatically fixes Nerd Font metadata via `fix_font_metadata()` in `font-installer.sh`. This runs at the end of `install.sh` after uvx/fonttools is available.
+Font installation and metadata fixes are handled by the `font` tool (`font install`). The dotfiles repo no longer manages font installation directly.
 
 ## macOS CoreText Cache
 

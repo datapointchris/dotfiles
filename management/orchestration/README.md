@@ -77,9 +77,9 @@ install.sh (orchestrator)
     ↓ sources orchestration/
 run_installer()
     ↓ executes
-installer scripts (github-releases/*.sh, fonts/*.sh, etc.)
+installer scripts (github-releases/*.sh, etc.)
     ↓ sources common/lib/
-failure-logging.sh, github-release-installer.sh, font-installer.sh
+failure-logging.sh, github-release-installer.sh
 ```
 
 **Key distinction:**

@@ -28,7 +28,6 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "Options:"
   echo "  -v, --version VERSION  Ubuntu version to test (22.04 or 24.04, default: 24.04)"
   echo "  -k, --keep            Keep container after test (for debugging)"
-  echo "  -f, --test-fonts      Enable font installation testing (fonts skipped by default)"
   echo "  -h, --help            Show this help message"
   echo ""
   echo "Examples:"
@@ -41,7 +40,6 @@ fi
 # Parse arguments
 UBUNTU_VERSION="24.04"
 KEEP_CONTAINER=false
-TEST_FONTS=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     -v|--version)
@@ -50,10 +48,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     -k|--keep)
       KEEP_CONTAINER=true
-      shift
-      ;;
-    -f|--test-fonts)
-      TEST_FONTS=true
       shift
       ;;
     *)
@@ -206,14 +200,8 @@ STEP_START=$(date +%s)
     HOME_DIR="/root"
   fi
 
-  # Set SKIP_FONTS based on --test-fonts flag
-  SKIP_FONTS_ENV=""
-  if [[ "$TEST_FONTS" == "false" ]]; then
-    SKIP_FONTS_ENV="--env SKIP_FONTS=1"
-  fi
-
   # Start container
-  # shellcheck disable=SC2086  # USER_FLAG and SKIP_FONTS_ENV intentionally unquoted (empty or flag)
+  # shellcheck disable=SC2086  # USER_FLAG intentionally unquoted (empty or flag)
   docker run -d \
     --name "$CONTAINER_NAME" \
     $USER_FLAG \
@@ -221,7 +209,6 @@ STEP_START=$(date +%s)
     --env HOME="$HOME_DIR" \
     --env DOTFILES_DOCKER_TEST=true \
     ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
-    $SKIP_FONTS_ENV \
     --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
     "$DOCKER_IMAGE" \
     /usr/bin/sleep infinity

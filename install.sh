@@ -51,24 +51,6 @@ show_failures_summary() {
   log_info "Full report saved to: $FAILURES_LOG"
 }
 
-install_fonts() {
-  local common_install="$DOTFILES_DIR/management/common/install"
-
-  if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-    log_warning "WSL detected - fonts install to Windows (may require manual steps)"
-  fi
-
-  # Nerd Fonts (all from packages.yml via single installer)
-  run_installer "$common_install/fonts/nerd-fonts.sh" "nerd-fonts"
-
-  # GitHub Release Fonts
-  # Iosevka Variants
-  run_installer "$common_install/fonts/sgr-iosevka.sh" "sgr-iosevka-font"
-  # Direct Download Fonts
-  run_installer "$common_install/fonts/comicmononf.sh" "comicmononf-font"
-  run_installer "$common_install/fonts/seriousshanns.sh" "seriousshanns-font"
-}
-
 # ================================================================
 # MANIFEST-DRIVEN INSTALLATION
 # ================================================================
@@ -81,13 +63,7 @@ install_manifest_phases() {
   local lang_tools="$common_install/language-tools"
   local plugins="$common_install/plugins"
 
-  # Fonts
-  if manifest_enabled "fonts" && [[ "${SKIP_FONTS:-}" != "1" ]]; then
-    print_header "Coding Fonts"
-    install_fonts
-  else
-    log_info "Skipping font installation"
-  fi
+  # Fonts (managed by the `font` tool — run `font install` separately)
 
   # Go Toolchain
   if manifest_enabled "go"; then
@@ -228,7 +204,6 @@ usage() {
   echo "  --help, -h                 Show this help message"
   echo ""
   echo "Offline Bundle Options (with --create-offline-bundle):"
-  echo "  --with-fonts               Include fonts in bundle (~400MB extra)"
   echo "  --platform PLATFORM        Target platform (default: linux-x86_64)"
   echo "                             Supported: linux-x86_64, linux-arm64,"
   echo "                                        darwin-x86_64, darwin-arm64"
@@ -237,16 +212,13 @@ usage() {
   echo ""
   echo "Environment Variables:"
   echo "  MACHINE=name    Same as --machine (flag takes precedence)"
-  echo "  SKIP_FONTS=1    Skip font download and installation"
-  echo ""
   echo "Examples:"
   echo "  ./install.sh --machine arch-personal-workstation"
   echo "  ./install.sh --machine ubuntu-lxc-server"
   echo "  MACHINE=arch-personal-workstation ./install.sh"
-  echo "  SKIP_FONTS=1 ./install.sh --machine macos-personal-workstation"
   echo ""
   echo "  # Offline workflow:"
-  echo "  ./install.sh --create-offline-bundle --with-fonts       # 1. Create bundle (internet machine)"
+  echo "  ./install.sh --create-offline-bundle                     # 1. Create bundle (internet machine)"
   echo ""
   echo "  # Transfer bundle to target machine (pick one):"
   echo "  python3 -m http.server 8000                             # 2a. Serve from source machine"

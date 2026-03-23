@@ -32,7 +32,6 @@ PACKAGE_SECTIONS = (
     "uv_tools",
     "git_uv_tools",
     "go_tools",
-    "nerd_fonts",
     "shell_plugins",
     "tmux_plugins",
     "mas_apps",
@@ -235,12 +234,6 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
         if app_path:
             return InstallStatus.APP_ONLY, str(app_path)
 
-    # Check fonts
-    if section == "nerd_fonts":
-        font_path = find_font(pkg.get("check_pattern", ""))
-        if font_path:
-            return InstallStatus.INSTALLED, str(font_path)
-
     return InstallStatus.NOT_INSTALLED, None
 
 
@@ -253,24 +246,6 @@ def find_macos_app(name: str) -> Path | None:
         for entry in base.iterdir():
             if entry.name.lower() == target:
                 return entry
-    return None
-
-
-def find_font(check_pattern: str) -> Path | None:
-    """Find a font matching the check_pattern glob in standard font directories."""
-    if not check_pattern:
-        return None
-
-    font_dirs = (
-        Path.home() / "Library/Fonts",
-        Path("/Library/Fonts"),
-        Path.home() / ".local/share/fonts",
-        Path("/usr/share/fonts"),
-    )
-
-    for font_dir in font_dirs:
-        if font_dir.exists() and list(font_dir.glob(check_pattern)):
-            return font_dir
     return None
 
 

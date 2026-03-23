@@ -27,7 +27,6 @@ installer script (e.g., github-releases/lazygit.sh)
     ↓ sources common/lib/ utilities
     - failure-logging.sh (error reporting)
     - github-release-installer.sh (GitHub release helpers)
-    - font-installer.sh (font installation)
 ```
 
 ## Standard Installer Pattern
