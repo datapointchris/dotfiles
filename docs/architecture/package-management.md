@@ -261,7 +261,9 @@ See [Package Version Analysis](../learnings/package-version-analysis.md) for det
 
 ### Single Source of Truth: packages.yml
 
-All package versions, repositories, and configurations are centralized in `management/packages.yml`:
+All package versions, repositories, and configurations are centralized in `management/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See [GitHub Releases vs System Packages](../learnings/github-releases-vs-system-packages.md) for the decision framework on choosing installation methods.
+
+Package definitions in packages.yml:
 
 ```yaml
 runtimes:
