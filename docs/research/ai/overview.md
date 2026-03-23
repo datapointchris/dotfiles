@@ -358,8 +358,7 @@ Each research document should:
 
 **Architecture Documents**: Technical implementation details
 
-- [Commit Agent Design](../../architecture/commit-agent-design.md)
-- [Metrics Tracking](../../architecture/metrics-tracking.md)
+- [Commit Agent Design](../../claude-code/commit-agent-design.md)
 
 **User Guides**: How to use implemented systems
 

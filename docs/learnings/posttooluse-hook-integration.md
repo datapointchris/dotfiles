@@ -385,7 +385,6 @@ except Exception as e:
 ## Related Learnings
 
 - [Tools Over Instructions](tools-over-instructions.md) - Create deterministic tools instead of complex inline commands
-- [Metrics Tracking Architecture](../claude-code/metrics-tracking.md) - Complete documentation of the metrics system
 
 ## References
 

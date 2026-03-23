@@ -54,6 +54,12 @@ task shell:build         # Build shell files from machine manifest
 MACHINE=ubuntu-lxc-server task shell:build  # Build for specific machine
 ```
 
+### Windows Setup
+
+```bash
+task windows:setup       # One-time Windows Git Bash setup (run from WSL)
+```
+
 ## Installation
 
 Full installation is handled by `install.sh` with a machine manifest, not Tasks:

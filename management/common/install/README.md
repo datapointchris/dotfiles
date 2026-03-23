@@ -7,7 +7,6 @@ Cross-platform installer scripts organized by installation method. These scripts
 ```text
 management/common/install/
 ├── github-releases/     # Install binaries from GitHub releases
-├── fonts/               # Install Nerd Fonts and font families
 ├── language-managers/   # Install language version managers
 ├── language-tools/      # Install tools via language package managers
 ├── plugins/             # Install tmux/nvim/shell plugins

@@ -28,9 +28,10 @@
 
 **App Installation Patterns** (⚠️ CRITICAL - Three distinct patterns):
 
-1. **Go Apps** (sess, toolbox): Published via GoReleaser, installed from GitHub releases
-   - Defined in `packages.yml` under `go_tools` with `github_repo` + `binary_pattern`
-   - Development in `~/tools/{app}/`, tag + push to GitHub triggers release
+1. **Go Apps** (sess, toolbox): Installed via `go install` from packages.yml
+   - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
+   - Installer: `management/common/install/language-tools/go-tools.sh`
+   - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
 2. **Shell Script Apps** (menu, notes): Symlinked from repo
@@ -136,7 +137,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration
-- `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides, status tracking; deleted when done (lives in git history)
+- `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides and status tracking
 
 **Key Systems**:
 

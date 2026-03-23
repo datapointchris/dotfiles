@@ -380,7 +380,7 @@ Exports detailed metrics:
 - **Weekly**: Add 5-10 quality log entries for significant sessions
 - **Monthly**: Generate comparison reports, identify trends
 
-**Detailed guide**: [Metrics Architecture](../architecture/metrics-tracking.md)
+Metrics tracking now lives in the [claude-code-metrics](https://github.com/datapointchris/claude-code-metrics) project at `~/code/claude-code-metrics`.
 
 ---
 
@@ -459,8 +459,6 @@ This repository uses a layered approach to Claude Code integration:
 ├── settings.json       # Hook configuration
 └── README.md           # Technical reference
 ```
-
-**Detailed architecture**: [Metrics Tracking Architecture](../architecture/metrics-tracking.md)
 
 ---
 
@@ -647,7 +645,6 @@ cat .claude/settings.json
 
 ### Architecture & Design
 
-- [Metrics Tracking Architecture](../architecture/metrics-tracking.md) - System design and implementation
 - [Shell Libraries](../architecture/shell-libraries.md) - Logging and error handling patterns
 
 ### Technical Reference

@@ -719,14 +719,13 @@ analyze-claude-metrics --date 2025-12-04
 - **Pre-commit iterations**: Lower indicates cleaner code
 - **Main agent overhead**: Target <500 tokens per invocation
 
-See [Metrics Tracking Architecture](../architecture/metrics-tracking.md) for complete details.
+Metrics tracking now lives in the [claude-code-metrics](https://github.com/datapointchris/claude-code-metrics) project.
 
 ---
 
 **Related Systems**:
 
 - Logsift workflow: `docs/claude-code/working-with-claude.md#logsift-workflow`
-- Metrics tracking: `docs/architecture/metrics-tracking.md`
 - Git protocols: `~/.claude/CLAUDE.md` and `CLAUDE.md`
 
 ---

@@ -191,6 +191,5 @@ apps/common/
 ## Related Docs
 
 - **[Working with Claude Code](./working-with-claude.md)** - Complete guide
-- **[Metrics Architecture](../architecture/metrics-tracking.md)** - System design
 - **[Usage Guide](./usage-guide.md)** - Pre-logsift monitoring
 - **[Hooks Reference](../reference/tools/hooks.md)** - All hooks

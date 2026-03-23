@@ -26,12 +26,13 @@ task symlinks:link-platform
 If you need to run the tool directly without Task:
 
 ```sh
-# From dotfiles root directory
-uv run tools/symlinks link common
-uv run tools/symlinks link macos
-uv run tools/symlinks relink macos
-uv run tools/symlinks check
-uv run tools/symlinks show
+# From management/symlinks/ directory
+cd management/symlinks
+uv run symlinks link common
+uv run symlinks link macos
+uv run symlinks relink macos
+uv run symlinks check
+uv run symlinks show
 ```
 
 ## Architecture
