@@ -396,7 +396,7 @@ Task handles coordination, tools handle commands. No wrapper tasks for simple on
 - Modified: All active documentation files (13 files rewritten)
 - Modified: `mkdocs.yml` (updated navigation)
 - Moved: `macos/.local/bin/tools` → `common/.local/bin/tools`
-- Moved: 4 planning docs to `docs/archive/planning/`
+- Archived: 4 planning docs (see git history)
 
 See repository history for complete analysis, error documentation, and lessons learned.
 

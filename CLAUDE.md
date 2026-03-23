@@ -136,7 +136,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration
-- `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides, status tracking; moved to archive when done
+- `.planning/` - **NOT TRACKED BY GIT** - Ephemeral planning guides, status tracking; deleted when done (lives in git history)
 
 **Key Systems**:
 
