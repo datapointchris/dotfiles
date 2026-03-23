@@ -49,6 +49,30 @@ Historical changelog entries below may reference the old `taskfiles/` structure.
 
 ---
 
+## 2025-12 {#2025-12-resilient-installation}
+
+### Resilient Installation & Testing
+
+Added failure registry and reporting to all installers. Individual installer scripts fail fast, while the parent `install.sh` catches failures via `run_installer()` and continues. A summary with manual remediation steps is displayed at the end. This was driven by WSL installations behind corporate firewalls where 8+ GitHub download failures were silently lost.
+
+Also adopted BATS with `bats-assert`/`bats-support` as the official shell testing framework. Added library flag pollution test suite covering all 7 shell libraries.
+
+Consolidated `update.sh` from 6 platform-specific files (326 lines) into a single file (156 lines) with platform detection.
+
+---
+
+## 2025-11 {#2025-11-brewfile-migration}
+
+### Brewfile Migration & Menu Simplification
+
+Migrated from dual package management (Brewfile + packages.yml) to single source of truth (packages.yml only). The migration removed ~70 duplicate packages and eliminated the Brewfile entirely. Revealed tools that existed in one list but not the other, confirming the drift problem.
+
+Consolidated shell formatting from multiple overlapping implementations into three distinct libraries: `logging.sh` (structured logging), `formatting.sh` (visual output), and `error-handling.sh` (traps and cleanup).
+
+Archived the Go-based menu system and replaced it with a simple gum-based launcher. The Go version had 3 implementations across the project and produced a 17MB binary for what ~100 lines of bash accomplishes.
+
+---
+
 ## 2025-11-04 {#2025-11-04-taskfile}
 
 ### Taskfile System Simplification
