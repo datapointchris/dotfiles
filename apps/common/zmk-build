@@ -207,6 +207,9 @@ ensure_workspace() {
       elif [ '$force_update' = 'true' ]; then
         echo 'Updating west dependencies...'
         west update
+      else
+        echo 'Updating branch-tracked modules...'
+        west update zmk-shared 2>/dev/null || true
       fi
     "
 
