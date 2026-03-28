@@ -78,12 +78,12 @@ alt-shift-j = 'move down'
 alt-shift-k = 'move up'
 alt-shift-l = 'move right'
 
-# Join windows (vim-style)
-alt-ctrl-h = 'join-with left'
-alt-ctrl-j = 'join-with down'
-alt-ctrl-k = 'join-with up'
-alt-ctrl-l = 'join-with right'
-alt-ctrl-g = 'flatten-workspace-tree'
+# Join windows (vim-style) — uses MEH (ctrl-shift-alt) to avoid collision with tmux pane resize (ctrl-alt)
+ctrl-shift-alt-h = 'join-with left'
+ctrl-shift-alt-j = 'join-with down'
+ctrl-shift-alt-k = 'join-with up'
+ctrl-shift-alt-l = 'join-with right'
+ctrl-shift-alt-g = 'flatten-workspace-tree'
 
 # Monitor navigation
 # alt-comma = 'focus-monitor left'
