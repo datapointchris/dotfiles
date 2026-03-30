@@ -154,6 +154,7 @@ nav:
       - Error Handling: architecture/error-handling.md
       - GitHub Release Installer: architecture/github-release-installer.md
   - Configuration:
+      - configuration/index.md
       - Neovim AI Assistants: configuration/neovim-ai-assistants.md
       - Docker Setup: configuration/docker.md
   - Reference:
