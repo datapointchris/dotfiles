@@ -246,8 +246,6 @@ nav:
       - Centralized Failure Registry: learnings/centralized-failure-registry.md
       - GitHub Releases vs System Packages: learnings/github-releases-vs-system-packages.md
       - Version Comparison in Shell: learnings/version-comparison-in-shell.md
-  - Changelog:
-      - Summary: changelog.md
 
 validation:
   links:

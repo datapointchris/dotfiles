@@ -120,4 +120,4 @@ Common issues and solutions.
 
 ## Still Having Issues?
 
-Check recent [changelog entries](../../changelog.md) for known issues and solutions.
+Check git history (`git log --oneline`) for recent changes that may have introduced issues.

@@ -173,8 +173,7 @@ docs/
 ├── development/         # Testing and contributing
 ├── reference/           # Quick lookup (platforms, tools, tasks)
 ├── research/            # Technical research and exploration
-├── learnings/           # Extracted wisdom from bugs and discoveries
-└── changelog/           # Historical record
+└── learnings/           # Extracted wisdom from bugs and discoveries
 ```
 
 **Writing Guidelines**:

@@ -15,10 +15,6 @@
           {
             "type": "command",
             "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check"
-          },
-          {
-            "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-dotfiles-changelog-reminder"
           }
         ]
       }

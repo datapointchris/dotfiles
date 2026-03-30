@@ -21,7 +21,6 @@ Apply only to this dotfiles repository.
 | Hook | Purpose |
 |------|---------|
 | `stop-build-check` | Run pytest after symlinks changes |
-| `stop-dotfiles-changelog-reminder` | Remind about commits made during session |
 | `check-feature-docs` | Pre-commit: ensure docs updated with code |
 
 ## Configuration
@@ -37,10 +36,6 @@ Apply only to this dotfiles repository.
           {
             "type": "command",
             "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check"
-          },
-          {
-            "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-dotfiles-changelog-reminder"
           }
         ]
       }
@@ -58,12 +53,6 @@ Universal hooks are configured in `~/.claude/settings.json`.
 **File:** `.claude/hooks/stop-build-check`
 
 Runs pytest after Claude modifies `management/symlinks/`. Catches test failures immediately so they can be fixed in the same session.
-
-### Stop Hook - Changelog Reminder
-
-**File:** `.claude/hooks/stop-dotfiles-changelog-reminder`
-
-Checks if commits were made in the last minute and reminds about them.
 
 ### Pre-Commit - Feature Documentation Check
 

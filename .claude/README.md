@@ -17,7 +17,6 @@ This directory contains **dotfiles-specific** configuration. Universal hooks and
 **Dotfiles-specific (in this directory)**:
 
 - Build verification (stop-build-check)
-- Changelog reminder (stop-dotfiles-changelog-reminder)
 - Feature documentation check (check-feature-docs)
 - Logsift commands
 
@@ -39,14 +38,6 @@ Runs builds and tests on modified tools to catch errors immediately.
 
 - `0` - All tests passed or no relevant changes
 - `2` - Critical errors that block (Claude must fix)
-
-### Stop - Changelog Reminder
-
-**File**: `.claude/hooks/stop-dotfiles-changelog-reminder`
-
-Reminds about pending changelog entries after commits.
-
-**Triggers**: When `.pending-changelog` exists
 
 ### PreToolUse - Feature Documentation Check
 
@@ -116,8 +107,7 @@ User-invoked commands for common workflows.
 │   └── logsift-auto.md             # Natural language logsift
 ├── hooks/                          # Dotfiles-specific hooks only
 │   ├── check-feature-docs          # Feature documentation check
-│   ├── stop-build-check            # Build verification
-│   └── stop-dotfiles-changelog-reminder  # Changelog reminder
+│   └── stop-build-check            # Build verification
 ├── tests/                          # Hook and library tests
 ├── settings.json                   # Dotfiles-specific hook configuration
 └── README.md                       # This file
