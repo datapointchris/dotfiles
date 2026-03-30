@@ -6,18 +6,11 @@ This repository uses a two-tier hooks system: **universal hooks** for all projec
 
 ### Universal Hooks (`~/.claude/`)
 
-Apply to all Claude Code projects. See `~/.claude/README.md` for full documentation.
+Apply to all Claude Code projects. These hooks change frequently as workflow improvements are added.
 
 **Location:** `~/.claude/hooks/`
 
-| Hook | Purpose |
-|------|---------|
-| `session-start` | Initialize session, check git state |
-| `markdown_formatter.py` | Auto-add language tags to code blocks |
-| `notification-desktop` | Desktop notifications for Claude events |
-| `pre-compact-save-state` | Save context before conversation compaction |
-| `pre-bash-block-git-reset` | Block dangerous git reset commands |
-| `pre-bash-intercept-commits` | Route commits through commit agent |
+See `~/.claude/README.md` for the current list of universal hooks and their purposes.
 
 ### Project-Specific Hooks (`.claude/`)
 

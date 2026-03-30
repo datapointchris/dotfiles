@@ -16,7 +16,7 @@ Three-tier Docker image strategy:
 - `build-base.sh` - Build the reusable base image with system packages
 - `run-installer-test.sh` - Run an installer test in a fresh container
 - `validate-installation.sh` - Validate that installed binaries exist and run correctly
-- `test-all-github-releases.sh` - Batch test runner for all 12 GitHub release installers
+- `test-all-github-releases.sh` - Batch test runner for all GitHub release installers
 
 ## Usage
 

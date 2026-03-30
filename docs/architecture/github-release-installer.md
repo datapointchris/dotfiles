@@ -2,7 +2,7 @@
 
 ## Overview
 
-The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across 16+ similar installer scripts while maintaining clarity and simplicity.
+The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in `management/common/install/github-releases/` while maintaining clarity and simplicity.
 
 ## Design Philosophy
 
@@ -114,7 +114,7 @@ install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "path/in/zip"
 
 ### Simple Tarball Installer
 
-Most common pattern (11 out of 16 tools):
+Most common pattern (majority of tools):
 
 ```bash
 #!/usr/bin/env bash
@@ -162,33 +162,13 @@ These scripts use library helpers where applicable but handle their unique requi
 
 ## Code Savings
 
-### Converted Scripts
+The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 5 focused functions.
 
-See `management/common/install/github-releases/` for all current scripts. At time of library creation, converting 11 tools saved ~47% of boilerplate (from ~1,039 lines to ~547).
+See `management/common/install/github-releases/` for all current scripts.
 
-### Library
+## Custom Installers (Not Using Library)
 
-- **Size:** 181 lines
-- **Functions:** 5
-- **Previous iteration:** 401 lines, 16 functions (over-abstracted)
-
-### Grand Total
-
-- **Before:** ~1,525 lines (estimated)
-- **After:** 1,211 lines (181 library + 547 converted + 483 special cases)
-- **Net savings:** 314 lines (20.6%)
-
-## Special Case Scripts (Not Converted)
-
-These 5 scripts have unique requirements that don't fit the standard pattern:
-
-1. **awscli** - Uses official AWS installer, macOS via Homebrew
-2. **claude-code** - Uses official installer, WSL skipped
-3. **fzf** - Built from source with Go
-4. **neovim** - AppImage extraction, multiple files
-5. **terraform** - Wrapper around tenv, delegates installation
-
-All still use error-handling.sh for structured logging consistency.
+Some tools have unique requirements that don't fit the GitHub release pattern. These live in `management/common/install/custom-installers/` instead. All still use error-handling.sh for structured logging consistency.
 
 ## Design Decisions
 
@@ -345,7 +325,7 @@ bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 
 **Library:**
 
-- `management/common/lib/github-release-installer.sh` (181 lines)
+- `management/common/lib/github-release-installer.sh`
 
 **Converted Scripts:** See `management/common/install/github-releases/` for the full current listing.
 

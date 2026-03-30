@@ -133,6 +133,8 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `shell/` - Modular shell aliases and functions (build source)
   - `symlinks/` - Symlinks manager (Python)
+  - `orchestration/` - Platform detection and installer runner
+  - `offline/` - Offline installation support (connectivity testing, bundles)
   - `{platform}/` - Platform-specific install scripts
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site

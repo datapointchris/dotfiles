@@ -45,7 +45,7 @@ log_error "Failed to backup config.yml" "$BASH_SOURCE" "$LINENO"
 
 **Location**: `~/.local/shell/formatting.sh`
 **Purpose**: Visual formatting for interactive scripts with headers, sections, banners
-**Size**: ~730 lines
+**Size**: ~760 lines
 
 **When to use**:
 
@@ -94,7 +94,7 @@ print_header_success "Backup Complete"
 
 **Location**: `~/.local/shell/error-handling.sh`
 **Purpose**: Error trapping, cleanup handlers, and verification utilities
-**Size**: ~319 lines
+**Size**: ~280 lines
 **Dependencies**: Sources logging.sh
 
 **When to use**:
@@ -376,4 +376,4 @@ Functions are available directly in interactive shells - no need to source.
 ## See Also
 
 - `platforms/common/.local/shell/colors.sh` - Color definitions
-- `.claude/skills/symlinks-developer` - Symlinks manager documentation
+- [Symlinks Manager](../reference/tools/symlinks.md) - Symlinks manager documentation
