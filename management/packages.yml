@@ -192,6 +192,8 @@ system_packages:
     brew: shfmt
     description: Shell script formatter
 
+  # Note: hadolint moved to github_binaries for consistent versioning across platforms
+
   - name: rclone
     apt: rclone
     pacman: rclone
@@ -708,6 +710,13 @@ github_binaries:
     binary_pattern: "shellcheck-{version}.{platform}.{arch}.tar.xz" # Platform-specific: darwin/linux, x86_64/aarch64
     install_dir: "~/.local/bin"
     description: Shell script static analysis tool (consistent version across all platforms)
+
+  - name: hadolint
+    repo: hadolint/hadolint
+    install_script: github-releases/hadolint.sh
+    binary_pattern: "hadolint-{platform}-{arch}" # Direct binary: macos/linux, arm64/x86_64
+    install_dir: "~/.local/bin"
+    description: Dockerfile linter (consistent version across all platforms)
 
 # ================================================================
 # CARGO PACKAGES (Rust)

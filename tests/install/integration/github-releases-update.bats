@@ -124,6 +124,7 @@ teardown_file() {
     "yazi"
     "neovim"
     "shellcheck"
+    "hadolint"
     "tenv"
     "tflint"
     "terraformer"
