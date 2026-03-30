@@ -1903,8 +1903,6 @@
       
         
       
-        
-      
     
     
     
@@ -1995,34 +1993,6 @@
     
   
     Task Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/skills/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Skills System
   
 
     
@@ -4772,7 +4742,7 @@
 
 <h1 id="github-release-installer-library">GitHub Release Installer Library<a class="headerlink" href="#github-release-installer-library" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across 16+ similar installer scripts while maintaining clarity and simplicity.</p>
+<p>The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in <code>management/common/install/github-releases/</code> while maintaining clarity and simplicity.</p>
 <h2 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">&para;</a></h2>
 <p>The library follows the "medium abstraction" principle:</p>
 <ul>
@@ -4846,7 +4816,7 @@
 </span></code></pre></div>
 <h2 id="script-patterns">Script Patterns<a class="headerlink" href="#script-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="simple-tarball-installer">Simple Tarball Installer<a class="headerlink" href="#simple-tarball-installer" title="Permanent link">&para;</a></h3>
-<p>Most common pattern (11 out of 16 tools):</p>
+<p>Most common pattern (majority of tools):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
@@ -4887,30 +4857,10 @@
 </ul>
 <p>These scripts use library helpers where applicable but handle their unique requirements inline.</p>
 <h2 id="code-savings">Code Savings<a class="headerlink" href="#code-savings" title="Permanent link">&para;</a></h2>
-<h3 id="converted-scripts">Converted Scripts<a class="headerlink" href="#converted-scripts" title="Permanent link">&para;</a></h3>
-<p>See <code>management/common/install/github-releases/</code> for all current scripts. At time of library creation, converting 11 tools saved ~47% of boilerplate (from ~1,039 lines to ~547).</p>
-<h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Size:</strong> 181 lines</li>
-<li><strong>Functions:</strong> 5</li>
-<li><strong>Previous iteration:</strong> 401 lines, 16 functions (over-abstracted)</li>
-</ul>
-<h3 id="grand-total">Grand Total<a class="headerlink" href="#grand-total" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Before:</strong> ~1,525 lines (estimated)</li>
-<li><strong>After:</strong> 1,211 lines (181 library + 547 converted + 483 special cases)</li>
-<li><strong>Net savings:</strong> 314 lines (20.6%)</li>
-</ul>
-<h2 id="special-case-scripts-not-converted">Special Case Scripts (Not Converted)<a class="headerlink" href="#special-case-scripts-not-converted" title="Permanent link">&para;</a></h2>
-<p>These 5 scripts have unique requirements that don't fit the standard pattern:</p>
-<ol>
-<li><strong>awscli</strong> - Uses official AWS installer, macOS via Homebrew</li>
-<li><strong>claude-code</strong> - Uses official installer, WSL skipped</li>
-<li><strong>fzf</strong> - Built from source with Go</li>
-<li><strong>neovim</strong> - AppImage extraction, multiple files</li>
-<li><strong>terraform</strong> - Wrapper around tenv, delegates installation</li>
-</ol>
-<p>All still use error-handling.sh for structured logging consistency.</p>
+<p>The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 5 focused functions.</p>
+<p>See <code>management/common/install/github-releases/</code> for all current scripts.</p>
+<h2 id="custom-installers-not-using-library">Custom Installers (Not Using Library)<a class="headerlink" href="#custom-installers-not-using-library" title="Permanent link">&para;</a></h2>
+<p>Some tools have unique requirements that don't fit the GitHub release pattern. These live in <code>management/common/install/custom-installers/</code> instead. All still use error-handling.sh for structured logging consistency.</p>
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
 <h3 id="why-not-more-abstraction">Why Not More Abstraction?<a class="headerlink" href="#why-not-more-abstraction" title="Permanent link">&para;</a></h3>
 <p><strong>Rejected:</strong> Complex packages.yml with all download patterns</p>
@@ -5019,7 +4969,7 @@
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
 <p><strong>Library:</strong></p>
 <ul>
-<li><code>management/common/lib/github-release-installer.sh</code> (181 lines)</li>
+<li><code>management/common/lib/github-release-installer.sh</code></li>
 </ul>
 <p><strong>Converted Scripts:</strong> See <code>management/common/install/github-releases/</code> for the full current listing.</p>
 <p><strong>Moved to Custom Installers:</strong></p>

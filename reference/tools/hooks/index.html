@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://datapointchris.github.io/dotfiles/reference/tools/hooks/">
       
       
-        <link rel="prev" href="../skills/">
+        <link rel="prev" href="../tasks/">
       
       
         <link rel="next" href="../../support/troubleshooting/">
@@ -1903,8 +1903,6 @@
       
         
       
-        
-      
     
     
     
@@ -1996,34 +1994,6 @@
     
   
     Task Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../skills/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Skills System
   
 
     
@@ -4804,42 +4774,9 @@
 <p>This repository uses a two-tier hooks system: <strong>universal hooks</strong> for all projects and <strong>project-specific hooks</strong> for dotfiles-only behavior.</p>
 <h2 id="hook-organization">Hook Organization<a class="headerlink" href="#hook-organization" title="Permanent link">&para;</a></h2>
 <h3 id="universal-hooks-claude">Universal Hooks (<code>~/.claude/</code>)<a class="headerlink" href="#universal-hooks-claude" title="Permanent link">&para;</a></h3>
-<p>Apply to all Claude Code projects. See <code>~/.claude/README.md</code> for full documentation.</p>
+<p>Apply to all Claude Code projects. These hooks change frequently as workflow improvements are added.</p>
 <p><strong>Location:</strong> <code>~/.claude/hooks/</code></p>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>session-start</code></td>
-<td>Initialize session, check git state</td>
-</tr>
-<tr>
-<td><code>markdown_formatter.py</code></td>
-<td>Auto-add language tags to code blocks</td>
-</tr>
-<tr>
-<td><code>notification-desktop</code></td>
-<td>Desktop notifications for Claude events</td>
-</tr>
-<tr>
-<td><code>pre-compact-save-state</code></td>
-<td>Save context before conversation compaction</td>
-</tr>
-<tr>
-<td><code>pre-bash-block-git-reset</code></td>
-<td>Block dangerous git reset commands</td>
-</tr>
-<tr>
-<td><code>pre-bash-intercept-commits</code></td>
-<td>Route commits through commit agent</td>
-</tr>
-</tbody>
-</table>
+<p>See <code>~/.claude/README.md</code> for the current list of universal hooks and their purposes.</p>
 <h3 id="project-specific-hooks-claude">Project-Specific Hooks (<code>.claude/</code>)<a class="headerlink" href="#project-specific-hooks-claude" title="Permanent link">&para;</a></h3>
 <p>Apply only to this dotfiles repository.</p>
 <p><strong>Location:</strong> <code>.claude/hooks/</code></p>
