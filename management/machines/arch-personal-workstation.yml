@@ -41,6 +41,7 @@ github_releases:
   - shellcheck
   - hadolint
   - tree-sitter
+  - just
 
 custom_installers:
   - bats

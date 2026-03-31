@@ -238,6 +238,7 @@ else
 fi
 
 check_command_at_path "hadolint" "$HOME/.local/bin/hadolint"
+check_command_at_path "just" "$HOME/.local/bin/just"
 check_command_at_path "cheat" "$HOME/go/bin/cheat"
 check_command_at_path "terraform-docs" "$HOME/go/bin/terraform-docs"
 check_command_at_path "gum" "$HOME/go/bin/gum"

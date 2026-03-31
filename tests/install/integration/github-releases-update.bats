@@ -125,6 +125,7 @@ teardown_file() {
     "neovim"
     "shellcheck"
     "hadolint"
+    "just"
     "tenv"
     "tflint"
     "terraformer"

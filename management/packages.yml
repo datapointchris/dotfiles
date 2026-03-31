@@ -718,6 +718,13 @@ github_binaries:
     install_dir: "~/.local/bin"
     description: Dockerfile linter (consistent version across all platforms)
 
+  - name: just
+    repo: casey/just
+    install_script: github-releases/just.sh
+    binary_pattern: "just-{version}-{target}.tar.gz" # Target-specific: x86_64-apple-darwin, aarch64-apple-darwin, x86_64-unknown-linux-musl
+    install_dir: "~/.local/bin"
+    description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
+
 # ================================================================
 # CARGO PACKAGES (Rust)
 # ================================================================

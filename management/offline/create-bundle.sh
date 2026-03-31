@@ -98,8 +98,10 @@ download_github_binaries() {
     "$github_releases/trivy.sh"
     "$github_releases/zk.sh"
     "$github_releases/shellcheck.sh"
+    "$github_releases/hadolint.sh"
     "$github_releases/tenv.sh"
     "$github_releases/tree-sitter.sh"
+    "$github_releases/just.sh"
   )
 
   local tool version url filename
