@@ -116,24 +116,11 @@ teardown_file() {
 # Test all installers have --update support
 
 @test "all github release installers accept --update flag" {
-  local installers=(
-    "lazygit"
-    "fzf"
-    "glow"
-    "duf"
-    "yazi"
-    "neovim"
-    "shellcheck"
-    "hadolint"
-    "just"
-    "tenv"
-    "tflint"
-    "terraformer"
-    "terrascan"
-    "tree-sitter"
-    "trivy"
-    "zk"
-  )
+  # Auto-discover all installer scripts
+  local installers=()
+  for script in "$DOTFILES_DIR/management/common/install/github-releases"/*.sh; do
+    [[ -f "$script" ]] && installers+=("$(basename "$script" .sh)")
+  done
 
   for installer in "${installers[@]}"; do
     run docker_exec "$BATS_SHARED_CONTAINER" \

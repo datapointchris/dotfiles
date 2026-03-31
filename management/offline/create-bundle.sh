@@ -77,32 +77,18 @@ download_file() {
 }
 
 # ============================================================================
-# GitHub Binary Releases (explicit listing - matches install.sh)
+# GitHub Binary Releases (auto-discovered from installer scripts)
 # ============================================================================
 
 download_github_binaries() {
   log_info "Downloading GitHub binary releases..."
   local github_releases="$DOTFILES_DIR/management/common/install/github-releases"
 
-  # Explicit listing - same tools as install.sh
-  local installers=(
-    "$github_releases/fzf.sh"
-    "$github_releases/neovim.sh"
-    "$github_releases/lazygit.sh"
-    "$github_releases/yazi.sh"
-    "$github_releases/glow.sh"
-    "$github_releases/duf.sh"
-    "$github_releases/tflint.sh"
-    "$github_releases/terraformer.sh"
-    "$github_releases/terrascan.sh"
-    "$github_releases/trivy.sh"
-    "$github_releases/zk.sh"
-    "$github_releases/shellcheck.sh"
-    "$github_releases/hadolint.sh"
-    "$github_releases/tenv.sh"
-    "$github_releases/tree-sitter.sh"
-    "$github_releases/just.sh"
-  )
+  # Auto-discover all installer scripts in the directory
+  local installers=()
+  for script in "$github_releases"/*.sh; do
+    [[ -f "$script" ]] && installers+=("$script")
+  done
 
   local tool version url filename
   for script in "${installers[@]}"; do

@@ -15,15 +15,12 @@ print_header() {
 if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo "Usage: $(basename "$0") [OPTIONS]"
   echo ""
-  echo "Test all GitHub release installers in Docker containers"
+  echo "Test all GitHub release installers in Docker containers."
+  echo "Installers are auto-discovered from management/common/install/github-releases/"
   echo ""
   echo "Options:"
   echo "  --keep-on-failure  Keep containers that fail (for debugging)"
   echo "  -h, --help         Show this help message"
-  echo ""
-  echo "Tests 14 GitHub release installers:"
-  echo "  duf, fzf, glow, hadolint, lazygit, neovim, shellcheck,"
-  echo "  tenv, terraformer, terrascan, tflint, trivy, yazi, zk"
   exit 0
 fi
 
@@ -42,26 +39,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Map installer names to binary names
+# Auto-discover installers and extract binary names from each script's BINARY_NAME variable
 # Format: "installer:binary"
-declare -a INSTALLERS=(
-  "duf:duf"
-  "fzf:fzf"
-  "glow:glow"
-  "hadolint:hadolint"
-  "just:just"
-  "lazygit:lazygit"
-  "neovim:nvim"
-  "shellcheck:shellcheck"
-  "tenv:tenv"
-  "terraformer:terraformer"
-  "terrascan:terrascan"
-  "tflint:tflint"
-  "tree-sitter:tree-sitter"
-  "trivy:trivy"
-  "yazi:yazi"
-  "zk:zk"
-)
+declare -a INSTALLERS=()
+GITHUB_RELEASES_DIR="$DOTFILES_DIR/management/common/install/github-releases"
+for script in "$GITHUB_RELEASES_DIR"/*.sh; do
+  [[ -f "$script" ]] || continue
+  installer=$(basename "$script" .sh)
+  binary=$(grep '^COMMAND_NAME=' "$script" | head -1 | cut -d'"' -f2 || true)
+  [[ -z "$binary" ]] && binary=$(grep '^BINARY_NAME=' "$script" | head -1 | cut -d'"' -f2 || true)
+  if [[ -z "$binary" ]]; then
+    echo "WARNING: No BINARY_NAME found in $script, skipping"
+    continue
+  fi
+  INSTALLERS+=("$installer:$binary")
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PASSED=0

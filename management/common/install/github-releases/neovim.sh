@@ -5,6 +5,8 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
 
 BINARY_NAME="neovim"
+# shellcheck disable=SC2034 # read externally by test scripts via grep
+COMMAND_NAME="nvim"
 REPO="neovim/neovim"
 
 get_download_url() {
