@@ -122,3 +122,4 @@ platforms/common/.local/shell/functions.sh
 # See apps/common/sess/.gitignore and apps/common/toolbox/.gitignore
 # Claude Code metrics (track docs, ignore data)
 .claude/metrics/*.jsonl
+.planning/
