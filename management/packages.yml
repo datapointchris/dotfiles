@@ -1005,6 +1005,12 @@ go_tools:
     binary_pattern: "todoui_{os}_{go_arch}.tar.gz"
     description: Personal project organization with local-first SQLite
 
+  - name: forge
+    package: github.com/datapointchris/forge
+    github_repo: datapointchris/forge
+    binary_pattern: "forge_{os}_{go_arch}.tar.gz"
+    description: Run commands and dies across all git repos
+
   - name: toolbox
     package: github.com/datapointchris/toolbox
     github_repo: datapointchris/toolbox

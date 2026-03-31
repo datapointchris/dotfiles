@@ -1130,6 +1130,48 @@ tools:
     see_also: [theme]
     tags: [dotfiles, fonts, customization, terminal]
 
+  forge:
+    category: custom-tools
+    description: "Run commands and dies (reusable scripts) across all git repos"
+    installed_via: go-install
+    usage: "forge <command> [args]"
+    why_use: "Execute maintenance scripts and ad-hoc commands across your entire repo fleet with filtering, dry-run, and execution tracking"
+    examples:
+      - cmd: "forge exec -- git status --short"
+        desc: "Run git status in every repo"
+      - cmd: "forge exec -F dotfiles,homelab -- git pull"
+        desc: "Pull specific repos"
+      - cmd: "forge dies list"
+        desc: "List available dies with descriptions and run stats"
+      - cmd: "forge dies run maintenance/add-planning-to-gitignore.sh"
+        desc: "Run a die across all repos"
+      - cmd: "forge dies run maintenance/fix.sh -F dotfiles -n"
+        desc: "Dry run a die on one repo"
+      - cmd: "forge dies search planning"
+        desc: "Search dies by name, description, or tags"
+      - cmd: "forge dies stats"
+        desc: "Show execution history"
+    see_also: [syncer, toolbox]
+    tags: [dotfiles, git, automation, workflow, go]
+    docs_url: "https://github.com/datapointchris/forge"
+
+  todoui:
+    category: custom-tools
+    description: "Personal project organization with local-first SQLite"
+    installed_via: go-install
+    usage: "todoui [command]"
+    why_use: "Track projects, tasks, and items with a TUI interface backed by local SQLite, no server required"
+    examples:
+      - cmd: "todoui"
+        desc: "Launch the TUI interface"
+      - cmd: "todoui projects"
+        desc: "List all projects"
+      - cmd: "todoui items"
+        desc: "List project items"
+    see_also: [forge, toolbox]
+    tags: [dotfiles, productivity, tui, sqlite, go]
+    docs_url: "https://github.com/datapointchris/todoui"
+
   toolbox:
     category: custom-tools
     description: "CLI tool discovery and documentation browser"
