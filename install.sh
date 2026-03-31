@@ -63,8 +63,6 @@ install_manifest_phases() {
   local lang_tools="$common_install/language-tools"
   local plugins="$common_install/plugins"
 
-  # Fonts (managed by the `font` tool — run `font install` separately)
-
   # Go Toolchain
   if manifest_enabled "go"; then
     print_header "Go Toolchain"
