@@ -25,6 +25,7 @@ go_tools:
   - sess
   - sesh
   - toolbox
+  - sops
 
 github_releases:
   - fzf

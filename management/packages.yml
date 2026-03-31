@@ -100,7 +100,6 @@ system_packages:
     tags: [cli, search]
 
   - name: tokei
-    apt: tokei
     pacman: tokei
     brew: tokei
     description: Code statistics (lines of code, language breakdown)
@@ -226,11 +225,7 @@ system_packages:
     brew: age
     description: Modern file encryption tool (used by sops)
 
-  - name: sops
-    apt: sops
-    pacman: sops
-    brew: sops
-    description: Secrets manager for config files (encrypts with age/GPG/KMS)
+
 
   # Media Processing
   - name: ffmpeg
@@ -1017,6 +1012,12 @@ go_tools:
     github_repo: datapointchris/forge
     binary_pattern: "forge_{os}_{go_arch}.tar.gz"
     description: Run commands and dies across all git repos
+
+  - name: sops
+    package: github.com/getsops/sops/v3/cmd/sops
+    github_repo: getsops/sops
+    binary_pattern: "sops-{version}.{os}.{go_arch}"
+    description: Secrets manager for config files (encrypts with age/GPG/KMS)
 
   - name: toolbox
     package: github.com/datapointchris/toolbox
