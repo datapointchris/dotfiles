@@ -57,6 +57,7 @@ EOF
   chmod +x "$MOCK_INSTALLER"
 
   # Define run_installer wrapper (from install.sh)
+  # shellcheck disable=SC2329
   run_installer() {
     local script="$1"
     local tool_name="$2"

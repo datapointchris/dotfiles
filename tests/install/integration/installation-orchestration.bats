@@ -29,6 +29,7 @@ setup_file() {
   export -f run_installer
 
   # Define REAL show_failures_summary (from install.sh) and export it
+  # shellcheck disable=SC2329
   show_failures_summary() {
     if [[ ! -f "$FAILURES_LOG" ]] || [[ ! -s "$FAILURES_LOG" ]]; then
       return 0

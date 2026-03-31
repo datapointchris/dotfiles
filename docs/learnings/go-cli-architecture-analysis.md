@@ -43,7 +43,7 @@
 
 ### Architecture Overview
 
-```
+```text
 sesh/
 ├── main.go                     # Minimal entry point, logging setup
 ├── seshcli/                    # CLI commands (cobra)
@@ -343,7 +343,7 @@ func init() {
 
 ### Architecture Overview
 
-```
+```text
 pkg/
 ├── app/                    # Application bootstrap
 ├── gui/                    # TUI layer (gocui)
@@ -366,7 +366,7 @@ pkg/
 
 #### 1. Layered Architecture
 
-```
+```text
 GUI Layer (views, controllers)
     ↓
 Services Layer (business logic)
@@ -443,7 +443,7 @@ type Common struct {
 
 ### Architecture Overview
 
-```
+```text
 gum/
 ├── main.go              # Kong CLI parser
 ├── choose/              # Choose command
@@ -598,7 +598,7 @@ func Context(timeout time.Duration) (context.Context, context.CancelFunc) {
 
 **Adopt sesh's flat domain structure:**
 
-```
+```text
 menu/
 ├── cmd/                    # Cobra commands
 ├── model/                  # Data structures
@@ -689,7 +689,7 @@ func NewRootCommand() *cobra.Command {
 
 3. **Integration tests separate**
 
-   ```
+   ```text
    menu_test/
    ├── integration/
    │   ├── tmux_test.go
@@ -798,7 +798,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 ### 7. Package Organization
 
-```
+```text
 menu/
 ├── main.go                      # Entry point, version injection
 ├── cmd/
@@ -865,14 +865,14 @@ type Executor struct {
 
 **Bad:**
 
-```
+```text
 tmux/ imports menu/
 menu/ imports tmux/  ← circular!
 ```
 
 **Good:**
 
-```
+```text
 model/           # Shared types
   ├── item.go
   └── session.go
