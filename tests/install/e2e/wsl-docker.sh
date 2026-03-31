@@ -341,15 +341,12 @@ else
       sleep 2
     fi
 
-    # Remove old dotfiles and copy updated version
+    # Re-copy from bind mount (already at /dotfiles from initial docker run)
     echo "  Removing old dotfiles..."
     docker exec "$CONTAINER_NAME" bash -c "rm -rf ${CONTAINER_HOME}/dotfiles" || true
 
-    echo "  Copying updated dotfiles..."
-    docker cp "${DOTFILES_DIR}/." "${CONTAINER_NAME}:${CONTAINER_HOME}/dotfiles/"
-
-    echo "  Setting permissions..."
-    docker exec "$CONTAINER_NAME" bash -c "chown -R \$(whoami):\$(whoami) ${CONTAINER_HOME}/dotfiles"
+    echo "  Copying fresh dotfiles from bind mount..."
+    docker exec "$CONTAINER_NAME" bash -c "cp -rp /dotfiles/. ${CONTAINER_HOME}/dotfiles/ && cd ${CONTAINER_HOME}/dotfiles && git init -q"
 
     echo "  Cleaning pre-built binaries (force rebuild for Linux)..."
     docker exec "$CONTAINER_NAME" bash -c "rm -f ${CONTAINER_HOME}/dotfiles/apps/common/sess/sess ${CONTAINER_HOME}/dotfiles/apps/common/toolbox/toolbox"
@@ -373,7 +370,7 @@ STEP_START=$(date +%s)
   echo ""
 
   CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-  docker exec "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh" --machine wsl-work-workstation
+  docker exec ${GITHUB_TOKEN:+-e GITHUB_TOKEN="$GITHUB_TOKEN"} "$CONTAINER_NAME" bash "${CONTAINER_HOME}/dotfiles/install.sh" --machine wsl-work-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

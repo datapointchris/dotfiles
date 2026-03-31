@@ -258,7 +258,7 @@ STEP_START=$(date +%s)
   echo "Executing Arch Linux installation in container..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash "/home/archuser/dotfiles/install.sh" --machine arch-personal-workstation
+  docker exec --user archuser --env HOME=/home/archuser ${GITHUB_TOKEN:+-e GITHUB_TOKEN="$GITHUB_TOKEN"} "$CONTAINER_NAME" bash "/home/archuser/dotfiles/install.sh" --machine arch-personal-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))

@@ -81,7 +81,7 @@ log_info "Installer: $INSTALLER_SCRIPT"
 
 START_TIME=$(date +%s)
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 cleanup_container() {
   if [[ "$KEEP_CONTAINER" == "true" ]]; then
     log_info "Container kept for debugging: $CONTAINER_NAME"
@@ -95,18 +95,13 @@ cleanup_container() {
 
 trap cleanup_container EXIT
 
-log_info "Starting container..."
+log_info "Starting container with dotfiles bind-mounted..."
 docker run -d \
   --name "$CONTAINER_NAME" \
   --user testuser \
+  --mount type=bind,source="$DOTFILES_DIR",target=/home/testuser/dotfiles,readonly \
   "$IMAGE_NAME" \
   sleep infinity >/dev/null
-
-log_info "Copying current dotfiles to container..."
-docker cp "$DOTFILES_DIR/." "$CONTAINER_NAME:/home/testuser/dotfiles/"
-
-log_info "Fixing file ownership..."
-docker exec --user root "$CONTAINER_NAME" chown -R testuser:testuser /home/testuser/dotfiles
 
 log_info "Running installer script..."
 echo ""
@@ -117,6 +112,7 @@ if docker exec \
   --workdir /home/testuser/dotfiles \
   -e DOTFILES_DOCKER_TEST=true \
   -e PATH=/home/testuser/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  ${GITHUB_TOKEN:+-e GITHUB_TOKEN="$GITHUB_TOKEN"} \
   "$CONTAINER_NAME" \
   bash "$INSTALLER_SCRIPT"; then
 

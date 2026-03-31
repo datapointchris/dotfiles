@@ -18,15 +18,9 @@ start_test_container() {
   docker run -d \
     --name "$container_name" \
     --user testuser \
+    --mount type=bind,source="$DOTFILES_DIR",target=/home/testuser/dotfiles,readonly \
     "$DOCKER_IMAGE" \
     sleep infinity >/dev/null
-
-  # Copy current dotfiles to container
-  docker cp "$DOTFILES_DIR/." "$container_name:/home/testuser/dotfiles/" >/dev/null 2>&1
-
-  # Fix ownership
-  docker exec --user root "$container_name" \
-    chown -R testuser:testuser /home/testuser/dotfiles >/dev/null 2>&1
 
   echo "$container_name"
 }
@@ -42,6 +36,7 @@ docker_exec() {
     --workdir /home/testuser/dotfiles \
     -e DOTFILES_DOCKER_TEST=true \
     -e PATH=/home/testuser/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    ${GITHUB_TOKEN:+-e GITHUB_TOKEN="$GITHUB_TOKEN"} \
     "$container_id" \
     bash -c "$@"
 }

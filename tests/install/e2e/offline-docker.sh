@@ -177,6 +177,7 @@ STEP_START=$(date +%s)
     --env DOTFILES_DOCKER_TEST=true \
     ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     --env PATH="/home/testuser/.local/bin:/home/testuser/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles-src,readonly \
     "$DOCKER_IMAGE" \
     sleep infinity >/dev/null
 
@@ -198,12 +199,11 @@ STEP_START=$(date +%s)
   log_info "Copying offline bundle..."
   docker cp "$BUNDLE_FILE" "$CONTAINER_NAME:/home/testuser/"
 
-  log_info "Copying dotfiles repository..."
-  docker cp "$DOTFILES_DIR/." "$CONTAINER_NAME:/home/testuser/dotfiles/"
-
-  log_info "Fixing ownership..."
-  docker exec --user root "$CONTAINER_NAME" \
-    chown -R testuser:testuser /home/testuser
+  log_info "Copying dotfiles from bind mount to writable location..."
+  docker exec --user root "$CONTAINER_NAME" bash -c "
+    cp -rp /dotfiles-src/. /home/testuser/dotfiles/
+    chown -R testuser:testuser /home/testuser/dotfiles
+  "
 
   log_info "Creating .env file..."
   docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
