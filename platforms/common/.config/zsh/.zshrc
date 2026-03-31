@@ -186,6 +186,18 @@ if command -v gh >/dev/null 2>&1; then
     log "Setup" "gh completions"
 fi
 
+# Forge completions
+if command -v forge >/dev/null 2>&1; then
+    eval "$(forge completion zsh)"
+    log "Setup" "forge completions"
+fi
+
+# Todoui completions
+if command -v todoui >/dev/null 2>&1; then
+    eval "$(todoui completion zsh)"
+    log "Setup" "todoui completions"
+fi
+
 log "Setup" "Completions"
 
 # ------------------------------------------------------------------ #
