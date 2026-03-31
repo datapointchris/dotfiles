@@ -999,6 +999,12 @@ go_tools:
     binary_pattern: "sesh_{Os}_{Arch}.tar.gz"
     description: Smart tmux session manager with zoxide integration
 
+  - name: todoui
+    package: github.com/datapointchris/todoui/cmd/todoui
+    github_repo: datapointchris/todoui
+    binary_pattern: "todoui_{os}_{go_arch}.tar.gz"
+    description: Personal project organization with local-first SQLite
+
   - name: toolbox
     package: github.com/datapointchris/toolbox
     github_repo: datapointchris/toolbox
