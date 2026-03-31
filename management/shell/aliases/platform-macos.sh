@@ -15,7 +15,6 @@ alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&
 alias icloud="z ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
 
 alias docs='z $HOME/code/docs'
-alias icb='~/webapps/ichrisbirch/cli/ichrisbirch'
 
 # ---------- Logs ---------- #
 
