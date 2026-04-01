@@ -918,6 +918,10 @@ git_uv_tools:
     repo: https://github.com/datapointchris/syncer.git
     description: Sync files and directories
 
+  - name: keymap-align
+    repo: https://github.com/datapointchris/keymap-align.git
+    description: Align ZMK keymap bindings into readable columns
+
 # ================================================================
 # GO TOOLS
 # ================================================================
