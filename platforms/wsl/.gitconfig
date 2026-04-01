@@ -6,6 +6,7 @@ email = datapointchris@gmail.com
 editor = nvim
 pager = delta
 autocrlf = input
+	excludesfile = /home/chris/.config/git/ignore
 
 [advice]
 addIgnoredFile = false
