@@ -92,7 +92,6 @@ venv/
 # Do not commit neovim lazy plugin because different os conflict
 **/lazy-lock.json
 .claude/sessions/
-.planning
 .discussion
 
 # Test artifacts
@@ -122,4 +121,4 @@ platforms/common/.local/shell/functions.sh
 # See apps/common/sess/.gitignore and apps/common/toolbox/.gitignore
 # Claude Code metrics (track docs, ignore data)
 .claude/metrics/*.jsonl
-.planning/
+.planning
