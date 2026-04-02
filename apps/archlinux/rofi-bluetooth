@@ -3,53 +3,32 @@
 
 set -euo pipefail
 
-bt_cmd() {
-    # Run bluetoothctl command via pipe, strip ANSI codes
-    echo "$1" | bluetoothctl 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g'
-}
-
 get_device_info() {
-    local mac="$1"
-    bt_cmd "info $mac"
+    bluetoothctl info "$1" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g'
 }
 
 is_connected() {
-    local info="$1"
-    echo "$info" | grep -q "Connected: yes"
+    echo "$1" | grep -q "Connected: yes"
 }
 
 is_paired() {
-    local info="$1"
-    echo "$info" | grep -q "Paired: yes"
+    echo "$1" | grep -q "Paired: yes"
 }
 
 get_battery() {
-    local info="$1"
     local battery
-    battery=$(echo "$info" | grep "Battery Percentage" | grep -oP '\(\K[0-9]+(?=\))') || true
+    battery=$(echo "$1" | grep "Battery Percentage" | grep -oP '\(\K[0-9]+(?=\))') || true
     echo "${battery:-}"
-}
-
-get_device_name() {
-    local mac="$1"
-    local name
-    # Try to get name from info
-    name=$(get_device_info "$mac" | grep "Name:" | sed 's/.*Name: //' | xargs)
-    if [[ -n "$name" ]]; then
-        echo "$name"
-    else
-        echo "$mac"
-    fi
 }
 
 build_device_menu() {
     local show_new="$1"
     local devices
-    # Filter to only "Device MAC Name" lines
-    devices=$(bt_cmd "devices" | grep -E '^Device [A-F0-9:]{17} ')
+    devices=$(bluetoothctl devices 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -E '^Device [A-F0-9:]{17} ') || true
 
-    declare -a macs=() display_names=()
-    local menu=""
+    MENU_MACS=()
+    MENU_DISPLAYS=()
+    MENU_TEXT=""
 
     while read -r _ mac name; do
         [[ -z "$mac" ]] && continue
@@ -61,12 +40,12 @@ build_device_menu() {
             [[ "$show_new" != "true" ]] && continue
         fi
 
-        # Get better name if needed
         if [[ -z "$name" || "$name" == "$mac" ]]; then
-            name=$(get_device_name "$mac")
+            name=$(echo "$info" | grep "Name:" | sed 's/.*Name: //' | xargs)
+            [[ -z "$name" ]] && name="$mac"
         fi
 
-        macs+=("$mac")
+        MENU_MACS+=("$mac")
 
         local status_icon="" battery_str="" suffix=""
 
@@ -86,32 +65,121 @@ build_device_menu() {
         fi
 
         local display="$status_icon $name$battery_str$suffix"
-        display_names+=("$display")
-        menu+="$display\n"
+        MENU_DISPLAYS+=("$display")
+        MENU_TEXT+="$display\n"
     done <<< "$devices"
+}
 
-    # Return via global arrays (bash limitation)
-    MENU_MACS=("${macs[@]}")
-    MENU_DISPLAYS=("${display_names[@]}")
-    MENU_TEXT="$menu"
+do_pair_connect() {
+    local mac="$1"
+    local name="$2"
+
+    notify-send -t 3000 "Bluetooth" "Pairing $name..." 2>/dev/null || true
+
+    # Keep a persistent bluetoothctl session so the device stays discoverable
+    coproc PAIR_BT { bluetoothctl 2>&1; }
+    local pair_pid="${PAIR_BT_PID}"
+
+    # Scan to keep device visible, trust before pairing
+    echo "scan on" >&"${PAIR_BT[1]}"
+    sleep 2
+    echo "trust $mac" >&"${PAIR_BT[1]}"
+    sleep 1
+    echo "pair $mac" >&"${PAIR_BT[1]}"
+    sleep 5
+    echo "connect $mac" >&"${PAIR_BT[1]}"
+    sleep 3
+
+    # Read result
+    echo "scan off" >&"${PAIR_BT[1]}"
+    echo "quit" >&"${PAIR_BT[1]}"
+    local output
+    output=$(cat <&"${PAIR_BT[0]}" | sed 's/\x1b\[[0-9;]*m//g') || true
+    wait "$pair_pid" 2>/dev/null || true
+
+    if echo "$output" | grep -q "Pairing successful\|already exists"; then
+        notify-send -t 3000 "Bluetooth" "Connected to $name" 2>/dev/null || true
+    else
+        notify-send -t 5000 "Bluetooth" "Failed to pair $name — try again" 2>/dev/null || true
+    fi
+}
+
+do_connect() {
+    local mac="$1"
+    local name="$2"
+    bluetoothctl connect "$mac" >/dev/null 2>&1
+    notify-send -t 3000 "Bluetooth" "Connected to $name" 2>/dev/null || true
+}
+
+do_disconnect() {
+    local mac="$1"
+    local name="$2"
+    bluetoothctl disconnect "$mac" >/dev/null 2>&1
+    notify-send -t 3000 "Bluetooth" "Disconnected $name" 2>/dev/null || true
+}
+
+do_remove() {
+    local mac="$1"
+    local name="$2"
+    bluetoothctl disconnect "$mac" >/dev/null 2>&1
+    bluetoothctl remove "$mac" >/dev/null 2>&1
+    notify-send -t 3000 "Bluetooth" "Removed $name" 2>/dev/null || true
+}
+
+show_device_menu() {
+    local mac="$1"
+    local info
+    info=$(get_device_info "$mac")
+    local name
+    name=$(echo "$info" | grep "Name:" | sed 's/.*Name: //' | xargs)
+    [[ -z "$name" ]] && name="$mac"
+
+    local battery
+    battery=$(get_battery "$info")
+    local battery_line=""
+    [[ -n "$battery" ]] && battery_line="Battery: ${battery}%  |  "
+
+    local menu=""
+    if is_connected "$info"; then
+        menu="⏏ Disconnect\n✕ Disconnect & Remove"
+    elif is_paired "$info"; then
+        menu="⏎ Connect\n✕ Remove"
+    else
+        menu="⏎ Pair & Connect\n✕ Remove"
+    fi
+
+    local header="${battery_line}${mac}"
+    local choice
+    choice=$(printf '%b' "← Back\n${menu}" | \
+        rofi -dmenu -i -p "$name" -no-custom \
+        -mesg "$header" \
+        2>/dev/null) || return
+
+    case "$choice" in
+        "← Back") show_main_menu ;;
+        "⏎ Connect") do_connect "$mac" "$name" ;;
+        "⏎ Pair & Connect") do_pair_connect "$mac" "$name" ;;
+        "⏏ Disconnect") do_disconnect "$mac" "$name" ;;
+        "✕ Disconnect & Remove") do_remove "$mac" "$name" ;;
+        "✕ Remove") do_remove "$mac" "$name" ;;
+    esac
 }
 
 scan_and_select() {
-    # Start scanning in background
-    bt_cmd "scan on" &>/dev/null &
-    local scan_pid=$!
+    # Start scanning via a persistent bluetoothctl process
+    coproc BTCTL { bluetoothctl 2>&1; }
+    echo "scan on" >&"${BTCTL[1]}"
 
-    # Cleanup on exit
-    trap 'kill $scan_pid 2>/dev/null; bt_cmd "scan off" &>/dev/null' EXIT
+    trap '{ echo "scan off" >&"${BTCTL[1]}"; echo "quit" >&"${BTCTL[1]}"; } 2>/dev/null || true; wait "${BTCTL_PID}" 2>/dev/null' EXIT
 
     local choice=""
     local rounds=0
-    local max_rounds=6  # 6 rounds × 2 seconds = 12 seconds max
+    local max_rounds=4
 
     while [[ -z "$choice" && $rounds -lt $max_rounds ]]; do
         rounds=$((rounds + 1))
+        sleep 2
 
-        # Build menu with all devices including new ones
         build_device_menu "true"
 
         local header="Scanning... (${rounds}/${max_rounds}) - Select device or wait"
@@ -119,42 +187,28 @@ scan_and_select() {
             header="Scan complete - Select device"
         fi
 
-        # Show menu with timeout
         choice=$(printf '%b' "↻ Refresh\n${MENU_TEXT}" | \
             rofi -dmenu -i -p "Bluetooth" -no-custom \
             -mesg "$header" \
-            -kb-custom-1 "" \
-            2>/dev/null) || {
-            # User cancelled
-            return
-        }
+            2>/dev/null) || return
 
-        # If refresh selected, continue scanning
         if [[ "$choice" == "↻ Refresh" ]]; then
             choice=""
-            sleep 1
             continue
         fi
     done
 
     [[ -z "$choice" ]] && return
 
-    # Find selected device
+    # Stop the scan session before handing off to device menu
+    echo "scan off" >&"${BTCTL[1]}" || true
+    echo "quit" >&"${BTCTL[1]}" || true
+    wait "${BTCTL_PID}" 2>/dev/null || true
+    trap - EXIT
+
     for i in "${!MENU_DISPLAYS[@]}"; do
         if [[ "${MENU_DISPLAYS[$i]}" == "$choice" ]]; then
-            local mac="${MENU_MACS[$i]}"
-            local info
-            info=$(get_device_info "$mac")
-
-            if is_connected "$info"; then
-                bt_cmd "disconnect $mac"
-            else
-                if ! is_paired "$info"; then
-                    bt_cmd "pair $mac"
-                    bt_cmd "trust $mac"
-                fi
-                bt_cmd "connect $mac"
-            fi
+            show_device_menu "${MENU_MACS[$i]}"
             return
         fi
     done
@@ -173,18 +227,9 @@ show_main_menu() {
         exit 0
     fi
 
-    # Find selected device
     for i in "${!MENU_DISPLAYS[@]}"; do
         if [[ "${MENU_DISPLAYS[$i]}" == "$choice" ]]; then
-            local mac="${MENU_MACS[$i]}"
-            local info
-            info=$(get_device_info "$mac")
-
-            if is_connected "$info"; then
-                bt_cmd "disconnect $mac"
-            else
-                bt_cmd "connect $mac"
-            fi
+            show_device_menu "${MENU_MACS[$i]}"
             exit 0
         fi
     done

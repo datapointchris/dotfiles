@@ -252,6 +252,7 @@ build_target() {
     -v "$ZMK_WORKSPACE":"$CONTAINER_WORKSPACE" \
     -v "$(pwd)/$CONFIG_DIR":"$CONTAINER_CONFIG" \
     -v "$(pwd)":"$CONTAINER_OUTPUT" \
+    -e "ZMK_CMAKE_ARGS=${cmake_args}" \
     -w "$CONTAINER_WORKSPACE" \
     "$DOCKER_IMAGE" \
     /bin/bash -c "
@@ -259,7 +260,7 @@ build_target() {
 
       west build -s zmk/app -d ${build_dir} -b ${board} ${pristine_arg} ${snippet_arg} -- \
         ${shield_arg} \
-        ${cmake_args} \
+        \${ZMK_CMAKE_ARGS} \
         ${board_root_arg} \
         -DZMK_CONFIG=${CONTAINER_CONFIG} \
         -DZephyr_DIR=${CONTAINER_WORKSPACE}/zephyr/share/zephyr-package/cmake
