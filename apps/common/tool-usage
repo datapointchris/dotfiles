@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# tool-usage - Report personal CLI tool usage frequency from shell history
+# Note: add 'setopt EXTENDED_HISTORY' to .zshrc to enable last-used dates
+
+set -euo pipefail
+
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=/dev/null
+source "$SHELL_DIR/formatting.sh"
+
+HISTORY="${HISTFILE:-$HOME/.local/state/zsh/history}"
+
+# Update this list when tools are added or retired
+TOOLS=(
+  forge syncer theme font
+  logsift signal todoui toolbox
+  refcheck workflows
+)
+
+if [[ ! -f "$HISTORY" ]]; then
+  print_error "History file not found: $HISTORY"
+  exit 1
+fi
+
+print_header "Tool Usage" "brightcyan"
+echo ""
+
+# Collect counts, then sort by usage descending
+declare -a entries
+for tool in "${TOOLS[@]}"; do
+  count=$(grep -cE "(^: [0-9]+:[0-9]+;|^)${tool}( |$)" "$HISTORY" 2>/dev/null || echo 0)
+  entries+=("${count} ${tool}")
+done
+
+unused=()
+while IFS=' ' read -r count tool; do
+  if (( count == 0 )); then
+    unused+=("$tool")
+  else
+    echo "  $(print_green "$tool") — ${count}x"
+  fi
+done < <(printf '%s\n' "${entries[@]}" | sort -rn)
+
+if (( ${#unused[@]} > 0 )); then
+  echo ""
+  print_section "Never used (in history)" "brightyellow"
+  for t in "${unused[@]}"; do
+    echo "  $(print_yellow "$t")"
+  done
+fi
+
+echo ""
+echo "  $(print_cyan "History:") $HISTORY  ($(wc -l < "$HISTORY") lines)"
+echo "  $(print_cyan "Tip:") setopt EXTENDED_HISTORY in .zshrc to track dates"
+echo ""
