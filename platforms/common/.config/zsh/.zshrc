@@ -414,8 +414,8 @@ echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
 # ------------------------------------------------------------------ #
 # TOOL REMINDER - Cycle through forgotten tools (Shell Startup)
 # ------------------------------------------------------------------ #
-if [[ -x "$HOME/.local/bin/tool-reminder" ]]; then
-  tool-reminder
+if command -v toolbox &>/dev/null; then
+  toolbox remind
 fi
 
 # ------------------------------------------------------------------ #
