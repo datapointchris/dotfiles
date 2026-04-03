@@ -413,6 +413,9 @@ echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
 # ------------------------------------------------------------------ #
 # WORKFLOWS - Random Learning (Shell Startup)
 # ------------------------------------------------------------------ #
-# Uncomment to show a random workflow on shell startup
-# Requires: workflows tool from dotfiles/apps/common/workflows
-# [[ -x "$HOME/.local/bin/workflows" ]] && workflows learn
+# Enable/disable with: workflows motd enable|disable
+if [[ -x "$HOME/.local/bin/workflows" ]]; then
+  _wf_motd="${XDG_STATE_HOME:-$HOME/.local/state}/workflows/motd"
+  [[ "$(cat "$_wf_motd" 2>/dev/null)" == "enabled" ]] && echo "" && workflows learn
+  unset _wf_motd
+fi

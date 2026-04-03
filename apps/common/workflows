@@ -13,6 +13,7 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
 WORKFLOWS_DIR="${WORKFLOWS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/workflows}"
+MOTD_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/workflows/motd"
 
 show_help() {
   print_header "Workflows - Personal Process Reference" "brightcyan"
@@ -28,20 +29,25 @@ show_help() {
   echo "  $(print_cyan "workflows learn")               Show a random workflow (direct output)"
   echo "  $(print_cyan "workflows random")              Show a random workflow (paginated)"
   echo "  $(print_cyan "workflows show") <name>         Show specific workflow"
+  echo "  $(print_cyan "workflows new") <name>          Create a new workflow and open in \$EDITOR"
+  echo "  $(print_cyan "workflows motd") <enable|disable|status>  Control shell startup display"
   echo ""
 
   print_section "Examples" "brightyellow"
-  echo "  $(print_green "workflows")                     # Show this help"
-  echo "  $(print_green "workflows git")                # Search for 'git'"
-  echo "  $(print_green "workflows search docker")       # Search for 'docker'"
-  echo "  $(print_green "workflows list")                # List all workflow names"
-  echo "  $(print_green "workflows learn")               # Show random workflow (for shell startup)"
-  echo "  $(print_green "workflows show tmux-sessions")  # Show specific workflow"
+  echo "  $(print_green "workflows")                       # Show this help"
+  echo "  $(print_green "workflows git")                   # Search for 'git'"
+  echo "  $(print_green "workflows search docker")         # Search for 'docker'"
+  echo "  $(print_green "workflows list")                  # List all workflow names"
+  echo "  $(print_green "workflows learn")                 # Show random workflow (for shell startup)"
+  echo "  $(print_green "workflows show tmux-sessions")    # Show specific workflow"
+  echo "  $(print_green "workflows motd enable")           # Show random workflow on shell startup"
+  echo "  $(print_green "workflows motd disable")          # Disable shell startup display"
   echo ""
 
   print_section "Location" "brightblue"
   echo "  Workflows: $(print_cyan "$WORKFLOWS_DIR")"
   echo "  Format:    $(print_cyan "*.md files")"
+  echo "  MOTD:      $(print_cyan "$MOTD_FILE")"
 }
 
 # Check if workflows directory exists
@@ -141,6 +147,90 @@ cmd_learn() {
   fi
 }
 
+# Create a new workflow file and open in $EDITOR
+cmd_new() {
+  local name="${1:-}"
+
+  if [[ -z "$name" ]]; then
+    print_error "Workflow name required"
+    echo "Usage: workflows new <name>"
+    exit 1
+  fi
+
+  # Slugify: lowercase, spaces to hyphens, strip non-alphanumeric except hyphens
+  local slug
+  slug=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+
+  # Prefer writing to the dotfiles source dir (so it's synced) by resolving
+  # where existing symlinks point. Fall back to WORKFLOWS_DIR if none exist.
+  local target_dir="$WORKFLOWS_DIR"
+  local existing
+  existing=$(find "$WORKFLOWS_DIR" -maxdepth 1 -name "*.md" -type l | head -1)
+  if [[ -n "$existing" ]]; then
+    target_dir=$(dirname "$(readlink -f "$existing")")
+  fi
+
+  local filepath="$target_dir/$slug.md"
+
+  if [[ -f "$filepath" ]]; then
+    print_error "Workflow already exists: $slug"
+    echo "  $filepath"
+    exit 1
+  fi
+
+  cat > "$filepath" <<EOF
+# $name
+
+EOF
+
+  # Create symlink in WORKFLOWS_DIR if we wrote to a different directory
+  if [[ "$target_dir" != "$WORKFLOWS_DIR" ]]; then
+    ln -sf "$filepath" "$WORKFLOWS_DIR/$slug.md"
+  fi
+
+  print_success "Created: $slug"
+  echo "  $filepath"
+  echo ""
+
+  local editor="${EDITOR:-nvim}"
+  exec "$editor" "$filepath"
+}
+
+# Control shell startup (motd) display
+cmd_motd() {
+  local action="${1:-}"
+  local motd_dir
+  motd_dir="$(dirname "$MOTD_FILE")"
+
+  case "$action" in
+    enable)
+      mkdir -p "$motd_dir"
+      echo "enabled" > "$MOTD_FILE"
+      print_success "Workflows MOTD enabled — a random workflow will show on shell startup"
+      ;;
+    disable)
+      mkdir -p "$motd_dir"
+      echo "disabled" > "$MOTD_FILE"
+      print_success "Workflows MOTD disabled"
+      ;;
+    status)
+      local current
+      current="$(cat "$MOTD_FILE" 2>/dev/null || echo "disabled (not set)")"
+      echo "MOTD status: $(print_cyan "$current")"
+      ;;
+    "")
+      print_error "Action required: enable, disable, or status"
+      echo "Usage: workflows motd <enable|disable|status>"
+      exit 1
+      ;;
+    *)
+      print_error "Unknown action: $action"
+      echo "Usage: workflows motd <enable|disable|status>"
+      exit 1
+      ;;
+  esac
+}
+
 # Show specific workflow
 cmd_show() {
   local name="${1:-}"
@@ -201,6 +291,14 @@ case "${1:-}" in
 
   show|view)
     cmd_show "${2:-}"
+    ;;
+
+  new)
+    cmd_new "${2:-}"
+    ;;
+
+  motd)
+    cmd_motd "${2:-}"
     ;;
 
   help|--help|-h)
