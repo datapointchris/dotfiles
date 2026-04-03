@@ -1,52 +1,44 @@
 #!/usr/bin/env bash
-# ================================================================
-# menu - Workflow Tools Quick Reference
-# ================================================================
-# Simple launcher showing available workflow tools and commands
-# ================================================================
+# menu - List personal CLI tools with descriptions from the toolbox registry
 
 set -euo pipefail
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
-gum style \
-  --border=rounded \
-  --border-foreground=4 \
-  --padding="1 2" \
-  --bold \
-  "Workflow Tools"
+REGISTRY="${DOTFILES_REGISTRY:-$HOME/.config/toolbox/registry.yml}"
 
+lookup_desc() {
+  local name="$1"
+  local desc
+  desc=$(yq ".tools[\"$name\"].description" "$REGISTRY" 2>/dev/null)
+  [[ "$desc" == "null" || -z "$desc" ]] && echo "" || echo "$desc"
+}
+
+print_entry() {
+  local name="$1"
+  local desc
+  desc=$(lookup_desc "$name")
+  if [[ -n "$desc" ]]; then
+    echo "  $(print_cyan "$name") — $desc"
+  else
+    echo "  $(print_cyan "$name") $(print_yellow "(not in registry)")"
+  fi
+}
+
+print_header "Personal Tools" "brightcyan"
 echo ""
 
-choice=$(gum choose --height=20 \
-  "sess - Switch tmux session" \
-  "theme - Change theme" \
-  "font - Change font" \
-  "notes - Take notes" \
-  "toolbox - Find a tool" \
-  "workflows - Browse workflows" \
-  "patterns - Log an event" \
-  "refcheck - Check references" \
-  "backmeup - Backup directories" \
-  "safekeep - Preserve files to network" \
-  "backup-incremental - Incremental backup" \
-  "open docs - Open documentation")
+print_section "$HOME/tools" "brightyellow"
+for dir in "$HOME"/tools/*/; do
+  [[ -d "$dir" ]] || continue
+  print_entry "$(basename "$dir")"
+done
 
-case "$choice" in
-"sess"*) sess --help ;;
-"theme"*) theme --help ;;
-"font"*) font --help ;;
-"notes"*) notes --help ;;
-"toolbox"*) toolbox --help ;;
-"workflows"*) workflows --help ;;
-"patterns"*) patterns --help ;;
-"refcheck"*) refcheck ;;
-"backmeup"*) backmeup --help ;;
-"safekeep"*) safekeep --help ;;
-"backup-incremental"*) backup-incremental --help ;;
-"open docs"*)
-  print_green "Opening documentation..."
-  open "https://datapointchris.github.io/dotfiles/"
-  ;;
-esac
+echo ""
+print_section "dotfiles scripts" "brightyellow"
+for file in "$HOME"/dotfiles/apps/common/*; do
+  [[ -f "$file" ]] || continue
+  print_entry "$(basename "$file")"
+done
+echo ""
