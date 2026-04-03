@@ -95,7 +95,7 @@ tools:
   ripgrep:
     category: search
     description: "Ultra-fast recursive grep with smart defaults"
-    installed_via: brew
+    installed_via: dotfiles
     usage: "rg [pattern] [path]"
     why_use: "Fastest grep tool, respects .gitignore, supports PCRE2, multiline search"
     examples:
@@ -238,7 +238,7 @@ tools:
   git-delta:
     category: version-control
     description: "Syntax-highlighting pager for git, diff, and grep output"
-    installed_via: brew
+    installed_via: dotfiles
     usage: "delta [file]"
     why_use: "Beautiful git diffs with syntax highlighting, line numbers, side-by-side view"
     examples:
@@ -548,7 +548,7 @@ tools:
   neovim:
     category: editor
     description: "Hyperextensible Vim-based text editor"
-    installed_via: brew
+    installed_via: dotfiles
     usage: "nvim [file]"
     why_use: "Modern vim, Lua configuration, LSP support, async plugins, active ecosystem"
     examples:
@@ -609,7 +609,7 @@ tools:
   nvm:
     category: language-manager
     description: "Node.js version manager for switching Node versions"
-    installed_via: script
+    installed_via: dotfiles
     usage: "nvm [command] [version]"
     why_use: "Manage multiple Node.js versions, switch per project, no sudo needed"
     examples:
