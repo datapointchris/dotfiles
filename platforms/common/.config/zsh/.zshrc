@@ -412,6 +412,13 @@ fi
 echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
 
 # ------------------------------------------------------------------ #
+# TOOL REMINDER - Cycle through forgotten tools (Shell Startup)
+# ------------------------------------------------------------------ #
+if [[ -x "$HOME/.local/bin/tool-reminder" ]]; then
+  tool-reminder
+fi
+
+# ------------------------------------------------------------------ #
 # WORKFLOWS - Random Learning (Shell Startup)
 # ------------------------------------------------------------------ #
 # Enable/disable with: workflows motd enable|disable
