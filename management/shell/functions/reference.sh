@@ -209,3 +209,27 @@ function commithelp() {
   color_bright_black "Tip: Use 'workflows show git-conventional-commits' for full list"
   echo ""
 }
+
+#@keymap
+#--> Browse ZMK keyboard layers with fzf preview
+function keymap() {
+  local keymap_yaml="${KEYMAP_YAML:-$HOME/code/zmk/corne42/corne_keymap.yaml}"
+  if [[ ! -f "$keymap_yaml" ]]; then
+    echo "Keymap not found: $keymap_yaml" >&2
+    echo "Set KEYMAP_YAML to point to your keymap_drawer YAML file" >&2
+    return 1
+  fi
+
+  local helper="${DOTFILES_DIR:-$HOME/dotfiles}/management/common/lib/keymap-preview.py"
+  if [[ ! -f "$helper" ]]; then
+    echo "Keymap preview helper not found: $helper" >&2
+    return 1
+  fi
+
+  yq '.layers | keys | .[]' "$keymap_yaml" | tr -d '"' \
+    | fzf --no-sort --reverse \
+        --header="Browse keyboard layers" \
+        --preview="python3 $helper $keymap_yaml {}" \
+        --preview-window=right:70%:wrap \
+        --bind="enter:abort"
+}
