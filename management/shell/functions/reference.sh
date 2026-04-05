@@ -210,9 +210,9 @@ function commithelp() {
   echo ""
 }
 
-#@keymap
-#--> Browse ZMK keyboard layers with fzf preview
-function keymap() {
+#@layers
+#--> Browse ZMK keyboard layers — pick from fzf, render SVG
+function layers() {
   local keymap_yaml="${KEYMAP_YAML:-$HOME/code/zmk/corne42/corne_keymap.yaml}"
   if [[ ! -f "$keymap_yaml" ]]; then
     echo "Keymap not found: $keymap_yaml" >&2
@@ -220,16 +220,11 @@ function keymap() {
     return 1
   fi
 
-  local helper="${DOTFILES_DIR:-$HOME/dotfiles}/management/common/lib/keymap-preview.py"
-  if [[ ! -f "$helper" ]]; then
-    echo "Keymap preview helper not found: $helper" >&2
-    return 1
-  fi
+  local layer
+  layer=$(yq '.layers | keys | .[]' "$keymap_yaml" | tr -d '"' \
+    | gum choose --header="Select a keyboard layer")
+  [[ -z "$layer" ]] && return 0
 
-  yq '.layers | keys | .[]' "$keymap_yaml" | tr -d '"' \
-    | fzf --no-sort --reverse \
-        --header="Browse keyboard layers" \
-        --preview="python3 $helper $keymap_yaml {}" \
-        --preview-window=right:70%:wrap \
-        --bind="enter:abort"
+  keymap draw "$keymap_yaml" -s "$layer" 2>/dev/null \
+    | chafa --size "${COLUMNS:-120}x${LINES:-40}" -
 }
