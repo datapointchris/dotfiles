@@ -4,17 +4,17 @@
 # Platform-agnostic configuration sourced by platform-specific configs
 # ------------------------------------------------------------------ #
 
-echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
-
 # ------------------------------------------------------------------ #
 # BOOTSTRAP: Load environment and utilities
 # ------------------------------------------------------------------ #
+[[ -f "$HOME/.env" ]] && source "$HOME/.env"
+ZSHRC_DEBUG="${ZSHRC_DEBUG:-0}"
+
 CHECK_MARK="☑️"
 ERROR_MARK="❌"
-# Load .env first (sets ZSHRC_DEBUG if present)
-[[ -f "$HOME/.env" ]] && source "$HOME/.env" && ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}" || ZSHRC_DEBUG="${ZSHRC_DEBUG:-1}"
+[[ "$ZSHRC_DEBUG" == "1" ]] && echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
 
-log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  $CHECK_MARK %-6s : %s\n" "$1" "$2" }
+log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  $CHECK_MARK %-6s : %s\n" "$1" "$2"; return 0 }
 log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
 # Log environment
@@ -409,7 +409,11 @@ else
   log_error "Load" "$syntax_highlighting_file"
 fi
 
-echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
+if [[ "$ZSHRC_DEBUG" == "1" ]]; then
+  echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
+else
+  echo " ✓ zsh loaded"
+fi
 
 # ------------------------------------------------------------------ #
 # TOOL REMINDER - Cycle through forgotten tools (Shell Startup)
