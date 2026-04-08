@@ -9,7 +9,7 @@ source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 # Parse arguments
-FORCE_INSTALL=false
+FORCE_INSTALL="${FORCE_INSTALL:-false}"
 UPDATE_MODE=false
 if [[ "${1:-}" == "--force" ]]; then
   FORCE_INSTALL=true
