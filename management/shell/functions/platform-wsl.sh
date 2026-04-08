@@ -74,6 +74,18 @@ update-tldr() {
   fi
 }
 
+mount-appserver() {
+    sudo mkdir -p /mnt/devdsapp001
+    mountpoint -q /mnt/devdsapp001 && sudo umount -f /mnt/devdsapp001
+    sudo mount -t cifs //devdsapp001/E\$ /mnt/devdsapp001 -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
+}
+
+mount-dfsapp() {
+    sudo mkdir -p /mnt/dfsapp
+    mountpoint -q /mnt/dfsapp && sudo umount -f /mnt/dfsapp
+    sudo mount -t cifs //prodfs011/Data_Science /mnt/dfsapp -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
+}
+
 aws-login() {
   local environment="${1:-dev}"
   local profile

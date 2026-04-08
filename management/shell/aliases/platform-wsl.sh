@@ -22,8 +22,6 @@ alias copytoclip="tr -d '\n' | win32yank.exe -i"
 
 # ---------- Network ---------- #
 
-# Mount network shares via CIFS (requires VPN)
-alias mount-appserver='sudo mkdir -p /mnt/devdsapp001 && sudo mount -t cifs //devdsapp001/E\$ /mnt/devdsapp001 -o username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)'
-alias mount-dfsapp='sudo mkdir -p /mnt/dfsapp && sudo mount -t cifs //prodfs011/Data_Science /mnt/dfsapp -o username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)'
+# Mount network shares moved to functions/platform-wsl.sh (need unmount logic for stale mounts)
 
 # ---------- Miscellaneous ---------- #
