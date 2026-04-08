@@ -76,8 +76,10 @@ while IFS='|' read -r binary_name tool; do
   if [[ -f "$cached_binary" ]] && [[ "$UPDATE_MODE" != "true" ]]; then
     log_info "Using cached binary: $cached_binary"
     mkdir -p "$GOBIN"
-    cp "$cached_binary" "$binary_path"
-    chmod +x "$binary_path"
+    # Copy to temp then rename to avoid "text file busy" if binary is currently running
+    cp "$cached_binary" "${binary_path}.new"
+    chmod +x "${binary_path}.new"
+    mv "${binary_path}.new" "$binary_path"
   else
     go install "$tool@latest" 2>&1 | grep -v "go: downloading" || true
   fi
