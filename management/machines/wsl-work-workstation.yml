@@ -42,6 +42,7 @@ github_releases:
   - hadolint
   - tree-sitter
   - just
+  - win32yank
 
 custom_installers:
   # - bats

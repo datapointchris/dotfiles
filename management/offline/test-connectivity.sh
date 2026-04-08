@@ -94,6 +94,7 @@ test_url "shellcheck" "https://github.com/koalaman/shellcheck/releases/latest"
 test_url "tflint" "https://github.com/terraform-linters/tflint/releases/latest"
 test_url "trivy" "https://github.com/aquasecurity/trivy/releases/latest"
 test_url "zk" "https://github.com/zk-org/zk/releases/latest"
+test_url "win32yank" "https://github.com/equalsraf/win32yank/releases/latest"
 echo ""
 
 # --- GitHub API ---
