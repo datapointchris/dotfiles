@@ -993,7 +993,7 @@ go_tools:
   - name: sess
     package: github.com/datapointchris/sess/cmd/sess
     github_repo: datapointchris/sess
-    binary_pattern: "sess_{os}_{go_arch}.tar.gz"
+    binary_pattern: "sess_{version_num}_{os}_{go_arch}.tar.gz"
     description: Terminal session manager
 
   - name: sesh
@@ -1005,13 +1005,13 @@ go_tools:
   - name: todoui
     package: github.com/datapointchris/todoui/cmd/todoui
     github_repo: datapointchris/todoui
-    binary_pattern: "todoui_{os}_{go_arch}.tar.gz"
+    binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
     description: Personal project organization with local-first SQLite
 
   - name: forge
     package: github.com/datapointchris/forge
     github_repo: datapointchris/forge
-    binary_pattern: "forge_{os}_{go_arch}.tar.gz"
+    binary_pattern: "forge_{version_num}_{os}_{go_arch}.tar.gz"
     description: Run commands and dies across all git repos
 
   - name: sops
@@ -1023,7 +1023,7 @@ go_tools:
   - name: toolbox
     package: github.com/datapointchris/toolbox
     github_repo: datapointchris/toolbox
-    binary_pattern: "toolbox_{os}_{go_arch}.tar.gz"
+    binary_pattern: "toolbox_{version_num}_{os}_{go_arch}.tar.gz"
     description: CLI for discovering installed development tools
 
 # ================================================================
