@@ -7,17 +7,18 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 })
 
 vim.api.nvim_create_autocmd('LspAttach', {
-  desc = 'LSP: Disable hover capability from Ruff in favor of Pyright',
-  group = vim.api.nvim_create_augroup('lsp_attach_disable_ruff_hover', { clear = true }),
+  desc = 'LSP: Buffer-local overrides on attach',
+  group = vim.api.nvim_create_augroup('lsp_attach_overrides', { clear = true }),
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
     if client == nil then
       return
     end
     if client.name == 'ruff' then
-      -- Disable hover in favor of Pyright
       client.server_capabilities.hoverProvider = false
     end
+    -- Explicit hover mapping overrides keywordprg (e.g. Python sets pydoc)
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, { buffer = args.buf })
   end,
 })
 

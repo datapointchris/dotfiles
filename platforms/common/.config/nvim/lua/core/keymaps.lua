@@ -134,24 +134,15 @@ vim.keymap.set('n', '<leader>ntp', '<cmd>neovimtipspdf<cr>', { desc = 'open neov
 --   Ctrl-g     - Tmux popup with Claude CLI
 
 --------------------------------------------------------------------------------
---- LSP - Native Neovim 0.11+ LSP Keymaps -------------------------------------
+--- LSP ------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode handles LSP natively, these mappings are replaced by VSCode keybindings
 if not vim.g.vscode then
-  -- NOTE: Neovim 0.11+ provides these DEFAULT keymaps automatically:
-  -- gra → vim.lsp.buf.code_action() (Normal & Visual)
-  -- gri → vim.lsp.buf.implementation()
-  -- grn → vim.lsp.buf.rename()
-  -- grr → vim.lsp.buf.references()
-  -- grt → vim.lsp.buf.type_definition()
-  -- gO  → vim.lsp.buf.document_symbol()
-  -- K   → vim.lsp.buf.hover() (unless keywordprg is set)
-  -- <C-S> (insert) → vim.lsp.buf.signature_help()
-  -- omnifunc → <C-X><C-O> for completion
-  -- tagfunc → <C-]>, <C-W>], <C-W>} for go-to-definition
-  -- formatexpr → gq for formatting
+  -- Default LSP keymaps (gra, gri, grn, grr, grt, gO, K, C-S, etc.) are
+  -- provided by Neovim. K is explicitly mapped in autocmds.lua LspAttach to
+  -- override keywordprg for filetypes like Python that set it to pydoc.
 
-  -- Additional Telescope-based LSP commands using non-conflicting keys
+  -- Telescope-based LSP commands using non-conflicting keys
   local tb = require('telescope.builtin')
   vim.keymap.set('n', '<leader>ld', tb.lsp_definitions, { silent = true, desc = 'Telescope: [L]SP [D]efinitions' })
   vim.keymap.set('n', '<leader>lr', tb.lsp_references, { silent = true, desc = 'Telescope: [L]SP [R]eferences' })
