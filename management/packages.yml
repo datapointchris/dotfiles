@@ -561,6 +561,12 @@ system_packages:
     description: GStreamer FFmpeg plugin (broad format support)
     tags: [multimedia, webview]
 
+  # Local AI
+  - name: ollama
+    pacman: ollama-rocm
+    brew: ollama
+    description: Local LLM server for embeddings — pacman uses ROCm variant for AMD RX 6600 GPU acceleration
+
 # ================================================================
 # RUNTIME VERSIONS
 # ================================================================
