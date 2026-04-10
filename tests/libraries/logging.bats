@@ -10,7 +10,7 @@ setup() {
   load "$HOME/.local/lib/bats-assert/load.bash"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
-  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 }
 
 # log_info tests
@@ -84,7 +84,7 @@ setup() {
 # log_fatal tests
 
 @test "log_fatal exits with code 1" {
-  run bash -c "source $DOTFILES_DIR/platforms/common/.local/shell/logging.sh; log_fatal 'fatal error'"
+  run bash -c "source $DOTFILES_DIR/configs/common/.local/shell/logging.sh; log_fatal 'fatal error'"
   assert_failure
   assert_equal "$status" 1
   assert_output --partial "[FATAL]"
@@ -92,7 +92,7 @@ setup() {
 }
 
 @test "log_fatal outputs file and line when provided" {
-  run bash -c "source $DOTFILES_DIR/platforms/common/.local/shell/logging.sh; log_fatal 'fatal error' 'script.sh' '99'"
+  run bash -c "source $DOTFILES_DIR/configs/common/.local/shell/logging.sh; log_fatal 'fatal error' 'script.sh' '99'"
   assert_failure
   assert_equal "$status" 1
   assert_output --partial "[FATAL]"
@@ -103,7 +103,7 @@ setup() {
 # die function tests
 
 @test "die exits with code 1" {
-  run bash -c "source $DOTFILES_DIR/platforms/common/.local/shell/logging.sh; die 'something went wrong'"
+  run bash -c "source $DOTFILES_DIR/configs/common/.local/shell/logging.sh; die 'something went wrong'"
   assert_failure
   assert_equal "$status" 1
   assert_output --partial "[ERROR]"

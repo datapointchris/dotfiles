@@ -139,7 +139,7 @@ teardown_file() {
 
 @test "check_if_update_needed: detects when tool not installed" {
   source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
-  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
   run check_if_update_needed "nonexistent-binary-12345" "v1.0.0"
@@ -148,7 +148,7 @@ teardown_file() {
 
 @test "check_if_update_needed: handles binary that exists" {
   source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
-  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 
   # Test with bash (always available) - should indicate update available

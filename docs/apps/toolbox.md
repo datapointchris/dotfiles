@@ -87,7 +87,7 @@ Requires gum (`brew install gum`).
 
 ## Registry Structure
 
-Tools are defined in `~/dotfiles/platforms/common/.config/toolbox/registry.yml`:
+Tools are defined in `~/dotfiles/configs/common/.config/toolbox/registry.yml`:
 
 ```yaml
 tool-name:
@@ -183,7 +183,7 @@ Push changes to GitHub, then `go install` to update the installed version.
 
 ## Adding Tools
 
-Edit `~/dotfiles/platforms/common/.config/toolbox/registry.yml` to add tools:
+Edit `~/dotfiles/configs/common/.config/toolbox/registry.yml` to add tools:
 
 ```yaml
 new-tool:
@@ -218,7 +218,7 @@ Commit changes to dotfiles repo. Toolbox reads the registry on each invocation.
 
 **Command not found**: Verify installation with `which toolbox`. If missing, run `go install github.com/datapointchris/toolbox@latest`.
 
-**Registry not found**: Check `ls ~/dotfiles/platforms/common/.config/toolbox/registry.yml`. The registry must exist for toolbox to work.
+**Registry not found**: Check `ls ~/dotfiles/configs/common/.config/toolbox/registry.yml`. The registry must exist for toolbox to work.
 
 **Search returns nothing**: Verify tools are installed with `which <tool>`. Toolbox shows installed status but doesn't auto-detect.
 

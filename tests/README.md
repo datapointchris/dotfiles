@@ -89,7 +89,7 @@ Create or update tests in `tests/libraries/`:
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$DOTFILES_DIR/platforms/common/.local/shell/my-library.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/my-library.sh"
 # Add tests...
 ```
 

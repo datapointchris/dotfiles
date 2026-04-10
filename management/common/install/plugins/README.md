@@ -25,8 +25,8 @@ Add a new installer to this directory when:
 Scripts in this directory typically source:
 
 ```bash
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"  # For error reporting
 ```
 
@@ -41,8 +41,8 @@ Install a plugin manager itself (Lazy.nvim, TPM):
 set -euo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 PLUGIN_MANAGER_DIR="$HOME/.local/share/plugin-manager"
@@ -76,8 +76,8 @@ Trigger plugin installation via plugin manager:
 set -euo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 print_banner "Installing Plugins"
 
@@ -105,8 +105,8 @@ Install shell plugins from packages.yml:
 set -euo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.local/share/zsh/plugins}"

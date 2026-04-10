@@ -402,8 +402,8 @@ DOTFILES_DEBUG=true bash script.sh
 
 **Library:**
 
-- `platforms/common/.local/shell/error-handling.sh` (319 lines)
-- `platforms/common/.local/shell/logging.sh` (116 lines)
+- `configs/common/.local/shell/error-handling.sh` (319 lines)
+- `configs/common/.local/shell/logging.sh` (116 lines)
 
 **All scripts using error-handling:**
 

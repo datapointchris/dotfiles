@@ -57,7 +57,7 @@ $ refcheck tests/apps/fixtures/refcheck-variables/
 
 Broken Source (3):
   wrong-levels.sh:8
-    Missing: $DOTFILES_DIR/platforms/... → /wrong/path/platforms/...
+    Missing: $DOTFILES_DIR/configs/... → /wrong/path/configs/...
   broken-script-dir.sh:4
     Missing: $SCRIPT_DIR/nonexistent.sh → /.../nonexistent.sh
   broken-dotfiles-dir.sh:5

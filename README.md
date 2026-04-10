@@ -28,7 +28,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 ```text
 dotfiles/
-├── platforms/        # Dotfiles deployed to $HOME
+├── configs/          # Config files deployed to $HOME (common base + platform overlays)
 │   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
 │   ├── macos/        # macOS-specific overrides
 │   ├── wsl/          # WSL Ubuntu overrides
@@ -51,7 +51,7 @@ dotfiles/
 - `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
-The core philosophy: write configs once in `platforms/common/`, override only what's platform-specific.
+The core philosophy: write configs once in `configs/common/`, override only what's platform-specific.
 
 ## Dotfiles Philosophy
 
@@ -100,7 +100,7 @@ Scripts in this repo use colors, unicode characters, and emojis to make output s
 
 If a specific project's logs will be ingested by a log aggregation system (Splunk, ELK, etc.), dial back the colors and special characters. But that's rare for personal projects.
 
-See `platforms/common/.local/shell/formatting.sh` and `platforms/common/.local/shell/colors.sh` for reusable libraries that are sourced system-wide and can be copied to other projects.
+See `configs/common/.local/shell/formatting.sh` and `configs/common/.local/shell/colors.sh` for reusable libraries that are sourced system-wide and can be copied to other projects.
 
 ## Package Management
 
@@ -129,7 +129,7 @@ toolbox search git        # Find git-related tools
 toolbox random            # Discover something you forgot existed
 ```
 
-Tools documented in the registry with usage examples and tips. See `platforms/common/.config/toolbox/registry.yml` for the full list.
+Tools documented in the registry with usage examples and tips. See `configs/common/.config/toolbox/registry.yml` for the full list.
 
 ## Common Tasks
 

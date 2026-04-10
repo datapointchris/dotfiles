@@ -18,7 +18,7 @@ DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-topleve
 SHELL_SRC="$DOTFILES_DIR/management/shell"
 DEFAULT_OUTPUT_DIR="$HOME/.local/shell"
 
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
 usage() {
   echo "Usage: $(basename "$0") <manifest-file> [output-dir]"

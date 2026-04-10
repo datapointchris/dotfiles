@@ -25,8 +25,8 @@ Add a new installer to this directory when:
 All scripts in this directory source:
 
 ```bash
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 ```
@@ -38,8 +38,8 @@ source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 set -uo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 

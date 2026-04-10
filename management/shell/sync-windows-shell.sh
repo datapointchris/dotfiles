@@ -52,7 +52,7 @@ main() {
   fi
 
   local win_shell_dir="$win_home/.local/shell"
-  local repo_shell_dir="$DOTFILES_DIR/platforms/common/.local/shell"
+  local repo_shell_dir="$DOTFILES_DIR/configs/common/.local/shell"
   local wsl_shell_dir="$HOME/.local/shell"
 
   echo "Syncing shell files to Windows Git Bash..."

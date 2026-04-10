@@ -20,8 +20,8 @@ setup_file() {
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
 
   # Source libraries
-  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-  source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
   source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
   # Source REAL run_installer wrapper and export it

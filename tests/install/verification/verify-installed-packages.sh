@@ -12,8 +12,8 @@ set -euo pipefail
 # Source logging library (runs after installation, can use $HOME/dotfiles)
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 # Counters
 TOTAL_CHECKS=0

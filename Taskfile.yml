@@ -20,7 +20,7 @@ tasks:
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
+        source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Creating symlinks" "cyan"
 
         # Detect platform (check env var first, then system detection)
@@ -50,7 +50,7 @@ tasks:
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
+        source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Relinking symlinks" "cyan"
 
         # Detect platform (check env var first, then system detection)
@@ -90,7 +90,7 @@ tasks:
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
+        source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Removing symlinks" "cyan"
 
         # Detect platform (check env var first, then system detection)
@@ -124,7 +124,7 @@ tasks:
     cmds:
       - |
         export TERM=${TERM:-xterm}
-        source "{{.DOTFILES_DIR}}/platforms/common/.local/shell/formatting.sh"
+        source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Building shell files" "cyan"
 
         # Determine machine manifest

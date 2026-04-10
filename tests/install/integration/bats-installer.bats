@@ -36,8 +36,8 @@ setup_file() {
   mkdir -p "$TEST_INSTALL_PREFIX/lib"
 
   # Source required libraries for the installer
-  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-  source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
   source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 }
 

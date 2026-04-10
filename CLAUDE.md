@@ -119,7 +119,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Directory Structure**:
 
-- `platforms/` - Platform configurations (what gets deployed)
+- `configs/` - Platform configurations (what gets deployed)
   - `common/` - Shared configurations (Neovim, tmux, zsh, git)
   - `macos/` - macOS-specific dotfiles and GUI app configs
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
@@ -192,7 +192,7 @@ docs/
 
 - **Symlinks Manager** — `task symlinks:{link,check,show}`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `platforms/common/.config/toolbox/registry.yml`
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `configs/common/.config/toolbox/registry.yml`
 - **Task** — `task --list-all` for available tasks; complex logic lives in `management/` scripts
 
 ## Learnings Directory

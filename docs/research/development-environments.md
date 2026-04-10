@@ -893,9 +893,9 @@ cd ~/dotfiles
 ./install.sh  # or task symlinks:link, etc.
 
 # Result: Symlinks to all configurations
-~/.config/nvim → ~/dotfiles/platforms/common/.config/nvim
-~/.zshrc → ~/dotfiles/platforms/common/.config/zsh/.zshrc
-~/.tmux.conf → ~/dotfiles/platforms/common/.config/tmux/tmux.conf
+~/.config/nvim → ~/dotfiles/configs/common/.config/nvim
+~/.zshrc → ~/dotfiles/configs/common/.config/zsh/.zshrc
+~/.tmux.conf → ~/dotfiles/configs/common/.config/tmux/tmux.conf
 ```
 
 **Capabilities**:
@@ -999,7 +999,7 @@ echo "Dotfiles setup complete!"
 dotfiles/
 ├── install.sh              # Full installation (native systems)
 ├── install-minimal.sh      # Container installation (no system packages)
-├── platforms/common/
+├── configs/common/
 │   ├── .config/
 │   │   ├── zsh/            # Shell config (works in containers)
 │   │   ├── git/            # Git config (works in containers)
@@ -1021,12 +1021,12 @@ set -euo pipefail
 DOTFILES_DIR="$HOME/dotfiles"
 
 # Symlink shell configurations
-ln -sf "$DOTFILES_DIR/platforms/common/.config/zsh/.zshrc" "$HOME/.zshrc"
-ln -sf "$DOTFILES_DIR/platforms/common/.config/git/.gitconfig" "$HOME/.gitconfig"
+ln -sf "$DOTFILES_DIR/configs/common/.config/zsh/.zshrc" "$HOME/.zshrc"
+ln -sf "$DOTFILES_DIR/configs/common/.config/git/.gitconfig" "$HOME/.gitconfig"
 
 # Symlink personal scripts
 mkdir -p "$HOME/.local/bin"
-ln -sf "$DOTFILES_DIR/platforms/common/.local/bin/"* "$HOME/.local/bin/"
+ln -sf "$DOTFILES_DIR/configs/common/.local/bin/"* "$HOME/.local/bin/"
 
 # Source shell libraries in .zshrc (or .bashrc)
 # They'll be available in container shells
@@ -1117,7 +1117,7 @@ Host Machine
 
 VM
 └── /mnt/host-dotfiles → symlink to shared folder
-    ~/.zshrc → /mnt/host-dotfiles/platforms/common/.config/zsh/.zshrc
+    ~/.zshrc → /mnt/host-dotfiles/configs/common/.config/zsh/.zshrc
 ```
 
 **Option 3: Configuration management**
@@ -1256,7 +1256,7 @@ cd ~/dotfiles
 
 ```text
 dotfiles/
-├── platforms/
+├── configs/
 │   ├── common/          # Shared configs (Neovim, tmux, zsh)
 │   ├── macos/           # macOS-specific (Alfred, BetterTouchTool)
 │   └── arch/            # Arch-specific configs
@@ -1629,36 +1629,36 @@ mkdir -p "$HOME/.local/shell"
 
 # Symlink shell configuration
 echo "Symlinking shell config..."
-ln -sf "$DOTFILES_DIR/platforms/common/.config/zsh/.zshrc" "$HOME/.zshrc"
-ln -sf "$DOTFILES_DIR/platforms/common/.config/bash/.bashrc" "$HOME/.bashrc"
+ln -sf "$DOTFILES_DIR/configs/common/.config/zsh/.zshrc" "$HOME/.zshrc"
+ln -sf "$DOTFILES_DIR/configs/common/.config/bash/.bashrc" "$HOME/.bashrc"
 
 # Symlink Git configuration
 echo "Symlinking Git config..."
-ln -sf "$DOTFILES_DIR/platforms/common/.config/git/.gitconfig" "$HOME/.gitconfig"
-ln -sf "$DOTFILES_DIR/platforms/common/.config/git/.gitignore_global" "$HOME/.gitignore_global"
+ln -sf "$DOTFILES_DIR/configs/common/.config/git/.gitconfig" "$HOME/.gitconfig"
+ln -sf "$DOTFILES_DIR/configs/common/.config/git/.gitignore_global" "$HOME/.gitignore_global"
 
 # Symlink personal scripts
 echo "Symlinking personal scripts..."
-for script in "$DOTFILES_DIR/platforms/common/.local/bin/"*; do
+for script in "$DOTFILES_DIR/configs/common/.local/bin/"*; do
   ln -sf "$script" "$HOME/.local/bin/$(basename "$script")"
 done
 
 # Symlink shell libraries
 echo "Symlinking shell libraries..."
-for lib in "$DOTFILES_DIR/platforms/common/.local/shell/"*; do
+for lib in "$DOTFILES_DIR/configs/common/.local/shell/"*; do
   ln -sf "$lib" "$HOME/.local/shell/$(basename "$lib")"
 done
 
 # Symlink Neovim config if Neovim is installed
 if command -v nvim &> /dev/null; then
   echo "Symlinking Neovim config..."
-  ln -sf "$DOTFILES_DIR/platforms/common/.config/nvim" "$HOME/.config/nvim"
+  ln -sf "$DOTFILES_DIR/configs/common/.config/nvim" "$HOME/.config/nvim"
 fi
 
 # Symlink tmux config if tmux is installed
 if command -v tmux &> /dev/null; then
   echo "Symlinking tmux config..."
-  ln -sf "$DOTFILES_DIR/platforms/common/.config/tmux/tmux.conf" "$HOME/.tmux.conf"
+  ln -sf "$DOTFILES_DIR/configs/common/.config/tmux/tmux.conf" "$HOME/.tmux.conf"
 fi
 
 # Container-specific setup

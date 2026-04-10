@@ -81,4 +81,4 @@ export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 - `management/packages.yml` - Go tools list
 - `management/symlinks/symlinks/manager.py:link_apps()` - Shell app symlinking
 - `management/common/install/custom-installers/theme.sh` - Personal tool installer
-- `platforms/common/.config/zsh/.zshrc` - PATH configuration
+- `configs/common/.config/zsh/.zshrc` - PATH configuration

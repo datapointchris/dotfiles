@@ -243,8 +243,8 @@ print_success "File selected"
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 print_header "Install Package" "blue"
 
@@ -342,8 +342,8 @@ Each has color variants and `_success/_error/_warning/_info` variants with emoji
 
 ```bash
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 ```
 
 ### From Scripts After Installation (use SHELL_DIR or HOME)
@@ -372,5 +372,5 @@ Functions are available directly in interactive shells - no need to source.
 
 ## See Also
 
-- `platforms/common/.local/shell/colors.sh` - Color definitions
+- `configs/common/.local/shell/colors.sh` - Color definitions
 - [Symlinks Manager](../reference/tools/symlinks.md) - Symlinks manager documentation

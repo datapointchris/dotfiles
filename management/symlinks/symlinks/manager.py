@@ -261,8 +261,8 @@ class SymlinkManager:
             platform: Platform name (e.g., "macos", "wsl", "arch")
         """
         # Updated paths for new structure
-        platform_dir = self.dotfiles_dir / "platforms" / platform
-        common_dir = self.dotfiles_dir / "platforms" / "common"
+        platform_dir = self.dotfiles_dir / "configs" / platform
+        common_dir = self.dotfiles_dir / "configs" / "common"
 
         if not platform_dir.exists():
             print(f"[red]✗[/] Platform directory does not exist: {platform}")

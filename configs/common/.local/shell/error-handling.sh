@@ -32,7 +32,7 @@ if [[ -f "$SHELL_DIR/logging.sh" ]]; then
   source "$SHELL_DIR/logging.sh"
 else
   # Fallback to repo location
-  source "$HOME/dotfiles/platforms/common/.local/shell/logging.sh"
+  source "$HOME/dotfiles/configs/common/.local/shell/logging.sh"
 fi
 
 # ================================================================

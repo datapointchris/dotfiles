@@ -160,7 +160,7 @@ sess list | awk '{print $2}'
 
 ```text
 dotfiles/
-├── platforms/        # Dotfiles deployed to $HOME
+├── configs/          # Config files deployed to $HOME (common base + platform overlays)
 │   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
 │   ├── macos/        # macOS-specific overrides
 │   ├── wsl/          # WSL Ubuntu overrides

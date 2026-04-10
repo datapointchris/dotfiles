@@ -28,8 +28,8 @@ if [[ "${1:-}" == "--print-url" ]]; then
   exit 0
 fi
 
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"

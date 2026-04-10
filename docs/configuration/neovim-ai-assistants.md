@@ -22,6 +22,6 @@ Each tool operates in its optimal environment - no integration complexity, no ty
 
 ## Configuration
 
-- `platforms/common/.config/nvim/lua/plugins/codecompanion.lua` - Copilot chat
-- `platforms/common/.config/nvim/lua/plugins/copilot.lua` - Copilot backend
-- `platforms/common/.config/nvim/lua/core/keymaps.lua` - AI keybindings
+- `configs/common/.config/nvim/lua/plugins/codecompanion.lua` - Copilot chat
+- `configs/common/.config/nvim/lua/plugins/copilot.lua` - Copilot backend
+- `configs/common/.config/nvim/lua/core/keymaps.lua` - AI keybindings

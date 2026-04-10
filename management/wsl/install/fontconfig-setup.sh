@@ -7,7 +7,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
 export TERM=${TERM:-xterm}
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
 FONTCONFIG_DIR="$HOME/.config/fontconfig"
 FONTCONFIG_FILE="$FONTCONFIG_DIR/fonts.conf"

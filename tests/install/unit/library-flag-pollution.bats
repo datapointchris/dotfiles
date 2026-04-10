@@ -53,17 +53,17 @@ TESTEOF
 # ================================================================
 
 @test "library_flags: logging.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+  run test_library_flags "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   assert_success
 }
 
 @test "library_flags: formatting.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+  run test_library_flags "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
   assert_success
 }
 
 @test "library_flags: error-handling.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/platforms/common/.local/shell/error-handling.sh"
+  run test_library_flags "$DOTFILES_DIR/configs/common/.local/shell/error-handling.sh"
   assert_success
 }
 

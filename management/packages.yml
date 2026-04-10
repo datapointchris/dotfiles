@@ -789,7 +789,7 @@ cargo_packages:
 # ================================================================
 # Installed via TPM (Tmux Plugin Manager)
 # Universal across all platforms
-# Plugins are declared in platforms/common/.config/tmux/tmux.conf
+# Plugins are declared in configs/common/.config/tmux/tmux.conf
 # TPM auto-installs plugins on tmux start (see tmux.conf lines 325-327)
 #
 # Current plugins:

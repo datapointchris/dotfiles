@@ -21,14 +21,14 @@ def link(
     target: str = typer.Argument(..., help="Target to link (common, macos, wsl, arch, etc.)"),
 ):
     """Create symlinks for common or platform layer, including apps."""
-    source_dir = settings.dotfiles_dir / "platforms" / target
+    source_dir = settings.dotfiles_dir / "configs" / target
 
     if not source_dir.exists():
-        console.print(f"[red]✗[/] Platform directory does not exist: {target}")
-        platforms_dir = settings.dotfiles_dir / "platforms"
-        console.print(f"[dim]Available platforms in {platforms_dir}:[/]")
-        if platforms_dir.exists():
-            for item in platforms_dir.iterdir():
+        console.print(f"[red]✗[/] Config directory does not exist: {target}")
+        configs_dir = settings.dotfiles_dir / "configs"
+        console.print(f"[dim]Available configs in {configs_dir}:[/]")
+        if configs_dir.exists():
+            for item in configs_dir.iterdir():
                 if item.is_dir() and not item.name.startswith("."):
                     console.print(f"  - {item.name}")
         raise typer.Exit(1)
@@ -47,10 +47,10 @@ def unlink(
     target: str = typer.Argument(..., help="Target to unlink (common, macos, wsl, arch, etc.)"),
 ):
     """Remove symlinks for common or platform layer."""
-    source_dir = settings.dotfiles_dir / "platforms" / target
+    source_dir = settings.dotfiles_dir / "configs" / target
 
     if not source_dir.exists():
-        console.print(f"[red]✗[/] Platform directory does not exist: {target}")
+        console.print(f"[red]✗[/] Config directory does not exist: {target}")
         raise typer.Exit(1)
 
     manager = SymlinkManager()
@@ -105,14 +105,14 @@ def relink(
     platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, arch, etc.)"),
 ):
     """Complete refresh: unlink platform, unlink common, check, link common, link platform."""
-    platform_dir = settings.dotfiles_dir / "platforms" / platform
+    platform_dir = settings.dotfiles_dir / "configs" / platform
 
     if not platform_dir.exists():
-        console.print(f"[red]✗[/] Platform directory does not exist: {platform}")
-        platforms_dir = settings.dotfiles_dir / "platforms"
-        console.print(f"[dim]Available platforms in {platforms_dir}:[/]")
-        if platforms_dir.exists():
-            for item in platforms_dir.iterdir():
+        console.print(f"[red]✗[/] Config directory does not exist: {platform}")
+        configs_dir = settings.dotfiles_dir / "configs"
+        console.print(f"[dim]Available configs in {configs_dir}:[/]")
+        if configs_dir.exists():
+            for item in configs_dir.iterdir():
                 if item.is_dir() and not item.name.startswith("."):
                     console.print(f"  - {item.name}")
         raise typer.Exit(1)

@@ -10,7 +10,7 @@ How the dotfiles repository is organized and why.
 
 ```text
 dotfiles/
-├── platforms/           # Platform configurations (what gets deployed)
+├── configs/             # Config files deployed to $HOME (common base + platform overlays)
 │   ├── common/          # Shared configs (all platforms)
 │   ├── macos/           # macOS-specific overrides
 │   ├── wsl/             # WSL Ubuntu overrides
@@ -44,7 +44,7 @@ Two-layer approach: common base + platform overlay.
 
 **How it works**:
 
-1. Links `platforms/common/` configs to `$HOME`
+1. Links `configs/common/` configs to `$HOME`
 2. Overlays platform-specific files (auto-detected: macos, wsl, arch, or ubuntu)
 3. Links apps from `apps/{platform}/` to `~/.local/bin/`
 4. Excludes generated shell files (aliases.sh, functions.sh) -- these are built by `build-shell.sh`
@@ -60,8 +60,8 @@ task symlinks:relink    # Complete refresh (remove and recreate)
 
 **Example results**:
 
-- `platforms/common/.config/zsh/.zshrc` → `~/.config/zsh/.zshrc`
-- `platforms/macos/.gitconfig` → `~/.gitconfig` (overrides common)
+- `configs/common/.config/zsh/.zshrc` → `~/.config/zsh/.zshrc`
+- `configs/macos/.gitconfig` → `~/.gitconfig` (overrides common)
 - `apps/common/menu` → `~/.local/bin/menu`
 
 ## Package Management
@@ -108,7 +108,7 @@ The manifest `function_groups` and `alias_groups` fields control which modules a
 
 ## Platform Detection
 
-**Shell** (`platforms/common/.config/zsh/.zshrc`):
+**Shell** (`configs/common/.config/zsh/.zshrc`):
 
 ```sh
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -130,7 +130,7 @@ Configurations use inheritance: shared base with platform overrides.
 
 **Example: Git Config**
 
-macOS (`platforms/macos/.gitconfig`):
+macOS (`configs/macos/.gitconfig`):
 
 ```gitconfig
 [core]
@@ -139,7 +139,7 @@ macOS (`platforms/macos/.gitconfig`):
     helper = osxkeychain
 ```
 
-WSL (`platforms/wsl/.gitconfig`):
+WSL (`configs/wsl/.gitconfig`):
 
 ```gitconfig
 [core]
@@ -150,7 +150,7 @@ WSL (`platforms/wsl/.gitconfig`):
 
 **Example: Neovim**
 
-Common (`platforms/common/.config/nvim/`): Base LSP, core plugins, keybindings
+Common (`configs/common/.config/nvim/`): Base LSP, core plugins, keybindings
 
 Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs
 
@@ -168,7 +168,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Minimal Duplication**: Only platform differences exist in platform directories.
 
-**Clear Separation**: platforms/common/ for shared, platform dirs for quirks only, apps/ for tools, management/ for repo tooling.
+**Clear Separation**: configs/common/ for shared, platform dirs for quirks only, apps/ for tools, management/ for repo tooling.
 
 **Easy Maintenance**: Update shared config once, all platforms benefit.
 
@@ -178,7 +178,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Symlink Complexity**: Two-layer system adds complexity, but `symlinks` tool handles it with clear errors.
 
-**Platform Knowledge**: Need to know whether to edit `platforms/common/` or platform dir. Experience makes this clear.
+**Platform Knowledge**: Need to know whether to edit `configs/common/` or platform dir. Experience makes this clear.
 
 See [Platform Differences](../reference/platforms/differences.md) for platform-specific quirks.
 

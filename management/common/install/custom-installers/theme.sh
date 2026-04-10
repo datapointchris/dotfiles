@@ -13,7 +13,7 @@ fi
 
 # Support --update by delegating to theme's own upgrade command
 if [[ "${1:-}" == "--update" ]]; then
-  source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   if command -v theme >/dev/null 2>&1; then
     if upgrade_output=$(theme upgrade 2>&1); then
       if [[ "$upgrade_output" == *"already up to date"* ]]; then
@@ -30,7 +30,7 @@ if [[ "${1:-}" == "--update" ]]; then
   exit 0
 fi
 
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 
 INSTALL_DIR="$HOME/.local/share/theme"

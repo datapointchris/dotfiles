@@ -34,10 +34,10 @@ def test_simple_variable():
 def test_braced_variable():
     """Test ${VAR} substitution"""
     symbol_table = {'DOTFILES_DIR': '/home/user/dotfiles'}
-    path = "${DOTFILES_DIR}/platforms/common/.local/shell/logging.sh"
+    path = "${DOTFILES_DIR}/configs/common/.local/shell/logging.sh"
 
     result = resolve_path(path, symbol_table)
-    expected = "/home/user/dotfiles/platforms/common/.local/shell/logging.sh"
+    expected = "/home/user/dotfiles/configs/common/.local/shell/logging.sh"
 
     assert result == expected, f"Expected {expected}, got {result}"
     print(f"✅ Braced variable: {path} → {result}")

@@ -38,7 +38,7 @@ if [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
 else
   # Fallback to repo location
-  source "$HOME/dotfiles/platforms/common/.local/shell/colors.sh"
+  source "$HOME/dotfiles/configs/common/.local/shell/colors.sh"
 fi
 
 # Define Unicode icons (from formatting.sh but redeclared for independence)

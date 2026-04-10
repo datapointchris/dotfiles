@@ -23,7 +23,7 @@ elif [[ -f "$HOME/.local/shell/colors.sh" ]]; then
   source "$HOME/.local/shell/colors.sh"
 else
   # Fallback to repo location
-  source "$HOME/dotfiles/platforms/common/.local/shell/colors.sh"
+  source "$HOME/dotfiles/configs/common/.local/shell/colors.sh"
 fi
 
 # ================================================================

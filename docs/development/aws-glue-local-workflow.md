@@ -37,7 +37,7 @@ Development Flow:
 pip install jupyter-client pynvim
 
 # Ensure molten-nvim is installed (see Neovim config)
-# Plugin file: platforms/common/.config/nvim/lua/plugins/molten.lua
+# Plugin file: configs/common/.config/nvim/lua/plugins/molten.lua
 ```
 
 ### Project Structure

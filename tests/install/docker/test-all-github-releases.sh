@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
-source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
 print_header() {
   echo ""
