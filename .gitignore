@@ -106,8 +106,8 @@ test-wsl-network-restricted.log
 .wsl-rootfs-cache/
 
 # Generated shell files (built by shell/build-shell.sh)
-platforms/common/.local/shell/aliases.sh
-platforms/common/.local/shell/functions.sh
+configs/common/.local/shell/aliases.sh
+configs/common/.local/shell/functions.sh
 
 # Offline install bundles
 *.tar.gz
