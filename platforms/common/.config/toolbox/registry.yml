@@ -157,6 +157,31 @@ tools:
   # NAVIGATION
   # =================================================================
 
+  broot:
+    category: navigation
+    description: "Interactive directory tree navigator with fuzzy search and cd-on-exit"
+    installed_via: dotfiles
+    usage: "br [path]"
+    why_use: "Navigate large trees with fuzzy filtering without losing your place; opens files in $EDITOR; can cd to selected directory on exit"
+    examples:
+      - cmd: "br"
+        desc: "Open tree in current directory"
+      - cmd: "br ~/projects"
+        desc: "Open tree at specific path"
+      - cmd: "br -h"
+        desc: "Show hidden files"
+      - cmd: "br -s"
+        desc: "Show file sizes"
+      - cmd: "br -d"
+        desc: "Show last-modified dates"
+      - cmd: "Type to filter, Enter to descend, Alt+Enter to cd and exit"
+        desc: "Core navigation pattern"
+      - cmd: ":e"
+        desc: "Open selected file in $EDITOR"
+    see_also: [zoxide, yazi, fd, eza]
+    tags: [cli, tui, navigation, file-management]
+    docs_url: "https://dystroy.org/broot/"
+
   zoxide:
     category: navigation
     description: "Smarter cd command that learns your habits"

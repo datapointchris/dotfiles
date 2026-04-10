@@ -12,6 +12,7 @@ Tool support, version managers, and platform-specific quirks.
 | **zoxide**     | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
 | **git-delta**  | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
 | **oxker**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **broot**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
 | **neovim**     | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **lazygit**    | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **yazi**       | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
@@ -187,7 +188,7 @@ When testing installations, verify these platform-specific items:
 
 === "Ubuntu/WSL"
 
-    - [ ] Cargo-binstall tools installed (bat, fd, eza, zoxide, delta)
+    - [ ] Cargo-binstall tools installed (bat, fd, eza, zoxide, delta, broot)
     - [ ] GitHub release tools installed (neovim, lazygit, yazi, fzf)
     - [ ] ~/.local/bin in PATH
     - [ ] WSL-specific config applied (/etc/wsl.conf)

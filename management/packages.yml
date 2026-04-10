@@ -770,6 +770,13 @@ cargo_packages:
     binary_pattern: "oxker_{platform}_{arch}.tar.gz"
     tags: [cli, tui, containers]
 
+  - name: broot
+    command: broot
+    description: Interactive directory tree navigator with fuzzy search
+    github_repo: Canop/broot
+    binary_pattern: "broot_{target}.zip"
+    tags: [cli, tui, files, navigation]
+
 
 # ================================================================
 # TMUX PLUGINS

@@ -65,6 +65,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 - `eza` - ls alternative
 - `git-delta` - Git diff viewer
 - `oxker` - Docker container TUI
+- `broot` - interactive directory tree navigator
 
 **Advantages**:
 
@@ -284,12 +285,13 @@ github_binaries:
   # ... more tools
 
 cargo_packages:
-  - bat
-  - fd-find
-  - eza
-  - zoxide
-  - git-delta
-  - oxker
+  - name: bat
+    command: bat
+    description: cat with syntax highlighting
+  - name: fd-find
+    command: fd
+    description: modern find replacement
+  # ... more tools (bat, eza, zoxide, git-delta, oxker, broot)
 
 uv_tools:
   - name: ruff
