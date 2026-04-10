@@ -72,9 +72,14 @@ install_from_cache() {
     return 1
   fi
 
-  # Find the binary (search recursively for exact match)
+  # Find the binary — prefer target-matching subdirectory for multi-platform
+  # archives (e.g. broot ships all platforms in one zip with directories named
+  # by target triple). Fall back to any match if no target-specific path found.
   local binary_path
-  binary_path=$(find "$extract_dir" -type f -name "$binary_name" 2>/dev/null | head -1)
+  binary_path=$(find "$extract_dir" -type f -name "$binary_name" -path "*$(get_target_string)*" 2>/dev/null | head -1)
+  if [[ -z "$binary_path" ]]; then
+    binary_path=$(find "$extract_dir" -type f -name "$binary_name" 2>/dev/null | head -1)
+  fi
 
   if [[ -z "$binary_path" ]]; then
     rm -rf "$extract_dir"
