@@ -129,9 +129,9 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
   - `arch/` - Arch Linux-specific tools (rofi menus, screen control)
+- `shell/` - Shell build source (aliases/, functions/, build-shell.sh)
 - `install/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
-  - `shell/` - Modular shell aliases and functions (build source)
   - `symlinks/` - Symlinks manager (Python)
   - `orchestration/` - Platform detection and installer runner
   - `offline/` - Offline installation support (connectivity testing, bundles)

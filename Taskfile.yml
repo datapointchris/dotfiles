@@ -3,6 +3,22 @@ version: '3'
 vars:
   DOTFILES_DIR:
     sh: pwd
+  PLATFORM:
+    sh: |
+      if [ -n "${PLATFORM:-}" ]; then
+        echo "$PLATFORM"
+      elif [ "$(uname)" = "Darwin" ]; then
+        echo "macos"
+      elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+        echo "wsl"
+      elif [ -f /etc/arch-release ]; then
+        echo "arch"
+      elif [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
+        echo "ubuntu"
+      else
+        echo "Unknown platform" >&2
+        exit 1
+      fi
 
 tasks:
   default:
@@ -22,27 +38,8 @@ tasks:
         export TERM=${TERM:-xterm}
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Creating symlinks" "cyan"
-
-        # Detect platform (check env var first, then system detection)
-        if [ -n "${PLATFORM:-}" ]; then
-          # PLATFORM already set (e.g., from ~/.env in Docker tests)
-          :
-        elif [ "$(uname)" = "Darwin" ]; then
-          PLATFORM="macos"
-        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-          PLATFORM="wsl"
-        elif [ -f /etc/arch-release ]; then
-          PLATFORM="arch"
-        elif [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
-          PLATFORM="ubuntu"
-        else
-          echo "Unknown platform"
-          exit 1
-        fi
-
-        # Link common first (base layer), then platform (overlay)
         cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link common
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link "{{.PLATFORM}}"
 
   symlinks:relink:
     desc: Remove all symlinks and recreate them (idempotent)
@@ -52,25 +49,7 @@ tasks:
         export TERM=${TERM:-xterm}
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Relinking symlinks" "cyan"
-
-        # Detect platform (check env var first, then system detection)
-        if [ -n "${PLATFORM:-}" ]; then
-          # PLATFORM already set (e.g., from ~/.env in Docker tests)
-          :
-        elif [ "$(uname)" = "Darwin" ]; then
-          PLATFORM="macos"
-        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-          PLATFORM="wsl"
-        elif [ -f /etc/arch-release ]; then
-          PLATFORM="arch"
-        elif [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
-          PLATFORM="ubuntu"
-        else
-          echo "Unknown platform"
-          exit 1
-        fi
-
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks relink "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks relink "{{.PLATFORM}}"
 
   symlinks:check:
     desc: Verify all symlinks are correct
@@ -92,26 +71,8 @@ tasks:
         export TERM=${TERM:-xterm}
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Removing symlinks" "cyan"
-
-        # Detect platform (check env var first, then system detection)
-        if [ -n "${PLATFORM:-}" ]; then
-          # PLATFORM already set (e.g., from ~/.env in Docker tests)
-          :
-        elif [ "$(uname)" = "Darwin" ]; then
-          PLATFORM="macos"
-        elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-          PLATFORM="wsl"
-        elif [ -f /etc/arch-release ]; then
-          PLATFORM="arch"
-        elif [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
-          PLATFORM="ubuntu"
-        else
-          echo "Unknown platform"
-          exit 1
-        fi
-
         # Unlink platform first (overlay), then common (base layer)
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink "{{.PLATFORM}}"
         cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink common
 
   # ================================================================
@@ -127,32 +88,13 @@ tasks:
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Building shell files" "cyan"
 
-        # Determine machine manifest
         MACHINE="${MACHINE:-}"
         if [ -z "$MACHINE" ]; then
-          # Auto-detect from PLATFORM
-          if [ -n "${PLATFORM:-}" ]; then
-            :
-          elif [ "$(uname)" = "Darwin" ]; then
-            PLATFORM="macos"
-          elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
-            PLATFORM="wsl"
-          elif [ -f /etc/arch-release ]; then
-            PLATFORM="arch"
-          elif [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
-            PLATFORM="ubuntu"
-          else
-            echo "Cannot detect platform. Set MACHINE or PLATFORM."
-            exit 1
-          fi
-
-          # Map platform to default machine manifest
-          case "$PLATFORM" in
-            macos) MACHINE="macos-personal-workstation" ;;
-            arch)  MACHINE="arch-personal-workstation" ;;
-            wsl)   MACHINE="wsl-work-workstation" ;;
+          case "{{.PLATFORM}}" in
+            macos)  MACHINE="macos-personal-workstation" ;;
+            arch)   MACHINE="arch-personal-workstation" ;;
+            wsl)    MACHINE="wsl-work-workstation" ;;
             ubuntu) MACHINE="ubuntu-lxc-server" ;;
-            *) echo "Unknown platform: $PLATFORM"; exit 1 ;;
           esac
         fi
 
