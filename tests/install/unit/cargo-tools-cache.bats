@@ -9,9 +9,13 @@
 #   1. Wrong binary_pattern in packages.yml (target vs version_num)
 #   2. Non-deterministic arch selection from multi-platform zip
 #
-# Each test runs cargo-tools.sh in a subprocess via HELPER_SCRIPT,
-# which mocks HOME and OFFLINE_CACHE_DIR to isolated temp dirs.
-# CARGO_TOOLS_SOURCE_ONLY=true prevents the install loop from running.
+# Two helper scripts are created per test:
+#   HELPER_SCRIPT      — uses the real get_target_string (host platform)
+#   LINUX_HELPER_SCRIPT — forces get_target_string to return
+#                         x86_64-unknown-linux, simulating WSL on any host.
+#
+# The Linux simulation tests are the critical ones: they run on every
+# platform and prove the WSL code path works before deployment.
 # ================================================================
 
 load "$HOME/.local/lib/bats-support/load.bash"
@@ -35,8 +39,7 @@ setup() {
   mkdir -p "$CACHE_DIR" "$FAKE_HOME/.cargo/bin"
   touch "$FAKE_HOME/.cargo/env"  # empty mock — cargo-tools.sh sources this
 
-  # Create a subprocess helper that sources cargo-tools.sh with a mocked
-  # environment and then calls whatever function is passed as $@.
+  # Standard helper: uses the real get_target_string (host platform)
   HELPER_SCRIPT="$TEST_DIR/run-fn.sh"
   cat > "$HELPER_SCRIPT" << SCRIPT
 #!/usr/bin/env bash
@@ -51,9 +54,28 @@ source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/management/common/install/language-tools/cargo-tools.sh"
 "\$@"
 SCRIPT
-  chmod +x "$HELPER_SCRIPT"
 
-  export TEST_DIR CACHE_DIR FAKE_HOME HELPER_SCRIPT
+  # Linux simulation helper: forces get_target_string → x86_64-unknown-linux
+  # This makes the WSL code path testable on any host platform (macOS included).
+  LINUX_HELPER_SCRIPT="$TEST_DIR/run-fn-linux.sh"
+  cat > "$LINUX_HELPER_SCRIPT" << SCRIPT
+#!/usr/bin/env bash
+set -euo pipefail
+export HOME="$FAKE_HOME"
+export OFFLINE_CACHE_DIR="$CACHE_DIR"
+export DOTFILES_DIR="$DOTFILES_DIR"
+export CARGO_TOOLS_SOURCE_ONLY=true
+source "$DOTFILES_DIR/platforms/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/platforms/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/management/common/install/language-tools/cargo-tools.sh"
+# Override after sourcing to simulate WSL x86_64 Linux on any host
+get_target_string() { echo "x86_64-unknown-linux"; }
+"\$@"
+SCRIPT
+
+  chmod +x "$HELPER_SCRIPT" "$LINUX_HELPER_SCRIPT"
+  export TEST_DIR CACHE_DIR FAKE_HOME HELPER_SCRIPT LINUX_HELPER_SCRIPT
 }
 
 teardown() {
@@ -64,9 +86,8 @@ teardown() {
 # Fixture helpers
 # ================================================================
 
-# Create a broot-style fat zip: one zip containing binaries for all platforms
-# in subdirectories named by Rust target triple. Each fake binary is a plain
-# text marker so tests can assert which one was installed.
+# Create a generic fat zip with all platforms including x86_64-apple-darwin.
+# Good for testing the host-native path but does NOT match the real broot zip.
 create_fat_zip() {
   local binary_name="$1" zip_path="$2"
   local build_dir="$TEST_DIR/build-fat-$$"
@@ -88,6 +109,36 @@ create_fat_zip() {
   rm -rf "$build_dir"
 }
 
+# Create a zip that mirrors the real broot release structure.
+# Critical differences from create_fat_zip:
+#   - No x86_64-apple-darwin (broot only ships aarch64 for macOS, not x86_64)
+#   - Includes x86_64-unknown-linux-gnu-glibc2.28 (present in real zip)
+#   - Includes armv7 variants (present in real zip)
+# This is the fixture that proves the WSL code path works.
+create_realistic_broot_zip() {
+  local zip_path="$1"
+  local build_dir="$TEST_DIR/build-broot-$$"
+  mkdir -p "$build_dir"
+
+  local platforms=(
+    aarch64-apple-darwin
+    aarch64-unknown-linux-gnu
+    aarch64-unknown-linux-musl
+    armv7-unknown-linux-gnueabihf
+    armv7-unknown-linux-musleabi
+    x86_64-unknown-linux-gnu
+    x86_64-unknown-linux-gnu-glibc2.28
+    x86_64-unknown-linux-musl
+  )
+  for platform in "${platforms[@]}"; do
+    mkdir -p "$build_dir/$platform"
+    printf 'BINARY-FOR-%s' "$platform" > "$build_dir/$platform/broot"
+  done
+
+  (cd "$build_dir" && zip -qr "$zip_path" .)
+  rm -rf "$build_dir"
+}
+
 # Create a standard single-platform tarball (e.g. bat, eza).
 # Binary sits at the root of the archive.
 create_single_tarball() {
@@ -100,10 +151,49 @@ create_single_tarball() {
 }
 
 # ================================================================
-# Tests: fat zip (broot-style, multiple platforms in one zip)
+# Tests: Linux/WSL target simulation — CRITICAL
+# These run on any host platform and prove WSL behaviour is correct.
+# The LINUX_HELPER_SCRIPT forces get_target_string=x86_64-unknown-linux.
 # ================================================================
 
-@test "cache/fat-zip: installs binary matching current target" {
+@test "linux-target/realistic-zip: selects x86_64-linux binary not aarch64" {
+  create_realistic_broot_zip "$CACHE_DIR/broot_1.56.2.zip"
+
+  run bash "$LINUX_HELPER_SCRIPT" install_from_cache broot broot
+  assert_success
+
+  run cat "$FAKE_HOME/.cargo/bin/broot"
+  assert_output --partial "x86_64-unknown-linux"
+  refute_output --partial "aarch64"
+  refute_output --partial "darwin"
+  refute_output --partial "armv7"
+}
+
+@test "linux-target/realistic-zip: installed binary is executable" {
+  create_realistic_broot_zip "$CACHE_DIR/broot_1.56.2.zip"
+
+  run bash "$LINUX_HELPER_SCRIPT" install_from_cache broot broot
+  assert_success
+
+  [[ -x "$FAKE_HOME/.cargo/bin/broot" ]]
+}
+
+@test "linux-target/generic-zip: selects x86_64-linux binary not darwin" {
+  create_fat_zip "broot" "$CACHE_DIR/broot_1.56.2.zip"
+
+  run bash "$LINUX_HELPER_SCRIPT" install_from_cache broot broot
+  assert_success
+
+  run cat "$FAKE_HOME/.cargo/bin/broot"
+  assert_output --partial "x86_64-unknown-linux"
+  refute_output --partial "darwin"
+}
+
+# ================================================================
+# Tests: host-native fat zip (verifies host platform path works)
+# ================================================================
+
+@test "cache/fat-zip: installs binary matching current host target" {
   create_fat_zip "broot" "$CACHE_DIR/broot_1.56.2.zip"
 
   run bash "$HELPER_SCRIPT" install_from_cache broot broot
@@ -114,7 +204,7 @@ create_single_tarball() {
   assert_output --partial "$expected_target"
 }
 
-@test "cache/fat-zip: does not install aarch64 binary on x86_64" {
+@test "cache/fat-zip: does not install aarch64 binary on x86_64 host" {
   [[ "$(uname -m)" == "x86_64" ]] || skip "x86_64-only assertion"
   create_fat_zip "broot" "$CACHE_DIR/broot_1.56.2.zip"
 
@@ -125,7 +215,7 @@ create_single_tarball() {
   refute_output --partial "aarch64"
 }
 
-@test "cache/fat-zip: does not install darwin binary on linux" {
+@test "cache/fat-zip: does not install darwin binary on linux host" {
   [[ "$(uname -s)" == "Linux" ]] || skip "Linux-only assertion"
   create_fat_zip "broot" "$CACHE_DIR/broot_1.56.2.zip"
 
@@ -146,7 +236,6 @@ create_single_tarball() {
 }
 
 @test "cache/fat-zip: falls back to any binary when no target matches" {
-  # Zip contains only one platform dir that won't match any target string
   local build_dir="$TEST_DIR/build-exotic-$$"
   mkdir -p "$build_dir/exotic-unknown-TempleOS"
   printf 'FALLBACK-BINARY' > "$build_dir/exotic-unknown-TempleOS/mytool"
@@ -195,7 +284,6 @@ create_single_tarball() {
 }
 
 @test "cache/miss: returns 1 when cache dir exists but has no matching file" {
-  # Cache dir is empty
   run bash "$HELPER_SCRIPT" install_from_cache broot broot
   assert_failure
 }
