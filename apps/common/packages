@@ -117,13 +117,13 @@ def get_packages_file() -> Path:
     # Walk up directory tree looking for git root
     for parent in script_path.parents:
         if (parent / ".git").exists():
-            packages_file = parent / "management" / "packages.yml"
+            packages_file = parent / "install" / "packages.yml"
             if packages_file.exists():
                 return packages_file
             break
 
     # Fallback to home dotfiles
-    home_packages = Path.home() / "dotfiles" / "management" / "packages.yml"
+    home_packages = Path.home() / "dotfiles" / "install" / "packages.yml"
     if home_packages.exists():
         return home_packages
 

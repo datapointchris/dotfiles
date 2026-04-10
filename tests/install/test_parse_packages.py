@@ -11,10 +11,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "management"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "install"))
 import parse_packages
 
-PACKAGES_YML = Path(__file__).parent.parent.parent / "management" / "packages.yml"
+PACKAGES_YML = Path(__file__).parent.parent.parent / "install" / "packages.yml"
 
 
 @pytest.fixture
