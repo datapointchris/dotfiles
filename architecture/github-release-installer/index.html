@@ -4714,37 +4714,49 @@
 <p><strong>Usage:</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>install_from_zip<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOWNLOAD_URL</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;path/in/zip&quot;</span>
 </span></code></pre></div>
+<h4 id="6-get_os">6. <code>get_os()</code><a class="headerlink" href="#6-get_os" title="Permanent link">&para;</a></h4>
+<p>Returns <code>"darwin"</code> or <code>"linux"</code> based on <code>$OSTYPE</code>.</p>
+<p><strong>Usage:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">OS</span><span class="o">=</span><span class="k">$(</span>get_os<span class="k">)</span>
+</span></code></pre></div>
+<p><strong>Why it exists:</strong> Every standard installer needs OS detection before constructing the download URL. Eliminates the repeated inline one-liner.</p>
+<h4 id="7-get_arch">7. <code>get_arch()</code><a class="headerlink" href="#7-get_arch" title="Permanent link">&para;</a></h4>
+<p>Returns normalized architecture string: <code>x86_64</code> or <code>arm64</code> (converts <code>aarch64</code> → <code>arm64</code>).</p>
+<p><strong>Usage:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">ARCH</span><span class="o">=</span><span class="k">$(</span>get_arch<span class="k">)</span>
+</span></code></pre></div>
+<p><strong>Why it exists:</strong> The <code>uname -m | sed 's/aarch64/arm64/...'</code> chain was copy-pasted across all 12 standard installers. A <code>case</code> statement in the library is clearer and has one canonical definition.</p>
 <h2 id="script-patterns">Script Patterns<a class="headerlink" href="#script-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="simple-tarball-installer">Simple Tarball Installer<a class="headerlink" href="#simple-tarball-installer" title="Permanent link">&para;</a></h3>
 <p>Most common pattern (majority of tools):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env bash</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>enable_error_traps
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/github-release-installer.sh&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nv">BINARY_NAME</span><span class="o">=</span><span class="s2">&quot;lazygit&quot;</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nv">REPO</span><span class="o">=</span><span class="s2">&quot;jesseduffield/lazygit&quot;</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="nv">TARGET_BIN</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin/</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>print_banner<span class="w"> </span><span class="s2">&quot;Installing LazyGit&quot;</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="k">if</span><span class="w"> </span>should_skip_install<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TARGET_BIN</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span>exit_success
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="k">fi</span>
-</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="nv">VERSION</span><span class="o">=</span><span class="k">$(</span>get_latest_version<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$REPO</span><span class="s2">&quot;</span><span class="k">)</span>
-</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>log_info<span class="w"> </span><span class="s2">&quot;Latest version: </span><span class="nv">$VERSION</span><span class="s2">&quot;</span>
-</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
-</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="nv">PLATFORM_ARCH</span><span class="o">=</span><span class="k">$(</span>get_platform_arch<span class="w"> </span><span class="s2">&quot;Darwin_x86_64&quot;</span><span class="w"> </span><span class="s2">&quot;Darwin_arm64&quot;</span><span class="w"> </span><span class="s2">&quot;Linux_x86_64&quot;</span><span class="k">)</span>
-</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="nv">DOWNLOAD_URL</span><span class="o">=</span><span class="s2">&quot;https://github.com/</span><span class="si">${</span><span class="nv">REPO</span><span class="si">}</span><span class="s2">/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/lazygit_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_</span><span class="si">${</span><span class="nv">PLATFORM_ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span>
-</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>
-</span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>install_from_tarball<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOWNLOAD_URL</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;lazygit&quot;</span>
-</span><span id="__span-6-26"><a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>
-</span><span id="__span-6-27"><a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>print_banner_success<span class="w"> </span><span class="s2">&quot;LazyGit installation complete&quot;</span>
-</span><span id="__span-6-28"><a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>exit_success
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="ch">#!/usr/bin/env bash</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>enable_error_traps
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/github-release-installer.sh&quot;</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nv">BINARY_NAME</span><span class="o">=</span><span class="s2">&quot;lazygit&quot;</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="nv">REPO</span><span class="o">=</span><span class="s2">&quot;jesseduffield/lazygit&quot;</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="nv">TARGET_BIN</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin/</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>print_banner<span class="w"> </span><span class="s2">&quot;Installing LazyGit&quot;</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="k">if</span><span class="w"> </span>should_skip_install<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TARGET_BIN</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">  </span>exit_success
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="k">fi</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="nv">VERSION</span><span class="o">=</span><span class="k">$(</span>get_latest_version<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$REPO</span><span class="s2">&quot;</span><span class="k">)</span>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>log_info<span class="w"> </span><span class="s2">&quot;Latest version: </span><span class="nv">$VERSION</span><span class="s2">&quot;</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="nv">PLATFORM_ARCH</span><span class="o">=</span><span class="k">$(</span>get_platform_arch<span class="w"> </span><span class="s2">&quot;Darwin_x86_64&quot;</span><span class="w"> </span><span class="s2">&quot;Darwin_arm64&quot;</span><span class="w"> </span><span class="s2">&quot;Linux_x86_64&quot;</span><span class="k">)</span>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="nv">DOWNLOAD_URL</span><span class="o">=</span><span class="s2">&quot;https://github.com/</span><span class="si">${</span><span class="nv">REPO</span><span class="si">}</span><span class="s2">/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/lazygit_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_</span><span class="si">${</span><span class="nv">PLATFORM_ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>install_from_tarball<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BINARY_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOWNLOAD_URL</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;lazygit&quot;</span>
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>print_banner_success<span class="w"> </span><span class="s2">&quot;LazyGit installation complete&quot;</span>
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>exit_success
 </span></code></pre></div>
 <p><strong>Lines:</strong> ~40-50 (was 90-120)</p>
 <h3 id="custom-installer-special-cases">Custom Installer (Special Cases)<a class="headerlink" href="#custom-installer-special-cases" title="Permanent link">&para;</a></h3>
@@ -4757,23 +4769,23 @@
 </ul>
 <p>These scripts use library helpers where applicable but handle their unique requirements inline.</p>
 <h2 id="code-savings">Code Savings<a class="headerlink" href="#code-savings" title="Permanent link">&para;</a></h2>
-<p>The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 5 focused functions.</p>
+<p>The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.</p>
 <p>See <code>management/common/install/github-releases/</code> for all current scripts.</p>
 <h2 id="custom-installers-not-using-library">Custom Installers (Not Using Library)<a class="headerlink" href="#custom-installers-not-using-library" title="Permanent link">&para;</a></h2>
 <p>Some tools have unique requirements that don't fit the GitHub release pattern. These live in <code>management/common/install/custom-installers/</code> instead. All still use error-handling.sh for structured logging consistency.</p>
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
 <h3 id="why-not-more-abstraction">Why Not More Abstraction?<a class="headerlink" href="#why-not-more-abstraction" title="Permanent link">&para;</a></h3>
 <p><strong>Rejected:</strong> Complex packages.yml with all download patterns</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># TOO COMPLEX - requires YAML parser, hard to trace</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">github_binaries</span><span class="p">:</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lazygit</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">archive_format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tar.gz</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">url_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{repo}/releases/download/{version}/lazygit_{version}_{platform}_{arch}.tar.gz&quot;</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">binary_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;lazygit&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># TOO COMPLEX - requires YAML parser, hard to trace</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">github_binaries</span><span class="p">:</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lazygit</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">archive_format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tar.gz</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">url_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{repo}/releases/download/{version}/lazygit_{version}_{platform}_{arch}.tar.gz&quot;</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">binary_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;lazygit&quot;</span>
 </span></code></pre></div>
 <p><strong>Chosen:</strong> Inline configuration in each script</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># SIMPLE - easy to trace, self-contained</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">DOWNLOAD_URL</span><span class="o">=</span><span class="s2">&quot;https://github.com/</span><span class="si">${</span><span class="nv">REPO</span><span class="si">}</span><span class="s2">/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/lazygit_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_</span><span class="si">${</span><span class="nv">PLATFORM_ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># SIMPLE - easy to trace, self-contained</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">DOWNLOAD_URL</span><span class="o">=</span><span class="s2">&quot;https://github.com/</span><span class="si">${</span><span class="nv">REPO</span><span class="si">}</span><span class="s2">/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/lazygit_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_</span><span class="si">${</span><span class="nv">PLATFORM_ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span>
 </span></code></pre></div>
 <p><strong>Rationale:</strong> URL patterns vary enough that YAML templates become complex. Inline keeps it explicit and traceable.</p>
 <h3 id="why-not-version-checking">Why Not Version Checking?<a class="headerlink" href="#why-not-version-checking" title="Permanent link">&para;</a></h3>
@@ -4799,23 +4811,23 @@
 <h2 id="integration-with-error-handling">Integration with Error Handling<a class="headerlink" href="#integration-with-error-handling" title="Permanent link">&para;</a></h2>
 <p>The library assumes <code>error-handling.sh</code> has been sourced by the calling script. This provides:</p>
 <h3 id="automatic-cleanup">Automatic Cleanup<a class="headerlink" href="#automatic-cleanup" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># In install_from_tarball()</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>register_cleanup<span class="w"> </span><span class="s2">&quot;rm -f &#39;</span><span class="nv">$temp_tarball</span><span class="s2">&#39; 2&gt;/dev/null || true&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># In install_from_tarball()</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>register_cleanup<span class="w"> </span><span class="s2">&quot;rm -f &#39;</span><span class="nv">$temp_tarball</span><span class="s2">&#39; 2&gt;/dev/null || true&quot;</span>
 </span></code></pre></div>
 <p>Cleanup happens automatically on exit (success or failure).</p>
 <h3 id="error-context">Error Context<a class="headerlink" href="#error-context" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>log_fatal<span class="w"> </span><span class="s2">&quot;Failed to download from </span><span class="nv">$download_url</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LINENO</span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>log_fatal<span class="w"> </span><span class="s2">&quot;Failed to download from </span><span class="nv">$download_url</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LINENO</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <p>Errors include file:line references for debugging.</p>
 <h3 id="structured-logging">Structured Logging<a class="headerlink" href="#structured-logging" title="Permanent link">&para;</a></h3>
 <p>Auto-detects terminal vs pipe:</p>
 <p><strong>Terminal mode:</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>  ● Downloading lazygit...
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  ✓ lazygit installed successfully
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>  ● Downloading lazygit...
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  ✓ lazygit installed successfully
 </span></code></pre></div>
 <p><strong>Structured mode (pipe/log):</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>[INFO] Downloading lazygit...
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>[INFO] ✓ lazygit installed successfully
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>[INFO] Downloading lazygit...
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>[INFO] ✓ lazygit installed successfully
 </span></code></pre></div>
 <h2 id="adding-a-new-tool">Adding a New Tool<a class="headerlink" href="#adding-a-new-tool" title="Permanent link">&para;</a></h2>
 <h3 id="steps">Steps<a class="headerlink" href="#steps" title="Permanent link">&para;</a></h3>
@@ -4834,17 +4846,17 @@
 <p><strong>6x faster</strong></p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>Run individual installer:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
 </span></code></pre></div>
 <p>Force reinstall:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nv">FORCE_INSTALL</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">FORCE_INSTALL</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
 </span></code></pre></div>
 <p>Test structured logging:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Visual mode (terminal)</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Structured mode (pipe)</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cat
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Visual mode (terminal)</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Structured mode (pipe)</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cat
 </span></code></pre></div>
 <h2 id="future-improvements">Future Improvements<a class="headerlink" href="#future-improvements" title="Permanent link">&para;</a></h2>
 <h3 id="possible-low-priority">Possible (Low Priority)<a class="headerlink" href="#possible-low-priority" title="Permanent link">&para;</a></h3>

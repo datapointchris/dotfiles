@@ -4662,10 +4662,11 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>task<span class="w"> </span>test:watch
 </span></code></pre></div>
 <h3 id="test-location">Test Location<a class="headerlink" href="#test-location" title="Permanent link">&para;</a></h3>
-<p>Tests are organized in <code>tests/install/integration/</code>:</p>
+<p>Tests are organized under <code>tests/</code>:</p>
 <ul>
-<li><code>bats-installer.bats</code> - Tests for the BATS installer itself (meta-testing!)</li>
-<li><code>language-managers-pattern-improved.bats</code> - Tests for language manager installer pattern</li>
+<li><code>tests/libraries/</code> — Tests for shared shell libraries</li>
+<li><code>tests/install/unit/</code> — Unit tests for installer functions (no Docker, no network). Run with <code>task test:unit</code>.</li>
+<li><code>tests/install/integration/</code> — Integration tests including Docker-based platform tests</li>
 </ul>
 <h3 id="writing-tests">Writing Tests<a class="headerlink" href="#writing-tests" title="Permanent link">&para;</a></h3>
 <p>Tests use BATS with assertion helpers:</p>
