@@ -144,6 +144,7 @@ export GNUPGHOME="$XDG_DATA_HOME/gnupg"
 export NODE_REPL_HISTORY="$XDG_DATA_HOME/node_repl_history"
 export PYTHONUSERBASE="$XDG_DATA_HOME/python"
 export REDISCLI_HISTFILE="$XDG_DATA_HOME/redis/rediscli_history"
+export OLLAMA_MODELS="$XDG_DATA_HOME/ollama/models"
 
 log "Setup" "XDG Directories"
 
