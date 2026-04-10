@@ -134,11 +134,6 @@ theme upgrade               # Update to latest version
     default=chris
     ```
 
-    **Binary Name Symlinks**:
-
-    - `batcat` → `bat` (created during install)
-    - `fdfind` → `fd` (created during install)
-
     **Font Installation**:
 
     Fonts are installed to Windows automatically (no manual steps):

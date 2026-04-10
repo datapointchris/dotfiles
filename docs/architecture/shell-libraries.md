@@ -8,7 +8,6 @@ The dotfiles repository provides three system-wide shell libraries for consisten
 
 **Location**: `~/.local/shell/logging.sh`
 **Purpose**: Core logging for scripts that output status messages and may be logged/monitored
-**Size**: ~116 lines
 
 **When to use**:
 
@@ -45,7 +44,6 @@ log_error "Failed to backup config.yml" "$BASH_SOURCE" "$LINENO"
 
 **Location**: `~/.local/shell/formatting.sh`
 **Purpose**: Visual formatting for interactive scripts with headers, sections, banners
-**Size**: ~760 lines
 
 **When to use**:
 
@@ -94,7 +92,6 @@ print_header_success "Backup Complete"
 
 **Location**: `~/.local/shell/error-handling.sh`
 **Purpose**: Error trapping, cleanup handlers, and verification utilities
-**Size**: ~280 lines
 **Dependencies**: Sources logging.sh
 
 **When to use**:

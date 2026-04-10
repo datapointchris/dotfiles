@@ -57,19 +57,6 @@ Quick lookup for common commands and workflows.
 # - Splits multi-concern changes intelligently
 ```
 
-## Analysis Tools
-
-```bash
-# View metrics summary
-analyze-claude-metrics
-
-# Detailed breakdown
-analyze-claude-metrics --details
-
-# Specific date
-analyze-claude-metrics --date 2025-12-03
-```
-
 ## Common Workflows
 
 ### Run and Fix Script
@@ -83,19 +70,6 @@ analyze-claude-metrics --date 2025-12-03
 # 3. Claude re-runs automatically
 
 # 4. Iterate until all errors resolved
-```
-
-### Track Quality Manually
-
-After significant sessions, add to `.claude/metrics/quality-log.md`:
-
-```markdown
-## YYYY-MM-DD HH:MM - Session ID
-
-**Command**: `/logsift "command"`
-**Quantitative**: Errors X → 0, Iterations Y, Tokens Z
-**Qualitative**: Correctness ✅, Efficiency ✅, Methodology ✅
-**Notes**: What worked well, what could improve
 ```
 
 ### Check Token Usage
@@ -162,9 +136,6 @@ export CLAUDE_CODE_ENABLE_TELEMETRY=1
 # Logsift not found
 cargo install logsift
 
-# Metrics not tracking
-chmod +x .claude/hooks/track-command-metrics
-
 # Need more details from logsift
 cat ~/.local/share/logsift/logs/latest-session.json
 ```
@@ -176,16 +147,10 @@ cat ~/.local/share/logsift/logs/latest-session.json
 ├── commands/
 │   ├── logsift.md           # /logsift definition
 │   └── logsift-auto.md      # /logsift-auto definition
-├── metrics/
-│   ├── README.md            # Metrics framework
-│   ├── quality-log.md       # Manual quality tracking
-│   └── command-metrics-*.jsonl  # Automated logs
 ├── hooks/
-│   └── track-command-metrics    # Metrics collection
+│   ├── check-feature-docs   # Pre-commit doc check
+│   └── stop-build-check     # Build verification on stop
 └── settings.json            # Hook configuration
-
-apps/common/
-└── analyze-claude-metrics  # Analysis tool
 ```
 
 ## Related Docs

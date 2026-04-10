@@ -59,13 +59,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 
 **Tools**:
 
-- `bat` - cat alternative (no "batcat" naming issue!)
-- `fd` - find alternative (no "fdfind" naming issue!)
-- `zoxide` - cd alternative
-- `eza` - ls alternative
-- `git-delta` - Git diff viewer
-- `oxker` - Docker container TUI
-- `broot` - interactive directory tree navigator
+See `management/packages.yml` (`cargo_packages` section) for the current list.
 
 **Advantages**:
 

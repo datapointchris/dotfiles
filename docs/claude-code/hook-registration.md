@@ -1,6 +1,6 @@
 # Hook Registration and Reload Behavior
 
-**CRITICAL NOTE (v2.0.59):** From practical experience with Claude Code version 2.0.59, **simply restarting the session is NOT sufficient** to register hook changes. The session must be restarted **AND** the `/hooks` command must be called with a dummy hook creation to trigger re-registration. No better workaround is currently known.
+**CRITICAL NOTE:** Simply restarting the session is NOT always sufficient to register hook changes. The session may need to be restarted **AND** the `/hooks` command called with a dummy hook creation to trigger re-registration. No better workaround is currently known.
 
 ## Overview
 
@@ -51,7 +51,7 @@ Since there is **no programmatic API** to reload hooks, you have limited options
 
 ### 1. Use `/hooks` Command (Most Practical)
 
-**Current best workaround for v2.0.59:**
+**Current best workaround:**
 
 1. Make your programmatic changes to `settings.json` or hook files
 2. Restart the Claude Code session (lose context but ensure clean state)
@@ -72,7 +72,7 @@ Since there is **no programmatic API** to reload hooks, you have limited options
 
 ### 3. Session Restart Alone (Unreliable)
 
-**Not sufficient in v2.0.59:**
+**Not always sufficient:**
 
 - Restarting the session *should* reload hooks
 - In practice, this does not reliably work
@@ -162,21 +162,14 @@ Check which hooks are currently registered:
 Test individual hooks outside Claude Code:
 
 ```bash
-# SessionStart hook
-echo '{"cwd": "/Users/chris/dotfiles"}' | python .claude/hooks/session-start
-
-# PreToolUse hook
-echo '{"tool": "Bash", "parameters": {"command": "ls"}}' | python .claude/hooks/pre-bash-intercept-commits
-
-# PostToolUse hook
-echo '{"tool": "Edit", "result": "success"}' | python .claude/hooks/markdown_formatter.py
-
-# Stop hook
+# Stop hook - build verification (project-level)
 bash .claude/hooks/stop-build-check
 
-# Notification hook
-echo '{"message": "Test notification"}' | bash .claude/hooks/notification-desktop
+# PreToolUse hook - feature doc check (project-level)
+echo '{"tool": "Bash", "parameters": {"command": "git commit -m test"}}' | bash .claude/hooks/check-feature-docs
 ```
+
+For universal hooks (SessionStart, PreCompact, notification, etc.), see `~/.claude/hooks/` for their locations and test commands.
 
 ### Validate Hook Safety
 
@@ -314,8 +307,8 @@ The exact fields depend on the hook type. See official documentation for each ho
 
 Hook registration in Claude Code has known reliability issues that require workarounds:
 
-- **Live-reload doesn't work for hooks** despite being documented for v1.0.90+
-- **Session restart alone is insufficient** in v2.0.59
+- **Live-reload doesn't work reliably for hooks** despite being documented
+- **Session restart alone is not always sufficient**
 - **The `/hooks` UI command forces re-registration** and is currently the most reliable workaround
 - **No programmatic API exists** to reload hooks without using the UI or restarting
 

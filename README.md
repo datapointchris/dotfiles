@@ -108,7 +108,9 @@ This setup uses different package managers for different purposes, because that'
 
 | What | How | Examples |
 |------|-----|----------|
-| System utilities | brew / apt / pacman | bat, eza, fd, ripgrep, tmux, neovim |
+| System utilities | brew / apt / pacman | ripgrep, tmux, zsh, jq |
+| Rust CLI tools | cargo-binstall | bat, eza, fd, broot, git-delta |
+| Editor / binaries | GitHub releases | neovim, lazygit, yazi, fzf |
 | Python | uv | version management, ruff, mypy, etc. |
 | Node.js | nvm | version management, LSPs, formatters |
 

@@ -44,7 +44,7 @@ install_from_cache() {
   # often differ from cargo package names (e.g., fd-find vs fd, git-delta vs delta)
   local cached_file=""
   for name in "$package" "$binary_name"; do
-    for pattern in "${name}-"*"${target}"*.tar.gz "${name}_${target}"*.tar.gz "${name}-"*".tar.gz" "${name}_"*".tar.gz"; do
+    for pattern in "${name}-"*"${target}"*.tar.gz "${name}_${target}"*.tar.gz "${name}-"*".tar.gz" "${name}_"*".tar.gz" "${name}_${target}"*.zip "${name}-"*".zip" "${name}_"*".zip"; do
       local found
       found=$(find "$OFFLINE_CACHE_DIR" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | head -1)
       if [[ -n "$found" ]]; then
@@ -61,8 +61,13 @@ install_from_cache() {
   local extract_dir="/tmp/${package}-extract-$$"
   mkdir -p "$extract_dir"
 
-  # Extract tarball
-  if ! tar -xf "$cached_file" -C "$extract_dir" 2>/dev/null; then
+  # Extract archive — zip (e.g. broot) or tarball
+  if [[ "$cached_file" == *.zip ]]; then
+    if ! unzip -q "$cached_file" -d "$extract_dir" 2>/dev/null; then
+      rm -rf "$extract_dir"
+      return 1
+    fi
+  elif ! tar -xf "$cached_file" -C "$extract_dir" 2>/dev/null; then
     rm -rf "$extract_dir"
     return 1
   fi

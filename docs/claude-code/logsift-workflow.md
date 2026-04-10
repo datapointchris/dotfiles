@@ -43,69 +43,15 @@ logsift monitor -- bash tests/install/test-install.sh
 
 ## 5-Phase Error Methodology
 
-### Phase 1: Initial Analysis
+See [Working with Claude Code](working-with-claude.md#error-fixing-methodology) for the full 5-phase methodology with examples.
 
-**Wait** for logsift to complete  
-**Read** the FULL error report  
-**Identify** ALL errors before acting  
-**Look** for patterns across failures
+**Summary**:
 
-**Anti-pattern**: Jump to first error immediately
-
-### Phase 2: Root Cause Investigation
-
-**Determine relationships**:
-
-**Related errors** (shared root cause):
-
-```yaml
-Error: Cannot find 'libfoo.so'
-Error: Package 'foo-dev' required
-Error: foo_init() undefined
-```
-
-→ All point to missing `foo` package
-
-**Independent errors**:
-
-```bash
-Error: Invalid JSON syntax
-Error: Port 8080 already in use  
-Error: Missing --required-flag
-```
-
-→ Three unrelated issues
-
-**Reality check**: Don't force connections that don't exist
-
-### Phase 3: Solution Strategy
-
-**When related**: Fix single root cause  
-**When independent**: Fix each individually (this is correct!)
-
-**Always read files before editing**:
-
-```bash
-# ❌ Don't guess
-Edit file.sh
-
-# ✅ Do this
-Read file.sh  # Understand context
-Edit file.sh  # Make informed change
-```
-
-### Phase 4: Iterative Fix-and-Rerun
-
-1. Re-run SAME logsift command
-2. Compare new errors to previous
-3. Verify fixes resolved issues
-4. Continue until all errors eliminated
-
-### Phase 5: Verification
-
-- Confirm solution is robust
-- Ensure no errors suppressed
-- Verify fix aligns with codebase
+1. **Initial Analysis** — Read the full error report before acting; look for patterns
+2. **Root Cause Investigation** — Are errors related (shared cause) or independent?
+3. **Solution Strategy** — Fix root cause if shared; fix independently if not
+4. **Iterative Fix-and-Rerun** — Re-run same command, compare, repeat until clean
+5. **Verification** — Confirm solution is robust, not just superficially passing
 
 ## Two Command Variants
 

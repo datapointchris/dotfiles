@@ -99,23 +99,17 @@ Common issues and solutions.
 
 ## WSL-Specific
 
-!!! info "ZSHDOTDIR not working"
-    Check `/etc/zsh/zshenv`:
+!!! info "ZDOTDIR not working"
+    Check `/etc/zshenv` (macOS) or `/etc/zsh/zshenv` (Ubuntu/WSL):
 
     ```sh
-    cat /etc/zsh/zshenv
+    cat /etc/zshenv
     ```
 
     Should contain:
 
     ```sh
-    export ZSHDOTDIR="$HOME/.config/zsh"
-    ```
-
-!!! tip "Binary symlinks missing (bat, fd)"
-    ```sh
-    ln -sf /usr/bin/batcat ~/.local/bin/bat
-    ln -sf /usr/bin/fdfind ~/.local/bin/fd
+    export ZDOTDIR="$HOME/.config/zsh"
     ```
 
 ## Still Having Issues?

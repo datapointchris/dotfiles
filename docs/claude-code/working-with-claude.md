@@ -267,58 +267,6 @@ You want to know:
 - Are errors being resolved correctly?
 - Is the methodology being followed?
 
-### Automatic Tracking
-
-Every logsift command is automatically logged to `.claude/metrics/`.
-
-**What's tracked automatically**:
-
-- Command type (logsift vs logsift-auto)
-- Timestamp and session ID
-- Command being run
-- Working directory
-
-**View metrics**:
-
-```bash
-# Quick summary
-analyze-claude-metrics
-
-# Detailed per-session breakdown
-analyze-claude-metrics --details
-
-# Specific date
-analyze-claude-metrics --date 2025-12-03
-```
-
-### Manual Quality Assessment
-
-For significant sessions, add an entry to `.claude/metrics/quality-log.md`:
-
-```markdown
-## 2025-12-03 15:30 - Session abc123
-
-**Command**: `/logsift "bash test-install.sh" 15`
-
-**Context**: Testing WSL Docker installation
-
-**Quantitative**:
-- Initial errors: 5
-- Final errors: 0
-- Iterations: 2
-- Tokens: ~45k (from /cost)
-
-**Qualitative**:
-- Correctness: ✅ All errors resolved
-- Efficiency: ✅ Found root cause (missing docker-compose)
-- Methodology: ✅ Followed 5-phase approach
-
-**Notes**:
-- Claude correctly identified shared root cause
-- Two iterations: first to install docker-compose, second to verify
-- Good use of context - read Dockerfile before editing
-```
-
 ### Key Performance Indicators
 
 **Quality KPIs**:
@@ -374,14 +322,6 @@ Exports detailed metrics:
 - `claude_code.tool_result` - Tool performance
 - `claude_code.active_time.total` - Actual usage time
 
-### Analysis Cadence
-
-- **Daily**: Run `analyze-claude-metrics` for quick overview
-- **Weekly**: Add 5-10 quality log entries for significant sessions
-- **Monthly**: Generate comparison reports, identify trends
-
-Metrics tracking now lives in the [claude-code-metrics](https://github.com/datapointchris/claude-code-metrics) project at `~/code/claude-code-metrics`.
-
 ---
 
 ## Architecture Overview
@@ -407,28 +347,18 @@ This repository uses a layered approach to Claude Code integration:
 
 **Purpose**: Automatic actions on events
 
-**Hooks**:
+**Project hooks** (`.claude/hooks/`):
+
+- `Stop` - Runs build checks when you pause
+- `PreToolUse` - Feature documentation check before commits
+
+**Universal hooks** (`~/.claude/hooks/`):
 
 - `SessionStart` - Loads git context automatically
-- `Stop` - Runs build checks when you pause
 - `PreCompact` - Saves session state before memory compaction
-- `track-command-metrics` - Logs command usage for analysis
+- And more — see `~/.claude/README.md`
 
-**When they run**: Triggered by Claude Code events (session start, stop, compact)
-
-**Files**: `.claude/hooks/*`
-
-#### Layer 3: Skills (Context-Activated)
-
-**Purpose**: Auto-suggest capabilities based on context
-
-**Skills**:
-
-- `symlinks-developer` - Activates when editing symlink management code
-
-**When they run**: Auto-suggest when keywords/file patterns match
-
-**Files**: `.claude/skills/*/SKILL.md`
+**When they run**: Triggered by Claude Code events
 
 ### Decision Matrix: When to Use Each
 
@@ -436,7 +366,6 @@ This repository uses a layered approach to Claude Code integration:
 |------|-----|---------|
 | User explicitly runs a task | Slash Command | /logsift, /commit |
 | Something happens automatically | Hook | Build checks on stop |
-| Claude should suggest capability | Skill | Symlink expertise |
 
 ### Directory Structure
 
@@ -445,17 +374,10 @@ This repository uses a layered approach to Claude Code integration:
 ├── commands/           # Slash commands
 │   ├── logsift.md
 │   └── logsift-auto.md
-├── hooks/              # Event-triggered automation
-│   ├── session-start
-│   ├── stop-build-check
-│   ├── pre-compact-save-state
-│   └── track-command-metrics
-├── metrics/            # Usage tracking
-│   ├── README.md
-│   ├── quality-log.md
-│   └── command-metrics-*.jsonl
-├── skills/             # Context-activated expertise
-│   └── symlinks-developer/
+├── hooks/              # Dotfiles-specific hooks
+│   ├── check-feature-docs
+│   └── stop-build-check
+├── sessions/           # Session state files
 ├── settings.json       # Hook configuration
 └── README.md           # Technical reference
 ```

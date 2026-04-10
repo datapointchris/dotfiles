@@ -259,4 +259,4 @@ management/symlinks/
 - [Learnings: Directory Pattern Matching](../../learnings/directory-pattern-matching.md)
 - [Learnings: Relative Path Calculation](../../learnings/relative-path-calculation.md)
 - [Learnings: Cross-Platform Symlinks](../../learnings/cross-platform-symlink-considerations.md)
-- [Skills System](skills.md) - symlinks-developer skill provides context-aware help
+- [Skills System](skills.md) - global skills overview
