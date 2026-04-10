@@ -1,11 +1,6 @@
 machine: ubuntu-lxc-server
 platform: ubuntu
 
-# Shell groups to concat into functions.sh / aliases.sh
-# platform-ubuntu groups are added automatically based on platform field
-function_groups: [core, git, docker, network, reference, fzf]
-alias_groups: [core]
-
 # Installation
 system_packages: true
 flatpak: false

@@ -4,178 +4,78 @@ set -euo pipefail
 # ================================================================
 # Shell Build Script
 # ================================================================
-# Reads a machine manifest and concatenates shell group files
-# into single functions.sh and aliases.sh output files.
+# Concatenates all shell group files into single functions.sh and
+# aliases.sh. Platform-specific group is auto-detected and appended
+# last so platform overrides take precedence over common definitions.
 #
 # Usage:
-#   build-shell.sh <manifest-file> [output-dir]
-#
-# The manifest YAML is parsed with a simple grep/sed approach
-# to avoid requiring Python/yq at shell build time.
+#   build-shell.sh [output-dir]
 # ================================================================
 
 DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 SHELL_SRC="$DOTFILES_DIR/shell"
-DEFAULT_OUTPUT_DIR="$HOME/.local/shell"
+OUTPUT_DIR="${1:-$HOME/.local/shell}"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
-usage() {
-  echo "Usage: $(basename "$0") <manifest-file> [output-dir]"
-  echo ""
-  echo "Build shell functions.sh and aliases.sh from manifest groups."
-  echo ""
-  echo "Arguments:"
-  echo "  manifest-file   Path to machine manifest YAML"
-  echo "  output-dir      Output directory (default: $DEFAULT_OUTPUT_DIR)"
-  echo ""
-  echo "Examples:"
-  echo "  $(basename "$0") install/machines/arch-personal-workstation.yml"
-  echo "  $(basename "$0") install/machines/ubuntu-lxc-server.yml /tmp/shell-test"
-  exit 0
-}
-
-# Parse a YAML list field from manifest
-# Handles both inline [a, b, c] and multi-line - a formats
-parse_yaml_list() {
-  local file="$1"
-  local field="$2"
-
-  # Try inline format first: field: [a, b, c]
-  local inline
-  inline=$(grep "^${field}:" "$file" | sed -n 's/.*\[\(.*\)\].*/\1/p')
-  if [[ -n "$inline" ]]; then
-    echo "$inline" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -v '^$'
+detect_platform() {
+  if [ -n "${PLATFORM:-}" ]; then
+    echo "$PLATFORM"
     return
   fi
-
-  # Multi-line format:
-  # field:
-  #   - a
-  #   - b
-  local in_field=false
-  while IFS= read -r line; do
-    if [[ "$line" =~ ^${field}: ]]; then
-      in_field=true
-      continue
-    fi
-    if $in_field; then
-      if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+(.*) ]]; then
-        echo "${BASH_REMATCH[1]}"
-      elif [[ "$line" =~ ^[a-z_] ]]; then
-        # Hit next top-level field
-        break
-      fi
-    fi
-  done < "$file"
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "macos"
+  elif grep -q "Microsoft" /proc/version 2>/dev/null || grep -q "WSL" /proc/version 2>/dev/null; then
+    echo "wsl"
+  elif [ -f /etc/arch-release ]; then
+    echo "arch"
+  elif [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
+    echo "ubuntu"
+  else
+    log_fatal "Cannot detect platform. Set PLATFORM env var."
+  fi
 }
 
-# Parse a scalar field from manifest
-parse_yaml_scalar() {
-  local file="$1"
-  local field="$2"
-
-  grep "^${field}:" "$file" | sed 's/^[^:]*:[[:space:]]*//' | sed 's/[[:space:]]*$//'
-}
-
-# Uppercase first letter of a string
-ucfirst() {
-  local str="$1"
-  echo "${str^}"
-}
-
-# Concatenate group files with section headers
-concat_groups() {
+# Concatenate all non-platform files alphabetically, then the platform file last
+build_output() {
   local src_dir="$1"
   local output_file="$2"
-  shift 2
-  local groups=("$@")
+  local platform="$3"
 
-  # Start with empty file
   : > "$output_file"
 
-  for group in "${groups[@]}"; do
-    local src_file="$src_dir/${group}.sh"
-    if [[ ! -f "$src_file" ]]; then
-      log_warning "Group file not found: $src_file"
-      continue
-    fi
-
-    local header
-    header=$(ucfirst "$group" | tr '-' ' ')
-
-    {
-      cat <<EOF
-
-# ================================================================
-# $(echo "$header" | tr '[:lower:]' '[:upper:]')
-# ================================================================
-
-EOF
-      cat "$src_file"
-      echo ""
-    } >> "$output_file"
+  for f in "$src_dir"/*.sh; do
+    [[ "$f" == *"/platform-"* ]] && continue
+    [[ -f "$f" ]] && cat "$f" >> "$output_file"
   done
+
+  local platform_file="$src_dir/platform-${platform}.sh"
+  if [[ -f "$platform_file" ]]; then
+    cat "$platform_file" >> "$output_file"
+  else
+    log_warning "No platform file found: $platform_file"
+  fi
 }
 
 main() {
-  if [[ $# -lt 1 ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
-    usage
+  if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+    echo "Usage: $(basename "$0") [output-dir]"
+    echo "  output-dir  Output directory (default: $HOME/.local/shell)"
+    exit 0
   fi
 
-  local manifest="$1"
-  local output_dir="${2:-$DEFAULT_OUTPUT_DIR}"
-
-  if [[ ! -f "$manifest" ]]; then
-    # Try relative to dotfiles dir
-    manifest="$DOTFILES_DIR/$manifest"
-    if [[ ! -f "$manifest" ]]; then
-      log_fatal "Manifest file not found: $1"
-    fi
-  fi
-
-  # Parse manifest
   local platform
-  platform=$(parse_yaml_scalar "$manifest" "platform")
-  if [[ -z "$platform" ]]; then
-    log_fatal "No 'platform' field found in manifest"
-  fi
+  platform=$(detect_platform)
 
-  # Parse function groups
-  local function_groups=()
-  while IFS= read -r group; do
-    [[ -n "$group" ]] && function_groups+=("$group")
-  done < <(parse_yaml_list "$manifest" "function_groups")
+  mkdir -p "$OUTPUT_DIR"
 
-  # Parse alias groups
-  local alias_groups=()
-  while IFS= read -r group; do
-    [[ -n "$group" ]] && alias_groups+=("$group")
-  done < <(parse_yaml_list "$manifest" "alias_groups")
+  log_info "Building shell files (platform: $platform, output: $OUTPUT_DIR)"
 
-  # Ensure output directory exists
-  mkdir -p "$output_dir"
+  build_output "$SHELL_SRC/functions" "$OUTPUT_DIR/functions.sh" "$platform"
+  log_success "Generated: functions.sh ($(wc -l < "$OUTPUT_DIR/functions.sh") lines)"
 
-  local func_output="$output_dir/functions.sh"
-  local alias_output="$output_dir/aliases.sh"
-
-  log_info "Building shell files from manifest: $(basename "$manifest")"
-  log_info "Platform: $platform"
-  log_info "Function groups: ${function_groups[*]}"
-  log_info "Alias groups: ${alias_groups[*]}"
-  log_info "Output: $output_dir"
-
-  # Build functions.sh
-  # Add specified groups, then auto-add platform group
-  local all_func_groups=("${function_groups[@]}" "platform-${platform}")
-  concat_groups "$SHELL_SRC/functions" "$func_output" "${all_func_groups[@]}"
-  log_success "Generated: functions.sh ($(wc -l < "$func_output") lines)"
-
-  # Build aliases.sh
-  # Add specified groups, then auto-add platform group
-  local all_alias_groups=("${alias_groups[@]}" "platform-${platform}")
-  concat_groups "$SHELL_SRC/aliases" "$alias_output" "${all_alias_groups[@]}"
-  log_success "Generated: aliases.sh ($(wc -l < "$alias_output") lines)"
+  build_output "$SHELL_SRC/aliases" "$OUTPUT_DIR/aliases.sh" "$platform"
+  log_success "Generated: aliases.sh ($(wc -l < "$OUTPUT_DIR/aliases.sh") lines)"
 
   log_success "Shell build complete"
 }

@@ -1,11 +1,6 @@
 machine: macos-personal-workstation
 platform: macos
 
-# Shell groups to concat into functions.sh / aliases.sh
-# platform-macos groups are added automatically based on platform field
-function_groups: [core, git, python, aws, docker, network, reference, node, fzf]
-alias_groups: [core]
-
 # Installation
 system_packages: true
 

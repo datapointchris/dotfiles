@@ -80,28 +80,14 @@ tasks:
   # ================================================================
 
   shell:build:
-    desc: Build shell functions.sh and aliases.sh from machine manifest
+    desc: Build shell functions.sh and aliases.sh
     silent: true
     cmds:
       - |
         export TERM=${TERM:-xterm}
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Building shell files" "cyan"
-
-        MACHINE="${MACHINE:-}"
-        if [ -z "$MACHINE" ]; then
-          case "{{.PLATFORM}}" in
-            macos)  MACHINE="macos-personal-workstation" ;;
-            arch)   MACHINE="arch-personal-workstation" ;;
-            wsl)    MACHINE="wsl-work-workstation" ;;
-            ubuntu) MACHINE="ubuntu-lxc-server" ;;
-          esac
-        fi
-
-        bash "{{.DOTFILES_DIR}}/shell/build-shell.sh" \
-          "{{.DOTFILES_DIR}}/install/machines/${MACHINE}.yml"
-
-        # Sync to Windows Git Bash (only runs in WSL, skips otherwise)
+        PLATFORM="{{.PLATFORM}}" bash "{{.DOTFILES_DIR}}/shell/build-shell.sh"
         bash "{{.DOTFILES_DIR}}/shell/sync-windows-shell.sh" || true
 
   # ================================================================
