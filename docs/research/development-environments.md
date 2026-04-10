@@ -1261,7 +1261,7 @@ dotfiles/
 │   ├── macos/           # macOS-specific (Alfred, BetterTouchTool)
 │   └── arch/            # Arch-specific configs
 ├── install.sh           # Detects platform, symlinks appropriate configs
-└── management/
+└── install/
     └── symlinks/        # Symlink manager (handles platform differences)
 ```
 

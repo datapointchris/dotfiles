@@ -57,7 +57,7 @@ WORKDIR /home/testuser/dotfiles
 RUN git config --global --add safe.directory /home/testuser/dotfiles
 
 # Run system packages installer
-RUN bash management/wsl/install/system-packages.sh
+RUN bash install/wsl/install/system-packages.sh
 
 # Remove baked-in dotfiles — tests provide fresh copy via bind mount at runtime.
 # Keeping an empty dir so bind mounts and internal copies have a target.

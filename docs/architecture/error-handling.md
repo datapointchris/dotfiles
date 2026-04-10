@@ -51,7 +51,7 @@ Sourcing `error-handling.sh` and calling `enable_error_traps` provides:
 ### Enable Error Handling
 
 ```bash
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+source "$DOTFILES_DIR/install/common/lib/error-handling.sh"
 enable_error_traps
 ```
 
@@ -87,7 +87,7 @@ register_cleanup "rm -f /tmp/lockfile"
 ```bash
 #!/usr/bin/env bash
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+source "$DOTFILES_DIR/install/common/lib/error-handling.sh"
 enable_error_traps
 
 # Setup temp directory
@@ -141,7 +141,7 @@ log_success "Installation complete"
 Enable debug mode for stack traces:
 
 ```bash
-DOTFILES_DEBUG=true bash management/common/install/github-releases/tool.sh
+DOTFILES_DEBUG=true bash install/common/install/github-releases/tool.sh
 ```
 
 **Output:**
@@ -196,9 +196,9 @@ The GitHub Release Installer library assumes `error-handling.sh` has been source
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+source "$DOTFILES_DIR/install/common/lib/error-handling.sh"
 enable_error_traps
-source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 
 # Now all functions have:
 # - Automatic cleanup via register_cleanup()
@@ -241,7 +241,7 @@ install_from_tarball() {
 #!/usr/bin/env bash
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+source "$DOTFILES_DIR/install/common/lib/error-handling.sh"
 enable_error_traps
 
 print_banner "Installing Tool"
@@ -344,10 +344,10 @@ All management scripts should use error-handling.sh:
 
 ```bash
 # Check scripts using error handling
-grep -l "source.*error-handling.sh" management/**/*.sh | wc -l
+grep -l "source.*error-handling.sh" install/**/*.sh | wc -l
 
 # Check scripts using old formatting.sh  
-grep -l "source.*formatting.sh" management/**/*.sh | wc -l
+grep -l "source.*formatting.sh" install/**/*.sh | wc -l
 ```
 
 **Current status:**

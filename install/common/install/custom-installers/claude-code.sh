@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+
+CLAUDE_CODE_INSTALL_URL="https://claude.ai/install.sh"
+
+# Support --print-url for offline bundle creator
+if [[ "${1:-}" == "--print-url" ]]; then
+  echo "claude-code|latest|$CLAUDE_CODE_INSTALL_URL"
+  exit 0
+fi
+
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+
+# Claude Code self-updates, no need to manually update
+if [[ "${1:-}" == "--update" ]]; then
+  if command -v claude >/dev/null 2>&1; then
+    CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
+    log_success "claude-code $CURRENT_VERSION (self-updates automatically)"
+  else
+    log_info "claude-code not installed"
+  fi
+  exit 0
+fi
+
+# Install mode: check if already installed
+if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v claude >/dev/null 2>&1; then
+  CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
+  log_success "claude-code already installed: $CURRENT_VERSION"
+  exit 0
+fi
+
+if pgrep -i "claude" >/dev/null 2>&1; then
+  log_warning "Claude appears to be running"
+  log_info "The installer may fail if Claude is running"
+  log_info "If installation fails, close Claude and try again"
+fi
+
+if command -v claude >/dev/null 2>&1; then
+  ALTERNATE_LOCATION=$(command -v claude)
+  log_info "claude found at $ALTERNATE_LOCATION"
+fi
+
+log_info "Installing via official installer..."
+
+# Offline cache
+OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
+CACHED_SCRIPT="$OFFLINE_CACHE_DIR/claude-code-install.sh"
+
+run_claude_install() {
+  # Check offline cache first
+  if [[ -f "$CACHED_SCRIPT" ]]; then
+    log_info "Using cached install script: $CACHED_SCRIPT"
+    bash "$CACHED_SCRIPT"
+    return $?
+  fi
+
+  # Try to download
+  curl -fsSL "$CLAUDE_CODE_INSTALL_URL" | bash
+}
+
+# The installer script handles platform detection and installs to ~/.local/bin
+# If it fails due to Claude running, skip gracefully
+INSTALLER_OUTPUT=$(run_claude_install 2>&1)
+INSTALLER_EXIT=$?
+
+if [[ $INSTALLER_EXIT -eq 0 ]]; then
+  log_success "Claude Code installed successfully"
+elif echo "$INSTALLER_OUTPUT" | grep -qi "another process is currently installing\|claude.*running"; then
+  log_warning "Installation skipped - Claude is currently running"
+  log_info "Claude Code will be available after closing Claude"
+  log_success "Skipping (non-blocking)"
+  exit 0
+else
+  manual_steps="The Claude Code installer failed.
+
+Try manually:
+   1. Download installer: curl -fsSL $CLAUDE_CODE_INSTALL_URL -o /tmp/claude-install.sh
+   2. Review script: less /tmp/claude-install.sh
+   3. Run installer: bash /tmp/claude-install.sh
+
+If Claude is running, close it first and try again.
+
+Official docs: https://docs.claude.ai/docs/claude-code"
+
+  output_failure_data "claude-code" "$CLAUDE_CODE_INSTALL_URL" "latest" "$manual_steps" "Installer failed"
+  log_warning "Claude Code installation failed (see summary)"
+  exit 1
+fi
+
+if command -v claude >/dev/null 2>&1; then
+  INSTALLED_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
+  log_success "Verified: $INSTALLED_VERSION"
+else
+  manual_steps="Claude Code installed but not found in PATH.
+
+Check installation:
+   ls -la ~/.local/bin/claude
+   which claude
+
+Ensure ~/.local/bin is in PATH:
+   export PATH=\"\$HOME/.local/bin:\$PATH\"
+
+Try closing and reopening your terminal, then verify:
+   claude --version"
+
+  output_failure_data "claude-code" "unknown" "latest" "$manual_steps" "Installation verification failed"
+  log_warning "Claude Code installation verification failed (see summary)"
+  exit 1
+fi

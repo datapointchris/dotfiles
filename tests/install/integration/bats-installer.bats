@@ -18,7 +18,7 @@ load "$HOME/.local/lib/bats-assert/load.bash"
 setup_file() {
   export SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
   export DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-  export BATS_INSTALLER="$DOTFILES_DIR/management/common/install/custom-installers/bats.sh"
+  export BATS_INSTALLER="$DOTFILES_DIR/install/common/install/custom-installers/bats.sh"
 
   # Verify installer exists
   if [[ ! -f "$BATS_INSTALLER" ]]; then
@@ -38,7 +38,7 @@ setup_file() {
   # Source required libraries for the installer
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 }
 
 # Teardown runs once after all tests

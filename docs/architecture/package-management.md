@@ -59,7 +59,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 
 **Tools**:
 
-See `management/packages.yml` (`cargo_packages` section) for the current list.
+See `install/packages.yml` (`cargo_packages` section) for the current list.
 
 **Advantages**:
 
@@ -127,7 +127,7 @@ See `management/packages.yml` (`cargo_packages` section) for the current list.
 
 **Method**: Git clone from upstream repositories
 
-**Plugins** (defined in `management/packages.yml`):
+**Plugins** (defined in `install/packages.yml`):
 
 - `git-open` - Open repo in browser from terminal
 - `zsh-vi-mode` - Better vi-mode for ZSH
@@ -256,7 +256,7 @@ See [Package Version Analysis](../learnings/package-version-analysis.md) for det
 
 ### Single Source of Truth: packages.yml
 
-All package versions, repositories, and configurations are centralized in `management/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See [GitHub Releases vs System Packages](../learnings/github-releases-vs-system-packages.md) for the decision framework on choosing installation methods.
+All package versions, repositories, and configurations are centralized in `install/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See [GitHub Releases vs System Packages](../learnings/github-releases-vs-system-packages.md) for the decision framework on choosing installation methods.
 
 Package definitions in packages.yml:
 
@@ -297,7 +297,7 @@ All installation scripts read from this single source. Change a version once, an
 
 ### Installation Scripts
 
-Located in `management/common/install/`:
+Located in `install/common/install/`:
 
 **Directory Structure**:
 
@@ -308,7 +308,7 @@ Located in `management/common/install/`:
 - `plugins/` - Plugin installers (tmux, yazi)
 - `fonts/` - Font installers
 
-**Core Library** (`management/common/lib/`):
+**Core Library** (`install/common/lib/`):
 
 - `failure-logging.sh` - Structured failure reporting
 - `github-release-installer.sh` - Shared functions for GitHub release tools
@@ -317,10 +317,10 @@ All installer scripts support `--update` for the update system and use structure
 
 ### Installation Organization
 
-Installation scripts are organized by platform under `management/`:
+Installation scripts are organized by platform under `install/`:
 
 ```text
-management/
+install/
 ├── common/          # Shared installation scripts
 │   ├── install/     # Tool installers (neovim, lazygit, yazi, etc.)
 │   └── lib/         # Shared libraries (github-release-installer.sh)

@@ -18,7 +18,7 @@ cd ~/dotfiles
 bash install.sh --machine arch-personal-workstation
 ```
 
-Available manifests are in `management/machines/` (arch, macOS, WSL, Ubuntu server).
+Available manifests are in `install/machines/` (arch, macOS, WSL, Ubuntu server).
 
 **Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
 
@@ -38,9 +38,9 @@ dotfiles/
 │   ├── common/       # Cross-platform tools
 │   ├── macos/        # macOS-specific tools
 │   └── arch/         # Arch-specific tools (rofi menus)
-├── management/       # Repository management
+├── shell/            # Shell environment source + builder (aliases, functions, build script)
+├── install/          # Provisioning: packages, installers, manifests, symlinks manager
 │   ├── machines/     # Machine manifests (what to install per computer)
-│   ├── shell/        # Modular shell aliases and functions
 │   ├── symlinks/     # Symlinks manager (Python)
 │   └── packages.yml  # Package definitions
 └── docs/             # MkDocs documentation site

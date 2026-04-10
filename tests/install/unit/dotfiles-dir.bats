@@ -30,8 +30,8 @@ setup_file() {
   [[ -f "$DOTFILES_DIR/install.sh" ]]
 }
 
-@test "dotfiles_dir: DOTFILES_DIR contains expected management structure" {
-  [[ -d "$DOTFILES_DIR/management/common/install" ]]
+@test "dotfiles_dir: DOTFILES_DIR contains expected install structure" {
+  [[ -d "$DOTFILES_DIR/install/common/install" ]]
 }
 
 @test "dotfiles_dir: BASH_SOURCE fallback works when run via bash" {

@@ -43,7 +43,7 @@ sudo pacman -S --noconfirm pcre2
 sudo ldconfig
 ```
 
-This is implemented automatically in the Arch installation scripts under `management/arch/`.
+This is implemented automatically in the Arch installation scripts under `install/arch/`.
 
 ### Why This Works
 

@@ -25,7 +25,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 # Source platform detection utility (same as install.sh)
-source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
+source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
 
 # Detect current platform
 PLATFORM=$(detect_platform)

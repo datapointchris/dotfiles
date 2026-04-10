@@ -44,7 +44,7 @@ The `link_apps()` function skips directories, only symlinking executable files.
 **Installation**: Custom installers clone from GitHub to `~/.local/share/`, symlink bin to `~/.local/bin/`:
 
 ```bash
-# In management/common/install/custom-installers/theme.sh
+# In install/common/install/custom-installers/theme.sh
 git clone https://github.com/datapointchris/theme.git ~/.local/share/theme
 ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 ```
@@ -78,7 +78,7 @@ export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 
 ## Related Files
 
-- `management/packages.yml` - Go tools list
-- `management/symlinks/symlinks/manager.py:link_apps()` - Shell app symlinking
-- `management/common/install/custom-installers/theme.sh` - Personal tool installer
+- `install/packages.yml` - Go tools list
+- `install/symlinks/symlinks/manager.py:link_apps()` - Shell app symlinking
+- `install/common/install/custom-installers/theme.sh` - Personal tool installer
 - `configs/common/.config/zsh/.zshrc` - PATH configuration

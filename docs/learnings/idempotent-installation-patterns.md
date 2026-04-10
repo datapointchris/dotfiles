@@ -48,7 +48,7 @@ Redundant checks create double-skip behavior
 install-yazi:
   desc: Install yazi terminal file manager with flavors and plugins
   cmds:
-    - bash management/common/install/yazi.sh
+    - bash install/common/install/yazi.sh
   # Note: No status check - always run to ensure plugins/flavors are up to date
 ```
 
@@ -125,6 +125,6 @@ After fixing, verify:
 
 ## Related Files
 
-- `management/common/install/yazi.sh` - Yazi with plugins/flavors
-- `management/common/install/npm-globals.sh` - Good pattern example
-- Installation scripts in `management/{macos,wsl,arch}/install/`
+- `install/common/install/yazi.sh` - Yazi with plugins/flavors
+- `install/common/install/npm-globals.sh` - Good pattern example
+- Installation scripts in `install/{macos,wsl,arch}/install/`

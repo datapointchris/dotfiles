@@ -48,10 +48,10 @@ def test_multiple_variables():
         'SCRIPT_DIR': '/tmp/tests/install/integration',
         'DOTFILES_DIR': '/tmp'
     }
-    path = "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+    path = "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
     result = resolve_path(path, symbol_table)
-    expected = "/tmp/management/common/lib/failure-logging.sh"
+    expected = "/tmp/install/common/lib/failure-logging.sh"
 
     assert result == expected, f"Expected {expected}, got {result}"
     print(f"✅ Multiple variables: {path} → {result}")

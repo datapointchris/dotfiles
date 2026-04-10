@@ -2363,7 +2363,7 @@ tools:
     examples:
       - cmd: "refcheck"
         desc: "Validate all file references in current directory"
-      - cmd: "refcheck management/"
+      - cmd: "refcheck install/"
         desc: "Check specific directory for broken references"
       - cmd: "refcheck --pattern 'old/path/' --desc 'Now new/path/'"
         desc: "Find old pattern after refactoring"

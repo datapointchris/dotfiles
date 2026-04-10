@@ -60,7 +60,7 @@ Installed as a Python tool via uv:
 uv tool install -e ~/tools/refcheck
 ```
 
-This is handled automatically by `management/common/install/language-tools/uv-tools.sh`.
+This is handled automatically by `install/common/install/language-tools/uv-tools.sh`.
 
 ## Usage
 
@@ -69,7 +69,7 @@ This is handled automatically by `management/common/install/language-tools/uv-to
 refcheck
 
 # Check specific directory
-refcheck management/
+refcheck install/
 
 # Find old pattern after refactoring
 refcheck --pattern "old/path/" --desc "Update to new/path/"
@@ -111,8 +111,8 @@ refcheck --skip-docs
 ### Check specific component
 
 ```bash
-# Validate management/ directory only
-refcheck management/
+# Validate install/ directory only
+refcheck install/
 
 # Check only shell scripts in apps/
 refcheck apps/ --type sh
@@ -262,7 +262,7 @@ fi
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `path` | Directory to check (positional) | `refcheck management/` |
+| `path` | Directory to check (positional) | `refcheck install/` |
 | `--pattern PATTERN` | Find old pattern | `--pattern "old/"` |
 | `--desc DESC` | Description for pattern | `--desc "Now new/"` |
 | `--type, -t TYPE` | Filter by file type | `--type sh` |

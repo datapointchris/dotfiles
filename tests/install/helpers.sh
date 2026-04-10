@@ -136,7 +136,7 @@ run_verification() {
   docker exec "$container" bash -c "
     ZSHDOTDIR=${home_dir}/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${dotfiles_path}/management/verify-installation.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc ${dotfiles_path}/install/verify-installation.sh\"
   "
 }
 

@@ -43,7 +43,7 @@ task docs:deploy        # Deploy documentation to GitHub Pages
 
 **Tasks are for orchestration, not wrappers.** The Taskfile coordinates multi-step workflows while keeping simple operations accessible via their native commands.
 
-**Minimal by design.** Complex installation logic lives in shell scripts under `management/`, not in YAML. This keeps the Taskfile readable and the logic testable.
+**Minimal by design.** Complex installation logic lives in shell scripts under `install/`, not in YAML. This keeps the Taskfile readable and the logic testable.
 
 **Platform detection is automatic.** Tasks that need platform awareness detect it at runtime using system checks.
 
@@ -69,7 +69,7 @@ cd ~/dotfiles
 bash install.sh --machine arch-personal-workstation
 ```
 
-Machine manifests in `management/machines/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
+Machine manifests in `install/machines/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
 
 ## Direct Commands
 
@@ -97,7 +97,7 @@ theme current
 
 ## Package Definitions
 
-All package versions and configurations are centralized in `management/packages.yml`:
+All package versions and configurations are centralized in `install/packages.yml`:
 
 - Runtime versions (Go, Node, Python)
 - GitHub binaries (neovim, lazygit, yazi, fzf)

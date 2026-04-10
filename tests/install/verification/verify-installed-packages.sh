@@ -464,7 +464,7 @@ print_section "Package Management Scripts (Universal)"
 
 # Test parse_packages.py can run and import yaml
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if /usr/bin/python3 "$HOME/dotfiles/management/parse_packages.py" --type=system --manager=apt >/dev/null 2>&1; then
+if /usr/bin/python3 "$HOME/dotfiles/install/parse_packages.py" --type=system --manager=apt >/dev/null 2>&1; then
   log_success "parse_packages.py: working (yaml module available)"
   PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else

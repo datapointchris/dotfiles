@@ -33,19 +33,19 @@ teardown_file() {
 
 @test "lazygit: accepts --update flag and makes real GitHub API call" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/github-releases/lazygit.sh --update"
+    "bash install/common/install/github-releases/lazygit.sh --update"
   [[ "$status" -le 1 ]]
 }
 
 @test "fzf: accepts --update flag and downloads from GitHub" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/github-releases/fzf.sh --update"
+    "bash install/common/install/github-releases/fzf.sh --update"
   [[ "$status" -le 1 ]]
 }
 
 @test "glow: installs successfully with real network call" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/github-releases/glow.sh"
+    "bash install/common/install/github-releases/glow.sh"
   assert_success
 
   run docker_exec "$BATS_SHARED_CONTAINER" "test -x ~/.local/bin/glow"
@@ -56,12 +56,12 @@ teardown_file() {
 
 @test "lazygit: installed binary is executable after installation" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/github-releases/lazygit.sh && ~/.local/bin/lazygit --version"
+    "bash install/common/install/github-releases/lazygit.sh && ~/.local/bin/lazygit --version"
   assert_success
 }
 
 @test "duf: can be installed and run in isolated container" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/github-releases/duf.sh && ~/.local/bin/duf --version"
+    "bash install/common/install/github-releases/duf.sh && ~/.local/bin/duf --version"
   assert_success
 }

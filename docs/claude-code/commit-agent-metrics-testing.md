@@ -8,7 +8,7 @@
 ### Setup
 
 - Created 3 minimal test changes to different files
-- Staged files: `.pre-commit-config.yaml`, `docs/architecture/shell-libraries.md`, `management/common/update.sh`
+- Staged files: `.pre-commit-config.yaml`, `docs/architecture/shell-libraries.md`, `install/common/update.sh`
 
 ### Execution
 

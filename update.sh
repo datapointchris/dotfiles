@@ -14,11 +14,11 @@ export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
+source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
 
 update_shell_plugins() {
   local plugins
-  plugins=$(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" \
+  plugins=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
     --type=shell-plugins --format=names)
 
   for name in $plugins; do
@@ -41,14 +41,14 @@ update_shell_plugins() {
 
 update_common_tools() {
   print_section "Updating Go toolchain via $(print_green "go.sh --update")"
-  if bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update; then
+  if bash "$DOTFILES_DIR/install/common/install/language-managers/go.sh" --update; then
     log_success "Go updated"
   else
     log_warning "Go update failed"
   fi
 
   print_section "Updating Go tools via $(print_green "go-tools.sh --update")"
-  if bash "$DOTFILES_DIR/management/common/install/language-tools/go-tools.sh" --update; then
+  if bash "$DOTFILES_DIR/install/common/install/language-tools/go-tools.sh" --update; then
     log_success "Go tools updated"
   else
     log_warning "Go tools update failed"
@@ -72,7 +72,7 @@ update_common_tools() {
       log_warning "$package update failed"
       cargo_failures=$((cargo_failures + 1))
     fi
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=name_command)
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=name_command)
   if [[ $cargo_failures -eq 0 ]]; then
     log_success "Rust packages updated"
   else
@@ -94,7 +94,7 @@ update_common_tools() {
   fi
 
   print_section "Updating nvm and Node.js via $(print_green "nvm.sh --update")"
-  if bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update; then
+  if bash "$DOTFILES_DIR/install/common/install/language-managers/nvm.sh" --update; then
     log_success "nvm and Node.js updated"
   else
     log_warning "nvm and Node.js update failed"
@@ -109,7 +109,7 @@ update_common_tools() {
   fi
 
   print_section "Updating GitHub Release Tools"
-  local github_releases="$DOTFILES_DIR/management/common/install/github-releases"
+  local github_releases="$DOTFILES_DIR/install/common/install/github-releases"
   for script in "$github_releases"/*.sh; do
     local tool=$(basename "$script" .sh)
     if ! bash "$script" --update; then
@@ -118,7 +118,7 @@ update_common_tools() {
   done
 
   print_section "Updating Custom Distribution Tools"
-  local custom_installers="$DOTFILES_DIR/management/common/install/custom-installers"
+  local custom_installers="$DOTFILES_DIR/install/common/install/custom-installers"
   for script in "$custom_installers"/*.sh; do
     local tool=$(basename "$script" .sh)
     if ! bash "$script" --update; then

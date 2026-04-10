@@ -10,9 +10,9 @@ export FAILURES_LOG
 export TERM=${TERM:-xterm}
 export PATH="$HOME/.local/bin:$PATH"
 
-source "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
-source "$DOTFILES_DIR/management/orchestration/run-installer.sh"
-source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
+source "$DOTFILES_DIR/install/orchestration/run-installer.sh"
+source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
@@ -33,7 +33,7 @@ fi
 # Read a manifest field via parse_packages.py
 manifest_field() {
   local field="$1"
-  /usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" \
+  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
     --manifest-field="$field" --manifest="$MACHINE"
 }
 
@@ -56,7 +56,7 @@ show_failures_summary() {
 # ================================================================
 
 install_manifest_phases() {
-  local common_install="$DOTFILES_DIR/management/common/install"
+  local common_install="$DOTFILES_DIR/install/common/install"
   local github_releases="$common_install/github-releases"
   local custom_installers="$common_install/custom-installers"
   local lang_managers="$common_install/language-managers"
@@ -140,7 +140,7 @@ install_manifest_phases() {
   # Build shell files from manifest
   print_header "Building Shell Files"
   bash "$DOTFILES_DIR/shell/build-shell.sh" \
-    "$DOTFILES_DIR/management/machines/${MACHINE}.yml"
+    "$DOTFILES_DIR/install/machines/${MACHINE}.yml"
 
   # Symlink Dotfiles
   print_header "Symlinking Dotfiles"
@@ -206,7 +206,7 @@ usage() {
   echo "                             Supported: linux-x86_64, linux-arm64,"
   echo "                                        darwin-x86_64, darwin-arm64"
   echo ""
-  echo "Machine manifests: management/machines/*.yml"
+  echo "Machine manifests: install/machines/*.yml"
   echo ""
   echo "Environment Variables:"
   echo "  MACHINE=name    Same as --machine (flag takes precedence)"
@@ -282,7 +282,7 @@ parse_args() {
       ;;
     --create-offline-bundle)
       shift
-      exec bash "$DOTFILES_DIR/management/offline/create-bundle.sh" "$@"
+      exec bash "$DOTFILES_DIR/install/offline/create-bundle.sh" "$@"
       ;;
     --help | -h)
       usage
@@ -306,17 +306,17 @@ parse_args() {
     echo "Set via environment:  export MACHINE=<name>"
     echo ""
     echo "Available manifests:"
-    for f in "$DOTFILES_DIR"/management/machines/*.yml; do
+    for f in "$DOTFILES_DIR"/install/machines/*.yml; do
       echo "  $(basename "$f" .yml)"
     done
     exit 1
   fi
 
-  if [[ ! -f "$DOTFILES_DIR/management/machines/${MACHINE}.yml" ]]; then
-    log_error "Machine manifest not found: management/machines/${MACHINE}.yml"
+  if [[ ! -f "$DOTFILES_DIR/install/machines/${MACHINE}.yml" ]]; then
+    log_error "Machine manifest not found: install/machines/${MACHINE}.yml"
     echo ""
     echo "Available manifests:"
-    for f in "$DOTFILES_DIR"/management/machines/*.yml; do
+    for f in "$DOTFILES_DIR"/install/machines/*.yml; do
       echo "  $(basename "$f" .yml)"
     done
     exit 1
@@ -356,8 +356,8 @@ main() {
   # Platform-specific system packages
   case "$platform" in
   macos)
-    local macos_install="$DOTFILES_DIR/management/macos/install"
-    local macos_setup="$DOTFILES_DIR/management/macos/setup"
+    local macos_install="$DOTFILES_DIR/install/macos/install"
+    local macos_setup="$DOTFILES_DIR/install/macos/setup"
 
     print_header "System Tools (Homebrew)"
     bash "$macos_install/homebrew.sh"
@@ -377,21 +377,21 @@ main() {
 
     if manifest_enabled "system_packages"; then
       print_header "System Packages (apt)"
-      bash "$DOTFILES_DIR/management/wsl/install/system-packages.sh"
+      bash "$DOTFILES_DIR/install/wsl/install/system-packages.sh"
     fi
 
     print_section "WSL fontconfig setup"
-    bash "$DOTFILES_DIR/management/wsl/install/fontconfig-setup.sh"
+    bash "$DOTFILES_DIR/install/wsl/install/fontconfig-setup.sh"
     ;;
   arch)
-    local arch_setup="$DOTFILES_DIR/management/arch/setup"
+    local arch_setup="$DOTFILES_DIR/install/arch/setup"
 
     if manifest_enabled "system_packages"; then
       print_header "System Packages (pacman)"
-      bash "$DOTFILES_DIR/management/arch/install/system-packages.sh"
+      bash "$DOTFILES_DIR/install/arch/install/system-packages.sh"
     fi
     if manifest_enabled "flatpak"; then
-      bash "$DOTFILES_DIR/management/arch/install/flatpak.sh"
+      bash "$DOTFILES_DIR/install/arch/install/flatpak.sh"
     fi
 
     print_header "System Configuration"
@@ -400,7 +400,7 @@ main() {
   ubuntu)
     if manifest_enabled "system_packages"; then
       print_header "System Packages (apt)"
-      bash "$DOTFILES_DIR/management/ubuntu/install/system-packages.sh"
+      bash "$DOTFILES_DIR/install/ubuntu/install/system-packages.sh"
     fi
     ;;
   *)

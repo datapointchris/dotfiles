@@ -34,7 +34,7 @@ No clear criteria for when to use GitHub release installers (download binary dir
 - Default to system packages unless there's a specific reason not to — they handle updates automatically
 - "Frequent releases" means the tool is actively evolving, not just patching
 - Security tools are the strongest case for GitHub releases — stale versions have real consequences
-- Use `management/common/lib/github-release-installer.sh` library for new GitHub release installers
+- Use `install/common/lib/github-release-installer.sh` library for new GitHub release installers
 
 ## Related
 

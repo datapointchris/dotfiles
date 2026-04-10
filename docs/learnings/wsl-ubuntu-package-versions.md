@@ -111,7 +111,7 @@ Our taskfiles handle this automatically:
 
 ## Testing
 
-Use `management/test-wsl-setup.sh -d` to test installation without committing changes.
+Use `install/test-wsl-setup.sh -d` to test installation without committing changes.
 
 ## Related
 

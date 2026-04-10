@@ -22,7 +22,7 @@ setup_file() {
   # Source libraries
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
   # Setup test environment
   export FAILURES_LOG="/tmp/test-github-releases-bats-$$.log"
@@ -36,7 +36,7 @@ set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 # Simulate GitHub release installer that fails
 TOOL_NAME="mock-tool"

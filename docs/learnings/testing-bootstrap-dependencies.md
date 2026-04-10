@@ -30,7 +30,7 @@ python3 parse-packages.py --type=system --manager=apt
 
 To ensure parse-packages.py works across all platforms regardless of which Python is in PATH:
 
-**1. Use system Python via shebang** (`management/parse-packages.py:1`):
+**1. Use system Python via shebang** (`install/parse-packages.py:1`):
 
 ```python
 #!/usr/bin/python3  # System Python, not #!/usr/bin/env python3
@@ -46,7 +46,7 @@ WSL/Debian (bootstrap script):
 sudo apt install -y python3-pyyaml  # Correct package name
 ```
 
-Arch Linux (`management/packages.yml`):
+Arch Linux (`install/packages.yml`):
 
 ```yaml
 - name: python3-yaml
@@ -59,7 +59,7 @@ macOS (bootstrap script):
 /usr/bin/python3 -m pip install --user PyYAML
 ```
 
-**3. Use Docker with WSL rootfs for testing** (`management/test-wsl-docker.sh`):
+**3. Use Docker with WSL rootfs for testing** (`install/test-wsl-docker.sh`):
 
 ```bash
 # Download official WSL Ubuntu rootfs (one-time, cached)
@@ -69,15 +69,15 @@ curl -L https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64
 gunzip -c ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz | docker import - wsl-ubuntu:24.04
 
 # Run tests in authentic WSL environment
-./management/test-wsl-docker.sh
+./install/test-wsl-docker.sh
 ```
 
 This provides **100% accurate testing** - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.
 
-**4. Verify the script works** (`management/verify-installation.sh:322`):
+**4. Verify the script works** (`install/verify-installation.sh:322`):
 
 ```bash
-if python3 "$HOME/dotfiles/management/parse-packages.py" --type=system --manager=apt >/dev/null 2>&1; then
+if python3 "$HOME/dotfiles/install/parse-packages.py" --type=system --manager=apt >/dev/null 2>&1; then
   print_success "parse-packages.py: working (yaml module available)"
 else
   print_error "parse-packages.py: FAILED (yaml module missing)"
@@ -133,10 +133,10 @@ Best practice for testing system installations:
 
 ## Related
 
-- `management/test-wsl-docker.sh` - Docker-based WSL testing (recommended)
-- `management/wsl-docker-images.sh` - Manage WSL Docker images
-- `management/test-install.sh` - Multipass testing (alternative)
-- `management/wsl/` - WSL installation scripts
-- `management/verify-installation.sh` - Installation verification
-- `management/parse_packages.py` - Package list parser
+- `install/test-wsl-docker.sh` - Docker-based WSL testing (recommended)
+- `install/wsl-docker-images.sh` - Manage WSL Docker images
+- `install/test-install.sh` - Multipass testing (alternative)
+- `install/wsl/` - WSL installation scripts
+- `install/verify-installation.sh` - Installation verification
+- `install/parse_packages.py` - Package list parser
 - `docs/development/testing.md` - Testing documentation

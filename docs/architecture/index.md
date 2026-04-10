@@ -24,7 +24,7 @@ dotfiles/
 │   ├── aliases/         # Alias group files (core.sh, platform-*.sh)
 │   ├── functions/       # Function group files (core.sh, git.sh, fzf.sh, ...)
 │   └── build-shell.sh   # Concatenates groups into ~/.local/shell/{aliases,functions}.sh
-├── management/          # Repository management
+├── install/          # Provisioning: packages, installers, manifests, symlinks manager
 │   ├── machines/        # Machine manifests (what to install per computer)
 │   ├── symlinks/        # Symlinks manager (Python)
 │   ├── common/          # Shared installers and libraries
@@ -75,10 +75,10 @@ task symlinks:relink    # Complete refresh (remove and recreate)
 
 ## Machine Manifests
 
-Installation is driven by machine manifests in `management/machines/`. Each manifest defines exactly what gets installed:
+Installation is driven by machine manifests in `install/machines/`. Each manifest defines exactly what gets installed:
 
 ```yaml
-# management/machines/arch-personal-workstation.yml
+# install/machines/arch-personal-workstation.yml
 machine: arch-personal-workstation
 platform: arch
 
@@ -169,7 +169,7 @@ Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP
 
 **Minimal Duplication**: Only platform differences exist in platform directories.
 
-**Clear Separation**: configs/common/ for shared, platform dirs for quirks only, apps/ for tools, management/ for repo tooling.
+**Clear Separation**: configs/common/ for shared, platform dirs for quirks only, apps/ for tools, install/ for repo tooling.
 
 **Easy Maintenance**: Update shared config once, all platforms benefit.
 

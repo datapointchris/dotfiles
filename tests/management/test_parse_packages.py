@@ -1,8 +1,8 @@
 """
 Tests for parse_packages.py
 
-Run with: pytest tests/management/test_parse_packages.py
-Or from project root: python -m pytest tests/management/
+Run with: pytest tests/install/test_parse_packages.py
+Or from project root: python -m pytest tests/install/
 """
 
 import sys

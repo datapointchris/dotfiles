@@ -32,39 +32,39 @@ teardown_file() {
 # Test that language managers recognize --update flag
 
 @test "go: accepts --update flag" {
-  run bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh" --update
+  run bash "$DOTFILES_DIR/install/common/install/language-managers/go.sh" --update
   assert_success
 }
 
 @test "go: normal install mode works" {
-  run bash "$DOTFILES_DIR/management/common/install/language-managers/go.sh"
+  run bash "$DOTFILES_DIR/install/common/install/language-managers/go.sh"
   assert_success
 }
 
 @test "go: shows already at latest version when current" {
   # First install to latest version
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/language-managers/go.sh"
+    "bash install/common/install/language-managers/go.sh"
   assert_success
 
   # Then run update - should show already at latest
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash management/common/install/language-managers/go.sh --update"
+    "bash install/common/install/language-managers/go.sh --update"
   assert_success
 }
 
 @test "nvm: accepts --update flag" {
-  run bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update
+  run bash "$DOTFILES_DIR/install/common/install/language-managers/nvm.sh" --update
   assert_success
 }
 
 @test "nvm: normal install mode works" {
-  run bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh"
+  run bash "$DOTFILES_DIR/install/common/install/language-managers/nvm.sh"
   assert_success
 }
 
 @test "nvm: shows already at target version when current" {
   skip "Requires nvm and Node.js to be installed at target version"
-  run bash "$DOTFILES_DIR/management/common/install/language-managers/nvm.sh" --update
+  run bash "$DOTFILES_DIR/install/common/install/language-managers/nvm.sh" --update
   assert_success
 }

@@ -1,0 +1,1250 @@
+# ================================================================
+# Universal Package Configuration
+# ================================================================
+# Single source of truth for ALL packages across ALL platforms
+# Parsed by install/parse_packages.py
+
+# ================================================================
+# MACOS HOMEBREW TAPS
+# ================================================================
+# Third-party Homebrew taps to add before installing packages
+# These provide packages not in the main Homebrew repository
+
+macos_taps:
+  - FelixKratz/formulae # JankyBorders
+  - TheZoraiz/ascii-image-converter # ASCII art from images
+
+# ================================================================
+# SYSTEM PACKAGES
+# ================================================================
+# Installed via OS package managers: apt (Ubuntu), pacman (Arch), brew (macOS)
+# Omit a platform if the tool is installed via other methods
+# See notes at bottom for exclusions (bat, eza, fd, neovim, etc.)
+
+system_packages:
+  # Essential Build Tools
+  - name: build-essential
+    apt: build-essential
+    pacman: base-devel
+    description: Compiler and build tools
+
+  - name: ca-certificates
+    apt: ca-certificates
+    pacman: ca-certificates
+    brew: ca-certificates
+    description: SSL/TLS certificates
+
+  - name: pkg-config
+    apt: pkg-config
+    pacman: pkgconf
+    brew: pkg-config
+    description: Build configuration tool
+
+  - name: libssl-dev
+    apt: libssl-dev
+    pacman: openssl
+    description: SSL development libraries
+
+  # Python YAML library (needed for parse_packages.py)
+  - name: python3-yaml
+    apt: python3-yaml
+    pacman: python-yaml
+    description: Python YAML library for parsing packages.yml
+
+  # Core Development Tools
+  - name: git
+    apt: git
+    pacman: git
+    brew: git
+    description: Version control system
+
+  - name: gh
+    apt: gh
+    pacman: github-cli
+    brew: gh
+    description: GitHub CLI
+
+  - name: awscli
+    brew: awscli
+    description: AWS CLI (macOS only - Linux uses official installer)
+
+  - name: curl
+    apt: curl
+    pacman: curl
+    brew: curl
+    description: Transfer data with URLs
+
+  - name: man-db
+    apt: man-db
+    pacman: man-db
+    description: Manual page viewer (macOS has it built-in)
+
+  - name: wget
+    apt: wget
+    pacman: wget
+    brew: wget
+    description: File retrieval
+
+  - name: unzip
+    apt: unzip
+    pacman: unzip
+    brew: unzip
+    description: Archive extraction
+
+  - name: ripgrep
+    apt: ripgrep
+    pacman: ripgrep
+    brew: ripgrep
+    command: rg
+    description: Fast grep alternative
+    tags: [cli, search]
+
+  - name: tokei
+    pacman: tokei
+    brew: tokei
+    description: Code statistics (lines of code, language breakdown)
+    tags: [cli, development]
+
+  - name: tmux
+    apt: tmux
+    pacman: tmux
+    brew: tmux
+    description: Terminal multiplexer
+    tags: [cli, terminal]
+
+  - name: jq
+    apt: jq
+    pacman: jq
+    brew: jq
+    description: JSON processor
+
+  - name: tree
+    apt: tree
+    pacman: tree
+    brew: tree
+    description: Directory tree visualization
+
+  - name: htop
+    apt: htop
+    pacman: htop
+    brew: htop
+    description: Interactive process viewer
+
+  - name: btop
+    apt: btop
+    pacman: btop
+    brew: btop
+    description: Resource monitor with themeable UI
+    tags: [cli, tui]
+
+  # Shell
+  - name: zsh
+    apt: zsh
+    pacman: zsh
+    description: Z shell (macOS has it pre-installed)
+
+  # Docker (cross-platform via official repos - WSL uses Windows Docker Desktop)
+  # Ubuntu: requires running setup-docker-official-repo-ubuntu.sh first
+  # Arch: official repos already up-to-date
+  # macOS: OrbStack provides Docker CLI (see macos_casks)
+  - name: docker
+    apt: docker-ce
+    pacman: docker
+    description: Docker CLI (official repositories)
+
+  - name: docker-cli
+    apt: docker-ce-cli
+    description: Docker CLI (Ubuntu official repo - separate package)
+
+  - name: containerd
+    apt: containerd.io
+    pacman: containerd
+    description: Container runtime
+
+  - name: docker-buildx-plugin
+    apt: docker-buildx-plugin
+    pacman: docker-buildx
+    description: Docker Buildx plugin
+
+  - name: docker-compose-plugin
+    apt: docker-compose-plugin
+    pacman: docker-compose
+    description: Docker Compose V2 plugin
+    # macOS: OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed
+
+  # Programming Languages
+  - name: ruby
+    brew: ruby
+    description: Ruby programming language (macOS only in Brewfile)
+
+  # Language Servers
+  - name: lua-language-server
+    brew: lua-language-server
+    description: Lua LSP (macOS only for now)
+
+  # Linters & Formatters
+  # Note: shellcheck moved to github_binaries for consistent versioning across platforms
+
+  - name: shfmt
+    apt: shfmt
+    pacman: shfmt
+    brew: shfmt
+    description: Shell script formatter
+
+  # Note: hadolint moved to github_binaries for consistent versioning across platforms
+
+  - name: rclone
+    apt: rclone
+    pacman: rclone
+    brew: rclone
+    description: Cloud storage sync and management
+
+  - name: rsync
+    apt: rsync
+    pacman: rsync
+    brew: rsync
+    description: Fast incremental file transfer
+
+  - name: direnv
+    apt: direnv
+    pacman: direnv
+    brew: direnv
+    description: Per-directory environment variables
+
+  # Security
+  - name: gnupg
+    apt: gnupg
+    pacman: gnupg
+    brew: gnupg
+    command: gpg
+    description: GPG encryption
+
+  - name: age
+    apt: age
+    pacman: age
+    brew: age
+    description: Modern file encryption tool (used by sops)
+
+
+
+  # Media Processing
+  - name: ffmpeg
+    apt: ffmpeg
+    pacman: ffmpeg
+    brew: ffmpeg
+    description: Video/audio processing
+
+  - name: imagemagick
+    apt: imagemagick
+    pacman: imagemagick
+    brew: imagemagick
+    command: magick
+    description: Image processing
+
+  - name: poppler-utils
+    apt: poppler-utils
+    pacman: poppler
+    brew: poppler
+    command: pdftotext
+    description: PDF rendering library (provides pdftoppm, pdftotext, etc.)
+
+  - name: chafa
+    apt: chafa
+    pacman: chafa
+    brew: chafa
+    description: Image to ASCII converter (used by Yazi for image preview)
+
+  - name: ascii-image-converter
+    brew: thezoraiz/ascii-image-converter/ascii-image-converter
+    aur: ascii-image-converter
+    description: Convert images to ASCII art (used by theme tool)
+    tags: [cli, media]
+
+  # Note: resvg removed - now embedded in Yazi as a Rust crate (not needed separately)
+
+  # Archive Tools
+  - name: 7zip
+    apt: 7zip-standalone
+    pacman: 7zip
+    brew: sevenzip
+    command: 7zz
+    description: 7-Zip compression (provides 7zz command on all platforms)
+
+  # Build & Task Automation
+  - name: go-task
+    brew: go-task
+    command: task
+    description: Task runner (apt/pacman install via script or AUR)
+
+  # macOS-Specific Tools
+  - name: gnu-sed
+    brew: gnu-sed
+    command: gsed
+    description: GNU sed (macOS only, available as gsed)
+
+  - name: gnu-tar
+    brew: gnu-tar
+    command: gtar
+    description: GNU tar (macOS only, available as gtar)
+
+  - name: grep
+    brew: grep
+    command: ggrep
+    description: GNU grep (macOS only)
+
+  - name: coreutils
+    brew: coreutils
+    command: gls
+    description: GNU core utilities (macOS only, g-prefixed)
+
+  - name: findutils
+    brew: findutils
+    command: gfind
+    description: GNU find utilities (macOS only)
+
+  - name: gawk
+    brew: gawk
+    command: gawk
+    description: GNU awk (macOS only, default awk is nawk)
+
+  - name: mas
+    brew: mas
+    description: Mac App Store CLI (macOS only)
+
+  - name: duti
+    brew: duti
+    description: File association manager (macOS only)
+
+  # Note: glow and duf moved to github_binaries for universal installation
+
+  - name: git-secrets
+    brew: git-secrets
+    description: Prevent committing secrets (macOS Brewfile)
+
+  # Shell and utilities
+  - name: bash
+    apt: bash
+    pacman: bash
+    brew: bash
+    description: Bash shell (macOS default is outdated)
+
+  - name: parallel
+    apt: parallel
+    pacman: parallel
+    brew: parallel
+    description: Execute jobs in parallel
+
+  - name: watch
+    apt: procps
+    pacman: procps-ng
+    brew: watch
+    description: Execute program periodically (used in watchports alias)
+
+  # Network Tools
+  - name: syncthing
+    pacman: syncthing
+    brew: syncthing
+    description: Continuous file synchronization
+
+  - name: nmap
+    apt: nmap
+    pacman: nmap
+    brew: nmap
+    description: Network scanner
+
+  # Media & Utilities
+  - name: mpv
+    apt: mpv
+    pacman: mpv
+    brew: mpv
+    description: Media player (used by Yazi for video playback)
+
+  - name: graphviz
+    apt: graphviz
+    pacman: graphviz
+    brew: graphviz
+    description: Graph visualization
+
+  - name: figlet
+    apt: figlet
+    pacman: figlet
+    brew: figlet
+    description: ASCII art text
+
+  # Security & Development Tools
+  - name: mkcert
+    apt: mkcert
+    pacman: mkcert
+    brew: mkcert
+    description: Local HTTPS certificates for development
+
+  - name: psql
+    apt: postgresql-client
+    pacman: postgresql
+    brew: libpq
+    description: PostgreSQL client (psql CLI for database connections)
+    # Notes:
+    # - macOS: requires `brew link --force libpq` after install (handled in post-install)
+    # - Arch: installs full postgresql package, but server doesn't run unless configured
+    # - All platforms: provides psql, pg_dump, pg_restore CLI tools
+
+  # Notifications
+  - name: libnotify
+    apt: libnotify-bin
+    pacman: libnotify
+    description: Desktop notifications (provides notify-send)
+
+  - name: terminal-notifier
+    brew: terminal-notifier
+    description: macOS notifications from terminal (macOS only)
+
+  - name: borders
+    brew: borders
+    description: macOS colored window borders
+
+  # Hyprland Desktop Environment (Arch Linux only)
+  - name: waybar
+    pacman: waybar
+    description: Wayland status bar
+
+  - name: rofi-wayland
+    pacman: rofi-wayland
+    description: Application launcher (Wayland fork)
+
+  - name: dunst
+    pacman: dunst
+    description: Notification daemon
+
+  - name: wl-clipboard
+    pacman: wl-clipboard
+    description: Wayland clipboard utilities
+
+  - name: cliphist
+    pacman: cliphist
+    description: Clipboard history manager
+
+  - name: grim
+    pacman: grim
+    description: Screenshot tool for Wayland
+
+  - name: slurp
+    pacman: slurp
+    description: Region selector for Wayland
+
+  - name: brightnessctl
+    pacman: brightnessctl
+    description: Brightness control
+
+  - name: playerctl
+    pacman: playerctl
+    description: Media player control
+
+  - name: polkit-kde-agent
+    pacman: polkit-kde-agent
+    description: Authentication agent for privilege escalation
+
+  - name: xdg-desktop-portal-hyprland
+    pacman: xdg-desktop-portal-hyprland
+    description: XDG portal backend for Hyprland
+
+  - name: hyprpaper
+    pacman: hyprpaper
+    description: Wallpaper utility for Hyprland
+
+  - name: hyprlock
+    pacman: hyprlock
+    description: Screen locker for Hyprland
+
+  - name: hypridle
+    pacman: hypridle
+    description: Idle daemon for Hyprland
+
+  - name: qt5-wayland
+    pacman: qt5-wayland
+    description: Qt5 Wayland support
+
+  - name: qt6-wayland
+    pacman: qt6-wayland
+    description: Qt6 Wayland support
+
+  - name: pipewire
+    pacman: pipewire
+    description: Multimedia framework
+
+  - name: wireplumber
+    pacman: wireplumber
+    description: PipeWire session manager
+
+  - name: pipewire-pulse
+    pacman: pipewire-pulse
+    description: PipeWire PulseAudio replacement
+
+  - name: wlogout
+    aur: wlogout
+    description: Logout menu for Wayland
+
+  - name: zen-browser
+    aur: zen-browser-bin
+    description: Privacy-focused Firefox fork with modern UI
+
+  - name: kitty
+    pacman: kitty
+    description: GPU-accelerated terminal (backup for Ghostty)
+
+  - name: ghostty
+    pacman: ghostty
+    description: GPU-accelerated terminal emulator
+
+  - name: visual-studio-code
+    aur: visual-studio-code-bin
+    description: Code editor (Arch only - macOS uses cask)
+
+  - name: aerc
+    brew: aerc
+    pacman: aerc
+    description: Terminal email client
+    tags: [cli, communication]
+
+  - name: w3m
+    brew: w3m
+    pacman: w3m
+    description: Text-based web browser and HTML renderer for aerc
+    tags: [cli, communication]
+
+  - name: newsboat
+    brew: newsboat
+    pacman: newsboat
+    description: RSS/Atom feed reader for the terminal
+    tags: [cli, communication]
+
+  - name: librewolf
+    aur: librewolf-bin
+    description: Privacy-focused Firefox fork (Arch only - macOS uses cask)
+    tags: [gui]
+
+  - name: sioyek
+    aur: sioyek
+    description: Keyboard-driven PDF viewer for technical documents
+    tags: [gui]
+
+  # ---- webviewrs dependencies ----
+  # Required for: cargo install --git https://github.com/datapointchris/webviewrs
+  # These packages enable webviewrs functionality but are optional if not using it
+
+  - name: webkit2gtk-4.1
+    pacman: webkit2gtk-4.1
+    description: WebKitGTK library (webviewrs core dependency)
+    tags: [gui, development, webview]
+
+  - name: noto-fonts-emoji
+    pacman: noto-fonts-emoji
+    description: Emoji fonts for proper icon rendering
+    tags: [fonts, gui]
+
+  - name: gst-plugins-base
+    pacman: gst-plugins-base
+    description: GStreamer base plugins (audio/video playback)
+    tags: [multimedia, webview]
+
+  - name: gst-plugins-good
+    pacman: gst-plugins-good
+    description: GStreamer good plugins (common codecs)
+    tags: [multimedia, webview]
+
+  - name: gst-plugins-bad
+    pacman: gst-plugins-bad
+    description: GStreamer bad plugins (additional codecs)
+    tags: [multimedia, webview]
+
+  - name: gst-libav
+    pacman: gst-libav
+    description: GStreamer FFmpeg plugin (broad format support)
+    tags: [multimedia, webview]
+
+  # Local AI
+  - name: ollama
+    pacman: ollama-rocm
+    brew: ollama
+    description: Local LLM server for embeddings — pacman uses ROCm variant for AMD RX 6600 GPU acceleration
+
+# ================================================================
+# RUNTIME VERSIONS
+# ================================================================
+# Minimum acceptable versions for language runtimes
+
+runtimes:
+  go:
+    min_version: "1.23"
+    install_method: github_release
+    repo: golang/go
+
+  node:
+    version: "24.11.0"
+    install_method: nvm
+
+  terraform:
+    version: "1.10.5"
+    install_method: tenv
+
+  rust:
+    install_method: rustup
+    url: https://sh.rustup.rs
+
+# ================================================================
+# GITHUB BINARY RELEASES
+# ================================================================
+# Tools installed via direct GitHub release downloads
+# Each has a dedicated install script that reads from this config
+#
+# NOTE: Most install scripts detect platform (macOS/Linux) and architecture automatically.
+# The binary_pattern field shows the pattern for reference, but scripts override with
+# platform-specific values (e.g., Darwin vs Linux, x86_64 vs arm64).
+
+github_binaries:
+  - name: neovim
+    repo: neovim/neovim
+    min_version: "0.11"
+    install_script: install-neovim.sh
+    binary_pattern: "nvim-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
+    install_dir: "~/.local/nvim-{platform}-{arch}" # Platform-specific
+    binary_link: "~/.local/bin/nvim"
+    description: Extensible text editor
+    tags: [cli, editor]
+
+  - name: lazygit
+    repo: jesseduffield/lazygit
+    version: "0.56.0"
+    install_script: install-lazygit.sh
+    binary_pattern: "lazygit_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
+    install_dir: "~/.local/bin"
+    description: Terminal UI for git
+    tags: [cli, tui, git]
+
+  - name: yazi
+    repo: sxyazi/yazi
+    install_script: install-yazi.sh
+    binary_pattern: "yazi-{arch}-{platform}.zip" # Platform-specific: apple-darwin/unknown-linux-gnu
+    install_dir: "~/.local/bin"
+    description: Terminal file manager
+    tags: [cli, tui, files]
+
+  - name: fzf
+    repo: junegunn/fzf
+    min_version: "0.50"
+    install_script: install-fzf.sh
+    build_method: go # Universal: built from source
+    install_dir: "~/.local/bin"
+    description: Fuzzy finder
+    tags: [cli, search]
+
+  - name: glow
+    repo: charmbracelet/glow
+    install_script: install-glow.sh
+    binary_pattern: "glow_{version}_{platform}_{arch}.tar.gz" # Platform-specific: Darwin/linux
+    install_dir: "~/.local/bin"
+    description: Markdown renderer for terminal
+    tags: [cli]
+
+  - name: duf
+    repo: muesli/duf
+    install_script: install-duf.sh
+    binary_pattern: "duf_{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Disk usage analyzer
+    tags: [cli]
+
+  # Terraform ecosystem tools
+  - name: tenv
+    repo: tofuutils/tenv
+    install_script: github-releases/tenv.sh
+    binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Version manager for Terraform/OpenTofu/Terragrunt and Terraform runtime
+
+  - name: terraform-ls
+    repo: hashicorp/terraform-ls
+    install_script: custom-installers/terraform-ls.sh
+    binary_pattern: "terraform-ls_{version}_{platform}_{arch}.zip" # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Terraform Language Server (uses releases.hashicorp.com)
+
+  - name: tflint
+    repo: terraform-linters/tflint
+    install_script: install-tflint.sh
+    binary_pattern: "tflint_{platform}_{arch}.zip" # Platform-specific: darwin/linux
+    install_dir: "~/.local/bin"
+    description: Terraform linter
+
+  - name: terraformer
+    repo: GoogleCloudPlatform/terraformer
+    version: "0.8.30"
+    install_script: install-terraformer.sh
+    binary_pattern: "terraformer-all-{platform}-{arch}" # Platform-specific: darwin/linux (direct binary)
+    install_dir: "~/.local/bin"
+    description: Generate Terraform from existing infrastructure
+
+  - name: terrascan
+    repo: tenable/terrascan
+    install_script: install-terrascan.sh
+    binary_pattern: "terrascan_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
+    install_dir: "~/.local/bin"
+    description: Terraform security scanner
+
+  # Development Tools
+  - name: zk
+    repo: zk-org/zk
+    install_script: install-zk.sh
+    binary_pattern: "zk-{version}-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
+    install_dir: "~/.local/bin"
+    description: Plain text note-taking assistant
+
+  - name: trivy
+    repo: aquasecurity/trivy
+    install_script: install-trivy.sh
+    binary_pattern: "trivy_{version}_{OS}_{arch}.tar.gz" # Platform-specific: macOS-64bit/macOS-ARM64/Linux-64bit/Linux-ARM64
+    install_dir: "~/.local/bin"
+    description: Container/IaC vulnerability scanner
+
+  - name: shellcheck
+    repo: koalaman/shellcheck
+    install_script: github-releases/shellcheck.sh
+    binary_pattern: "shellcheck-{version}.{platform}.{arch}.tar.xz" # Platform-specific: darwin/linux, x86_64/aarch64
+    install_dir: "~/.local/bin"
+    description: Shell script static analysis tool (consistent version across all platforms)
+
+  - name: hadolint
+    repo: hadolint/hadolint
+    install_script: github-releases/hadolint.sh
+    binary_pattern: "hadolint-{platform}-{arch}" # Direct binary: macos/linux, arm64/x86_64
+    install_dir: "~/.local/bin"
+    description: Dockerfile linter (consistent version across all platforms)
+
+  - name: just
+    repo: casey/just
+    install_script: github-releases/just.sh
+    binary_pattern: "just-{version}-{target}.tar.gz" # Target-specific: x86_64-apple-darwin, aarch64-apple-darwin, x86_64-unknown-linux-musl
+    install_dir: "~/.local/bin"
+    description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
+
+# ================================================================
+# CARGO PACKAGES (Rust)
+# ================================================================
+# Installed via: cargo binstall -y <package>
+# Fast pre-compiled binaries (much faster than cargo install)
+
+cargo_packages:
+  - name: bat
+    command: bat
+    description: cat with syntax highlighting
+    github_repo: sharkdp/bat
+    binary_pattern: "bat-{version}-{target}.tar.gz"
+    tags: [cli, files]
+
+  - name: fd-find
+    command: fd
+    description: modern find replacement
+    github_repo: sharkdp/fd
+    binary_pattern: "fd-{version}-{target}.tar.gz"
+    tags: [cli, search, files]
+
+  - name: eza
+    command: eza
+    description: modern ls replacement
+    github_repo: eza-community/eza
+    binary_pattern: "eza_{target}.tar.gz"
+    tags: [cli, files]
+
+  - name: zoxide
+    command: zoxide
+    description: Smarter cd command
+    github_repo: ajeetdsouza/zoxide
+    binary_pattern: "zoxide-{version_num}-{target}.tar.gz"
+    linux_target: x86_64-unknown-linux-musl
+    tags: [cli]
+
+  - name: git-delta
+    command: delta
+    description: syntax-highlighting git diff
+    github_repo: dandavison/delta
+    binary_pattern: "delta-{version}-{target}.tar.gz"
+    tags: [cli, git]
+
+  - name: oxker
+    command: oxker
+    description: Docker container TUI
+    github_repo: mrjackwills/oxker
+    binary_pattern: "oxker_{platform}_{arch}.tar.gz"
+    tags: [cli, tui, containers]
+
+  - name: broot
+    command: broot
+    description: Interactive directory tree navigator with fuzzy search
+    github_repo: Canop/broot
+    binary_pattern: "broot_{version_num}.zip"
+    tags: [cli, tui, files, navigation]
+
+
+# ================================================================
+# TMUX PLUGINS
+# ================================================================
+# Installed via TPM (Tmux Plugin Manager)
+# Universal across all platforms
+# Plugins are declared in configs/common/.config/tmux/tmux.conf
+# TPM auto-installs plugins on tmux start (see tmux.conf lines 325-327)
+#
+# Current plugins:
+#   - tmux-plugins/tpm (plugin manager)
+#   - tmux-plugins/tmux-cpu (CPU/RAM status)
+#   - tmux-plugins/tmux-sidebar (file tree sidebar)
+#   - tmux-plugins/tmux-yank (clipboard integration)
+#   - tmux-plugins/tmux-resurrect (session persistence - manual save/restore)
+#   - tmux-plugins/tmux-continuum (auto-save/restore for resurrect)
+
+tmux_plugins:
+  tpm:
+    repo: https://github.com/tmux-plugins/tpm
+    install_dir: ~/.config/tmux/plugins/tpm
+    description: Tmux Plugin Manager - auto-installs plugins declared in tmux.conf
+
+# ================================================================
+# NPM GLOBAL PACKAGES
+# ================================================================
+# Installed via: npm install -g <package>
+# Managed by nvm (Node.js version manager)
+# These are system-wide tools, not project dependencies
+
+npm_globals:
+  # Language Servers
+  language_servers:
+    - name: typescript-language-server
+      description: TypeScript & JavaScript LSP
+
+    - name: typescript
+      description: TypeScript compiler (peer dependency for ts-server)
+
+    - name: bash-language-server
+      description: Bash & Shell script LSP
+
+    - name: yaml-language-server
+      description: YAML LSP
+
+    - name: vscode-langservers-extracted
+      description: HTML, CSS, JSON, ESLint LSPs
+
+    - name: gh-actions-language-server
+      description: GitHub Actions LSP
+
+    - name: "@taplo/cli"
+      description: TOML language server and formatter
+
+  # Linters & Formatters
+  linters_formatters:
+    - name: eslint
+      description: JavaScript/TypeScript linter
+
+    - name: prettier
+      description: Code formatter (multi-language)
+
+    - name: markdownlint-cli
+      description: Markdown linter
+
+  # Build Tools
+  build_tools:
+    - name: sass
+      description: Dart Sass CSS compiler
+
+    # tree-sitter-cli moved to GitHub release installer (install/common/install/github-releases/tree-sitter.sh)
+    # npm install triggers post-install scripts that fail behind corporate firewalls
+
+# ================================================================
+# UV TOOLS (Python)
+# ================================================================
+# Installed via: uv tool install <package>
+# Managed by uv (fast Python package manager)
+# These are Python CLI tools, not project dependencies
+
+uv_tools:
+  # Linters & Formatters
+  linters_formatters:
+    - name: ruff
+      description: Fast Python linter & formatter (replaces flake8, black, isort)
+
+    - name: mypy
+      description: Static type checker for Python
+
+    - name: basedpyright
+      description: Type checker (Pyright fork with better defaults)
+
+  # Code Quality
+  code_quality:
+    - name: codespell
+      description: Spell checker for code
+
+  # SQL
+  sql:
+    - name: sqlfluff
+      description: SQL linter and formatter
+
+  # Template Linting
+  template:
+    - name: djlint
+      description: Django/Jinja template linter & formatter
+
+  # Utilities
+  utilities:
+    - name: yq
+      description: YAML/XML processor (jq wrapper for YAML)
+
+    - name: keymap-drawer
+      command: keymap
+      description: Generate keyboard layout diagrams
+
+    - name: nbpreview
+      description: Jupyter notebook preview in terminal
+
+    - name: numpy
+      description: Numerical computing (for various tools)
+
+  # Development Tools
+  development:
+    - name: pre-commit
+      description: Git pre-commit hook framework
+
+    - name: git-filter-repo
+      description: Git history rewriting tool (recommended replacement for git-filter-branch and BFG)
+
+    - name: tldr
+      description: Collaborative cheatsheets for console commands
+
+# ================================================================
+# GIT UV TOOLS
+# ================================================================
+# Installed via: uv tool install <repo_url>
+# Python tools installed from GitHub repositories
+
+git_uv_tools:
+  - name: refcheck
+    repo: https://github.com/datapointchris/refcheck.git
+    description: Find broken file references and fragile path patterns
+
+  - name: syncer
+    repo: https://github.com/datapointchris/syncer.git
+    description: Sync files and directories
+
+  - name: keymap-align
+    repo: https://github.com/datapointchris/keymap-align.git
+    description: Align ZMK keymap bindings into readable columns
+
+# ================================================================
+# GO TOOLS
+# ================================================================
+# Installed via: go install <package>@latest
+# Managed by Go toolchain (installed in Phase 2)
+# These are Go CLI tools installed globally
+
+go_tools:
+  - name: task
+    package: github.com/go-task/task/v3/cmd/task
+    github_repo: go-task/task
+    binary_pattern: "task_{os}_{go_arch}.tar.gz"
+    description: Task runner / build tool (Taskfile.yml)
+
+  - name: cheat
+    package: github.com/cheat/cheat/cmd/cheat
+    github_repo: cheat/cheat
+    binary_pattern: "cheat-{os}-{go_arch}.gz"
+    description: Interactive cheatsheet CLI
+
+  - name: terraform-docs
+    package: github.com/terraform-docs/terraform-docs
+    github_repo: terraform-docs/terraform-docs
+    binary_pattern: "terraform-docs-{version}-{os}-{go_arch}.tar.gz"
+    description: Generate terraform documentation
+
+  - name: gum
+    package: github.com/charmbracelet/gum
+    github_repo: charmbracelet/gum
+    binary_pattern: "gum_{version_num}_{Os}_{Arch}.tar.gz"
+    description: Tool for glamorous shell scripts (used by menu/notes apps)
+
+  - name: lazydocker
+    package: github.com/jesseduffield/lazydocker
+    github_repo: jesseduffield/lazydocker
+    binary_pattern: "lazydocker_{version_num}_{Os}_{Arch}.tar.gz"
+    description: Terminal UI for Docker with compose support
+
+  - name: actionlint
+    package: github.com/rhysd/actionlint/cmd/actionlint
+    github_repo: rhysd/actionlint
+    binary_pattern: "actionlint_{version_num}_{os}_{go_arch}.tar.gz"
+    description: GitHub Actions workflow linter
+
+  - name: goose
+    package: github.com/pressly/goose/v3/cmd/goose
+    github_repo: pressly/goose
+    binary_pattern: "goose_{os}_{Arch}"
+    description: Database migration tool
+
+  - name: gofumpt
+    package: mvdan.cc/gofumpt
+    github_repo: mvdan/gofumpt
+    binary_pattern: "gofumpt_{version}_{os}_{go_arch}"
+    description: Stricter gofmt formatter for Go code
+
+  - name: golangci-lint
+    package: github.com/golangci/golangci-lint/cmd/golangci-lint
+    github_repo: golangci/golangci-lint
+    binary_pattern: "golangci-lint-{version_num}-{os}-{go_arch}.tar.gz"
+    description: Comprehensive Go linter aggregating 100+ linters
+
+  - name: gdu
+    package: github.com/dundee/gdu/v5/cmd/gdu
+    github_repo: dundee/gdu
+    binary_pattern: "gdu_{os}_{go_arch}.tgz"
+    description: Fast disk usage analyzer with interactive TUI
+
+  - name: sess
+    package: github.com/datapointchris/sess/cmd/sess
+    github_repo: datapointchris/sess
+    binary_pattern: "sess_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Terminal session manager
+
+  - name: sesh
+    package: github.com/joshmedeski/sesh/v2
+    github_repo: joshmedeski/sesh
+    binary_pattern: "sesh_{Os}_{Arch}.tar.gz"
+    description: Smart tmux session manager with zoxide integration
+
+  - name: todoui
+    package: github.com/datapointchris/todoui/cmd/todoui
+    github_repo: datapointchris/todoui
+    binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Personal project organization with local-first SQLite
+
+  - name: forge
+    package: github.com/datapointchris/forge
+    github_repo: datapointchris/forge
+    binary_pattern: "forge_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Run commands and dies across all git repos
+
+  - name: sops
+    package: github.com/getsops/sops/v3/cmd/sops
+    github_repo: getsops/sops
+    binary_pattern: "sops-{version}.{os}.{go_arch}"
+    description: Secrets manager for config files (encrypts with age/GPG/KMS)
+
+  - name: toolbox
+    package: github.com/datapointchris/toolbox
+    github_repo: datapointchris/toolbox
+    binary_pattern: "toolbox_{version_num}_{os}_{go_arch}.tar.gz"
+    description: CLI for discovering installed development tools
+
+# ================================================================
+# SHELL PLUGINS
+# ================================================================
+# Manually cloned into ~/.config/zsh/plugins
+# Not managed by package managers
+
+shell_plugins:
+  - name: git-open
+    repo: https://github.com/paulirish/git-open.git
+    description: Open repo in browser from terminal
+
+  - name: zsh-vi-mode
+    repo: https://github.com/jeffreytse/zsh-vi-mode.git
+    description: Better vi-mode for ZSH
+
+  - name: forgit
+    repo: https://github.com/wfxr/forgit.git
+    description: Interactive git commands with fzf
+
+  - name: zsh-syntax-highlighting
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+    description: Fish-like syntax highlighting for ZSH
+
+# ================================================================
+# MAC APP STORE APPS
+# ================================================================
+# Installed via: mas install <id>
+# Platform: macOS only
+# Note: mas (Mac App Store CLI) may fail on certain macOS versions
+# These apps can be manually installed via the App Store GUI if needed
+
+mas_apps:
+  - name: Color Picker
+    id: 1545870783
+    description: Color picker utility for macOS
+
+  - name: Dark Reader for Safari
+    id: 1438243180
+    description: Dark mode for Safari websites
+
+  - name: Dato
+    id: 1470584107
+    description: Menu bar calendar and time zones
+
+  - name: Disk Space Analyzer
+    id: 446243721
+    description: Disk space analyzer
+
+  - name: Forecast Bar
+    id: 982710545
+    description: Weather forecast in menu bar
+
+  - name: Hush
+    id: 1544743900
+    description: Skip cookie accept on websites
+
+  - name: Pixelstyle Photo Editor
+    id: 1244649277
+    description: Photo editing application
+
+  - name: Todoist
+    id: 585829637
+    description: Task management and to-do list
+
+  - name: uBlock Origin Lite
+    id: 67545342698
+    description: Block ads on Safari
+
+# ================================================================
+# LINUX GUI APPLICATIONS
+# ================================================================
+# Installed via Flatpak (universal across all Linux distributions)
+# Platform: Linux only (NOT WSL - GUI runs in Windows)
+# Install: flatpak install flathub <flatpak_id>
+# See: https://flathub.org for application catalog
+
+flatpak_apps:
+  - name: dbeaver-community
+    flatpak_id: io.dbeaver.DBeaverCommunity
+    description: Universal database GUI
+
+  - name: discord
+    flatpak_id: com.discordapp.Discord
+    description: Chat platform
+    tags: [gui, communication]
+
+# ================================================================
+# MACOS CASKS
+# ================================================================
+# GUI applications for macOS
+# Installed via: brew install --cask <name>
+
+macos_casks:
+  - name: kitty
+    description: GPU-accelerated terminal emulator
+    tags: [gui, terminal]
+
+  - name: ghostty
+    description: GPU-accelerated terminal emulator
+    tags: [gui, terminal]
+
+  - name: aerospace
+    description: Tiling window manager
+    tags: [gui]
+
+  - name: alfred
+    description: Launcher & productivity
+    tags: [gui]
+
+  - name: bettertouchtool
+    description: Input customization
+    tags: [gui]
+
+  - name: dbeaver-community
+    description: Database client
+    tags: [gui]
+
+  - name: macs-fan-control
+    description: Fan control utility
+    tags: [gui]
+
+  - name: michaelvillar-timer
+    description: Timer app
+    tags: [gui]
+
+  - name: orbstack
+    description: Container runtime (lightweight Docker Desktop alternative)
+    tags: [gui]
+
+  - name: multipass
+    description: Ubuntu VM manager
+    tags: [gui]
+
+  - name: discord
+    description: Chat platform
+    tags: [gui, communication]
+
+  - name: zoom
+    description: Video conferencing
+    tags: [gui, communication]
+
+  - name: obsidian
+    description: Note-taking app
+    tags: [gui, editor]
+
+  - name: visual-studio-code
+    description: Code editor
+    tags: [gui, editor]
+
+  - name: librewolf
+    description: Privacy-focused Firefox fork
+    tags: [gui]
+
+  - name: sioyek
+    description: Keyboard-driven PDF viewer for technical documents
+    tags: [gui]
+
+  - name: zen
+    description: Privacy-focused Firefox fork with modern UI
+    tags: [gui]
+
+# ================================================================
+# NOTES
+# ================================================================
+# This file is the single source of truth for package installation
+# Parsed by install/parse_packages.py (Python)
+#
+# Package Management Philosophy:
+#   - System packages: apt/pacman/brew for OS-level tools (see system_packages)
+#   - Language-specific managers: npm, uv, cargo, go (consistent across platforms)
+#   - GitHub binaries: For tools needing latest versions (neovim, lazygit, etc)
+#
+# Tools NOT in system_packages (installed via other methods):
+#   - bat, eza, fd-find, zoxide, git-delta: cargo-binstall
+#   - neovim, lazygit, yazi, fzf, shellcheck: GitHub releases
+#   - go: GitHub releases (not apt/pacman golang-go)
+#   - nvm, npm packages: nvm + npm (not system Node.js)
+#   - Python tools: uv (not system pip)
+#   - Go tools: go install (see go_tools)
+#   - AWS CLI: Official installer (see install/scripts/install-awscli.sh)
+#       macOS: Notes AWS CLI managed by Homebrew
+#       Linux: Downloads official installer, installs to ~/.local/aws-cli
+#       Not in system_packages - AWS recommends official installer only
+#
+# Runtime Versions:
+#   - Node.js: Managed by nvm (see runtimes.node.version)
+#   - Python: Managed by uv
+#   - Go: Installed from GitHub releases (see runtimes.go.min_version)
+#   - Rust: Installed via rustup
+#
+# Parsing examples:
+#   python parse_packages.py --type=system --manager=apt
+#   python parse_packages.py --type=cargo
+#   python parse_packages.py --type=npm
+#   python parse_packages.py --type=go
+#   python parse_packages.py --type=mas
+#   python parse_packages.py --type=flatpak
+#   python parse_packages.py --type=macos-casks
+#   python parse_packages.py --get=runtimes.node.version
+#
+# To update all packages:
+#   task update           # Updates everything
+#   task macos:update-all # macOS-specific
+#   task wsl:update-all   # WSL-specific
+#
+# To add new packages:
+#   1. Add to this file under the appropriate section
+#   2. Run: task install or platform-specific install task
+#   3. Commit changes

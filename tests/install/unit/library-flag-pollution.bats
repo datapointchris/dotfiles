@@ -72,21 +72,21 @@ TESTEOF
 # ================================================================
 
 @test "library_flags: failure-logging.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+  run test_library_flags "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
   assert_success
 }
 
 @test "library_flags: github-release-installer.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+  run test_library_flags "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
   assert_success
 }
 
 @test "library_flags: version-helpers.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+  run test_library_flags "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
   assert_success
 }
 
 @test "library_flags: platform-detection.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/management/orchestration/platform-detection.sh"
+  run test_library_flags "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
   assert_success
 }

@@ -14,8 +14,8 @@ This document validates that the enhanced refcheck can now detect the 4 original
 ### Issue 2: Relative path without $DOTFILES_DIR in single-installer.sh
 
 **File**: `tests/install/integration/single-installer.sh:16`
-**Original bug**: `source management/common/lib/failure-logging.sh`
-**Problem**: Fragile relative path, should use `$DOTFILES_DIR/management/...`
+**Original bug**: `source install/common/lib/failure-logging.sh`
+**Problem**: Fragile relative path, should use `$DOTFILES_DIR/install/...`
 **Status**: ⚠️ **Partially caught** - refcheck catches this if run from wrong directory, but doesn't enforce $DOTFILES_DIR usage
 
 ### Issue 3: Wrong ../ levels in test-nvm-failure-handling.sh
@@ -68,7 +68,7 @@ Broken Source (3):
 
 The enhanced refcheck also found and helped fix a real bug in the codebase:
 
-**File**: `management/wsl/lib/docker-images.sh:12`
+**File**: `install/wsl/lib/docker-images.sh:12`
 **Bug**: `DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"`
 **Fix**: Changed to `DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"`
 **Commit**: 6832883
@@ -85,6 +85,6 @@ The refcheck variable path enhancement successfully achieves its goal of catchin
 
 ## Remaining Limitation
 
-Issue #2 (relative paths without variables) is not caught when the relative path happens to be valid from the current working directory. This is by design - refcheck validates paths from the repo root, so `source management/file.sh` will pass if the file exists.
+Issue #2 (relative paths without variables) is not caught when the relative path happens to be valid from the current working directory. This is by design - refcheck validates paths from the repo root, so `source install/file.sh` will pass if the file exists.
 
 To enforce $DOTFILES_DIR usage, we could add a future enhancement to warn about relative source paths in scripts that define DOTFILES_DIR (suggesting they should use the variable for consistency).

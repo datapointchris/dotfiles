@@ -14,7 +14,7 @@ cd ~/dotfiles
 bash install.sh --machine arch-personal-workstation
 ```
 
-Machine manifests define exactly what gets installed on each type of computer. Available manifests are in `management/machines/`:
+Machine manifests define exactly what gets installed on each type of computer. Available manifests are in `install/machines/`:
 
 - `arch-personal-workstation` - Full Arch Linux development workstation
 - `macos-personal-workstation` - Full macOS development workstation
@@ -170,9 +170,9 @@ dotfiles/
 │   ├── common/       # Cross-platform tools
 │   ├── macos/        # macOS-specific tools
 │   └── arch/         # Arch-specific tools (rofi menus)
-├── management/       # Repository management
+├── shell/            # Shell environment source + builder (aliases, functions, build script)
+├── install/          # Provisioning: packages, installers, manifests, symlinks manager
 │   ├── machines/     # Machine manifests (what to install per computer)
-│   ├── shell/        # Modular shell aliases and functions
 │   ├── symlinks/     # Symlinks manager (Python)
 │   ├── common/       # Shared installers and libraries
 │   └── packages.yml  # Package definitions

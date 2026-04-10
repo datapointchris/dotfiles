@@ -147,7 +147,7 @@ No installation required - `uv run` executes the tool in-place.
 The symlinks tool has comprehensive pytest test suite.
 
 ```bash
-cd ~/dotfiles/management/symlinks
+cd ~/dotfiles/install/symlinks
 pytest -v                              # Run all tests
 pytest tests/test_manager.py           # Manager tests
 pytest tests/test_integration.py       # Integration tests
@@ -164,7 +164,7 @@ Tests cover:
 
 ## Configuration
 
-Exclusion patterns in `management/symlinks/symlinks/config.py`:
+Exclusion patterns in `install/symlinks/symlinks/config.py`:
 
 **Excluded by default**:
 
@@ -234,7 +234,7 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 **Project structure**:
 
 ```text
-management/symlinks/
+install/symlinks/
 ├── symlinks/               # Main package
 │   ├── cli.py             # Typer CLI
 │   ├── config.py          # Configuration

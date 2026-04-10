@@ -18,8 +18,8 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 ```bash
 # Parent wrapper (install.sh)
-run_installer "management/install/github-releases/yazi.sh" "yazi" || true
-run_installer "management/install/github-releases/lazygit.sh" "lazygit" || true
+run_installer "install/install/github-releases/yazi.sh" "yazi" || true
+run_installer "install/install/github-releases/lazygit.sh" "lazygit" || true
 # ... continues even if yazi fails
 display_failure_summary  # Shows all failures at end
 ```

@@ -26,9 +26,9 @@ if [[ $# -lt 1 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo "  -h, --help         Show this help message"
   echo ""
   echo "Examples:"
-  echo "  $(basename "$0") management/wsl/install/system-packages.sh"
-  echo "  $(basename "$0") management/common/install/github-releases/lazygit.sh --validate lazygit"
-  echo "  $(basename "$0") management/common/install/github-releases/lazygit.sh --validate lazygit --keep"
+  echo "  $(basename "$0") install/wsl/install/system-packages.sh"
+  echo "  $(basename "$0") install/common/install/github-releases/lazygit.sh --validate lazygit"
+  echo "  $(basename "$0") install/common/install/github-releases/lazygit.sh --validate lazygit --keep"
   exit 0
 fi
 

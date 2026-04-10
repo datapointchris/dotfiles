@@ -81,22 +81,22 @@ brew install --cask docker
 
 ### Unified Test Dispatcher
 
-The `management/test-install.sh` script provides a unified interface for testing across all platforms:
+The `install/test-install.sh` script provides a unified interface for testing across all platforms:
 
 ```sh
 cd ~/dotfiles
 
 # Test specific platform
-bash management/test-install.sh -p wsl        # WSL Ubuntu (Docker)
-bash management/test-install.sh -p arch       # Arch Linux (Docker)
-bash management/test-install.sh -p macos      # macOS (local user)
+bash install/test-install.sh -p wsl        # WSL Ubuntu (Docker)
+bash install/test-install.sh -p arch       # Arch Linux (Docker)
+bash install/test-install.sh -p macos      # macOS (local user)
 
 # Keep container after test for debugging
-bash management/test-install.sh -p wsl -k
-bash management/test-install.sh -p arch -k
+bash install/test-install.sh -p wsl -k
+bash install/test-install.sh -p arch -k
 
 # Show help
-bash management/test-install.sh --help
+bash install/test-install.sh --help
 ```
 
 ### Run and Summarize (Context-Friendly Testing)
@@ -105,7 +105,7 @@ For long-running tests, use `run-and-summarize.sh` to avoid context overload whe
 
 ```sh
 # Run test with periodic updates every 30 seconds
-bash management/run-and-summarize.sh "bash management/test-install.sh -p arch --keep" test-arch.log 30
+bash install/run-and-summarize.sh "bash install/test-install.sh -p arch --keep" test-arch.log 30
 
 # What this does:
 # - Runs test in background
@@ -120,7 +120,7 @@ bash management/run-and-summarize.sh "bash management/test-install.sh -p arch --
 # - Claude receives only summary, not thousands of log lines
 ```
 
-The summarize script (`management/summarize-log.sh`) creates `.summary` files with:
+The summarize script (`install/summarize-log.sh`) creates `.summary` files with:
 
 - File size and line count
 - Success/failure counts
@@ -129,7 +129,7 @@ The summarize script (`management/summarize-log.sh`) creates `.summary` files wi
 
 This is especially useful for CI/CD integration or when repeatedly testing installations.
 
-Scripts are located in `management/` directory alongside other testing tools.
+Scripts are located in `install/` directory alongside other testing tools.
 
 ### Platform-Specific Test Scripts
 
@@ -216,7 +216,7 @@ macOS VMs are too complex and resource-intensive. Fresh user accounts provide cl
 
 ## Verification
 
-The test scripts automatically run comprehensive verification using `management/verify-installation.sh`. This checks:
+The test scripts automatically run comprehensive verification using `install/verify-installation.sh`. This checks:
 
 - Core build tools (git, curl, wget, make)
 - Task runner installation
@@ -235,10 +235,10 @@ If testing manually without the automated scripts:
 ```sh
 # Run comprehensive verification
 cd ~/dotfiles
-bash management/verify-installation.sh
+bash install/verify-installation.sh
 
 # Check for duplicate installations
-bash management/detect-alternate-installations.sh
+bash install/detect-alternate-installations.sh
 ```
 
 ## Iteration Workflow

@@ -101,7 +101,7 @@ tasks:
 **After (clean script):**
 
 ```bash
-# management/scripts/update-wsl.sh
+# install/scripts/update-wsl.sh
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -118,7 +118,7 @@ task wsl:apt:update
 tasks:
   run-updates:
     cmds:
-      - bash {{.DOTFILES_DIR}}/management/scripts/update-wsl.sh
+      - bash {{.DOTFILES_DIR}}/install/scripts/update-wsl.sh
 ```
 
 ## Key Learnings

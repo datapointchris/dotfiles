@@ -31,11 +31,11 @@ check-filenames = true
 [tool.coverage.run]
 parallel = true
 branch = true
-source = ["management/symlinks"]
+source = ["install/symlinks"]
 omit = []
 
 [tool.coverage.paths]
-source = ["management/symlinks"]
+source = ["install/symlinks"]
 
 [tool.coverage.report]
 fail_under = 70

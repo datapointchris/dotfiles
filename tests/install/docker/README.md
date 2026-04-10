@@ -34,13 +34,13 @@ Image size: 3.24GB
 
 ```bash
 # Test a GitHub release installer
-./run-installer-test.sh management/common/install/github-releases/lazygit.sh
+./run-installer-test.sh install/common/install/github-releases/lazygit.sh
 
 # Test system packages (should skip - already installed in base)
-./run-installer-test.sh management/wsl/install/system-packages.sh
+./run-installer-test.sh install/wsl/install/system-packages.sh
 
 # Keep container for debugging
-./run-installer-test.sh management/common/install/github-releases/lazygit.sh --keep
+./run-installer-test.sh install/common/install/github-releases/lazygit.sh --keep
 ```
 
 Test time: ~12-15 seconds per installer (base image reused)
@@ -61,7 +61,7 @@ Test time: ~12-15 seconds per installer (base image reused)
 **Example Test Output**:
 
 ```bash
-$ time ./run-installer-test.sh management/common/install/github-releases/glow.sh
+$ time ./run-installer-test.sh install/common/install/github-releases/glow.sh
 [INFO] ● Latest version: v1.5.1
 [INFO] ● Download URL: https://github.com/...
 [INFO] ● Downloading glow...

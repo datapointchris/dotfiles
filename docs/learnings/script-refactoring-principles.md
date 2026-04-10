@@ -52,10 +52,10 @@ mas upgrade
 
 ```bash
 # update.sh
-bash "$DOTFILES_DIR/management/macos/update.sh"
-bash "$DOTFILES_DIR/management/common/update.sh"
+bash "$DOTFILES_DIR/install/macos/update.sh"
+bash "$DOTFILES_DIR/install/common/update.sh"
 
-# management/macos/update.sh
+# install/macos/update.sh
 update_homebrew() { brew update; brew upgrade; }
 update_mas() { mas upgrade; }
 update_homebrew
@@ -241,10 +241,10 @@ if npm update -g 2>&1 | grep -v "npm warn"; then
 
 ```text
 update.sh                      # Wrapper
-├─ management/macos/update.sh  # 40 lines
-├─ management/wsl/update.sh    # 23 lines
-├─ management/arch/update.sh   # 33 lines
-└─ management/common/update.sh # 159 lines
+├─ install/macos/update.sh  # 40 lines
+├─ install/wsl/update.sh    # 23 lines
+├─ install/arch/update.sh   # 33 lines
+└─ install/common/update.sh # 159 lines
 ```
 
 **Good Pattern**:
@@ -280,7 +280,7 @@ update.sh                      # 156 lines total
 update_npm_globals() {
   export NVM_DIR="$HOME/.local/share/nvm"
   [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-  bash "$DOTFILES_DIR/management/common/install/language-tools/npm-install-globals.sh"
+  bash "$DOTFILES_DIR/install/common/install/language-tools/npm-install-globals.sh"
 }
 ```
 

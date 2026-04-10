@@ -12,11 +12,11 @@ setup() {
 
   # Source dependencies first
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-  source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
-  source "$DOTFILES_DIR/management/common/lib/version-helpers.sh"
+  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 
   # Source library under test
-  source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+  source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 }
 
 # get_platform_arch tests
@@ -114,12 +114,12 @@ setup() {
 #!/usr/bin/env bash
 set -uo pipefail
 DOTFILES_DIR="$DOTFILES_DIR"
-source "\$DOTFILES_DIR/management/common/lib/version-helpers.sh"
-source "\$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "\$DOTFILES_DIR/install/common/lib/version-helpers.sh"
+source "\$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 source "\$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "\$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "\$DOTFILES_DIR/configs/common/.local/shell/error-handling.sh"
-source "\$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+source "\$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 # Override to simulate GitHub API failure
 fetch_github_latest_version() { return 1; }

@@ -17,7 +17,7 @@ source "$DOTFILES_DIR/tests/install/helpers.sh"
 # Configuration
 DOCKER_IMAGE="dotfiles-test-base:ubuntu-24.04"
 CONTAINER_NAME="dotfiles-offline-test-$(date '+%Y%m%d-%H%M%S')"
-BUNDLE_SCRIPT_DIR="$DOTFILES_DIR/management/offline"
+BUNDLE_SCRIPT_DIR="$DOTFILES_DIR/install/offline"
 BUNDLE_OUTPUT_DIR="$DOTFILES_DIR"
 LOG_FILE="$DOTFILES_DIR/test-offline-docker.log"
 

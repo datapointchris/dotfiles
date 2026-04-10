@@ -2,7 +2,7 @@
 
 ## Overview
 
-The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in `management/common/install/github-releases/` while maintaining clarity and simplicity.
+The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in `install/common/install/github-releases/` while maintaining clarity and simplicity.
 
 ## Design Philosophy
 
@@ -34,7 +34,7 @@ Each installer script sources `error-handling.sh`, which automatically provides:
 
 ### Library Functions
 
-Located in `management/common/lib/github-release-installer.sh`:
+Located in `install/common/lib/github-release-installer.sh`:
 
 #### 1. `get_platform_arch()`
 
@@ -145,9 +145,9 @@ Most common pattern (majority of tools):
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/error-handling.sh"
+source "$DOTFILES_DIR/install/common/lib/error-handling.sh"
 enable_error_traps
-source "$DOTFILES_DIR/management/common/lib/github-release-installer.sh"
+source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 
 BINARY_NAME="lazygit"
 REPO="jesseduffield/lazygit"
@@ -188,11 +188,11 @@ These scripts use library helpers where applicable but handle their unique requi
 
 The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
 
-See `management/common/install/github-releases/` for all current scripts.
+See `install/common/install/github-releases/` for all current scripts.
 
 ## Custom Installers (Not Using Library)
 
-Some tools have unique requirements that don't fit the GitHub release pattern. These live in `management/common/install/custom-installers/` instead. All still use error-handling.sh for structured logging consistency.
+Some tools have unique requirements that don't fit the GitHub release pattern. These live in `install/common/install/custom-installers/` instead. All still use error-handling.sh for structured logging consistency.
 
 ## Design Decisions
 
@@ -287,7 +287,7 @@ Auto-detects terminal vs pipe:
 
 ### Steps
 
-1. Create new script in `management/common/install/github-releases/`
+1. Create new script in `install/common/install/github-releases/`
 2. Use template pattern (see Simple Tarball Installer above)
 3. Configure: BINARY_NAME, REPO, download URL pattern
 4. Handle special cases inline if needed
@@ -305,23 +305,23 @@ Auto-detects terminal vs pipe:
 Run individual installer:
 
 ```bash
-bash management/common/install/github-releases/lazygit.sh
+bash install/common/install/github-releases/lazygit.sh
 ```
 
 Force reinstall:
 
 ```bash
-FORCE_INSTALL=true bash management/common/install/github-releases/lazygit.sh
+FORCE_INSTALL=true bash install/common/install/github-releases/lazygit.sh
 ```
 
 Test structured logging:
 
 ```bash
 # Visual mode (terminal)
-bash management/common/install/github-releases/lazygit.sh
+bash install/common/install/github-releases/lazygit.sh
 
 # Structured mode (pipe)
-bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
+bash install/common/install/github-releases/lazygit.sh 2>&1 | cat
 ```
 
 ## Future Improvements
@@ -349,16 +349,16 @@ bash management/common/install/github-releases/lazygit.sh 2>&1 | cat
 
 **Library:**
 
-- `management/common/lib/github-release-installer.sh`
+- `install/common/lib/github-release-installer.sh`
 
-**Converted Scripts:** See `management/common/install/github-releases/` for the full current listing.
+**Converted Scripts:** See `install/common/install/github-releases/` for the full current listing.
 
 **Moved to Custom Installers:**
 
-- `management/common/install/custom-installers/awscli.sh` - Uses AWS custom installer
-- `management/common/install/custom-installers/claude-code.sh` - Uses official installer script
-- `management/common/install/custom-installers/terraform-ls.sh` - Uses releases.hashicorp.com (not GitHub)
+- `install/common/install/custom-installers/awscli.sh` - Uses AWS custom installer
+- `install/common/install/custom-installers/claude-code.sh` - Uses official installer script
+- `install/common/install/custom-installers/terraform-ls.sh` - Uses releases.hashicorp.com (not GitHub)
 
 **Moved back to GitHub Releases:**
 
-- `management/common/install/github-releases/tenv.sh` - Terraform is a program, not a language. Grouped by installation method (GitHub releases)
+- `install/common/install/github-releases/tenv.sh` - Terraform is a program, not a language. Grouped by installation method (GitHub releases)

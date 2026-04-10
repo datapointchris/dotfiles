@@ -22,10 +22,10 @@ setup_file() {
   # Source libraries
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
   # Source REAL run_installer wrapper and export it
-  source "$DOTFILES_DIR/management/orchestration/run-installer.sh"
+  source "$DOTFILES_DIR/install/orchestration/run-installer.sh"
   export -f run_installer
 
   # Define REAL show_failures_summary (from install.sh) and export it
@@ -58,7 +58,7 @@ EOF
   cat > "$TEMP_DIR/failure.sh" << 'EOF'
 #!/usr/bin/env bash
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 TOOL_NAME="${MOCK_TOOL_NAME:-mock-tool}"
 DOWNLOAD_URL="https://example.com/${TOOL_NAME}.tar.gz"

@@ -81,14 +81,14 @@ Claude: Reads summary, provides insights
 
 ```bash
 # Start process with auto-monitoring
-bash management/scripts/run-and-summarize.sh \
-  "bash management/test-install.sh -p wsl --keep" \
+bash install/scripts/run-and-summarize.sh \
+  "bash install/test-install.sh -p wsl --keep" \
   test-wsl-docker.log
 
 # Or manual: start process, summarize later
-bash management/test-install.sh -p wsl --keep > /dev/null 2>&1 &
+bash install/test-install.sh -p wsl --keep > /dev/null 2>&1 &
 # Later...
-bash management/scripts/summarize-log.sh test-wsl-docker.log
+bash install/scripts/summarize-log.sh test-wsl-docker.log
 ```
 
 ## Context Management Best Practices

@@ -32,7 +32,7 @@ version_compare() {
 - Always strip the `v` prefix before comparing (`v1.2.3` → `1.2.3`)
 - Fail-safe default: if version check fails (API rate limit, missing binary, network error), proceed with installation rather than skipping — a redundant install is better than a stale binary
 - Use `FORCE_INSTALL=true` to trigger version checking mode in installers (repurposes existing flag)
-- See `management/common/lib/version-helpers.sh` for the canonical implementation
+- See `install/common/lib/version-helpers.sh` for the canonical implementation
 
 ## Related
 

@@ -30,8 +30,8 @@ usage() {
   echo "  output-dir      Output directory (default: $DEFAULT_OUTPUT_DIR)"
   echo ""
   echo "Examples:"
-  echo "  $(basename "$0") management/machines/arch-personal-workstation.yml"
-  echo "  $(basename "$0") management/machines/ubuntu-lxc-server.yml /tmp/shell-test"
+  echo "  $(basename "$0") install/machines/arch-personal-workstation.yml"
+  echo "  $(basename "$0") install/machines/ubuntu-lxc-server.yml /tmp/shell-test"
   exit 0
 }
 

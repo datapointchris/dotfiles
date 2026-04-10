@@ -30,7 +30,7 @@
 
 1. **Go Apps** (sess, toolbox): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
-   - Installer: `management/common/install/language-tools/go-tools.sh`
+   - Installer: `install/common/install/language-tools/go-tools.sh`
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
@@ -40,7 +40,7 @@
    - Note: `link_apps()` skips directories, only symlinks files
 
 3. **Personal CLI Tools** (theme, font): Git clone + symlink
-   - Custom installers in `management/common/install/custom-installers/`
+   - Custom installers in `install/common/install/custom-installers/`
    - Clone to `~/.local/share/{tool}/`, symlink bin → `~/.local/bin/`
    - Development in `~/tools/{app}/`, push to GitHub, run `{tool} upgrade`
 
@@ -66,8 +66,8 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 
 **GitHub Release Installers** (⚠️ Use library for new installers):
 
-- Use `management/common/lib/github-release-installer.sh` for new GitHub release installers
-- See `management/common/install/github-releases/` for all current scripts
+- Use `install/common/lib/github-release-installer.sh` for new GitHub release installers
+- See `install/common/install/github-releases/` for all current scripts
 - See `docs/architecture/github-release-installer.md`
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
@@ -129,7 +129,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
   - `arch/` - Arch Linux-specific tools (rofi menus, screen control)
-- `management/` - Repository management tools
+- `install/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `shell/` - Modular shell aliases and functions (build source)
   - `symlinks/` - Symlinks manager (Python)
@@ -143,7 +143,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Key Systems**:
 
-- **Machine Manifests** - YAML files in `management/machines/` defining what to install per computer type
+- **Machine Manifests** - YAML files in `install/machines/` defining what to install per computer type
 - **Shell Build** - `shell/build-shell.sh` concatenates modular shell files based on manifest groups
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
@@ -193,7 +193,7 @@ docs/
 - **Symlinks Manager** — `task symlinks:{link,check,show}`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
 - **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `configs/common/.config/toolbox/registry.yml`
-- **Task** — `task --list-all` for available tasks; complex logic lives in `management/` scripts
+- **Task** — `task --list-all` for available tasks; complex logic lives in `install/` scripts
 
 ## Learnings Directory
 

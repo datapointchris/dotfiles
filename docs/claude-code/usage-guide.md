@@ -6,7 +6,7 @@
 
 ```bash
 # Start process in background
-bash management/test-install.sh -p wsl --keep > /dev/null 2>&1 &
+bash install/test-install.sh -p wsl --keep > /dev/null 2>&1 &
 
 # Monitor in your terminal
 tail -f test-wsl-docker.log
@@ -18,15 +18,15 @@ tail -f test-wsl-docker.log
 Claude will run:
 
 ```bash
-bash management/scripts/summarize-log.sh test-wsl-docker.log
+bash install/scripts/summarize-log.sh test-wsl-docker.log
 ```
 
 ### Scenario 2: You're Away (Auto-Monitoring)
 
 ```bash
 # Start with auto-monitoring wrapper
-bash management/scripts/run-and-summarize.sh \
-  "bash management/test-install.sh -p wsl --keep" \
+bash install/scripts/run-and-summarize.sh \
+  "bash install/test-install.sh -p wsl --keep" \
   test-wsl-docker.log
 ```
 
@@ -43,7 +43,7 @@ When you return, Claude reads: `cat test-wsl-docker.log.summary`
 
 ```bash
 # Get quick status while process is running
-bash management/scripts/summarize-log.sh test-wsl-docker.log
+bash install/scripts/summarize-log.sh test-wsl-docker.log
 ```
 
 Shows current errors, warnings, last phase, and status.
@@ -114,7 +114,7 @@ Claude: [Reads test-wsl-docker.log.summary]
 
 ```bash
 # Check every 30 seconds instead of 60
-bash management/scripts/run-and-summarize.sh \
+bash install/scripts/run-and-summarize.sh \
   "bash build.sh" \
   build.log \
   30
@@ -125,8 +125,8 @@ bash management/scripts/run-and-summarize.sh \
 ```bash
 # Start multiple tests
 for platform in wsl arch macos; do
-  bash management/scripts/run-and-summarize.sh \
-    "bash management/test-install.sh -p $platform --keep" \
+  bash install/scripts/run-and-summarize.sh \
+    "bash install/test-install.sh -p $platform --keep" \
     "test-$platform.log" &
 done
 
@@ -150,7 +150,7 @@ docker exec -it dotfiles-wsl-test-TIMESTAMP bash
 
 # Fix and re-run inside container
 bash ~/dotfiles/install.sh
-bash ~/dotfiles/management/verify-installation.sh
+bash ~/dotfiles/install/verify-installation.sh
 ```
 
 ## See Also

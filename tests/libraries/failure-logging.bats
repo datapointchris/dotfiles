@@ -9,7 +9,7 @@ setup() {
   load "$HOME/.local/lib/bats-assert/load.bash"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
-  source "$DOTFILES_DIR/management/common/lib/failure-logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 }
 
 # output_failure_data tests

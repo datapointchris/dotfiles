@@ -2,8 +2,8 @@
 """
 Simple tests for parse_packages.py (no pytest required)
 
-Run with: /usr/bin/python3 tests/management/test_parse_packages_simple.py
-or: python3 tests/management/test_parse_packages_simple.py (if yaml is available)
+Run with: /usr/bin/python3 tests/install/test_parse_packages_simple.py
+or: python3 tests/install/test_parse_packages_simple.py (if yaml is available)
 """
 
 import sys

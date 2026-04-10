@@ -41,8 +41,8 @@ tasks:
         fi
 
         # Link common first (base layer), then platform (overlay)
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks link common
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks link "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link common
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link "$PLATFORM"
 
   symlinks:relink:
     desc: Remove all symlinks and recreate them (idempotent)
@@ -70,19 +70,19 @@ tasks:
           exit 1
         fi
 
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks relink "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks relink "$PLATFORM"
 
   symlinks:check:
     desc: Verify all symlinks are correct
     silent: true
     cmds:
-      - cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks check
+      - cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks check
 
   symlinks:show:
     desc: Show all configured symlinks
     silent: true
     cmds:
-      - cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks show
+      - cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks show
 
   symlinks:unlink:
     desc: Remove all symlinks
@@ -111,8 +111,8 @@ tasks:
         fi
 
         # Unlink platform first (overlay), then common (base layer)
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks unlink "$PLATFORM"
-        cd "{{.DOTFILES_DIR}}/management/symlinks" && uv run symlinks unlink common
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink "$PLATFORM"
+        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink common
 
   # ================================================================
   # SHELL BUILD
@@ -157,7 +157,7 @@ tasks:
         fi
 
         bash "{{.DOTFILES_DIR}}/shell/build-shell.sh" \
-          "{{.DOTFILES_DIR}}/management/machines/${MACHINE}.yml"
+          "{{.DOTFILES_DIR}}/install/machines/${MACHINE}.yml"
 
         # Sync to Windows Git Bash (only runs in WSL, skips otherwise)
         bash "{{.DOTFILES_DIR}}/shell/sync-windows-shell.sh" || true
