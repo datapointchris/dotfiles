@@ -780,7 +780,7 @@ cargo_packages:
     command: broot
     description: Interactive directory tree navigator with fuzzy search
     github_repo: Canop/broot
-    binary_pattern: "broot_{target}.zip"
+    binary_pattern: "broot_{version_num}.zip"
     tags: [cli, tui, files, navigation]
 
 
