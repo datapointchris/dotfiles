@@ -11,6 +11,22 @@ source "$SCRIPT_DIR/version-helpers.sh"
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
 
+# Returns "darwin" or "linux"
+get_os() {
+  [[ "$OSTYPE" == "darwin"* ]] && echo "darwin" || echo "linux"
+}
+
+# Returns normalized architecture: x86_64 or arm64
+get_arch() {
+  local arch
+  arch=$(uname -m)
+  case "$arch" in
+    x86_64)        echo "x86_64" ;;
+    aarch64|arm64) echo "arm64" ;;
+    *)             echo "$arch" ;;
+  esac
+}
+
 # Get platform_arch string with customizable capitalization
 # Usage: get_platform_arch <darwin_x86> <darwin_arm> <linux_x86>
 # Example: get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64"

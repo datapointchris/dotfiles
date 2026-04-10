@@ -44,7 +44,7 @@ install_from_cache() {
   # often differ from cargo package names (e.g., fd-find vs fd, git-delta vs delta)
   local cached_file=""
   for name in "$package" "$binary_name"; do
-    for pattern in "${name}-"*"${target}"*.tar.gz "${name}_${target}"*.tar.gz "${name}-"*".tar.gz" "${name}_"*".tar.gz" "${name}_${target}"*.zip "${name}-"*".zip" "${name}_"*".zip"; do
+    for pattern in "${name}-"*"${target}"*.tar.gz "${name}_${target}"*.tar.gz "${name}-"*".tar.gz" "${name}_"*".tar.gz"; do
       local found
       found=$(find "$OFFLINE_CACHE_DIR" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | head -1)
       if [[ -n "$found" ]]; then
@@ -61,30 +61,14 @@ install_from_cache() {
   local extract_dir="/tmp/${package}-extract-$$"
   mkdir -p "$extract_dir"
 
-  # Extract archive — zip (e.g. broot) or tarball
-  if [[ "$cached_file" == *.zip ]]; then
-    if ! unzip -q "$cached_file" -d "$extract_dir" 2>/dev/null; then
-      rm -rf "$extract_dir"
-      return 1
-    fi
-  elif ! tar -xf "$cached_file" -C "$extract_dir" 2>/dev/null; then
+  if ! tar -xf "$cached_file" -C "$extract_dir" 2>/dev/null; then
     rm -rf "$extract_dir"
     return 1
   fi
 
-  # Find the binary — prefer target-matching subdirectory for multi-platform
-  # archives (e.g. broot ships all platforms in one zip with directories named
-  # by target triple). Fall back to any match if no target-specific path found.
-  # Use grep on find output rather than find -path to avoid portability issues.
-  local target binary_path all_matches
-  target=$(get_target_string)
-  all_matches=$(find "$extract_dir" -type f -name "$binary_name" 2>/dev/null)
-  # grep exits 1 on no match; || true prevents set -e from aborting the function
-  binary_path=$(echo "$all_matches" | grep "$target" | head -1) || true
-  if [[ -z "$binary_path" ]]; then
-    binary_path=$(echo "$all_matches" | head -1)
-  fi
-  log_info "  selecting $binary_name: target=$target path=$(basename "${binary_path:-NONE}")"
+  local binary_path
+  binary_path=$(find "$extract_dir" -type f -name "$binary_name" 2>/dev/null | head -1)
+  log_info "  installing $binary_name from: $(basename "${binary_path:-NONE}")"
 
   if [[ -z "$binary_path" ]]; then
     rm -rf "$extract_dir"

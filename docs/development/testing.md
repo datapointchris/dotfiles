@@ -24,10 +24,11 @@ task test:watch
 
 ### Test Location
 
-Tests are organized in `tests/install/integration/`:
+Tests are organized under `tests/`:
 
-- `bats-installer.bats` - Tests for the BATS installer itself (meta-testing!)
-- `language-managers-pattern-improved.bats` - Tests for language manager installer pattern
+- `tests/libraries/` — Tests for shared shell libraries
+- `tests/install/unit/` — Unit tests for installer functions (no Docker, no network). Run with `task test:unit`.
+- `tests/install/integration/` — Integration tests including Docker-based platform tests
 
 ### Writing Tests
 

@@ -110,6 +110,30 @@ Same as `install_from_tarball()` but for zip files.
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "path/in/zip"
 ```
 
+#### 6. `get_os()`
+
+Returns `"darwin"` or `"linux"` based on `$OSTYPE`.
+
+**Usage:**
+
+```bash
+OS=$(get_os)
+```
+
+**Why it exists:** Every standard installer needs OS detection before constructing the download URL. Eliminates the repeated inline one-liner.
+
+#### 7. `get_arch()`
+
+Returns normalized architecture string: `x86_64` or `arm64` (converts `aarch64` → `arm64`).
+
+**Usage:**
+
+```bash
+ARCH=$(get_arch)
+```
+
+**Why it exists:** The `uname -m | sed 's/aarch64/arm64/...'` chain was copy-pasted across all 12 standard installers. A `case` statement in the library is clearer and has one canonical definition.
+
 ## Script Patterns
 
 ### Simple Tarball Installer
@@ -162,7 +186,7 @@ These scripts use library helpers where applicable but handle their unique requi
 
 ## Code Savings
 
-The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 5 focused functions.
+The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
 
 See `management/common/install/github-releases/` for all current scripts.
 

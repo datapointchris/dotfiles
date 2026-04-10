@@ -56,8 +56,8 @@ else
   fi
 fi
 
-OS=$([[ "$OSTYPE" == "darwin"* ]] && echo "darwin" || echo "linux")
-ARCH=$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/;s/arm64/arm64/')
+OS=$(get_os)
+ARCH=$(get_arch)
 PLATFORM_ARCH=$(get_platform_arch_for_url "$OS" "$ARCH")
 DOWNLOAD_URL=$(get_download_url "$VERSION" "$OS" "$ARCH")
 

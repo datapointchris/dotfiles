@@ -243,6 +243,26 @@ download_cargo_binaries() {
 
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
+
+    # Fat zips (e.g. broot) bundle all platforms in target-named subdirs.
+    # Pre-extract the target binary and re-package as a standard single-platform
+    # tarball so install_from_cache needs no special zip handling.
+    if [[ "$filename" == *.zip ]]; then
+      local version_num extract_dir repackaged binary_in_zip
+      version_num="${version#v}"
+      repackaged="${tool}_${version_num}_${target}.tar.gz"
+      extract_dir=$(mktemp -d)
+      unzip -q "$CACHE_DIR/binaries/$filename" -d "$extract_dir"
+      binary_in_zip=$(find "$extract_dir/$target" -maxdepth 1 -type f -name "$tool" 2>/dev/null | head -1)
+      if [[ -z "$binary_in_zip" ]]; then
+        log_error "Could not find $target/$tool in $filename"
+        exit 1
+      fi
+      (cd "$(dirname "$binary_in_zip")" && tar -czf "$CACHE_DIR/binaries/$repackaged" "$(basename "$binary_in_zip")")
+      rm -rf "$extract_dir" "$CACHE_DIR/binaries/$filename"
+      filename="$repackaged"
+    fi
+
     echo "cargo|$tool|$version|$filename" >> "$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/management/parse_packages.py" --type=cargo --format=binary_info)
 }
