@@ -9,9 +9,19 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "management"))
 import parse_packages
+
+PACKAGES_YML = Path(__file__).parent.parent.parent / "management" / "packages.yml"
+
+
+@pytest.fixture
+def real_packages_data():
+    """Load actual packages.yml for tests that validate live configuration."""
+    with open(PACKAGES_YML) as f:
+        return yaml.safe_load(f)
 
 
 @pytest.fixture
@@ -205,3 +215,43 @@ def test_get_system_packages_empty():
     data = {}
     packages = parse_packages.get_system_packages(data, "apt")
     assert packages == []
+
+
+# ================================================================
+# Live packages.yml validation: cargo binary_pattern
+# ================================================================
+# broot has burned us twice with non-standard release format.
+# These tests pin the known-good patterns so regressions are caught
+# before the offline bundle is built, not after install on WSL.
+
+
+def test_broot_uses_version_pattern_not_target(real_packages_data):
+    """broot releases a fat zip named by version (broot_1.56.2.zip), NOT by
+    target triple (broot_x86_64-unknown-linux-gnu.zip). Using {target} causes
+    a 404 on every bundle build. This test pins the correct placeholder."""
+    cargo_packages = real_packages_data.get("cargo_packages", [])
+    broot = next((p for p in cargo_packages if p.get("name") == "broot"), None)
+
+    assert broot is not None, "broot must be present in cargo_packages"
+    pattern = broot.get("binary_pattern", "")
+
+    assert pattern, "broot must have a binary_pattern field"
+    assert "{target}" not in pattern, (
+        f"broot binary_pattern must NOT use {{target}} — broot ships a fat zip "
+        f"with all platforms, named only by version. Got: {pattern!r}"
+    )
+    assert "{version_num}" in pattern or "{version}" in pattern, (
+        f"broot binary_pattern must use a version placeholder. Got: {pattern!r}"
+    )
+
+
+def test_cargo_packages_with_binary_pattern_have_github_repo(real_packages_data):
+    """Any cargo package with a binary_pattern must also have a github_repo,
+    since the pattern is only used to construct a GitHub release download URL."""
+    cargo_packages = real_packages_data.get("cargo_packages", [])
+    for pkg in cargo_packages:
+        if "binary_pattern" in pkg:
+            assert "github_repo" in pkg, (
+                f"Cargo package {pkg['name']!r} has binary_pattern but no github_repo. "
+                f"binary_pattern is only used for GitHub release URLs."
+            )
