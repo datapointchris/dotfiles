@@ -156,11 +156,11 @@ tasks:
           esac
         fi
 
-        bash "{{.DOTFILES_DIR}}/management/shell/build-shell.sh" \
+        bash "{{.DOTFILES_DIR}}/shell/build-shell.sh" \
           "{{.DOTFILES_DIR}}/management/machines/${MACHINE}.yml"
 
         # Sync to Windows Git Bash (only runs in WSL, skips otherwise)
-        bash "{{.DOTFILES_DIR}}/management/shell/sync-windows-shell.sh" || true
+        bash "{{.DOTFILES_DIR}}/shell/sync-windows-shell.sh" || true
 
   # ================================================================
   # TESTING
@@ -217,4 +217,4 @@ tasks:
   windows:setup:
     desc: One-time Windows Git Bash setup (run from WSL)
     cmds:
-      - bash "{{.DOTFILES_DIR}}/management/shell/setup-windows.sh"
+      - bash "{{.DOTFILES_DIR}}/shell/setup-windows.sh"

@@ -139,7 +139,7 @@ install_manifest_phases() {
 
   # Build shell files from manifest
   print_header "Building Shell Files"
-  bash "$DOTFILES_DIR/management/shell/build-shell.sh" \
+  bash "$DOTFILES_DIR/shell/build-shell.sh" \
     "$DOTFILES_DIR/management/machines/${MACHINE}.yml"
 
   # Symlink Dotfiles

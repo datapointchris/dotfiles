@@ -144,7 +144,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 **Key Systems**:
 
 - **Machine Manifests** - YAML files in `management/machines/` defining what to install per computer type
-- **Shell Build** - `management/shell/build-shell.sh` concatenates modular shell files based on manifest groups
+- **Shell Build** - `shell/build-shell.sh` concatenates modular shell files based on manifest groups
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools

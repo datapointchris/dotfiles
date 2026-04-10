@@ -135,7 +135,7 @@ echo ""
 # Run initial shell sync
 # ================================================================
 echo "Running initial shell sync..."
-bash "$DOTFILES_DIR/management/shell/sync-windows-shell.sh"
+bash "$DOTFILES_DIR/shell/sync-windows-shell.sh"
 echo ""
 
 echo "Windows setup complete!"

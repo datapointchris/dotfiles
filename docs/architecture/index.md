@@ -20,11 +20,12 @@ dotfiles/
 │   ├── common/          # Cross-platform: menu, notes, backmeup, safekeep, patterns, ...
 │   ├── macos/           # macOS-specific tools
 │   └── arch/            # Arch Linux-specific tools (rofi menus, etc.)
+├── shell/               # Shell environment source + builder
+│   ├── aliases/         # Alias group files (core.sh, platform-*.sh)
+│   ├── functions/       # Function group files (core.sh, git.sh, fzf.sh, ...)
+│   └── build-shell.sh   # Concatenates groups into ~/.local/shell/{aliases,functions}.sh
 ├── management/          # Repository management
 │   ├── machines/        # Machine manifests (what to install per computer)
-│   ├── shell/           # Modular shell aliases and functions (build source)
-│   │   ├── aliases/     # Alias group files (core.sh, platform-*.sh)
-│   │   └── functions/   # Function group files (core.sh, git.sh, fzf.sh, ...)
 │   ├── symlinks/        # Symlinks manager (Python)
 │   ├── common/          # Shared installers and libraries
 │   ├── {platform}/      # Platform-specific install scripts
@@ -98,10 +99,10 @@ Run installation with: `bash install.sh --machine arch-personal-workstation`
 
 ## Shell Build System
 
-Shell aliases and functions are modular source files in `management/shell/` that get concatenated into single output files based on the machine manifest:
+Shell aliases and functions are modular source files in `shell/` that get concatenated into single output files based on the machine manifest:
 
-- **Source**: `management/shell/aliases/*.sh` and `management/shell/functions/*.sh`
-- **Builder**: `management/shell/build-shell.sh`
+- **Source**: `shell/aliases/*.sh` and `shell/functions/*.sh`
+- **Builder**: `shell/build-shell.sh`
 - **Output**: `~/.local/shell/aliases.sh` and `~/.local/shell/functions.sh`
 
 The manifest `function_groups` and `alias_groups` fields control which modules are included. Platform-specific groups (e.g., `platform-arch`) are added automatically based on the `platform` field.

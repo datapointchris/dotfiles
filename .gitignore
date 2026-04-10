@@ -105,7 +105,7 @@ test-wsl-network-restricted.log
 .tmp-transfer/
 .wsl-rootfs-cache/
 
-# Generated shell files (built by management/shell/build-shell.sh)
+# Generated shell files (built by shell/build-shell.sh)
 platforms/common/.local/shell/aliases.sh
 platforms/common/.local/shell/functions.sh
 

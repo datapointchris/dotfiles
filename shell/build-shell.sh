@@ -15,7 +15,7 @@ set -euo pipefail
 # ================================================================
 
 DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
-SHELL_SRC="$DOTFILES_DIR/management/shell"
+SHELL_SRC="$DOTFILES_DIR/shell"
 DEFAULT_OUTPUT_DIR="$HOME/.local/shell"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
