@@ -362,6 +362,21 @@ else
   log_error "Setup" "yazi not found"
 fi
 
+# broot — manual shell integration so broot --install never touches dotfiles
+if command -v broot >/dev/null 2>&1; then
+  br() {
+    local tmp cmd
+    tmp=$(mktemp -t "broot-outcmd.XXXXXX")
+    broot --outcmd "$tmp" "$@"
+    IFS= read -r -d '' cmd < "$tmp"
+    rm -f -- "$tmp"
+    [[ -n "$cmd" ]] && eval "$cmd"
+  }
+  log "Setup" "broot"
+else
+  log_error "Setup" "broot not found"
+fi
+
 # ------------------------------------------------------------------ #
 # ZSH PLUGINS (manually cloned to ~/.config/zsh/plugins)
 # ------------------------------------------------------------------ #
