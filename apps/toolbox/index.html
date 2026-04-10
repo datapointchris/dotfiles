@@ -4641,7 +4641,7 @@
 
 
 <h1 id="toolbox">Toolbox<a class="headerlink" href="#toolbox" title="Permanent link">&para;</a></h1>
-<p>Tool discovery system for the 152 tools in your dotfiles. Find tools by name, category, or purpose. Get usage examples and learn when to use each tool.</p>
+<p>Tool discovery system for the installed tools in your dotfiles. Find tools by name, category, or purpose. Get usage examples and learn when to use each tool.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>toolbox<span class="w">              </span><span class="c1"># Show help</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>toolbox<span class="w"> </span>git<span class="w">          </span><span class="c1"># Search for git tools (shortcut)</span>
@@ -4700,7 +4700,7 @@
 </ol>
 <p>Requires gum (<code>brew install gum</code>).</p>
 <h2 id="registry-structure">Registry Structure<a class="headerlink" href="#registry-structure" title="Permanent link">&para;</a></h2>
-<p>Tools are defined in <code>~/dotfiles/docs/tools/registry.yml</code>:</p>
+<p>Tools are defined in <code>~/dotfiles/platforms/common/.config/toolbox/registry.yml</code>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">tool-name</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file-viewer</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Brief</span><span class="nv"> </span><span class="s">description&quot;</span>
@@ -4761,7 +4761,7 @@
 </span></code></pre></div>
 <p>Push changes to GitHub, then <code>go install</code> to update the installed version.</p>
 <h2 id="adding-tools">Adding Tools<a class="headerlink" href="#adding-tools" title="Permanent link">&para;</a></h2>
-<p>Edit <code>~/dotfiles/docs/tools/registry.yml</code> to add tools:</p>
+<p>Edit <code>~/dotfiles/platforms/common/.config/toolbox/registry.yml</code> to add tools:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">new-tool</span><span class="p">:</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">utility</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;What</span><span class="nv"> </span><span class="s">it</span><span class="nv"> </span><span class="s">does&quot;</span>
@@ -4784,7 +4784,7 @@
 <p><strong>Tag thoughtfully</strong>: Tags improve searchability. A Python tool should have tags like [python, language, repl] so it appears in multiple searches.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p><strong>Command not found</strong>: Verify installation with <code>which toolbox</code>. If missing, run <code>go install github.com/datapointchris/toolbox@latest</code>.</p>
-<p><strong>Registry not found</strong>: Check <code>ls ~/dotfiles/docs/tools/registry.yml</code>. The registry must exist for toolbox to work.</p>
+<p><strong>Registry not found</strong>: Check <code>ls ~/dotfiles/platforms/common/.config/toolbox/registry.yml</code>. The registry must exist for toolbox to work.</p>
 <p><strong>Search returns nothing</strong>: Verify tools are installed with <code>which &lt;tool&gt;</code>. Toolbox shows installed status but doesn't auto-detect.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

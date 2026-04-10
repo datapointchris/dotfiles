@@ -4763,18 +4763,12 @@
 </div>
 <h2 id="wsl-specific">WSL-Specific<a class="headerlink" href="#wsl-specific" title="Permanent link">&para;</a></h2>
 <div class="admonition info">
-<p class="admonition-title">ZSHDOTDIR not working</p>
-<p>Check <code>/etc/zsh/zshenv</code>:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>cat<span class="w"> </span>/etc/zsh/zshenv
+<p class="admonition-title">ZDOTDIR not working</p>
+<p>Check <code>/etc/zshenv</code> (macOS) or <code>/etc/zsh/zshenv</code> (Ubuntu/WSL):</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>cat<span class="w"> </span>/etc/zshenv
 </span></code></pre></div>
 <p>Should contain:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ZSHDOTDIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.config/zsh&quot;</span>
-</span></code></pre></div>
-</div>
-<div class="admonition tip">
-<p class="admonition-title">Binary symlinks missing (bat, fd)</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>ln<span class="w"> </span>-sf<span class="w"> </span>/usr/bin/batcat<span class="w"> </span>~/.local/bin/bat
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>ln<span class="w"> </span>-sf<span class="w"> </span>/usr/bin/fdfind<span class="w"> </span>~/.local/bin/fd
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ZDOTDIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.config/zsh&quot;</span>
 </span></code></pre></div>
 </div>
 <h2 id="still-having-issues">Still Having Issues?<a class="headerlink" href="#still-having-issues" title="Permanent link">&para;</a></h2>

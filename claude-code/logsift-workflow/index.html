@@ -4698,54 +4698,18 @@
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># 5. Reports only issues</span>
 </span></code></pre></div>
 <h2 id="5-phase-error-methodology">5-Phase Error Methodology<a class="headerlink" href="#5-phase-error-methodology" title="Permanent link">&para;</a></h2>
-<h3 id="phase-1-initial-analysis">Phase 1: Initial Analysis<a class="headerlink" href="#phase-1-initial-analysis" title="Permanent link">&para;</a></h3>
-<p><strong>Wait</strong> for logsift to complete<br />
-<strong>Read</strong> the FULL error report<br />
-<strong>Identify</strong> ALL errors before acting<br />
-<strong>Look</strong> for patterns across failures</p>
-<p><strong>Anti-pattern</strong>: Jump to first error immediately</p>
-<h3 id="phase-2-root-cause-investigation">Phase 2: Root Cause Investigation<a class="headerlink" href="#phase-2-root-cause-investigation" title="Permanent link">&para;</a></h3>
-<p><strong>Determine relationships</strong>:</p>
-<p><strong>Related errors</strong> (shared root cause):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">Error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cannot find &#39;libfoo.so&#39;</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">Error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Package &#39;foo-dev&#39; required</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">Error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">foo_init() undefined</span>
-</span></code></pre></div>
-<p>→ All point to missing <code>foo</code> package</p>
-<p><strong>Independent errors</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Error:<span class="w"> </span>Invalid<span class="w"> </span>JSON<span class="w"> </span>syntax
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Error:<span class="w"> </span>Port<span class="w"> </span><span class="m">8080</span><span class="w"> </span>already<span class="w"> </span><span class="k">in</span><span class="w"> </span>use<span class="w">  </span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Error:<span class="w"> </span>Missing<span class="w"> </span>--required-flag
-</span></code></pre></div>
-<p>→ Three unrelated issues</p>
-<p><strong>Reality check</strong>: Don't force connections that don't exist</p>
-<h3 id="phase-3-solution-strategy">Phase 3: Solution Strategy<a class="headerlink" href="#phase-3-solution-strategy" title="Permanent link">&para;</a></h3>
-<p><strong>When related</strong>: Fix single root cause<br />
-<strong>When independent</strong>: Fix each individually (this is correct!)</p>
-<p><strong>Always read files before editing</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># ❌ Don&#39;t guess</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Edit<span class="w"> </span>file.sh
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># ✅ Do this</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>Read<span class="w"> </span>file.sh<span class="w">  </span><span class="c1"># Understand context</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>Edit<span class="w"> </span>file.sh<span class="w">  </span><span class="c1"># Make informed change</span>
-</span></code></pre></div>
-<h3 id="phase-4-iterative-fix-and-rerun">Phase 4: Iterative Fix-and-Rerun<a class="headerlink" href="#phase-4-iterative-fix-and-rerun" title="Permanent link">&para;</a></h3>
+<p>See <a href="../working-with-claude/#error-fixing-methodology">Working with Claude Code</a> for the full 5-phase methodology with examples.</p>
+<p><strong>Summary</strong>:</p>
 <ol>
-<li>Re-run SAME logsift command</li>
-<li>Compare new errors to previous</li>
-<li>Verify fixes resolved issues</li>
-<li>Continue until all errors eliminated</li>
+<li><strong>Initial Analysis</strong> — Read the full error report before acting; look for patterns</li>
+<li><strong>Root Cause Investigation</strong> — Are errors related (shared cause) or independent?</li>
+<li><strong>Solution Strategy</strong> — Fix root cause if shared; fix independently if not</li>
+<li><strong>Iterative Fix-and-Rerun</strong> — Re-run same command, compare, repeat until clean</li>
+<li><strong>Verification</strong> — Confirm solution is robust, not just superficially passing</li>
 </ol>
-<h3 id="phase-5-verification">Phase 5: Verification<a class="headerlink" href="#phase-5-verification" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Confirm solution is robust</li>
-<li>Ensure no errors suppressed</li>
-<li>Verify fix aligns with codebase</li>
-</ul>
 <h2 id="two-command-variants">Two Command Variants<a class="headerlink" href="#two-command-variants" title="Permanent link">&para;</a></h2>
 <h3 id="logsift-explicit-command">/logsift - Explicit Command<a class="headerlink" href="#logsift-explicit-command" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/logsift<span class="w"> </span><span class="s2">&quot;bash ~/dotfiles/tests/install/test-install.sh --reuse&quot;</span><span class="w"> </span><span class="m">15</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/logsift<span class="w"> </span><span class="s2">&quot;bash ~/dotfiles/tests/install/test-install.sh --reuse&quot;</span><span class="w"> </span><span class="m">15</span>
 </span></code></pre></div>
 <p><strong>Pros</strong>:</p>
 <ul>
@@ -4759,7 +4723,7 @@
 <li>More typing</li>
 </ul>
 <h3 id="logsift-auto-natural-language">/logsift-auto - Natural Language<a class="headerlink" href="#logsift-auto-natural-language" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/logsift-auto<span class="w"> </span>run<span class="w"> </span>wsl<span class="w"> </span>docker<span class="w"> </span><span class="nb">test</span><span class="w"> </span>with<span class="w"> </span>reuse<span class="w"> </span>flag,<span class="w"> </span><span class="m">15</span><span class="w"> </span>minutes
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/logsift-auto<span class="w"> </span>run<span class="w"> </span>wsl<span class="w"> </span>docker<span class="w"> </span><span class="nb">test</span><span class="w"> </span>with<span class="w"> </span>reuse<span class="w"> </span>flag,<span class="w"> </span><span class="m">15</span><span class="w"> </span>minutes
 </span></code></pre></div>
 <p><strong>Pros</strong>:</p>
 <ul>
@@ -4775,11 +4739,11 @@
 <p><strong>Comparison</strong>: Track via metrics to see which works better</p>
 <h2 id="integration-with-commit-agent">Integration with Commit Agent<a class="headerlink" href="#integration-with-commit-agent" title="Permanent link">&para;</a></h2>
 <p>Commit agent uses logs ift for pre-commit:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Phase 4: Background (suppress auto-fixes)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Phase 5: Logsift (show errors only)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>logsift<span class="w"> </span>monitor<span class="w"> </span>--<span class="w"> </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--files<span class="w"> </span>file1.py<span class="w"> </span>file2.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Phase 4: Background (suppress auto-fixes)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Phase 5: Logsift (show errors only)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>logsift<span class="w"> </span>monitor<span class="w"> </span>--<span class="w"> </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--files<span class="w"> </span>file1.py<span class="w"> </span>file2.sh
 </span></code></pre></div>
 <p><strong>Token savings</strong>: ~950 tokens per pre-commit run</p>
 <h2 id="guiding-principle">Guiding Principle<a class="headerlink" href="#guiding-principle" title="Permanent link">&para;</a></h2>

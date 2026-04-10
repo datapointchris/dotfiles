@@ -4668,7 +4668,7 @@
 
 
 <h1 id="hook-registration-and-reload-behavior">Hook Registration and Reload Behavior<a class="headerlink" href="#hook-registration-and-reload-behavior" title="Permanent link">&para;</a></h1>
-<p><strong>CRITICAL NOTE (v2.0.59):</strong> From practical experience with Claude Code version 2.0.59, <strong>simply restarting the session is NOT sufficient</strong> to register hook changes. The session must be restarted <strong>AND</strong> the <code>/hooks</code> command must be called with a dummy hook creation to trigger re-registration. No better workaround is currently known.</p>
+<p><strong>CRITICAL NOTE:</strong> Simply restarting the session is NOT always sufficient to register hook changes. The session may need to be restarted <strong>AND</strong> the <code>/hooks</code> command called with a dummy hook creation to trigger re-registration. No better workaround is currently known.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>Claude Code's hook system has known issues with detecting and reloading hook configuration changes made during an active session. This document explains the underlying behavior, known issues, and practical workarounds.</p>
 <h2 id="how-hooks-are-loaded">How Hooks Are Loaded<a class="headerlink" href="#how-hooks-are-loaded" title="Permanent link">&para;</a></h2>
@@ -4703,7 +4703,7 @@
 <h2 id="available-workarounds">Available Workarounds<a class="headerlink" href="#available-workarounds" title="Permanent link">&para;</a></h2>
 <p>Since there is <strong>no programmatic API</strong> to reload hooks, you have limited options:</p>
 <h3 id="1-use-hooks-command-most-practical">1. Use <code>/hooks</code> Command (Most Practical)<a class="headerlink" href="#1-use-hooks-command-most-practical" title="Permanent link">&para;</a></h3>
-<p><strong>Current best workaround for v2.0.59:</strong></p>
+<p><strong>Current best workaround:</strong></p>
 <ol>
 <li>Make your programmatic changes to <code>settings.json</code> or hook files</li>
 <li>Restart the Claude Code session (lose context but ensure clean state)</li>
@@ -4721,7 +4721,7 @@
 <li>Verify hooks with <code>/hooks</code> command on startup</li>
 </ul>
 <h3 id="3-session-restart-alone-unreliable">3. Session Restart Alone (Unreliable)<a class="headerlink" href="#3-session-restart-alone-unreliable" title="Permanent link">&para;</a></h3>
-<p><strong>Not sufficient in v2.0.59:</strong></p>
+<p><strong>Not always sufficient:</strong></p>
 <ul>
 <li>Restarting the session <em>should</em> reload hooks</li>
 <li>In practice, this does not reliably work</li>
@@ -4775,21 +4775,13 @@
 </span></code></pre></div>
 <h3 id="test-hook-execution">Test Hook Execution<a class="headerlink" href="#test-hook-execution" title="Permanent link">&para;</a></h3>
 <p>Test individual hooks outside Claude Code:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># SessionStart hook</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;cwd&quot;: &quot;/Users/chris/dotfiles&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>.claude/hooks/session-start
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Stop hook - build verification (project-level)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>bash<span class="w"> </span>.claude/hooks/stop-build-check
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># PreToolUse hook</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;tool&quot;: &quot;Bash&quot;, &quot;parameters&quot;: {&quot;command&quot;: &quot;ls&quot;}}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>.claude/hooks/pre-bash-intercept-commits
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># PostToolUse hook</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;tool&quot;: &quot;Edit&quot;, &quot;result&quot;: &quot;success&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>.claude/hooks/markdown_formatter.py
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Stop hook</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>bash<span class="w"> </span>.claude/hooks/stop-build-check
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># Notification hook</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;message&quot;: &quot;Test notification&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>.claude/hooks/notification-desktop
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># PreToolUse hook - feature doc check (project-level)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;tool&quot;: &quot;Bash&quot;, &quot;parameters&quot;: {&quot;command&quot;: &quot;git commit -m test&quot;}}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>.claude/hooks/check-feature-docs
 </span></code></pre></div>
+<p>For universal hooks (SessionStart, PreCompact, notification, etc.), see <code>~/.claude/hooks/</code> for their locations and test commands.</p>
 <h3 id="validate-hook-safety">Validate Hook Safety<a class="headerlink" href="#validate-hook-safety" title="Permanent link">&para;</a></h3>
 <p>Ensure hooks follow safety best practices:</p>
 <ul>
@@ -4914,8 +4906,8 @@
 <h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
 <p>Hook registration in Claude Code has known reliability issues that require workarounds:</p>
 <ul>
-<li><strong>Live-reload doesn't work for hooks</strong> despite being documented for v1.0.90+</li>
-<li><strong>Session restart alone is insufficient</strong> in v2.0.59</li>
+<li><strong>Live-reload doesn't work reliably for hooks</strong> despite being documented</li>
+<li><strong>Session restart alone is not always sufficient</strong></li>
 <li><strong>The <code>/hooks</code> UI command forces re-registration</strong> and is currently the most reliable workaround</li>
 <li><strong>No programmatic API exists</strong> to reload hooks without using the UI or restarting</li>
 </ul>

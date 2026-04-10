@@ -4881,49 +4881,6 @@
 <li>Are errors being resolved correctly?</li>
 <li>Is the methodology being followed?</li>
 </ul>
-<h3 id="automatic-tracking">Automatic Tracking<a class="headerlink" href="#automatic-tracking" title="Permanent link">&para;</a></h3>
-<p>Every logsift command is automatically logged to <code>.claude/metrics/</code>.</p>
-<p><strong>What's tracked automatically</strong>:</p>
-<ul>
-<li>Command type (logsift vs logsift-auto)</li>
-<li>Timestamp and session ID</li>
-<li>Command being run</li>
-<li>Working directory</li>
-</ul>
-<p><strong>View metrics</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Quick summary</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>analyze-claude-metrics
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Detailed per-session breakdown</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>analyze-claude-metrics<span class="w"> </span>--details
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Specific date</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>analyze-claude-metrics<span class="w"> </span>--date<span class="w"> </span><span class="m">2025</span>-12-03
-</span></code></pre></div>
-<h3 id="manual-quality-assessment">Manual Quality Assessment<a class="headerlink" href="#manual-quality-assessment" title="Permanent link">&para;</a></h3>
-<p>For significant sessions, add an entry to <code>.claude/metrics/quality-log.md</code>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="gu">## 2025-12-03 15:30 - Session abc123</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="gs">**Command**</span>: <span class="sb">`/logsift &quot;bash test-install.sh&quot; 15`</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="gs">**Context**</span>: Testing WSL Docker installation
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="gs">**Quantitative**</span>:
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">-</span><span class="w"> </span>Initial errors: 5
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="k">-</span><span class="w"> </span>Final errors: 0
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="k">-</span><span class="w"> </span>Iterations: 2
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="k">-</span><span class="w"> </span>Tokens: ~45k (from /cost)
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="gs">**Qualitative**</span>:
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="k">-</span><span class="w"> </span>Correctness: ✅ All errors resolved
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="k">-</span><span class="w"> </span>Efficiency: ✅ Found root cause (missing docker-compose)
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="k">-</span><span class="w"> </span>Methodology: ✅ Followed 5-phase approach
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="gs">**Notes**</span>:
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="k">-</span><span class="w"> </span>Claude correctly identified shared root cause
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="k">-</span><span class="w"> </span>Two iterations: first to install docker-compose, second to verify
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="k">-</span><span class="w"> </span>Good use of context - read Dockerfile before editing
-</span></code></pre></div>
 <h3 id="key-performance-indicators">Key Performance Indicators<a class="headerlink" href="#key-performance-indicators" title="Permanent link">&para;</a></h3>
 <p><strong>Quality KPIs</strong>:</p>
 <ul>
@@ -4947,7 +4904,7 @@
 </ul>
 <h3 id="token-usage-during-sessions">Token Usage During Sessions<a class="headerlink" href="#token-usage-during-sessions" title="Permanent link">&para;</a></h3>
 <p>Check token usage in real-time:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>/cost
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/cost
 </span></code></pre></div>
 <p>Shows:</p>
 <ul>
@@ -4958,10 +4915,10 @@
 </ul>
 <h3 id="advanced-opentelemetry-export">Advanced: OpenTelemetry Export<a class="headerlink" href="#advanced-opentelemetry-export" title="Permanent link">&para;</a></h3>
 <p>For production-grade monitoring, enable telemetry export:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Add to ~/.zshrc</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CLAUDE_CODE_ENABLE_TELEMETRY</span><span class="o">=</span><span class="m">1</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_LOGS_EXPORTER</span><span class="o">=</span>otlp
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_METRICS_EXPORTER</span><span class="o">=</span>otlp
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Add to ~/.zshrc</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CLAUDE_CODE_ENABLE_TELEMETRY</span><span class="o">=</span><span class="m">1</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_LOGS_EXPORTER</span><span class="o">=</span>otlp
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_METRICS_EXPORTER</span><span class="o">=</span>otlp
 </span></code></pre></div>
 <p>Exports detailed metrics:</p>
 <ul>
@@ -4970,13 +4927,6 @@
 <li><code>claude_code.tool_result</code> - Tool performance</li>
 <li><code>claude_code.active_time.total</code> - Actual usage time</li>
 </ul>
-<h3 id="analysis-cadence">Analysis Cadence<a class="headerlink" href="#analysis-cadence" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Daily</strong>: Run <code>analyze-claude-metrics</code> for quick overview</li>
-<li><strong>Weekly</strong>: Add 5-10 quality log entries for significant sessions</li>
-<li><strong>Monthly</strong>: Generate comparison reports, identify trends</li>
-</ul>
-<p>Metrics tracking now lives in the <a href="https://github.com/datapointchris/claude-code-metrics">claude-code-metrics</a> project at <code>~/code/claude-code-metrics</code>.</p>
 <hr />
 <h2 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h2>
 <h3 id="the-three-layer-system">The Three-Layer System<a class="headerlink" href="#the-three-layer-system" title="Permanent link">&para;</a></h3>
@@ -4992,23 +4942,18 @@
 <p><strong>Files</strong>: <code>.claude/commands/*.md</code></p>
 <h4 id="layer-2-hooks-event-triggered">Layer 2: Hooks (Event-Triggered)<a class="headerlink" href="#layer-2-hooks-event-triggered" title="Permanent link">&para;</a></h4>
 <p><strong>Purpose</strong>: Automatic actions on events</p>
-<p><strong>Hooks</strong>:</p>
+<p><strong>Project hooks</strong> (<code>.claude/hooks/</code>):</p>
+<ul>
+<li><code>Stop</code> - Runs build checks when you pause</li>
+<li><code>PreToolUse</code> - Feature documentation check before commits</li>
+</ul>
+<p><strong>Universal hooks</strong> (<code>~/.claude/hooks/</code>):</p>
 <ul>
 <li><code>SessionStart</code> - Loads git context automatically</li>
-<li><code>Stop</code> - Runs build checks when you pause</li>
 <li><code>PreCompact</code> - Saves session state before memory compaction</li>
-<li><code>track-command-metrics</code> - Logs command usage for analysis</li>
+<li>And more — see <code>~/.claude/README.md</code></li>
 </ul>
-<p><strong>When they run</strong>: Triggered by Claude Code events (session start, stop, compact)</p>
-<p><strong>Files</strong>: <code>.claude/hooks/*</code></p>
-<h4 id="layer-3-skills-context-activated">Layer 3: Skills (Context-Activated)<a class="headerlink" href="#layer-3-skills-context-activated" title="Permanent link">&para;</a></h4>
-<p><strong>Purpose</strong>: Auto-suggest capabilities based on context</p>
-<p><strong>Skills</strong>:</p>
-<ul>
-<li><code>symlinks-developer</code> - Activates when editing symlink management code</li>
-</ul>
-<p><strong>When they run</strong>: Auto-suggest when keywords/file patterns match</p>
-<p><strong>Files</strong>: <code>.claude/skills/*/SKILL.md</code></p>
+<p><strong>When they run</strong>: Triggered by Claude Code events</p>
 <h3 id="decision-matrix-when-to-use-each">Decision Matrix: When to Use Each<a class="headerlink" href="#decision-matrix-when-to-use-each" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -5029,68 +4974,56 @@
 <td>Hook</td>
 <td>Build checks on stop</td>
 </tr>
-<tr>
-<td>Claude should suggest capability</td>
-<td>Skill</td>
-<td>Symlink expertise</td>
-</tr>
 </tbody>
 </table>
 <h3 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>.claude/
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>├── commands/           # Slash commands
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>│   ├── logsift.md
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>│   └── logsift-auto.md
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>├── hooks/              # Event-triggered automation
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>│   ├── session-start
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>│   ├── stop-build-check
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>│   ├── pre-compact-save-state
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>│   └── track-command-metrics
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>├── metrics/            # Usage tracking
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>│   ├── README.md
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>│   ├── quality-log.md
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>│   └── command-metrics-*.jsonl
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>├── skills/             # Context-activated expertise
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>│   └── symlinks-developer/
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>├── settings.json       # Hook configuration
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>└── README.md           # Technical reference
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>.claude/
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── commands/           # Slash commands
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>│   ├── logsift.md
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>│   └── logsift-auto.md
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>├── hooks/              # Dotfiles-specific hooks
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>│   ├── check-feature-docs
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>│   └── stop-build-check
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>├── sessions/           # Session state files
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>├── settings.json       # Hook configuration
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>└── README.md           # Technical reference
 </span></code></pre></div>
 <hr />
 <h2 id="command-reference">Command Reference<a class="headerlink" href="#command-reference" title="Permanent link">&para;</a></h2>
 <h3 id="slash-commands">Slash Commands<a class="headerlink" href="#slash-commands" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Logsift commands</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>/logsift<span class="w"> </span><span class="s2">&quot;&lt;command&gt;&quot;</span><span class="w"> </span><span class="o">[</span>timeout_minutes<span class="o">]</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>/logsift-auto<span class="w"> </span>&lt;natural<span class="w"> </span>language<span class="w"> </span>description&gt;
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># Built-in Claude Code commands</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>/cost<span class="w">                   </span><span class="c1"># View token usage this session</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>/clear<span class="w">                  </span><span class="c1"># Clear context between work sessions</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>/model<span class="w">                  </span><span class="c1"># View/change active model</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>/help<span class="w">                   </span><span class="c1"># View available commands</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Logsift commands</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>/logsift<span class="w"> </span><span class="s2">&quot;&lt;command&gt;&quot;</span><span class="w"> </span><span class="o">[</span>timeout_minutes<span class="o">]</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>/logsift-auto<span class="w"> </span>&lt;natural<span class="w"> </span>language<span class="w"> </span>description&gt;
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Built-in Claude Code commands</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>/cost<span class="w">                   </span><span class="c1"># View token usage this session</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>/clear<span class="w">                  </span><span class="c1"># Clear context between work sessions</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>/model<span class="w">                  </span><span class="c1"># View/change active model</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>/help<span class="w">                   </span><span class="c1"># View available commands</span>
 </span></code></pre></div>
 <h3 id="analysis-tools">Analysis Tools<a class="headerlink" href="#analysis-tools" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Metrics analysis</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>analyze-claude-metrics<span class="w">              </span><span class="c1"># Summary of command usage</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>analyze-claude-metrics<span class="w"> </span>--details<span class="w">    </span><span class="c1"># Per-session breakdown</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>analyze-claude-metrics<span class="w"> </span>--date<span class="w"> </span>YYYY-MM-DD<span class="w">  </span><span class="c1"># Specific date</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># Logsift usage</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>logsift<span class="w"> </span>monitor<span class="w"> </span>--<span class="w"> </span>&lt;command&gt;<span class="w">         </span><span class="c1"># Run command with monitoring</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>logsift<span class="w"> </span>llm<span class="w">                          </span><span class="c1"># Get logsift usage instructions</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Metrics analysis</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>analyze-claude-metrics<span class="w">              </span><span class="c1"># Summary of command usage</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>analyze-claude-metrics<span class="w"> </span>--details<span class="w">    </span><span class="c1"># Per-session breakdown</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>analyze-claude-metrics<span class="w"> </span>--date<span class="w"> </span>YYYY-MM-DD<span class="w">  </span><span class="c1"># Specific date</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Logsift usage</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>logsift<span class="w"> </span>monitor<span class="w"> </span>--<span class="w"> </span>&lt;command&gt;<span class="w">         </span><span class="c1"># Run command with monitoring</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>logsift<span class="w"> </span>llm<span class="w">                          </span><span class="c1"># Get logsift usage instructions</span>
 </span></code></pre></div>
 <h3 id="git-workflow">Git Workflow<a class="headerlink" href="#git-workflow" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Commit work (follows git safety protocol)</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>git<span class="w"> </span>status<span class="w">               </span><span class="c1"># Review changes first</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>git<span class="w"> </span>diff<span class="w"> </span>--staged<span class="w">        </span><span class="c1"># See what will be committed</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>git<span class="w"> </span>add<span class="w"> </span>&lt;file&gt;<span class="w">           </span><span class="c1"># Stage specific files (never use -A)</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>git<span class="w"> </span>commit<span class="w">               </span><span class="c1"># Pre-commit hooks run automatically</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Commit work (follows git safety protocol)</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>git<span class="w"> </span>status<span class="w">               </span><span class="c1"># Review changes first</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>git<span class="w"> </span>diff<span class="w"> </span>--staged<span class="w">        </span><span class="c1"># See what will be committed</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>git<span class="w"> </span>add<span class="w"> </span>&lt;file&gt;<span class="w">           </span><span class="c1"># Stage specific files (never use -A)</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>git<span class="w"> </span>commit<span class="w">               </span><span class="c1"># Pre-commit hooks run automatically</span>
 </span></code></pre></div>
 <p><strong>Note</strong>: Never use <code>git add -A</code> or <code>git add .</code> to avoid accidentally staging unwanted files</p>
 <h3 id="commit-agent-automated-workflow">Commit Agent (Automated Workflow)<a class="headerlink" href="#commit-agent-automated-workflow" title="Permanent link">&para;</a></h3>
 <p>For complex commits or when you want to minimize token usage, use the commit agent:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>&quot;Let&#39;s commit this work&quot;
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>&quot;Create a commit for these changes&quot;
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>&quot;Commit the staged files&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>&quot;Let&#39;s commit this work&quot;
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>&quot;Create a commit for these changes&quot;
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>&quot;Commit the staged files&quot;
 </span></code></pre></div>
 <p><strong>What the agent does</strong>:</p>
 <ol>
@@ -5110,16 +5043,16 @@
 <li><strong>Pre-commit Automation</strong>: Handles formatting and linting automatically</li>
 </ul>
 <p><strong>Example workflow</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>You: &quot;Let&#39;s commit this work&quot;
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>Commit Agent:
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>✅ Created 2 commits:
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>1. [a1b2c3d] feat(metrics): add logsift command tracking
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>2. [e4f5g6h] docs: update metrics documentation
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>Files committed: 5
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>Pre-commit iterations: 1 (markdown formatting auto-fixed)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>You: &quot;Let&#39;s commit this work&quot;
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>Commit Agent:
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>✅ Created 2 commits:
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>1. [a1b2c3d] feat(metrics): add logsift command tracking
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>2. [e4f5g6h] docs: update metrics documentation
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>Files committed: 5
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>Pre-commit iterations: 1 (markdown formatting auto-fixed)
 </span></code></pre></div>
 <p><strong>When to use</strong>:</p>
 <ul>
@@ -5131,56 +5064,56 @@
 <p><strong>Manual commits</strong> are still fine for simple, single-file changes where you want direct control.</p>
 <p><strong>Technical details</strong>: <code>.claude/agents/commit-agent.md</code></p>
 <h3 id="task-automation">Task Automation<a class="headerlink" href="#task-automation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Common tasks</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>task<span class="w"> </span>--list-all<span class="w">          </span><span class="c1"># See all available tasks</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>task<span class="w"> </span>symlinks:link<span class="w">       </span><span class="c1"># Deploy dotfiles</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>task<span class="w"> </span>build<span class="w">               </span><span class="c1"># Build Go applications</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">                </span><span class="c1"># Run tests</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Common tasks</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>task<span class="w"> </span>--list-all<span class="w">          </span><span class="c1"># See all available tasks</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>task<span class="w"> </span>symlinks:link<span class="w">       </span><span class="c1"># Deploy dotfiles</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>task<span class="w"> </span>build<span class="w">               </span><span class="c1"># Build Go applications</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>task<span class="w"> </span><span class="nb">test</span><span class="w">                </span><span class="c1"># Run tests</span>
 </span></code></pre></div>
 <p><strong>Full reference</strong>: <a href="../../reference/tools/tasks/">Task Reference</a></p>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="logsift-issues">Logsift Issues<a class="headerlink" href="#logsift-issues" title="Permanent link">&para;</a></h3>
 <p><strong>Problem</strong>: "logsift: command not found"</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Install logsift</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>cargo<span class="w"> </span>install<span class="w"> </span>logsift
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># Or check if it&#39;s in PATH</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>which<span class="w"> </span>logsift
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Install logsift</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>cargo<span class="w"> </span>install<span class="w"> </span>logsift
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Or check if it&#39;s in PATH</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>which<span class="w"> </span>logsift
 </span></code></pre></div>
 <p><strong>Problem</strong>: Claude backgrounded the process</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a># This is an anti-pattern - report to improve slash command
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a># Kill the background process:
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>ps aux | grep logsift
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>kill &lt;PID&gt;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a># This is an anti-pattern - report to improve slash command
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a># Kill the background process:
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>ps aux | grep logsift
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>kill &lt;PID&gt;
 </span></code></pre></div>
 <p><strong>Problem</strong>: No errors shown but script failed</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Check the full logsift analysis</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>cat<span class="w"> </span>~/.local/share/logsift/logs/latest-session.json
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Or read original output</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>cat<span class="w"> </span>/tmp/command-output.log
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Check the full logsift analysis</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>cat<span class="w"> </span>~/.local/share/logsift/logs/latest-session.json
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Or read original output</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>cat<span class="w"> </span>/tmp/command-output.log
 </span></code></pre></div>
 <h3 id="metrics-not-tracking">Metrics Not Tracking<a class="headerlink" href="#metrics-not-tracking" title="Permanent link">&para;</a></h3>
 <p><strong>Problem</strong>: No metrics files generated</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Check metrics directory exists</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>.claude/metrics/
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Check hook is executable</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>ls<span class="w"> </span>-la<span class="w"> </span>.claude/hooks/track-command-metrics
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/track-command-metrics
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="c1"># Check hook is configured in settings.json</span>
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>cat<span class="w"> </span>.claude/settings.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>track-command-metrics
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Check metrics directory exists</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>.claude/metrics/
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Check hook is executable</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>ls<span class="w"> </span>-la<span class="w"> </span>.claude/hooks/track-command-metrics
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/track-command-metrics
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="c1"># Check hook is configured in settings.json</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>cat<span class="w"> </span>.claude/settings.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>track-command-metrics
 </span></code></pre></div>
 <h3 id="general-claude-code-issues">General Claude Code Issues<a class="headerlink" href="#general-claude-code-issues" title="Permanent link">&para;</a></h3>
 <p><strong>Problem</strong>: Hook not running</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Verify hook is executable</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/*
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Check settings.json configuration</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>cat<span class="w"> </span>.claude/settings.json
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="c1"># Look for errors in Claude Code output</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Verify hook is executable</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/*
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Check settings.json configuration</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>cat<span class="w"> </span>.claude/settings.json
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Look for errors in Claude Code output</span>
 </span></code></pre></div>
 <p><strong>Full troubleshooting</strong>: <a href="../../reference/support/troubleshooting/">Support &amp; Troubleshooting</a></p>
 <hr />
