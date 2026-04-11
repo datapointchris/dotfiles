@@ -140,7 +140,7 @@ install_manifest_phases() {
   # Build shell files from manifest
   print_header "Building Shell Files"
   bash "$DOTFILES_DIR/shell/build-shell.sh" \
-    "$DOTFILES_DIR/install/machines/${MACHINE}.yml"
+    "$DOTFILES_DIR/install/manifests/${MACHINE}.yml"
 
   # Symlink Dotfiles
   print_header "Symlinking Dotfiles"
@@ -206,7 +206,7 @@ usage() {
   echo "                             Supported: linux-x86_64, linux-arm64,"
   echo "                                        darwin-x86_64, darwin-arm64"
   echo ""
-  echo "Machine manifests: install/machines/*.yml"
+  echo "Machine manifests: install/manifests/*.yml"
   echo ""
   echo "Environment Variables:"
   echo "  MACHINE=name    Same as --machine (flag takes precedence)"
@@ -306,17 +306,17 @@ parse_args() {
     echo "Set via environment:  export MACHINE=<name>"
     echo ""
     echo "Available manifests:"
-    for f in "$DOTFILES_DIR"/install/machines/*.yml; do
+    for f in "$DOTFILES_DIR"/install/manifests/*.yml; do
       echo "  $(basename "$f" .yml)"
     done
     exit 1
   fi
 
-  if [[ ! -f "$DOTFILES_DIR/install/machines/${MACHINE}.yml" ]]; then
-    log_error "Machine manifest not found: install/machines/${MACHINE}.yml"
+  if [[ ! -f "$DOTFILES_DIR/install/manifests/${MACHINE}.yml" ]]; then
+    log_error "Machine manifest not found: install/manifests/${MACHINE}.yml"
     echo ""
     echo "Available manifests:"
-    for f in "$DOTFILES_DIR"/install/machines/*.yml; do
+    for f in "$DOTFILES_DIR"/install/manifests/*.yml; do
       echo "  $(basename "$f" .yml)"
     done
     exit 1

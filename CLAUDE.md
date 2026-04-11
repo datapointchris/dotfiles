@@ -131,7 +131,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
 - `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)
 - `install/` - Repository management tools
-  - `machines/` - Machine manifests (YAML defining what to install per computer)
+  - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
   - `offline/` - Offline installation support (connectivity testing, bundles)
   - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, ubuntu/, wsl/)
@@ -143,7 +143,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Key Systems**:
 
-- **Machine Manifests** - YAML files in `install/machines/` defining what to install per computer type
+- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type
 - **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim

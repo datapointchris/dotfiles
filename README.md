@@ -15,10 +15,10 @@ Clone and run the setup script with a machine manifest:
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bash install.sh --machine arch-personal-workstation
+bash install.sh --machine archlinux-personal-workstation
 ```
 
-Available manifests are in `install/machines/` (arch, macOS, WSL, Ubuntu server).
+Available manifests are in `install/manifests/` (Arch Linux, macOS, WSL, Ubuntu server).
 
 **Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
 
@@ -26,25 +26,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 ## Structure
 
-```text
-dotfiles/
-├── configs/          # Config files deployed to $HOME (common base + platform overlays)
-│   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
-│   ├── macos/        # macOS-specific overrides
-│   ├── wsl/          # WSL Ubuntu overrides
-│   ├── arch/         # Arch Linux overrides
-│   └── ubuntu/       # Ubuntu server overrides
-├── apps/             # Personal CLI applications (shell scripts)
-│   ├── common/       # Cross-platform tools
-│   ├── macos/        # macOS-specific tools
-│   └── arch/         # Arch-specific tools (rofi menus)
-├── shell/            # Shell source files (functions.sh, aliases.sh, platform-specific)
-├── install/          # Provisioning: packages, installers, manifests, symlinks manager
-│   ├── machines/     # Machine manifests (what to install per computer)
-│   ├── symlinks/     # Symlinks manager (Python)
-│   └── packages.yml  # Package definitions
-└── docs/             # MkDocs documentation site
-```
+`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`, `ubuntu/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
 **External tools** (installed from GitHub, not in this repo):
 

@@ -63,7 +63,7 @@ cd ~/dotfiles
 bash install.sh --machine archlinux-personal-workstation
 ```
 
-Machine manifests in `install/machines/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
+Machine manifests in `install/manifests/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
 
 ## Direct Commands
 

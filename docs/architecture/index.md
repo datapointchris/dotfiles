@@ -6,35 +6,6 @@ icon: material/city
 
 How the dotfiles repository is organized and why.
 
-## Structure
-
-```text
-dotfiles/
-├── configs/             # Config files deployed to $HOME (common base + platform overlays)
-│   ├── common/          # Shared configs (all platforms)
-│   ├── macos/           # macOS-specific overrides
-│   ├── wsl/             # WSL Ubuntu overrides
-│   ├── archlinux/       # Arch Linux overrides
-│   └── ubuntu/          # Ubuntu server overrides
-├── apps/                # Personal CLI applications (shell scripts)
-│   ├── common/          # Cross-platform: menu, notes, backmeup, safekeep, patterns, ...
-│   ├── macos/           # macOS-specific tools
-│   └── archlinux/       # Arch Linux-specific tools (rofi menus, etc.)
-├── shell/               # Shell source files by platform (symlinked to ~/.local/shell/)
-│   ├── common/          # Cross-platform: functions.sh, aliases.sh
-│   ├── macos/           # macOS functions + aliases (macos.sh)
-│   ├── archlinux/       # Arch Linux functions + aliases (archlinux.sh)
-│   └── wsl/             # WSL functions + aliases (wsl.sh)
-├── install/          # Provisioning: packages, installers, manifests, symlinks manager
-│   ├── machines/        # Machine manifests (what to install per computer)
-│   ├── symlinks/        # Symlinks manager (Python)
-│   ├── common/          # Shared installers and libraries
-│   ├── {platform}/      # Platform-specific install scripts
-│   └── packages.yml     # Package definitions
-├── Taskfile.yml         # Task automation
-└── docs/                # MkDocs documentation
-```
-
 **External tools** (installed from GitHub, not in this repo):
 
 - `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
@@ -76,10 +47,10 @@ task symlinks:relink    # Complete refresh (remove and recreate)
 
 ## Machine Manifests
 
-Installation is driven by machine manifests in `install/machines/`. Each manifest defines exactly what gets installed:
+Installation is driven by machine manifests in `install/manifests/`. Each manifest defines exactly what gets installed:
 
 ```yaml
-# install/machines/arch-personal-workstation.yml
+# install/manifests/arch-personal-workstation.yml
 machine: arch-personal-workstation
 platform: arch
 
