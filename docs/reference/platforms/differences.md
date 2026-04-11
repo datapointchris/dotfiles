@@ -11,7 +11,7 @@ Comprehensive reference for platform-specific differences across macOS, Ubuntu, 
 | **Binary Prefix**  | None           | Some (bat, fd)    | Some (bat, fd)    | None       |
 | **User Binaries**  | ~/.local/bin   | ~/.local/bin      | ~/.local/bin      | ~/.local/bin |
 | **System Binaries**| /usr/local/bin | /usr/bin          | /usr/bin          | /usr/bin   |
-| **Machine Manifest**| macos-personal-workstation | ubuntu-lxc-server | wsl-work-workstation | arch-personal-workstation |
+| **Machine Manifest**| macos-personal-workstation | ubuntu-lxc-server | wsl-work-workstation | archlinux-personal-workstation |
 
 ## Deep Dive
 

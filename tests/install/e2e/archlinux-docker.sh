@@ -28,7 +28,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "  $(basename "$0")              # Test with latest Arch"
   echo "  $(basename "$0") -k           # Keep container for debugging"
   echo "  $(basename "$0") -r           # Reuse most recent container"
-  echo "  $(basename "$0") -c dotfiles-arch-test-123456  # Reuse specific container"
+  echo "  $(basename "$0") -c dotfiles-archlinux-test-123456  # Reuse specific container"
   exit 0
 fi
 
@@ -64,19 +64,19 @@ done
 
 # Configuration
 DOCKER_IMAGE="archlinux:latest"
-LOG_FILE="${DOTFILES_DIR}/test-arch-docker.log"
+LOG_FILE="${DOTFILES_DIR}/test-archlinux-docker.log"
 
 # Use provided container name or generate new one
 if [[ "$REUSE_LATEST" == "true" ]]; then
   # Find most recent container
   CONTAINER_NAME=$(docker ps -a --format '{{.CreatedAt}}\t{{.Names}}' | \
-                   grep dotfiles-arch-test | \
+                   grep dotfiles-archlinux-test | \
                    sort -r | \
                    head -1 | \
                    cut -f2)
 
   if [[ -z "$CONTAINER_NAME" ]]; then
-    echo "Error: No existing dotfiles-arch-test containers found"
+    echo "Error: No existing dotfiles-archlinux-test containers found"
     echo "Available containers:"
     docker ps -a --format '  {{.Names}}' | grep dotfiles || echo "  (none)"
     exit 1
@@ -90,12 +90,12 @@ elif [[ -n "$REUSE_CONTAINER" ]]; then
   if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Error: Container '$CONTAINER_NAME' not found"
     echo "Available containers:"
-    docker ps -a --format '  {{.Names}}' | grep dotfiles-arch-test || echo "  (none)"
+    docker ps -a --format '  {{.Names}}' | grep dotfiles-archlinux-test || echo "  (none)"
     exit 1
   fi
   log_info "Reusing existing container: $CONTAINER_NAME"
 else
-  CONTAINER_NAME="dotfiles-arch-test-$(date '+%Y%m%d-%H%M%S')"
+  CONTAINER_NAME="dotfiles-archlinux-test-$(date '+%Y%m%d-%H%M%S')"
 fi
 
 # Get GitHub token from host for authenticated API calls inside container
@@ -208,26 +208,26 @@ STEP_START=$(date +%s)
   docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo git python python-yaml
 
   # Create non-root user for realistic Arch testing
-  echo "Creating test user 'archuser' for realistic testing..."
+  echo "Creating test user 'archlinuxuser' for realistic testing..."
   docker exec "$CONTAINER_NAME" bash -c "
-    useradd -m -G wheel -s /bin/bash archuser
-    echo 'archuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+    useradd -m -G wheel -s /bin/bash archlinuxuser
+    echo 'archlinuxuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
   "
 
-  # Set container home directory for archuser
-  CONTAINER_HOME="/home/archuser"
+  # Set container home directory for archlinuxuser
+  CONTAINER_HOME="/home/archlinuxuser"
 
   # Create ~/.env for testing
   echo "Creating ~/.env..."
-  docker exec --user archuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
-PLATFORM=arch
+  docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
+PLATFORM=archlinux
 NVIM_AI_ENABLED=false
 DOTFILES_DOCKER_TEST=true
 EOF"
 
   # Copy dotfiles to writable location (install script modifies files)
   echo "Copying dotfiles to writable location..."
-  docker exec --user archuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "
+  docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "
     shopt -s dotglob
     for item in /dotfiles/*; do
       [[ \$(basename \"\$item\") == '.git' ]] && continue
@@ -258,7 +258,7 @@ STEP_START=$(date +%s)
   echo "Executing Arch Linux installation in container..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser ${GITHUB_TOKEN:+-e GITHUB_TOKEN="$GITHUB_TOKEN"} "$CONTAINER_NAME" bash "/home/archuser/dotfiles/install.sh" --machine arch-personal-workstation
+  docker exec --user archlinuxuser --env HOME=/home/archlinuxuser ${GITHUB_TOKEN:+-e GITHUB_TOKEN="$GITHUB_TOKEN"} "$CONTAINER_NAME" bash "/home/archlinuxuser/dotfiles/install.sh" --machine archlinux-personal-workstation
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -279,10 +279,10 @@ STEP_START=$(date +%s)
   echo ""
 
   # Run verification script (continue even if verification fails)
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
-    ZSHDOTDIR=/home/archuser/.config/zsh
+  docker exec --user archlinuxuser --env HOME=/home/archlinuxuser "$CONTAINER_NAME" bash -c "
+    ZSHDOTDIR=/home/archlinuxuser/.config/zsh
     export ZSHDOTDIR
-    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /home/archuser/dotfiles/tests/install/verification/verify-installed-packages.sh\"
+    zsh -c \"source \\\$ZSHDOTDIR/.zshrc 2>/dev/null; bash --norc /home/archlinuxuser/dotfiles/tests/install/verification/verify-installed-packages.sh\"
   " || echo "  Note: Verification had failures, continuing with remaining tests..."
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -302,7 +302,7 @@ STEP_START=$(date +%s)
   echo "Running detect-installed-duplicates.sh to check for duplicates..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "cd /home/archuser/dotfiles && bash tests/install/verification/detect-installed-duplicates.sh"
+  docker exec --user archlinuxuser --env HOME=/home/archlinuxuser "$CONTAINER_NAME" bash -c "cd /home/archlinuxuser/dotfiles && bash tests/install/verification/detect-installed-duplicates.sh"
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
 STEP_ELAPSED=$((STEP_END - STEP_START))
@@ -323,7 +323,7 @@ STEP_START=$(date +%s)
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Run test outside of tee subshell to capture result
-if docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "export PATH=\"/home/archuser/go/bin:/home/archuser/.local/bin:\$PATH\" && bash /home/archuser/dotfiles/tests/apps/all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+if docker exec --user archlinuxuser --env HOME=/home/archlinuxuser "$CONTAINER_NAME" bash -c "export PATH=\"/home/archlinuxuser/go/bin:/home/archlinuxuser/.local/bin:\$PATH\" && bash /home/archlinuxuser/dotfiles/tests/apps/all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
   STEP_STATUS+=("PASS")
 else
   STEP_STATUS+=("FAIL")
@@ -345,8 +345,8 @@ STEP_START=$(date +%s)
   echo "Running update.sh to verify update functionality..."
   echo ""
 
-  docker exec --user archuser --env HOME=/home/archuser "$CONTAINER_NAME" bash -c "
-    cd /home/archuser/dotfiles
+  docker exec --user archlinuxuser --env HOME=/home/archlinuxuser "$CONTAINER_NAME" bash -c "
+    cd /home/archlinuxuser/dotfiles
     bash update.sh
   " || log_warning "Update script failed"
 } 2>&1 | tee -a "$LOG_FILE"
@@ -405,7 +405,7 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   else
     print_section "Debug Information" "cyan"
     echo "  Container kept for debugging"
-    echo "  • Shell into container: docker exec -it --user archuser $CONTAINER_NAME bash"
+    echo "  • Shell into container: docker exec -it --user archlinuxuser $CONTAINER_NAME bash"
     echo "  • View logs: docker logs $CONTAINER_NAME"
     echo "  • Remove when done: docker rm -f $CONTAINER_NAME"
   fi

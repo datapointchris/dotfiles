@@ -127,4 +127,4 @@ After fixing, verify:
 
 - `install/common/github-releases/yazi.sh` - Yazi with plugins/flavors
 - `install/common/language-tools/npm-install-globals.sh` - Good pattern example
-- Installation scripts in `install/{macos,wsl,arch}/`
+- Installation scripts in `install/{macos,wsl,archlinux}/`

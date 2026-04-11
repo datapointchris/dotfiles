@@ -100,14 +100,14 @@ def test_cross_platform_git_files(tmp_path):
     home = tmp_path / "home"
     home.mkdir()
 
-    for platform in ["common", "macos", "wsl", "arch"]:
+    for platform in ["common", "macos", "wsl", "archlinux"]:
         platform_dir = dotfiles / platform
         platform_dir.mkdir(parents=True)
         (platform_dir / ".gitconfig").write_text(f"[user]\n  platform = {platform}")
         (platform_dir / ".gitignore").write_text("*.swp")
         (platform_dir / ".gitattributes").write_text("* text=auto")
 
-    for platform in ["macos", "wsl", "arch"]:
+    for platform in ["macos", "wsl", "archlinux"]:
         # Clear home between platform tests
         for item in home.iterdir():
             if item.is_symlink() or item.is_file():

@@ -98,7 +98,7 @@ venv/
 test-wsl-setup.log
 test-install.log
 test-wsl-docker.log
-test-arch-*
+test-archlinux-*
 test-offline-docker.log
 test-wsl-network-restricted.log
 .last-test-vm

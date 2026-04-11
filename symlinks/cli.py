@@ -28,7 +28,7 @@ def main(
 
 @app.command()
 def link(
-    target: str = typer.Argument(..., help="Target to link (common, macos, wsl, arch, etc.)"),
+    target: str = typer.Argument(..., help="Target to link (common, macos, wsl, archlinux, etc.)"),
 ):
     """Create symlinks for common or platform layer, including apps."""
     source_dir = core.DOTFILES_DIR / "configs" / target
@@ -58,7 +58,7 @@ def link(
 
 @app.command()
 def unlink(
-    target: str = typer.Argument(..., help="Target to unlink (common, macos, wsl, arch, etc.)"),
+    target: str = typer.Argument(..., help="Target to unlink (common, macos, wsl, archlinux, etc.)"),
 ):
     """Remove symlinks for common or platform layer."""
     source_dir = core.DOTFILES_DIR / "configs" / target
@@ -75,7 +75,7 @@ def unlink(
 
 @app.command()
 def show(
-    target: str = typer.Argument(None, help="Target to show (common, macos, wsl, arch, or omit for all)"),
+    target: str = typer.Argument(None, help="Target to show (common, macos, wsl, archlinux, or omit for all)"),
 ):
     """Show current symlinks for a layer or all dotfiles symlinks."""
     if target:
@@ -110,7 +110,7 @@ def check(
 
 @app.command()
 def relink(
-    platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, arch, etc.)"),
+    platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, archlinux, etc.)"),
 ):
     """Complete refresh: unlink platform, unlink common, check, link common, link platform."""
     platform_dir = core.DOTFILES_DIR / "configs" / platform

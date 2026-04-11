@@ -243,7 +243,7 @@ if npm update -g 2>&1 | grep -v "npm warn"; then
 update.sh                      # Wrapper
 ├─ install/macos/update.sh  # 40 lines
 ├─ install/wsl/update.sh    # 23 lines
-├─ install/arch/update.sh   # 33 lines
+├─ install/archlinux/update.sh   # 33 lines
 └─ install/common/update.sh # 159 lines
 ```
 

@@ -186,11 +186,11 @@ fi
 #   # test_cmd "wsl-app help" "wsl-app --help"
 # fi
 
-# Add Arch-specific tests here when Arch apps are added
-# if [[ "$PLATFORM" == "arch" ]]; then
+# Add Arch Linux-specific tests here when archlinux apps are added
+# if [[ "$PLATFORM" == "archlinux" ]]; then
 #   echo ""
-#   echo "Arch Specific Apps:"
-#   # test_cmd "arch-app help" "arch-app --help"
+#   echo "Arch Linux Specific Apps:"
+#   # test_cmd "archlinux-app help" "archlinux-app --help"
 # fi
 
 # ================================================================

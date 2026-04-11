@@ -122,7 +122,7 @@ elif [ "$(uname)" = "Darwin" ]; then
 elif grep -q "Microsoft" /proc/version 2>/dev/null; then
   DETECTED_PLATFORM="wsl"
 elif [ -f /etc/arch-release ]; then
-  DETECTED_PLATFORM="arch"
+  DETECTED_PLATFORM="archlinux"
 else
   DETECTED_PLATFORM="linux"
 fi
@@ -191,7 +191,7 @@ print_section "File Processing Tools (Universal)"
 check_command "ffmpeg" "-version"
 
 # 7-Zip: Arch provides 7z, others provide 7zz
-if [[ "$DETECTED_PLATFORM" == "arch" ]]; then
+if [[ "$DETECTED_PLATFORM" == "archlinux" ]]; then
   check_command "7z" "SKIP_VERSION"
 else
   check_command "7zz" "SKIP_VERSION"
@@ -476,7 +476,7 @@ fi
 # ================================================================
 # Flatpak Apps (Arch only, skip in Docker)
 # ================================================================
-if [[ "$DETECTED_PLATFORM" == "arch" ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
+if [[ "$DETECTED_PLATFORM" == "archlinux" ]] && [[ "${DOTFILES_DOCKER_TEST:-}" != "true" ]]; then
   print_section "Flatpak Apps (Arch)"
 
   # Check if flatpak command exists

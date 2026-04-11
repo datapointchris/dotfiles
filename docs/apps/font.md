@@ -54,10 +54,10 @@ Font history is stored in `~/.config/font/` (symlinked to dotfiles for cross-mac
 ```text
 ~/.config/font/
 ├── history-macos.jsonl
-├── history-arch.jsonl
+├── history-archlinux.jsonl
 ├── history-wsl.jsonl
 ├── rejected-fonts-macos.json
-├── rejected-fonts-arch.json
+├── rejected-fonts-archlinux.json
 └── font-info.json
 ```
 

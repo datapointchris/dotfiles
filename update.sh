@@ -188,7 +188,7 @@ main() {
       update_common_tools
       ;;
 
-    arch)
+    archlinux)
       print_section "Updating system packages via $(print_green "pacman -Syu")"
       if sudo pacman -Syu --noconfirm; then
         log_success "system packages updated"

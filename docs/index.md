@@ -11,12 +11,12 @@ Clone the repository and run the install script with a machine manifest:
 ```bash
 git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bash install.sh --machine arch-personal-workstation
+bash install.sh --machine archlinux-personal-workstation
 ```
 
 Machine manifests define exactly what gets installed on each type of computer. Available manifests are in `install/machines/`:
 
-- `arch-personal-workstation` - Full Arch Linux development workstation
+- `archlinux-personal-workstation` - Full Arch Linux development workstation
 - `macos-personal-workstation` - Full macOS development workstation
 - `wsl-work-workstation` - WSL Ubuntu for restricted work environment
 - `ubuntu-lxc-server` - Minimal Ubuntu server (LXC containers)
@@ -121,7 +121,7 @@ task symlinks:check      # Verify symlinks
 task symlinks:show       # Show mappings
 
 # Installation (use install.sh, not Task)
-bash install.sh --machine arch-personal-workstation
+bash install.sh --machine archlinux-personal-workstation
 
 # Documentation
 task docs:serve          # Start docs server (localhost:8000)
@@ -164,12 +164,12 @@ dotfiles/
 │   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
 │   ├── macos/        # macOS-specific overrides
 │   ├── wsl/          # WSL Ubuntu overrides
-│   ├── arch/         # Arch Linux overrides
+│   ├── archlinux/    # Arch Linux overrides
 │   └── ubuntu/       # Ubuntu server overrides
 ├── apps/             # Personal CLI applications (shell scripts)
 │   ├── common/       # Cross-platform tools
 │   ├── macos/        # macOS-specific tools
-│   └── arch/         # Arch-specific tools (rofi menus)
+│   └── archlinux/    # Arch Linux-specific tools (rofi menus)
 ├── shell/            # Shell environment source + builder (aliases, functions, build script)
 ├── install/          # Provisioning: packages, installers, manifests, symlinks manager
 │   ├── machines/     # Machine manifests (what to install per computer)

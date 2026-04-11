@@ -211,9 +211,9 @@ usage() {
   echo "Environment Variables:"
   echo "  MACHINE=name    Same as --machine (flag takes precedence)"
   echo "Examples:"
-  echo "  ./install.sh --machine arch-personal-workstation"
+  echo "  ./install.sh --machine archlinux-personal-workstation"
   echo "  ./install.sh --machine ubuntu-lxc-server"
-  echo "  MACHINE=arch-personal-workstation ./install.sh"
+  echo "  MACHINE=archlinux-personal-workstation ./install.sh"
   echo ""
   echo "  # Offline workflow:"
   echo "  ./install.sh --create-offline-bundle                     # 1. Create bundle (internet machine)"
@@ -382,17 +382,17 @@ main() {
     print_section "WSL fontconfig setup"
     bash "$DOTFILES_DIR/install/wsl/fontconfig-setup.sh"
     ;;
-  arch)
+  archlinux)
     if manifest_enabled "system_packages"; then
       print_header "System Packages (pacman)"
-      bash "$DOTFILES_DIR/install/arch/system-packages.sh"
+      bash "$DOTFILES_DIR/install/archlinux/system-packages.sh"
     fi
     if manifest_enabled "flatpak"; then
-      bash "$DOTFILES_DIR/install/arch/flatpak.sh"
+      bash "$DOTFILES_DIR/install/archlinux/flatpak.sh"
     fi
 
     print_header "System Configuration"
-    bash "$DOTFILES_DIR/install/arch/system-config.sh"
+    bash "$DOTFILES_DIR/install/archlinux/system-config.sh"
     ;;
   ubuntu)
     if manifest_enabled "system_packages"; then

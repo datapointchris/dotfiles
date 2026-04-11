@@ -124,14 +124,14 @@ bash install/scripts/run-and-summarize.sh \
 
 ```bash
 # Start multiple tests
-for platform in wsl arch macos; do
+for platform in wsl archlinux macos; do
   bash install/scripts/run-and-summarize.sh \
     "bash install/test-install.sh -p $platform --keep" \
     "test-$platform.log" &
 done
 
 # Later: check all summaries
-for platform in wsl arch macos; do
+for platform in wsl archlinux macos; do
   echo "=== $platform ==="
   cat "test-$platform.log.summary"
 done

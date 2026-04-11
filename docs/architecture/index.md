@@ -14,16 +14,16 @@ dotfiles/
 │   ├── common/          # Shared configs (all platforms)
 │   ├── macos/           # macOS-specific overrides
 │   ├── wsl/             # WSL Ubuntu overrides
-│   ├── arch/            # Arch Linux overrides
+│   ├── archlinux/       # Arch Linux overrides
 │   └── ubuntu/          # Ubuntu server overrides
 ├── apps/                # Personal CLI applications (shell scripts)
 │   ├── common/          # Cross-platform: menu, notes, backmeup, safekeep, patterns, ...
 │   ├── macos/           # macOS-specific tools
-│   └── arch/            # Arch Linux-specific tools (rofi menus, etc.)
+│   └── archlinux/       # Arch Linux-specific tools (rofi menus, etc.)
 ├── shell/               # Shell source files by platform (symlinked to ~/.local/shell/)
 │   ├── common/          # Cross-platform: functions.sh, aliases.sh
 │   ├── macos/           # macOS functions + aliases (macos.sh)
-│   ├── arch/            # Arch Linux functions + aliases (arch.sh)
+│   ├── archlinux/       # Arch Linux functions + aliases (archlinux.sh)
 │   └── wsl/             # WSL functions + aliases (wsl.sh)
 ├── install/          # Provisioning: packages, installers, manifests, symlinks manager
 │   ├── machines/        # Machine manifests (what to install per computer)

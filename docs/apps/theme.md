@@ -134,10 +134,10 @@ Theme history is stored in `~/.config/theme/` (symlinked to dotfiles for cross-m
 ```text
 ~/.config/theme/
 ├── history-macos.jsonl
-├── history-arch.jsonl
+├── history-archlinux.jsonl
 ├── history-wsl.jsonl
 ├── rejected-themes-macos.json
-└── rejected-themes-arch.json
+└── rejected-themes-archlinux.json
 ```
 
 Per-platform rejection files prevent git merge conflicts. Rankings combine data across all platforms.

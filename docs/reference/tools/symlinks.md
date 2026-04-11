@@ -80,7 +80,7 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 - .zshrc, .config/nvim, .config/tmux, etc.
 - Linked first
 
-**Platform overlay** (`macos/`, `wsl/`, `arch/`):
+**Platform overlay** (`macos/`, `wsl/`, `archlinux/`):
 
 - Platform-specific configs
 - Overrides or extends common configs

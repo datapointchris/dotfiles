@@ -32,7 +32,7 @@ detect_platform() {
         if grep -q "Microsoft\|WSL" /proc/version 2>/dev/null; then
             echo "wsl"
         elif [[ -f /etc/arch-release ]]; then
-            echo "arch"
+            echo "archlinux"
         elif [[ -f /etc/lsb-release ]] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null; then
             echo "ubuntu"
         else

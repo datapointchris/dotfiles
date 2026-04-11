@@ -70,7 +70,7 @@ Default sessions are defined in platform-specific YAML files:
 
 - macOS: `~/.config/sess/sessions-macos.yml`
 - WSL: `~/.config/sess/sessions-wsl.yml`
-- Arch: `~/.config/sess/sessions-arch.yml`
+- Arch Linux: `~/.config/sess/sessions-archlinux.yml`
 
 Sess automatically detects your platform and loads the appropriate file.
 

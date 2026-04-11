@@ -1259,7 +1259,7 @@ dotfiles/
 ├── configs/
 │   ├── common/          # Shared configs (Neovim, tmux, zsh)
 │   ├── macos/           # macOS-specific (Alfred, BetterTouchTool)
-│   └── arch/            # Arch-specific configs
+│   └── archlinux/       # Arch Linux-specific configs
 ├── install.sh           # Detects platform, symlinks appropriate configs
 └── install/
     └── symlinks/        # Symlink manager (handles platform differences)

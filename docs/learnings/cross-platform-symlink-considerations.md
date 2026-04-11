@@ -62,7 +62,7 @@ assert not should_exclude(Path(".gitignore"))
 Test cross-platform in integration tests:
 
 ```python
-for platform in ["macos", "wsl", "arch"]:
+for platform in ["macos", "wsl", "archlinux"]:
     # Verify .gitconfig, .gitignore, .gitattributes all symlink
 ```
 

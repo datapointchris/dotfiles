@@ -123,18 +123,18 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Shared configurations (Neovim, tmux, zsh, git)
   - `macos/` - macOS-specific dotfiles and GUI app configs
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
-  - `arch/` - Arch Linux configurations
+  - `archlinux/` - Arch Linux configurations
   - `ubuntu/` - Ubuntu server configurations
 - `apps/` - Personal CLI applications (shell scripts only, see `apps/` for full listing)
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
-  - `arch/` - Arch Linux-specific tools (rofi menus, screen control)
-- `shell/` - Shell source files, organized by platform (common/, macos/, arch/, wsl/ — symlinked to ~/.local/shell/)
+  - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
+- `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)
 - `install/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
   - `offline/` - Offline installation support (connectivity testing, bundles)
-  - `{platform}/` - Platform-specific install scripts (arch/, macos/, ubuntu/, wsl/)
+  - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, ubuntu/, wsl/)
   - `common/` - Cross-platform installer scripts (github-releases/, language-managers/, etc.) and `lib/` shared libraries
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
@@ -144,7 +144,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 **Key Systems**:
 
 - **Machine Manifests** - YAML files in `install/machines/` defining what to install per computer type
-- **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, arch/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
+- **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools

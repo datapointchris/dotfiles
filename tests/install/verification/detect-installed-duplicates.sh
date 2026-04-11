@@ -39,7 +39,7 @@ if [ "$(uname)" = "Darwin" ]; then
 elif grep -q "Microsoft" /proc/version 2>/dev/null; then
   DETECTED_PLATFORM="wsl"
 elif [ -f /etc/arch-release ]; then
-  DETECTED_PLATFORM="arch"
+  DETECTED_PLATFORM="archlinux"
 else
   DETECTED_PLATFORM="linux"
 fi

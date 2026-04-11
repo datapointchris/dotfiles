@@ -1,5 +1,5 @@
-machine: arch-personal-workstation
-platform: arch
+machine: archlinux-personal-workstation
+platform: archlinux
 
 # Installation
 system_packages: true

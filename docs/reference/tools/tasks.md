@@ -60,7 +60,7 @@ Full installation is handled by `install.sh` with a machine manifest, not Tasks:
 
 ```bash
 cd ~/dotfiles
-bash install.sh --machine arch-personal-workstation
+bash install.sh --machine archlinux-personal-workstation
 ```
 
 Machine manifests in `install/machines/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
