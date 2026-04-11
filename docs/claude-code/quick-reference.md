@@ -140,19 +140,6 @@ cargo install logsift
 cat ~/.local/share/logsift/logs/latest-session.json
 ```
 
-## File Locations
-
-```text
-.claude/
-├── commands/
-│   ├── logsift.md           # /logsift definition
-│   └── logsift-auto.md      # /logsift-auto definition
-├── hooks/
-│   ├── check-feature-docs   # Pre-commit doc check
-│   └── stop-build-check     # Build verification on stop
-└── settings.json            # Hook configuration
-```
-
 ## Related Docs
 
 - **[Working with Claude Code](./working-with-claude.md)** - Complete guide

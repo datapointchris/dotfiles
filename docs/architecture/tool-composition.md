@@ -23,12 +23,13 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 
 ## The Tools
 
-**sess** - Go application (installed via `go install`)
+**sesh** - Go application (third-party, installed via `go install`)
 
-- Tmux session management
-- Aggregates: tmux sessions, tmuxinator projects, default configs
-- Commands: `sess`, `sess list`, `sess <name>`, `sess last`
-- Development: `~/tools/sess/`
+- Tmux session management with zoxide integration
+- Sources: running tmux sessions, sesh.toml configs, zoxide directories
+- Commands: `sesh connect <name>`, `prefix + s` (fzf picker), `prefix + L` (last session)
+- Config: `~/.config/sesh/sesh.toml`
+- Package: `github.com/joshmedeski/sesh`
 
 **toolbox** - Go application (installed via `go install`)
 
@@ -74,7 +75,7 @@ toolbox list | fzf --preview='toolbox show {1}'
 theme preview  # Built-in fzf preview
 
 # Session switcher
-sess list | fzf | xargs sess
+sesh list | fzf | xargs sesh connect
 
 # Note browser
 zk list | fzf --preview='bat {-1}'
@@ -89,7 +90,7 @@ zk list | fzf --preview='bat {-1}'
 toolbox list | grep cli-utility
 
 # Get session names only
-sess list | awk '{print $2}'
+sesh list | awk '{print $2}'
 
 # Count matching notes
 zk list --match "algorithm" | wc -l
@@ -103,8 +104,8 @@ toolbox installed | wc -l
 ### Pattern 3: Scripting and Automation
 
 ```bash
-# Auto-create session for current directory
-sess $(basename "$PWD")
+# Create session for current directory
+sesh connect $(basename "$PWD")
 
 # Time-based theme switching
 hour=$(date +%H)
@@ -128,8 +129,8 @@ TOOL=$(toolbox list | awk '{print $1}' | gum choose)
 toolbox show "$TOOL"
 
 # Multi-step workflow
-SESSION=$(sess list | gum choose --height=10)
-sess "$SESSION"
+SESSION=$(sesh list | gum choose --height=10)
+sesh connect "$SESSION"
 
 # Input for note creation
 TITLE=$(gum input --placeholder "Note title")
@@ -145,14 +146,14 @@ zk devnote "$TITLE"
 **Anti-pattern**:
 
 ```bash
-sess --fzf          # Now sess depends on fzf
+sesh --fzf          # Now sesh depends on fzf
 toolbox --interactive  # Now toolbox needs gum
 ```
 
 **Better**:
 
 ```bash
-sess list | fzf     # sess is independent
+sesh list | fzf     # sesh is independent
 toolbox list | gum choose  # toolbox doesn't know about gum
 ```
 
@@ -167,7 +168,7 @@ toolbox list | gum choose  # toolbox doesn't know about gum
 
 **Pragmatism over purity**:
 
-- **sess/toolbox** are Go because: Complex logic, concurrent operations, type safety for config parsing
+- **sesh/toolbox** are Go because: Complex logic, concurrent operations, type safety for config parsing
 - **theme/notes/menu** are bash because: Simple text processing, YAML parsing with yq, shell integration
 
 **Rule of thumb**: If it's mostly calling other CLI tools and processing text, bash is simpler.
@@ -183,7 +184,7 @@ workflow tools      # another subcommand
 workflow themes     # yet another subcommand
 
 # Better: Focused tools
-sess
+sesh
 toolbox
 theme
 ```
@@ -216,18 +217,18 @@ Flow:
 
 ```text
 User runs:
-  sess dotfiles
+  sesh connect dotfiles
 
 Flow:
-  1. sess checks if "dotfiles" session exists
+  1. sesh checks if "dotfiles" session exists
      → tmux has-session -t dotfiles
 
   2. If exists: switch
      → tmux switch-client -t dotfiles
 
-  3. If not: check for default config
-     → Reads ~/.config/sess/sessions-macos.yml
-     → Finds dotfiles entry with directory ~/dotfiles
+  3. If not: check sesh.toml for configured session
+     → Reads ~/.config/sesh/sesh.toml
+     → Finds dotfiles entry with path ~/dotfiles
 
   4. Create from config
      → tmux new-session -s dotfiles -c ~/dotfiles
@@ -244,7 +245,7 @@ Flow:
      ├─────┐
      │     │
 ┌────▼─┐ ┌─▼────────┐ ┌────────────┐ ┌─────────┐
-│ sess │ │ toolbox  │ │   theme    │ │ notes   │
+│ sesh │ │ toolbox  │ │   theme    │ │ notes   │
 └──────┘ └──────────┘ └────────────┘ └────┬────┘
    │         │              │               │
    │         │              │               │
@@ -272,7 +273,7 @@ ls ~/.local/bin/
 ```bash
 # Installed during dotfiles setup from GitHub
 ls ~/go/bin/
-# sess toolbox gum cheat lazydocker ...
+# sesh toolbox gum cheat lazydocker ...
 ```
 
 **External bash tools** (theme, font) are cloned to `~/.local/share/` with binaries symlinked to `~/.local/bin/`.
@@ -283,7 +284,7 @@ All tools available in PATH (both `~/.local/bin/` and `~/go/bin/` are in PATH), 
 
 Tools read from XDG-compliant locations:
 
-- `~/.config/sess/sessions-{platform}.yml` - Default sessions
+- `~/.config/sesh/sesh.toml` - Configured sessions
 - `~/.config/toolbox/registry.yml` - Tool definitions
 - `~/.config/zk/config.toml` - Note configuration
 
@@ -293,7 +294,7 @@ Source files in `configs/common/.config/` (symlinked to `~/.config/`).
 
 Each tool owns its data:
 
-- **sess**: Aggregates tmux state + tmuxinator + config file
+- **sesh**: Aggregates tmux sessions + sesh.toml configs + zoxide directories
 - **toolbox**: Reads YAML registry
 - **theme**: Reads theme.yml files and generates app configs
 - **notes**: Wraps zk (which manages `~/notes/`)
@@ -322,18 +323,18 @@ theme list
 
 ```bash
 # Structured for humans
-sess list
-# ● dotfiles (4 windows)
-# ○ learning (2 windows)
+sesh list
+# dotfiles
+# learning
 
 # But parseable for scripts
-sess list | awk '{print $2}'  # Still works
+sesh list | awk '{print $1}'  # Still works
 ```
 
 **Return meaningful exit codes**:
 
 ```bash
-if sess dotfiles; then
+if sesh connect dotfiles; then
   echo "Switched successfully"
 else
   echo "Session doesn't exist"
@@ -345,9 +346,9 @@ fi
 **Compose at the shell level**:
 
 ```bash
-# Don't ask for tool flags like: sess --fuzzy
+# Don't ask for tool flags like: sesh --fuzzy
 # Instead: compose with fzf
-sess list | fzf
+sesh list | fzf
 ```
 
 **Use aliases for common compositions**:
@@ -364,7 +365,7 @@ alias ts='theme preview'  # Built-in fzf picker
 #!/usr/bin/env bash
 # Create session for each project
 for project in ~/code/*; do
-  sess "$(basename "$project")"
+  sesh connect "$(basename "$project")"
 done
 ```
 
@@ -402,7 +403,7 @@ done
 
 - ✅ Easier to modify (bash is readable)
 - ✅ Better shell integration
-- ❌ Less type safety (use Go when needed like sess)
+- ❌ Less type safety (use Go when needed like toolbox)
 
 ## Related Documentation
 

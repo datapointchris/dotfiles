@@ -108,10 +108,10 @@ The symlinks manager maps `apps/` and `shell/` to specific target directories ra
 - Platform-specific: `macos.sh`, `arch.sh`, `wsl.sh`
 - These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
-**Go apps** (sess, toolbox):
+**Go apps** (toolbox, sesh):
 
 - Installed from GitHub via `go install` (defined in `packages.yml`)
-- Development in `~/tools/sess/`, `~/tools/toolbox/`
+- Development in `~/tools/toolbox/`
 - NOT managed by symlinks - binaries go to `~/go/bin/`
 
 **Personal CLI tools** (theme, font):

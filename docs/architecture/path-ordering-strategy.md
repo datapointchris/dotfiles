@@ -40,7 +40,7 @@ Listed from highest to lowest priority. First match wins during command executio
 
 ### `~/go/bin`
 
-- User-compiled Go binaries (sess, toolbox - our Go CLI apps).
+- User-installed Go binaries (toolbox, sesh, and others from `packages.yml`).
 
 ### `/usr/bin`
 

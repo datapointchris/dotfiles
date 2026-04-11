@@ -129,18 +129,7 @@ The theme system integrates with Neovim via `colorscheme-manager.lua`:
 
 ## Data & History
 
-Theme history is stored in `~/.config/theme/` (symlinked to dotfiles for cross-machine sync):
-
-```text
-~/.config/theme/
-├── history-macos.jsonl
-├── history-archlinux.jsonl
-├── history-wsl.jsonl
-├── rejected-themes-macos.json
-└── rejected-themes-archlinux.json
-```
-
-Per-platform rejection files prevent git merge conflicts. Rankings combine data across all platforms.
+Theme history is stored in `~/.config/theme/` (symlinked to dotfiles for cross-machine sync): per-platform `history-{platform}.jsonl` and `rejected-themes-{platform}.json` files. Per-platform rejection files prevent git merge conflicts. Rankings combine data across all platforms.
 
 ## Wallpaper Generator
 

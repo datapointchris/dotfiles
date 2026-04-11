@@ -28,7 +28,7 @@
 
 **App Installation Patterns** (⚠️ CRITICAL - Three distinct patterns):
 
-1. **Go Apps** (sess, toolbox): Installed via `go install` from packages.yml
+1. **Go Apps** (toolbox): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
    - Installer: `install/common/language-tools/go-tools.sh`
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest

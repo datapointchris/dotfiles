@@ -1,5 +1,11 @@
 # Commit Agent: Design and Implementation
 
+!!! note "Historical reference"
+    The file-based agent definition (`.claude/agents/commit-agent.md`) described in this document
+    no longer exists. The commit workflow pattern is now invoked through natural language
+    ("create a commit", "let's commit") using Claude's built-in capabilities. This document
+    remains useful as design reference for the methodology and token-saving patterns.
+
 Comprehensive design documentation for the automated commit workflow agent with token optimization.
 
 ## Executive Summary

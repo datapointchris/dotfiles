@@ -4,6 +4,11 @@ icon: material/tab
 
 # Session Manager (sess)
 
+!!! warning "Deprecated"
+    `sess` has been replaced by [sesh](https://github.com/joshmedeski/sesh) (joshmedeski/sesh).
+    Use `sesh connect <name>` or `prefix + s` inside tmux for session management.
+    See `configs/common/.local/share/workflows/session-management-with-sesh.md` for the current workflow.
+
 Fast tmux session management through a single command. Switch between projects, create new workspaces, or jump back to your previous session without typing complex tmux commands.
 
 ## Quick Start

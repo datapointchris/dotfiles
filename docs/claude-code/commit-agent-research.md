@@ -1,5 +1,10 @@
 # Commit Agent Research
 
+!!! note "Historical reference"
+    The `.claude/agents/commit-agent.md` file referenced here no longer exists in the repo.
+    See [Commit Agent Design](commit-agent-design.md) for the methodology, which is still
+    applied through natural language invocation.
+
 Comprehensive research findings for automated git commit workflow with token optimization.
 
 ## Research Overview
@@ -7,7 +12,7 @@ Comprehensive research findings for automated git commit workflow with token opt
 **Date**: 2025-12-04
 **Status**: Complete - Implemented in production
 **Implementation**: `.claude/agents/commit-agent.md`
-**Architecture Doc**: [Commit Agent Design](../../architecture/commit-agent-design.md)
+**Architecture Doc**: [Commit Agent Design](commit-agent-design.md)
 
 ## Problem Statement
 

@@ -1,6 +1,6 @@
 # Claude Code Hooks & Git Workflow Reference
 
-This repository uses a two-tier hooks system: **universal hooks** for all projects and **project-specific hooks** for dotfiles-only behavior.
+This repository uses universal hooks (from `~/.claude/`) for Claude Code automation, plus git pre-commit hooks for quality enforcement.
 
 ## Hook Organization
 
@@ -11,63 +11,6 @@ Apply to all Claude Code projects. These hooks change frequently as workflow imp
 **Location:** `~/.claude/hooks/`
 
 See `~/.claude/README.md` for the current list of universal hooks and their purposes.
-
-### Project-Specific Hooks (`.claude/`)
-
-Apply only to this dotfiles repository.
-
-**Location:** `.claude/hooks/`
-
-| Hook | Purpose |
-|------|---------|
-| `stop-build-check` | Run pytest after symlinks changes |
-| `check-feature-docs` | Pre-commit: ensure docs updated with code |
-
-## Configuration
-
-### Project Settings (`.claude/settings.json`)
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Universal hooks are configured in `~/.claude/settings.json`.
-
-## Project-Specific Hook Details
-
-### Stop Hook - Build Verification
-
-**File:** `.claude/hooks/stop-build-check`
-
-Runs pytest after Claude modifies `symlinks/`. Catches test failures immediately so they can be fixed in the same session.
-
-### Pre-Commit - Feature Documentation Check
-
-**File:** `.claude/hooks/check-feature-docs`
-
-Runs via pre-commit framework before git commits. Checks:
-
-- Code files modified → are docs updated?
-- New feature added → are tests included?
-
-**Strictness levels:**
-
-- **Strict** (blocks commit): `feat`, `fix` commits without docs
-- **Warning** (allows commit): `refactor` commits without docs
-- **Skipped**: `chore`, `deps`, `typo`, `style`, `ci`, `build` commits
 
 ## Git Hooks (via pre-commit framework)
 
@@ -93,10 +36,10 @@ All pre-commit hooks can be bypassed:
 git commit -m "feat: quick fix" --no-verify
 ```
 
-Or skip specific hooks:
+Or skip specific pre-commit hooks by name:
 
 ```bash
-SKIP=check-feature-docs git commit -m "feat: docs coming later"
+SKIP=markdownlint git commit -m "feat: docs coming later"
 ```
 
 ## Troubleshooting
@@ -107,14 +50,8 @@ SKIP=check-feature-docs git commit -m "feat: docs coming later"
 # Reinstall pre-commit hooks
 pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type post-commit
 
-# Test specific hook
-pre-commit run check-feature-docs --all-files
-```
-
-### Permission Errors
-
-```bash
-chmod +x .claude/hooks/*
+# Test a specific hook
+pre-commit run markdownlint --all-files
 ```
 
 ## Philosophy

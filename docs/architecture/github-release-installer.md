@@ -132,7 +132,7 @@ Returns normalized architecture string: `x86_64` or `arm64` (converts `aarch64` 
 ARCH=$(get_arch)
 ```
 
-**Why it exists:** The `uname -m | sed 's/aarch64/arm64/...'` chain was copy-pasted across all 12 standard installers. A `case` statement in the library is clearer and has one canonical definition.
+**Why it exists:** The `uname -m | sed 's/aarch64/arm64/...'` chain was copy-pasted across standard installers. A `case` statement in the library is clearer and has one canonical definition.
 
 ## Script Patterns
 

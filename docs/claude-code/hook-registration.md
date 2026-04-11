@@ -159,17 +159,7 @@ Check which hooks are currently registered:
 
 ### Test Hook Execution
 
-Test individual hooks outside Claude Code:
-
-```bash
-# Stop hook - build verification (project-level)
-bash .claude/hooks/stop-build-check
-
-# PreToolUse hook - feature doc check (project-level)
-echo '{"tool": "Bash", "parameters": {"command": "git commit -m test"}}' | bash .claude/hooks/check-feature-docs
-```
-
-For universal hooks (SessionStart, PreCompact, notification, etc.), see `~/.claude/hooks/` for their locations and test commands.
+Test individual hooks outside Claude Code. For universal hooks (SessionStart, PreCompact, notification, etc.), see `~/.claude/hooks/` for their locations and test commands.
 
 ### Validate Hook Safety
 
@@ -299,7 +289,6 @@ The exact fields depend on the hook type. See official documentation for each ho
 
 - [Working with Claude Code](working-with-claude.md) - General Claude Code workflow
 - [Quick Reference](quick-reference.md) - Command and hook quick lookup
-- [Metrics Tracking](metrics-tracking.md) - How hooks integrate with metrics
 - [Official Claude Code Hooks Guide](https://code.claude.com/docs/en/hooks-guide)
 - [Hooks Reference](https://docs.claude.com/en/docs/claude-code/hooks)
 

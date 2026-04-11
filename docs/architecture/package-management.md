@@ -153,7 +153,7 @@ PATH Priority (highest to lowest):
 
 ~/.cargo/bin/          # Tier 2: Rust tools (bat, fd, eza, zoxide, delta)
 ~/.local/bin/          # Tier 1: GitHub releases (nvim, lazygit, fzf, yq, yazi)
-~/go/bin/              # Go-installed binaries (sess, toolbox)
+~/go/bin/              # Go-installed binaries (toolbox, sesh)
 /usr/local/go/bin/     # Go toolchain
 ~/.local/share/npm/bin # npm global packages
 /usr/local/bin/        # Homebrew/system-wide installs
@@ -237,20 +237,7 @@ mv lazygit ~/.local/bin/lazygit  # Direct move works!
 
 ## Version Comparison
 
-See [Package Version Analysis](../learnings/package-version-analysis.md) for detailed version comparisons.
-
-**Highlights**:
-
-| Tool | Ubuntu 24.04 apt | Latest | Installation Method |
-|------|-----------------|--------|---------------------|
-| fzf | 0.44.1 | 0.66.1 | GitHub releases (22 versions ahead!) |
-| neovim | 0.9.5 | 0.11+ | GitHub releases (major version ahead) |
-| go | 1.22 | 1.23+ | GitHub releases (official method) |
-| bat | 0.24.0 | 0.26.0 | cargo-binstall |
-| fd | 9.0.0 | 10.2.0 | cargo-binstall |
-| zoxide | 0.8.x | 0.9.6 | cargo-binstall |
-| tmux | 3.4 | 3.5a | apt (acceptable, only bugfixes) |
-| ripgrep | 14.1.0 | 14.1.0 | apt (current!) |
+See [Package Version Analysis](../learnings/package-version-analysis.md) for version comparisons and the rationale for each tool's installation method.
 
 ## Implementation
 
@@ -347,13 +334,12 @@ See [Task Reference](../reference/tools/tasks.md) for all available tasks.
 **Updating tools**:
 
 ```bash
-# Rust tools (updates via cargo binstall in update.sh)
+# Rust tools
 cargo binstall -y <package>
 
-# Manually check GitHub releases
-task wsl:install-go        # Updates if new version available
-task wsl:install-neovim    # Updates if new version available
-task wsl:install-lazygit   # Updates if new version available
+# GitHub release tools — re-run installer script directly
+bash install/common/github-releases/neovim.sh
+bash install/common/github-releases/lazygit.sh
 
 # System packages
 sudo apt update && sudo apt upgrade

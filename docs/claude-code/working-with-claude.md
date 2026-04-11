@@ -35,8 +35,6 @@ This repository has custom Claude Code slash commands, hooks, and tools optimize
 **What happens automatically**:
 
 - Session context loads on startup (git status, recent commits)
-- Build checks run when you stop (catches errors immediately)
-- Metrics are tracked for analysis
 - Pre-commit hooks enforce quality standards
 
 ---
@@ -347,11 +345,6 @@ This repository uses a layered approach to Claude Code integration:
 
 **Purpose**: Automatic actions on events
 
-**Project hooks** (`.claude/hooks/`):
-
-- `Stop` - Runs build checks when you pause
-- `PreToolUse` - Feature documentation check before commits
-
 **Universal hooks** (`~/.claude/hooks/`):
 
 - `SessionStart` - Loads git context automatically
@@ -365,22 +358,9 @@ This repository uses a layered approach to Claude Code integration:
 | Need | Use | Example |
 |------|-----|---------|
 | User explicitly runs a task | Slash Command | /logsift, /commit |
-| Something happens automatically | Hook | Build checks on stop |
+| Something happens automatically | Hook | Session startup context |
 
-### Directory Structure
-
-```text
-.claude/
-├── commands/           # Slash commands
-│   ├── logsift.md
-│   └── logsift-auto.md
-├── hooks/              # Dotfiles-specific hooks
-│   ├── check-feature-docs
-│   └── stop-build-check
-├── sessions/           # Session state files
-├── settings.json       # Hook configuration
-└── README.md           # Technical reference
-```
+**Files**: `.claude/commands/` (slash command definitions), `.claude/sessions/` (session state)
 
 ---
 
@@ -400,15 +380,9 @@ This repository uses a layered approach to Claude Code integration:
 /help                   # View available commands
 ```
 
-### Analysis Tools
+### Logsift Usage
 
 ```bash
-# Metrics analysis
-analyze-claude-metrics              # Summary of command usage
-analyze-claude-metrics --details    # Per-session breakdown
-analyze-claude-metrics --date YYYY-MM-DD  # Specific date
-
-# Logsift usage
 logsift monitor -- <command>         # Run command with monitoring
 logsift llm                          # Get logsift usage instructions
 ```
@@ -476,8 +450,6 @@ Pre-commit iterations: 1 (markdown formatting auto-fixed)
 
 **Manual commits** are still fine for simple, single-file changes where you want direct control.
 
-**Technical details**: `.claude/agents/commit-agent.md`
-
 ### Task Automation
 
 ```bash
@@ -524,34 +496,16 @@ cat ~/.local/share/logsift/logs/latest-session.json
 cat /tmp/command-output.log
 ```
 
-### Metrics Not Tracking
-
-**Problem**: No metrics files generated
-
-```bash
-# Check metrics directory exists
-ls -la .claude/metrics/
-
-# Check hook is executable
-ls -la .claude/hooks/track-command-metrics
-chmod +x .claude/hooks/track-command-metrics
-
-# Check hook is configured in settings.json
-cat .claude/settings.json | grep track-command-metrics
-```
-
 ### General Claude Code Issues
 
 **Problem**: Hook not running
 
 ```bash
-# Verify hook is executable
-chmod +x .claude/hooks/*
+# Reinstall pre-commit hooks
+pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type post-commit
 
-# Check settings.json configuration
-cat .claude/settings.json
-
-# Look for errors in Claude Code output
+# Verify universal hook is configured
+cat ~/.claude/settings.json
 ```
 
 **Full troubleshooting**: [Support & Troubleshooting](../reference/support/troubleshooting.md)

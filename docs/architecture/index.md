@@ -8,7 +8,8 @@ How the dotfiles repository is organized and why.
 
 **External tools** (installed from GitHub, not in this repo):
 
-- `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
+- `toolbox`: Go app via `go install github.com/datapointchris/toolbox`
+- `sesh`: Go app via `go install github.com/joshmedeski/sesh/v2`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 ## Symlink System

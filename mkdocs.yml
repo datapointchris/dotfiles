@@ -138,7 +138,6 @@ nav:
       - Font: apps/font.md
       - Notes: apps/notes.md
       - Patterns: apps/patterns.md
-      - Session Manager: apps/sess.md
       - Menu: apps/menu.md
       - Toolbox: apps/toolbox.md
       - Refcheck: apps/refcheck.md

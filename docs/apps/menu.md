@@ -18,7 +18,7 @@ menu                    # Launch interactive menu
 
 | Option | Tool | Description |
 |--------|------|-------------|
-| Switch tmux session | `sess` | Tmux session management |
+| Switch tmux session | `sesh` | Tmux session management |
 | Change theme | `theme` | Theme management |
 | Change font | `font` | Font management |
 | Take notes | `notes` | Note-taking with zk |
@@ -36,7 +36,7 @@ menu                    # Launch interactive menu
 Bypass menu for direct access:
 
 ```bash
-sess                    # Open session picker
+sesh connect <name>     # Switch to or create a session
 theme preview           # Theme preview with fzf
 font change             # Font picker with preview
 notes                   # Interactive note menu
@@ -63,7 +63,6 @@ Uses `gum choose --height=20` to display all options without pagination.
 - [Font](font.md) - Font management
 - [Toolbox](toolbox.md) - Tool discovery
 - [Notes](notes.md) - Note-taking
-- [Session Manager](sess.md) - Session manager
 - [Backmeup](backmeup.md) - Directory backup
 - [Safekeep](safekeep.md) - File preservation
 - [Backup Incremental](backup-incremental.md) - Incremental backup

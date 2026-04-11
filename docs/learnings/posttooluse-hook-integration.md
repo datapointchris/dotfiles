@@ -1,5 +1,11 @@
 # PostToolUse Hook Integration for Agent Metrics
 
+!!! note "Historical reference"
+    The hook infrastructure described in this document (`.claude/hooks/post-task-extract-metrics`,
+    `.claude/lib/extract_agent_metrics.py`, `.claude/settings.json`, `.claude/metrics/`) was
+    removed from the repo. The design principles and hook context structures below remain
+    accurate and useful for building similar systems.
+
 **Context**: Implementing automated metrics extraction for commit-agent using PostToolUse hooks
 
 **Date**: 2025-12-05

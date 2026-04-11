@@ -46,9 +46,7 @@ Claude Code configuration uses a two-tier system:
 
 **Project-specific configuration** (`.claude/`):
 
-- Dotfiles-specific hooks and slash commands
-- `.claude/settings.json` - Project hook configuration
-- `.claude/hooks/` - Dotfiles-specific hooks only
+- Dotfiles-specific slash commands in `.claude/commands/`
 
 ## Related Documentation
 

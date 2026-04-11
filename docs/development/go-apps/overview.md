@@ -4,21 +4,6 @@ Custom Go applications for workflow automation and tool discovery. Apps are inst
 
 ## Applications
 
-### sess - Session Manager
-
-Fast tmux session manager with interactive selection, creation, and switching. Integrates with tmuxinator projects and configurable default sessions.
-
-**Installation**: `go install github.com/datapointchris/sess/cmd/sess@latest`
-
-**Key features**:
-
-- Interactive session picker with gum
-- Create or switch to sessions by name
-- List all sessions (tmux + tmuxinator + defaults)
-- Platform-specific default sessions (`~/.config/sess/sessions-{platform}.yml`)
-
-See [Session Manager Reference](../../apps/sess.md) for usage details.
-
 ### toolbox - Tool Discovery
 
 Tool discovery and documentation system for exploring CLI tools. Provides searchable registry with descriptions, examples, and installation information.
@@ -41,37 +26,26 @@ Development happens in `~/tools/` with source code pushed to GitHub.
 ### Testing Changes Locally
 
 ```bash
-cd ~/tools/sess
-go run ./cmd/sess     # Test changes
-go build -o sess ./cmd/sess  # Build local binary
+cd ~/tools/toolbox
+go run .              # Test changes
+go build -o toolbox . # Build local binary
 task test             # Run tests
 ```
 
 ### Publishing Changes
 
 ```bash
-cd ~/tools/sess
+cd ~/tools/toolbox
 git add -A && git commit -m "feat: add feature"
 git push
 
 # Update installed version
-go install github.com/datapointchris/sess/cmd/sess@latest
+go install github.com/datapointchris/toolbox@latest
 ```
 
 ### Project Structure
 
-```text
-~/tools/sess/
-├── cmd/sess/         # Main entry point
-├── internal/         # Internal packages
-│   ├── config/       # Configuration loading
-│   ├── display/      # UI components (Bubbletea)
-│   └── models/       # Data structures
-├── go.mod            # Go module definition
-├── go.sum            # Dependency checksums
-├── Taskfile.yml      # Build automation
-└── README.md         # Documentation
-```
+Standard Go layout with `cmd/` entry point, `internal/` packages, `go.mod`/`go.sum`, and a `Taskfile.yml` for build automation.
 
 ## Development Standards
 

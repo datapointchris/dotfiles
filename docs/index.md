@@ -72,10 +72,9 @@ See [Troubleshooting](reference/support/troubleshooting.md) if any commands fail
 ### Session Management
 
 ```bash
-sess                     # Interactive session picker
-sess <name>              # Create or switch to session
-sess list                # List all sessions
-sess last                # Switch to last session
+sesh connect <name>      # Create or switch to session
+prefix + s               # Interactive fzf session picker (inside tmux)
+prefix + L               # Toggle to last session (inside tmux)
 ```
 
 ### Tool Discovery
@@ -149,11 +148,10 @@ theme preview            # Built-in fzf preview
 zk list | fzf --preview='bat {-1}'
 
 # Session automation
-sess $(basename "$PWD")  # Auto-create session for current directory
+sesh connect $(basename "$PWD")  # Create session for current directory
 
 # Tool filtering
 toolbox list | grep cli-utility
-sess list | awk '{print $2}'
 ```
 
 ## Structure
@@ -162,7 +160,8 @@ sess list | awk '{print $2}'
 
 **External tools** (installed from GitHub, not in this repo):
 
-- `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
+- `toolbox`: Go app via `go install github.com/datapointchris/toolbox`
+- `sesh`: Go app via `go install github.com/joshmedeski/sesh/v2`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 ## Key Concepts
@@ -178,7 +177,7 @@ sess list | awk '{print $2}'
 **Morning Setup**:
 
 ```bash
-sess                     # Start or switch to project session
+sesh connect <project>   # Start or switch to project session
 theme current            # Verify theme
 zk list --sort modified- --limit 10  # Review recent notes
 ```

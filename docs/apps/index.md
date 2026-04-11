@@ -14,10 +14,6 @@ Personal CLI tools for enhanced workflows.
 
     Zettelkasten note-taking with zk
 
-- :material-tab: __[Session Manager](sess.md)__
-
-    Tmux session management
-
 - :material-check-all: __[Refcheck](refcheck.md)__
 
     Find broken file references
