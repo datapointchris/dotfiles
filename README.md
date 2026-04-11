@@ -38,7 +38,7 @@ dotfiles/
 │   ├── common/       # Cross-platform tools
 │   ├── macos/        # macOS-specific tools
 │   └── arch/         # Arch-specific tools (rofi menus)
-├── shell/            # Shell environment source + builder (aliases, functions, build script)
+├── shell/            # Shell source files (functions.sh, aliases.sh, platform-specific)
 ├── install/          # Provisioning: packages, installers, manifests, symlinks manager
 │   ├── machines/     # Machine manifests (what to install per computer)
 │   ├── symlinks/     # Symlinks manager (Python)

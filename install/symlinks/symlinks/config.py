@@ -61,10 +61,6 @@ class SymlinksSettings(BaseSettings):
             "__pycache__/",
             "*.pyc",
             ".pytest_cache/",
-            # Generated shell files (built by shell/build-shell.sh)
-            ".local/shell/functions.sh",
-            ".local/shell/aliases.sh",
-            ".local/shell/fzf-functions.sh",
         ],
         description="File patterns to exclude from symlinking",
     )

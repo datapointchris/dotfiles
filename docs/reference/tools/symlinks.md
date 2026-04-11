@@ -42,17 +42,14 @@ Display current symlinks.
 
 ```bash
 task symlinks:show         # Show all symlinks
-task symlinks:show-common  # Show common layer only
-task symlinks:show-platform # Show platform layer only
 ```
 
-### Additional Commands
+### task symlinks:unlink
+
+Remove all symlinks.
 
 ```bash
-task symlinks:link-common    # Link common base layer only (additive)
-task symlinks:link-platform  # Link platform overlay only (additive)
 task symlinks:unlink         # Remove all symlinks
-task symlinks:check-clean    # Check and remove broken symlinks
 ```
 
 ### Direct Usage (Advanced)
@@ -88,14 +85,21 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 - Directory vs directory: Merged (both symlinked)
 - File vs directory: Error (must resolve manually)
 
-## Apps Directory Handling
+## Special Directory Handling
 
-The symlinks manager has **special handling for the `apps/` directory**:
+The symlinks manager has custom handling for `apps/` and `shell/` directories — both are mapped to specific targets rather than `$HOME`.
 
 **Shell scripts** (`apps/common/menu`, `apps/common/notes`, etc.):
 
 - Symlinked to `~/.local/bin/` automatically by `link_apps()`
 - Examples: `menu`, `notes`, `patterns`, `aws-profiles`
+
+**Shell source files** (`shell/functions.sh`, `shell/aliases.sh`, `shell/{platform}.sh`):
+
+- Symlinked to `~/.local/shell/` automatically by `link_shell()`
+- Common: `functions.sh` + `aliases.sh` on all platforms
+- Platform-specific: `{platform}.sh` (macos.sh, arch.sh, wsl.sh)
+- These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
 **Go apps** (sess, toolbox):
 

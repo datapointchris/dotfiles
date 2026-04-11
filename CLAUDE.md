@@ -129,7 +129,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
   - `arch/` - Arch Linux-specific tools (rofi menus, screen control)
-- `shell/` - Shell build source (aliases/, functions/, build-shell.sh)
+- `shell/` - Shell source files (functions.sh, aliases.sh, {platform}.sh — symlinked to ~/.local/shell/)
 - `install/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
@@ -144,7 +144,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 **Key Systems**:
 
 - **Machine Manifests** - YAML files in `install/machines/` defining what to install per computer type
-- **Shell Build** - `shell/build-shell.sh` concatenates modular shell files based on manifest groups
+- **Shell Files** - `shell/` contains functions.sh, aliases.sh, and {platform}.sh; symlinked directly to `~/.local/shell/` by `task symlinks:link`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools

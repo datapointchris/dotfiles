@@ -35,9 +35,10 @@ def link(
 
     manager = SymlinkManager()
     count = manager.create_symlinks(source_dir, target)
+    shell_count = manager.link_shell(target)
     app_count = manager.link_apps(target)
 
-    if count == 0 and app_count == 0:
+    if count == 0 and shell_count == 0 and app_count == 0:
         console.print("[yellow]No symlinks created[/]")
         raise typer.Exit(1)
 

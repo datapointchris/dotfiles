@@ -1,25 +1,15 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2154
-# SC2154 = Variable is referenced but not assigned
-# *For the word formatting that comes from .color-and-formatting
+# SC2154 = Variables referenced but not assigned (from sourced files)
 
-# DOTFILES="$HOME/dotfiles"
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/colors.sh"
 
-# ------------ TLDR Manual Update ------------ #
-# Function to manually update tldr pages from a downloaded zip file
-# Usage: update-tldr [zip-file-name]
-#   If no filename provided, looks for tldr-pages.zip
-#
-# Prerequisites:
-#   - Download tldr-pages.zip from https://github.com/tldr-pages/tldr/releases
-#   - Save to Windows Downloads folder
-#   - File will be accessed via $winchris/Downloads/
-#
-# Note: Add to ~/.env to prevent auto-update crashes:
-#   export TLDR_CACHE_MAX_AGE=999999999
-#
+#@update-tldr
+#--> Update tldr pages from downloaded zip file (offline WSL)
+# Usage: update-tldr [zip-file-name]  (default: tldr-pages.zip)
+# Prerequisites: download tldr-pages.zip from github.com/tldr-pages/tldr/releases
+# to Windows Downloads folder; set TLDR_CACHE_MAX_AGE=999999999 in ~/.env
 update-tldr() {
   local zip_file="${1:-tldr-pages.zip}"
   local downloads_dir="${winchris}/Downloads"
@@ -74,18 +64,24 @@ update-tldr() {
   fi
 }
 
+#@mount-appserver
+#--> Mount work appserver CIFS share at /mnt/devdsapp001
 mount-appserver() {
     sudo mkdir -p /mnt/devdsapp001
     mountpoint -q /mnt/devdsapp001 && sudo umount -f /mnt/devdsapp001
     sudo mount -t cifs //devdsapp001/E\$ /mnt/devdsapp001 -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
 }
 
+#@mount-dfsapp
+#--> Mount DFS app CIFS share at /mnt/dfsapp
 mount-dfsapp() {
     sudo mkdir -p /mnt/dfsapp
     mountpoint -q /mnt/dfsapp && sudo umount -f /mnt/dfsapp
     sudo mount -t cifs //prodfs011/Data_Science /mnt/dfsapp -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
 }
 
+#@aws-login
+#--> Login to AWS via Okta for dev or prod environment
 aws-login() {
   local environment="${1:-dev}"
   local profile
@@ -116,3 +112,27 @@ aws-login() {
   export AWS_PROFILE=$profile
   date
 }
+
+# ------------ Terminal ------------ #
+#
+# Copy the last command to the OS clipboard
+# NOTE: Must use win32yank to get it on the Windows clipboard
+# Do not set --crlf because it is most likely being copied back into shell
+alias copycommand='fc -ln -1 | win32yank.exe -i'
+
+alias slack='uv run --no-project --with=keyboard python ~/code/buzz.py'
+
+# ---------- Directory Navigation ---------- #
+
+export winchris="/mnt/c/Users/600002371"
+
+# ---------- Operations ---------- #
+
+# Trim new lines and copy to clipboard
+alias copytoclip="tr -d '\n' | win32yank.exe -i"
+
+# ---------- Network ---------- #
+
+# Mount network shares moved to functions/platform-wsl.sh (need unmount logic for stale mounts)
+
+# ---------- Miscellaneous ---------- #

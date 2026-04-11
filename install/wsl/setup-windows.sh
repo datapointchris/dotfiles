@@ -8,8 +8,7 @@
 # This script:
 #   1. Installs tools via winget (zoxide, eza, fzf, etc.)
 #   2. Copies binaries to ~/bin (single PATH entry)
-#   3. Copies shelldocsparser for lsfunc
-#   4. Runs initial shell sync
+#   3. Runs initial shell sync
 #
 # Usage: task windows:setup (from WSL)
 # ================================================================
@@ -119,23 +118,10 @@ copy_winget_binary "delta" "dandavison.delta"
 echo ""
 
 # ================================================================
-# Copy shelldocsparser (needed by lsfunc)
-# ================================================================
-echo "Copying shell utilities..."
-shelldocsparser="$DOTFILES_DIR/apps/common/shelldocsparser"
-if [[ -f "$shelldocsparser" ]]; then
-  cp "$shelldocsparser" "$win_home/bin/"
-  echo "  Copied: shelldocsparser"
-else
-  echo "  WARNING: shelldocsparser not found at $shelldocsparser"
-fi
-echo ""
-
-# ================================================================
 # Run initial shell sync
 # ================================================================
 echo "Running initial shell sync..."
-bash "$DOTFILES_DIR/shell/sync-windows-shell.sh"
+bash "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh"
 echo ""
 
 echo "Windows setup complete!"

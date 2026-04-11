@@ -106,7 +106,6 @@ test_cmd "backmeup help" "backmeup --help"
 test_cmd "safekeep help" "safekeep --help"
 test_cmd "workflows available" "command -v workflows"
 test_cmd "printcolors available" "command -v printcolors"
-test_cmd "shelldocsparser available" "command -v shelldocsparser"
 
 # ================================================================
 # 2. SHELL LIBRARIES
@@ -119,6 +118,7 @@ test_file "error-handling.sh exists" "$HOME/.local/shell/error-handling.sh"
 test_file "colors.sh exists" "$HOME/.local/shell/colors.sh"
 test_file "functions.sh exists" "$HOME/.local/shell/functions.sh"
 test_file "aliases.sh exists" "$HOME/.local/shell/aliases.sh"
+test_file "${PLATFORM}.sh exists" "$HOME/.local/shell/${PLATFORM}.sh"
 
 # Test they can be sourced
 test_cmd "logging.sh loads" "source ~/.local/shell/logging.sh && command -v log_info"

@@ -53,7 +53,6 @@ symlinks link macos       # or wsl, arch
 
 - Uses VS Code as git editor (`core.editor = code --wait`)
 - OSX Keychain credential helper
-- iTerm2 configurations and color schemes
 - Homebrew-based dependency paths
 
 ### WSL-specific (`wsl/`)

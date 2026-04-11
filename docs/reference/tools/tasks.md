@@ -47,17 +47,11 @@ task docs:deploy        # Deploy documentation to GitHub Pages
 
 **Platform detection is automatic.** Tasks that need platform awareness detect it at runtime using system checks.
 
-### Shell Build
-
-```bash
-task shell:build         # Build shell files from machine manifest
-MACHINE=ubuntu-lxc-server task shell:build  # Build for specific machine
-```
-
-### Windows Setup
+### Windows Setup (WSL only)
 
 ```bash
 task windows:setup       # One-time Windows Git Bash setup (run from WSL)
+task windows:sync        # Sync shell files to Windows Git Bash (run from WSL)
 ```
 
 ## Installation

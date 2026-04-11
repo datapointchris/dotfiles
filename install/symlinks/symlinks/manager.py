@@ -217,6 +217,47 @@ class SymlinkManager:
 
         return count
 
+    def link_shell(self, platform: str) -> int:
+        """Link shell files from shell/ to ~/.local/shell/
+
+        Args:
+            platform: "common" for functions.sh + aliases.sh, or platform name for {platform}.sh
+
+        Returns:
+            Number of files linked
+        """
+        shell_src = self.dotfiles_dir / "shell"
+        if not shell_src.exists():
+            print(f"[red]✗[/] Shell directory does not exist: {shell_src}")
+            return 0
+
+        target_shell = self.target_dir / ".local" / "shell"
+        target_shell.mkdir(parents=True, exist_ok=True)
+
+        filenames = ["functions.sh", "aliases.sh"] if platform == "common" else [f"{platform}.sh"]
+
+        print(f"[blue]Linking {platform} shell files to ~/.local/shell/...[/]")
+        count = 0
+
+        for filename in filenames:
+            src = shell_src / filename
+            if not src.exists():
+                print(f"[yellow]⚠[/] Shell file not found: {filename}")
+                continue
+
+            target = target_shell / filename
+            if target.exists() or target.is_symlink():
+                target.unlink()
+
+            relative_source = make_relative_symlink(src, target)
+            target.symlink_to(relative_source)
+            print(f"  [green]✓[/] {filename} → ~/.local/shell/{filename}")
+            count += 1
+
+        if count > 0:
+            print(f"[green]Linked {count} shell files[/]")
+        return count
+
     def link_apps(self, platform: str) -> int:
         """Link apps from apps/{platform}/ to ~/.local/bin/
 
@@ -260,9 +301,9 @@ class SymlinkManager:
         Args:
             platform: Platform name (e.g., "macos", "wsl", "arch")
         """
-        # Updated paths for new structure
         platform_dir = self.dotfiles_dir / "configs" / platform
         common_dir = self.dotfiles_dir / "configs" / "common"
+        shell_dir = self.dotfiles_dir / "shell"
 
         if not platform_dir.exists():
             print(f"[red]✗[/] Platform directory does not exist: {platform}")
@@ -271,27 +312,36 @@ class SymlinkManager:
         print(f"[bold cyan]Complete relink for {platform}[/]")
         print()
 
-        print("[yellow]Step [green]1/6[/green]: Removing platform symlinks[/yellow]")
+        print("[yellow]Step [green]1/8[/green]: Removing platform symlinks[/yellow]")
         self.remove_symlinks(platform_dir, platform)
         print()
 
-        print("[yellow]Step [green]2/6[/green]: Removing common symlinks[/yellow]")
+        print("[yellow]Step [green]2/8[/green]: Removing common symlinks[/yellow]")
         self.remove_symlinks(common_dir, "common")
         print()
 
-        print("[yellow]Step [green]3/6[/green]: Checking for broken symlinks[/yellow]")
+        print("[yellow]Step [green]3/8[/green]: Removing shell symlinks[/yellow]")
+        self.remove_symlinks(shell_dir, "shell")
+        print()
+
+        print("[yellow]Step [green]4/8[/green]: Checking for broken symlinks[/yellow]")
         self.check_and_clean()
         print()
 
-        print("[yellow]Step [green]4/6[/green]: Creating common base layer[/yellow]")
+        print("[yellow]Step [green]5/8[/green]: Creating common base layer[/yellow]")
         self.create_symlinks(common_dir, "common")
         print()
 
-        print("[yellow]Step [green]5/6[/green]: Creating platform overlay[/yellow]")
+        print("[yellow]Step [green]6/8[/green]: Creating platform overlay[/yellow]")
         self.create_symlinks(platform_dir, platform)
         print()
 
-        print("[yellow]Step [green]6/6[/green]: Linking apps[/yellow]")
+        print("[yellow]Step [green]7/8[/green]: Linking shell files[/yellow]")
+        self.link_shell("common")
+        self.link_shell(platform)
+        print()
+
+        print("[yellow]Step [green]8/8[/green]: Linking apps[/yellow]")
         self.link_apps("common")
         self.link_apps(platform)
         print()
