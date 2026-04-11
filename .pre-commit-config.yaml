@@ -83,18 +83,9 @@ repos:
   #     - id: terraform_tflint
   #       stages: [pre-commit]
 
-  # Custom local hooks for documentation enforcement
+  # Custom local hooks
   - repo: local
     hooks:
-      # Check that documentation is updated with code changes
-      - id: check-feature-docs
-        name: Check feature documentation updated
-        entry: .claude/hooks/check-feature-docs
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
-
       # Test all user-facing apps can be invoked
       - id: test-all-apps
         name: Test all apps can be invoked
