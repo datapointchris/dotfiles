@@ -192,7 +192,7 @@ docs/
 
 - **Symlinks Manager** — `task symlinks:{link,check,show}`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `configs/common/.config/toolbox/registry.yml`
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `~/dev/tools.yml` (Syncthing-synced, not in dotfiles)
 - **Task** — `task --list-all` for available tasks; complex logic lives in `install/` scripts
 
 ## Learnings Directory
