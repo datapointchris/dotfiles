@@ -66,7 +66,7 @@ Testing dotfiles installation across platforms using containers and virtual mach
 | Platform | Method | Tool | Accuracy | Machine Manifest |
 |----------|--------|------|----------|-----------------|
 | Ubuntu (WSL) | Docker | Official WSL rootfs | 100% exact match | `wsl-work-workstation` |
-| Arch Linux | Docker | Official Arch base image | 100% exact match | `arch-personal-workstation` |
+| Arch Linux | Docker | Official Arch base image | 100% exact match | `archlinux-personal-workstation` |
 | Ubuntu (Server) | Docker | Official Ubuntu image | 100% exact match | `ubuntu-lxc-server` |
 | macOS | Fresh user account | Local testing | Full | `macos-personal-workstation` |
 
@@ -79,70 +79,18 @@ brew install --cask docker
 
 ## Testing with Docker (Recommended)
 
-### Unified Test Dispatcher
-
-The `install/test-install.sh` script provides a unified interface for testing across all platforms:
-
-```sh
-cd ~/dotfiles
-
-# Test specific platform
-bash install/test-install.sh -p wsl        # WSL Ubuntu (Docker)
-bash install/test-install.sh -p arch       # Arch Linux (Docker)
-bash install/test-install.sh -p macos      # macOS (local user)
-
-# Keep container after test for debugging
-bash install/test-install.sh -p wsl -k
-bash install/test-install.sh -p arch -k
-
-# Show help
-bash install/test-install.sh --help
-```
-
-### Run and Summarize (Context-Friendly Testing)
-
-For long-running tests, use `run-and-summarize.sh` to avoid context overload when working with Claude Code:
-
-```sh
-# Run test with periodic updates every 30 seconds
-bash install/run-and-summarize.sh "bash install/test-install.sh -p arch --keep" test-arch.log 30
-
-# What this does:
-# - Runs test in background
-# - Shows progress every 30 seconds
-# - Shows last 5 lines every 5 checks
-# - Generates concise summary when complete
-# - Saves full logs to test-arch.log
-
-# Why use this:
-# - Prevents flooding context with verbose installation output
-# - Get periodic updates without full log streaming
-# - Claude receives only summary, not thousands of log lines
-```
-
-The summarize script (`install/summarize-log.sh`) creates `.summary` files with:
-
-- File size and line count
-- Success/failure counts
-- Final result status
-- Last 20 lines of output (most important context)
-
-This is especially useful for CI/CD integration or when repeatedly testing installations.
-
-Scripts are located in `install/` directory alongside other testing tools.
-
 ### Platform-Specific Test Scripts
 
 Located in `tests/install/e2e/`:
 
 - `wsl-docker.sh` - WSL Ubuntu testing with Docker
-- `arch-docker.sh` - Arch Linux testing with Docker
+- `archlinux-docker.sh` - Arch Linux testing with Docker
 - `offline-docker.sh` - Offline installation testing with Docker
 - `wsl-network-restricted.sh` - Network-restricted WSL testing
 - `macos-temp-user.sh` - macOS testing with fresh user account
 - `current-user.sh` - Test on current user (any platform)
 
-All test scripts pass `--machine <manifest>` to `install.sh` and forward the host's GitHub token for authenticated API calls inside containers.
+All test scripts pass `--machine <manifest>` to `install.sh` and forward the host's GitHub token for authenticated API calls inside containers. The token is resolved from `gh auth token` on the host at test setup time, since `gh` is not available inside the test containers.
 
 ### Why Docker for Testing
 
@@ -194,7 +142,7 @@ Docker test scripts run comprehensive phases:
 Each test run creates a detailed log file:
 
 - WSL: `test-wsl-docker.log`
-- Arch: `test-arch-docker.log`
+- Arch Linux: `test-archlinux-docker.log`
 - macOS: `test-macos.log`
 
 Logs include all installation output, timing information, and test results.
@@ -235,10 +183,10 @@ If testing manually without the automated scripts:
 ```sh
 # Run comprehensive verification
 cd ~/dotfiles
-bash install/verify-installation.sh
+bash tests/install/verification/verify-installed-packages.sh
 
 # Check for duplicate installations
-bash install/detect-alternate-installations.sh
+bash tests/install/verification/detect-installed-duplicates.sh
 ```
 
 ## Iteration Workflow

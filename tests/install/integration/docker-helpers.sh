@@ -74,6 +74,14 @@ docker_test_setup() {
   if ! verify_docker_base_image; then
     skip "Docker base image not built"
   fi
+
+  # Resolve GitHub token for authenticated API calls inside containers.
+  # docker_exec passes GITHUB_TOKEN when set; gh CLI is not available inside
+  # the container, so we must resolve it here on the host.
+  if [[ -z "${GITHUB_TOKEN:-}" ]] && command -v gh &>/dev/null; then
+    GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
+    export GITHUB_TOKEN
+  fi
 }
 
 # Cleanup function for per-test containers
