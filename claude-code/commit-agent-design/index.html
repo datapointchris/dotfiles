@@ -604,8 +604,6 @@
       
         
       
-        
-      
     
     
     
@@ -771,36 +769,6 @@
     
   
     Patterns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../apps/sess/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
   
 
     
@@ -4668,6 +4636,13 @@
 
 
 <h1 id="commit-agent-design-and-implementation">Commit Agent: Design and Implementation<a class="headerlink" href="#commit-agent-design-and-implementation" title="Permanent link">&para;</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Historical reference</p>
+<p>The file-based agent definition (<code>.claude/agents/commit-agent.md</code>) described in this document
+no longer exists. The commit workflow pattern is now invoked through natural language
+("create a commit", "let's commit") using Claude's built-in capabilities. This document
+remains useful as design reference for the methodology and token-saving patterns.</p>
+</div>
 <p>Comprehensive design documentation for the automated commit workflow agent with token optimization.</p>
 <h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
 <p>The commit agent is a specialized Claude Code agent that handles the complete git commit workflow with minimal token usage through context isolation, logsift integration, and strategic pre-commit execution.</p>

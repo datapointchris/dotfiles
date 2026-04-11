@@ -604,8 +604,6 @@
       
         
       
-        
-      
     
     
     
@@ -771,36 +769,6 @@
     
   
     Patterns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../apps/sess/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
   
 
     
@@ -4671,93 +4639,34 @@
 
 
 <h1 id="claude-code-hooks-git-workflow-reference">Claude Code Hooks &amp; Git Workflow Reference<a class="headerlink" href="#claude-code-hooks-git-workflow-reference" title="Permanent link">&para;</a></h1>
-<p>This repository uses a two-tier hooks system: <strong>universal hooks</strong> for all projects and <strong>project-specific hooks</strong> for dotfiles-only behavior.</p>
+<p>This repository uses universal hooks (from <code>~/.claude/</code>) for Claude Code automation, plus git pre-commit hooks for quality enforcement.</p>
 <h2 id="hook-organization">Hook Organization<a class="headerlink" href="#hook-organization" title="Permanent link">&para;</a></h2>
 <h3 id="universal-hooks-claude">Universal Hooks (<code>~/.claude/</code>)<a class="headerlink" href="#universal-hooks-claude" title="Permanent link">&para;</a></h3>
 <p>Apply to all Claude Code projects. These hooks change frequently as workflow improvements are added.</p>
 <p><strong>Location:</strong> <code>~/.claude/hooks/</code></p>
 <p>See <code>~/.claude/README.md</code> for the current list of universal hooks and their purposes.</p>
-<h3 id="project-specific-hooks-claude">Project-Specific Hooks (<code>.claude/</code>)<a class="headerlink" href="#project-specific-hooks-claude" title="Permanent link">&para;</a></h3>
-<p>Apply only to this dotfiles repository.</p>
-<p><strong>Location:</strong> <code>.claude/hooks/</code></p>
-<table>
-<thead>
-<tr>
-<th>Hook</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>stop-build-check</code></td>
-<td>Run pytest after symlinks changes</td>
-</tr>
-<tr>
-<td><code>check-feature-docs</code></td>
-<td>Pre-commit: ensure docs updated with code</td>
-</tr>
-</tbody>
-</table>
-<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<h3 id="project-settings-claudesettingsjson">Project Settings (<code>.claude/settings.json</code>)<a class="headerlink" href="#project-settings-claudesettingsjson" title="Permanent link">&para;</a></h3>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;Stop&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="p">{</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">&quot;hooks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">          </span><span class="p">{</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bash $CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check&quot;</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">          </span><span class="p">}</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="p">]</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">]</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">}</span>
-</span></code></pre></div>
-<p>Universal hooks are configured in <code>~/.claude/settings.json</code>.</p>
-<h2 id="project-specific-hook-details">Project-Specific Hook Details<a class="headerlink" href="#project-specific-hook-details" title="Permanent link">&para;</a></h2>
-<h3 id="stop-hook-build-verification">Stop Hook - Build Verification<a class="headerlink" href="#stop-hook-build-verification" title="Permanent link">&para;</a></h3>
-<p><strong>File:</strong> <code>.claude/hooks/stop-build-check</code></p>
-<p>Runs pytest after Claude modifies <code>symlinks/</code>. Catches test failures immediately so they can be fixed in the same session.</p>
-<h3 id="pre-commit-feature-documentation-check">Pre-Commit - Feature Documentation Check<a class="headerlink" href="#pre-commit-feature-documentation-check" title="Permanent link">&para;</a></h3>
-<p><strong>File:</strong> <code>.claude/hooks/check-feature-docs</code></p>
-<p>Runs via pre-commit framework before git commits. Checks:</p>
-<ul>
-<li>Code files modified → are docs updated?</li>
-<li>New feature added → are tests included?</li>
-</ul>
-<p><strong>Strictness levels:</strong></p>
-<ul>
-<li><strong>Strict</strong> (blocks commit): <code>feat</code>, <code>fix</code> commits without docs</li>
-<li><strong>Warning</strong> (allows commit): <code>refactor</code> commits without docs</li>
-<li><strong>Skipped</strong>: <code>chore</code>, <code>deps</code>, <code>typo</code>, <code>style</code>, <code>ci</code>, <code>build</code> commits</li>
-</ul>
 <h2 id="git-hooks-via-pre-commit-framework">Git Hooks (via pre-commit framework)<a class="headerlink" href="#git-hooks-via-pre-commit-framework" title="Permanent link">&para;</a></h2>
 <p>Git hooks are installed via the pre-commit framework and run for ALL commits.</p>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
 </span></code></pre></div>
 <h3 id="conventional-commits-enforcement">Conventional Commits Enforcement<a class="headerlink" href="#conventional-commits-enforcement" title="Permanent link">&para;</a></h3>
 <p><strong>Required format:</strong> <code>type(optional-scope): description</code></p>
 <p><strong>Valid types:</strong> <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>chore</code>, <code>refactor</code>, <code>test</code>, <code>style</code>, <code>perf</code>, <code>build</code>, <code>ci</code>, <code>revert</code></p>
 <h2 id="bypassing-hooks">Bypassing Hooks<a class="headerlink" href="#bypassing-hooks" title="Permanent link">&para;</a></h2>
 <p>All pre-commit hooks can be bypassed:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: quick fix&quot;</span><span class="w"> </span>--no-verify
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: quick fix&quot;</span><span class="w"> </span>--no-verify
 </span></code></pre></div>
-<p>Or skip specific hooks:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">SKIP</span><span class="o">=</span>check-feature-docs<span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: docs coming later&quot;</span>
+<p>Or skip specific pre-commit hooks by name:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">SKIP</span><span class="o">=</span>markdownlint<span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: docs coming later&quot;</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="hook-not-running">Hook Not Running<a class="headerlink" href="#hook-not-running" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Reinstall pre-commit hooks</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Test specific hook</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>check-feature-docs<span class="w"> </span>--all-files
-</span></code></pre></div>
-<h3 id="permission-errors">Permission Errors<a class="headerlink" href="#permission-errors" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>chmod<span class="w"> </span>+x<span class="w"> </span>.claude/hooks/*
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Reinstall pre-commit hooks</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pre-commit<span class="w"> </span>install<span class="w"> </span>--hook-type<span class="w"> </span>pre-commit<span class="w"> </span>--hook-type<span class="w"> </span>commit-msg<span class="w"> </span>--hook-type<span class="w"> </span>post-commit
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Test a specific hook</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>pre-commit<span class="w"> </span>run<span class="w"> </span>markdownlint<span class="w"> </span>--all-files
 </span></code></pre></div>
 <h2 id="philosophy">Philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
 <ol>

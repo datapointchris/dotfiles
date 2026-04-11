@@ -604,8 +604,6 @@
       
         
       
-        
-      
     
     
     
@@ -771,36 +769,6 @@
     
   
     Patterns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../apps/sess/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
   
 
     
@@ -4656,12 +4624,13 @@
 </span></code></pre></div>
 <p>Inspired by <a href="https://github.com/joshmedeski/sesh">sesh</a> - integration happens at the shell level, not within the tool.</p>
 <h2 id="the-tools">The Tools<a class="headerlink" href="#the-tools" title="Permanent link">&para;</a></h2>
-<p><strong>sess</strong> - Go application (installed via <code>go install</code>)</p>
+<p><strong>sesh</strong> - Go application (third-party, installed via <code>go install</code>)</p>
 <ul>
-<li>Tmux session management</li>
-<li>Aggregates: tmux sessions, tmuxinator projects, default configs</li>
-<li>Commands: <code>sess</code>, <code>sess list</code>, <code>sess &lt;name&gt;</code>, <code>sess last</code></li>
-<li>Development: <code>~/tools/sess/</code></li>
+<li>Tmux session management with zoxide integration</li>
+<li>Sources: running tmux sessions, sesh.toml configs, zoxide directories</li>
+<li>Commands: <code>sesh connect &lt;name&gt;</code>, <code>prefix + s</code> (fzf picker), <code>prefix + L</code> (last session)</li>
+<li>Config: <code>~/.config/sesh/sesh.toml</code></li>
+<li>Package: <code>github.com/joshmedeski/sesh</code></li>
 </ul>
 <p><strong>toolbox</strong> - Go application (installed via <code>go install</code>)</p>
 <ul>
@@ -4704,7 +4673,7 @@
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>theme<span class="w"> </span>preview<span class="w">  </span><span class="c1"># Built-in fzf preview</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Session switcher</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sess
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>sesh<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>sesh<span class="w"> </span>connect
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Note browser</span>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>zk<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;bat {-1}&#39;</span>
@@ -4715,7 +4684,7 @@
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cli-utility
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Get session names only</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>sesh<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Count matching notes</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>zk<span class="w"> </span>list<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;algorithm&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
@@ -4725,8 +4694,8 @@
 </span></code></pre></div>
 <p><strong>Why this works</strong>: Structured output + standard Unix tools = powerful queries.</p>
 <h3 id="pattern-3-scripting-and-automation">Pattern 3: Scripting and Automation<a class="headerlink" href="#pattern-3-scripting-and-automation" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Auto-create session for current directory</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sess<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Create session for current directory</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sesh<span class="w"> </span>connect<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Time-based theme switching</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">hour</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span>
@@ -4746,8 +4715,8 @@
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>toolbox<span class="w"> </span>show<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TOOL</span><span class="s2">&quot;</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Multi-step workflow</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>gum<span class="w"> </span>choose<span class="w"> </span>--height<span class="o">=</span><span class="m">10</span><span class="k">)</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>sess<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SESSION</span><span class="s2">&quot;</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>sesh<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>gum<span class="w"> </span>choose<span class="w"> </span>--height<span class="o">=</span><span class="m">10</span><span class="k">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>sesh<span class="w"> </span>connect<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SESSION</span><span class="s2">&quot;</span>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c1"># Input for note creation</span>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="nv">TITLE</span><span class="o">=</span><span class="k">$(</span>gum<span class="w"> </span>input<span class="w"> </span>--placeholder<span class="w"> </span><span class="s2">&quot;Note title&quot;</span><span class="k">)</span>
@@ -4757,11 +4726,11 @@
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
 <h3 id="why-not-build-fzfgum-into-each-tool">Why not build fzf/gum INTO each tool?<a class="headerlink" href="#why-not-build-fzfgum-into-each-tool" title="Permanent link">&para;</a></h3>
 <p><strong>Anti-pattern</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sess<span class="w"> </span>--fzf<span class="w">          </span><span class="c1"># Now sess depends on fzf</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sesh<span class="w"> </span>--fzf<span class="w">          </span><span class="c1"># Now sesh depends on fzf</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>toolbox<span class="w"> </span>--interactive<span class="w">  </span><span class="c1"># Now toolbox needs gum</span>
 </span></code></pre></div>
 <p><strong>Better</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w">     </span><span class="c1"># sess is independent</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sesh<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w">     </span><span class="c1"># sesh is independent</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>gum<span class="w"> </span>choose<span class="w">  </span><span class="c1"># toolbox doesn&#39;t know about gum</span>
 </span></code></pre></div>
 <p><strong>Benefits</strong>:</p>
@@ -4774,7 +4743,7 @@
 <h3 id="why-bash-scripts-instead-of-one-go-application">Why bash scripts instead of one Go application?<a class="headerlink" href="#why-bash-scripts-instead-of-one-go-application" title="Permanent link">&para;</a></h3>
 <p><strong>Pragmatism over purity</strong>:</p>
 <ul>
-<li><strong>sess/toolbox</strong> are Go because: Complex logic, concurrent operations, type safety for config parsing</li>
+<li><strong>sesh/toolbox</strong> are Go because: Complex logic, concurrent operations, type safety for config parsing</li>
 <li><strong>theme/notes/menu</strong> are bash because: Simple text processing, YAML parsing with yq, shell integration</li>
 </ul>
 <p><strong>Rule of thumb</strong>: If it's mostly calling other CLI tools and processing text, bash is simpler.</p>
@@ -4786,7 +4755,7 @@
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>workflow<span class="w"> </span>themes<span class="w">     </span><span class="c1"># yet another subcommand</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Better: Focused tools</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>sess
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>sesh
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>toolbox
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>theme
 </span></code></pre></div>
@@ -4812,18 +4781,18 @@
 </span></code></pre></div>
 <p><strong>Session creation</strong>:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>User runs:
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  sess dotfiles
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  sesh connect dotfiles
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Flow:
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  1. sess checks if &quot;dotfiles&quot; session exists
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  1. sesh checks if &quot;dotfiles&quot; session exists
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>     → tmux has-session -t dotfiles
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>  2. If exists: switch
 </span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>     → tmux switch-client -t dotfiles
 </span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>  3. If not: check for default config
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>     → Reads ~/.config/sess/sessions-macos.yml
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>     → Finds dotfiles entry with directory ~/dotfiles
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>  3. If not: check sesh.toml for configured session
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>     → Reads ~/.config/sesh/sesh.toml
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>     → Finds dotfiles entry with path ~/dotfiles
 </span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
 </span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>  4. Create from config
 </span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>     → tmux new-session -s dotfiles -c ~/dotfiles
@@ -4837,7 +4806,7 @@
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>     ├─────┐
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>     │     │
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>┌────▼─┐ ┌─▼────────┐ ┌────────────┐ ┌─────────┐
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│ sess │ │ toolbox  │ │   theme    │ │ notes   │
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│ sesh │ │ toolbox  │ │   theme    │ │ notes   │
 </span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>└──────┘ └──────────┘ └────────────┘ └────┬────┘
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>   │         │              │               │
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>   │         │              │               │
@@ -4856,14 +4825,14 @@
 <p><strong>Go binaries</strong> are in <code>~/go/bin/</code> (installed via <code>go install</code>):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Installed during dotfiles setup from GitHub</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ls<span class="w"> </span>~/go/bin/
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># sess toolbox gum cheat lazydocker ...</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># sesh toolbox gum cheat lazydocker ...</span>
 </span></code></pre></div>
 <p><strong>External bash tools</strong> (theme, font) are cloned to <code>~/.local/share/</code> with binaries symlinked to <code>~/.local/bin/</code>.</p>
 <p>All tools available in PATH (both <code>~/.local/bin/</code> and <code>~/go/bin/</code> are in PATH), callable from anywhere.</p>
 <h3 id="configuration-files">Configuration Files<a class="headerlink" href="#configuration-files" title="Permanent link">&para;</a></h3>
 <p>Tools read from XDG-compliant locations:</p>
 <ul>
-<li><code>~/.config/sess/sessions-{platform}.yml</code> - Default sessions</li>
+<li><code>~/.config/sesh/sesh.toml</code> - Configured sessions</li>
 <li><code>~/.config/toolbox/registry.yml</code> - Tool definitions</li>
 <li><code>~/.config/zk/config.toml</code> - Note configuration</li>
 </ul>
@@ -4871,7 +4840,7 @@
 <h3 id="data-sources">Data Sources<a class="headerlink" href="#data-sources" title="Permanent link">&para;</a></h3>
 <p>Each tool owns its data:</p>
 <ul>
-<li><strong>sess</strong>: Aggregates tmux state + tmuxinator + config file</li>
+<li><strong>sesh</strong>: Aggregates tmux sessions + sesh.toml configs + zoxide directories</li>
 <li><strong>toolbox</strong>: Reads YAML registry</li>
 <li><strong>theme</strong>: Reads theme.yml files and generates app configs</li>
 <li><strong>notes</strong>: Wraps zk (which manages <code>~/notes/</code>)</li>
@@ -4892,15 +4861,15 @@
 </span></code></pre></div>
 <p><strong>Provide structured and plain outputs</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Structured for humans</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>sess<span class="w"> </span>list
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># ● dotfiles (4 windows)</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># ○ learning (2 windows)</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>sesh<span class="w"> </span>list
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># dotfiles</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># learning</span>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># But parseable for scripts</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="w">  </span><span class="c1"># Still works</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>sesh<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w">  </span><span class="c1"># Still works</span>
 </span></code></pre></div>
 <p><strong>Return meaningful exit codes</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">if</span><span class="w"> </span>sess<span class="w"> </span>dotfiles<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">if</span><span class="w"> </span>sesh<span class="w"> </span>connect<span class="w"> </span>dotfiles<span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Switched successfully&quot;</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">else</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Session doesn&#39;t exist&quot;</span>
@@ -4908,9 +4877,9 @@
 </span></code></pre></div>
 <h3 id="for-users">For Users<a class="headerlink" href="#for-users" title="Permanent link">&para;</a></h3>
 <p><strong>Compose at the shell level</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Don&#39;t ask for tool flags like: sess --fuzzy</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Don&#39;t ask for tool flags like: sesh --fuzzy</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># Instead: compose with fzf</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>sesh<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf
 </span></code></pre></div>
 <p><strong>Use aliases for common compositions</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># In .zshrc</span>
@@ -4921,7 +4890,7 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="c1"># Create session for each project</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="k">for</span><span class="w"> </span>project<span class="w"> </span><span class="k">in</span><span class="w"> </span>~/code/*<span class="p">;</span><span class="w"> </span><span class="k">do</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>sess<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$project</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>sesh<span class="w"> </span>connect<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$project</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
 </span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="k">done</span>
 </span></code></pre></div>
 <h2 id="why-this-architecture-works">Why This Architecture Works<a class="headerlink" href="#why-this-architecture-works" title="Permanent link">&para;</a></h2>
@@ -4950,7 +4919,7 @@
 <ul>
 <li>✅ Easier to modify (bash is readable)</li>
 <li>✅ Better shell integration</li>
-<li>❌ Less type safety (use Go when needed like sess)</li>
+<li>❌ Less type safety (use Go when needed like toolbox)</li>
 </ul>
 <h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
 <ul>

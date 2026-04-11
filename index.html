@@ -610,8 +610,6 @@
       
         
       
-        
-      
     
     
     
@@ -777,36 +775,6 @@
     
   
     Patterns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="apps/sess/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
   
 
     
@@ -4644,10 +4612,9 @@
 <p>See <a href="reference/support/troubleshooting/">Troubleshooting</a> if any commands fail.</p>
 <h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
 <h3 id="session-management">Session Management<a class="headerlink" href="#session-management" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive session picker</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>sess<span class="w"> </span>&lt;name&gt;<span class="w">              </span><span class="c1"># Create or switch to session</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>sess<span class="w"> </span>list<span class="w">                </span><span class="c1"># List all sessions</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>sess<span class="w"> </span>last<span class="w">                </span><span class="c1"># Switch to last session</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sesh<span class="w"> </span>connect<span class="w"> </span>&lt;name&gt;<span class="w">      </span><span class="c1"># Create or switch to session</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>prefix<span class="w"> </span>+<span class="w"> </span>s<span class="w">               </span><span class="c1"># Interactive fzf session picker (inside tmux)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>prefix<span class="w"> </span>+<span class="w"> </span>L<span class="w">               </span><span class="c1"># Toggle to last session (inside tmux)</span>
 </span></code></pre></div>
 <h3 id="tool-discovery">Tool Discovery<a class="headerlink" href="#tool-discovery" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>toolbox<span class="w"> </span>list<span class="w">             </span><span class="c1"># List all tools by category</span>
@@ -4703,17 +4670,17 @@
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>zk<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;bat {-1}&#39;</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Session automation</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>sess<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span><span class="w">  </span><span class="c1"># Auto-create session for current directory</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>sesh<span class="w"> </span>connect<span class="w"> </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span><span class="k">)</span><span class="w">  </span><span class="c1"># Create session for current directory</span>
 </span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
 </span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="c1"># Tool filtering</span>
 </span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cli-utility
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
 </span></code></pre></div>
 <h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
 <p><code>configs/</code>, <code>apps/</code>, and <code>shell/</code> all follow the same layered pattern: a <code>common/</code> base shared across all platforms with platform-specific subdirectories (<code>macos/</code>, <code>archlinux/</code>, <code>wsl/</code>, <code>ubuntu/</code>) layered on top. <code>install/</code> handles provisioning — machine manifests in <code>install/manifests/</code>, platform-specific scripts in <code>install/{platform}/</code>, shared libraries in <code>install/common/</code>, and package definitions in <code>install/packages.yml</code>.</p>
 <p><strong>External tools</strong> (installed from GitHub, not in this repo):</p>
 <ul>
-<li><code>sess</code>, <code>toolbox</code>: Go apps via <code>go install github.com/datapointchris/...</code></li>
+<li><code>toolbox</code>: Go app via <code>go install github.com/datapointchris/toolbox</code></li>
+<li><code>sesh</code>: Go app via <code>go install github.com/joshmedeski/sesh/v2</code></li>
 <li><code>theme</code>, <code>font</code>: Bash tools cloned to <code>~/.local/share/</code></li>
 </ul>
 <h2 id="key-concepts">Key Concepts<a class="headerlink" href="#key-concepts" title="Permanent link">&para;</a></h2>
@@ -4726,7 +4693,7 @@
 </ul>
 <h2 id="common-workflows">Common Workflows<a class="headerlink" href="#common-workflows" title="Permanent link">&para;</a></h2>
 <p><strong>Morning Setup</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sess<span class="w">                     </span><span class="c1"># Start or switch to project session</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sesh<span class="w"> </span>connect<span class="w"> </span>&lt;project&gt;<span class="w">   </span><span class="c1"># Start or switch to project session</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>theme<span class="w"> </span>current<span class="w">            </span><span class="c1"># Verify theme</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>zk<span class="w"> </span>list<span class="w"> </span>--sort<span class="w"> </span>modified-<span class="w"> </span>--limit<span class="w"> </span><span class="m">10</span><span class="w">  </span><span class="c1"># Review recent notes</span>
 </span></code></pre></div>

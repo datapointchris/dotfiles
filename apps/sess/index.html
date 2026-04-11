@@ -11,10 +11,6 @@
         <link rel="canonical" href="https://datapointchris.github.io/dotfiles/apps/sess/">
       
       
-        <link rel="prev" href="../patterns/">
-      
-      
-        <link rel="next" href="../menu/">
       
       
         
@@ -25,7 +21,7 @@
     
     
       
-        <title>Session Manager - Dotfiles</title>
+        <title>Session Manager (sess) - Dotfiles</title>
       
     
     
@@ -176,7 +172,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Session Manager
+              Session Manager (sess)
             
           </span>
         </div>
@@ -305,12 +301,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../" class="md-tabs__link">
           
   
@@ -575,8 +569,6 @@
       
   
   
-    
-  
   
   
     
@@ -606,25 +598,22 @@
       
         
       
-        
-      
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -648,13 +637,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -782,44 +771,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
     </li>
   
 
@@ -4590,46 +4541,6 @@
   
 
 
-  <nav class="md-path" aria-label="Navigation" >
-    <ol class="md-path__list">
-      
-        
-  
-  
-    <li class="md-path__item">
-      <a href="../.." class="md-path__link">
-        
-  <span class="md-ellipsis">
-    Home
-  </span>
-
-      </a>
-    </li>
-  
-
-      
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="../" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Apps
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
               
               <article class="md-content__inner md-typeset">
                 
@@ -4641,6 +4552,12 @@
 
 
 <h1 id="session-manager-sess">Session Manager (sess)<a class="headerlink" href="#session-manager-sess" title="Permanent link">&para;</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Deprecated</p>
+<p><code>sess</code> has been replaced by <a href="https://github.com/joshmedeski/sesh">sesh</a> (joshmedeski/sesh).
+Use <code>sesh connect &lt;name&gt;</code> or <code>prefix + s</code> inside tmux for session management.
+See <code>configs/common/.local/share/workflows/session-management-with-sesh.md</code> for the current workflow.</p>
+</div>
 <p>Fast tmux session management through a single command. Switch between projects, create new workspaces, or jump back to your previous session without typing complex tmux commands.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sess<span class="w">                     </span><span class="c1"># Interactive selection</span>

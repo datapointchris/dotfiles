@@ -604,8 +604,6 @@
       
         
       
-        
-      
     
     
     
@@ -771,36 +769,6 @@
     
   
     Patterns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../apps/sess/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
   
 
     
@@ -4641,6 +4609,13 @@
 
 
 <h1 id="posttooluse-hook-integration-for-agent-metrics">PostToolUse Hook Integration for Agent Metrics<a class="headerlink" href="#posttooluse-hook-integration-for-agent-metrics" title="Permanent link">&para;</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Historical reference</p>
+<p>The hook infrastructure described in this document (<code>.claude/hooks/post-task-extract-metrics</code>,
+<code>.claude/lib/extract_agent_metrics.py</code>, <code>.claude/settings.json</code>, <code>.claude/metrics/</code>) was
+removed from the repo. The design principles and hook context structures below remain
+accurate and useful for building similar systems.</p>
+</div>
 <p><strong>Context</strong>: Implementing automated metrics extraction for commit-agent using PostToolUse hooks</p>
 <p><strong>Date</strong>: 2025-12-05</p>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>

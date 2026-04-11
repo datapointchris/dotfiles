@@ -604,8 +604,6 @@
       
         
       
-        
-      
     
     
     
@@ -771,36 +769,6 @@
     
   
     Patterns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../apps/sess/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H3V5h10v4h8z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    Session Manager
   
 
     
@@ -4725,7 +4693,7 @@
 <p><strong>Usage:</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">ARCH</span><span class="o">=</span><span class="k">$(</span>get_arch<span class="k">)</span>
 </span></code></pre></div>
-<p><strong>Why it exists:</strong> The <code>uname -m | sed 's/aarch64/arm64/...'</code> chain was copy-pasted across all 12 standard installers. A <code>case</code> statement in the library is clearer and has one canonical definition.</p>
+<p><strong>Why it exists:</strong> The <code>uname -m | sed 's/aarch64/arm64/...'</code> chain was copy-pasted across standard installers. A <code>case</code> statement in the library is clearer and has one canonical definition.</p>
 <h2 id="script-patterns">Script Patterns<a class="headerlink" href="#script-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="simple-tarball-installer">Simple Tarball Installer<a class="headerlink" href="#simple-tarball-installer" title="Permanent link">&para;</a></h3>
 <p>Most common pattern (majority of tools):</p>
