@@ -31,11 +31,11 @@ go_tools:
 **Installation**: Symlinked from repo → `~/.local/bin/` by symlinks manager:
 
 ```python
-manager.link_apps("common")  # apps/common/* files → ~/.local/bin/
-manager.link_apps(platform)  # apps/{platform}/* files → ~/.local/bin/
+create_symlinks(apps_dir / "common", "apps-common", target_dir=Path.home() / ".local/bin")
+create_symlinks(apps_dir / platform, f"apps-{platform}", target_dir=Path.home() / ".local/bin")
 ```
 
-The `link_apps()` function skips directories, only symlinking executable files.
+`create_symlinks()` skips directories (via `rglob` + `is_file()`), so only executable files are linked.
 
 ### 3. Personal CLI Tools (Git Clone Pattern)
 
@@ -79,6 +79,6 @@ export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 ## Related Files
 
 - `install/packages.yml` - Go tools list
-- `install/symlinks/symlinks/manager.py:link_apps()` - Shell app symlinking
+- `symlinks/core.py` - Symlink management (apps linked via `create_symlinks` to `~/.local/bin/`)
 - `install/common/install/custom-installers/theme.sh` - Personal tool installer
 - `configs/common/.config/zsh/.zshrc` - PATH configuration

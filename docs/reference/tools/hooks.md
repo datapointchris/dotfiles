@@ -52,7 +52,7 @@ Universal hooks are configured in `~/.claude/settings.json`.
 
 **File:** `.claude/hooks/stop-build-check`
 
-Runs pytest after Claude modifies `install/symlinks/`. Catches test failures immediately so they can be fixed in the same session.
+Runs pytest after Claude modifies `symlinks/`. Catches test failures immediately so they can be fixed in the same session.
 
 ### Pre-Commit - Feature Documentation Check
 

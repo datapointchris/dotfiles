@@ -38,8 +38,8 @@ tasks:
         export TERM=${TERM:-xterm}
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Creating symlinks" "cyan"
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link common
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks link "{{.PLATFORM}}"
+        uv run symlinks link common
+        uv run symlinks link "{{.PLATFORM}}"
         if [ "{{.PLATFORM}}" = "wsl" ]; then
           bash "{{.DOTFILES_DIR}}/install/wsl/sync-windows-shell.sh"
         fi
@@ -52,7 +52,7 @@ tasks:
         export TERM=${TERM:-xterm}
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Relinking symlinks" "cyan"
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks relink "{{.PLATFORM}}"
+        uv run symlinks relink "{{.PLATFORM}}"
         if [ "{{.PLATFORM}}" = "wsl" ]; then
           bash "{{.DOTFILES_DIR}}/install/wsl/sync-windows-shell.sh"
         fi
@@ -61,13 +61,13 @@ tasks:
     desc: Verify all symlinks are correct
     silent: true
     cmds:
-      - cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks check
+      - uv run symlinks check
 
   symlinks:show:
     desc: Show all configured symlinks
     silent: true
     cmds:
-      - cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks show
+      - uv run symlinks show
 
   symlinks:unlink:
     desc: Remove all symlinks
@@ -78,8 +78,8 @@ tasks:
         source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
         print_section "Removing symlinks" "cyan"
         # Unlink platform first (overlay), then common (base layer)
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink "{{.PLATFORM}}"
-        cd "{{.DOTFILES_DIR}}/install/symlinks" && uv run symlinks unlink common
+        uv run symlinks unlink "{{.PLATFORM}}"
+        uv run symlinks unlink common
 
   # ================================================================
   # TESTING

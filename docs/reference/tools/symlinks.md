@@ -94,18 +94,18 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 
 ## Special Directory Handling
 
-The symlinks manager has custom handling for `apps/` and `shell/` directories — both are mapped to specific targets rather than `$HOME`.
+The symlinks manager maps `apps/` and `shell/` to specific target directories rather than `$HOME`, using the same `create_symlinks` function with a custom `target_dir`.
 
 **Shell scripts** (`apps/common/menu`, `apps/common/notes`, etc.):
 
-- Symlinked to `~/.local/bin/` automatically by `link_apps()`
+- Symlinked to `~/.local/bin/`
 - Examples: `menu`, `notes`, `patterns`, `aws-profiles`
 
-**Shell source files** (`shell/functions.sh`, `shell/aliases.sh`, `shell/{platform}.sh`):
+**Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`):
 
-- Symlinked to `~/.local/shell/` automatically by `link_shell()`
+- Symlinked to `~/.local/shell/`
 - Common: `functions.sh` + `aliases.sh` on all platforms
-- Platform-specific: `{platform}.sh` (macos.sh, arch.sh, wsl.sh)
+- Platform-specific: `macos.sh`, `arch.sh`, `wsl.sh`
 - These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
 **Go apps** (sess, toolbox):
@@ -158,11 +158,10 @@ No installation required - `uv run` executes the tool in-place.
 The symlinks tool has comprehensive pytest test suite.
 
 ```bash
-cd ~/dotfiles/install/symlinks
-pytest -v                              # Run all tests
-pytest tests/test_manager.py           # Manager tests
-pytest tests/test_integration.py       # Integration tests
-pytest test_edge_cases.py              # Edge cases
+cd ~/dotfiles/symlinks
+uv run python -m pytest tests/ -v     # Run all tests
+uv run python -m pytest tests/test_core.py          # Unit tests
+uv run python -m pytest tests/test_integration.py  # Integration tests
 ```
 
 Tests cover:
@@ -175,7 +174,7 @@ Tests cover:
 
 ## Configuration
 
-Exclusion patterns in `install/symlinks/symlinks/config.py`:
+Exclusion patterns in `symlinks/core.py` (`EXCLUDE_PATTERNS` constant):
 
 **Excluded by default**:
 
@@ -242,24 +241,7 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 
 ## Development
 
-**Project structure**:
-
-```text
-install/symlinks/
-├── symlinks/               # Main package
-│   ├── cli.py             # Typer CLI
-│   ├── config.py          # Configuration
-│   ├── manager.py         # Core logic
-│   └── utils.py           # Helper functions
-├── tests/                 # Test suite
-│   ├── test_manager.py    # Manager tests
-│   ├── test_utils.py      # Utility tests
-│   └── test_integration.py  # Integration tests
-├── test_edge_cases.py     # Edge case tests
-├── pyproject.toml         # uv configuration
-├── uv.lock                # Locked dependencies
-└── README.md              # Implementation docs
-```
+The package lives at `symlinks/` in the repo root as part of the main dotfiles project — `cli.py` for the Typer interface, `core.py` for all logic. Dependencies (`typer`, `rich`) and entry point are defined in the root `pyproject.toml`. Run from anywhere with `uv run symlinks`.
 
 **Dependencies**: typer (CLI framework), rich (console output)
 

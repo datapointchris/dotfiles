@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from symlinks.manager import SymlinkManager
+import symlinks.core as core
 
 
 @pytest.fixture
@@ -45,10 +45,8 @@ def test_complete_symlink_workflow(dotfiles_structure):
     common = dotfiles_structure["common"]
     macos = dotfiles_structure["macos"]
 
-    manager = SymlinkManager(dotfiles_dir=dotfiles, target_dir=home)
-
     # Create common symlinks
-    count = manager.create_symlinks(common, "common")
+    count = core.create_symlinks(common, "common", target_dir=home)
     assert count == 3  # init.lua, .zshrc, tools (no excluded files)
 
     # Verify common symlinks exist and work
@@ -62,7 +60,7 @@ def test_complete_symlink_workflow(dotfiles_structure):
     assert not (home / "node_modules" / "package").exists()
 
     # Create platform symlinks
-    count = manager.create_symlinks(macos, "macos")
+    count = core.create_symlinks(macos, "macos", target_dir=home)
     assert count == 3  # .gitconfig, .profile, ghostty/config
 
     # Verify platform symlinks
@@ -72,7 +70,7 @@ def test_complete_symlink_workflow(dotfiles_structure):
     assert (home / ".config" / "ghostty" / "config").is_symlink()
 
     # Remove platform symlinks
-    removed = manager.remove_symlinks(macos, "macos")
+    removed = core.remove_symlinks(macos, "macos", target_dir=home)
     assert removed == 3
 
     # Verify platform symlinks are gone
@@ -84,17 +82,13 @@ def test_complete_symlink_workflow(dotfiles_structure):
 
 
 def test_gitconfig_not_excluded(dotfiles_structure):
-    """Regression test: .gitconfig should be symlinked (not excluded by .git/ pattern)."""
+    """Regression: .gitconfig should be symlinked (not excluded by .git/ pattern)."""
     dotfiles = dotfiles_structure["dotfiles"]
     home = dotfiles_structure["home"]
     macos = dotfiles_structure["macos"]
 
-    manager = SymlinkManager(dotfiles_dir=dotfiles, target_dir=home)
+    core.create_symlinks(macos, "macos", target_dir=home)
 
-    # Create symlinks
-    manager.create_symlinks(macos, "macos")
-
-    # CRITICAL: .gitconfig should exist
     assert (home / ".gitconfig").exists(), ".gitconfig was incorrectly excluded!"
     assert (home / ".gitconfig").is_symlink()
     assert (home / ".gitconfig").read_text() == "[user]\n  name = Test"
@@ -106,29 +100,21 @@ def test_cross_platform_git_files(tmp_path):
     home = tmp_path / "home"
     home.mkdir()
 
-    # Create git-related files that should be symlinked
     for platform in ["common", "macos", "wsl", "arch"]:
         platform_dir = dotfiles / platform
         platform_dir.mkdir(parents=True)
-
-        # All platforms might have these
         (platform_dir / ".gitconfig").write_text(f"[user]\n  platform = {platform}")
         (platform_dir / ".gitignore").write_text("*.swp")
         (platform_dir / ".gitattributes").write_text("* text=auto")
 
-    manager = SymlinkManager(dotfiles_dir=dotfiles, target_dir=home)
-
-    # Test each platform
     for platform in ["macos", "wsl", "arch"]:
-        # Clear home
+        # Clear home between platform tests
         for item in home.iterdir():
             if item.is_symlink() or item.is_file():
                 item.unlink()
 
-        platform_dir = dotfiles / platform
-        manager.create_symlinks(platform_dir, platform)
+        core.create_symlinks(dotfiles / platform, platform, target_dir=home)
 
-        # All .git* files should be symlinked
         assert (home / ".gitconfig").exists(), f"{platform}: .gitconfig missing"
         assert (home / ".gitignore").exists(), f"{platform}: .gitignore missing"
         assert (home / ".gitattributes").exists(), f"{platform}: .gitattributes missing"
@@ -140,23 +126,15 @@ def test_broken_symlink_cleanup(dotfiles_structure):
     home = dotfiles_structure["home"]
     common = dotfiles_structure["common"]
 
-    manager = SymlinkManager(dotfiles_dir=dotfiles, target_dir=home)
-
-    # Create symlinks
-    manager.create_symlinks(common, "common")
+    core.create_symlinks(common, "common", target_dir=home)
 
     # Break a symlink by removing the source file
-    source_file = common / ".config" / "nvim" / "init.lua"
-    source_file.unlink()
+    (common / ".config" / "nvim" / "init.lua").unlink()
 
-    # Find broken symlinks
-    broken = manager.find_broken_symlinks()
+    broken = core.find_broken_symlinks(target_dir=home, dotfiles_dir=dotfiles)
     assert len(broken) == 1
     assert broken[0].name == "init.lua"
 
-    # Clean up broken symlinks
-    removed = manager.check_and_clean()
+    removed = core.check_and_clean(target_dir=home, dotfiles_dir=dotfiles)
     assert removed == 1
-
-    # Verify it's gone
     assert not (home / ".config" / "nvim" / "init.lua").exists()

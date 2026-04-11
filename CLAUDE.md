@@ -36,8 +36,8 @@
 
 2. **Shell Script Apps** (menu, notes): Symlinked from repo
    - Located in `apps/{platform}/` as executable files
-   - Symlinked by `link_apps()` → `~/.local/bin/`
-   - Note: `link_apps()` skips directories, only symlinks files
+   - Symlinked to `~/.local/bin/`
+   - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
 
 3. **Personal CLI Tools** (theme, font): Git clone + symlink
    - Custom installers in `install/common/install/custom-installers/`
@@ -129,7 +129,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
   - `arch/` - Arch Linux-specific tools (rofi menus, screen control)
-- `shell/` - Shell source files (functions.sh, aliases.sh, {platform}.sh — symlinked to ~/.local/shell/)
+- `shell/` - Shell source files, organized by platform (common/, macos/, arch/, wsl/ — symlinked to ~/.local/shell/)
 - `install/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
@@ -144,7 +144,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 **Key Systems**:
 
 - **Machine Manifests** - YAML files in `install/machines/` defining what to install per computer type
-- **Shell Files** - `shell/` contains functions.sh, aliases.sh, and {platform}.sh; symlinked directly to `~/.local/shell/` by `task symlinks:link`
+- **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, arch/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools

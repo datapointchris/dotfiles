@@ -5,9 +5,8 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+import symlinks.core as core
 from symlinks import __version__
-from symlinks.config import settings
-from symlinks.manager import SymlinkManager
 
 app = typer.Typer(
     help="Dotfiles symlink manager with layered architecture",
@@ -32,11 +31,11 @@ def link(
     target: str = typer.Argument(..., help="Target to link (common, macos, wsl, arch, etc.)"),
 ):
     """Create symlinks for common or platform layer, including apps."""
-    source_dir = settings.dotfiles_dir / "configs" / target
+    source_dir = core.DOTFILES_DIR / "configs" / target
 
     if not source_dir.exists():
         console.print(f"[red]✗[/] Config directory does not exist: {target}")
-        configs_dir = settings.dotfiles_dir / "configs"
+        configs_dir = core.DOTFILES_DIR / "configs"
         console.print(f"[dim]Available configs in {configs_dir}:[/]")
         if configs_dir.exists():
             for item in configs_dir.iterdir():
@@ -44,10 +43,13 @@ def link(
                     console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
-    manager = SymlinkManager(verbose=verbose)
-    count = manager.create_symlinks(source_dir, target)
-    shell_count = manager.link_shell(target)
-    app_count = manager.link_apps(target)
+    count = core.create_symlinks(source_dir, target, verbose=verbose)
+
+    shell_dir = core.DOTFILES_DIR / "shell" / target
+    shell_count = core.create_symlinks(shell_dir, f"shell-{target}", verbose=verbose, target_dir=core.TARGET_DIR / ".local" / "shell") if shell_dir.exists() else 0
+
+    apps_dir = core.DOTFILES_DIR / "apps" / target
+    app_count = core.create_symlinks(apps_dir, f"apps-{target}", verbose=verbose, target_dir=core.TARGET_DIR / ".local" / "bin") if apps_dir.exists() else 0
 
     if count == 0 and shell_count == 0 and app_count == 0:
         console.print("[yellow]No symlinks created[/]")
@@ -59,14 +61,13 @@ def unlink(
     target: str = typer.Argument(..., help="Target to unlink (common, macos, wsl, arch, etc.)"),
 ):
     """Remove symlinks for common or platform layer."""
-    source_dir = settings.dotfiles_dir / "configs" / target
+    source_dir = core.DOTFILES_DIR / "configs" / target
 
     if not source_dir.exists():
         console.print(f"[red]✗[/] Config directory does not exist: {target}")
         raise typer.Exit(1)
 
-    manager = SymlinkManager(verbose=verbose)
-    count = manager.remove_symlinks(source_dir, target)
+    count = core.remove_symlinks(source_dir, target, verbose=verbose)
 
     if count == 0:
         console.print("[yellow]No symlinks removed[/]")
@@ -77,16 +78,14 @@ def show(
     target: str = typer.Argument(None, help="Target to show (common, macos, wsl, arch, or omit for all)"),
 ):
     """Show current symlinks for a layer or all dotfiles symlinks."""
-    manager = SymlinkManager(verbose=verbose)
-
     if target:
-        source_dir = settings.dotfiles_dir / target
+        source_dir = core.DOTFILES_DIR / target
         if not source_dir.exists():
             console.print(f"[red]✗[/] Directory does not exist: {target}")
             raise typer.Exit(1)
-        manager.show_symlinks(source_dir, target)
+        core.show_symlinks(source_dir, target)
     else:
-        manager.show_symlinks(None, "all dotfiles")
+        core.show_symlinks(None, "all dotfiles")
 
 
 @app.command()
@@ -94,20 +93,17 @@ def check(
     auto_fix: bool = typer.Option(True, help="Automatically remove broken symlinks"),
 ):
     """Check for broken symlinks and optionally remove them."""
-    manager = SymlinkManager(verbose=verbose)
-
     if auto_fix:
-        count = manager.check_and_clean()
+        core.check_and_clean()
     else:
-        broken = manager.find_broken_symlinks()
+        broken = core.find_broken_symlinks()
         if not broken:
             console.print("[green]✓[/] No broken symlinks found")
         else:
             console.print(f"[yellow]Found {len(broken)} broken symlinks:[/]")
             for symlink in broken:
                 try:
-                    target = symlink.readlink()
-                    console.print(f"  [red]✗[/] {symlink} → {target}")
+                    console.print(f"  [red]✗[/] {symlink} → {symlink.readlink()}")
                 except OSError:
                     pass
 
@@ -117,11 +113,11 @@ def relink(
     platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, arch, etc.)"),
 ):
     """Complete refresh: unlink platform, unlink common, check, link common, link platform."""
-    platform_dir = settings.dotfiles_dir / "configs" / platform
+    platform_dir = core.DOTFILES_DIR / "configs" / platform
 
     if not platform_dir.exists():
         console.print(f"[red]✗[/] Config directory does not exist: {platform}")
-        configs_dir = settings.dotfiles_dir / "configs"
+        configs_dir = core.DOTFILES_DIR / "configs"
         console.print(f"[dim]Available configs in {configs_dir}:[/]")
         if configs_dir.exists():
             for item in configs_dir.iterdir():
@@ -129,8 +125,7 @@ def relink(
                     console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
-    manager = SymlinkManager(verbose=verbose)
-    manager.relink(platform)
+    core.relink(platform, verbose=verbose)
 
 
 @app.command()
@@ -143,12 +138,12 @@ def version():
 def info():
     """Show dotfiles directory and configuration."""
     console.print("[cyan]Dotfiles Configuration:[/]")
-    console.print(f"  Dotfiles directory: [bold]{settings.dotfiles_dir}[/]")
-    console.print(f"  Target directory: [bold]{settings.target_dir}[/]")
-    console.print(f"  Search depth: [bold]{settings.search_depth}[/]")
+    console.print(f"  Dotfiles directory: [bold]{core.DOTFILES_DIR}[/]")
+    console.print(f"  Target directory: [bold]{core.TARGET_DIR}[/]")
+    console.print(f"  Search depth: [bold]{core.SEARCH_DEPTH}[/]")
     console.print()
     console.print("[cyan]Available directories:[/]")
-    for item in settings.dotfiles_dir.iterdir():
+    for item in core.DOTFILES_DIR.iterdir():
         if item.is_dir() and item.name not in [".git", "tools", "docs", "scripts"]:
             layer_type = "base layer" if item.name == "common" else "overlay"
             console.print(f"  [green]•[/] {item.name} ({layer_type})")

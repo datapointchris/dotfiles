@@ -7,7 +7,8 @@
 #
 # Copies these files to Windows ~/.local/shell/:
 #   - colors.sh, formatting.sh, prompt-lib.sh, prompt.bash (static)
-#   - functions.sh, aliases.sh, wsl.sh (from dotfiles/shell/)
+#   - functions.sh, aliases.sh (from dotfiles/shell/common/)
+#   - wsl.sh (from dotfiles/shell/wsl/)
 #
 # Also generates combined.sh that concatenates all files in order,
 # with Windows-specific overrides at the end (e.g., alias open='start').
@@ -49,7 +50,8 @@ main() {
 
   local win_shell_dir="$win_home/.local/shell"
   local repo_shell_dir="$DOTFILES_DIR/configs/common/.local/shell"
-  local shell_src="$DOTFILES_DIR/shell"
+  local shell_common="$DOTFILES_DIR/shell/common"
+  local shell_wsl="$DOTFILES_DIR/shell/wsl"
 
   echo "Syncing shell files to Windows Git Bash..."
   echo "  Windows home: $win_home"
@@ -71,15 +73,21 @@ main() {
   cp "$repo_shell_dir/prompt.bash" "$win_shell_dir/"
   echo "  Copied: prompt.bash"
 
-  # Copy shell code files from dotfiles/shell/
-  for f in functions.sh aliases.sh wsl.sh; do
-    if [[ -f "$shell_src/$f" ]]; then
-      cp "$shell_src/$f" "$win_shell_dir/"
+  # Copy shell code files from dotfiles/shell/{platform}/
+  for f in functions.sh aliases.sh; do
+    if [[ -f "$shell_common/$f" ]]; then
+      cp "$shell_common/$f" "$win_shell_dir/"
       echo "  Copied: $f"
     else
-      echo "  WARNING: $f not found in $shell_src"
+      echo "  WARNING: $f not found in $shell_common"
     fi
   done
+  if [[ -f "$shell_wsl/wsl.sh" ]]; then
+    cp "$shell_wsl/wsl.sh" "$win_shell_dir/"
+    echo "  Copied: wsl.sh"
+  else
+    echo "  WARNING: wsl.sh not found in $shell_wsl"
+  fi
 
   # Generate combined.sh with proper dependency order
   local combined_file="$win_shell_dir/combined.sh"
