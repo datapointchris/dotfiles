@@ -4664,7 +4664,7 @@
 <li>Always strip the <code>v</code> prefix before comparing (<code>v1.2.3</code> → <code>1.2.3</code>)</li>
 <li>Fail-safe default: if version check fails (API rate limit, missing binary, network error), proceed with installation rather than skipping — a redundant install is better than a stale binary</li>
 <li>Use <code>FORCE_INSTALL=true</code> to trigger version checking mode in installers (repurposes existing flag)</li>
-<li>See <code>management/common/lib/version-helpers.sh</code> for the canonical implementation</li>
+<li>See <code>install/common/lib/version-helpers.sh</code> for the canonical implementation</li>
 </ul>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>

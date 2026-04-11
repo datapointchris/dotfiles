@@ -4650,7 +4650,7 @@
 <p><strong>Installation</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>orbstack
 </span></code></pre></div>
-<p><strong>Plugin Discovery</strong>: OrbStack installs its binaries at <code>/Applications/OrbStack.app/Contents/MacOS/xbin/</code>. To make <code>docker compose</code> and <code>docker buildx</code> work as CLI plugins, the Docker config needs <code>cliPluginsExtraDirs</code> pointing to that directory. This is configured automatically by the dotfiles install script (<code>management/macos/install/system-packages.sh</code>).</p>
+<p><strong>Plugin Discovery</strong>: OrbStack installs its binaries at <code>/Applications/OrbStack.app/Contents/MacOS/xbin/</code>. To make <code>docker compose</code> and <code>docker buildx</code> work as CLI plugins, the Docker config needs <code>cliPluginsExtraDirs</code> pointing to that directory. This is configured automatically by the dotfiles install script (<code>install/macos/install/system-packages.sh</code>).</p>
 <p><strong>Start OrbStack</strong>:</p>
 <p>Open the OrbStack app. Docker is available immediately — no manual daemon start required. OrbStack runs in the menu bar and starts automatically on login.</p>
 <h3 id="linux-wslarch">Linux (WSL/Arch)<a class="headerlink" href="#linux-wslarch" title="Permanent link">&para;</a></h3>
@@ -4768,7 +4768,7 @@ Linux package managers install docker-compose-plugin automatically with proper i
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="p">]</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>If missing, re-run <code>management/macos/install/system-packages.sh</code> or add it manually.</p>
+<p>If missing, re-run <code>install/macos/install/system-packages.sh</code> or add it manually.</p>
 <p><strong>Linux</strong>: Install docker-compose-plugin:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker-compose-plugin<span class="w">  </span><span class="c1"># WSL</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>docker-compose<span class="w">            </span><span class="c1"># Arch</span>

@@ -4604,7 +4604,7 @@
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--machine<span class="w"> </span>arch-personal-workstation
 </span></code></pre></div>
-<p>Machine manifests define exactly what gets installed on each type of computer. Available manifests are in <code>management/machines/</code>:</p>
+<p>Machine manifests define exactly what gets installed on each type of computer. Available manifests are in <code>install/machines/</code>:</p>
 <ul>
 <li><code>arch-personal-workstation</code> - Full Arch Linux development workstation</li>
 <li><code>macos-personal-workstation</code> - Full macOS development workstation</li>
@@ -4711,7 +4711,7 @@
 </span></code></pre></div>
 <h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>dotfiles/
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── platforms/        # Dotfiles deployed to $HOME
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── configs/          # Config files deployed to $HOME (common base + platform overlays)
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>│   ├── macos/        # macOS-specific overrides
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>│   ├── wsl/          # WSL Ubuntu overrides
@@ -4721,9 +4721,9 @@
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>│   ├── common/       # Cross-platform tools
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>│   ├── macos/        # macOS-specific tools
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>│   └── arch/         # Arch-specific tools (rofi menus)
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>├── management/       # Repository management
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>│   ├── machines/     # Machine manifests (what to install per computer)
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>│   ├── shell/        # Modular shell aliases and functions
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>├── shell/            # Shell environment source + builder (aliases, functions, build script)
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>├── install/          # Provisioning: packages, installers, manifests, symlinks manager
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>│   ├── machines/     # Machine manifests (what to install per computer)
 </span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>│   ├── symlinks/     # Symlinks manager (Python)
 </span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>│   ├── common/       # Shared installers and libraries
 </span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>│   └── packages.yml  # Package definitions

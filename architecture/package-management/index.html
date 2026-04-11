@@ -4687,7 +4687,7 @@
 <p><strong>Installation target</strong>: <code>~/.cargo/bin</code></p>
 <p><strong>Method</strong>: Download pre-compiled Rust binaries (much faster than <code>cargo install</code>)</p>
 <p><strong>Tools</strong>:</p>
-<p>See <code>management/packages.yml</code> (<code>cargo_packages</code> section) for the current list.</p>
+<p>See <code>install/packages.yml</code> (<code>cargo_packages</code> section) for the current list.</p>
 <p><strong>Advantages</strong>:</p>
 <ul>
 <li>Pre-compiled binaries (fast, 10-30 seconds)</li>
@@ -4745,7 +4745,7 @@
 <p><strong>When to use</strong>: ZSH plugins that need to be sourced directly</p>
 <p><strong>Installation target</strong>: <code>~/.config/zsh/plugins/</code></p>
 <p><strong>Method</strong>: Git clone from upstream repositories</p>
-<p><strong>Plugins</strong> (defined in <code>management/packages.yml</code>):</p>
+<p><strong>Plugins</strong> (defined in <code>install/packages.yml</code>):</p>
 <ul>
 <li><code>git-open</code> - Open repo in browser from terminal</li>
 <li><code>zsh-vi-mode</code> - Better vi-mode for ZSH</li>
@@ -4899,7 +4899,7 @@
 </table>
 <h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h2>
 <h3 id="single-source-of-truth-packagesyml">Single Source of Truth: packages.yml<a class="headerlink" href="#single-source-of-truth-packagesyml" title="Permanent link">&para;</a></h3>
-<p>All package versions, repositories, and configurations are centralized in <code>management/packages.yml</code>. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See <a href="../../learnings/github-releases-vs-system-packages/">GitHub Releases vs System Packages</a> for the decision framework on choosing installation methods.</p>
+<p>All package versions, repositories, and configurations are centralized in <code>install/packages.yml</code>. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See <a href="../../learnings/github-releases-vs-system-packages/">GitHub Releases vs System Packages</a> for the decision framework on choosing installation methods.</p>
 <p>Package definitions in packages.yml:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">runtimes</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">go</span><span class="p">:</span>
@@ -4934,7 +4934,7 @@
 </span></code></pre></div>
 <p>All installation scripts read from this single source. Change a version once, and it applies everywhere.</p>
 <h3 id="installation-scripts">Installation Scripts<a class="headerlink" href="#installation-scripts" title="Permanent link">&para;</a></h3>
-<p>Located in <code>management/common/install/</code>:</p>
+<p>Located in <code>install/common/install/</code>:</p>
 <p><strong>Directory Structure</strong>:</p>
 <ul>
 <li><code>github-releases/</code> - Tools installed from GitHub releases (neovim, lazygit, yazi, fzf, etc.)</li>
@@ -4944,15 +4944,15 @@
 <li><code>plugins/</code> - Plugin installers (tmux, yazi)</li>
 <li><code>fonts/</code> - Font installers</li>
 </ul>
-<p><strong>Core Library</strong> (<code>management/common/lib/</code>):</p>
+<p><strong>Core Library</strong> (<code>install/common/lib/</code>):</p>
 <ul>
 <li><code>failure-logging.sh</code> - Structured failure reporting</li>
 <li><code>github-release-installer.sh</code> - Shared functions for GitHub release tools</li>
 </ul>
 <p>All installer scripts support <code>--update</code> for the update system and use structured error reporting.</p>
 <h3 id="installation-organization">Installation Organization<a class="headerlink" href="#installation-organization" title="Permanent link">&para;</a></h3>
-<p>Installation scripts are organized by platform under <code>management/</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>management/
+<p>Installation scripts are organized by platform under <code>install/</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>install/
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── common/          # Shared installation scripts
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│   ├── install/     # Tool installers (neovim, lazygit, yazi, etc.)
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│   └── lib/         # Shared libraries (github-release-installer.sh)

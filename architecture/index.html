@@ -4636,7 +4636,7 @@
 <p>How the dotfiles repository is organized and why.</p>
 <h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dotfiles/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── platforms/           # Platform configurations (what gets deployed)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── configs/             # Config files deployed to $HOME (common base + platform overlays)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ├── common/          # Shared configs (all platforms)
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── macos/           # macOS-specific overrides
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── wsl/             # WSL Ubuntu overrides
@@ -4646,17 +4646,20 @@
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   ├── common/          # Cross-platform: menu, notes, backmeup, safekeep, patterns, ...
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   ├── macos/           # macOS-specific tools
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   └── arch/            # Arch Linux-specific tools (rofi menus, etc.)
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── management/          # Repository management
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── machines/        # Machine manifests (what to install per computer)
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── shell/           # Modular shell aliases and functions (build source)
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   │   ├── aliases/     # Alias group files (core.sh, platform-*.sh)
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   │   └── functions/   # Function group files (core.sh, git.sh, fzf.sh, ...)
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── symlinks/        # Symlinks manager (Python)
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   ├── common/          # Shared installers and libraries
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   ├── {platform}/      # Platform-specific install scripts
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   └── packages.yml     # Package definitions
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>├── Taskfile.yml         # Task automation
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>└── docs/                # MkDocs documentation
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── shell/               # Shell source files (symlinked to ~/.local/shell/)
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── functions.sh     # Shell functions (cross-platform)
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── aliases.sh       # Shell aliases (cross-platform)
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   ├── macos.sh         # macOS functions + aliases
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── arch.sh          # Arch Linux functions + aliases
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   └── wsl.sh           # WSL functions + aliases
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>├── install/          # Provisioning: packages, installers, manifests, symlinks manager
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   ├── machines/        # Machine manifests (what to install per computer)
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   ├── symlinks/        # Symlinks manager (Python)
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│   ├── common/          # Shared installers and libraries
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│   ├── {platform}/      # Platform-specific install scripts
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   └── packages.yml     # Package definitions
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>├── Taskfile.yml         # Task automation
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>└── docs/                # MkDocs documentation
 </span></code></pre></div>
 <p><strong>External tools</strong> (installed from GitHub, not in this repo):</p>
 <ul>
@@ -4667,10 +4670,10 @@
 <p>Two-layer approach: common base + platform overlay.</p>
 <p><strong>How it works</strong>:</p>
 <ol>
-<li>Links <code>platforms/common/</code> configs to <code>$HOME</code></li>
+<li>Links <code>configs/common/</code> configs to <code>$HOME</code></li>
 <li>Overlays platform-specific files (auto-detected: macos, wsl, arch, or ubuntu)</li>
 <li>Links apps from <code>apps/{platform}/</code> to <code>~/.local/bin/</code></li>
-<li>Excludes generated shell files (aliases.sh, functions.sh) -- these are built by <code>build-shell.sh</code></li>
+<li>Links shell source files from <code>shell/</code> to <code>~/.local/shell/</code> (common: functions.sh + aliases.sh; platform: {platform}.sh)</li>
 </ol>
 <p><strong>Common commands</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>task<span class="w"> </span>symlinks:link<span class="w">      </span><span class="c1"># Deploy all symlinks</span>
@@ -4680,8 +4683,8 @@
 </span></code></pre></div>
 <p><strong>Example results</strong>:</p>
 <ul>
-<li><code>platforms/common/.config/zsh/.zshrc</code> → <code>~/.config/zsh/.zshrc</code></li>
-<li><code>platforms/macos/.gitconfig</code> → <code>~/.gitconfig</code> (overrides common)</li>
+<li><code>configs/common/.config/zsh/.zshrc</code> → <code>~/.config/zsh/.zshrc</code></li>
+<li><code>configs/macos/.gitconfig</code> → <code>~/.gitconfig</code> (overrides common)</li>
 <li><code>apps/common/menu</code> → <code>~/.local/bin/menu</code></li>
 </ul>
 <h2 id="package-management">Package Management<a class="headerlink" href="#package-management" title="Permanent link">&para;</a></h2>
@@ -4689,8 +4692,8 @@
 <p><strong>Language Versions</strong>: uv (Python), nvm (Node.js)</p>
 <p><strong>Why separate</strong>: Version managers provide cross-platform consistency and project-specific versions without system conflicts.</p>
 <h2 id="machine-manifests">Machine Manifests<a class="headerlink" href="#machine-manifests" title="Permanent link">&para;</a></h2>
-<p>Installation is driven by machine manifests in <code>management/machines/</code>. Each manifest defines exactly what gets installed:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># management/machines/arch-personal-workstation.yml</span>
+<p>Installation is driven by machine manifests in <code>install/machines/</code>. Each manifest defines exactly what gets installed:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># install/machines/arch-personal-workstation.yml</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">machine</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arch-personal-workstation</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arch</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
@@ -4707,16 +4710,16 @@
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># ... etc</span>
 </span></code></pre></div>
 <p>Run installation with: <code>bash install.sh --machine arch-personal-workstation</code></p>
-<h2 id="shell-build-system">Shell Build System<a class="headerlink" href="#shell-build-system" title="Permanent link">&para;</a></h2>
-<p>Shell aliases and functions are modular source files in <code>management/shell/</code> that get concatenated into single output files based on the machine manifest:</p>
+<h2 id="shell-source-files">Shell Source Files<a class="headerlink" href="#shell-source-files" title="Permanent link">&para;</a></h2>
+<p>Shell functions and aliases live in <code>shell/</code> as flat source files deployed directly via symlinks — no build step required.</p>
 <ul>
-<li><strong>Source</strong>: <code>management/shell/aliases/*.sh</code> and <code>management/shell/functions/*.sh</code></li>
-<li><strong>Builder</strong>: <code>management/shell/build-shell.sh</code></li>
-<li><strong>Output</strong>: <code>~/.local/shell/aliases.sh</code> and <code>~/.local/shell/functions.sh</code></li>
+<li><strong>Cross-platform</strong>: <code>shell/functions.sh</code> and <code>shell/aliases.sh</code> → <code>~/.local/shell/</code></li>
+<li><strong>Platform-specific</strong>: <code>shell/{platform}.sh</code> (macos, arch, wsl) → <code>~/.local/shell/{platform}.sh</code></li>
+<li><strong><code>.zshrc</code> sources them explicitly</strong> using the <code>$PLATFORM</code> env var: <code>source "$SHELL_DIR/$PLATFORM.sh"</code></li>
 </ul>
-<p>The manifest <code>function_groups</code> and <code>alias_groups</code> fields control which modules are included. Platform-specific groups (e.g., <code>platform-arch</code>) are added automatically based on the <code>platform</code> field.</p>
+<p>Windows Git Bash is the only exception — it needs a concatenated <code>combined.sh</code> for startup performance, generated by <code>install/wsl/sync-windows-shell.sh</code>.</p>
 <h2 id="platform-detection">Platform Detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h2>
-<p><strong>Shell</strong> (<code>platforms/common/.config/zsh/.zshrc</code>):</p>
+<p><strong>Shell</strong> (<code>configs/common/.config/zsh/.zshrc</code>):</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OSTYPE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;darwin&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="c1"># macOS</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">elif</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span>/proc/version<span class="w"> </span><span class="o">]]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>Microsoft<span class="w"> </span>/proc/version<span class="p">;</span><span class="w"> </span><span class="k">then</span>
@@ -4731,20 +4734,20 @@
 <h2 id="configuration-layers">Configuration Layers<a class="headerlink" href="#configuration-layers" title="Permanent link">&para;</a></h2>
 <p>Configurations use inheritance: shared base with platform overrides.</p>
 <p><strong>Example: Git Config</strong></p>
-<p>macOS (<code>platforms/macos/.gitconfig</code>):</p>
+<p>macOS (<code>configs/macos/.gitconfig</code>):</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>[core]
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    editor = code --wait
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>[credential]
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    helper = osxkeychain
 </span></code></pre></div>
-<p>WSL (<code>platforms/wsl/.gitconfig</code>):</p>
+<p>WSL (<code>configs/wsl/.gitconfig</code>):</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>[core]
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    editor = nvim
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>[credential]
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-wincred.exe
 </span></code></pre></div>
 <p><strong>Example: Neovim</strong></p>
-<p>Common (<code>platforms/common/.config/nvim/</code>): Base LSP, core plugins, keybindings</p>
+<p>Common (<code>configs/common/.config/nvim/</code>): Base LSP, core plugins, keybindings</p>
 <p>Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs</p>
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
 <p><strong>Symlinks over Stow</strong>: Custom tool provides better two-layer linking, clearer error messages, platform awareness.</p>
@@ -4753,12 +4756,12 @@
 <p><strong>Unified Theme System</strong>: The <code>theme</code> CLI generates consistent configs for ghostty, tmux, btop, and Neovim from a single <code>theme.yml</code> source file per theme.</p>
 <h2 id="advantages">Advantages<a class="headerlink" href="#advantages" title="Permanent link">&para;</a></h2>
 <p><strong>Minimal Duplication</strong>: Only platform differences exist in platform directories.</p>
-<p><strong>Clear Separation</strong>: platforms/common/ for shared, platform dirs for quirks only, apps/ for tools, management/ for repo tooling.</p>
+<p><strong>Clear Separation</strong>: configs/common/ for shared, platform dirs for quirks only, apps/ for tools, install/ for repo tooling.</p>
 <p><strong>Easy Maintenance</strong>: Update shared config once, all platforms benefit.</p>
 <p><strong>Testable</strong>: Each platform can be tested independently with Docker containers.</p>
 <h2 id="trade-offs">Trade-offs<a class="headerlink" href="#trade-offs" title="Permanent link">&para;</a></h2>
 <p><strong>Symlink Complexity</strong>: Two-layer system adds complexity, but <code>symlinks</code> tool handles it with clear errors.</p>
-<p><strong>Platform Knowledge</strong>: Need to know whether to edit <code>platforms/common/</code> or platform dir. Experience makes this clear.</p>
+<p><strong>Platform Knowledge</strong>: Need to know whether to edit <code>configs/common/</code> or platform dir. Experience makes this clear.</p>
 <p>See <a href="../reference/platforms/differences/">Platform Differences</a> for platform-specific quirks.</p>
 <h2 id="deep-dives">Deep Dives<a class="headerlink" href="#deep-dives" title="Permanent link">&para;</a></h2>
 <div class="grid cards">

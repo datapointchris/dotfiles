@@ -4665,7 +4665,7 @@
 <h3 id="3-personal-cli-tools-git-clone-pattern">3. Personal CLI Tools (Git Clone Pattern)<a class="headerlink" href="#3-personal-cli-tools-git-clone-pattern" title="Permanent link">&para;</a></h3>
 <p><strong>Examples</strong>: <code>theme</code>, <code>font</code></p>
 <p><strong>Installation</strong>: Custom installers clone from GitHub to <code>~/.local/share/</code>, symlink bin to <code>~/.local/bin/</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># In management/common/install/custom-installers/theme.sh</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># In install/common/install/custom-installers/theme.sh</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/theme.git<span class="w"> </span>~/.local/share/theme
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>ln<span class="w"> </span>-sf<span class="w"> </span>~/.local/share/theme/bin/theme<span class="w"> </span>~/.local/bin/theme
 </span></code></pre></div>
@@ -4715,10 +4715,10 @@
 </ol>
 <h2 id="related-files">Related Files<a class="headerlink" href="#related-files" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>management/packages.yml</code> - Go tools list</li>
-<li><code>management/symlinks/symlinks/manager.py:link_apps()</code> - Shell app symlinking</li>
-<li><code>management/common/install/custom-installers/theme.sh</code> - Personal tool installer</li>
-<li><code>platforms/common/.config/zsh/.zshrc</code> - PATH configuration</li>
+<li><code>install/packages.yml</code> - Go tools list</li>
+<li><code>install/symlinks/symlinks/manager.py:link_apps()</code> - Shell app symlinking</li>
+<li><code>install/common/install/custom-installers/theme.sh</code> - Personal tool installer</li>
+<li><code>configs/common/.config/zsh/.zshrc</code> - PATH configuration</li>
 </ul>
 
 

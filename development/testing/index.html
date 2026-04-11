@@ -4740,25 +4740,25 @@
 </span></code></pre></div>
 <h2 id="testing-with-docker-recommended">Testing with Docker (Recommended)<a class="headerlink" href="#testing-with-docker-recommended" title="Permanent link">&para;</a></h2>
 <h3 id="unified-test-dispatcher">Unified Test Dispatcher<a class="headerlink" href="#unified-test-dispatcher" title="Permanent link">&para;</a></h3>
-<p>The <code>management/test-install.sh</code> script provides a unified interface for testing across all platforms:</p>
+<p>The <code>install/test-install.sh</code> script provides a unified interface for testing across all platforms:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Test specific platform</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>-p<span class="w"> </span>wsl<span class="w">        </span><span class="c1"># WSL Ubuntu (Docker)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>-p<span class="w"> </span>arch<span class="w">       </span><span class="c1"># Arch Linux (Docker)</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>-p<span class="w"> </span>macos<span class="w">      </span><span class="c1"># macOS (local user)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>bash<span class="w"> </span>install/test-install.sh<span class="w"> </span>-p<span class="w"> </span>wsl<span class="w">        </span><span class="c1"># WSL Ubuntu (Docker)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>bash<span class="w"> </span>install/test-install.sh<span class="w"> </span>-p<span class="w"> </span>arch<span class="w">       </span><span class="c1"># Arch Linux (Docker)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>bash<span class="w"> </span>install/test-install.sh<span class="w"> </span>-p<span class="w"> </span>macos<span class="w">      </span><span class="c1"># macOS (local user)</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Keep container after test for debugging</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>-p<span class="w"> </span>wsl<span class="w"> </span>-k
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>-p<span class="w"> </span>arch<span class="w"> </span>-k
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>bash<span class="w"> </span>install/test-install.sh<span class="w"> </span>-p<span class="w"> </span>wsl<span class="w"> </span>-k
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>bash<span class="w"> </span>install/test-install.sh<span class="w"> </span>-p<span class="w"> </span>arch<span class="w"> </span>-k
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Show help</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>bash<span class="w"> </span>management/test-install.sh<span class="w"> </span>--help
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>bash<span class="w"> </span>install/test-install.sh<span class="w"> </span>--help
 </span></code></pre></div>
 <h3 id="run-and-summarize-context-friendly-testing">Run and Summarize (Context-Friendly Testing)<a class="headerlink" href="#run-and-summarize-context-friendly-testing" title="Permanent link">&para;</a></h3>
 <p>For long-running tests, use <code>run-and-summarize.sh</code> to avoid context overload when working with Claude Code:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Run test with periodic updates every 30 seconds</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>bash<span class="w"> </span>management/run-and-summarize.sh<span class="w"> </span><span class="s2">&quot;bash management/test-install.sh -p arch --keep&quot;</span><span class="w"> </span>test-arch.log<span class="w"> </span><span class="m">30</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>bash<span class="w"> </span>install/run-and-summarize.sh<span class="w"> </span><span class="s2">&quot;bash install/test-install.sh -p arch --keep&quot;</span><span class="w"> </span>test-arch.log<span class="w"> </span><span class="m">30</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># What this does:</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># - Runs test in background</span>
@@ -4772,7 +4772,7 @@
 </span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="c1"># - Get periodic updates without full log streaming</span>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="c1"># - Claude receives only summary, not thousands of log lines</span>
 </span></code></pre></div>
-<p>The summarize script (<code>management/summarize-log.sh</code>) creates <code>.summary</code> files with:</p>
+<p>The summarize script (<code>install/summarize-log.sh</code>) creates <code>.summary</code> files with:</p>
 <ul>
 <li>File size and line count</li>
 <li>Success/failure counts</li>
@@ -4780,7 +4780,7 @@
 <li>Last 20 lines of output (most important context)</li>
 </ul>
 <p>This is especially useful for CI/CD integration or when repeatedly testing installations.</p>
-<p>Scripts are located in <code>management/</code> directory alongside other testing tools.</p>
+<p>Scripts are located in <code>install/</code> directory alongside other testing tools.</p>
 <h3 id="platform-specific-test-scripts">Platform-Specific Test Scripts<a class="headerlink" href="#platform-specific-test-scripts" title="Permanent link">&para;</a></h3>
 <p>Located in <code>tests/install/e2e/</code>:</p>
 <ul>
@@ -4854,7 +4854,7 @@
 </ol>
 <p>macOS VMs are too complex and resource-intensive. Fresh user accounts provide clean testing environment.</p>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
-<p>The test scripts automatically run comprehensive verification using <code>management/verify-installation.sh</code>. This checks:</p>
+<p>The test scripts automatically run comprehensive verification using <code>install/verify-installation.sh</code>. This checks:</p>
 <ul>
 <li>Core build tools (git, curl, wget, make)</li>
 <li>Task runner installation</li>
@@ -4869,10 +4869,10 @@
 <p>If testing manually without the automated scripts:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Run comprehensive verification</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>bash<span class="w"> </span>management/verify-installation.sh
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>bash<span class="w"> </span>install/verify-installation.sh
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Check for duplicate installations</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>bash<span class="w"> </span>management/detect-alternate-installations.sh
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>bash<span class="w"> </span>install/detect-alternate-installations.sh
 </span></code></pre></div>
 <h2 id="iteration-workflow">Iteration Workflow<a class="headerlink" href="#iteration-workflow" title="Permanent link">&para;</a></h2>
 <ol>

@@ -4662,7 +4662,7 @@
 <h2 id="the-solution">The Solution<a class="headerlink" href="#the-solution" title="Permanent link">&para;</a></h2>
 <p><strong>Root Fix: Use System Python Explicitly</strong></p>
 <p>To ensure parse-packages.py works across all platforms regardless of which Python is in PATH:</p>
-<p><strong>1. Use system Python via shebang</strong> (<code>management/parse-packages.py:1</code>):</p>
+<p><strong>1. Use system Python via shebang</strong> (<code>install/parse-packages.py:1</code>):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/python3  # System Python, not #!/usr/bin/env python3</span>
 </span></code></pre></div>
 <p>This ensures the script always uses <code>/usr/bin/python3</code> even if uv-managed Python is in PATH.</p>
@@ -4670,14 +4670,14 @@
 <p>WSL/Debian (bootstrap script):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pyyaml<span class="w">  </span><span class="c1"># Correct package name</span>
 </span></code></pre></div>
-<p>Arch Linux (<code>management/packages.yml</code>):</p>
+<p>Arch Linux (<code>install/packages.yml</code>):</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python3-yaml</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">pacman</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python-yaml</span>
 </span></code></pre></div>
 <p>macOS (bootstrap script):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/usr/bin/python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>PyYAML
 </span></code></pre></div>
-<p><strong>3. Use Docker with WSL rootfs for testing</strong> (<code>management/test-wsl-docker.sh</code>):</p>
+<p><strong>3. Use Docker with WSL rootfs for testing</strong> (<code>install/test-wsl-docker.sh</code>):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Download official WSL Ubuntu rootfs (one-time, cached)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>curl<span class="w"> </span>-L<span class="w"> </span>https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -4685,11 +4685,11 @@
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>gunzip<span class="w"> </span>-c<span class="w"> </span>ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>import<span class="w"> </span>-<span class="w"> </span>wsl-ubuntu:24.04
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Run tests in authentic WSL environment</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>./management/test-wsl-docker.sh
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>./install/test-wsl-docker.sh
 </span></code></pre></div>
 <p>This provides <strong>100% accurate testing</strong> - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.</p>
-<p><strong>4. Verify the script works</strong> (<code>management/verify-installation.sh:322</code>):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span><span class="w"> </span>python3<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/dotfiles/management/parse-packages.py&quot;</span><span class="w"> </span>--type<span class="o">=</span>system<span class="w"> </span>--manager<span class="o">=</span>apt<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<p><strong>4. Verify the script works</strong> (<code>install/verify-installation.sh:322</code>):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span><span class="w"> </span>python3<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/dotfiles/install/parse-packages.py&quot;</span><span class="w"> </span>--type<span class="o">=</span>system<span class="w"> </span>--manager<span class="o">=</span>apt<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>print_success<span class="w"> </span><span class="s2">&quot;parse-packages.py: working (yaml module available)&quot;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">else</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>print_error<span class="w"> </span><span class="s2">&quot;parse-packages.py: FAILED (yaml module missing)&quot;</span>
@@ -4763,12 +4763,12 @@
 </table>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>management/test-wsl-docker.sh</code> - Docker-based WSL testing (recommended)</li>
-<li><code>management/wsl-docker-images.sh</code> - Manage WSL Docker images</li>
-<li><code>management/test-install.sh</code> - Multipass testing (alternative)</li>
-<li><code>management/wsl/</code> - WSL installation scripts</li>
-<li><code>management/verify-installation.sh</code> - Installation verification</li>
-<li><code>management/parse_packages.py</code> - Package list parser</li>
+<li><code>install/test-wsl-docker.sh</code> - Docker-based WSL testing (recommended)</li>
+<li><code>install/wsl-docker-images.sh</code> - Manage WSL Docker images</li>
+<li><code>install/test-install.sh</code> - Multipass testing (alternative)</li>
+<li><code>install/wsl/</code> - WSL installation scripts</li>
+<li><code>install/verify-installation.sh</code> - Installation verification</li>
+<li><code>install/parse_packages.py</code> - Package list parser</li>
 <li><code>docs/development/testing.md</code> - Testing documentation</li>
 </ul>
 

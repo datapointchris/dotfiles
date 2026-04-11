@@ -4844,8 +4844,8 @@
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/platforms/common/.local/shell/logging.sh&quot;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/platforms/common/.local/shell/formatting.sh&quot;</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/configs/common/.local/shell/logging.sh&quot;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/configs/common/.local/shell/formatting.sh&quot;</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>print_header<span class="w"> </span><span class="s2">&quot;Install Package&quot;</span><span class="w"> </span><span class="s2">&quot;blue&quot;</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
@@ -5067,8 +5067,8 @@
 <h2 id="sourcing-patterns">Sourcing Patterns<a class="headerlink" href="#sourcing-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="from-scripts-in-repo-use-dotfiles_dir">From Scripts in Repo (use DOTFILES_DIR)<a class="headerlink" href="#from-scripts-in-repo-use-dotfiles_dir" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/platforms/common/.local/shell/logging.sh&quot;</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/platforms/common/.local/shell/formatting.sh&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/configs/common/.local/shell/logging.sh&quot;</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/configs/common/.local/shell/formatting.sh&quot;</span>
 </span></code></pre></div>
 <h3 id="from-scripts-after-installation-use-shell_dir-or-home">From Scripts After Installation (use SHELL_DIR or HOME)<a class="headerlink" href="#from-scripts-after-installation-use-shell_dir-or-home" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">SHELL_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">SHELL_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.local/shell</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -5091,7 +5091,7 @@
 </ol>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>platforms/common/.local/shell/colors.sh</code> - Color definitions</li>
+<li><code>configs/common/.local/shell/colors.sh</code> - Color definitions</li>
 <li><a href="../../reference/tools/symlinks/">Symlinks Manager</a> - Symlinks manager documentation</li>
 </ul>
 

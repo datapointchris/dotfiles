@@ -4642,7 +4642,7 @@
 
 <h1 id="github-release-installer-library">GitHub Release Installer Library<a class="headerlink" href="#github-release-installer-library" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in <code>management/common/install/github-releases/</code> while maintaining clarity and simplicity.</p>
+<p>The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in <code>install/common/install/github-releases/</code> while maintaining clarity and simplicity.</p>
 <h2 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">&para;</a></h2>
 <p>The library follows the "medium abstraction" principle:</p>
 <ul>
@@ -4667,7 +4667,7 @@
 <li>Consistent error messages with file:line references</li>
 </ul>
 <h3 id="library-functions">Library Functions<a class="headerlink" href="#library-functions" title="Permanent link">&para;</a></h3>
-<p>Located in <code>management/common/lib/github-release-installer.sh</code>:</p>
+<p>Located in <code>install/common/lib/github-release-installer.sh</code>:</p>
 <h4 id="1-get_platform_arch">1. <code>get_platform_arch()</code><a class="headerlink" href="#1-get_platform_arch" title="Permanent link">&para;</a></h4>
 <p>Handles platform/architecture detection with customizable capitalization.</p>
 <p><strong>Usage:</strong></p>
@@ -4733,9 +4733,9 @@
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/error-handling.sh&quot;</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>enable_error_traps
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/github-release-installer.sh&quot;</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/github-release-installer.sh&quot;</span>
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nv">BINARY_NAME</span><span class="o">=</span><span class="s2">&quot;lazygit&quot;</span>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="nv">REPO</span><span class="o">=</span><span class="s2">&quot;jesseduffield/lazygit&quot;</span>
@@ -4770,9 +4770,9 @@
 <p>These scripts use library helpers where applicable but handle their unique requirements inline.</p>
 <h2 id="code-savings">Code Savings<a class="headerlink" href="#code-savings" title="Permanent link">&para;</a></h2>
 <p>The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.</p>
-<p>See <code>management/common/install/github-releases/</code> for all current scripts.</p>
+<p>See <code>install/common/install/github-releases/</code> for all current scripts.</p>
 <h2 id="custom-installers-not-using-library">Custom Installers (Not Using Library)<a class="headerlink" href="#custom-installers-not-using-library" title="Permanent link">&para;</a></h2>
-<p>Some tools have unique requirements that don't fit the GitHub release pattern. These live in <code>management/common/install/custom-installers/</code> instead. All still use error-handling.sh for structured logging consistency.</p>
+<p>Some tools have unique requirements that don't fit the GitHub release pattern. These live in <code>install/common/install/custom-installers/</code> instead. All still use error-handling.sh for structured logging consistency.</p>
 <h2 id="design-decisions">Design Decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
 <h3 id="why-not-more-abstraction">Why Not More Abstraction?<a class="headerlink" href="#why-not-more-abstraction" title="Permanent link">&para;</a></h3>
 <p><strong>Rejected:</strong> Complex packages.yml with all download patterns</p>
@@ -4832,7 +4832,7 @@
 <h2 id="adding-a-new-tool">Adding a New Tool<a class="headerlink" href="#adding-a-new-tool" title="Permanent link">&para;</a></h2>
 <h3 id="steps">Steps<a class="headerlink" href="#steps" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Create new script in <code>management/common/install/github-releases/</code></li>
+<li>Create new script in <code>install/common/install/github-releases/</code></li>
 <li>Use template pattern (see Simple Tarball Installer above)</li>
 <li>Configure: BINARY_NAME, REPO, download URL pattern</li>
 <li>Handle special cases inline if needed</li>
@@ -4846,17 +4846,17 @@
 <p><strong>6x faster</strong></p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>Run individual installer:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>bash<span class="w"> </span>install/common/install/github-releases/lazygit.sh
 </span></code></pre></div>
 <p>Force reinstall:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">FORCE_INSTALL</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">FORCE_INSTALL</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>bash<span class="w"> </span>install/common/install/github-releases/lazygit.sh
 </span></code></pre></div>
 <p>Test structured logging:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Visual mode (terminal)</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>bash<span class="w"> </span>install/common/install/github-releases/lazygit.sh
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Structured mode (pipe)</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>bash<span class="w"> </span>management/common/install/github-releases/lazygit.sh<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cat
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>bash<span class="w"> </span>install/common/install/github-releases/lazygit.sh<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cat
 </span></code></pre></div>
 <h2 id="future-improvements">Future Improvements<a class="headerlink" href="#future-improvements" title="Permanent link">&para;</a></h2>
 <h3 id="possible-low-priority">Possible (Low Priority)<a class="headerlink" href="#possible-low-priority" title="Permanent link">&para;</a></h3>
@@ -4881,18 +4881,18 @@
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
 <p><strong>Library:</strong></p>
 <ul>
-<li><code>management/common/lib/github-release-installer.sh</code></li>
+<li><code>install/common/lib/github-release-installer.sh</code></li>
 </ul>
-<p><strong>Converted Scripts:</strong> See <code>management/common/install/github-releases/</code> for the full current listing.</p>
+<p><strong>Converted Scripts:</strong> See <code>install/common/install/github-releases/</code> for the full current listing.</p>
 <p><strong>Moved to Custom Installers:</strong></p>
 <ul>
-<li><code>management/common/install/custom-installers/awscli.sh</code> - Uses AWS custom installer</li>
-<li><code>management/common/install/custom-installers/claude-code.sh</code> - Uses official installer script</li>
-<li><code>management/common/install/custom-installers/terraform-ls.sh</code> - Uses releases.hashicorp.com (not GitHub)</li>
+<li><code>install/common/install/custom-installers/awscli.sh</code> - Uses AWS custom installer</li>
+<li><code>install/common/install/custom-installers/claude-code.sh</code> - Uses official installer script</li>
+<li><code>install/common/install/custom-installers/terraform-ls.sh</code> - Uses releases.hashicorp.com (not GitHub)</li>
 </ul>
 <p><strong>Moved back to GitHub Releases:</strong></p>
 <ul>
-<li><code>management/common/install/github-releases/tenv.sh</code> - Terraform is a program, not a language. Grouped by installation method (GitHub releases)</li>
+<li><code>install/common/install/github-releases/tenv.sh</code> - Terraform is a program, not a language. Grouped by installation method (GitHub releases)</li>
 </ul>
 
 

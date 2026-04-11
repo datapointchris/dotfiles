@@ -4680,7 +4680,7 @@
 </ul>
 <h2 id="core-functions">Core Functions<a class="headerlink" href="#core-functions" title="Permanent link">&para;</a></h2>
 <h3 id="enable-error-handling">Enable Error Handling<a class="headerlink" href="#enable-error-handling" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/error-handling.sh&quot;</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>enable_error_traps
 </span></code></pre></div>
 <p><strong>What it does:</strong></p>
@@ -4710,7 +4710,7 @@
 <p><strong>Example:</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/error-handling.sh&quot;</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>enable_error_traps
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># Setup temp directory</span>
@@ -4750,7 +4750,7 @@
 </span></code></pre></div>
 <h3 id="stack-traces">Stack Traces<a class="headerlink" href="#stack-traces" title="Permanent link">&para;</a></h3>
 <p>Enable debug mode for stack traces:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">DOTFILES_DEBUG</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>bash<span class="w"> </span>management/common/install/github-releases/tool.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">DOTFILES_DEBUG</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>bash<span class="w"> </span>install/common/install/github-releases/tool.sh
 </span></code></pre></div>
 <p><strong>Output:</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="o">[</span>ERROR<span class="o">]</span><span class="w"> </span>Command<span class="w"> </span>failed<span class="w"> </span>with<span class="w"> </span><span class="nb">exit</span><span class="w"> </span>code<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>install-tool.sh:42
@@ -4788,9 +4788,9 @@
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/error-handling.sh&quot;</span>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>enable_error_traps
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/github-release-installer.sh&quot;</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/github-release-installer.sh&quot;</span>
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1"># Now all functions have:</span>
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># - Automatic cleanup via register_cleanup()</span>
@@ -4826,7 +4826,7 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="ch">#!/usr/bin/env bash</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nv">DOTFILES_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">DOTFILES_DIR</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/dotfiles</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/management/common/lib/error-handling.sh&quot;</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DOTFILES_DIR</span><span class="s2">/install/common/lib/error-handling.sh&quot;</span>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>enable_error_traps
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
 </span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>print_banner<span class="w"> </span><span class="s2">&quot;Installing Tool&quot;</span>
@@ -4900,10 +4900,10 @@
 <h2 id="error-safety-audit">Error Safety Audit<a class="headerlink" href="#error-safety-audit" title="Permanent link">&para;</a></h2>
 <p>All management scripts should use error-handling.sh:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Check scripts using error handling</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>grep<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;source.*error-handling.sh&quot;</span><span class="w"> </span>management/**/*.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>grep<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;source.*error-handling.sh&quot;</span><span class="w"> </span>install/**/*.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Check scripts using old formatting.sh  </span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>grep<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;source.*formatting.sh&quot;</span><span class="w"> </span>management/**/*.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>grep<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;source.*formatting.sh&quot;</span><span class="w"> </span>install/**/*.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
 </span></code></pre></div>
 <p><strong>Current status:</strong></p>
 <ul>
@@ -4946,8 +4946,8 @@
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
 <p><strong>Library:</strong></p>
 <ul>
-<li><code>platforms/common/.local/shell/error-handling.sh</code> (319 lines)</li>
-<li><code>platforms/common/.local/shell/logging.sh</code> (116 lines)</li>
+<li><code>configs/common/.local/shell/error-handling.sh</code> (319 lines)</li>
+<li><code>configs/common/.local/shell/logging.sh</code> (116 lines)</li>
 </ul>
 <p><strong>All scripts using error-handling:</strong></p>
 <ul>
