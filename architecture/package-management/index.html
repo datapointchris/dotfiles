@@ -4934,7 +4934,7 @@
 </span></code></pre></div>
 <p>All installation scripts read from this single source. Change a version once, and it applies everywhere.</p>
 <h3 id="installation-scripts">Installation Scripts<a class="headerlink" href="#installation-scripts" title="Permanent link">&para;</a></h3>
-<p>Located in <code>install/common/install/</code>:</p>
+<p>Located in <code>install/common/</code>:</p>
 <p><strong>Directory Structure</strong>:</p>
 <ul>
 <li><code>github-releases/</code> - Tools installed from GitHub releases (neovim, lazygit, yazi, fzf, etc.)</li>
@@ -4942,7 +4942,6 @@
 <li><code>language-tools/</code> - Language-specific tools (go-tools, npm-globals, cargo-tools)</li>
 <li><code>custom-installers/</code> - Special installers (theme, font, awscli, claude-code)</li>
 <li><code>plugins/</code> - Plugin installers (tmux, yazi)</li>
-<li><code>fonts/</code> - Font installers</li>
 </ul>
 <p><strong>Core Library</strong> (<code>install/common/lib/</code>):</p>
 <ul>
@@ -4950,21 +4949,7 @@
 <li><code>github-release-installer.sh</code> - Shared functions for GitHub release tools</li>
 </ul>
 <p>All installer scripts support <code>--update</code> for the update system and use structured error reporting.</p>
-<h3 id="installation-organization">Installation Organization<a class="headerlink" href="#installation-organization" title="Permanent link">&para;</a></h3>
-<p>Installation scripts are organized by platform under <code>install/</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>install/
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── common/          # Shared installation scripts
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│   ├── install/     # Tool installers (neovim, lazygit, yazi, etc.)
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│   └── lib/         # Shared libraries (github-release-installer.sh)
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├── macos/           # macOS-specific installation
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>│   ├── install/     # macOS installers
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>│   └── setup/       # macOS system configuration
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>├── wsl/             # WSL installation scripts
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>│   └── install/     # WSL-specific installers
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>└── arch/            # Arch Linux installation scripts
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    └── install/     # Arch-specific installers
-</span></code></pre></div>
-<p>The root <code>install.sh</code> orchestrates the installation process, detecting the platform and running appropriate scripts.</p>
+<p>The root <code>install.sh</code> orchestrates the installation process, detecting the platform and running appropriate scripts from <code>install/{platform}/</code> and <code>install/common/{category}/</code>.</p>
 <h3 id="main-installation-flow">Main Installation Flow<a class="headerlink" href="#main-installation-flow" title="Permanent link">&para;</a></h3>
 <p><code>install.sh</code> orchestrates installation phases:</p>
 <ol>
@@ -4980,23 +4965,23 @@
 </ol>
 <h3 id="taskfile-tasks">Taskfile Tasks<a class="headerlink" href="#taskfile-tasks" title="Permanent link">&para;</a></h3>
 <p>The <code>Taskfile.yml</code> provides convenience tasks for common operations but delegates complex logic to shell scripts:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="l l-Scalar l-Scalar-Plain">symlinks:link</span><span class="w">        </span><span class="c1"># Deploy symlinks</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="l l-Scalar l-Scalar-Plain">symlinks:check</span><span class="w">       </span><span class="c1"># Verify symlinks</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="l l-Scalar l-Scalar-Plain">docs:serve</span><span class="w">           </span><span class="c1"># Local docs server</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="l l-Scalar l-Scalar-Plain">symlinks:link</span><span class="w">        </span><span class="c1"># Deploy symlinks</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="l l-Scalar l-Scalar-Plain">symlinks:check</span><span class="w">       </span><span class="c1"># Verify symlinks</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="l l-Scalar l-Scalar-Plain">docs:serve</span><span class="w">           </span><span class="c1"># Local docs server</span>
 </span></code></pre></div>
 <p>See <a href="../../reference/tools/tasks/">Task Reference</a> for all available tasks.</p>
 <h2 id="maintenance">Maintenance<a class="headerlink" href="#maintenance" title="Permanent link">&para;</a></h2>
 <p><strong>Updating tools</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Rust tools (updates via cargo binstall in update.sh)</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>cargo<span class="w"> </span>binstall<span class="w"> </span>-y<span class="w"> </span>&lt;package&gt;
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Manually check GitHub releases</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>task<span class="w"> </span>wsl:install-go<span class="w">        </span><span class="c1"># Updates if new version available</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>task<span class="w"> </span>wsl:install-neovim<span class="w">    </span><span class="c1"># Updates if new version available</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>task<span class="w"> </span>wsl:install-lazygit<span class="w">   </span><span class="c1"># Updates if new version available</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="c1"># System packages</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Rust tools (updates via cargo binstall in update.sh)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>cargo<span class="w"> </span>binstall<span class="w"> </span>-y<span class="w"> </span>&lt;package&gt;
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Manually check GitHub releases</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>task<span class="w"> </span>wsl:install-go<span class="w">        </span><span class="c1"># Updates if new version available</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>task<span class="w"> </span>wsl:install-neovim<span class="w">    </span><span class="c1"># Updates if new version available</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>task<span class="w"> </span>wsl:install-lazygit<span class="w">   </span><span class="c1"># Updates if new version available</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># System packages</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade
 </span></code></pre></div>
 <p><strong>Version checking</strong>: Each install script checks current version before installing, skipping if acceptable version already present.</p>
 <h2 id="related-documents">Related Documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>

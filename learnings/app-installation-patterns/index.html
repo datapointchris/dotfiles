@@ -4658,14 +4658,14 @@
 <p><strong>Examples</strong>: <code>menu</code>, <code>notes</code>, <code>aws-profiles</code></p>
 <p><strong>Location</strong>: <code>apps/{platform}/</code> (executable files)</p>
 <p><strong>Installation</strong>: Symlinked from repo → <code>~/.local/bin/</code> by symlinks manager:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">manager</span><span class="o">.</span><span class="n">link_apps</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">)</span>  <span class="c1"># apps/common/* files → ~/.local/bin/</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">manager</span><span class="o">.</span><span class="n">link_apps</span><span class="p">(</span><span class="n">platform</span><span class="p">)</span>  <span class="c1"># apps/{platform}/* files → ~/.local/bin/</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">create_symlinks</span><span class="p">(</span><span class="n">apps_dir</span> <span class="o">/</span> <span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="s2">&quot;apps-common&quot;</span><span class="p">,</span> <span class="n">target_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.local/bin&quot;</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">create_symlinks</span><span class="p">(</span><span class="n">apps_dir</span> <span class="o">/</span> <span class="n">platform</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;apps-</span><span class="si">{</span><span class="n">platform</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">target_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.local/bin&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The <code>link_apps()</code> function skips directories, only symlinking executable files.</p>
+<p><code>create_symlinks()</code> skips directories (via <code>rglob</code> + <code>is_file()</code>), so only executable files are linked.</p>
 <h3 id="3-personal-cli-tools-git-clone-pattern">3. Personal CLI Tools (Git Clone Pattern)<a class="headerlink" href="#3-personal-cli-tools-git-clone-pattern" title="Permanent link">&para;</a></h3>
 <p><strong>Examples</strong>: <code>theme</code>, <code>font</code></p>
 <p><strong>Installation</strong>: Custom installers clone from GitHub to <code>~/.local/share/</code>, symlink bin to <code>~/.local/bin/</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># In install/common/install/custom-installers/theme.sh</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># In install/common/custom-installers/theme.sh</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/theme.git<span class="w"> </span>~/.local/share/theme
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>ln<span class="w"> </span>-sf<span class="w"> </span>~/.local/share/theme/bin/theme<span class="w"> </span>~/.local/bin/theme
 </span></code></pre></div>
@@ -4716,8 +4716,8 @@
 <h2 id="related-files">Related Files<a class="headerlink" href="#related-files" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>install/packages.yml</code> - Go tools list</li>
-<li><code>install/symlinks/symlinks/manager.py:link_apps()</code> - Shell app symlinking</li>
-<li><code>install/common/install/custom-installers/theme.sh</code> - Personal tool installer</li>
+<li><code>symlinks/core.py</code> - Symlink management (apps linked via <code>create_symlinks</code> to <code>~/.local/bin/</code>)</li>
+<li><code>install/common/custom-installers/theme.sh</code> - Personal tool installer</li>
 <li><code>configs/common/.config/zsh/.zshrc</code> - PATH configuration</li>
 </ul>
 

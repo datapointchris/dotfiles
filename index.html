@@ -4602,11 +4602,11 @@
 <p>Clone the repository and run the install script with a machine manifest:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/datapointchris/dotfiles.git<span class="w"> </span>~/dotfiles
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--machine<span class="w"> </span>arch-personal-workstation
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--machine<span class="w"> </span>archlinux-personal-workstation
 </span></code></pre></div>
-<p>Machine manifests define exactly what gets installed on each type of computer. Available manifests are in <code>install/machines/</code>:</p>
+<p>Machine manifests define exactly what gets installed on each type of computer. Available manifests are in <code>install/manifests/</code>:</p>
 <ul>
-<li><code>arch-personal-workstation</code> - Full Arch Linux development workstation</li>
+<li><code>archlinux-personal-workstation</code> - Full Arch Linux development workstation</li>
 <li><code>macos-personal-workstation</code> - Full macOS development workstation</li>
 <li><code>wsl-work-workstation</code> - WSL Ubuntu for restricted work environment</li>
 <li><code>ubuntu-lxc-server</code> - Minimal Ubuntu server (LXC containers)</li>
@@ -4681,7 +4681,7 @@
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>task<span class="w"> </span>symlinks:show<span class="w">       </span><span class="c1"># Show mappings</span>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Installation (use install.sh, not Task)</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--machine<span class="w"> </span>arch-personal-workstation
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>bash<span class="w"> </span>install.sh<span class="w"> </span>--machine<span class="w"> </span>archlinux-personal-workstation
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
 </span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="c1"># Documentation</span>
 </span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>task<span class="w"> </span>docs:serve<span class="w">          </span><span class="c1"># Start docs server (localhost:8000)</span>
@@ -4710,25 +4710,7 @@
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>sess<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span>
 </span></code></pre></div>
 <h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>dotfiles/
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── configs/          # Config files deployed to $HOME (common base + platform overlays)
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   ├── common/       # Shared across all platforms (zsh, nvim, tmux, git)
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>│   ├── macos/        # macOS-specific overrides
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>│   ├── wsl/          # WSL Ubuntu overrides
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>│   ├── arch/         # Arch Linux overrides
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>│   └── ubuntu/       # Ubuntu server overrides
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>├── apps/             # Personal CLI applications (shell scripts)
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>│   ├── common/       # Cross-platform tools
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>│   ├── macos/        # macOS-specific tools
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>│   └── arch/         # Arch-specific tools (rofi menus)
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>├── shell/            # Shell environment source + builder (aliases, functions, build script)
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>├── install/          # Provisioning: packages, installers, manifests, symlinks manager
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>│   ├── machines/     # Machine manifests (what to install per computer)
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>│   ├── symlinks/     # Symlinks manager (Python)
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>│   ├── common/       # Shared installers and libraries
-</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>│   └── packages.yml  # Package definitions
-</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>└── docs/             # MkDocs documentation site
-</span></code></pre></div>
+<p><code>configs/</code>, <code>apps/</code>, and <code>shell/</code> all follow the same layered pattern: a <code>common/</code> base shared across all platforms with platform-specific subdirectories (<code>macos/</code>, <code>archlinux/</code>, <code>wsl/</code>, <code>ubuntu/</code>) layered on top. <code>install/</code> handles provisioning — machine manifests in <code>install/manifests/</code>, platform-specific scripts in <code>install/{platform}/</code>, shared libraries in <code>install/common/</code>, and package definitions in <code>install/packages.yml</code>.</p>
 <p><strong>External tools</strong> (installed from GitHub, not in this repo):</p>
 <ul>
 <li><code>sess</code>, <code>toolbox</code>: Go apps via <code>go install github.com/datapointchris/...</code></li>
@@ -4744,19 +4726,19 @@
 </ul>
 <h2 id="common-workflows">Common Workflows<a class="headerlink" href="#common-workflows" title="Permanent link">&para;</a></h2>
 <p><strong>Morning Setup</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>sess<span class="w">                     </span><span class="c1"># Start or switch to project session</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>theme<span class="w"> </span>current<span class="w">            </span><span class="c1"># Verify theme</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>zk<span class="w"> </span>list<span class="w"> </span>--sort<span class="w"> </span>modified-<span class="w"> </span>--limit<span class="w"> </span><span class="m">10</span><span class="w">  </span><span class="c1"># Review recent notes</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sess<span class="w">                     </span><span class="c1"># Start or switch to project session</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>theme<span class="w"> </span>current<span class="w">            </span><span class="c1"># Verify theme</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>zk<span class="w"> </span>list<span class="w"> </span>--sort<span class="w"> </span>modified-<span class="w"> </span>--limit<span class="w"> </span><span class="m">10</span><span class="w">  </span><span class="c1"># Review recent notes</span>
 </span></code></pre></div>
 <p><strong>Interactive Exploration</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;toolbox show {1}&#39;</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>theme<span class="w"> </span>preview<span class="w">            </span><span class="c1"># Interactive theme preview</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span>--preview<span class="o">=</span><span class="s1">&#39;toolbox show {1}&#39;</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>theme<span class="w"> </span>preview<span class="w">            </span><span class="c1"># Interactive theme preview</span>
 </span></code></pre></div>
 <p><strong>Quick Note Taking</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>notes<span class="w">                    </span><span class="c1"># Interactive menu</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Daily reflections&quot;</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;Bug fix for auth&quot;</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>zk<span class="w"> </span>learn<span class="w"> </span><span class="s2">&quot;Docker networking patterns&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>notes<span class="w">                    </span><span class="c1"># Interactive menu</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>zk<span class="w"> </span>journal<span class="w"> </span><span class="s2">&quot;Daily reflections&quot;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>zk<span class="w"> </span>devnote<span class="w"> </span><span class="s2">&quot;Bug fix for auth&quot;</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>zk<span class="w"> </span>learn<span class="w"> </span><span class="s2">&quot;Docker networking patterns&quot;</span>
 </span></code></pre></div>
 
 

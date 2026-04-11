@@ -4716,7 +4716,7 @@
 <li>.zshrc, .config/nvim, .config/tmux, etc.</li>
 <li>Linked first</li>
 </ul>
-<p><strong>Platform overlay</strong> (<code>macos/</code>, <code>wsl/</code>, <code>arch/</code>):</p>
+<p><strong>Platform overlay</strong> (<code>macos/</code>, <code>wsl/</code>, <code>archlinux/</code>):</p>
 <ul>
 <li>Platform-specific configs</li>
 <li>Overrides or extends common configs</li>
@@ -4729,17 +4729,17 @@
 <li>File vs directory: Error (must resolve manually)</li>
 </ul>
 <h2 id="special-directory-handling">Special Directory Handling<a class="headerlink" href="#special-directory-handling" title="Permanent link">&para;</a></h2>
-<p>The symlinks manager has custom handling for <code>apps/</code> and <code>shell/</code> directories — both are mapped to specific targets rather than <code>$HOME</code>.</p>
+<p>The symlinks manager maps <code>apps/</code> and <code>shell/</code> to specific target directories rather than <code>$HOME</code>, using the same <code>create_symlinks</code> function with a custom <code>target_dir</code>.</p>
 <p><strong>Shell scripts</strong> (<code>apps/common/menu</code>, <code>apps/common/notes</code>, etc.):</p>
 <ul>
-<li>Symlinked to <code>~/.local/bin/</code> automatically by <code>link_apps()</code></li>
+<li>Symlinked to <code>~/.local/bin/</code></li>
 <li>Examples: <code>menu</code>, <code>notes</code>, <code>patterns</code>, <code>aws-profiles</code></li>
 </ul>
-<p><strong>Shell source files</strong> (<code>shell/functions.sh</code>, <code>shell/aliases.sh</code>, <code>shell/{platform}.sh</code>):</p>
+<p><strong>Shell source files</strong> (<code>shell/common/functions.sh</code>, <code>shell/common/aliases.sh</code>, <code>shell/{platform}/{platform}.sh</code>):</p>
 <ul>
-<li>Symlinked to <code>~/.local/shell/</code> automatically by <code>link_shell()</code></li>
+<li>Symlinked to <code>~/.local/shell/</code></li>
 <li>Common: <code>functions.sh</code> + <code>aliases.sh</code> on all platforms</li>
-<li>Platform-specific: <code>{platform}.sh</code> (macos.sh, arch.sh, wsl.sh)</li>
+<li>Platform-specific: <code>macos.sh</code>, <code>arch.sh</code>, <code>wsl.sh</code></li>
 <li>These are shell code (functions + aliases), not config — <code>~/.local/shell/</code> is intentional</li>
 </ul>
 <p><strong>Go apps</strong> (sess, toolbox):</p>
@@ -4782,11 +4782,10 @@
 <p><strong>Symptom of outdated symlinks</strong>: "module not found" errors in Neovim after creating new files in <code>common/.config/nvim/lua/</code> directories.</p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>The symlinks tool has comprehensive pytest test suite.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/install/symlinks
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>pytest<span class="w"> </span>-v<span class="w">                              </span><span class="c1"># Run all tests</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>pytest<span class="w"> </span>tests/test_manager.py<span class="w">           </span><span class="c1"># Manager tests</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>pytest<span class="w"> </span>tests/test_integration.py<span class="w">       </span><span class="c1"># Integration tests</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>pytest<span class="w"> </span>test_edge_cases.py<span class="w">              </span><span class="c1"># Edge cases</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles/symlinks
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-v<span class="w">     </span><span class="c1"># Run all tests</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_core.py<span class="w">          </span><span class="c1"># Unit tests</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_integration.py<span class="w">  </span><span class="c1"># Integration tests</span>
 </span></code></pre></div>
 <p>Tests cover:</p>
 <ul>
@@ -4797,7 +4796,7 @@
 <li>Edge cases (loops, permissions)</li>
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Exclusion patterns in <code>install/symlinks/symlinks/config.py</code>:</p>
+<p>Exclusion patterns in <code>symlinks/core.py</code> (<code>EXCLUDE_PATTERNS</code> constant):</p>
 <p><strong>Excluded by default</strong>:</p>
 <ul>
 <li><code>.git/</code> directories</li>
@@ -4847,22 +4846,7 @@
 <li>Restart Neovim</li>
 </ul>
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
-<p><strong>Project structure</strong>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>install/symlinks/
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── symlinks/               # Main package
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>│   ├── cli.py             # Typer CLI
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>│   ├── config.py          # Configuration
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>│   ├── manager.py         # Core logic
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>│   └── utils.py           # Helper functions
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>├── tests/                 # Test suite
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>│   ├── test_manager.py    # Manager tests
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>│   ├── test_utils.py      # Utility tests
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>│   └── test_integration.py  # Integration tests
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>├── test_edge_cases.py     # Edge case tests
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>├── pyproject.toml         # uv configuration
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>├── uv.lock                # Locked dependencies
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>└── README.md              # Implementation docs
-</span></code></pre></div>
+<p>The package lives at <code>symlinks/</code> in the repo root as part of the main dotfiles project — <code>cli.py</code> for the Typer interface, <code>core.py</code> for all logic. Dependencies (<code>typer</code>, <code>rich</code>) and entry point are defined in the root <code>pyproject.toml</code>. Run from anywhere with <code>uv run symlinks</code>.</p>
 <p><strong>Dependencies</strong>: typer (CLI framework), rich (console output)</p>
 <p><strong>Python version</strong>: 3.12+ (requires <code>Path.relative_to(walk_up=True)</code>)</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
