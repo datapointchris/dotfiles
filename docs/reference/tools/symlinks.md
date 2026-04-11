@@ -63,6 +63,13 @@ uv run symlinks relink macos
 uv run symlinks check
 ```
 
+Pass `-v/--verbose` before the subcommand to show individual file operations:
+
+```bash
+uv run symlinks -v link macos      # Show each file as it's linked
+uv run symlinks -v relink macos    # Show each file during full refresh
+```
+
 ## Architecture
 
 The symlinks tool uses a **layered architecture**: common base + platform overlay.
@@ -210,7 +217,7 @@ See: `docs/learnings/cross-platform-symlink-considerations.md`
 
 **Symlinks not created**:
 
-- Run with verbose flag: `uv run symlinks link macos -v`
+- Run with verbose flag: `uv run symlinks -v link macos`
 - Check for permission errors
 - Verify source files exist in dotfiles repo
 

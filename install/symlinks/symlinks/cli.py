@@ -15,6 +15,17 @@ app = typer.Typer(
 )
 console = Console()
 
+# Module-level verbose flag set by the app callback
+verbose: bool = False
+
+
+@app.callback()
+def main(
+    verbose_flag: bool = typer.Option(False, "--verbose", "-v", help="Show individual file operations"),
+):
+    global verbose
+    verbose = verbose_flag
+
 
 @app.command()
 def link(
@@ -33,7 +44,7 @@ def link(
                     console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
-    manager = SymlinkManager()
+    manager = SymlinkManager(verbose=verbose)
     count = manager.create_symlinks(source_dir, target)
     shell_count = manager.link_shell(target)
     app_count = manager.link_apps(target)
@@ -54,7 +65,7 @@ def unlink(
         console.print(f"[red]✗[/] Config directory does not exist: {target}")
         raise typer.Exit(1)
 
-    manager = SymlinkManager()
+    manager = SymlinkManager(verbose=verbose)
     count = manager.remove_symlinks(source_dir, target)
 
     if count == 0:
@@ -66,7 +77,7 @@ def show(
     target: str = typer.Argument(None, help="Target to show (common, macos, wsl, arch, or omit for all)"),
 ):
     """Show current symlinks for a layer or all dotfiles symlinks."""
-    manager = SymlinkManager()
+    manager = SymlinkManager(verbose=verbose)
 
     if target:
         source_dir = settings.dotfiles_dir / target
@@ -83,7 +94,7 @@ def check(
     auto_fix: bool = typer.Option(True, help="Automatically remove broken symlinks"),
 ):
     """Check for broken symlinks and optionally remove them."""
-    manager = SymlinkManager()
+    manager = SymlinkManager(verbose=verbose)
 
     if auto_fix:
         count = manager.check_and_clean()
@@ -118,7 +129,7 @@ def relink(
                     console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
-    manager = SymlinkManager()
+    manager = SymlinkManager(verbose=verbose)
     manager.relink(platform)
 
 

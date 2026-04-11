@@ -11,15 +11,22 @@ from symlinks.utils import cleanup_empty_directories, make_relative_symlink, res
 class SymlinkManager:
     """Manages dotfiles symlinks with layered architecture."""
 
-    def __init__(self, dotfiles_dir: Path | None = None, target_dir: Path | None = None):
+    def __init__(
+        self,
+        dotfiles_dir: Path | None = None,
+        target_dir: Path | None = None,
+        verbose: bool = False,
+    ):
         """Initialize symlink manager.
 
         Args:
             dotfiles_dir: Root directory of dotfiles repository (defaults to settings)
             target_dir: Target directory for symlinks (defaults to settings)
+            verbose: Show individual file operations (default: summaries only)
         """
         self.dotfiles_dir = (dotfiles_dir or settings.dotfiles_dir).resolve()
         self.target_dir = (target_dir or settings.target_dir).resolve()
+        self.verbose = verbose
 
     def create_symlinks(self, source_dir: Path, layer: str) -> int:
         """Create symlinks from source directory to target.
@@ -61,7 +68,8 @@ class SymlinkManager:
                     target_path.unlink()
 
                 target_path.symlink_to(relative_link, target_is_directory=item.is_dir())
-                print(f"[green]✓[/] [default]{relative_path}[/] → [magenta]{relative_link}[/]")
+                if self.verbose:
+                    print(f"[green]✓[/] [default]{relative_path}[/] → [magenta]{relative_link}[/]")
                 count += 1
             except (OSError, PermissionError) as e:
                 print(f"[yellow]⚠[/] Failed to link {relative_path}: {e}")
@@ -93,14 +101,15 @@ class SymlinkManager:
 
                 if target and str(target).startswith(str(source_dir)):
                     symlink.unlink()
-                    relative_path = symlink.relative_to(self.target_dir)
-                    print(f"[green]✓[/] Removed: {relative_path}")
+                    if self.verbose:
+                        relative_path = symlink.relative_to(self.target_dir)
+                        print(f"[green]✓[/] Removed: {relative_path}")
                     count += 1
             except (OSError, ValueError):
                 continue
 
         removed_dirs = cleanup_empty_directories(self.target_dir, settings.get_cleanup_paths())
-        if removed_dirs:
+        if removed_dirs and self.verbose:
             print(f"[dim]Cleaned up {len(removed_dirs)} empty directories:[/]")
             for dir_path in removed_dirs:
                 print(f"[dim]  - {dir_path}[/]")
@@ -251,7 +260,8 @@ class SymlinkManager:
 
             relative_source = make_relative_symlink(src, target)
             target.symlink_to(relative_source)
-            print(f"  [green]✓[/] {filename} → ~/.local/shell/{filename}")
+            if self.verbose:
+                print(f"  [green]✓[/] {filename} → ~/.local/shell/{filename}")
             count += 1
 
         if count > 0:
@@ -288,7 +298,8 @@ class SymlinkManager:
 
             relative_source = make_relative_symlink(app, target)
             target.symlink_to(relative_source)
-            print(f"  [green]✓[/] {app.name} → ~/.local/bin/{app.name}")
+            if self.verbose:
+                print(f"  [green]✓[/] {app.name} → ~/.local/bin/{app.name}")
             count += 1
 
         if count > 0:
@@ -312,39 +323,21 @@ class SymlinkManager:
         print(f"[bold cyan]Complete relink for {platform}[/]")
         print()
 
-        print("[yellow]Step [green]1/8[/green]: Removing platform symlinks[/yellow]")
-        self.remove_symlinks(platform_dir, platform)
-        print()
+        steps = [
+            ("Removing platform symlinks", lambda: self.remove_symlinks(platform_dir, platform)),
+            ("Removing common symlinks", lambda: self.remove_symlinks(common_dir, "common")),
+            ("Removing shell symlinks", lambda: self.remove_symlinks(shell_dir, "shell")),
+            ("Checking for broken symlinks", self.check_and_clean),
+            ("Creating common base layer", lambda: self.create_symlinks(common_dir, "common")),
+            ("Creating platform overlay", lambda: self.create_symlinks(platform_dir, platform)),
+            ("Linking shell files", lambda: (self.link_shell("common"), self.link_shell(platform))),
+            ("Linking apps", lambda: (self.link_apps("common"), self.link_apps(platform))),
+        ]
 
-        print("[yellow]Step [green]2/8[/green]: Removing common symlinks[/yellow]")
-        self.remove_symlinks(common_dir, "common")
-        print()
-
-        print("[yellow]Step [green]3/8[/green]: Removing shell symlinks[/yellow]")
-        self.remove_symlinks(shell_dir, "shell")
-        print()
-
-        print("[yellow]Step [green]4/8[/green]: Checking for broken symlinks[/yellow]")
-        self.check_and_clean()
-        print()
-
-        print("[yellow]Step [green]5/8[/green]: Creating common base layer[/yellow]")
-        self.create_symlinks(common_dir, "common")
-        print()
-
-        print("[yellow]Step [green]6/8[/green]: Creating platform overlay[/yellow]")
-        self.create_symlinks(platform_dir, platform)
-        print()
-
-        print("[yellow]Step [green]7/8[/green]: Linking shell files[/yellow]")
-        self.link_shell("common")
-        self.link_shell(platform)
-        print()
-
-        print("[yellow]Step [green]8/8[/green]: Linking apps[/yellow]")
-        self.link_apps("common")
-        self.link_apps(platform)
-        print()
+        for i, (desc, fn) in enumerate(steps, 1):
+            print(f"[yellow]Step [green]{i}/{len(steps)}[/green]: {desc}[/yellow]")
+            fn()
+            print()
 
         print(f"[bold green]✓ Relink complete![/] {platform} environment refreshed.")
 
