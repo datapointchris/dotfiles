@@ -31,7 +31,7 @@ setup_file() {
 }
 
 @test "dotfiles_dir: DOTFILES_DIR contains expected install structure" {
-  [[ -d "$DOTFILES_DIR/install/common/install" ]]
+  [[ -d "$DOTFILES_DIR/install/common/github-releases" ]]
 }
 
 @test "dotfiles_dir: BASH_SOURCE fallback works when run via bash" {

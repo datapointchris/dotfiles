@@ -20,7 +20,7 @@ fi
 # Check if Go is installed
 if ! command -v go &>/dev/null; then
   log_error "Go is not installed"
-  echo "Install Go first: bash $DOTFILES_DIR/install/common/install/language-managers/install-go.sh"
+  echo "Install Go first: bash $DOTFILES_DIR/install/common/language-managers/install-go.sh"
   exit 1
 fi
 

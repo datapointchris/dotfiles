@@ -171,10 +171,10 @@ log_success "Shell plugins installed"
 6. **Test**:
 
    ```bash
-   bash install/common/install/plugins/{tool}-plugins.sh
+   bash install/common/plugins/{tool}-plugins.sh
    ls $PLUGIN_DIR
    # Test idempotency
-   bash install/common/install/plugins/{tool}-plugins.sh
+   bash install/common/plugins/{tool}-plugins.sh
    ```
 
 ## Examples

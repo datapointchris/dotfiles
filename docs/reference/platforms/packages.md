@@ -52,4 +52,4 @@ These tools are installed via `cargo-binstall` (pre-compiled binaries, fast) on 
 - `oxker` - Docker container TUI
 - `broot` - interactive directory tree navigator
 
-Installation is handled by `install/common/install/language-tools/cargo-tools.sh`.
+Installation is handled by `install/common/language-tools/cargo-tools.sh`.

@@ -18,7 +18,7 @@ OrbStack provides a fast, lightweight Linux VM with native Docker CLI integratio
 brew install --cask orbstack
 ```
 
-**Plugin Discovery**: OrbStack installs its binaries at `/Applications/OrbStack.app/Contents/MacOS/xbin/`. To make `docker compose` and `docker buildx` work as CLI plugins, the Docker config needs `cliPluginsExtraDirs` pointing to that directory. This is configured automatically by the dotfiles install script (`install/macos/install/system-packages.sh`).
+**Plugin Discovery**: OrbStack installs its binaries at `/Applications/OrbStack.app/Contents/MacOS/xbin/`. To make `docker compose` and `docker buildx` work as CLI plugins, the Docker config needs `cliPluginsExtraDirs` pointing to that directory. This is configured automatically by the dotfiles install script (`install/macos/system-packages.sh`).
 
 **Start OrbStack**:
 
@@ -195,7 +195,7 @@ newgrp docker
 }
 ```
 
-If missing, re-run `install/macos/install/system-packages.sh` or add it manually.
+If missing, re-run `install/macos/system-packages.sh` or add it manually.
 
 **Linux**: Install docker-compose-plugin:
 

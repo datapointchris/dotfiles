@@ -16,7 +16,7 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   echo "Usage: $(basename "$0") [OPTIONS]"
   echo ""
   echo "Test all GitHub release installers in Docker containers."
-  echo "Installers are auto-discovered from install/common/install/github-releases/"
+  echo "Installers are auto-discovered from install/common/github-releases/"
   echo ""
   echo "Options:"
   echo "  --keep-on-failure  Keep containers that fail (for debugging)"
@@ -42,7 +42,7 @@ done
 # Auto-discover installers and extract binary names from each script's BINARY_NAME variable
 # Format: "installer:binary"
 declare -a INSTALLERS=()
-GITHUB_RELEASES_DIR="$DOTFILES_DIR/install/common/install/github-releases"
+GITHUB_RELEASES_DIR="$DOTFILES_DIR/install/common/github-releases"
 for script in "$GITHUB_RELEASES_DIR"/*.sh; do
   [[ -f "$script" ]] || continue
   installer=$(basename "$script" .sh)
@@ -75,7 +75,7 @@ for entry in "${INSTALLERS[@]}"; do
   log_info "Testing: $installer (binary: $binary)"
   echo "────────────────────────────────────────────────────────────────"
 
-  INSTALLER_PATH="install/common/install/github-releases/${installer}.sh"
+  INSTALLER_PATH="install/common/github-releases/${installer}.sh"
 
   if [[ "$KEEP_ON_FAILURE" == "true" ]]; then
     if "$SCRIPT_DIR/run-installer-test.sh" "$INSTALLER_PATH" --validate "$binary" --keep; then

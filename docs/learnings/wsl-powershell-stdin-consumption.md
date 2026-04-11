@@ -45,4 +45,4 @@ echo "Processed: $count"  # Should match file count
 
 ## Related
 
-- `install/wsl/lib/install-windows-font.sh` - Standalone font installer
+- `install/wsl/install-windows-font.sh` - Standalone font installer

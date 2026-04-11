@@ -67,7 +67,7 @@ run_nvm_install() {
 2. Save to: $CACHED_SCRIPT
 
 3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/install/language-managers/nvm.sh"
+   bash $DOTFILES_DIR/install/common/language-managers/nvm.sh"
   output_failure_data "nvm" "$NVM_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
   return 1
 }
@@ -126,7 +126,7 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
 fi
 
 # Install Node.js using the existing nvm-install-node.sh script
-if ! NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/install/common/install/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
+if ! NVM_DIR="$NVM_DIR" bash "$DOTFILES_DIR/install/common/language-tools/nvm-install-node.sh" "${NODE_VERSION}"; then
   manual_steps="1. First ensure nvm is installed (see above)
 
 2. Then install Node.js manually:

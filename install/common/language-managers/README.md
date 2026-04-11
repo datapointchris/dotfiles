@@ -154,14 +154,14 @@ tar -xzf archive.tar.gz -C ~/.local/
 
    ```bash
    # Test installation
-   bash install/common/install/language-managers/toolname.sh
+   bash install/common/language-managers/toolname.sh
 
    # Verify binary
    which toolname
    toolname --version
 
    # Test idempotency
-   bash install/common/install/language-managers/toolname.sh
+   bash install/common/language-managers/toolname.sh
    ```
 
 ## Examples

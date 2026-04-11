@@ -2,7 +2,7 @@
 
 ## Overview
 
-The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in `install/common/install/github-releases/` while maintaining clarity and simplicity.
+The GitHub Release Installer library provides focused helper functions for installing binary tools from GitHub releases. It eliminates code duplication across the installer scripts in `install/common/github-releases/` while maintaining clarity and simplicity.
 
 ## Design Philosophy
 
@@ -188,11 +188,11 @@ These scripts use library helpers where applicable but handle their unique requi
 
 The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
 
-See `install/common/install/github-releases/` for all current scripts.
+See `install/common/github-releases/` for all current scripts.
 
 ## Custom Installers (Not Using Library)
 
-Some tools have unique requirements that don't fit the GitHub release pattern. These live in `install/common/install/custom-installers/` instead. All still use error-handling.sh for structured logging consistency.
+Some tools have unique requirements that don't fit the GitHub release pattern. These live in `install/common/custom-installers/` instead. All still use error-handling.sh for structured logging consistency.
 
 ## Design Decisions
 
@@ -287,7 +287,7 @@ Auto-detects terminal vs pipe:
 
 ### Steps
 
-1. Create new script in `install/common/install/github-releases/`
+1. Create new script in `install/common/github-releases/`
 2. Use template pattern (see Simple Tarball Installer above)
 3. Configure: BINARY_NAME, REPO, download URL pattern
 4. Handle special cases inline if needed
@@ -305,23 +305,23 @@ Auto-detects terminal vs pipe:
 Run individual installer:
 
 ```bash
-bash install/common/install/github-releases/lazygit.sh
+bash install/common/github-releases/lazygit.sh
 ```
 
 Force reinstall:
 
 ```bash
-FORCE_INSTALL=true bash install/common/install/github-releases/lazygit.sh
+FORCE_INSTALL=true bash install/common/github-releases/lazygit.sh
 ```
 
 Test structured logging:
 
 ```bash
 # Visual mode (terminal)
-bash install/common/install/github-releases/lazygit.sh
+bash install/common/github-releases/lazygit.sh
 
 # Structured mode (pipe)
-bash install/common/install/github-releases/lazygit.sh 2>&1 | cat
+bash install/common/github-releases/lazygit.sh 2>&1 | cat
 ```
 
 ## Future Improvements
@@ -351,14 +351,14 @@ bash install/common/install/github-releases/lazygit.sh 2>&1 | cat
 
 - `install/common/lib/github-release-installer.sh`
 
-**Converted Scripts:** See `install/common/install/github-releases/` for the full current listing.
+**Converted Scripts:** See `install/common/github-releases/` for the full current listing.
 
 **Moved to Custom Installers:**
 
-- `install/common/install/custom-installers/awscli.sh` - Uses AWS custom installer
-- `install/common/install/custom-installers/claude-code.sh` - Uses official installer script
-- `install/common/install/custom-installers/terraform-ls.sh` - Uses releases.hashicorp.com (not GitHub)
+- `install/common/custom-installers/awscli.sh` - Uses AWS custom installer
+- `install/common/custom-installers/claude-code.sh` - Uses official installer script
+- `install/common/custom-installers/terraform-ls.sh` - Uses releases.hashicorp.com (not GitHub)
 
 **Moved back to GitHub Releases:**
 
-- `install/common/install/github-releases/tenv.sh` - Terraform is a program, not a language. Grouped by installation method (GitHub releases)
+- `install/common/github-releases/tenv.sh` - Terraform is a program, not a language. Grouped by installation method (GitHub releases)

@@ -853,7 +853,7 @@ npm_globals:
     - name: sass
       description: Dart Sass CSS compiler
 
-    # tree-sitter-cli moved to GitHub release installer (install/common/install/github-releases/tree-sitter.sh)
+    # tree-sitter-cli moved to GitHub release installer (install/common/github-releases/tree-sitter.sh)
     # npm install triggers post-install scripts that fail behind corporate firewalls
 
 # ================================================================

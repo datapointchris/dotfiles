@@ -297,7 +297,7 @@ All installation scripts read from this single source. Change a version once, an
 
 ### Installation Scripts
 
-Located in `install/common/install/`:
+Located in `install/common/`:
 
 **Directory Structure**:
 
@@ -306,7 +306,6 @@ Located in `install/common/install/`:
 - `language-tools/` - Language-specific tools (go-tools, npm-globals, cargo-tools)
 - `custom-installers/` - Special installers (theme, font, awscli, claude-code)
 - `plugins/` - Plugin installers (tmux, yazi)
-- `fonts/` - Font installers
 
 **Core Library** (`install/common/lib/`):
 
@@ -315,25 +314,7 @@ Located in `install/common/install/`:
 
 All installer scripts support `--update` for the update system and use structured error reporting.
 
-### Installation Organization
-
-Installation scripts are organized by platform under `install/`:
-
-```text
-install/
-├── common/          # Shared installation scripts
-│   ├── install/     # Tool installers (neovim, lazygit, yazi, etc.)
-│   └── lib/         # Shared libraries (github-release-installer.sh)
-├── macos/           # macOS-specific installation
-│   ├── install/     # macOS installers
-│   └── setup/       # macOS system configuration
-├── wsl/             # WSL installation scripts
-│   └── install/     # WSL-specific installers
-└── arch/            # Arch Linux installation scripts
-    └── install/     # Arch-specific installers
-```
-
-The root `install.sh` orchestrates the installation process, detecting the platform and running appropriate scripts.
+The root `install.sh` orchestrates the installation process, detecting the platform and running appropriate scripts from `install/{platform}/` and `install/common/{category}/`.
 
 ### Main Installation Flow
 

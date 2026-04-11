@@ -10,7 +10,7 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
+source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
@@ -128,7 +128,7 @@ if ! curl -fsSL "$GO_URL" -o "$GO_TARBALL"; then
 2. Save to home directory (~/)
 
 3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/install/language-managers/go.sh"
+   bash $DOTFILES_DIR/install/common/language-managers/go.sh"
     output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Download failed"
     log_error "Go installation failed"
     exit 1

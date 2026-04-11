@@ -77,7 +77,7 @@ else
 2. Save to: $CACHED_SCRIPT
 
 3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/install/custom-installers/theme.sh"
+   bash $DOTFILES_DIR/install/common/custom-installers/theme.sh"
 
   output_failure_data "theme" "$THEME_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
   log_error "theme installation failed"

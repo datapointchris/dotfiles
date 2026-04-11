@@ -141,7 +141,7 @@ log_success "Installation complete"
 Enable debug mode for stack traces:
 
 ```bash
-DOTFILES_DEBUG=true bash install/common/install/github-releases/tool.sh
+DOTFILES_DEBUG=true bash install/common/github-releases/tool.sh
 ```
 
 **Output:**

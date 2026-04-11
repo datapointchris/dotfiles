@@ -44,7 +44,7 @@ create_symlinks(apps_dir / platform, f"apps-{platform}", target_dir=Path.home() 
 **Installation**: Custom installers clone from GitHub to `~/.local/share/`, symlink bin to `~/.local/bin/`:
 
 ```bash
-# In install/common/install/custom-installers/theme.sh
+# In install/common/custom-installers/theme.sh
 git clone https://github.com/datapointchris/theme.git ~/.local/share/theme
 ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 ```
@@ -80,5 +80,5 @@ export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 
 - `install/packages.yml` - Go tools list
 - `symlinks/core.py` - Symlink management (apps linked via `create_symlinks` to `~/.local/bin/`)
-- `install/common/install/custom-installers/theme.sh` - Personal tool installer
+- `install/common/custom-installers/theme.sh` - Personal tool installer
 - `configs/common/.config/zsh/.zshrc` - PATH configuration

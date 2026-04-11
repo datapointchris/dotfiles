@@ -40,7 +40,7 @@ Verify TPM is installed:
   fi
 else
   manual_steps="TPM install script not found. Install TPM first:
-   bash $DOTFILES_DIR/install/common/install/plugins/tpm.sh
+   bash $DOTFILES_DIR/install/common/plugins/tpm.sh
 
 Then run plugin installation:
    $TPM_DIR/bin/install_plugins"

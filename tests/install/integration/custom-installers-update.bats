@@ -33,23 +33,23 @@ teardown_file() {
 
 @test "terraform-ls: accepts --update flag" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/terraform-ls.sh --update"
+    "bash install/common/custom-installers/terraform-ls.sh --update"
   assert_success
 }
 
 @test "terraform-ls: normal install mode works" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/terraform-ls.sh"
+    "bash install/common/custom-installers/terraform-ls.sh"
   assert_success
 }
 
 @test "awscli: accepts --update flag" {
-  run bash "$DOTFILES_DIR/install/common/install/custom-installers/awscli.sh" --update
+  run bash "$DOTFILES_DIR/install/common/custom-installers/awscli.sh" --update
   assert_success
 }
 
 @test "awscli: normal install mode works" {
-  run bash "$DOTFILES_DIR/install/common/install/custom-installers/awscli.sh"
+  run bash "$DOTFILES_DIR/install/common/custom-installers/awscli.sh"
   assert_success
 }
 
@@ -58,12 +58,12 @@ teardown_file() {
 @test "terraform-ls: shows already at latest version when current" {
   # First install to latest version
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/terraform-ls.sh"
+    "bash install/common/custom-installers/terraform-ls.sh"
   assert_success
 
   # Then run update - should show already at latest
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/terraform-ls.sh --update"
+    "bash install/common/custom-installers/terraform-ls.sh --update"
   assert_success
 }
 
@@ -72,45 +72,45 @@ teardown_file() {
     skip "macOS-specific test"
   fi
 
-  run bash "$DOTFILES_DIR/install/common/install/custom-installers/awscli.sh" --update
+  run bash "$DOTFILES_DIR/install/common/custom-installers/awscli.sh" --update
   assert_success
 }
 
 @test "bats: accepts --update flag" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/bats.sh --update"
+    "bash install/common/custom-installers/bats.sh --update"
   assert_success
 }
 
 @test "bats: normal install mode works" {
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/bats.sh"
+    "bash install/common/custom-installers/bats.sh"
   assert_success
 }
 
 @test "bats: shows already at latest version when current" {
   # First install to latest version
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/bats.sh"
+    "bash install/common/custom-installers/bats.sh"
   assert_success
 
   # Then run update - should show already at latest
   run docker_exec "$BATS_SHARED_CONTAINER" \
-    "bash install/common/install/custom-installers/bats.sh --update"
+    "bash install/common/custom-installers/bats.sh --update"
   assert_success
 }
 
 @test "claude-code: accepts --update flag" {
-  run bash "$DOTFILES_DIR/install/common/install/custom-installers/claude-code.sh" --update
+  run bash "$DOTFILES_DIR/install/common/custom-installers/claude-code.sh" --update
   assert_success
 }
 
 @test "claude-code: normal install mode works" {
-  run bash "$DOTFILES_DIR/install/common/install/custom-installers/claude-code.sh"
+  run bash "$DOTFILES_DIR/install/common/custom-installers/claude-code.sh"
   assert_success
 }
 
 @test "claude-code: shows already installed or self-updates" {
-  run bash "$DOTFILES_DIR/install/common/install/custom-installers/claude-code.sh" --update
+  run bash "$DOTFILES_DIR/install/common/custom-installers/claude-code.sh" --update
   assert_success
 }

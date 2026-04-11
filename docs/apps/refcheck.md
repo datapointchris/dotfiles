@@ -60,7 +60,7 @@ Installed as a Python tool via uv:
 uv tool install -e ~/tools/refcheck
 ```
 
-This is handled automatically by `install/common/install/language-tools/uv-tools.sh`.
+This is handled automatically by `install/common/language-tools/uv-tools.sh`.
 
 ## Usage
 

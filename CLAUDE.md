@@ -30,7 +30,7 @@
 
 1. **Go Apps** (sess, toolbox): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
-   - Installer: `install/common/install/language-tools/go-tools.sh`
+   - Installer: `install/common/language-tools/go-tools.sh`
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
@@ -40,7 +40,7 @@
    - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
 
 3. **Personal CLI Tools** (theme, font): Git clone + symlink
-   - Custom installers in `install/common/install/custom-installers/`
+   - Custom installers in `install/common/custom-installers/`
    - Clone to `~/.local/share/{tool}/`, symlink bin → `~/.local/bin/`
    - Development in `~/tools/{app}/`, push to GitHub, run `{tool} upgrade`
 
@@ -67,7 +67,7 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 **GitHub Release Installers** (⚠️ Use library for new installers):
 
 - Use `install/common/lib/github-release-installer.sh` for new GitHub release installers
-- See `install/common/install/github-releases/` for all current scripts
+- See `install/common/github-releases/` for all current scripts
 - See `docs/architecture/github-release-installer.md`
 
 **Zsh Configuration Setup** (⚠️ This is the CORRECT setup - do not second-guess it):
@@ -133,9 +133,9 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 - `install/` - Repository management tools
   - `machines/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
-  - `orchestration/` - Platform detection and installer runner
   - `offline/` - Offline installation support (connectivity testing, bundles)
-  - `{platform}/` - Platform-specific install scripts
+  - `{platform}/` - Platform-specific install scripts (arch/, macos/, ubuntu/, wsl/)
+  - `common/` - Cross-platform installer scripts (github-releases/, language-managers/, etc.) and `lib/` shared libraries
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site
 - `.claude/` - Skills and hooks for Claude Code integration

@@ -58,7 +58,7 @@ fi
 
 if [[ "$SKIP_TENV_INSTALL" == "false" ]]; then
   # Detect platform (tenv uses x86_64 and arm64 directly)
-  source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
+  source "$DOTFILES_DIR/install/platform-detection.sh"
 
   OS=$(detect_os)
   RAW_ARCH=$(uname -m)

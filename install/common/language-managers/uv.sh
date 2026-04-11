@@ -58,7 +58,7 @@ if ! run_uv_install; then
 2. Save to: $CACHED_SCRIPT
 
 3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/install/language-managers/uv.sh"
+   bash $DOTFILES_DIR/install/common/language-managers/uv.sh"
 
   output_failure_data "uv" "$UV_INSTALL_URL" "latest" "$manual_steps" "curl install script failed"
   log_error "uv installation failed"

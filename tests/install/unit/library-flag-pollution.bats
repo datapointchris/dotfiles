@@ -87,6 +87,6 @@ TESTEOF
 }
 
 @test "library_flags: platform-detection.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
+  run test_library_flags "$DOTFILES_DIR/install/platform-detection.sh"
   assert_success
 }

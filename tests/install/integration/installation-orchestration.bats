@@ -25,7 +25,7 @@ setup_file() {
   source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
   # Source REAL run_installer wrapper and export it
-  source "$DOTFILES_DIR/install/orchestration/run-installer.sh"
+  source "$DOTFILES_DIR/install/run-installer.sh"
   export -f run_installer
 
   # Define REAL show_failures_summary (from install.sh) and export it

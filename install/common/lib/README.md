@@ -77,7 +77,7 @@ common/lib/ utilities
 
 **Key distinction:**
 
-- **orchestration/** - Sourced by install.sh (controls HOW installers run)
+- **install/platform-detection.sh, install/run-installer.sh** - Sourced by install.sh (controls HOW installers run)
 - **common/lib/** - Sourced by installer scripts (provides utilities FOR installers)
 
 All installer scripts should source `failure-logging.sh` to ensure consistent error reporting that `run-installer.sh` can parse.

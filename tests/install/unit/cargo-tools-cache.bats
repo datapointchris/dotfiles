@@ -33,7 +33,7 @@ export CARGO_TOOLS_SOURCE_ONLY=true
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-source "$DOTFILES_DIR/install/common/install/language-tools/cargo-tools.sh"
+source "$DOTFILES_DIR/install/common/language-tools/cargo-tools.sh"
 "\$@"
 SCRIPT
 

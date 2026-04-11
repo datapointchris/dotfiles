@@ -31,7 +31,7 @@ fi
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
+source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 UPDATE_MODE=false

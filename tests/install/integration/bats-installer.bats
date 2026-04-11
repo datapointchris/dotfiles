@@ -18,7 +18,7 @@ load "$HOME/.local/lib/bats-assert/load.bash"
 setup_file() {
   export SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
   export DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-  export BATS_INSTALLER="$DOTFILES_DIR/install/common/install/custom-installers/bats.sh"
+  export BATS_INSTALLER="$DOTFILES_DIR/install/common/custom-installers/bats.sh"
 
   # Verify installer exists
   if [[ ! -f "$BATS_INSTALLER" ]]; then

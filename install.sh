@@ -10,8 +10,8 @@ export FAILURES_LOG
 export TERM=${TERM:-xterm}
 export PATH="$HOME/.local/bin:$PATH"
 
-source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"
-source "$DOTFILES_DIR/install/orchestration/run-installer.sh"
+source "$DOTFILES_DIR/install/platform-detection.sh"
+source "$DOTFILES_DIR/install/run-installer.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
@@ -56,7 +56,7 @@ show_failures_summary() {
 # ================================================================
 
 install_manifest_phases() {
-  local common_install="$DOTFILES_DIR/install/common/install"
+  local common_install="$DOTFILES_DIR/install/common"
   local github_releases="$common_install/github-releases"
   local custom_installers="$common_install/custom-installers"
   local lang_managers="$common_install/language-managers"
@@ -356,18 +356,17 @@ main() {
   # Platform-specific system packages
   case "$platform" in
   macos)
-    local macos_install="$DOTFILES_DIR/install/macos/install"
-    local macos_setup="$DOTFILES_DIR/install/macos/setup"
+    local macos="$DOTFILES_DIR/install/macos"
 
     print_header "System Tools (Homebrew)"
-    bash "$macos_install/homebrew.sh"
-    bash "$macos_install/system-packages.sh"
-    bash "$macos_install/casks.sh"
-    bash "$macos_install/mas-apps.sh"
-    bash "$macos_setup/xcode.sh"
+    bash "$macos/homebrew.sh"
+    bash "$macos/system-packages.sh"
+    bash "$macos/casks.sh"
+    bash "$macos/mas-apps.sh"
+    bash "$macos/xcode.sh"
 
     print_header "System Preferences"
-    bash "$macos_setup/preferences.sh"
+    bash "$macos/preferences.sh"
     ;;
   wsl)
     if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
@@ -377,30 +376,28 @@ main() {
 
     if manifest_enabled "system_packages"; then
       print_header "System Packages (apt)"
-      bash "$DOTFILES_DIR/install/wsl/install/system-packages.sh"
+      bash "$DOTFILES_DIR/install/wsl/system-packages.sh"
     fi
 
     print_section "WSL fontconfig setup"
-    bash "$DOTFILES_DIR/install/wsl/install/fontconfig-setup.sh"
+    bash "$DOTFILES_DIR/install/wsl/fontconfig-setup.sh"
     ;;
   arch)
-    local arch_setup="$DOTFILES_DIR/install/arch/setup"
-
     if manifest_enabled "system_packages"; then
       print_header "System Packages (pacman)"
-      bash "$DOTFILES_DIR/install/arch/install/system-packages.sh"
+      bash "$DOTFILES_DIR/install/arch/system-packages.sh"
     fi
     if manifest_enabled "flatpak"; then
-      bash "$DOTFILES_DIR/install/arch/install/flatpak.sh"
+      bash "$DOTFILES_DIR/install/arch/flatpak.sh"
     fi
 
     print_header "System Configuration"
-    bash "$arch_setup/system-config.sh"
+    bash "$DOTFILES_DIR/install/arch/system-config.sh"
     ;;
   ubuntu)
     if manifest_enabled "system_packages"; then
       print_header "System Packages (apt)"
-      bash "$DOTFILES_DIR/install/ubuntu/install/system-packages.sh"
+      bash "$DOTFILES_DIR/install/ubuntu/system-packages.sh"
     fi
     ;;
   *)

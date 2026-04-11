@@ -82,7 +82,7 @@ download_file() {
 
 download_github_binaries() {
   log_info "Downloading GitHub binary releases..."
-  local github_releases="$DOTFILES_DIR/install/common/install/github-releases"
+  local github_releases="$DOTFILES_DIR/install/common/github-releases"
 
   # Auto-discover all installer scripts in the directory
   local installers=()
@@ -185,8 +185,8 @@ download_go_binaries() {
 
 download_install_scripts() {
   log_info "Downloading install scripts..."
-  local lang_managers="$DOTFILES_DIR/install/common/install/language-managers"
-  local custom_installers="$DOTFILES_DIR/install/common/install/custom-installers"
+  local lang_managers="$DOTFILES_DIR/install/common/language-managers"
+  local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
 
   # Explicit listing
   local installers=(

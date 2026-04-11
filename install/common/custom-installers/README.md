@@ -28,7 +28,7 @@ Scripts in this directory typically source:
 ```bash
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/install/orchestration/platform-detection.sh"  # If platform-specific
+source "$DOTFILES_DIR/install/platform-detection.sh"  # If platform-specific
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"  # For error reporting
 ```
 
@@ -111,14 +111,14 @@ fi
 
    ```bash
    # Test installation
-   bash install/common/install/custom-installers/toolname.sh
+   bash install/common/custom-installers/toolname.sh
 
    # Verify
    which toolname
    toolname --version
 
    # Test idempotency
-   bash install/common/install/custom-installers/toolname.sh
+   bash install/common/custom-installers/toolname.sh
    ```
 
 ## Examples
@@ -195,7 +195,7 @@ Uses official npm installer:
 # Requires Node.js/npm
 if ! command -v npm >/dev/null 2>&1; then
   manual_steps="Claude Code requires Node.js/npm:
-1. Install Node.js via nvm: bash install/common/install/language-managers/nvm.sh
+1. Install Node.js via nvm: bash install/common/language-managers/nvm.sh
 2. Then install Claude Code: npm install -g @anthropic/claude-code"
   output_failure_data "claude-code" "https://www.npmjs.com/package/@anthropic/claude-code" "latest" "$manual_steps" "npm not found"
   exit 1

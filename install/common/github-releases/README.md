@@ -117,14 +117,14 @@ install_from_tarball "$BINARY_NAME" "$DOWNLOAD_URL" "toolname" "$VERSION"
 
    ```bash
    # Test installation
-   bash install/common/install/github-releases/toolname.sh
+   bash install/common/github-releases/toolname.sh
 
    # Verify binary is in PATH
    which toolname
    toolname --version
 
    # Test idempotency (should skip on second run)
-   bash install/common/install/github-releases/toolname.sh
+   bash install/common/github-releases/toolname.sh
    ```
 
 ## Examples
