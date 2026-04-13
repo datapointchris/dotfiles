@@ -935,6 +935,10 @@ git_uv_tools:
     repo: https://github.com/datapointchris/keymap-align.git
     description: Align ZMK keymap bindings into readable columns
 
+  - name: indy
+    repo: https://github.com/datapointchris/indy.git
+    description: Semantic search index for local codebases, docs, and notes
+
 # ================================================================
 # GO TOOLS
 # ================================================================
