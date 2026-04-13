@@ -56,7 +56,7 @@ def load_packages():
 def get_manifest_file(machine_name):
     """Find machine manifest YAML relative to script location."""
     script_dir = Path(__file__).parent
-    manifest_file = script_dir / "machines" / f"{machine_name}.yml"
+    manifest_file = script_dir / "manifests" / f"{machine_name}.yml"
     if not manifest_file.exists():
         print(f"Error: manifest not found at {manifest_file}", file=sys.stderr)
         sys.exit(1)
