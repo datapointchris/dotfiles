@@ -24,7 +24,7 @@ Many tools have different package names across platforms. This table maps the to
 | **yq**        | `yq`         | snap or binary   | `yq`          | Ubuntu via snap or manual          |
 | **htop**      | `htop`       | `htop`           | `htop`        | ✅ Consistent                      |
 | **tree**      | `tree`       | `tree`           | `tree`        | ✅ Consistent                      |
-| **go-task**   | `go-task`    | via script       | `go-task`     | Binary name: `task`                |
+| **go-task**   | `go install` | `go install`     | `go install`  | Installed via Go on all platforms  |
 
 ## Binary Name Differences
 

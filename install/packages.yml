@@ -270,12 +270,6 @@ system_packages:
     command: 7zz
     description: 7-Zip compression (provides 7zz command on all platforms)
 
-  # Build & Task Automation
-  - name: go-task
-    brew: go-task
-    command: task
-    description: Task runner (apt/pacman install via script or AUR)
-
   # macOS-Specific Tools
   - name: gnu-sed
     brew: gnu-sed

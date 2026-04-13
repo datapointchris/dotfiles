@@ -107,7 +107,7 @@ All package versions and configurations are centralized in `install/packages.yml
 Install task:
 
 ```bash
-brew install go-task  # macOS
+go install github.com/go-task/task/v3/cmd/task@latest
 ```
 
 ### Permission Errors
