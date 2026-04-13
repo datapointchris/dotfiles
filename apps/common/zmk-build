@@ -34,6 +34,10 @@ CONTAINER_WORKSPACE="/workspaces/zmk"
 CONTAINER_CONFIG="/workspaces/zmk/config"
 CONTAINER_OUTPUT="/workspaces/output"
 
+# Shared behaviors module (local mount, not managed by west)
+ZMK_SHARED_DIR="${ZMK_SHARED_DIR:-$(dirname "$(pwd)")/shared}"
+CONTAINER_SHARED="$CONTAINER_WORKSPACE/zmk-shared"
+
 # ================================================================
 # Functions
 # ================================================================
@@ -85,6 +89,7 @@ REQUIREMENTS:
     - yq (YAML processor)
     - build.yaml in current directory
     - config/ directory with keymap and conf files
+    - Sibling shared/ directory (or ZMK_SHARED_DIR env var)
 
 EXAMPLES:
     zmk-build              # Incremental build of all targets
@@ -113,6 +118,13 @@ check_requirements() {
   if [[ ! -d "$CONFIG_DIR" ]]; then
     print_error "No $CONFIG_DIR/ directory found."
     print_info "Your keymap and conf files should be in config/"
+    exit 1
+  fi
+
+  if [[ ! -f "$ZMK_SHARED_DIR/zephyr/module.yml" ]]; then
+    print_error "Shared behaviors module not found at $ZMK_SHARED_DIR"
+    print_info "Expected sibling 'shared/' directory with zephyr/module.yml"
+    print_info "Override with ZMK_SHARED_DIR environment variable"
     exit 1
   fi
 }
@@ -207,9 +219,6 @@ ensure_workspace() {
       elif [ '$force_update' = 'true' ]; then
         echo 'Updating west dependencies...'
         west update
-      else
-        echo 'Updating branch-tracked modules...'
-        west update zmk-shared 2>/dev/null || true
       fi
     "
 
@@ -252,6 +261,7 @@ build_target() {
     -v "$ZMK_WORKSPACE":"$CONTAINER_WORKSPACE" \
     -v "$(pwd)/$CONFIG_DIR":"$CONTAINER_CONFIG" \
     -v "$(pwd)":"$CONTAINER_OUTPUT" \
+    -v "$ZMK_SHARED_DIR":"$CONTAINER_SHARED":ro \
     -e "ZMK_CMAKE_ARGS=${cmake_args}" \
     -w "$CONTAINER_WORKSPACE" \
     "$DOCKER_IMAGE" \
@@ -263,7 +273,8 @@ build_target() {
         \${ZMK_CMAKE_ARGS} \
         ${board_root_arg} \
         -DZMK_CONFIG=${CONTAINER_CONFIG} \
-        -DZephyr_DIR=${CONTAINER_WORKSPACE}/zephyr/share/zephyr-package/cmake
+        -DZephyr_DIR=${CONTAINER_WORKSPACE}/zephyr/share/zephyr-package/cmake \
+        -DZMK_EXTRA_MODULES=${CONTAINER_SHARED}
 
       cp ${build_dir}/zephyr/zmk.uf2 ${CONTAINER_OUTPUT}/${output_name}.uf2
     "
@@ -341,6 +352,7 @@ main() {
 
   print_header "ZMK Build" "blue"
   print_info "Workspace: $ZMK_WORKSPACE"
+  print_info "Shared: $ZMK_SHARED_DIR"
   print_info "Config: $(pwd)/$CONFIG_DIR"
   [[ "$pristine" == "true" ]] && print_info "Mode: pristine (full rebuild)"
   echo ""
