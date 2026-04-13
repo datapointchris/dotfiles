@@ -141,10 +141,19 @@ update_common_tools() {
   fi
 
   print_section "Updating Neovim plugins via $(print_green ":Lazy update")"
-  if nvim --headless +Lazy! update +qa 2>&1; then
+  local nvim_output
+  nvim_output=$(mktemp)
+  if nvim --headless "+Lazy! update" +qa &>"$nvim_output"; then
     log_success "Neovim plugins updated"
+    if [[ "${DEBUG:-}" == "true" ]]; then
+      cat "$nvim_output"
+    fi
+    rm -f "$nvim_output"
   else
     log_warning "Neovim plugins update failed"
+    log_warning "Full output:"
+    cat "$nvim_output"
+    rm -f "$nvim_output"
   fi
 }
 
