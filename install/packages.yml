@@ -1023,7 +1023,7 @@ go_tools:
     package: github.com/datapointchris/todoui/cmd/todoui
     github_repo: datapointchris/todoui
     binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
-    description: Personal project organization with local-first SQLite
+    description: Project organization and task management with local-first SQLite
 
   - name: forge
     package: github.com/datapointchris/forge

@@ -30,6 +30,11 @@ if [[ ! -f "$DOTFILES_DIR/install/packages.yml" ]]; then
   exit 1
 fi
 
+MANIFEST_FLAG=()
+if [[ -n "${MACHINE:-}" ]]; then
+  MANIFEST_FLAG=(--manifest="$MACHINE")
+fi
+
 print_header "Go Tools"
 
 # Get Go tools from packages.yml via Python parser
@@ -123,7 +128,7 @@ Tool will be installed to:
     log_warning "Failed to install $binary_name (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=name_package)
+done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=name_package "${MANIFEST_FLAG[@]}")
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT tool(s) failed to install"

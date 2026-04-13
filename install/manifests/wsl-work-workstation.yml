@@ -16,10 +16,8 @@ go_tools:
   # - gofumpt
   # - golangci-lint
   - gdu
-  - sess
   - sesh
   - toolbox
-  - sops
 
 github_releases:
   - fzf
@@ -54,7 +52,9 @@ nvm: true
 npm_globals: true
 uv: true
 uv_tools: true
-git_uv_tools: true
+git_uv_tools:
+  - refcheck
+  - indy
 tenv: true
 
 shell_plugins: true

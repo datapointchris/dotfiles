@@ -99,6 +99,17 @@ def filter_github_releases_by_manifest(data, manifest):
     return [pkg['name'] for pkg in all_binaries if pkg['name'] in manifest_releases]
 
 
+def filter_git_uv_packages_by_manifest(data, manifest):
+    """Filter git uv packages to only those named in the manifest."""
+    manifest_tools = manifest.get('git_uv_tools', [])
+    if manifest_tools is True:
+        return get_git_uv_packages(data)
+    if not manifest_tools:
+        return []
+    all_tools = data.get('git_uv_tools', [])
+    return [f"{pkg['name']}:{pkg['repo']}" for pkg in all_tools if pkg['name'] in manifest_tools]
+
+
 def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     """Filter cargo packages to only those named in the manifest."""
     manifest_pkgs = manifest.get('cargo_packages', [])
@@ -383,8 +394,8 @@ def main():
         else:
             packages = get_uv_packages(data)
     elif args.type == 'git_uv':
-        if manifest and not manifest.get('git_uv_tools', True):
-            packages = []
+        if manifest:
+            packages = filter_git_uv_packages_by_manifest(data, manifest)
         else:
             packages = get_git_uv_packages(data)
     elif args.type == 'go':

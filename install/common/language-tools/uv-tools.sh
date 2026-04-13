@@ -22,10 +22,15 @@ if [[ ! -f "$DOTFILES_DIR/install/packages.yml" ]]; then
   exit 1
 fi
 
+MANIFEST_FLAG=()
+if [[ -n "${MACHINE:-}" ]]; then
+  MANIFEST_FLAG=(--manifest="$MACHINE")
+fi
+
 print_section "Python Tools (uv)"
 
 # Get uv tools from packages.yml via Python parser
-/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=uv | while read -r tool; do
+/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=uv "${MANIFEST_FLAG[@]}" | while read -r tool; do
   # Check if tool is already installed
   if uv tool list | grep -q "^$tool "; then
     log_success "$tool already installed, skipping"
@@ -41,7 +46,7 @@ done
 
 print_section "Git Python Tools (uv)"
 
-/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=git_uv | while read -r line; do
+/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=git_uv "${MANIFEST_FLAG[@]}" | while read -r line; do
   name=$(echo "$line" | cut -d: -f1)
   repo=$(echo "$line" | cut -d: -f2-)
 

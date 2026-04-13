@@ -16,7 +16,6 @@ go_tools:
   - gofumpt
   - golangci-lint
   - gdu
-  - sess
   - sesh
   - toolbox
   - sops

@@ -84,6 +84,11 @@ install_from_cache() {
   return 0
 }
 
+MANIFEST_FLAG=()
+if [[ -n "${MACHINE:-}" ]]; then
+  MANIFEST_FLAG=(--manifest="$MACHINE")
+fi
+
 # Allow sourcing this script for unit testing without running the install loop.
 # Usage: CARGO_TOOLS_SOURCE_ONLY=true source cargo-tools.sh
 if [[ "${CARGO_TOOLS_SOURCE_ONLY:-false}" != "true" ]]; then
@@ -114,7 +119,7 @@ Or download pre-built binary and place in:
       log_warning "$package installation failed (see summary)"
       FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=name_command)
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=name_command "${MANIFEST_FLAG[@]}")
 
   if [[ $FAILURE_COUNT -gt 0 ]]; then
     log_warning "$FAILURE_COUNT package(s) failed to install"
