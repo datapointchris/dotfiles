@@ -13,7 +13,7 @@ log_info "Installing casks from packages.yml..."
 CASKS=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=macos-casks | tr '\n' ' ')
 
 # shellcheck disable=SC2086
-if brew install --cask $CASKS; then
+if brew install --quiet --cask $CASKS; then
   log_success "Casks installed"
 else
   log_warning "Some casks may have failed to install"

@@ -22,7 +22,7 @@ fi
 log_info "Installing system packages from packages.yml..."
 PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew | tr '\n' ' ')
 # shellcheck disable=SC2086
-if brew install $PACKAGES; then
+if brew install --quiet $PACKAGES; then
   log_success "System packages installed"
 else
   log_warning "Some packages may have failed to install"
