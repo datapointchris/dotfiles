@@ -69,7 +69,6 @@ config format:
   destination structure:
     dest/YYYY-MM-DD/  A dated subdirectory is created for each day's backup.
                       Full directory structure is preserved from filesystem root.
-    dest/latest       Symlink always pointing to the most recent backup.
     Dated directories beyond the 'keep' count are pruned automatically.
 
   examples:
@@ -176,7 +175,7 @@ def rsync_paths(paths, dest_base, excludes, dry_run=False):
     if not dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
 
-    cmd = ["rsync", "-a", "--relative", "--copy-links"]
+    cmd = ["rsync", "-av", "--no-perms", "--relative", "--copy-links"]
     for pattern in excludes:
         cmd.extend(["--exclude", pattern])
     if dry_run:
@@ -207,7 +206,7 @@ def rsync_untracked(files, dest_base, dry_run=False):
         tmp_path = tmp.name
 
     try:
-        cmd = ["rsync", "-a", "--files-from", tmp_path, "/", str(dest_base) + "/"]
+        cmd = ["rsync", "-av", "--no-perms", "--files-from", tmp_path, "/", str(dest_base) + "/"]
         if dry_run:
             cmd.append("-n")
         subprocess.run(cmd, check=True)
@@ -216,13 +215,6 @@ def rsync_untracked(files, dest_base, dry_run=False):
 
     return len(rel_paths)
 
-
-def update_latest_symlink(dest, date_dir):
-    """Update the 'latest' symlink to point to the newest backup."""
-    latest = dest / "latest"
-    if latest.is_symlink() or latest.exists():
-        latest.unlink()
-    latest.symlink_to(date_dir)
 
 
 def prune_old_backups(dest, keep):
@@ -335,12 +327,11 @@ def main():
     keep = config["keep"]
     excludes = config.get("exclude", DEFAULT_EXCLUDES)
 
-    # Fail fast if destination not available
-    if not dest.exists():
-        print(
-            f"{red('safekeep:')} destination {yellow(str(dest))} not found — is the network drive connected?",
-            file=sys.stderr,
-        )
+    # Create destination if it doesn't exist, fail if parent is unreachable
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"{red('safekeep:')} cannot create destination {yellow(str(dest))} — {e}", file=sys.stderr)
         sys.exit(1)
     if not os.access(dest, os.W_OK):
         print(f"{red('safekeep:')} destination {yellow(str(dest))} is not writable", file=sys.stderr)
@@ -376,10 +367,6 @@ def main():
             total += count
 
     if not args.dry_run:
-        # Update latest symlink
-        update_latest_symlink(dest, date_dir)
-        print(f"\n{green('updated')} latest -> {cyan(date_dir)}")
-
         # Prune old backups
         removed = prune_old_backups(dest, keep)
         if removed:
