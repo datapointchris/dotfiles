@@ -417,6 +417,12 @@ main() {
     fi
   fi
 
+  if [[ "$platform" == "archlinux" ]] && command -v hyprctl &>/dev/null; then
+    print_section "Reloading Hyprland configuration"
+    hyprctl reload
+    log_success "Hyprland configuration reloaded"
+  fi
+
   show_failures_summary
 
   local end_time
