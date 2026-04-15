@@ -11,9 +11,12 @@ Primary use case: backing up scattered config files, local scripts, and git-untr
 ## Quick Start
 
 ```bash
+safekeep --init             # Generate starter config at ~/.config/safekeep/default.json
+safekeep --init work        # Generate starter config at ~/.config/safekeep/work.json
+safekeep --dry-run          # Preview what would be copied
 safekeep                    # Auto-detect config, run backup
 safekeep --config work      # Use specific config
-safekeep --dry-run          # Preview what would be copied
+safekeep --show-config      # Display the resolved config
 ```
 
 ## Config
@@ -63,14 +66,16 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
 ## Commands
 
 ```bash
-safekeep [--config NAME] [--dry-run] [--help]
+safekeep [--config NAME] [--dry-run] [--init [NAME]] [--show-config]
 ```
 
 **Options:**
 
 - `-c, --config NAME` — Config name or absolute path (default: auto-detect)
 - `-n, --dry-run` — Show what would be copied without doing it
-- `-h, --help` — Show help
+- `--init [NAME]` — Generate a starter config with example structure (default name: `default`)
+- `--show-config` — Display the resolved config and exit
+- `-h, --help` — Show help and config format reference
 
 ## Destination Structure
 
@@ -102,7 +107,7 @@ Path construction: `dest / YYYY-MM-DD / section-name / relative-path`
 
 **Retention**: After a successful backup, dated directories beyond the `keep` count are pruned (oldest first). The `latest` symlink always points to the most recent backup.
 
-**Clean output**: Simple print statements with no spinners or colors. Output is loggable and cron-friendly.
+**Clean output**: Minimal ANSI-colored output with no spinners or progress bars.
 
 ## See Also
 

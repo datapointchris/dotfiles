@@ -6,7 +6,7 @@ automatic retention pruning. Primary use case: backing up scattered config files
 local scripts, and git-untracked WIP to a network drive for crash protection.
 
 Config: ~/.config/safekeep/<name>.json
-Usage: safekeep [--config NAME] [--dry-run] [--help]
+Usage: safekeep [--config NAME] [--dry-run] [--init [NAME]] [--show-config]
 """
 
 import argparse
@@ -40,6 +40,43 @@ DEFAULT_EXCLUDES = [
 
 CONFIG_DIR = Path.home() / ".config" / "safekeep"
 
+EXAMPLE_CONFIG = {
+    "dest": "~/backups/safekeep",
+    "keep": 7,
+    "home": {
+        "base": "~",
+        "paths": [
+            ".ssh/config",
+            ".gnupg/pubring.kbx",
+            "Documents/notes",
+        ],
+        "git_untracked": [],
+    },
+}
+
+CONFIG_FORMAT_HELP = """\
+config format:
+  Files live in ~/.config/safekeep/<name>.json
+
+  required keys:
+    dest              Backup destination directory (~ is expanded)
+    keep              Number of dated snapshots to retain
+
+  optional keys:
+    exclude           List of glob patterns to skip (sensible defaults if omitted)
+
+  sections:
+    Any other top-level key that maps to an object defines a backup section.
+    Each section contains:
+      base            Base directory (~ is expanded)
+      paths           List of paths relative to base to copy
+      git_untracked   List of repo paths relative to base — copies their untracked files
+
+  examples:
+    safekeep --init                Create starter config (~/.config/safekeep/default.json)
+    safekeep --init work           Create starter config (~/.config/safekeep/work.json)
+    safekeep --show-config         Display the resolved config and exit"""
+
 
 def resolve_config(name):
     """Resolve config by name, absolute path, or auto-detect single config."""
@@ -52,17 +89,19 @@ def resolve_config(name):
             return config_path
         print(f"{red('safekeep:')} config not found: {yellow(name)}", file=sys.stderr)
         print(f"  looked in: {cyan(str(config_path))}", file=sys.stderr)
+        print(f"  generate it: {cyan(f'safekeep --init {name}')}", file=sys.stderr)
         sys.exit(1)
 
     # Auto-detect: list configs in CONFIG_DIR
     if not CONFIG_DIR.exists():
         print(f"{red('safekeep:')} no config directory at {cyan(str(CONFIG_DIR))}", file=sys.stderr)
-        print(f"  create a config: {cyan('~/.config/safekeep/<name>.json')}", file=sys.stderr)
+        print(f"  generate a starter config: {cyan('safekeep --init')}", file=sys.stderr)
         sys.exit(1)
 
     configs = sorted(CONFIG_DIR.glob("*.json"))
     if not configs:
         print(f"{red('safekeep:')} no configs found in {cyan(str(CONFIG_DIR))}", file=sys.stderr)
+        print(f"  generate a starter config: {cyan('safekeep --init')}", file=sys.stderr)
         sys.exit(1)
     if len(configs) == 1:
         return configs[0]
@@ -205,10 +244,65 @@ def prune_old_backups(dest, keep):
     return removed
 
 
+def init_config(name):
+    """Generate an example config file."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    config_path = CONFIG_DIR / f"{name}.json"
+
+    if config_path.exists():
+        print(f"{yellow('safekeep:')} config already exists: {cyan(str(config_path))}", file=sys.stderr)
+        print(f"  use {cyan('--show-config')} to view it, or edit directly", file=sys.stderr)
+        sys.exit(1)
+
+    config_path.write_text(json.dumps(EXAMPLE_CONFIG, indent=2) + "\n")
+
+    print(f"{green('safekeep:')} created {cyan(str(config_path))}")
+    print()
+    print(f"  Edit the file to match your backup needs, then preview with:")
+    print(f"    {cyan(f'safekeep --config {name} --dry-run')}")
+    print()
+    print(f"  Config format reference:")
+    print(f"    {cyan('safekeep --help')}")
+
+
+def show_config(config_path, config):
+    """Display the resolved config with readable formatting."""
+    print(f"{bold('safekeep:')} {cyan(str(config_path))}")
+    print()
+    print(f"  {bold('dest:')}    {cyan(config['dest'])}")
+    print(f"  {bold('keep:')}    {config['keep']} snapshots")
+    excludes = config.get("exclude", DEFAULT_EXCLUDES)
+    print(f"  {bold('exclude:')} {', '.join(excludes)}")
+
+    sections = list(get_sections(config))
+    if not sections:
+        print(f"\n  {yellow('no backup sections defined')}")
+        return
+
+    for name, section in sections:
+        base = section.get("base", "(not set)")
+        paths = section.get("paths", [])
+        repos = section.get("git_untracked", [])
+        print(f"\n  {bold('[' + name + ']')}")
+        print(f"    base: {cyan(base)}")
+        if paths:
+            print(f"    paths ({len(paths)}):")
+            for p in paths:
+                print(f"      {p}")
+        if repos:
+            print(f"    git_untracked ({len(repos)}):")
+            for r in repos:
+                print(f"      {r}")
+        if not paths and not repos:
+            print(f"    {yellow('(no paths or git_untracked defined)')}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="safekeep",
         description="Config-driven file preservation with dated snapshots and retention",
+        epilog=CONFIG_FORMAT_HELP,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "-c", "--config",
@@ -219,11 +313,33 @@ def main():
         action="store_true",
         help="Show what would be copied without doing it",
     )
+    parser.add_argument(
+        "--init",
+        nargs="?",
+        const="default",
+        metavar="NAME",
+        help="Generate starter config (default name: 'default')",
+    )
+    parser.add_argument(
+        "--show-config",
+        action="store_true",
+        help="Display the resolved config and exit",
+    )
     args = parser.parse_args()
+
+    if args.init is not None:
+        name = args.config or args.init
+        init_config(name)
+        sys.exit(0)
 
     # Resolve and load config
     config_path = resolve_config(args.config)
     config = load_config(config_path)
+
+    if args.show_config:
+        show_config(config_path, config)
+        sys.exit(0)
+
     print(f"{bold('safekeep:')} using config {cyan(config_path.name)}", flush=True)
 
     dest = Path(config["dest"]).expanduser()
