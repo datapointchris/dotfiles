@@ -105,7 +105,7 @@ The symlinks manager maps `apps/` and `shell/` to specific target directories ra
 
 - Symlinked to `~/.local/shell/`
 - Common: `functions.sh` + `aliases.sh` on all platforms
-- Platform-specific: `macos.sh`, `arch.sh`, `wsl.sh`
+- Platform-specific: `macos.sh`, `archlinux.sh`, `wsl.sh`
 - These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
 **Go apps** (toolbox, sesh):
