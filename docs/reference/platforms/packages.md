@@ -50,6 +50,5 @@ These tools are installed via `cargo-binstall` (pre-compiled binaries, fast) on 
 - `zoxide` - cd alternative
 - `git-delta` - git diff viewer
 - `oxker` - Docker container TUI
-- `broot` - interactive directory tree navigator
 
 Installation is handled by `install/common/language-tools/cargo-tools.sh`.

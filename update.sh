@@ -212,6 +212,26 @@ main() {
         log_warning "AUR packages update failed"
       fi
 
+      if command -v flatpak &>/dev/null; then
+        print_section "Updating Flatpak apps via $(print_green "flatpak update")"
+        if flatpak update -y; then
+          log_success "Flatpak apps updated"
+        else
+          log_warning "Flatpak apps update failed"
+        fi
+      fi
+
+      update_common_tools
+      ;;
+
+    ubuntu)
+      print_section "Updating system packages via $(print_green "apt update && apt upgrade")"
+      if sudo apt update && sudo apt upgrade -y; then
+        log_success "system packages updated"
+      else
+        log_warning "system packages update failed"
+      fi
+
       update_common_tools
       ;;
 

@@ -272,7 +272,7 @@ cargo_packages:
   - name: fd-find
     command: fd
     description: modern find replacement
-  # ... more tools (bat, eza, zoxide, git-delta, oxker, broot)
+  # ... more tools (bat, eza, zoxide, git-delta, oxker)
 
 uv_tools:
   - name: ruff
