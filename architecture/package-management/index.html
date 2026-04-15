@@ -4653,7 +4653,7 @@
 <h3 id="tier-2-cargo-binstall-rust-ecosystem">Tier 2: cargo-binstall (Rust Ecosystem)<a class="headerlink" href="#tier-2-cargo-binstall-rust-ecosystem" title="Permanent link">&para;</a></h3>
 <p><strong>When to use</strong>: Rust CLI tools where we want latest versions</p>
 <p><strong>Installation target</strong>: <code>~/.cargo/bin</code></p>
-<p><strong>Method</strong>: Download pre-compiled Rust binaries (much faster than <code>cargo install</code>)</p>
+<p><strong>Method</strong>: Download pre-compiled Rust binaries (much faster than <code>cargo install</code>). Packages with a <code>repo</code> field in packages.yml are compiled from source via <code>cargo install --git</code> instead — used for personal Rust tools not published to crates.io.</p>
 <p><strong>Tools</strong>:</p>
 <p>See <code>install/packages.yml</code> (<code>cargo_packages</code> section) for the current list.</p>
 <p><strong>Advantages</strong>:</p>

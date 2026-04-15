@@ -4639,6 +4639,17 @@
 </span></code></pre></div>
 <p><strong>Development</strong>: Source code in <code>~/tools/theme/</code> and <code>~/tools/font/</code>. Changes tested locally, pushed to GitHub. Run <code>theme upgrade</code> or <code>font upgrade</code> to pull updates to installed version.</p>
 <p><strong>Upgrade</strong>: Built-in <code>upgrade</code> command runs <code>git pull</code> on the installed version.</p>
+<h3 id="4-python-tools-remote-install-via-uv-tool-install">4. Python Tools (Remote Install via <code>uv tool install</code>)<a class="headerlink" href="#4-python-tools-remote-install-via-uv-tool-install" title="Permanent link">&para;</a></h3>
+<p><strong>Examples</strong>: <code>relate</code>, <code>logsift</code>, <code>indy</code>, <code>refcheck</code>, <code>syncer</code></p>
+<p><strong>Installation</strong>: Installed from GitHub via <code>uv tool install</code> in packages.yml:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">git_uv_tools</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">relate</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://github.com/datapointchris/relate.git</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">logsift</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://github.com/datapointchris/logsift.git</span>
+</span></code></pre></div>
+<p><strong>Development</strong>: Source code lives in <code>~/tools/{app}/</code>. Changes are tested locally, then pushed to GitHub. <code>uv tool install</code> gets the latest from GitHub.</p>
+<p><strong>Binary location</strong>: <code>~/.local/bin/</code> (managed by uv)</p>
 <h2 id="directory-summary">Directory Summary<a class="headerlink" href="#directory-summary" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -4668,11 +4679,17 @@
 <td>~/.local/share/{app}/</td>
 <td>~/.local/bin/{app} → .local/share</td>
 </tr>
+<tr>
+<td>Python tools</td>
+<td>~/tools/{app}/</td>
+<td>GitHub</td>
+<td>~/.local/bin/{app} (uv-managed)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="path-requirements">PATH Requirements<a class="headerlink" href="#path-requirements" title="Permanent link">&para;</a></h2>
 <p>Both directories must be in PATH (configured in <code>.zshrc</code>):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin:</span><span class="nv">$HOME</span><span class="s2">/go/bin:</span><span class="nv">$PATH</span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin:</span><span class="nv">$HOME</span><span class="s2">/go/bin:</span><span class="nv">$PATH</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <h2 id="key-learnings">Key Learnings<a class="headerlink" href="#key-learnings" title="Permanent link">&para;</a></h2>
 <ol>
