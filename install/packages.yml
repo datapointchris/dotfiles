@@ -777,6 +777,12 @@ cargo_packages:
     binary_pattern: "broot_{version_num}.zip"
     tags: [cli, tui, files, navigation]
 
+  - name: webviewrs
+    command: webviewrs
+    description: Simple webview app that opens URLs in a minimal native window
+    repo: https://github.com/datapointchris/webviewrs.git
+    tags: [cli, gui]
+
 
 # ================================================================
 # TMUX PLUGINS
@@ -932,6 +938,14 @@ git_uv_tools:
   - name: indy
     repo: https://github.com/datapointchris/indy.git
     description: Semantic search index for local codebases, docs, and notes
+
+  - name: relate
+    repo: https://github.com/datapointchris/relate.git
+    description: Analyze YouTube videos and web articles with Claude, building a searchable knowledge base
+
+  - name: logsift
+    repo: https://github.com/datapointchris/logsift.git
+    description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
 
 # ================================================================
 # GO TOOLS

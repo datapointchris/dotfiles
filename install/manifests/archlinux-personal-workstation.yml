@@ -47,7 +47,7 @@ custom_installers:
   - font
 
 rust: true
-cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker, broot]
+cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs]
 
 nvm: true
 npm_globals: true

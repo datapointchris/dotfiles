@@ -55,7 +55,7 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 
 **Installation target**: `~/.cargo/bin`
 
-**Method**: Download pre-compiled Rust binaries (much faster than `cargo install`)
+**Method**: Download pre-compiled Rust binaries (much faster than `cargo install`). Packages with a `repo` field in packages.yml are compiled from source via `cargo install --git` instead — used for personal Rust tools not published to crates.io.
 
 **Tools**:
 

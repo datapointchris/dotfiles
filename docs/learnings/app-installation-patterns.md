@@ -53,6 +53,24 @@ ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 
 **Upgrade**: Built-in `upgrade` command runs `git pull` on the installed version.
 
+### 4. Python Tools (Remote Install via `uv tool install`)
+
+**Examples**: `relate`, `logsift`, `indy`, `refcheck`, `syncer`
+
+**Installation**: Installed from GitHub via `uv tool install` in packages.yml:
+
+```yaml
+git_uv_tools:
+  - name: relate
+    repo: https://github.com/datapointchris/relate.git
+  - name: logsift
+    repo: https://github.com/datapointchris/logsift.git
+```
+
+**Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then pushed to GitHub. `uv tool install` gets the latest from GitHub.
+
+**Binary location**: `~/.local/bin/` (managed by uv)
+
 ## Directory Summary
 
 | Category | Development | Installed | Binary/Symlink |
@@ -60,6 +78,7 @@ ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 | Go apps | ~/tools/{app}/ | GitHub | ~/go/bin/{app} |
 | Shell scripts | apps/{platform}/ | (same) | ~/.local/bin/{app} → repo |
 | Personal tools | ~/tools/{app}/ | ~/.local/share/{app}/ | ~/.local/bin/{app} → .local/share |
+| Python tools | ~/tools/{app}/ | GitHub | ~/.local/bin/{app} (uv-managed) |
 
 ## PATH Requirements
 
