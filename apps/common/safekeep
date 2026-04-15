@@ -31,7 +31,7 @@ def red(text): return _color("31", text)
 def bold(text): return _color("1", text)
 
 
-RESERVED_KEYS = {"dest", "keep", "exclude"}
+VALID_KEYS = {"dest", "keep", "exclude", "paths", "git_untracked"}
 
 DEFAULT_EXCLUDES = [
     ".venv", "node_modules", "__pycache__", ".mypy_cache", ".ruff_cache",
@@ -43,15 +43,14 @@ CONFIG_DIR = Path.home() / ".config" / "safekeep"
 EXAMPLE_CONFIG = {
     "dest": "~/backups/safekeep",
     "keep": 7,
-    "home": {
-        "base": "~",
-        "paths": [
-            ".ssh/config",
-            ".gnupg/pubring.kbx",
-            "Documents/notes",
-        ],
-        "git_untracked": [],
-    },
+    "paths": [
+        "~/.ssh/config",
+        "~/.gnupg/pubring.kbx",
+        "~/Documents/notes",
+    ],
+    "git_untracked": [
+        "~/code/my-project",
+    ],
 }
 
 CONFIG_FORMAT_HELP = """\
@@ -64,13 +63,14 @@ config format:
 
   optional keys:
     exclude           List of glob patterns to skip (sensible defaults if omitted)
+    paths             List of absolute paths to back up (~ is expanded)
+    git_untracked     List of absolute paths to git repos — copies their untracked files
 
-  sections:
-    Any other top-level key that maps to an object defines a backup section.
-    Each section contains:
-      base            Base directory (~ is expanded)
-      paths           List of paths relative to base to copy
-      git_untracked   List of repo paths relative to base — copies their untracked files
+  destination structure:
+    dest/YYYY-MM-DD/  A dated subdirectory is created for each day's backup.
+                      Full directory structure is preserved from filesystem root.
+    dest/latest       Symlink always pointing to the most recent backup.
+    Dated directories beyond the 'keep' count are pruned automatically.
 
   examples:
     safekeep --init                Create starter config (~/.config/safekeep/default.json)
@@ -122,14 +122,13 @@ def load_config(config_path):
             print(f"{red('safekeep:')} config missing required key {yellow(repr(key))}: {cyan(str(config_path))}", file=sys.stderr)
             sys.exit(1)
 
+    unknown = set(config.keys()) - VALID_KEYS
+    if unknown:
+        print(f"{red('safekeep:')} unknown config keys: {yellow(', '.join(sorted(unknown)))}", file=sys.stderr)
+        print(f"  valid keys: {cyan(', '.join(sorted(VALID_KEYS)))}", file=sys.stderr)
+        sys.exit(1)
+
     return config
-
-
-def get_sections(config):
-    """Yield (name, section_dict) for all non-reserved top-level keys."""
-    for key, value in config.items():
-        if key not in RESERVED_KEYS and isinstance(value, dict):
-            yield key, value
 
 
 def git_ls_untracked(repo_path):
@@ -157,19 +156,19 @@ def matches_exclude(rel_path, excludes):
     return False
 
 
-def rsync_relative(base, rel_paths, dest_base, excludes, dry_run=False):
-    """Rsync paths relative to base into dest_base, preserving directory structure.
+def rsync_paths(paths, dest_base, excludes, dry_run=False):
+    """Rsync absolute paths into dest_base, preserving full directory structure.
 
-    Uses rsync --relative so that 'notes' becomes dest_base/notes/ and
-    '.ssh/config' becomes dest_base/.ssh/config.
+    Uses rsync --relative with absolute paths so that '/home/chris/.ssh/config'
+    becomes dest_base/home/chris/.ssh/config.
     """
     valid = []
-    for p in rel_paths:
-        source = base / p
-        if source.exists():
-            valid.append(str(p))
+    for p in paths:
+        expanded = Path(p).expanduser()
+        if expanded.exists():
+            valid.append(str(expanded))
         else:
-            print(f"  {yellow('skip:')} {source} {yellow('(not found)')}")
+            print(f"  {yellow('skip:')} {expanded} {yellow('(not found)')}")
 
     if not valid:
         return 0
@@ -177,7 +176,7 @@ def rsync_relative(base, rel_paths, dest_base, excludes, dry_run=False):
     if not dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
 
-    cmd = ["rsync", "-a", "--relative"]
+    cmd = ["rsync", "-a", "--relative", "--copy-links"]
     for pattern in excludes:
         cmd.extend(["--exclude", pattern])
     if dry_run:
@@ -185,21 +184,17 @@ def rsync_relative(base, rel_paths, dest_base, excludes, dry_run=False):
     cmd.extend(valid)
     cmd.append(str(dest_base) + "/")
 
-    subprocess.run(cmd, cwd=str(base), check=True)
+    subprocess.run(cmd, check=True)
     return len(valid)
 
 
-def rsync_untracked(files, base, dest_base, dry_run=False):
-    """Rsync individual untracked files preserving path structure relative to base.
+def rsync_untracked(files, dest_base, dry_run=False):
+    """Rsync individual untracked files preserving full path structure.
 
-    Uses --files-from for efficiency when copying many small files.
+    Uses --files-from with / as the base for efficiency when copying many
+    small files. Paths are stored relative to filesystem root in the destination.
     """
-    rel_paths = []
-    for f in files:
-        try:
-            rel_paths.append(str(f.relative_to(base)))
-        except ValueError:
-            continue
+    rel_paths = [str(f).lstrip("/") for f in files]
 
     if not rel_paths:
         return 0
@@ -212,7 +207,7 @@ def rsync_untracked(files, base, dest_base, dry_run=False):
         tmp_path = tmp.name
 
     try:
-        cmd = ["rsync", "-a", "--files-from", tmp_path, str(base) + "/", str(dest_base) + "/"]
+        cmd = ["rsync", "-a", "--files-from", tmp_path, "/", str(dest_base) + "/"]
         if dry_run:
             cmd.append("-n")
         subprocess.run(cmd, check=True)
@@ -274,27 +269,21 @@ def show_config(config_path, config):
     excludes = config.get("exclude", DEFAULT_EXCLUDES)
     print(f"  {bold('exclude:')} {', '.join(excludes)}")
 
-    sections = list(get_sections(config))
-    if not sections:
-        print(f"\n  {yellow('no backup sections defined')}")
-        return
+    paths = config.get("paths", [])
+    repos = config.get("git_untracked", [])
 
-    for name, section in sections:
-        base = section.get("base", "(not set)")
-        paths = section.get("paths", [])
-        repos = section.get("git_untracked", [])
-        print(f"\n  {bold('[' + name + ']')}")
-        print(f"    base: {cyan(base)}")
-        if paths:
-            print(f"    paths ({len(paths)}):")
-            for p in paths:
-                print(f"      {p}")
-        if repos:
-            print(f"    git_untracked ({len(repos)}):")
-            for r in repos:
-                print(f"      {r}")
-        if not paths and not repos:
-            print(f"    {yellow('(no paths or git_untracked defined)')}")
+    if paths:
+        print(f"\n  {bold('paths')} ({len(paths)}):")
+        for p in paths:
+            print(f"    {p}")
+
+    if repos:
+        print(f"\n  {bold('git_untracked')} ({len(repos)}):")
+        for r in repos:
+            print(f"    {r}")
+
+    if not paths and not repos:
+        print(f"\n  {yellow('no paths or git_untracked defined')}")
 
 
 def main():
@@ -358,39 +347,32 @@ def main():
         sys.exit(1)
 
     date_dir = datetime.now().strftime("%Y-%m-%d")
+    dest_base = dest / date_dir
     total = 0
 
-    for section_name, section in get_sections(config):
-        base = Path(section["base"]).expanduser()
-        dest_base = dest / date_dir / section_name
-        print(f"\n{bold('[' + section_name + ']')} base: {cyan(str(base))}")
+    # Static paths
+    paths = config.get("paths", [])
+    if paths:
+        print(f"\n{bold('paths:')}")
+        count = rsync_paths(paths, dest_base, excludes, args.dry_run)
+        label = yellow("would copy") if args.dry_run else green("copied")
+        print(f"  {label} {bold(str(count))} paths")
+        total += count
 
-        if not base.exists():
-            print(f"  {yellow('skip:')} base path {yellow(str(base))} does not exist")
-            continue
-
-        # Static paths
-        static = section.get("paths", [])
-        if static:
-            count = rsync_relative(base, static, dest_base, excludes, args.dry_run)
-            label = yellow("would copy") if args.dry_run else green("copied")
-            print(f"  {label} {bold(str(count))} static paths")
-            total += count
-
-        # Git untracked (dynamic)
-        for repo in section.get("git_untracked", []):
-            repo_path = base / repo
+    # Git untracked
+    repos = config.get("git_untracked", [])
+    if repos:
+        print(f"\n{bold('git_untracked:')}")
+        for repo in repos:
+            repo_path = Path(repo).expanduser()
             if not repo_path.exists():
-                print(f"  {yellow('skip:')} repo {yellow(str(repo_path))} does not exist")
+                print(f"  {yellow('skip:')} {yellow(str(repo_path))} (not found)")
                 continue
             untracked = git_ls_untracked(repo_path)
-            filtered = [
-                f for f in untracked
-                if not matches_exclude(str(f.relative_to(base)), excludes)
-            ]
-            count = rsync_untracked(filtered, base, dest_base, args.dry_run)
+            filtered = [f for f in untracked if not matches_exclude(str(f), excludes)]
+            count = rsync_untracked(filtered, dest_base, args.dry_run)
             label = yellow("would copy") if args.dry_run else green("copied")
-            print(f"  {label} {bold(str(count))} untracked files from {cyan(repo)}")
+            print(f"  {label} {bold(str(count))} untracked files from {cyan(str(repo_path))}")
             total += count
 
     if not args.dry_run:

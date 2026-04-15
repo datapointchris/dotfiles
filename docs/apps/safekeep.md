@@ -30,38 +30,26 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
   "exclude": [".venv", "node_modules", "__pycache__", ".mypy_cache",
               ".ruff_cache", ".pytest_cache", "build", "dist",
               "*.pyc", ".DS_Store"],
-  "wsl": {
-    "base": "~",
-    "paths": [
-      "notes",
-      ".ssh/config",
-      "code/ichrisbirch/xperiments"
-    ],
-    "git_untracked": [
-      "code/ichrisbirch",
-      "code/api-project"
-    ]
-  },
-  "win": {
-    "base": "/mnt/c/Users/chris",
-    "paths": [
-      "Documents/work-notes"
-    ]
-  }
+  "paths": [
+    "~/notes",
+    "~/.ssh/config",
+    "~/code/ichrisbirch/xperiments",
+    "/mnt/c/Users/chris/Documents/work-notes"
+  ],
+  "git_untracked": [
+    "~/code/ichrisbirch",
+    "~/code/api-project"
+  ]
 }
 ```
 
-**Top-level keys:**
+**Keys:**
 
 - `dest` — base destination path (required)
 - `keep` — number of dated snapshots to retain (required)
 - `exclude` — exclusion patterns applied to all rsync calls (optional, has sensible defaults)
-
-**Section keys** (any name that isn't `dest`, `keep`, or `exclude`):
-
-- `base` — base path for resolving relative paths in this section (supports `~`)
-- `paths` — list of files/directories relative to `base` (static, explicit)
-- `git_untracked` — list of git repos relative to `base` to collect untracked files from (dynamic)
+- `paths` — list of absolute paths to back up, `~` is expanded (optional)
+- `git_untracked` — list of absolute paths to git repos to collect untracked files from (optional)
 
 ## Commands
 
@@ -79,29 +67,33 @@ safekeep [--config NAME] [--dry-run] [--init [NAME]] [--show-config]
 
 ## Destination Structure
 
+A dated subdirectory is created for each day's backup. Full directory structure is preserved from filesystem root, so the origin of every file is unambiguous.
+
 ```text
 /h/backups/
   2026-03-11/
-    wsl/
+    home/chris/
       notes/meeting.md
       .ssh/config
       code/ichrisbirch/xperiments/notebook.ipynb
       code/ichrisbirch/scratch.py          (from git_untracked)
-    win/
+    mnt/c/Users/chris/
       Documents/work-notes/report.docx
   2026-03-09/
-    wsl/
+    home/chris/
       ...
   latest -> 2026-03-11/
 ```
 
-Path construction: `dest / YYYY-MM-DD / section-name / relative-path`
+Path construction: `dest / YYYY-MM-DD / absolute-path-from-root`
 
 ## Key Behaviors
 
 **Idempotent**: Running twice on the same day updates the same dated directory. rsync handles this efficiently — only changed files are transferred.
 
 **Fail fast**: If the destination doesn't exist or isn't writable, exit immediately with a clear message about checking the network drive connection.
+
+**Symlink dereferencing**: Symlinks are followed and copied as real files. Backups contain actual content, not symlinks that would break if the source machine is lost.
 
 **Smart exclusions**: Default exclude list (.venv, node_modules, etc.) applied to all rsync calls. Override in config. For `git_untracked`, files are filtered through the exclude list before copying.
 
