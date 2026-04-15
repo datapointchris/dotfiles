@@ -1014,7 +1014,7 @@ go_tools:
     description: Smart tmux session manager with zoxide integration
 
   - name: todoui
-    package: github.com/datapointchris/todoui/cmd/todoui
+    package: github.com/datapointchris/todoui
     github_repo: datapointchris/todoui
     binary_pattern: "todoui_{version_num}_{os}_{go_arch}.tar.gz"
     description: Project organization and task management with local-first SQLite

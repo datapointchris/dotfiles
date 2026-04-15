@@ -45,7 +45,7 @@ go install github.com/datapointchris/toolbox@latest
 
 ### Project Structure
 
-Standard Go layout with `cmd/` entry point, `internal/` packages, `go.mod`/`go.sum`, and a `Taskfile.yml` for build automation.
+Standard Go layout with `main.go` at root (or `cmd/` entry point for multi-binary repos), `go.mod`/`go.sum`, and a `Taskfile.yml` for build automation.
 
 ## Development Standards
 
