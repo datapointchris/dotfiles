@@ -64,20 +64,28 @@ update-tldr() {
   fi
 }
 
+#@mount-h
+#--> Mount user network h drive CIFS share at /mnt/h
+mount-h() {
+  sudo mkdir -p /mnt/h
+  mountpoint -q /mnt/h && sudo umount -f /mnt/h
+  sudo mount -t cifs //prodfs011/dfs_users/600002371 /mnt/h -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
+}
+
 #@mount-appserver
 #--> Mount work appserver CIFS share at /mnt/devdsapp001
 mount-appserver() {
-    sudo mkdir -p /mnt/devdsapp001
-    mountpoint -q /mnt/devdsapp001 && sudo umount -f /mnt/devdsapp001
-    sudo mount -t cifs //devdsapp001/E\$ /mnt/devdsapp001 -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
+  sudo mkdir -p /mnt/devdsapp001
+  mountpoint -q /mnt/devdsapp001 && sudo umount -f /mnt/devdsapp001
+  sudo mount -t cifs //devdsapp001/E\$ /mnt/devdsapp001 -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
 }
 
 #@mount-dfsapp
 #--> Mount DFS app CIFS share at /mnt/dfsapp
 mount-dfsapp() {
-    sudo mkdir -p /mnt/dfsapp
-    mountpoint -q /mnt/dfsapp && sudo umount -f /mnt/dfsapp
-    sudo mount -t cifs //prodfs011/Data_Science /mnt/dfsapp -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
+  sudo mkdir -p /mnt/dfsapp
+  mountpoint -q /mnt/dfsapp && sudo umount -f /mnt/dfsapp
+  sudo mount -t cifs //prodfs011/Data_Science /mnt/dfsapp -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
 }
 
 #@aws-login
