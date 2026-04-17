@@ -4807,6 +4807,7 @@
 <h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h2>
 <h3 id="single-source-of-truth-packagesyml">Single Source of Truth: packages.yml<a class="headerlink" href="#single-source-of-truth-packagesyml" title="Permanent link">&para;</a></h3>
 <p>All package versions, repositories, and configurations are centralized in <code>install/packages.yml</code>. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See <a href="../../learnings/github-releases-vs-system-packages/">GitHub Releases vs System Packages</a> for the decision framework on choosing installation methods.</p>
+<p><strong>Every installation type is catalogued in packages.yml, including custom installers.</strong> There is no auto-detection anywhere: <code>install.sh</code>, <code>update.sh</code>, and <code>install/offline/create-bundle.sh</code> all drive from the corresponding packages.yml section rather than listing directories. A script with no catalog entry (or a catalog entry with no script) is a hard error — see <a href="#drift-detection">Drift Detection</a> below.</p>
 <p>Package definitions in packages.yml:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">runtimes</span><span class="p">:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">go</span><span class="p">:</span>
@@ -4816,7 +4817,7 @@
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">python</span><span class="p">:</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">min_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.12&quot;</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nt">github_binaries</span><span class="p">:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nt">github_releases</span><span class="p">:</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">neovim</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">neovim/neovim</span>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.11.0&quot;</span>
@@ -4840,6 +4841,16 @@
 </span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">  </span><span class="c1"># ... more tools</span>
 </span></code></pre></div>
 <p>All installation scripts read from this single source. Change a version once, and it applies everywhere.</p>
+<h3 id="drift-detection">Drift Detection<a class="headerlink" href="#drift-detection" title="Permanent link">&para;</a></h3>
+<p>The <code>packages verify</code> subcommand (in <code>apps/common/packages</code>) enforces that packages.yml, the machine manifests, and the installer script directories stay in sync. It runs on every commit via pre-commit and surfaces four classes of drift:</p>
+<ul>
+<li><strong>Shape errors</strong> — an entry missing required fields (e.g., a <code>github_releases</code> entry with no <code>repo</code>), or duplicate names within a section.</li>
+<li><strong>Unresolved manifest names</strong> — a manifest lists a name that has no corresponding packages.yml entry (the no-op that shipped <code>todoui</code> and <code>forge</code> ghost-installed for weeks).</li>
+<li><strong>Script parity breaks</strong> — a script in <code>install/common/github-releases/</code> or <code>install/common/custom-installers/</code> with no packages.yml entry, or vice versa.</li>
+<li><strong>Deprecated manifest keys</strong> — <code>go: true</code> / <code>rust: true</code> / <code>nvm: true</code> / <code>uv: true</code> / <code>tenv: true</code>; these runtime gates were removed in Phase 1.6 in favor of name-list derivation.</li>
+</ul>
+<p>A fifth, softer check warns when packages.yml defines an entry that no manifest subscribes to — useful for spotting orphans without failing the commit.</p>
+<p>Behavior is authoritative in <code>--help</code> and <code>apps/common/packages verify --help</code>. Tests live in <code>tests/apps/test_packages_verify.py</code> and drive verify against synthetic fixture trees (one test per check), so coverage doesn't depend on the real repo being in any particular state.</p>
 <h3 id="installation-scripts">Installation Scripts<a class="headerlink" href="#installation-scripts" title="Permanent link">&para;</a></h3>
 <p>Located in <code>install/common/</code>:</p>
 <p><strong>Directory Structure</strong>:</p>

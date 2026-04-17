@@ -4612,42 +4612,61 @@
 
 
 <h1 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h1>
-<p>The dotfiles repository uses two types of testing:</p>
+<p>The dotfiles repository has three layers of testing:</p>
 <ol>
-<li><strong>Unit/Integration Testing</strong> - BATS tests for installer scripts and library functions</li>
-<li><strong>Installation Testing</strong> - Docker-based testing across platforms</li>
+<li><strong>BATS unit + integration tests</strong> — shell library and installer coverage</li>
+<li><strong>pytest</strong> — Python code (packages CLI, <code>packages verify</code>, <code>parse_packages.py</code>)</li>
+<li><strong>Installation e2e tests</strong> — Docker-based platform walkthroughs of <code>install.sh</code></li>
 </ol>
-<h2 id="unit-and-integration-testing">Unit and Integration Testing<a class="headerlink" href="#unit-and-integration-testing" title="Permanent link">&para;</a></h2>
-<p>The project uses <a href="https://github.com/bats-core/bats-core">BATS (Bash Automated Testing System)</a> for testing installer scripts and shell libraries.</p>
+<p>All three run on every commit via pre-commit hooks. See <code>.pre-commit-config.yaml</code> for the full wiring.</p>
+<h2 id="bats-bash-tests">BATS (Bash Tests)<a class="headerlink" href="#bats-bash-tests" title="Permanent link">&para;</a></h2>
+<p>Shell library and installer tests using <a href="https://github.com/bats-core/bats-core">BATS (Bash Automated Testing System)</a>.</p>
 <h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Run all tests</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># All BATS tests (unit + integration)</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>task<span class="w"> </span><span class="nb">test</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Run integration tests only</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>task<span class="w"> </span>test:integration
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Unit tests only — libraries + installer functions, no Docker, no network</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>task<span class="w"> </span>test:unit
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Watch mode (requires entr)</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>task<span class="w"> </span>test:watch
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Integration tests — Docker-backed, will auto-build the base image on first run</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>task<span class="w"> </span>test:integration
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Watch mode (requires entr)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>task<span class="w"> </span>test:watch
 </span></code></pre></div>
 <h3 id="test-location">Test Location<a class="headerlink" href="#test-location" title="Permanent link">&para;</a></h3>
 <p>Tests are organized under <code>tests/</code>:</p>
 <ul>
 <li><code>tests/libraries/</code> — Tests for shared shell libraries</li>
 <li><code>tests/install/unit/</code> — Unit tests for installer functions (no Docker, no network). Run with <code>task test:unit</code>.</li>
-<li><code>tests/install/integration/</code> — Integration tests including Docker-based platform tests</li>
+<li><code>tests/install/integration/</code> — Integration tests. Requires Docker + the prebuilt base image <code>dotfiles-test-base:ubuntu-24.04</code>. If the image is missing, <code>tests/install/docker/build-base.sh</code> is invoked automatically before tests run — if the build itself fails, the test run fails loudly rather than silently skipping.</li>
 </ul>
+<h2 id="pytest-python-tests">pytest (Python Tests)<a class="headerlink" href="#pytest-python-tests" title="Permanent link">&para;</a></h2>
+<p>Python-side coverage for <code>install/parse_packages.py</code> and <code>apps/common/packages</code> (including <code>packages verify</code>):</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/
+</span></code></pre></div>
+<p>Test files:</p>
+<ul>
+<li><code>tests/install/test_parse_packages.py</code> — packages.yml parser (filtered-by-manifest behavior, section field extraction).</li>
+<li><code>tests/install/test_parse_packages_simple.py</code> — core parse-helper sanity.</li>
+<li><code>tests/apps/test_packages_verify.py</code> — <code>packages verify</code> drift detection. Every test builds a synthetic <code>install/packages.yml</code> + manifest tree in <code>tmp_path</code>, invokes <code>packages verify --root &lt;tmp_path&gt;</code> via subprocess, and asserts on stdout/stderr + exit code. One test per check. The real repo is never read.</li>
+</ul>
+<h2 id="packages-verify">packages verify<a class="headerlink" href="#packages-verify" title="Permanent link">&para;</a></h2>
+<p><code>apps/common/packages verify</code> enforces drift-freeness across packages.yml, the machine manifests, and the installer script directories. See <a href="../../architecture/package-management/#drift-detection">Package Management — Drift Detection</a> for the check catalog. Runs on every commit; also runnable manually:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>apps/common/packages<span class="w"> </span>verify
+</span></code></pre></div>
 <h3 id="writing-tests">Writing Tests<a class="headerlink" href="#writing-tests" title="Permanent link">&para;</a></h3>
 <p>Tests use BATS with assertion helpers:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/env bats</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Load helpers</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>load<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/lib/bats-support/load.bash&quot;</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>load<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/lib/bats-assert/load.bash&quot;</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>@test<span class="w"> </span><span class="s2">&quot;installer checks for dependencies&quot;</span><span class="w"> </span><span class="o">{</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>run<span class="w"> </span>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$INSTALLER_SCRIPT</span><span class="s2">&quot;</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>assert_output<span class="w"> </span>--partial<span class="w"> </span><span class="s2">&quot;Checking dependencies&quot;</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="o">}</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="ch">#!/usr/bin/env bats</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Load helpers</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>load<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/lib/bats-support/load.bash&quot;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>load<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/lib/bats-assert/load.bash&quot;</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>@test<span class="w"> </span><span class="s2">&quot;installer checks for dependencies&quot;</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>run<span class="w"> </span>bash<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$INSTALLER_SCRIPT</span><span class="s2">&quot;</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>assert_output<span class="w"> </span>--partial<span class="w"> </span><span class="s2">&quot;Checking dependencies&quot;</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="o">}</span>
 </span></code></pre></div>
 <p>See <a href="../../learnings/bash-testing-frameworks-guide/">bash-testing-frameworks-guide.md</a> for detailed BATS usage.</p>
 <h2 id="installation-testing">Installation Testing<a class="headerlink" href="#installation-testing" title="Permanent link">&para;</a></h2>
@@ -4703,8 +4722,8 @@
 </tbody>
 </table>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Docker Desktop (required)</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>docker
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Docker Desktop (required)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>docker
 </span></code></pre></div>
 <h2 id="testing-with-docker-recommended">Testing with Docker (Recommended)<a class="headerlink" href="#testing-with-docker-recommended" title="Permanent link">&para;</a></h2>
 <h3 id="platform-specific-test-scripts">Platform-Specific Test Scripts<a class="headerlink" href="#platform-specific-test-scripts" title="Permanent link">&para;</a></h3>
@@ -4793,12 +4812,12 @@
 <p>The verification script validates that tools are installed in the expected locations (e.g., <code>~/.local/bin/</code>, <code>~/.cargo/bin/</code>) and reports any duplicate installations.</p>
 <h3 id="manual-verification">Manual Verification<a class="headerlink" href="#manual-verification" title="Permanent link">&para;</a></h3>
 <p>If testing manually without the automated scripts:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Run comprehensive verification</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>bash<span class="w"> </span>tests/install/verification/verify-installed-packages.sh
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Check for duplicate installations</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>bash<span class="w"> </span>tests/install/verification/detect-installed-duplicates.sh
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Run comprehensive verification</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">cd</span><span class="w"> </span>~/dotfiles
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>bash<span class="w"> </span>tests/install/verification/verify-installed-packages.sh
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Check for duplicate installations</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>bash<span class="w"> </span>tests/install/verification/detect-installed-duplicates.sh
 </span></code></pre></div>
 <h2 id="iteration-workflow">Iteration Workflow<a class="headerlink" href="#iteration-workflow" title="Permanent link">&para;</a></h2>
 <ol>
