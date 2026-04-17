@@ -95,7 +95,7 @@ if [[ "${CARGO_TOOLS_SOURCE_ONLY:-false}" != "true" ]]; then
   log_info "Reading packages from packages.yml..."
 
   FAILURE_COUNT=0
-  while IFS='|' read -r package binary_name git_repo; do
+  while IFS='|' read -r package binary_name; do
     if [[ "${FORCE_INSTALL:-false}" != "true" ]] && command -v "$binary_name" >/dev/null 2>&1; then
       log_success "$package already installed: $HOME/.cargo/bin/$binary_name"
       continue
@@ -103,17 +103,8 @@ if [[ "${CARGO_TOOLS_SOURCE_ONLY:-false}" != "true" ]]; then
 
     log_info "Installing $package..."
 
-    if [[ -n "$git_repo" ]]; then
-      # Git-based package: compile from source
-      if cargo install --git "$git_repo"; then
-        log_success "$package installed from git: $HOME/.cargo/bin/$binary_name"
-      else
-        output_failure_data "$package" "$git_repo" "latest" "cargo install --git $git_repo" "Failed to install from git"
-        log_warning "$package installation failed (see summary)"
-        FAILURE_COUNT=$((FAILURE_COUNT + 1))
-      fi
     # Try cached binary first, then fall back to cargo binstall
-    elif install_from_cache "$package" "$binary_name"; then
+    if install_from_cache "$package" "$binary_name"; then
       log_success "$package installed from cache: $HOME/.cargo/bin/$binary_name"
     elif cargo binstall -y "$package"; then
       log_success "$package installed: $HOME/.cargo/bin/$binary_name"

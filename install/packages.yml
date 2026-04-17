@@ -521,9 +521,9 @@ system_packages:
     description: Keyboard-driven PDF viewer for technical documents
     tags: [gui]
 
-  # ---- webviewrs dependencies ----
-  # Required for: cargo install --git https://github.com/datapointchris/webviewrs
-  # These packages enable webviewrs functionality but are optional if not using it
+  # ---- webviewrs runtime dependencies ----
+  # webviewrs binary dynamically links against WebKitGTK + GStreamer at runtime.
+  # Required on any machine that installs webviewrs (cargo_packages).
 
   - name: webkit2gtk-4.1
     pacman: webkit2gtk-4.1
@@ -843,7 +843,8 @@ cargo_packages:
   - name: webviewrs
     command: webviewrs
     description: Simple webview app that opens URLs in a minimal native window
-    repo: https://github.com/datapointchris/webviewrs.git
+    github_repo: datapointchris/webviewrs
+    binary_pattern: "webviewrs-{version}-{target}.tar.gz"
     tags: [cli, gui]
 
 

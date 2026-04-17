@@ -151,7 +151,7 @@ def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     all_pkgs = data.get('cargo_packages', [])
     filtered = [pkg for pkg in all_pkgs if pkg['name'] in manifest_pkgs]
     if output_format == 'name_command':
-        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}|{pkg.get('repo', '')}" for pkg in filtered]
+        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in filtered]
     elif output_format == 'github_repos':
         return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
                 for pkg in filtered if 'github_repo' in pkg]
@@ -207,7 +207,7 @@ def get_cargo_packages(data, output_format='names'):
         return []
 
     if output_format == 'name_command':
-        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}|{pkg.get('repo', '')}" for pkg in data['cargo_packages']]
+        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in data['cargo_packages']]
     elif output_format == 'github_repos':
         return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
                 for pkg in data['cargo_packages'] if 'github_repo' in pkg]
