@@ -31,7 +31,7 @@ def red(text): return _color("31", text)
 def bold(text): return _color("1", text)
 
 
-VALID_KEYS = {"dest", "keep", "exclude", "paths", "git_untracked"}
+VALID_KEYS = {"dest", "keep", "exclude", "paths", "git_untracked", "git_ignored"}
 
 DEFAULT_EXCLUDES = [
     ".venv", "node_modules", "__pycache__", ".mypy_cache", ".ruff_cache",
@@ -64,7 +64,9 @@ config format:
   optional keys:
     exclude           List of glob patterns to skip (sensible defaults if omitted)
     paths             List of absolute paths to back up (~ is expanded)
-    git_untracked     List of absolute paths to git repos — copies their untracked files
+    git_untracked     List of absolute paths to git repos -- copies their untracked files
+    git_ignored       List of glob patterns to capture from git_untracked repos
+                      (e.g. ["CLAUDE.md", ".planning"] to back up gitignored files)
 
   destination structure:
     dest/YYYY-MM-DD/  A dated subdirectory is created for each day's backup.
@@ -146,6 +148,48 @@ def git_ls_untracked(repo_path):
         return []
 
 
+def git_ls_ignored(repo_path, patterns):
+    """Get list of gitignored files matching patterns from a git repository.
+
+    Uses git ls-files --others (without --exclude-standard) and subtracts the
+    --exclude-standard set to get only ignored files, then filters to those
+    matching the given glob patterns.
+    """
+    try:
+        all_result = subprocess.run(
+            ["git", "ls-files", "--others"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        untracked_result = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"  {yellow('warning:')} could not list ignored files in {cyan(str(repo_path))}")
+        return []
+
+    all_files = set(all_result.stdout.strip().splitlines())
+    untracked_files = set(untracked_result.stdout.strip().splitlines())
+    ignored_files = all_files - untracked_files
+
+    matched = []
+    for rel_path in sorted(ignored_files):
+        if not rel_path:
+            continue
+        for pattern in patterns:
+            if fnmatch(rel_path, pattern) or any(fnmatch(part, pattern) for part in Path(rel_path).parts):
+                matched.append(repo_path / rel_path)
+                break
+
+    return matched
+
+
 def matches_exclude(rel_path, excludes):
     """Check if any path component matches an exclude pattern."""
     for part in Path(rel_path).parts:
@@ -175,7 +219,7 @@ def rsync_paths(paths, dest_base, excludes, dry_run=False):
     if not dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
 
-    cmd = ["rsync", "-av", "--no-perms", "--relative", "--copy-links"]
+    cmd = ["rsync", "-av", "--no-perms", "--chmod=Du+w", "--relative", "--copy-links"]
     for pattern in excludes:
         cmd.extend(["--exclude", pattern])
     if dry_run:
@@ -274,6 +318,11 @@ def show_config(config_path, config):
         for r in repos:
             print(f"    {r}")
 
+    ignored_patterns = config.get("git_ignored", [])
+    if ignored_patterns:
+        print(f"\n  {bold('git_ignored')} patterns: {', '.join(ignored_patterns)}")
+        print(f"    applied to {len(repos)} git_untracked repos")
+
     if not paths and not repos:
         print(f"\n  {yellow('no paths or git_untracked defined')}")
 
@@ -364,6 +413,23 @@ def main():
             count = rsync_untracked(filtered, dest_base, args.dry_run)
             label = yellow("would copy") if args.dry_run else green("copied")
             print(f"  {label} {bold(str(count))} untracked files from {cyan(str(repo_path))}")
+            total += count
+
+    # Git ignored files matching patterns
+    ignored_patterns = config.get("git_ignored", [])
+    if ignored_patterns and repos:
+        print(f"\n{bold('git_ignored:')}")
+        for repo in repos:
+            repo_path = Path(repo).expanduser()
+            if not repo_path.exists():
+                continue
+            ignored = git_ls_ignored(repo_path, ignored_patterns)
+            filtered = [f for f in ignored if not matches_exclude(str(f), excludes)]
+            if not filtered:
+                continue
+            count = rsync_untracked(filtered, dest_base, args.dry_run)
+            label = yellow("would copy") if args.dry_run else green("copied")
+            print(f"  {label} {bold(str(count))} ignored files from {cyan(str(repo_path))}")
             total += count
 
     if not args.dry_run:
