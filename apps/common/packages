@@ -24,26 +24,61 @@ import yaml
 
 VERSION = "1.0.0"
 
-PACKAGE_SECTIONS = (
-    "system_packages",
-    "github_binaries",
+SECTION_SPECS: dict[str, dict[str, Any]] = {
+    "system_packages": {
+        "structure": "list",
+        "required": ["name"],
+        "required_any_of": [("apt", "pacman", "brew", "aur")],
+        "id_field": "name",
+    },
+    "github_releases": {"structure": "list", "required": ["name", "repo"], "id_field": "name"},
+    "custom_installers": {
+        "structure": "list",
+        "required": ["name", "source_type", "description"],
+        "id_field": "name",
+    },
+    "cargo_packages": {"structure": "list", "required": ["name"], "id_field": "name"},
+    "npm_globals": {"structure": "dict_of_lists", "required": ["name"], "id_field": "name"},
+    "uv_tools": {"structure": "dict_of_lists", "required": ["name"], "id_field": "name"},
+    "git_uv_tools": {"structure": "list", "required": ["name", "repo"], "id_field": "name"},
+    "go_tools": {"structure": "list", "required": ["name", "package"], "id_field": "name"},
+    "shell_plugins": {"structure": "list", "required": ["name", "repo"], "id_field": "name"},
+    "tmux_plugins": {"structure": "dict_of_dicts", "required": ["repo", "install_dir"], "id_field": "name"},
+    "mas_apps": {"structure": "list", "required": ["id", "name"], "id_field": "name"},
+    "flatpak_apps": {"structure": "list", "required": ["flatpak_id"], "id_field": "flatpak_id"},
+    "macos_casks": {"structure": "list", "required": ["name"], "id_field": "name"},
+}
+
+PACKAGE_SECTIONS = tuple(SECTION_SPECS.keys())
+
+# Sections whose manifest field is a list of names that must resolve to packages.yml entries.
+NAME_SUBSCRIBED_SECTIONS = (
+    "go_tools",
     "cargo_packages",
     "npm_globals",
     "uv_tools",
     "git_uv_tools",
-    "go_tools",
-    "shell_plugins",
-    "tmux_plugins",
-    "mas_apps",
-    "flatpak_apps",
-    "macos_casks",
+    "github_releases",
+    "custom_installers",
 )
+
+# Manifest keys that used to gate runtimes but were removed in Phase 1.6.
+# Runtime installation is now derived from name-list presence (e.g. go_tools non-empty → Go).
+DEPRECATED_MANIFEST_KEYS = ("go", "rust", "nvm", "uv", "tenv")
+
+# Sections whose entries have a 1:1 script in a directory under install/common/.
+# Maps section name → subdir name.
+SCRIPT_BACKED_SECTIONS = {
+    "github_releases": "github-releases",
+    "custom_installers": "custom-installers",
+}
 
 
 class Color(Enum):
     """ANSI color codes."""
 
     RESET = "\033[0m"
+    RED = "\033[0;31m"
     CYAN = "\033[0;36m"
     GREEN = "\033[0;32m"
     YELLOW = "\033[0;33m"
@@ -110,8 +145,15 @@ def print_header(title: str) -> None:
         print(line)
 
 
-def get_packages_file() -> Path:
-    """Find packages.yml by traversing up to git root or falling back to ~/dotfiles."""
+def get_packages_file(root: Path | None = None) -> Path:
+    """Find packages.yml. If root is given, look under <root>/install/; else walk to git root."""
+    if root is not None:
+        packages_file = root / "install" / "packages.yml"
+        if packages_file.exists():
+            return packages_file
+        print(f"Error: packages.yml not found at {packages_file}", file=sys.stderr)
+        sys.exit(1)
+
     script_path = Path(__file__).resolve()
 
     # Walk up directory tree looking for git root
@@ -131,9 +173,9 @@ def get_packages_file() -> Path:
     sys.exit(1)
 
 
-def load_packages() -> dict[str, Any]:
-    """Load and parse packages.yml."""
-    with get_packages_file().open() as f:
+def load_packages(root: Path | None = None) -> dict[str, Any]:
+    """Load and parse packages.yml, optionally rooted at an override path."""
+    with get_packages_file(root).open() as f:
         return yaml.safe_load(f)
 
 
@@ -216,7 +258,7 @@ def check_installed(pkg: dict[str, Any]) -> tuple[InstallStatus, str | None]:
     cmd_name = pkg.get("command", name)
     section = pkg.get("_section", "")
 
-    # Check binary_link field (used by github_binaries)
+    # Check binary_link field (used by github_releases)
     binary_link = pkg.get("binary_link", "")
     if binary_link:
         link_path = Path(binary_link).expanduser()
@@ -464,6 +506,238 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
             print(f"{pkg['name']:<{widths['name']}} {pkg['description']}")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Verify — drift detection between packages.yml, manifests, and installer scripts
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def resolve_repo_root(override: str | None = None) -> Path:
+    """Return the repo root — the --root override, or the ancestor of packages.yml."""
+    if override:
+        root = Path(override).resolve()
+        if not root.exists():
+            print(f"Error: --root path does not exist: {root}", file=sys.stderr)
+            sys.exit(1)
+        return root
+    return get_packages_file().parent.parent
+
+
+def load_manifests(root: Path) -> dict[str, dict[str, Any]]:
+    """Load all manifests from <root>/install/manifests/*.yml, keyed by stem."""
+    manifests_dir = root / "install" / "manifests"
+    if not manifests_dir.exists():
+        return {}
+    manifests: dict[str, dict[str, Any]] = {}
+    for manifest_file in sorted(manifests_dir.glob("*.yml")):
+        with manifest_file.open() as f:
+            manifests[manifest_file.stem] = yaml.safe_load(f) or {}
+    return manifests
+
+
+def list_installer_scripts(root: Path, subdir: str) -> set[str]:
+    """Return the stem (filename without .sh) of every *.sh in install/common/<subdir>/."""
+    script_dir = root / "install" / "common" / subdir
+    if not script_dir.exists():
+        return set()
+    return {p.stem for p in script_dir.glob("*.sh")}
+
+
+def iter_section_entries(data: dict[str, Any], section: str):
+    """Yield each entry from a section. For dict-of-lists (npm_globals/uv_tools),
+    flatten subcategories. For dict-of-dicts (tmux_plugins), synthesize a 'name'
+    field from the outer key so downstream checks work uniformly."""
+    spec = SECTION_SPECS.get(section, {})
+    structure = spec.get("structure")
+    section_data = data.get(section)
+    if section_data is None:
+        return
+
+    if structure == "list":
+        if isinstance(section_data, list):
+            yield from section_data
+    elif structure == "dict_of_lists":
+        if isinstance(section_data, dict):
+            for category in section_data.values():
+                if isinstance(category, list):
+                    yield from category
+    elif structure == "dict_of_dicts":
+        if isinstance(section_data, dict):
+            for key, entry in section_data.items():
+                if isinstance(entry, dict):
+                    yield {"name": key, **entry}
+
+
+def get_section_ids(data: dict[str, Any], section: str) -> set[str]:
+    """Return the set of id_field values for a section (e.g., names for most sections)."""
+    id_field = SECTION_SPECS[section]["id_field"]
+    return {
+        entry[id_field]
+        for entry in iter_section_entries(data, section)
+        if isinstance(entry, dict) and id_field in entry
+    }
+
+
+def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[str, str, str]]) -> None:
+    """Tier 1 checks 1 and 2: required fields + no duplicate ids within a section."""
+    spec = SECTION_SPECS[section]
+    required = spec.get("required", [])
+    required_any_of = spec.get("required_any_of", [])
+    id_field = spec["id_field"]
+
+    seen_ids: Counter[str] = Counter()
+    for idx, entry in enumerate(iter_section_entries(data, section)):
+        if not isinstance(entry, dict):
+            issues.append((section, "error", f"entry #{idx} is not a mapping"))
+            continue
+        label = entry.get(id_field) or entry.get("name") or f"entry #{idx}"
+
+        for field in required:
+            if field not in entry:
+                issues.append((section, "error", f"{label}: missing required field '{field}'"))
+
+        for any_of_group in required_any_of:
+            if not any(f in entry for f in any_of_group):
+                issues.append((section, "error",
+                               f"{label}: must have at least one of {list(any_of_group)}"))
+
+        if id_field in entry:
+            seen_ids[entry[id_field]] += 1
+
+    # dict_of_dicts uses the YAML key as id, which is already unique
+    if spec["structure"] != "dict_of_dicts":
+        for key, count in seen_ids.items():
+            if count > 1:
+                issues.append((section, "error", f"duplicate {id_field}: '{key}' appears {count}x"))
+
+
+def check_manifest_name_resolution(
+    data: dict[str, Any],
+    manifests: dict[str, dict[str, Any]],
+    issues: list[tuple[str, str, str]],
+) -> None:
+    """Tier 1 check 3: every name referenced from a manifest must resolve to a packages.yml entry.
+    Script existence is covered transitively by the parity check below, so no direct filesystem
+    check is needed here — a missing script will surface via parity as an additional error."""
+    section_ids = {section: get_section_ids(data, section) for section in NAME_SUBSCRIBED_SECTIONS}
+
+    for manifest_name, manifest in manifests.items():
+        for section in NAME_SUBSCRIBED_SECTIONS:
+            value = manifest.get(section)
+            if not isinstance(value, list):
+                continue
+            for name in value:
+                if name not in section_ids[section]:
+                    issues.append((section, "error",
+                                   f"manifest '{manifest_name}' names '{name}' but no packages.yml {section} entry exists"))
+
+
+def check_script_parity(
+    data: dict[str, Any],
+    scripts_by_section: dict[str, set[str]],
+    issues: list[tuple[str, str, str]],
+) -> None:
+    """Tier 1 check 4: bidirectional script ↔ packages.yml parity for every script-backed section."""
+    for section, subdir in SCRIPT_BACKED_SECTIONS.items():
+        section_ids = get_section_ids(data, section)
+        scripts = scripts_by_section.get(section, set())
+
+        for script_name in sorted(scripts - section_ids):
+            issues.append((section, "error",
+                           f"install/common/{subdir}/{script_name}.sh exists but no packages.yml {section} entry"))
+
+        for entry_name in sorted(section_ids - scripts):
+            issues.append((section, "error",
+                           f"packages.yml {section} entry '{entry_name}' has no install/common/{subdir}/{entry_name}.sh script"))
+
+
+def check_deprecated_manifest_keys(
+    manifests: dict[str, dict[str, Any]],
+    issues: list[tuple[str, str, str]],
+) -> None:
+    """Tier 1 check: manifests must not set removed runtime-gate booleans.
+    Phase 1.6 replaced them with name-list derivation (e.g. go_tools non-empty → Go)."""
+    for manifest_name, manifest in manifests.items():
+        for key in DEPRECATED_MANIFEST_KEYS:
+            if key in manifest:
+                issues.append(("manifest", "error",
+                               f"manifest '{manifest_name}' uses removed key '{key}:' "
+                               f"— install is now derived from the corresponding name-list"))
+
+
+def check_unreferenced_entries(
+    data: dict[str, Any],
+    manifests: dict[str, dict[str, Any]],
+    issues: list[tuple[str, str, str]],
+) -> None:
+    """Tier 2 check 5: packages.yml entries in name-subscribed sections that no manifest uses."""
+    for section in NAME_SUBSCRIBED_SECTIONS:
+        # If any manifest uses `true` for this section, every entry is implicitly referenced
+        if any(manifest.get(section) is True for manifest in manifests.values()):
+            continue
+        referenced: set[str] = set()
+        for manifest in manifests.values():
+            value = manifest.get(section)
+            if isinstance(value, list):
+                referenced.update(value)
+        pkg_ids = get_section_ids(data, section)
+        for name in sorted(pkg_ids - referenced):
+            issues.append((section, "warning",
+                           f"'{name}' defined in packages.yml but not referenced by any manifest"))
+
+
+def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
+    """Verify packages.yml against manifests and installer script directories."""
+    root = resolve_repo_root(args.root)
+    # Reload from the resolved root to guarantee data matches root when --root overrides default
+    data = load_packages(root=root)
+    manifests = load_manifests(root)
+    scripts_by_section = {
+        section: list_installer_scripts(root, subdir)
+        for section, subdir in SCRIPT_BACKED_SECTIONS.items()
+    }
+
+    issues: list[tuple[str, str, str]] = []  # (section, severity, message)
+
+    for section in SECTION_SPECS:
+        if section in data:
+            check_section_shape(data, section, issues)
+
+    check_manifest_name_resolution(data, manifests, issues)
+    check_script_parity(data, scripts_by_section, issues)
+    check_deprecated_manifest_keys(manifests, issues)
+    check_unreferenced_entries(data, manifests, issues)
+
+    errors = [i for i in issues if i[1] == "error"]
+    warnings = [i for i in issues if i[1] == "warning"]
+
+    by_section: dict[str, list[tuple[str, str]]] = {}
+    for section, severity, message in issues:
+        by_section.setdefault(section, []).append((severity, message))
+
+    for section in sorted(by_section):
+        print(f"\n{colorize(section, Color.BRIGHT_CYAN)}", file=sys.stderr)
+        for severity, message in by_section[section]:
+            if severity == "error":
+                marker = colorize("error", Color.RED)
+            else:
+                marker = colorize("warn ", Color.YELLOW)
+            print(f"  [{marker}] {message}", file=sys.stderr)
+
+    if issues:
+        print(file=sys.stderr)
+
+    summary = f"{len(errors)} errors, {len(warnings)} warnings"
+    if not errors and not warnings:
+        summary = colorize(f"✓ {summary}", Color.GREEN)
+    elif errors:
+        summary = colorize(f"✗ {summary}", Color.RED)
+    else:
+        summary = colorize(f"⚠ {summary}", Color.YELLOW)
+    print(summary)
+
+    sys.exit(1 if errors else 0)
+
+
 def show_help() -> None:
     """Show main help with examples."""
     print_header("packages - Query packages.yml")
@@ -480,6 +754,7 @@ def show_help() -> None:
         ("packages sections", "List all sections"),
         ("packages stats", "Show package counts"),
         ("packages tags", "List all tags with counts"),
+        ("packages verify", "Check drift between packages.yml, manifests, and scripts"),
     ]
     for cmd, desc in commands:
         print(f"  {colorize(cmd, Color.CYAN):<35} {desc}")
@@ -564,6 +839,12 @@ def main() -> None:
     list_parser.add_argument("--json", action="store_true", help="Output as JSON")
     list_parser.set_defaults(func=cmd_list)
 
+    # verify command
+    verify_parser = subparsers.add_parser("verify",
+                                          help="Check packages.yml against manifests and installer scripts")
+    verify_parser.add_argument("--root", help="Override repo root (for testing with synthetic trees)")
+    verify_parser.set_defaults(func=cmd_verify)
+
     args = parser.parse_args()
 
     if args.version:
@@ -574,7 +855,9 @@ def main() -> None:
         show_help()
         return
 
-    data = load_packages()
+    root_override = getattr(args, "root", None)
+    root_path = Path(root_override).resolve() if root_override else None
+    data = load_packages(root=root_path)
     args.func(args, data)
 
 

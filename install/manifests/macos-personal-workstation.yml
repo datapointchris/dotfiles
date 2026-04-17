@@ -4,7 +4,6 @@ platform: macos
 # Installation
 system_packages: true
 
-go: true
 go_tools:
   - task
   - cheat
@@ -19,6 +18,8 @@ go_tools:
   - sesh
   - toolbox
   - sops
+  - todoui
+  - forge
 
 github_releases:
   - fzf
@@ -36,6 +37,7 @@ github_releases:
   - hadolint
   - tree-sitter
   - just
+  - tenv
 
 custom_installers:
   - bats
@@ -45,15 +47,43 @@ custom_installers:
   - theme
   - font
 
-rust: true
 cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker, broot]
 
-nvm: true
-npm_globals: true
-uv: true
-uv_tools: true
-git_uv_tools: true
-tenv: true
+npm_globals:
+  - typescript-language-server
+  - typescript
+  - bash-language-server
+  - yaml-language-server
+  - vscode-langservers-extracted
+  - gh-actions-language-server
+  - "@taplo/cli"
+  - eslint
+  - prettier
+  - markdownlint-cli
+  - sass
+
+uv_tools:
+  - ruff
+  - mypy
+  - basedpyright
+  - codespell
+  - sqlfluff
+  - djlint
+  - yq
+  - keymap-drawer
+  - nbpreview
+  - numpy
+  - pre-commit
+  - git-filter-repo
+  - tldr
+
+git_uv_tools:
+  - refcheck
+  - syncer
+  - keymap-align
+  - indy
+  - relate
+  - logsift
 
 shell_plugins: true
 tmux_plugins: true

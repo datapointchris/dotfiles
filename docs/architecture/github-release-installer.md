@@ -202,7 +202,7 @@ Some tools have unique requirements that don't fit the GitHub release pattern. T
 
 ```yaml
 # TOO COMPLEX - requires YAML parser, hard to trace
-github_binaries:
+github_releases:
   - name: lazygit
     archive_format: tar.gz
     url_pattern: "{repo}/releases/download/{version}/lazygit_{version}_{platform}_{arch}.tar.gz"

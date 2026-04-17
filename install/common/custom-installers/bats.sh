@@ -16,13 +16,25 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 INSTALL_PREFIX="$HOME/.local"
 BATS_LIB_DIR="$INSTALL_PREFIX/lib"
 
-# Repository URLs
-BATS_CORE_REPO="https://github.com/bats-core/bats-core.git"
-BATS_SUPPORT_REPO="https://github.com/bats-core/bats-support.git"
-BATS_ASSERT_REPO="https://github.com/bats-core/bats-assert.git"
+# Repositories — read from packages.yml so they stay in sync with the SOT
+read_custom_field() {
+  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+    --custom-installer bats --field "$1"
+}
+
+BATS_CORE_SLUG=$(read_custom_field repo) \
+  || { log_error "Could not read bats.repo from packages.yml"; exit 1; }
+BATS_SUPPORT_SLUG=$(read_custom_field support_repo) \
+  || { log_error "Could not read bats.support_repo from packages.yml"; exit 1; }
+BATS_ASSERT_SLUG=$(read_custom_field assert_repo) \
+  || { log_error "Could not read bats.assert_repo from packages.yml"; exit 1; }
+
+BATS_CORE_REPO="https://github.com/${BATS_CORE_SLUG}.git"
+BATS_SUPPORT_REPO="https://github.com/${BATS_SUPPORT_SLUG}.git"
+BATS_ASSERT_REPO="https://github.com/${BATS_ASSERT_SLUG}.git"
 
 # Fetch latest version from GitHub (both install and update modes)
-BATS_VERSION=$(fetch_github_latest_version "bats-core/bats-core")
+BATS_VERSION=$(fetch_github_latest_version "$BATS_CORE_SLUG")
 if [[ -z "$BATS_VERSION" ]]; then
   log_error "Failed to fetch latest BATS version from GitHub"
   exit 1

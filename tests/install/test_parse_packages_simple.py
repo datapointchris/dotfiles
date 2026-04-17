@@ -102,25 +102,25 @@ def test_get_go_packages():
     print("✓ test_get_go_packages passed")
 
 
-def test_get_github_binary_field():
-    """Test getting fields from GitHub binaries."""
+def test_get_github_release_field():
+    """Test getting fields from GitHub releases."""
     data = {
-        "github_binaries": [
+        "github_releases": [
             {"name": "neovim", "repo": "neovim/neovim", "min_version": "0.9.0"},
             {"name": "lazygit", "repo": "jesseduffield/lazygit"}
         ]
     }
 
-    min_version = parse_packages.get_github_binary_field(data, "neovim", "min_version")
+    min_version = parse_packages.get_github_release_field(data, "neovim", "min_version")
     assert min_version == "0.9.0"
 
-    repo = parse_packages.get_github_binary_field(data, "neovim", "repo")
+    repo = parse_packages.get_github_release_field(data, "neovim", "repo")
     assert repo == "neovim/neovim"
 
-    not_found = parse_packages.get_github_binary_field(data, "nonexistent", "repo")
+    not_found = parse_packages.get_github_release_field(data, "nonexistent", "repo")
     assert not_found is None
 
-    print("✓ test_get_github_binary_field passed")
+    print("✓ test_get_github_release_field passed")
 
 
 def test_get_shell_plugins():
@@ -153,7 +153,7 @@ def main():
     test_get_npm_packages()
     test_get_system_packages()
     test_get_go_packages()
-    test_get_github_binary_field()
+    test_get_github_release_field()
     test_get_shell_plugins()
 
     print("\n✅ All tests passed!")

@@ -51,28 +51,31 @@ cleanup_test_container() {
   fi
 }
 
-# Verify base image exists
-# Usage: verify_docker_base_image
-verify_docker_base_image() {
-  if ! docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
-    echo "Error: Docker base image not found: $DOCKER_IMAGE" >&2
-    echo "Build it with: cd tests/install/docker && ./build-base.sh" >&2
-    return 1
-  fi
-  return 0
-}
-
 # Setup function for Bats tests
 # Call this in setup_file() to verify Docker is available
+#
+# Integration tests require Docker and the prebuilt base image. We fail
+# loudly rather than skip: a missing dependency is an actionable problem,
+# not something to silently paper over in CI or pre-commit.
+#
+# Docker itself can't be installed automatically (needs sudo + OS-specific
+# package manager), so that's a hard fail. But the base image is a one-shot
+# build we can trigger on demand — if it's missing, build it. If the build
+# itself fails, let that error surface.
 docker_test_setup() {
-  # Check if Docker is available
   if ! command -v docker >/dev/null 2>&1; then
-    skip "Docker not available"
+    echo "FATAL: Docker is required for integration tests but was not found on PATH." >&2
+    echo "  Install Docker:" >&2
+    echo "    Arch Linux: sudo pacman -S docker && sudo systemctl enable --now docker" >&2
+    echo "    macOS:      brew install --cask docker" >&2
+    echo "    Ubuntu:     sudo apt install docker.io && sudo systemctl enable --now docker" >&2
+    exit 1
   fi
 
-  # Verify base image exists
-  if ! verify_docker_base_image; then
-    skip "Docker base image not built"
+  # Image missing → build it. If the build fails, let the exit status propagate.
+  if ! docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
+    echo "Docker base image '$DOCKER_IMAGE' not found — building it now..." >&2
+    "$DOTFILES_DIR/tests/install/docker/build-base.sh" >&2
   fi
 
   # Resolve GitHub token for authenticated API calls inside containers.

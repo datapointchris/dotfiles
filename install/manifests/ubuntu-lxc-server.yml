@@ -5,7 +5,6 @@ platform: ubuntu
 system_packages: true
 flatpak: false
 
-go: true
 go_tools:
   - task
   - toolbox
@@ -20,15 +19,11 @@ github_releases:
 
 custom_installers: []
 
-rust: true
 cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker]
 
-nvm: false
-npm_globals: false
-uv: false
-uv_tools: false
-git_uv_tools: false
-tenv: false
+npm_globals: []
+uv_tools: []
+git_uv_tools: []
 
 shell_plugins: true
 tmux_plugins: true

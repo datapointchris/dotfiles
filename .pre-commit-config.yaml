@@ -95,6 +95,42 @@ repos:
         always_run: false
         stages: [pre-commit]
 
+      # Drift check: packages.yml ↔ manifests ↔ installer scripts
+      - id: packages-verify
+        name: packages verify (drift check)
+        entry: apps/common/packages verify
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Python unit tests — covers parse_packages + packages verify logic
+      - id: pytest
+        name: pytest (unit)
+        entry: uv run pytest tests/
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Bash/library unit tests via bats
+      - id: bats-unit
+        name: bats unit tests
+        entry: task test:unit
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Bash integration tests via bats (Docker-backed; auto-builds base image if missing)
+      - id: bats-integration
+        name: bats integration tests
+        entry: task test:integration
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
       # Strip Claude Code branding from commit messages
       - id: prepare-commit-msg
         name: Strip AI branding from commits

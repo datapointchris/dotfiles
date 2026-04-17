@@ -115,18 +115,28 @@ teardown_file() {
   assert_output --partial "\$HOME/.local"
 }
 
-@test "installer defines correct repository URLs" {
-  run grep "BATS_CORE_REPO=" "$BATS_INSTALLER"
+@test "installer reads repo slugs from packages.yml" {
+  # Phase 1.5f: installer no longer hardcodes URLs; slugs come from packages.yml
+  # via read_custom_field. The URL is built at runtime: https://github.com/${SLUG}.git
+  run grep -E "BATS_CORE_SLUG=\\\$\\(read_custom_field repo\\)" "$BATS_INSTALLER"
   assert_success
-  assert_output --partial "bats-core/bats-core.git"
 
-  run grep "BATS_SUPPORT_REPO=" "$BATS_INSTALLER"
+  run grep -E "BATS_SUPPORT_SLUG=\\\$\\(read_custom_field support_repo\\)" "$BATS_INSTALLER"
   assert_success
-  assert_output --partial "bats-core/bats-support.git"
 
-  run grep "BATS_ASSERT_REPO=" "$BATS_INSTALLER"
+  run grep -E "BATS_ASSERT_SLUG=\\\$\\(read_custom_field assert_repo\\)" "$BATS_INSTALLER"
   assert_success
-  assert_output --partial "bats-core/bats-assert.git"
+}
+
+@test "installer builds repo URLs from packages.yml slugs" {
+  run grep -E 'BATS_CORE_REPO="https://github.com/\$\{BATS_CORE_SLUG\}\.git"' "$BATS_INSTALLER"
+  assert_success
+
+  run grep -E 'BATS_SUPPORT_REPO="https://github.com/\$\{BATS_SUPPORT_SLUG\}\.git"' "$BATS_INSTALLER"
+  assert_success
+
+  run grep -E 'BATS_ASSERT_REPO="https://github.com/\$\{BATS_ASSERT_SLUG\}\.git"' "$BATS_INSTALLER"
+  assert_success
 }
 
 # ================================================================

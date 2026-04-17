@@ -3,7 +3,9 @@ set -uo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 
-CLAUDE_CODE_INSTALL_URL="https://claude.ai/install.sh"
+CLAUDE_CODE_INSTALL_URL=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  --custom-installer claude-code --field url) \
+  || { echo "Error: could not read claude-code.url from packages.yml" >&2; exit 1; }
 
 # Support --print-url for offline bundle creator
 if [[ "${1:-}" == "--print-url" ]]; then

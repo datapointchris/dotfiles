@@ -64,7 +64,7 @@ def sample_packages_data():
             {"id": 937984704, "name": "Amphetamine"},
             {"id": 1352778147, "name": "Bitwarden"}
         ],
-        "github_binaries": [
+        "github_releases": [
             {"name": "neovim", "repo": "neovim/neovim", "min_version": "0.9.0"},
             {"name": "lazygit", "repo": "jesseduffield/lazygit"}
         ],
@@ -150,7 +150,7 @@ def test_get_mas_apps(sample_packages_data):
 
 
 def test_get_github_packages(sample_packages_data):
-    """Test extracting GitHub binary package names."""
+    """Test extracting GitHub release package names."""
     packages = parse_packages.get_github_packages(sample_packages_data)
     assert packages == ["neovim", "lazygit"]
 
@@ -170,18 +170,18 @@ def test_get_shell_plugins_name_repo(sample_packages_data):
     ]
 
 
-def test_get_github_binary_field(sample_packages_data):
-    """Test getting field from GitHub binary."""
-    value = parse_packages.get_github_binary_field(sample_packages_data, "neovim", "min_version")
+def test_get_github_release_field(sample_packages_data):
+    """Test getting field from GitHub release."""
+    value = parse_packages.get_github_release_field(sample_packages_data, "neovim", "min_version")
     assert value == "0.9.0"
 
-    value = parse_packages.get_github_binary_field(sample_packages_data, "neovim", "repo")
+    value = parse_packages.get_github_release_field(sample_packages_data, "neovim", "repo")
     assert value == "neovim/neovim"
 
 
-def test_get_github_binary_field_not_found(sample_packages_data):
-    """Test getting field from non-existent binary."""
-    value = parse_packages.get_github_binary_field(sample_packages_data, "nonexistent", "repo")
+def test_get_github_release_field_not_found(sample_packages_data):
+    """Test getting field from non-existent release."""
+    value = parse_packages.get_github_release_field(sample_packages_data, "nonexistent", "repo")
     assert value is None
 
 

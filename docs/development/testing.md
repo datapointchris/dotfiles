@@ -1,21 +1,27 @@
 # Testing
 
-The dotfiles repository uses two types of testing:
+The dotfiles repository has three layers of testing:
 
-1. **Unit/Integration Testing** - BATS tests for installer scripts and library functions
-2. **Installation Testing** - Docker-based testing across platforms
+1. **BATS unit + integration tests** — shell library and installer coverage
+2. **pytest** — Python code (packages CLI, `packages verify`, `parse_packages.py`)
+3. **Installation e2e tests** — Docker-based platform walkthroughs of `install.sh`
 
-## Unit and Integration Testing
+All three run on every commit via pre-commit hooks. See `.pre-commit-config.yaml` for the full wiring.
 
-The project uses [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core) for testing installer scripts and shell libraries.
+## BATS (Bash Tests)
+
+Shell library and installer tests using [BATS (Bash Automated Testing System)](https://github.com/bats-core/bats-core).
 
 ### Running Tests
 
 ```sh
-# Run all tests
+# All BATS tests (unit + integration)
 task test
 
-# Run integration tests only
+# Unit tests only — libraries + installer functions, no Docker, no network
+task test:unit
+
+# Integration tests — Docker-backed, will auto-build the base image on first run
 task test:integration
 
 # Watch mode (requires entr)
@@ -28,7 +34,29 @@ Tests are organized under `tests/`:
 
 - `tests/libraries/` — Tests for shared shell libraries
 - `tests/install/unit/` — Unit tests for installer functions (no Docker, no network). Run with `task test:unit`.
-- `tests/install/integration/` — Integration tests including Docker-based platform tests
+- `tests/install/integration/` — Integration tests. Requires Docker + the prebuilt base image `dotfiles-test-base:ubuntu-24.04`. If the image is missing, `tests/install/docker/build-base.sh` is invoked automatically before tests run — if the build itself fails, the test run fails loudly rather than silently skipping.
+
+## pytest (Python Tests)
+
+Python-side coverage for `install/parse_packages.py` and `apps/common/packages` (including `packages verify`):
+
+```sh
+uv run pytest tests/
+```
+
+Test files:
+
+- `tests/install/test_parse_packages.py` — packages.yml parser (filtered-by-manifest behavior, section field extraction).
+- `tests/install/test_parse_packages_simple.py` — core parse-helper sanity.
+- `tests/apps/test_packages_verify.py` — `packages verify` drift detection. Every test builds a synthetic `install/packages.yml` + manifest tree in `tmp_path`, invokes `packages verify --root <tmp_path>` via subprocess, and asserts on stdout/stderr + exit code. One test per check. The real repo is never read.
+
+## packages verify
+
+`apps/common/packages verify` enforces drift-freeness across packages.yml, the machine manifests, and the installer script directories. See [Package Management — Drift Detection](../architecture/package-management.md#drift-detection) for the check catalog. Runs on every commit; also runnable manually:
+
+```sh
+apps/common/packages verify
+```
 
 ### Writing Tests
 

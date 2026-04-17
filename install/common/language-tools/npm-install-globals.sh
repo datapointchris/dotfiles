@@ -27,8 +27,13 @@ fi
 
 log_info "Installing npm global packages from packages.yml..."
 
-# Get npm packages from packages.yml via Python parser
-NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=npm)
+MANIFEST_FLAG=()
+if [[ -n "${MACHINE:-}" ]]; then
+  MANIFEST_FLAG=(--manifest="$MACHINE")
+fi
+
+# Get npm packages from packages.yml (filtered by manifest) via Python parser
+NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=npm "${MANIFEST_FLAG[@]}")
 
 FAILURE_COUNT=0
 for package in $NPM_PACKAGES; do

@@ -11,10 +11,13 @@ Usage:
     python parse_packages.py --type=go
     python parse_packages.py --type=mas
     python parse_packages.py --type=github
+    python parse_packages.py --type=custom
+    python parse_packages.py --type=custom --filter=bundle_install_script
     python parse_packages.py --type=flatpak
     python parse_packages.py --type=macos-casks
     python parse_packages.py --taps
     python parse_packages.py --get=runtimes.node.version
+    python parse_packages.py --custom-installer=terraform-ls --field=repo
 
 Manifest-filtered usage:
     python parse_packages.py --type=go --manifest=ubuntu-lxc-server
@@ -89,13 +92,13 @@ def filter_go_packages_by_manifest(data, manifest, output_format='packages'):
 
 
 def filter_github_releases_by_manifest(data, manifest):
-    """Filter github binary names to only those in the manifest."""
+    """Filter github release names to only those in the manifest."""
     manifest_releases = manifest.get('github_releases', [])
     if manifest_releases is True:
         return get_github_packages(data)
     if not manifest_releases:
         return []
-    all_binaries = data.get('github_binaries', [])
+    all_binaries = data.get('github_releases', [])
     return [pkg['name'] for pkg in all_binaries if pkg['name'] in manifest_releases]
 
 
@@ -108,6 +111,34 @@ def filter_git_uv_packages_by_manifest(data, manifest):
         return []
     all_tools = data.get('git_uv_tools', [])
     return [f"{pkg['name']}:{pkg['repo']}" for pkg in all_tools if pkg['name'] in manifest_tools]
+
+
+def filter_npm_packages_by_manifest(data, manifest):
+    """Filter npm globals to only those named in the manifest."""
+    manifest_tools = manifest.get('npm_globals', [])
+    if manifest_tools is True:
+        return get_npm_packages(data)
+    if not manifest_tools:
+        return []
+    all_tools = []
+    for category in data.get('npm_globals', {}).values():
+        if isinstance(category, list):
+            all_tools.extend(category)
+    return [pkg['name'] for pkg in all_tools if pkg['name'] in manifest_tools]
+
+
+def filter_uv_packages_by_manifest(data, manifest):
+    """Filter uv tools to only those named in the manifest."""
+    manifest_tools = manifest.get('uv_tools', [])
+    if manifest_tools is True:
+        return get_uv_packages(data)
+    if not manifest_tools:
+        return []
+    all_tools = []
+    for category in data.get('uv_tools', {}).values():
+        if isinstance(category, list):
+            all_tools.extend(category)
+    return [pkg['name'] for pkg in all_tools if pkg['name'] in manifest_tools]
 
 
 def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
@@ -253,10 +284,10 @@ def get_mas_apps(data):
 
 
 def get_github_packages(data):
-    """Extract GitHub binary package names."""
-    if 'github_binaries' not in data:
+    """Extract GitHub release package names."""
+    if 'github_releases' not in data:
         return []
-    return [pkg['name'] for pkg in data['github_binaries']]
+    return [pkg['name'] for pkg in data['github_releases']]
 
 
 def get_shell_plugins(data, output_format='names'):
@@ -274,14 +305,39 @@ def get_shell_plugins(data, output_format='names'):
         return [pkg['name'] for pkg in data['shell_plugins']]
 
 
-def get_github_binary_field(data, name, field):
-    """Get a field from a specific GitHub binary by name."""
-    if 'github_binaries' not in data:
+def get_github_release_field(data, name, field):
+    """Get a field from a specific GitHub release by name."""
+    if 'github_releases' not in data:
         return None
 
-    for binary in data['github_binaries']:
+    for binary in data['github_releases']:
         if binary.get('name') == name:
             return binary.get(field)
+    return None
+
+
+def get_custom_installers(data, filter_field=None):
+    """Extract custom installer names.
+
+    Args:
+        filter_field: if set, only return installers where filter_field is truthy
+                      (e.g., 'bundle_install_script' for offline bundle inclusion).
+    """
+    if 'custom_installers' not in data:
+        return []
+    installers = data['custom_installers']
+    if filter_field:
+        return [i['name'] for i in installers if i.get(filter_field)]
+    return [i['name'] for i in installers]
+
+
+def get_custom_installer_field(data, name, field):
+    """Get a field from a specific custom installer by name."""
+    if 'custom_installers' not in data:
+        return None
+    for installer in data['custom_installers']:
+        if installer.get('name') == name:
+            return installer.get(field)
     return None
 
 
@@ -306,15 +362,17 @@ def get_macos_casks(data):
 
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'shell-plugins', 'flatpak', 'macos-casks'],
+    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks'],
                         help='Type of packages to extract')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
     parser.add_argument('--get', help='Get a specific value using dot notation (e.g., runtimes.node.version)')
     parser.add_argument('--taps', action='store_true',
                         help='Get macOS Homebrew taps')
-    parser.add_argument('--github-binary', help='Name of GitHub binary (e.g., neovim)')
-    parser.add_argument('--field', help='Field to extract from GitHub binary (e.g., min_version, repo)')
+    parser.add_argument('--github-release', help='Name of GitHub release (e.g., neovim)')
+    parser.add_argument('--custom-installer', help='Name of custom installer (e.g., terraform-ls)')
+    parser.add_argument('--field', help='Field to extract from --github-release or --custom-installer (e.g., repo, url)')
+    parser.add_argument('--filter', help='With --type=custom: only include installers where this field is truthy (e.g., bundle_install_script)')
     parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
                         help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., ubuntu-lxc-server) to filter packages')
@@ -350,15 +408,27 @@ def main():
             print(tap)
         return
 
-    if args.github_binary:
+    if args.github_release:
         if not args.field:
-            print("Error: --field required with --github-binary", file=sys.stderr)
+            print("Error: --field required with --github-release", file=sys.stderr)
             sys.exit(1)
-        value = get_github_binary_field(data, args.github_binary, args.field)
+        value = get_github_release_field(data, args.github_release, args.field)
         if value is not None:
             print(value)
         else:
-            print(f"Error: {args.github_binary}.{args.field} not found", file=sys.stderr)
+            print(f"Error: {args.github_release}.{args.field} not found", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    if args.custom_installer:
+        if not args.field:
+            print("Error: --field required with --custom-installer", file=sys.stderr)
+            sys.exit(1)
+        value = get_custom_installer_field(data, args.custom_installer, args.field)
+        if value is not None:
+            print(value)
+        else:
+            print(f"Error: {args.custom_installer}.{args.field} not found", file=sys.stderr)
             sys.exit(1)
         return
 
@@ -385,13 +455,13 @@ def main():
         else:
             packages = get_cargo_packages(data, fmt)
     elif args.type == 'npm':
-        if manifest and not manifest.get('npm_globals', True):
-            packages = []
+        if manifest:
+            packages = filter_npm_packages_by_manifest(data, manifest)
         else:
             packages = get_npm_packages(data)
     elif args.type == 'uv':
-        if manifest and not manifest.get('uv_tools', True):
-            packages = []
+        if manifest:
+            packages = filter_uv_packages_by_manifest(data, manifest)
         else:
             packages = get_uv_packages(data)
     elif args.type == 'git_uv':
@@ -412,6 +482,8 @@ def main():
             packages = filter_github_releases_by_manifest(data, manifest)
         else:
             packages = get_github_packages(data)
+    elif args.type == 'custom':
+        packages = get_custom_installers(data, filter_field=args.filter)
     elif args.type == 'shell-plugins':
         packages = get_shell_plugins(data, args.format)
     elif args.type == 'flatpak':

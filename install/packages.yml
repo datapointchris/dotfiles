@@ -183,7 +183,7 @@ system_packages:
     description: Lua LSP (macOS only for now)
 
   # Linters & Formatters
-  # Note: shellcheck moved to github_binaries for consistent versioning across platforms
+  # Note: shellcheck moved to github_releases for consistent versioning across platforms
 
   - name: shfmt
     apt: shfmt
@@ -191,7 +191,7 @@ system_packages:
     brew: shfmt
     description: Shell script formatter
 
-  # Note: hadolint moved to github_binaries for consistent versioning across platforms
+  # Note: hadolint moved to github_releases for consistent versioning across platforms
 
   - name: rclone
     apt: rclone
@@ -309,7 +309,7 @@ system_packages:
     brew: duti
     description: File association manager (macOS only)
 
-  # Note: glow and duf moved to github_binaries for universal installation
+  # Note: glow and duf moved to github_releases for universal installation
 
   - name: git-secrets
     brew: git-secrets
@@ -585,7 +585,7 @@ runtimes:
     url: https://sh.rustup.rs
 
 # ================================================================
-# GITHUB BINARY RELEASES
+# GITHUB RELEASES
 # ================================================================
 # Tools installed via direct GitHub release downloads
 # Each has a dedicated install script that reads from this config
@@ -594,7 +594,7 @@ runtimes:
 # The binary_pattern field shows the pattern for reference, but scripts override with
 # platform-specific values (e.g., Darwin vs Linux, x86_64 vs arm64).
 
-github_binaries:
+github_releases:
   - name: neovim
     repo: neovim/neovim
     min_version: "0.11"
@@ -655,13 +655,6 @@ github_binaries:
     install_dir: "~/.local/bin"
     description: Version manager for Terraform/OpenTofu/Terragrunt and Terraform runtime
 
-  - name: terraform-ls
-    repo: hashicorp/terraform-ls
-    install_script: custom-installers/terraform-ls.sh
-    binary_pattern: "terraform-ls_{version}_{platform}_{arch}.zip" # Platform-specific: darwin/linux
-    install_dir: "~/.local/bin"
-    description: Terraform Language Server (uses releases.hashicorp.com)
-
   - name: tflint
     repo: terraform-linters/tflint
     install_script: install-tflint.sh
@@ -719,6 +712,76 @@ github_binaries:
     binary_pattern: "just-{version}-{target}.tar.gz" # Target-specific: x86_64-apple-darwin, aarch64-apple-darwin, x86_64-unknown-linux-musl
     install_dir: "~/.local/bin"
     description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
+
+  - name: tree-sitter
+    repo: tree-sitter/tree-sitter
+    install_script: github-releases/tree-sitter.sh
+    binary_pattern: "tree-sitter-{platform}-{arch}.gz" # macos-arm64, macos-x64, linux-x64
+    install_dir: "~/.local/bin"
+    description: Incremental parsing library CLI (used by Neovim treesitter; NOT installed via npm — see build_tools comment)
+
+  # WSL-only
+  - name: win32yank
+    repo: equalsraf/win32yank
+    install_script: github-releases/win32yank.sh
+    binary_pattern: "win32yank-x64.zip" # Fixed Windows binary; WSL clipboard bridge
+    install_dir: "~/.local/bin"
+    description: Windows clipboard bridge for WSL (enables Neovim/tmux clipboard integration)
+    tags: [cli, wsl]
+
+# ================================================================
+# CUSTOM INSTALLERS
+# ================================================================
+# Tools with bespoke install logic that doesn't match other categories.
+# Each has a dedicated script in install/common/custom-installers/<name>.sh.
+# This section is the source of truth: every script here must have an entry,
+# and every entry must have a script. Verified by `packages verify`.
+#
+# source_type values:
+#   github_clone       — clone a GitHub repo and run its own installer
+#   hashicorp_release  — download from releases.hashicorp.com (GitHub repo for version lookup)
+#   official_installer — run a vendor-provided install script or package (awscli pkg, claude.ai)
+#
+# bundle_install_script: true marks installers whose downloadable script should
+# be cached in offline bundles (see install/offline/create-bundle.sh).
+
+custom_installers:
+  - name: awscli
+    source_type: official_installer
+    url: https://awscli.amazonaws.com
+    description: AWS Command Line Interface v2 (official installer, platform-specific archive)
+
+  - name: bats
+    source_type: github_clone
+    repo: bats-core/bats-core
+    support_repo: bats-core/bats-support
+    assert_repo: bats-core/bats-assert
+    description: Bash Automated Testing System (cloned from GitHub, builds from source)
+
+  - name: claude-code
+    source_type: official_installer
+    url: https://claude.ai/install.sh
+    bundle_install_script: true
+    description: Claude Code CLI (self-updating, installs to ~/.local/bin via official installer)
+
+  - name: terraform-ls
+    source_type: hashicorp_release
+    repo: hashicorp/terraform-ls
+    description: Terraform Language Server (direct download from releases.hashicorp.com)
+
+  - name: theme
+    source_type: github_clone
+    repo: datapointchris/theme
+    install_url: https://raw.githubusercontent.com/datapointchris/theme/main/install.sh
+    bundle_install_script: true
+    description: Unified theme manager across ghostty, tmux, btop, Neovim
+
+  - name: font
+    source_type: github_clone
+    repo: datapointchris/font
+    install_url: https://raw.githubusercontent.com/datapointchris/font/main/install.sh
+    bundle_install_script: true
+    description: Font management CLI with terminal/platform awareness
 
 # ================================================================
 # CARGO PACKAGES (Rust)
@@ -853,8 +916,11 @@ npm_globals:
     - name: sass
       description: Dart Sass CSS compiler
 
-    # tree-sitter-cli moved to GitHub release installer (install/common/github-releases/tree-sitter.sh)
-    # npm install triggers post-install scripts that fail behind corporate firewalls
+    # tree-sitter-cli is installed via install/common/github-releases/tree-sitter.sh
+    # NOT via npm — npm install runs a post-install script that downloads the binary
+    # from GitHub directly, bypassing our offline-cache path. In firewalled environments
+    # (WSL work machine) that download fails. The github-releases installer integrates
+    # with the offline bundle, so it works online AND offline. Do not re-migrate to npm.
 
 # ================================================================
 # UV TOOLS (Python)
@@ -1014,12 +1080,6 @@ go_tools:
     github_repo: dundee/gdu
     binary_pattern: "gdu_{os}_{go_arch}.tgz"
     description: Fast disk usage analyzer with interactive TUI
-
-  - name: sess
-    package: github.com/datapointchris/sess/cmd/sess
-    github_repo: datapointchris/sess
-    binary_pattern: "sess_{version_num}_{os}_{go_arch}.tar.gz"
-    description: Terminal session manager
 
   - name: sesh
     package: github.com/joshmedeski/sesh/v2

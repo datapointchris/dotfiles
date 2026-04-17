@@ -11,6 +11,14 @@ This directory contains installers for tools with unique installation methods th
 - May require platform-specific handling
 - Often have dependencies or prerequisites
 
+## Catalog Requirement (⚠️ MANDATORY)
+
+Every script in this directory must have a matching entry in the `custom_installers:` section of `install/packages.yml`. The reverse also holds: every `custom_installers:` entry in packages.yml must have a script file of the same name in this directory.
+
+This bidirectional parity is enforced by `apps/common/packages verify`, which runs on every pre-commit. There is no auto-detection: `install.sh`, `update.sh`, and `install/offline/create-bundle.sh` all drive from the `custom_installers:` list in packages.yml rather than listing this directory. Adding a script without a catalog entry means it will never run; adding an entry without a script fails verify.
+
+When adding a new installer, both the script and the packages.yml entry must go in the same commit.
+
 ## When to Use
 
 Add a new installer to this directory when:

@@ -43,6 +43,14 @@ manifest_enabled() {
   [[ "$(manifest_field "$field")" == "true" ]]
 }
 
+# Check if a manifest list field has at least one entry
+manifest_list_non_empty() {
+  local field="$1"
+  local value
+  value=$(manifest_field "$field" 2>/dev/null) || return 1
+  [[ -n "$value" ]]
+}
+
 show_failures_summary() {
   [[ ! -f "$FAILURES_LOG" || ! -s "$FAILURES_LOG" ]] && return 0
 
@@ -63,8 +71,8 @@ install_manifest_phases() {
   local lang_tools="$common_install/language-tools"
   local plugins="$common_install/plugins"
 
-  # Go Toolchain
-  if manifest_enabled "go"; then
+  # Go Toolchain — install iff go_tools list has entries
+  if manifest_list_non_empty "go_tools"; then
     print_header "Go Toolchain"
     run_installer "$lang_managers/go.sh" "go"
     PATH="/usr/local/go/bin:$PATH" run_installer "$lang_tools/go-tools.sh" "go-tools"
@@ -102,33 +110,30 @@ install_manifest_phases() {
     done <<< "$custom_tools"
   fi
 
-  # Rust/Cargo Tools
-  if manifest_enabled "rust"; then
+  # Rust/Cargo Tools — install iff cargo_packages list has entries
+  if manifest_list_non_empty "cargo_packages"; then
     print_header "Rust/Cargo Tools"
     run_installer "$lang_managers/rust.sh" "rust"
     run_installer "$lang_tools/cargo-binstall.sh" "cargo-binstall"
     run_installer "$lang_tools/cargo-tools.sh" "cargo-tools"
   fi
 
-  # Language Package Managers
-  if manifest_enabled "nvm" || manifest_enabled "uv" || manifest_enabled "tenv"; then
+  # Language Package Managers — derive runtime needs from tool-list presence
+  local need_nvm=false need_uv=false
+  manifest_list_non_empty "npm_globals" && need_nvm=true
+  { manifest_list_non_empty "uv_tools" || manifest_list_non_empty "git_uv_tools"; } && need_uv=true
+
+  if $need_nvm || $need_uv; then
     print_header "Language Package Managers"
   fi
 
-  if manifest_enabled "nvm"; then
+  if $need_nvm; then
     run_installer "$lang_managers/nvm.sh" "nvm"
-  fi
-  if manifest_enabled "npm_globals"; then
     run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
   fi
-  if manifest_enabled "uv"; then
+  if $need_uv; then
     run_installer "$lang_managers/uv.sh" "uv"
-  fi
-  if manifest_enabled "uv_tools"; then
     run_installer "$lang_tools/uv-tools.sh" "uv-tools"
-  fi
-  if manifest_enabled "tenv"; then
-    run_installer "$github_releases/tenv.sh" "tenv"
   fi
 
   # Shell Plugins

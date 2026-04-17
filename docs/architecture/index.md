@@ -48,27 +48,30 @@ task symlinks:relink    # Complete refresh (remove and recreate)
 
 ## Machine Manifests
 
-Installation is driven by machine manifests in `install/manifests/`. Each manifest defines exactly what gets installed:
+Installation is driven by machine manifests in `install/manifests/`. Each manifest defines exactly what gets installed. Every installed tool is declared as a name in a list; the name must resolve to a catalog entry in `install/packages.yml`. `packages verify` enforces this bidirectionally (every name → an entry, every entry → a name that references it or a warning).
 
 ```yaml
-# install/manifests/arch-personal-workstation.yml
-machine: arch-personal-workstation
-platform: arch
+# install/manifests/archlinux-personal-workstation.yml
+machine: archlinux-personal-workstation
+platform: archlinux
 
 function_groups: [core, git, python, aws, docker, network, reference, node, fzf]
 alias_groups: [core]
 
 system_packages: true
-go: true
 go_tools: [task, cheat, terraform-docs, ...]
-github_releases: [fzf, neovim, lazygit, yazi, ...]
-custom_installers: [bats, awscli, claude-code, ...]
-rust: true
-nvm: true
+github_releases: [fzf, neovim, lazygit, yazi, tree-sitter, tenv, ...]
+custom_installers: [bats, awscli, claude-code, terraform-ls, ...]
+cargo_packages: [bat, fd-find, eza, zoxide, ...]
+npm_globals: [typescript-language-server, prettier, ...]
+uv_tools: [ruff, mypy, basedpyright, ...]
+git_uv_tools: [refcheck, indy, ...]
 # ... etc
 ```
 
-Run installation with: `bash install.sh --machine arch-personal-workstation`
+Runtime installation is **derived from list presence**, not from explicit booleans. A non-empty `go_tools:` list triggers the Go runtime install; a non-empty `npm_globals:` list triggers nvm + Node; `uv_tools:` or `git_uv_tools:` triggers uv. The deprecated `go: true` / `rust: true` / `nvm: true` / `uv: true` / `tenv: true` gates were removed in the Phase 1.6 cleanup — `packages verify` flags any manifest that still sets them.
+
+Run installation with: `bash install.sh --machine archlinux-personal-workstation`
 
 ## Shell Source Files
 

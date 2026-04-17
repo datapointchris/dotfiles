@@ -245,6 +245,8 @@ See [Package Version Analysis](../learnings/package-version-analysis.md) for ver
 
 All package versions, repositories, and configurations are centralized in `install/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See [GitHub Releases vs System Packages](../learnings/github-releases-vs-system-packages.md) for the decision framework on choosing installation methods.
 
+**Every installation type is catalogued in packages.yml, including custom installers.** There is no auto-detection anywhere: `install.sh`, `update.sh`, and `install/offline/create-bundle.sh` all drive from the corresponding packages.yml section rather than listing directories. A script with no catalog entry (or a catalog entry with no script) is a hard error — see [Drift Detection](#drift-detection) below.
+
 Package definitions in packages.yml:
 
 ```yaml
@@ -256,7 +258,7 @@ runtimes:
   python:
     min_version: "3.12"
 
-github_binaries:
+github_releases:
   - name: neovim
     repo: neovim/neovim
     version: "0.11.0"
@@ -281,6 +283,19 @@ uv_tools:
 ```
 
 All installation scripts read from this single source. Change a version once, and it applies everywhere.
+
+### Drift Detection
+
+The `packages verify` subcommand (in `apps/common/packages`) enforces that packages.yml, the machine manifests, and the installer script directories stay in sync. It runs on every commit via pre-commit and surfaces four classes of drift:
+
+- **Shape errors** — an entry missing required fields (e.g., a `github_releases` entry with no `repo`), or duplicate names within a section.
+- **Unresolved manifest names** — a manifest lists a name that has no corresponding packages.yml entry (the no-op that shipped `todoui` and `forge` ghost-installed for weeks).
+- **Script parity breaks** — a script in `install/common/github-releases/` or `install/common/custom-installers/` with no packages.yml entry, or vice versa.
+- **Deprecated manifest keys** — `go: true` / `rust: true` / `nvm: true` / `uv: true` / `tenv: true`; these runtime gates were removed in Phase 1.6 in favor of name-list derivation.
+
+A fifth, softer check warns when packages.yml defines an entry that no manifest subscribes to — useful for spotting orphans without failing the commit.
+
+Behavior is authoritative in `--help` and `apps/common/packages verify --help`. Tests live in `tests/apps/test_packages_verify.py` and drive verify against synthetic fixture trees (one test per check), so coverage doesn't depend on the real repo being in any particular state.
 
 ### Installation Scripts
 

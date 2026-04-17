@@ -77,30 +77,30 @@ download_file() {
 }
 
 # ============================================================================
-# GitHub Binary Releases (auto-discovered from installer scripts)
+# GitHub Releases (driven by packages.yml github_releases:)
 # ============================================================================
 
-download_github_binaries() {
-  log_info "Downloading GitHub binary releases..."
-  local github_releases="$DOTFILES_DIR/install/common/github-releases"
+download_github_releases() {
+  log_info "Downloading GitHub releases..."
+  local github_releases_dir="$DOTFILES_DIR/install/common/github-releases"
 
-  # Auto-discover all installer scripts in the directory
-  local installers=()
-  for script in "$github_releases"/*.sh; do
-    [[ -f "$script" ]] && installers+=("$script")
-  done
-
-  local tool version url filename
-  for script in "${installers[@]}"; do
+  local tool version url filename script
+  while IFS= read -r tool; do
+    [[ -z "$tool" ]] && continue
+    script="$github_releases_dir/${tool}.sh"
+    if [[ ! -f "$script" ]]; then
+      log_error "packages.yml github_releases entry '$tool' has no script at $script"
+      exit 1
+    fi
     if ! IFS='|' read -r tool version url < <(bash "$script" --print-url "$OS" "$ARCH"); then
-      log_error "Could not get URL for $(basename "$script" .sh)"
+      log_error "Could not get URL for $tool"
       exit 1
     fi
     filename=$(basename "$url")
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
     echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
-  done
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=github)
 }
 
 # ============================================================================
@@ -180,25 +180,25 @@ download_go_binaries() {
 }
 
 # ============================================================================
-# Install Scripts (explicit listing - each supports --print-url)
+# Install Scripts
 # ============================================================================
+# Two sources:
+#   1. Language managers (nvm, uv) — hardcoded list; these are not in packages.yml
+#      (language managers are bootstrap infrastructure, outside the custom_installers model).
+#   2. Custom installers with bundle_install_script: true — driven by packages.yml.
 
 download_install_scripts() {
   log_info "Downloading install scripts..."
   local lang_managers="$DOTFILES_DIR/install/common/language-managers"
   local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
 
-  # Explicit listing
-  local installers=(
+  local lang_manager_scripts=(
     "$lang_managers/nvm.sh"
     "$lang_managers/uv.sh"
-    "$custom_installers/theme.sh"
-    "$custom_installers/font.sh"
-    "$custom_installers/claude-code.sh"
   )
 
-  local name version url filename
-  for script in "${installers[@]}"; do
+  local name version url filename script
+  for script in "${lang_manager_scripts[@]}"; do
     if ! IFS='|' read -r name version url < <(bash "$script" --print-url); then
       log_error "Could not get URL for $(basename "$script" .sh)"
       exit 1
@@ -208,6 +208,23 @@ download_install_scripts() {
     download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
     echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
   done
+
+  while IFS= read -r tool; do
+    [[ -z "$tool" ]] && continue
+    script="$custom_installers/${tool}.sh"
+    if [[ ! -f "$script" ]]; then
+      log_error "packages.yml custom_installers entry '$tool' has no script at $script"
+      exit 1
+    fi
+    if ! IFS='|' read -r name version url < <(bash "$script" --print-url); then
+      log_error "Could not get URL for $tool"
+      exit 1
+    fi
+    filename="${name}-install.sh"
+    log_info "  $name..."
+    download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
+    echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=custom --filter=bundle_install_script)
 }
 
 # ============================================================================
@@ -381,7 +398,7 @@ main() {
   log_info "Target platform: $OS/$ARCH"
   echo ""
 
-  download_github_binaries
+  download_github_releases
   download_go_binaries
   download_cargo_binaries
   download_install_scripts

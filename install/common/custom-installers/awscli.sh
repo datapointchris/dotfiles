@@ -62,12 +62,16 @@ case $OS in
   linux)
     log_info "Platform: Linux ($ARCH)"
 
+    AWSCLI_URL_BASE=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+      --custom-installer awscli --field url) \
+      || { log_error "Could not read awscli.url from packages.yml"; exit 1; }
+
     case $ARCH in
       amd64)
-        ZIP_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        ZIP_URL="${AWSCLI_URL_BASE}/awscli-exe-linux-x86_64.zip"
         ;;
       arm64)
-        ZIP_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+        ZIP_URL="${AWSCLI_URL_BASE}/awscli-exe-linux-aarch64.zip"
         ;;
       *)
         log_error "Unsupported architecture: $ARCH"

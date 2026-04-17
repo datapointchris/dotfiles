@@ -3,7 +3,9 @@ set -uo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 
-FONT_INSTALL_URL="https://raw.githubusercontent.com/datapointchris/font/main/install.sh"
+FONT_INSTALL_URL=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  --custom-installer font --field install_url) \
+  || { echo "Error: could not read font.install_url from packages.yml" >&2; exit 1; }
 
 # Support --print-url for offline bundle creator
 if [[ "${1:-}" == "--print-url" ]]; then

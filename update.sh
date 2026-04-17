@@ -110,21 +110,31 @@ update_common_tools() {
 
   print_section "Updating GitHub Release Tools"
   local github_releases="$DOTFILES_DIR/install/common/github-releases"
-  for script in "$github_releases"/*.sh; do
-    local tool=$(basename "$script" .sh)
+  while IFS= read -r tool; do
+    [[ -z "$tool" ]] && continue
+    local script="$github_releases/${tool}.sh"
+    if [[ ! -f "$script" ]]; then
+      log_warning "No installer script for github release: $tool (packages verify should have caught this)"
+      continue
+    fi
     if ! bash "$script" --update; then
       log_warning "$tool update failed"
     fi
-  done
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=github)
 
   print_section "Updating Custom Distribution Tools"
   local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
-  for script in "$custom_installers"/*.sh; do
-    local tool=$(basename "$script" .sh)
+  while IFS= read -r tool; do
+    [[ -z "$tool" ]] && continue
+    local script="$custom_installers/${tool}.sh"
+    if [[ ! -f "$script" ]]; then
+      log_warning "No installer script for custom installer: $tool (packages verify should have caught this)"
+      continue
+    fi
     if ! bash "$script" --update; then
       log_warning "$tool update failed"
     fi
-  done
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=custom)
 
   print_section "Updating Shell plugins via $(print_green "git pull")"
   if update_shell_plugins; then
