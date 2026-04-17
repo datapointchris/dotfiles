@@ -63,5 +63,4 @@ if [[ $FAILURE_COUNT -gt 0 ]]; then
   exit 1
 else
   log_success "All npm global packages installed successfully"
-  npm list -g --depth=0
 fi

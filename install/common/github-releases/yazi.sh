@@ -47,12 +47,10 @@ SKIP_BINARY_INSTALL=false
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then
     SKIP_BINARY_INSTALL=true
-    log_info "Proceeding to themes/plugins update..."
   fi
 else
   if should_skip_install "$TARGET_BIN" "$BINARY_NAME"; then
     SKIP_BINARY_INSTALL=true
-    log_info "Proceeding to themes/plugins update..."
   fi
 fi
 
@@ -129,6 +127,8 @@ Verify the binary exists:
   fi
 fi
 
+print_section "yazi plugins"
+
 # Configure git to not prompt for credentials (prevents hanging)
 export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
@@ -139,3 +139,4 @@ log_info "Installing plugins..."
 ya pkg add AnirudhG07/nbpreview || true
 ya pkg add pirafrank/what-size || true
 ya pkg add yazi-rs/plugins:git || true
+log_success "yazi plugins synced"

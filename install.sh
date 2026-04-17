@@ -142,11 +142,6 @@ install_manifest_phases() {
     run_installer "$plugins/shell-plugins.sh" "shell-plugins"
   fi
 
-  # Build shell files from manifest
-  print_header "Building Shell Files"
-  bash "$DOTFILES_DIR/shell/build-shell.sh" \
-    "$DOTFILES_DIR/install/manifests/${MACHINE}.yml"
-
   # Symlink Dotfiles
   print_header "Symlinking Dotfiles"
   cd "$DOTFILES_DIR" && PATH="$HOME/go/bin:$PATH" task symlinks:relink

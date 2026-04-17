@@ -61,5 +61,3 @@ print_section "Git Python Tools (uv)"
     fi
   fi
 done
-
-log_success "Python tools installed"

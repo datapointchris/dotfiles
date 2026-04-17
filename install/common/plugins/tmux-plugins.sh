@@ -16,9 +16,12 @@ if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
   "$TPM_DIR/bin/install_plugins" 2>&1 | while IFS= read -r line; do
     if [[ "$line" =~ "Already installed"[[:space:]]+\"(.+)\" ]]; then
       plugin_name="${BASH_REMATCH[1]}"
+      # TPM bootstrap is logged by tpm.sh; skip the duplicate here
+      [[ "$plugin_name" == "tpm" ]] && continue
       log_success "$plugin_name already installed: $TMUX_PLUGINS_DIR/$plugin_name"
     elif [[ "$line" =~ "Installing"[[:space:]]+\"(.+)\" ]]; then
       plugin_name="${BASH_REMATCH[1]}"
+      [[ "$plugin_name" == "tpm" ]] && continue
       log_info "Installing $plugin_name..."
     elif [[ -n "$line" ]]; then
       log_info "$line"

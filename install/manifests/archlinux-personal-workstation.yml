@@ -74,6 +74,7 @@ uv_tools:
   - keymap-drawer
   - nbpreview
   - numpy
+  - jupyterlab
   - pre-commit
   - git-filter-repo
   - tldr

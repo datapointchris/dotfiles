@@ -973,8 +973,8 @@ uv_tools:
 
   # Development Tools
   development:
-    - name: jupyter
-      description: Jupyter kernel for interactive Python (used by molten.nvim)
+    - name: jupyterlab
+      description: Full Jupyter stack (provides `jupyter` CLI and kernel infrastructure for molten.nvim)
 
     - name: pre-commit
       description: Git pre-commit hook framework

@@ -24,12 +24,6 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 print_section "Node.js (nvm)"
 
-if [[ "$UPDATE_MODE" == "true" ]]; then
-  log_info "Checking for nvm updates..."
-else
-  log_info "Installing nvm..."
-fi
-
 # Check if packages.yml exists
 if [[ ! -f "$DOTFILES_DIR/install/packages.yml" ]]; then
   log_error "packages.yml not found at $DOTFILES_DIR/install/packages.yml"

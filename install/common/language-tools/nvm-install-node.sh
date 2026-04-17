@@ -30,12 +30,6 @@ if ! command -v nvm >/dev/null 2>&1; then
   exit 1
 fi
 
-# Install Node.js
-echo "Installing Node.js ${NODE_VERSION}..."
+# Install Node.js (nvm install activates the version; no separate `nvm use` needed)
 nvm install "$NODE_VERSION"
-nvm use "$NODE_VERSION"
 nvm alias default "$NODE_VERSION"
-
-echo "Node.js ${NODE_VERSION} installed and set as default"
-node --version
-npm --version

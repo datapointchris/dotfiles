@@ -150,33 +150,50 @@ TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" -
 
 print_section "Terraform"
 
+TENV_TF_DIR="${HOME}/.tenv/Terraform"
+TENV_VERSION_FILE="${TENV_TF_DIR}/version"
+TERRAFORM_INSTALLED=false
+TERRAFORM_IS_DEFAULT=false
+
+[[ -d "${TENV_TF_DIR}/${TERRAFORM_VERSION}" ]] && TERRAFORM_INSTALLED=true
+[[ -f "$TENV_VERSION_FILE" ]] && [[ "$(cat "$TENV_VERSION_FILE")" == "$TERRAFORM_VERSION" ]] && TERRAFORM_IS_DEFAULT=true
+
+if [[ "$TERRAFORM_INSTALLED" == "true" ]] && [[ "$TERRAFORM_IS_DEFAULT" == "true" ]]; then
+  log_success "Terraform ${TERRAFORM_VERSION} already installed and set as default"
+  exit 0
+fi
+
 # Install specific Terraform version
-log_info "Installing Terraform ${TERRAFORM_VERSION}..."
-if ! tenv tf install "${TERRAFORM_VERSION}"; then
-  manual_steps="Install Terraform manually with tenv:
+if [[ "$TERRAFORM_INSTALLED" == "false" ]]; then
+  log_info "Installing Terraform ${TERRAFORM_VERSION}..."
+  if ! tenv tf install "${TERRAFORM_VERSION}" >/dev/null; then
+    manual_steps="Install Terraform manually with tenv:
    tenv tf install ${TERRAFORM_VERSION}
    tenv tf use ${TERRAFORM_VERSION}
 
 Verify:
    terraform --version"
 
-  output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf install failed"
-  log_error "Failed to install Terraform"
-  exit 1
+    output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf install failed"
+    log_error "Failed to install Terraform"
+    exit 1
+  fi
 fi
 
 # Set as default version
-log_info "Setting Terraform ${TERRAFORM_VERSION} as default..."
-if ! tenv tf use "${TERRAFORM_VERSION}"; then
-  manual_steps="Set Terraform version manually:
+if [[ "$TERRAFORM_IS_DEFAULT" == "false" ]]; then
+  log_info "Setting Terraform ${TERRAFORM_VERSION} as default..."
+  if ! tenv tf use "${TERRAFORM_VERSION}" >/dev/null; then
+    manual_steps="Set Terraform version manually:
    tenv tf use ${TERRAFORM_VERSION}
 
 Verify:
    terraform --version"
 
-  output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf use failed"
-  log_error "Failed to set Terraform version"
-  exit 1
+    output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf use failed"
+    log_error "Failed to set Terraform version"
+    exit 1
+  fi
 fi
 
 log_success "Terraform ${TERRAFORM_VERSION} installed and set as default"
