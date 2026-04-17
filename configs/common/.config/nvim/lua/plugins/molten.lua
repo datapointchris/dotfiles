@@ -31,7 +31,7 @@ return {
       vim.keymap.set('n', '<leader>mq', ':MoltenDeinit<CR>', { desc = 'Molten: Stop kernel' })
 
       -- Enter output window (useful for scrolling through long outputs)
-      vim.keymap.set('n', '<leader>me', ':MoltenEnterOutput<CR>', { desc = 'Molten: Enter output window' })
+      vim.keymap.set('n', '<leader>mw', ':MoltenEnterOutput<CR>', { desc = 'Molten: Enter output window' })
 
       -- Import/export notebook outputs
       vim.keymap.set('n', '<leader>mx', ':MoltenExportOutput<CR>', { desc = 'Molten: Export output' })
