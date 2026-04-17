@@ -493,6 +493,10 @@ system_packages:
     aur: visual-studio-code-bin
     description: Code editor (Arch only - macOS uses cask)
 
+  - name: bitwarden
+    aur: bitwarden-bin
+    description: Password manager desktop app (Arch only - macOS uses App Store)
+
   - name: aerc
     brew: aerc
     pacman: aerc
@@ -510,11 +514,6 @@ system_packages:
     pacman: newsboat
     description: RSS/Atom feed reader for the terminal
     tags: [cli, communication]
-
-  - name: librewolf
-    aur: librewolf-bin
-    description: Privacy-focused Firefox fork (Arch only - macOS uses cask)
-    tags: [gui]
 
   - name: sioyek
     aur: sioyek
@@ -974,6 +973,9 @@ uv_tools:
 
   # Development Tools
   development:
+    - name: jupyter
+      description: Jupyter kernel for interactive Python (used by molten.nvim)
+
     - name: pre-commit
       description: Git pre-commit hook framework
 
@@ -1176,9 +1178,33 @@ mas_apps:
     id: 585829637
     description: Task management and to-do list
 
+  - name: Bitwarden
+    id: 1352778147
+    description: Password manager (includes Safari extension)
+
   - name: uBlock Origin Lite
     id: 67545342698
     description: Block ads on Safari
+
+# ================================================================
+# ZEN / FIREFOX EXTENSIONS
+# ================================================================
+# Manual install from addons.mozilla.org (no automation available)
+# Platform: Arch Linux (Zen browser), any Firefox-based browser
+# Zen is Firefox-based and supports all Firefox Add-ons
+
+zen_extensions:
+  - name: Bitwarden
+    url: https://addons.mozilla.org/en-US/firefox/addon/bitwarden-password-manager/
+    description: Password manager (pointed at self-hosted Vaultwarden)
+
+  - name: uBlock Origin
+    url: https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/
+    description: Ad and tracker blocker (full version, not Lite)
+
+  - name: Dark Reader
+    url: https://addons.mozilla.org/en-US/firefox/addon/darkreader/
+    description: Dark mode for websites
 
 # ================================================================
 # LINUX GUI APPLICATIONS
@@ -1260,10 +1286,6 @@ macos_casks:
   - name: visual-studio-code
     description: Code editor
     tags: [gui, editor]
-
-  - name: librewolf
-    description: Privacy-focused Firefox fork
-    tags: [gui]
 
   - name: sioyek
     description: Keyboard-driven PDF viewer for technical documents
