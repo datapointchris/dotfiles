@@ -9,9 +9,18 @@ config-file = opacity/current.conf
 
 macos-titlebar-style = hidden
 
+# Linux/GTK chrome — match Ghostty's palette, use the terminal font for tab
+# labels, flatten the toolbar, and let tabs size to their content.
+window-theme = ghostty
+window-title-font-family = "Comic Mono Nerd Font 13"
+gtk-toolbar-style = flat
+gtk-wide-tabs = true
+gtk-custom-css = themes/current.css
+gtk-custom-css = fonts/current.css
+
 window-padding-x = 16
-window-padding-y = 16
-window-padding-balance = true
+window-padding-y = 0,4
+window-padding-balance = false
 
 # Font rendering preferences
 font-style = Regular
