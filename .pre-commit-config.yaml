@@ -114,21 +114,26 @@ repos:
         stages: [pre-commit]
 
       # Bash/library unit tests via bats
+      # Gated to install-layer changes — the tests only cover installer scripts
+      # and shared libraries, so unrelated edits (shell/, configs/, docs/, apps/)
+      # should not pay the bats startup cost.
       - id: bats-unit
         name: bats unit tests
         entry: task test:unit
         language: system
         pass_filenames: false
-        always_run: true
+        files: ^(install/|install\.sh$|update\.sh$|tests/install/|tests/libraries/)
         stages: [pre-commit]
 
       # Bash integration tests via bats (Docker-backed; auto-builds base image if missing)
+      # Same gating as bats-unit — and doubly worthwhile here since Docker-backed
+      # integration runs are the slowest hook in the chain.
       - id: bats-integration
         name: bats integration tests
         entry: task test:integration
         language: system
         pass_filenames: false
-        always_run: true
+        files: ^(install/|install\.sh$|update\.sh$|tests/install/|tests/libraries/)
         stages: [pre-commit]
 
       # Strip Claude Code branding from commit messages
