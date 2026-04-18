@@ -393,6 +393,22 @@ tm() {
   session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) &&  tmux $change -t "$session" || echo "No sessions found."
 }
 
+# sesh wrapper: warm up tmux + run resurrect restore synchronously before the
+# first sesh attach. Replaces @continuum-boot (which started tmux under systemd
+# pre-graphical-session, losing HYPRLAND_INSTANCE_SIGNATURE/WAYLAND_DISPLAY) and
+# @continuum-restore (which ran restore backgrounded and raced sesh's attach).
+# Inside tmux, the server is already up so this is a no-op passthrough.
+# tmux's own run-shell spawns a non-interactive shell that does not source this
+# file, so keybinds inside tmux continue to call the real sesh binary directly.
+sesh() {
+  if ! command tmux info >/dev/null 2>&1; then
+    command tmux start-server
+    local restore="$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh"
+    [ -x "$restore" ] && "$restore"
+  fi
+  command sesh "$@"
+}
+
 
 fzf-man-widget() {
   manpage="echo {} | sed 's/\([[:alnum:][:punct:]]*\) (\([[:alnum:]]*\)).*/\2 \1/'"
