@@ -403,6 +403,10 @@ tm() {
 sesh() {
   if ! command tmux info >/dev/null 2>&1; then
     command tmux start-server
+    # Source tmux.conf so @resurrect-* options (strategy-nvim, capture-pane-contents)
+    # are set on the bare server before restore.sh reads them. tmux start-server
+    # does not source config on its own; config normally loads on first client attach.
+    command tmux source-file "${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf" 2>/dev/null
     local restore="$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh"
     [ -x "$restore" ] && "$restore"
   fi
