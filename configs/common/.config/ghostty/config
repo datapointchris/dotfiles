@@ -7,7 +7,7 @@ config-file = fonts/current.conf
 # Opacity (imported - use 'theme opacity-up/down' to change)
 config-file = opacity/current.conf
 
-macos-titlebar-style = tabs
+macos-titlebar-style = hidden
 
 # Linux/GTK chrome — match Ghostty's palette, use the terminal font for tab
 # labels, flatten the toolbar, and let tabs size to their content.
@@ -29,5 +29,7 @@ font-thicken = false
 font-feature = -liga
 font-feature = -calt
 font-feature = -clig
+
+confirm-close-surface = false
 
 keybind = shift+enter=text:\x1b\r
