@@ -402,13 +402,19 @@ tm() {
 # file, so keybinds inside tmux continue to call the real sesh binary directly.
 sesh() {
   if ! command tmux info >/dev/null 2>&1; then
-    command tmux start-server
-    # Source tmux.conf so @resurrect-* options (strategy-nvim, capture-pane-contents)
-    # are set on the bare server before restore.sh reads them. tmux start-server
-    # does not source config on its own; config normally loads on first client attach.
-    command tmux source-file "${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf" 2>/dev/null
     local restore="$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh"
-    [ -x "$restore" ] && "$restore"
+    if [ -x "$restore" ]; then
+      # resurrect's new_session() calls `tmux -S "$(tmux_socket)"` where tmux_socket()
+      # parses $TMUX for the socket path. Outside a tmux client $TMUX is unset, so
+      # `tmux -S ""` silently fails and no sessions are ever created.
+      # Predict the default socket path and inject it. When restore.sh calls
+      # new-session and no server exists yet, tmux auto-starts the server and loads
+      # tmux.conf — so explicit start-server + source-file are not needed.
+      local uid; uid=$(id -u)
+      # Stderr suppressed: no-client errors from resurrect's spinner and switch-client
+      # are cosmetic; session/window/pane creation works headlessly.
+      TMUX="${TMUX_TMPDIR:-/tmp}/tmux-${uid}/default,0,0" "$restore" 2>/dev/null
+    fi
   fi
   command sesh "$@"
 }
