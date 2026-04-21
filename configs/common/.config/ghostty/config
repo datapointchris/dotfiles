@@ -18,7 +18,7 @@ gtk-custom-css = themes/current.css
 gtk-custom-css = fonts/current.css
 
 window-padding-x = 16
-window-padding-y = 0,4
+window-padding-y = 4,4
 window-padding-balance = false
 
 # Font rendering preferences
