@@ -81,11 +81,11 @@ mount-appserver() {
 }
 
 #@mount-dfsapp
-#--> Mount DFS app CIFS share at /mnt/dfsapp
+#--> Mount DFS app CIFS share at /mnt/dfs_app/Data_Science
 mount-dfsapp() {
-  sudo mkdir -p /mnt/dfsapp
-  mountpoint -q /mnt/dfsapp && sudo umount -f /mnt/dfsapp
-  sudo mount -t cifs //prodfs011/Data_Science /mnt/dfsapp -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
+  sudo mkdir -p /mnt/dfs_app/Data_Science
+  mountpoint -q /mnt/dfs_app/Data_Science && sudo umount -f /mnt/dfs_app/Data_Science
+  sudo mount -t cifs //prodfs011/Data_Science /mnt/dfs_app/Data_Science -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
 }
 
 #@aws-login
