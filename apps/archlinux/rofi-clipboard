@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# rofi-clipboard - Clipboard history picker that pastes into the focused window.
+#
+# Terminals bind paste to Ctrl+Shift+V (Ctrl+V is readline quoted-insert, which
+# causes the shell to show "^" and wait for the next keystroke). GUI apps bind
+# paste to Ctrl+V. A single wtype chord cannot serve both, so detect the
+# focused window class and pick the right chord.
+
+set -euo pipefail
+
+TERMINAL_CLASSES_RE='^(com\.mitchellh\.ghostty|ghostty|[Aa]lacritty|foot|kitty|org\.wezfurlong\.wezterm|wezterm|org\.kde\.konsole|konsole)$'
+
+pick_entry() {
+    cliphist list | rofi -dmenu -i -p "Clipboard" -no-custom
+}
+
+paste_into_focused_window() {
+    local target_class
+    target_class=$(hyprctl activewindow -j | jq -r '.class // ""')
+
+    if [[ "$target_class" =~ $TERMINAL_CLASSES_RE ]]; then
+        wtype -M ctrl -M shift -k v -m shift -m ctrl
+    else
+        wtype -M ctrl -k v -m ctrl
+    fi
+}
+
+main() {
+    local selection
+    selection=$(pick_entry) || exit 0
+    [[ -z "$selection" ]] && exit 0
+
+    printf '%s\n' "$selection" | cliphist decode | wl-copy
+
+    # Give the compositor a moment to restore focus to the window that was
+    # active before rofi opened
+    sleep 0.1
+
+    paste_into_focused_window
+}
+
+main
