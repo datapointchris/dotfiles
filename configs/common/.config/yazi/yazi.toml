@@ -11,6 +11,9 @@ max_width = 1200
 max_height = 1800
 
 [opener]
+edit = [
+  { run = 'cd "${YAZI_LAUNCH_DIR:-.}" && nvim "$@"', block = true, for = "unix" },
+]
 play = [
   { run = 'mpv --force-window %s', orphan = true, for = "unix" },
   { run = 'mpv --force-window %s', orphan = true, for = "windows" },

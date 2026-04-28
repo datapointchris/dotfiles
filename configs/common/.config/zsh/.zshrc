@@ -343,12 +343,8 @@ fi
 
 # yazi
 if command -v yazi >/dev/null 2>&1; then
-  yy() {
-    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-    yazi "$@" --cwd-file="$tmp"
-    IFS= read -r -d '' cwd <"$tmp"
-    [[ -n "$cwd" ]] && [[ "$cwd" != "$PWD" ]] && builtin cd -- "$cwd" || return
-    rm -f -- "$tmp"
+  y() {
+    YAZI_LAUNCH_DIR="$PWD" yazi "$@"
   }
   log "Setup" "yazi"
 else

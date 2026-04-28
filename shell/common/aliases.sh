@@ -19,7 +19,6 @@ alias move_all_to_parent='find . -maxdepth 1 -exec mv {} .. \;'
 # Go to base of current git directory
 alias base='z $(git rev-parse --show-toplevel)'
 
-alias y='yazi'
 
 # tree should not display any gitignored files or directories
 alias tree='tree --gitignore'
