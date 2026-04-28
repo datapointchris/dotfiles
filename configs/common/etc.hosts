@@ -1,6 +1,6 @@
 # Homelab hosts
 # NOTE: Manually copy to /etc/hosts (requires sudo). Not for WSL.
-# sudo cp ~/dotfiles/platforms/common/etc.hosts /etc/hosts
+# sudo cp ~/dotfiles/configs/common/etc.hosts /etc/hosts
 
 127.0.0.1       localhost
 255.255.255.255 broadcasthost
@@ -18,6 +18,11 @@
 10.0.20.18  immich
 10.0.20.19  syncthing
 10.0.20.20  files
+10.0.20.21  monitoring
+10.0.20.22  vault
+10.0.20.23  auth
+10.0.20.24  logging
+10.0.20.26  chris-birch
 10.0.20.50  nas
 
 # Docker local development (ichrisbirch)
