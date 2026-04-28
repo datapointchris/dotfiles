@@ -2,6 +2,11 @@
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+local venv_python = vim.fn.getcwd() .. '/.venv/bin/python'
+if vim.fn.executable(venv_python) == 1 then
+  vim.g.python3_host_prog = venv_python
+end
+
 -- Show line numbers
 vim.opt.number = true
 -- Show relative line numbers
