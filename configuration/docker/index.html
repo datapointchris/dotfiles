@@ -4614,7 +4614,7 @@
 <h3 id="macos-orbstack">macOS (OrbStack)<a class="headerlink" href="#macos-orbstack" title="Permanent link">&para;</a></h3>
 <p>macOS cannot run containers natively and requires a Linux VM. This setup uses <strong>OrbStack</strong> instead of Docker Desktop.</p>
 <p><strong>Container Runtime</strong>: OrbStack (optimized lightweight VM with Docker integration)</p>
-<p>OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, Docker Buildx, kubectl, and shell completions — no Homebrew docker packages needed.</p>
+<p>OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, Docker Buildx, and shell completions — no Homebrew docker packages needed. (Kubernetes tooling — <code>kubectl</code>, <code>helm</code>, <code>k9s</code>, etc. — is installed via Homebrew separately so it's also available on Arch; see <code>install/packages.yml</code>.)</p>
 <p><strong>Installation</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>--cask<span class="w"> </span>orbstack
 </span></code></pre></div>
