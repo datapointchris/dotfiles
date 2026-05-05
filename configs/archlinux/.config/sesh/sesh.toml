@@ -1,5 +1,4 @@
 [default_session]
-startup_command = "git status"
 preview_command = "eza --all --git --icons --color=always {}"
 
 [[session]]
