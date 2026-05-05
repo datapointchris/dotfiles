@@ -10,7 +10,7 @@ macOS cannot run containers natively and requires a Linux VM. This setup uses **
 
 **Container Runtime**: OrbStack (optimized lightweight VM with Docker integration)
 
-OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, Docker Buildx, kubectl, and shell completions — no Homebrew docker packages needed.
+OrbStack provides a fast, lightweight Linux VM with native Docker CLI integration. It bundles Docker CLI, Docker Compose, Docker Buildx, and shell completions — no Homebrew docker packages needed. (Kubernetes tooling — `kubectl`, `helm`, `k9s`, etc. — is installed via Homebrew separately so it's also available on Arch; see `install/packages.yml`.)
 
 **Installation**:
 

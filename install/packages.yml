@@ -172,6 +172,45 @@ system_packages:
     description: Docker Compose V2 plugin
     # macOS: OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed
 
+  # Kubernetes (macOS + Arch only — no apt key, so Ubuntu/WSL skip these)
+  # All packages ship zsh completions to standard site-functions dirs
+  # picked up by compinit (see configs/common/.config/zsh/.zshrc).
+  - name: kubectl
+    pacman: kubectl
+    brew: kubernetes-cli
+    description: Kubernetes CLI (brew formula is kubernetes-cli; kubectl is an alias)
+    tags: [cli, kubernetes]
+
+  - name: helm
+    pacman: helm
+    brew: helm
+    description: Kubernetes package manager
+    tags: [cli, kubernetes]
+
+  - name: k9s
+    pacman: k9s
+    brew: k9s
+    description: Terminal UI for Kubernetes clusters
+    tags: [cli, tui, kubernetes]
+
+  - name: kubectx
+    pacman: kubectx
+    brew: kubectx
+    description: Fast Kubernetes context and namespace switcher (provides kubectx and kubens)
+    tags: [cli, kubernetes]
+
+  - name: stern
+    pacman: stern
+    brew: stern
+    description: Multi-pod log tailing for Kubernetes
+    tags: [cli, kubernetes]
+
+  - name: minikube
+    pacman: minikube
+    brew: minikube
+    description: Local Kubernetes cluster for learning and experimentation
+    tags: [cli, kubernetes]
+
   # Programming Languages
   - name: ruby
     brew: ruby
