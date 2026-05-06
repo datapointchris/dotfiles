@@ -5,11 +5,12 @@
 # for offline installation on restricted networks.
 #
 # Usage:
-#   ./create-bundle.sh                          # Standard bundle
-#   ./create-bundle.sh --platform linux-arm64   # Different platform
+#   ./create-bundle.sh                                       # Default: wsl-work-workstation, linux-x86_64
+#   ./create-bundle.sh --platform linux-arm64                # Different platform
+#   ./create-bundle.sh --manifest archlinux-personal-workstation
 #
 # Output:
-#   dotfiles-offline-v{YYYYMMDD}-{platform}.tar.gz
+#   dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
 
 set -euo pipefail
 
@@ -23,6 +24,7 @@ source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 # ============================================================================
 
 TARGET_PLATFORM="linux-x86_64"
+MANIFEST="wsl-work-workstation"
 OS=""
 ARCH=""
 BUNDLE_NAME=""
@@ -100,7 +102,7 @@ download_github_releases() {
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
     echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=github)
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=github --manifest="$MANIFEST")
 }
 
 # ============================================================================
@@ -176,7 +178,7 @@ download_go_binaries() {
     rm -rf "$extract_dir"
 
     echo "go-binary|$binary_name|$version|$binary_name" >> "$MANIFEST_FILE"
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=binary_info)
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=binary_info --manifest="$MANIFEST")
 }
 
 # ============================================================================
@@ -224,7 +226,7 @@ download_install_scripts() {
     log_info "  $name..."
     download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
     echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=custom --filter=bundle_install_script)
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=custom --filter=bundle_install_script --manifest="$MANIFEST")
 }
 
 # ============================================================================
@@ -281,7 +283,7 @@ download_cargo_binaries() {
     fi
 
     echo "cargo|$tool|$version|$filename" >> "$MANIFEST_FILE"
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=binary_info)
+  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=binary_info --manifest="$MANIFEST")
 }
 
 # ============================================================================
@@ -295,6 +297,8 @@ usage() {
   echo "  --platform PLATFORM    Target platform (default: linux-x86_64)"
   echo "                         Supported: linux-x86_64, linux-arm64,"
   echo "                                    darwin-x86_64, darwin-arm64"
+  echo "  --manifest NAME        Machine manifest filter (default: wsl-work-workstation)"
+  echo "                         Bundles only the packages that manifest installs."
   echo "  --help                 Show this help message"
   exit 0
 }
@@ -303,10 +307,24 @@ parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --platform)   TARGET_PLATFORM="$2"; shift 2 ;;
+      --manifest)   MANIFEST="$2"; shift 2 ;;
       --help|-h)    usage ;;
       *)            log_error "Unknown option: $1"; exit 1 ;;
     esac
   done
+}
+
+validate_manifest() {
+  local manifest_path="$DOTFILES_DIR/install/manifests/${MANIFEST}.yml"
+  if [[ ! -f "$manifest_path" ]]; then
+    log_error "Manifest not found: $manifest_path"
+    log_info "Available manifests:"
+    local m
+    for m in "$DOTFILES_DIR/install/manifests/"*.yml; do
+      log_info "  $(basename "$m" .yml)"
+    done
+    exit 1
+  fi
 }
 
 parse_platform() {
@@ -324,7 +342,7 @@ parse_platform() {
 }
 
 setup_directories() {
-  BUNDLE_NAME="dotfiles-offline-v$(date +%Y%m%d)-${OS}-${ARCH}"
+  BUNDLE_NAME="dotfiles-offline-v$(date +%Y%m%d)-${MANIFEST}-${OS}-${ARCH}"
   WORK_DIR=$(mktemp -d)
   trap 'rm -rf "${WORK_DIR:-}"' EXIT
   CACHE_DIR="$WORK_DIR/installers"
@@ -392,10 +410,12 @@ create_tarball() {
 main() {
   parse_args "$@"
   parse_platform
+  validate_manifest
   setup_directories
 
   log_info "Creating offline bundle: $BUNDLE_NAME"
   log_info "Target platform: $OS/$ARCH"
+  log_info "Manifest filter: $MANIFEST"
   echo ""
 
   download_github_releases

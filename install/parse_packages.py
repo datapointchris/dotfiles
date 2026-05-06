@@ -141,6 +141,25 @@ def filter_uv_packages_by_manifest(data, manifest):
     return [pkg['name'] for pkg in all_tools if pkg['name'] in manifest_tools]
 
 
+def filter_custom_installers_by_manifest(data, manifest, filter_field=None):
+    """Filter custom installer names to only those listed in the manifest.
+
+    If filter_field is set, also require the installer to have that field truthy
+    (e.g. bundle_install_script: true). Manifest field == True means 'all'.
+    """
+    manifest_installers = manifest.get('custom_installers', [])
+    all_installers = data.get('custom_installers', [])
+    if manifest_installers is True:
+        candidates = all_installers
+    elif not manifest_installers:
+        return []
+    else:
+        candidates = [i for i in all_installers if i['name'] in manifest_installers]
+    if filter_field:
+        candidates = [i for i in candidates if i.get(filter_field)]
+    return [i['name'] for i in candidates]
+
+
 def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     """Filter cargo packages to only those named in the manifest."""
     manifest_pkgs = manifest.get('cargo_packages', [])
@@ -483,7 +502,10 @@ def main():
         else:
             packages = get_github_packages(data)
     elif args.type == 'custom':
-        packages = get_custom_installers(data, filter_field=args.filter)
+        if manifest:
+            packages = filter_custom_installers_by_manifest(data, manifest, filter_field=args.filter)
+        else:
+            packages = get_custom_installers(data, filter_field=args.filter)
     elif args.type == 'shell-plugins':
         packages = get_shell_plugins(data, args.format)
     elif args.type == 'flatpak':

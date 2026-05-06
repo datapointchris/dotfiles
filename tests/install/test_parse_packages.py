@@ -255,3 +255,157 @@ def test_cargo_packages_with_binary_pattern_have_github_repo(real_packages_data)
                 f"Cargo package {pkg['name']!r} has binary_pattern but no github_repo. "
                 f"binary_pattern is only used for GitHub release URLs."
             )
+
+
+# ================================================================
+# Unit tests: filter_custom_installers_by_manifest
+# ================================================================
+# The offline bundler runs --type=custom --filter=bundle_install_script
+# --manifest=<machine> to pick up only the install scripts that the target
+# machine actually uses AND that have a downloadable script worth caching.
+# Both predicates must compose correctly or the bundle will either be missing
+# scripts (broken offline install) or carrying scripts the machine never runs.
+#
+# Each parametrize row encodes one mutation defense: invert the membership
+# check, drop the True branch, swallow filter_field, etc. Together they pin
+# every branch of the filter without requiring manual mutation testing.
+
+
+@pytest.fixture
+def custom_installers_sample():
+    """Realistic sample mirroring the structure of packages.yml custom_installers."""
+    return {
+        "custom_installers": [
+            {"name": "claude-code", "bundle_install_script": True},
+            {"name": "theme", "bundle_install_script": True},
+            {"name": "font", "bundle_install_script": True},
+            {"name": "awscli"},
+            {"name": "terraform-ls"},
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "case_id, manifest, filter_field, expected",
+    [
+        # Intersection: list of names returns only names present in BOTH manifest and packages.yml.
+        # Mutation it catches: inverting `in` to `not in` flips intersection to complement.
+        ("list_intersection",
+            {"custom_installers": ["claude-code", "awscli"]}, None,
+            ["claude-code", "awscli"]),
+
+        # True branch returns every entry in declaration order.
+        # Mutation it catches: True branch returning [] or filtered list.
+        ("true_returns_all",
+            {"custom_installers": True}, None,
+            ["claude-code", "theme", "font", "awscli", "terraform-ls"]),
+
+        # Missing field defaults to [], not all.
+        # Mutation it catches: `manifest.get('custom_installers', True)` (wrong default).
+        ("missing_field_returns_empty",
+            {}, None,
+            []),
+
+        # Empty list returns []. Note this is distinct from True — falsy list must NOT fall
+        # through to the True branch.
+        # Mutation it catches: `if not manifest_installers` placed BEFORE the `is True` check.
+        ("empty_list_returns_empty",
+            {"custom_installers": []}, None,
+            []),
+
+        # filter_field ANDs with manifest membership. terraform-ls and awscli are in the
+        # manifest but lack bundle_install_script; only claude-code survives both predicates.
+        # Mutation it catches: dropping the filter_field clause (would return all 3).
+        ("filter_field_ands_with_manifest",
+            {"custom_installers": ["claude-code", "awscli", "terraform-ls"]}, "bundle_install_script",
+            ["claude-code"]),
+
+        # filter_field still applies when manifest_installers is True.
+        # Mutation it catches: filter_field clause skipped on the True branch only.
+        ("filter_field_with_true_manifest",
+            {"custom_installers": True}, "bundle_install_script",
+            ["claude-code", "theme", "font"]),
+
+        # filter_field with manifest containing only un-flagged names yields []. Catches the
+        # case where manifest says "yes install awscli" but the bundle has no script for it.
+        # Mutation it catches: filter_field treated as OR (would return both names).
+        ("filter_field_excludes_all_unflagged",
+            {"custom_installers": ["awscli", "terraform-ls"]}, "bundle_install_script",
+            []),
+
+        # Stale manifest names (no matching packages.yml entry) are silently dropped, not errors.
+        # Mutation it catches: emitting manifest names verbatim instead of intersecting.
+        ("unknown_manifest_names_dropped",
+            {"custom_installers": ["claude-code", "ghost-installer", "another-ghost"]}, None,
+            ["claude-code"]),
+
+        # filter_field with missing manifest field still returns [] (not "all where flag").
+        # Mutation it catches: filter_field path bypassing the manifest check entirely.
+        ("filter_field_with_missing_manifest",
+            {}, "bundle_install_script",
+            []),
+    ],
+    ids=lambda v: v if isinstance(v, str) else None,
+)
+def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id, manifest, filter_field, expected):
+    """Parametrized contract for filter_custom_installers_by_manifest. See the case
+    comments above for the specific mutation each row defends against."""
+    result = parse_packages.filter_custom_installers_by_manifest(
+        custom_installers_sample, manifest, filter_field=filter_field
+    )
+    assert result == expected, f"case={case_id!r}: expected {expected}, got {result}"
+
+
+# ================================================================
+# Live-config invariants: cargo bundle composition by manifest
+# ================================================================
+# webviewrs is the regression: it depends on WebKitGTK + GStreamer at runtime
+# (packages.yml:562-568) so it ships only on archlinux-personal-workstation.
+# The offline bundler used to fetch all cargo_packages indiscriminately, which
+# 404'd on webviewrs and broke WSL bundles.
+#
+# This parametrized test runs the same assertion across every machine manifest
+# we ship. It's the strongest defense against two specific regression classes:
+#
+#   1. Filter goes back to "fetch everything" — webviewrs leaks into wsl/mac/ubuntu.
+#   2. Someone hardcodes `if name == 'webviewrs': skip` — the arch row breaks.
+#
+# It also pins broot (which arch/mac/wsl have but ubuntu-lxc-server doesn't) so
+# any future package with similar selective-shipping semantics is covered.
+
+
+@pytest.mark.parametrize(
+    "manifest_name, must_include, must_exclude",
+    [
+        # WSL work: the manifest that triggered the bug.
+        ("wsl-work-workstation",
+            ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot"],
+            ["webviewrs"]),
+        # macOS personal: same cargo set as WSL, also no webviewrs.
+        ("macos-personal-workstation",
+            ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot"],
+            ["webviewrs"]),
+        # Arch personal: the only machine that actually installs webviewrs.
+        # Proves the filter is data-driven, not a hardcoded skip.
+        ("archlinux-personal-workstation",
+            ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot", "webviewrs"],
+            []),
+        # Ubuntu LXC server: smaller cargo set — no broot, no webviewrs.
+        # Catches mutations that hardcode-include broot for all linux machines.
+        ("ubuntu-lxc-server",
+            ["bat", "fd", "eza", "zoxide", "delta", "oxker"],
+            ["broot", "webviewrs"]),
+    ],
+)
+def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):
+    """Each machine's cargo bundle must contain its manifest's packages and nothing else.
+    Names compared are commands (binary_info first column), since fd-find→fd, git-delta→delta."""
+    manifest = parse_packages.load_manifest(manifest_name)
+    result = parse_packages.filter_cargo_packages_by_manifest(
+        real_packages_data, manifest, output_format="binary_info"
+    )
+    names = {line.split("|", 1)[0] for line in result}
+    missing = [n for n in must_include if n not in names]
+    leaked = [n for n in must_exclude if n in names]
+    assert not missing, f"{manifest_name}: missing required cargo entries {missing}; got {sorted(names)}"
+    assert not leaked, f"{manifest_name}: cargo bundle leaked {leaked}; got {sorted(names)}"
