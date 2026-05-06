@@ -1,14 +1,11 @@
 git:
-  paging:
-    colorArg: always
-    pager: delta --paging=never
-    useConfig: false
-
+  pagers:
+    - colorArg: always
+      pager: delta --paging=never
+      useConfig: false
 gui:
   nerdFontsVersion: "3"
   showCommandLog: false
-
 os:
   editPreset: nvim
-
 promptToReturnFromSubprocess: false
