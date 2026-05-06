@@ -17,6 +17,7 @@ go_tools:
   - gdu
   - sesh
   - toolbox
+  - todoui
 
 github_releases:
   - fzf
