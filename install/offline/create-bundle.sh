@@ -87,6 +87,7 @@ download_github_releases() {
   local github_releases_dir="$DOTFILES_DIR/install/common/github-releases"
 
   local tool version url filename script
+  local extra_name extra_version extra_url extra_filename
   while IFS= read -r tool; do
     [[ -z "$tool" ]] && continue
     script="$github_releases_dir/${tool}.sh"
@@ -102,6 +103,20 @@ download_github_releases() {
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
     echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
+
+    # Companion files (e.g. fzf-tmux for fzf). Scripts opt in by handling
+    # --print-extras and emitting <name>|<version>|<url> lines. Scripts
+    # without the handler would fall through to their full install path
+    # if invoked with the flag, so we capability-check before calling.
+    if grep -q -- "--print-extras" "$script"; then
+      while IFS='|' read -r extra_name extra_version extra_url; do
+        [[ -z "$extra_name" ]] && continue
+        extra_filename=$(basename "$extra_url")
+        log_info "    extra: $extra_name ($extra_version)..."
+        download_file "$extra_url" "$CACHE_DIR/binaries/$extra_filename" "$extra_name"
+        echo "extra|$extra_name|$extra_version|$extra_filename" >> "$MANIFEST_FILE"
+      done < <(bash "$script" --print-extras "$OS" "$ARCH")
+    fi
   done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=github --manifest="$MANIFEST")
 }
 

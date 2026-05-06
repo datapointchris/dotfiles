@@ -184,6 +184,17 @@ Some tools need custom handling:
 
 These scripts use library helpers where applicable but handle their unique requirements inline.
 
+## Bundler Contract
+
+`install/offline/create-bundle.sh` invokes each script with two read-only flags to build the offline cache without performing any installation on the bundler's host:
+
+- `--print-url <os> <arch>` — required. Emits one line: `name|version|url`. The bundler downloads `url` into `installers/binaries/`. See `install/common/github-releases/lazygit.sh` for the canonical implementation.
+- `--print-extras <os> <arch>` — optional. Emits zero or more lines in the same `name|version|url` format for companion files that aren't included in the release tarball. The bundler downloads each into `installers/binaries/` alongside the main artifact. The fzf installer uses this for `fzf-tmux`, the popup wrapper script that the tmux `prefix+s` binding calls — it lives in the fzf repo but is not bundled into release tarballs.
+
+Both flags must be handled *before* the script sources logging/error-handling libraries and before any installation logic, so invocation is fast and side-effect-free. The bundler grep-detects `--print-extras` support before invoking it; scripts without the flag are skipped (calling them would otherwise fall through to their full install path).
+
+The version returned by `--print-extras` should be pinned to the same release as `--print-url` so the bundle ships a matched pair. Compute the version once in the script and reuse it for both URL builders.
+
 ## Code Savings
 
 The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
