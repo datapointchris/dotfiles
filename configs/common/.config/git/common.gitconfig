@@ -1,0 +1,35 @@
+[advice]
+addIgnoredFile = false
+
+[init]
+defaultBranch = main
+
+[pull]
+rebase = true
+
+[push]
+autoSetupRemote = true
+
+[merge]
+conflictstyle = diff3
+
+[diff]
+colorMoved = default
+
+[interactive]
+diffFilter = delta --color-only
+
+[delta]
+navigate = true
+line-numbers = true
+side-by-side = true
+
+[alias]
+prune = fetch --prune
+undo-commit = reset --soft HEAD^
+unstage = restore --staged
+graph = log --graph --pretty=format:'%C(blue)%h%C(auto)%d %s %C(green)(%cr)%C(dim yellow) - %an%C(auto)'
+oneline = log --oneline
+last = commit --amend --no-edit --no-verify
+last-commit = log -1 HEAD
+changes = log --pretty='short' --name-status
