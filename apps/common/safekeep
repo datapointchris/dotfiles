@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime
 from fnmatch import fnmatch
 from pathlib import Path
@@ -31,11 +32,11 @@ def red(text): return _color("31", text)
 def bold(text): return _color("1", text)
 
 
-VALID_KEYS = {"dest", "keep", "exclude", "paths", "git_untracked", "git_ignored"}
+VALID_KEYS = {"dest", "keep", "exclude", "paths", "git_untracked", "git_ignored", "max_file_size_mb"}
 
 DEFAULT_EXCLUDES = [
     ".venv", "node_modules", "__pycache__", ".mypy_cache", ".ruff_cache",
-    ".pytest_cache", "build", "dist", "*.pyc", ".DS_Store",
+    ".pytest_cache", "build", "dist", "*.pyc", ".DS_Store", ".terraform",
 ]
 
 CONFIG_DIR = Path.home() / ".config" / "safekeep"
@@ -63,6 +64,7 @@ config format:
 
   optional keys:
     exclude           List of glob patterns to skip (sensible defaults if omitted)
+    max_file_size_mb  Skip files larger than this size in MB (e.g. 5 skips files > 5 MB)
     paths             List of absolute paths to back up (~ is expanded)
     git_untracked     List of absolute paths to git repos -- copies their untracked files
     git_ignored       List of glob patterns to capture from git_untracked repos
@@ -199,7 +201,7 @@ def matches_exclude(rel_path, excludes):
     return False
 
 
-def rsync_paths(paths, dest_base, excludes, dry_run=False):
+def rsync_paths(paths, dest_base, excludes, dry_run=False, max_size_mb=None):
     """Rsync absolute paths into dest_base, preserving full directory structure.
 
     Uses rsync --relative with absolute paths so that '/home/chris/.ssh/config'
@@ -222,21 +224,35 @@ def rsync_paths(paths, dest_base, excludes, dry_run=False):
     cmd = ["rsync", "-av", "--no-perms", "--chmod=Du+w", "--relative", "--copy-links"]
     for pattern in excludes:
         cmd.extend(["--exclude", pattern])
+    if max_size_mb is not None:
+        cmd.extend(["--max-size", f"{max_size_mb}m"])
     if dry_run:
         cmd.append("-n")
     cmd.extend(valid)
     cmd.append(str(dest_base) + "/")
 
-    subprocess.run(cmd, check=True)
+    result = subprocess.run(cmd)
+    if result.returncode not in (0, 23, 24):
+        raise subprocess.CalledProcessError(result.returncode, cmd)
+    if result.returncode in (23, 24):
+        print(f"  {yellow('warning:')} rsync completed with partial transfer (some files skipped)")
     return len(valid)
 
 
-def rsync_untracked(files, dest_base, dry_run=False):
+def rsync_untracked(files, dest_base, dry_run=False, max_size_mb=None):
     """Rsync individual untracked files preserving full path structure.
 
     Uses --files-from with / as the base for efficiency when copying many
     small files. Paths are stored relative to filesystem root in the destination.
     """
+    if max_size_mb is not None:
+        limit = max_size_mb * 1024 * 1024
+        skipped = [f for f in files if f.is_file() and f.stat().st_size > limit]
+        files = [f for f in files if not (f.is_file() and f.stat().st_size > limit)]
+        for f in skipped:
+            size_mb = f.stat().st_size / (1024 * 1024)
+            print(f"  {yellow('skip:')} {f} {yellow(f'({size_mb:.1f} MB > {max_size_mb} MB limit)')}")
+
     rel_paths = [str(f).lstrip("/") for f in files]
 
     if not rel_paths:
@@ -253,7 +269,11 @@ def rsync_untracked(files, dest_base, dry_run=False):
         cmd = ["rsync", "-av", "--no-perms", "--files-from", tmp_path, "/", str(dest_base) + "/"]
         if dry_run:
             cmd.append("-n")
-        subprocess.run(cmd, check=True)
+        result = subprocess.run(cmd)
+        if result.returncode not in (0, 23, 24):
+            raise subprocess.CalledProcessError(result.returncode, cmd)
+        if result.returncode in (23, 24):
+            print(f"  {yellow('warning:')} rsync completed with partial transfer (some files skipped)")
     finally:
         os.unlink(tmp_path)
 
@@ -304,6 +324,9 @@ def show_config(config_path, config):
     print(f"  {bold('keep:')}    {config['keep']} snapshots")
     excludes = config.get("exclude", DEFAULT_EXCLUDES)
     print(f"  {bold('exclude:')} {', '.join(excludes)}")
+    max_size_mb = config.get("max_file_size_mb")
+    if max_size_mb is not None:
+        print(f"  {bold('max_file_size_mb:')} {max_size_mb} MB")
 
     paths = config.get("paths", [])
     repos = config.get("git_untracked", [])
@@ -372,9 +395,11 @@ def main():
 
     print(f"{bold('safekeep:')} using config {cyan(config_path.name)}", flush=True)
 
+    start_time = time.monotonic()
     dest = Path(config["dest"]).expanduser()
     keep = config["keep"]
     excludes = config.get("exclude", DEFAULT_EXCLUDES)
+    max_size_mb = config.get("max_file_size_mb")
 
     # Create destination if it doesn't exist, fail if parent is unreachable
     try:
@@ -394,7 +419,7 @@ def main():
     paths = config.get("paths", [])
     if paths:
         print(f"\n{bold('paths:')}")
-        count = rsync_paths(paths, dest_base, excludes, args.dry_run)
+        count = rsync_paths(paths, dest_base, excludes, args.dry_run, max_size_mb)
         label = yellow("would copy") if args.dry_run else green("copied")
         print(f"  {label} {bold(str(count))} paths")
         total += count
@@ -410,7 +435,7 @@ def main():
                 continue
             untracked = git_ls_untracked(repo_path)
             filtered = [f for f in untracked if not matches_exclude(str(f), excludes)]
-            count = rsync_untracked(filtered, dest_base, args.dry_run)
+            count = rsync_untracked(filtered, dest_base, args.dry_run, max_size_mb)
             label = yellow("would copy") if args.dry_run else green("copied")
             print(f"  {label} {bold(str(count))} untracked files from {cyan(str(repo_path))}")
             total += count
@@ -427,7 +452,7 @@ def main():
             filtered = [f for f in ignored if not matches_exclude(str(f), excludes)]
             if not filtered:
                 continue
-            count = rsync_untracked(filtered, dest_base, args.dry_run)
+            count = rsync_untracked(filtered, dest_base, args.dry_run, max_size_mb)
             label = yellow("would copy") if args.dry_run else green("copied")
             print(f"  {label} {bold(str(count))} ignored files from {cyan(str(repo_path))}")
             total += count
@@ -438,8 +463,23 @@ def main():
         if removed:
             print(f"{yellow('pruned')} {bold(str(len(removed)))} old backups: {', '.join(d.name for d in removed)}")
 
+    elapsed = time.monotonic() - start_time
+    elapsed_str = f"{elapsed:.0f}s" if elapsed < 60 else f"{elapsed / 60:.1f}m"
+
+    if not args.dry_run and dest_base.exists():
+        total_bytes = sum(f.stat().st_size for f in dest_base.rglob("*") if f.is_file())
+        if total_bytes >= 1024 ** 3:
+            size_str = f"{total_bytes / 1024 ** 3:.2f} GB"
+        elif total_bytes >= 1024 ** 2:
+            size_str = f"{total_bytes / 1024 ** 2:.1f} MB"
+        else:
+            size_str = f"{total_bytes / 1024:.1f} KB"
+        size_part = f", {bold(size_str)} written"
+    else:
+        size_part = ""
+
     label = yellow("would back up") if args.dry_run else green("backed up")
-    print(f"\n{bold('safekeep:')} {label} {bold(str(total))} items to {cyan(str(dest / date_dir))}")
+    print(f"\n{bold('safekeep:')} {label} {bold(str(total))} items to {cyan(str(dest / date_dir))} in {bold(elapsed_str)}{size_part}")
 
 
 if __name__ == "__main__":
