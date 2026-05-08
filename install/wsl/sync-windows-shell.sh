@@ -52,13 +52,15 @@ main() {
   local repo_shell_dir="$DOTFILES_DIR/configs/common/.local/shell"
   local shell_common="$DOTFILES_DIR/shell/common"
   local shell_wsl="$DOTFILES_DIR/shell/wsl"
+  local common_gitconfig="$DOTFILES_DIR/configs/common/.config/git/common.gitconfig"
 
   echo "Syncing shell files to Windows Git Bash..."
   echo "  Windows home: $win_home"
   echo "  Target: $win_shell_dir"
 
-  # Create target directory
+  # Create target directories
   mkdir -p "$win_shell_dir"
+  mkdir -p "$win_home/.config/git"
 
   # Copy static library files from repo
   cp "$repo_shell_dir/colors.sh" "$win_shell_dir/"
@@ -154,6 +156,37 @@ OVERRIDES
   } > "$combined_file"
 
   echo "  Generated: combined.sh ($(wc -l < "$combined_file") lines)"
+
+  cat > "$win_home/.bashrc" <<'BASHRC'
+# shellcheck shell=bash
+# shellcheck disable=SC1091
+
+[[ -f "$HOME/.env" ]] && source "$HOME/.env"
+
+[[ -f "$HOME/.local/shell/combined.sh" ]] && source "$HOME/.local/shell/combined.sh"
+
+export PLATFORM="windows"
+
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
+command -v fzf >/dev/null 2>&1 && eval "$(fzf --bash)"
+BASHRC
+  echo "  Wrote: .bashrc"
+
+  cp "$common_gitconfig" "$win_home/.config/git/common.gitconfig"
+  echo "  Copied: .config/git/common.gitconfig"
+
+  cp "$DOTFILES_DIR/configs/common/.inputrc" "$win_home/.inputrc"
+  echo "  Copied: .inputrc"
+
+  # Add include to Windows .gitconfig if not already present
+  local win_gitconfig="$win_home/.gitconfig"
+  if ! grep -q "common.gitconfig" "$win_gitconfig" 2>/dev/null; then
+    printf '[include]\n\tpath = ~/.config/git/common.gitconfig\n' >> "$win_gitconfig"
+    echo "  Updated: .gitconfig (added include)"
+  else
+    echo "  Skipped: .gitconfig include already present"
+  fi
+
   echo "Windows shell sync complete."
 }
 
