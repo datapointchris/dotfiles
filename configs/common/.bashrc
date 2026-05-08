@@ -8,7 +8,7 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 [[ -f "$SHELL_DIR/functions.sh" ]] && source "$SHELL_DIR/functions.sh"
 [[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh"
 
-[[ -f "$SHELL_DIR/.bash_prompt" ]] && source "$SHELL_DIR/.bash_prompt"
+[[ -f "$SHELL_DIR/prompt.bash" ]] && source "$SHELL_DIR/prompt.bash"
 
 _detect_platform() {
   case "$(uname -s)" in
@@ -29,16 +29,14 @@ PLATFORM="${PLATFORM:-$(_detect_platform)}"
 
 case "$PLATFORM" in
   macos)
-    [[ -f "$SHELL_DIR/macos-aliases.sh" ]] && source "$SHELL_DIR/macos-aliases.sh"
-    [[ -f "$SHELL_DIR/macos-functions.sh" ]] && source "$SHELL_DIR/macos-functions.sh"
+    [[ -f "$SHELL_DIR/macos.sh" ]] && source "$SHELL_DIR/macos.sh"
     ;;
   wsl)
-    [[ -f "$SHELL_DIR/wsl-aliases.sh" ]] && source "$SHELL_DIR/wsl-aliases.sh"
-    [[ -f "$SHELL_DIR/wsl-functions.sh" ]] && source "$SHELL_DIR/wsl-functions.sh"
+    [[ -f "$SHELL_DIR/wsl.sh" ]] && source "$SHELL_DIR/wsl.sh"
     ;;
 esac
 
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
 command -v fzf >/dev/null 2>&1 && eval "$(fzf --bash)"
-
-[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"

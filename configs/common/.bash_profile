@@ -10,6 +10,8 @@ export XDG_BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 export SHELL_DIR="$HOME/.local/shell"
 export EDITOR="nvim"
 
+[[ -f "$HOME/.env" ]] && source "$HOME/.env"
+
 PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 [[ -d "$HOME/.local/bin" ]] && PATH="$HOME/.local/bin:$PATH"
 [[ -d "$HOME/bin" ]] && PATH="$HOME/bin:$PATH"
