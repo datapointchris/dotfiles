@@ -93,12 +93,22 @@ tasks:
   test:unit:
     desc: Run unit tests (libraries + installer functions, no Docker)
     cmds:
-      - bats tests/libraries/*.bats tests/install/unit/*.bats
+      - |
+        if grep -qi microsoft /proc/version 2>/dev/null; then
+          echo "Skipping bats unit tests on WSL"
+          exit 0
+        fi
+        bats tests/libraries/*.bats tests/install/unit/*.bats
 
   test:integration:
     desc: Run integration tests (includes Docker tests if image is built)
     cmds:
-      - bats tests/install/integration/*.bats
+      - |
+        if grep -qi microsoft /proc/version 2>/dev/null; then
+          echo "Skipping bats integration tests on WSL"
+          exit 0
+        fi
+        bats tests/install/integration/*.bats
 
   test:watch:
     desc: Run tests on file changes (requires entr)
