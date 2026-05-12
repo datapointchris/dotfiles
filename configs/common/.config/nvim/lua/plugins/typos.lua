@@ -1,6 +1,7 @@
 return {
   dir = '~/code/typos',
   name = 'typos',
+  cond = vim.env.PLATFORM ~= 'wsl',
   ft = 'markdown', -- Notes are .md, no need to load otherwise
   cmd = { 'TyposToggle', 'TyposStatus' },
   opts = {
