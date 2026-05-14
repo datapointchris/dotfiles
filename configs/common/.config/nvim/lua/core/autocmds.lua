@@ -17,6 +17,9 @@ vim.api.nvim_create_autocmd('LspAttach', {
     if client.name == 'ruff' then
       client.server_capabilities.hoverProvider = false
     end
+    if client.name == 'terraformls' then
+      client.server_capabilities.semanticTokensProvider = nil
+    end
     -- Explicit hover mapping overrides keywordprg (e.g. Python sets pydoc)
     vim.keymap.set('n', 'K', vim.lsp.buf.hover, { buffer = args.buf })
   end,
