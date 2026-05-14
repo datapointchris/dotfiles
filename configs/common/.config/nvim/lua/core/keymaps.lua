@@ -89,7 +89,6 @@ end
 -- VSCode doesn't use Neovim sessions, these are Neovim-specific
 if not vim.g.vscode then
   vim.keymap.set('n', '<leader>wr', '<cmd>SessionRestore<CR>', { desc = 'Restore session for cwd' })
-  vim.keymap.set('n', '<leader>ws', '<cmd>SessionSave<CR>', { desc = 'Save session for auto session root dir' })
 end
 
 --------------------------------------------------------------------------------
@@ -103,16 +102,6 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<C-l>', '<cmd>TmuxNavigateRight<CR>', { desc = 'Navigate right' })
   vim.keymap.set('n', '<C-\\>', '<cmd>TmuxNavigatePrevious<CR>', { desc = 'Navigate previous' })
 end
-
---------------------------------------------------------------------------------
---- NEOVIM-TIPS -----------------------------------------------------------------------
---------------------------------------------------------------------------------
-vim.keymap.set('n', '<leader>nto', '<cmd>neovimtips<cr>', { desc = 'open neovim tips' })
-vim.keymap.set('n', '<leader>nte', '<cmd>neovimtipsedit<cr>', { desc = 'edit your neovim tips' })
-vim.keymap.set('n', '<leader>nta', '<cmd>neovimtipsadd<cr>', { desc = 'add your neovim tip' })
-vim.keymap.set('n', '<leader>nth', '<cmd>help neovim-tips<cr>', { desc = 'neovim tips help' })
-vim.keymap.set('n', '<leader>ntr', '<cmd>neovimtipsrandom<cr>', { desc = 'show random tip' })
-vim.keymap.set('n', '<leader>ntp', '<cmd>neovimtipspdf<cr>', { desc = 'open neovim tips pdf' })
 
 ---------------------------------------------------------------------------------
 --- AI Assistant Keymaps --------------------------------------------------------
@@ -262,18 +251,4 @@ if not vim.g.vscode then
       apply = true,
     })
   end, { desc = '[F]ix all linting' })
-end
-
---------------------------------------------------------------------------------
--- Workflows ------------------------------------------------------------------
---------------------------------------------------------------------------------
--- Custom workflow system is Neovim-specific
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>hw', function()
-    require('utils.workflows').show_workflow_picker()
-  end, { desc = 'Help: Workflows' })
-  vim.keymap.set('n', '<leader>hk', function()
-    require('utils.workflows').show_all_keymaps()
-  end, { desc = 'Help: All keymaps' })
-  vim.keymap.set('n', '<leader>hh', '<leader>?', { desc = 'Help: Buffer keymaps', remap = true })
 end
