@@ -75,12 +75,12 @@ if not vim.g.vscode then
       require('winresize').resize(win, amt, dir)
     end
   end
-  vim.keymap.set('n', '<leader>rh', resize(0, 10, 'left'), { desc = 'Resize window left' })
-  vim.keymap.set('n', '<leader>rj', resize(0, 10, 'down'), { desc = 'Resize window down' })
-  vim.keymap.set('n', '<leader>rk', resize(0, 10, 'up'), { desc = 'Resize window up' })
-  vim.keymap.set('n', '<leader>rl', resize(0, 10, 'right'), { desc = 'Resize window right' })
+  vim.keymap.set('n', '<leader>wh', resize(0, 10, 'left'), { desc = 'Window resize left' })
+  vim.keymap.set('n', '<leader>wj', resize(0, 10, 'down'), { desc = 'Window resize down' })
+  vim.keymap.set('n', '<leader>wk', resize(0, 10, 'up'), { desc = 'Window resize up' })
+  vim.keymap.set('n', '<leader>wl', resize(0, 10, 'right'), { desc = 'Window resize right' })
   -- Maximize / restore current split using vim-maximizer
-  vim.keymap.set('n', '<leader>rm', '<cmd>MaximizerToggle<CR>', { desc = 'Maximize/minimize a split' })
+  vim.keymap.set('n', '<leader>wm', '<cmd>MaximizerToggle<CR>', { desc = 'Window maximize/minimize' })
 end
 
 ----------------------------------------

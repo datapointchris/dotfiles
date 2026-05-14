@@ -36,14 +36,14 @@ return {
     -- Swap keymaps (normal mode)
     local ts_swap = require('nvim-treesitter-textobjects.swap')
     local swap_next_maps = {
-      ['<leader>na'] = { query = '@parameter.inner', desc = 'Swap parameter/argument with next' },
-      ['<leader>n:'] = { query = '@property.outer', desc = 'Swap object property with next' },
-      ['<leader>nm'] = { query = '@function.outer', desc = 'Swap function with next' },
+      ['<leader>sna'] = { query = '@parameter.inner', desc = 'Swap parameter/argument with next' },
+      ['<leader>sn:'] = { query = '@property.outer', desc = 'Swap object property with next' },
+      ['<leader>snm'] = { query = '@function.outer', desc = 'Swap function with next' },
     }
     local swap_prev_maps = {
-      ['<leader>pa'] = { query = '@parameter.inner', desc = 'Swap parameter/argument with prev' },
-      ['<leader>p:'] = { query = '@property.outer', desc = 'Swap object property with prev' },
-      ['<leader>pm'] = { query = '@function.outer', desc = 'Swap function with previous' },
+      ['<leader>spa'] = { query = '@parameter.inner', desc = 'Swap parameter/argument with prev' },
+      ['<leader>sp:'] = { query = '@property.outer', desc = 'Swap object property with prev' },
+      ['<leader>spm'] = { query = '@function.outer', desc = 'Swap function with previous' },
     }
 
     for lhs, map in pairs(swap_next_maps) do

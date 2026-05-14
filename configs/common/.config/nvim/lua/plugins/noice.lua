@@ -57,23 +57,20 @@ return {
     },
   },
   keys = {
-    -- Keymap to search through all messages with Telescope
     {
-      '<leader>fmm',
+      '<leader>nm',
       '<cmd>Telescope noice<cr>',
-      desc = 'Search Noice Messages',
+      desc = 'Noice: Search messages',
     },
-    -- Keymap to show message history
     {
-      '<leader>fmh',
+      '<leader>nh',
       '<cmd>Noice history<cr>',
-      desc = 'Noice History',
+      desc = 'Noice: History',
     },
-    -- Keymap to dismiss all visible notifications
     {
       '<leader>nd',
       '<cmd>Noice dismiss<cr>',
-      desc = 'Dismiss Noice Notifications',
+      desc = 'Noice: Dismiss notifications',
     },
   },
 }

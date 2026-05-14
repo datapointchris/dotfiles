@@ -18,32 +18,47 @@ return {
     local wk = require('which-key')
     wk.setup(opts)
 
-    -- Add clean, minimal group names without icons
+    -- Group labels for which-key popup. Goal: every prefix with real keymaps
+    -- has an accurate label; nothing is registered that has no bindings.
     wk.add({
-      -- Main action groups
-      { '<leader>a', group = 'AI Chat' },
-      { '<leader>c', group = 'AI Assistant' },
-      { '<leader>f', group = 'Find & Search' },
+      -- AI / chat
+      { '<leader>c', group = 'AI Assistant (CodeCompanion)' },
+
+      -- Find / search
+      { '<leader>f', group = 'Find & Search (Telescope)' },
+      { '<leader>fm', group = 'Format Code' },
+
+      -- LSP / code navigation
+      { '<leader>l', group = 'LSP' },
+      { '<leader>g', group = 'Go To / Treesitter' },
+      { '<leader>d', group = 'Document Symbols' },
+      { '<leader>x', group = 'Trouble Diagnostics' },
+
+      -- Git
+      { '<leader>h', group = 'Git Hunks' },
+      { '<leader>ht', group = 'Git Toggles' },
+
+      -- Buffers / windows / sessions
+      { '<leader>t', group = 'Tabs' },
+      { '<leader>w', group = 'Windows & Sessions' },
+      { '<leader>r', group = 'Reload Config' },
+
+      -- Quit
       { '<leader>q', group = 'Quit & Exit' },
 
-      -- Code navigation & editing
-      { '<leader>l', group = 'Language Server' },
-      { '<leader>g', group = 'Go To Location' },
-      { '<leader>d', group = 'Document Analysis' },
-      { '<leader>w', group = 'Windows & Sessions' },
-
-      -- File & project management
-      { '<leader>t', group = 'Tabs' },
-      { '<leader>h', group = 'Help & Guides' },
-
-      -- Text manipulation
-      { '<leader>y', group = 'Copy to Clipboard' },
+      -- Editing / clipboard
+      { '<leader>y', group = 'Yank to Clipboard' },
       { '<leader>p', group = 'Paste from Clipboard' },
+      { '<leader>n', group = 'Noice / Notifications' },
+      { '<leader>s', group = 'Swap (Treesitter)' },
+      { '<leader>sn', group = 'Swap with Next' },
+      { '<leader>sp', group = 'Swap with Previous' },
 
-      -- Advanced features
-      { '<leader>s', group = 'Screen & Splits' },
-      { '<leader>z', group = 'Zen Mode' },
-      { '<leader>fm', group = 'Format Code' },
+      -- Tools
+      { '<leader>b', group = 'Debug Breakpoints (DAP)' },
+      { '<leader>m', group = 'Molten (Jupyter)' },
+      { '<leader>O', group = 'Octo (GitHub PRs)' },
+      { '<leader>z', group = 'Zen Mode & ZK Notes' },
     })
   end,
   keys = {
