@@ -3,9 +3,14 @@
 
 return {
   'saghen/blink.cmp',
-  -- version = '0.*',
-  build = 'cargo build --release',
+  -- v2 build: invokes the plugin's own build task so the binary lands in
+  -- the new lib/ path. Replaces v1's `build = 'cargo build --release'`,
+  -- which left the artifact in target/release/ where v2 no longer looks.
+  build = function()
+    require('blink.cmp').build():wait(60000)
+  end,
   dependencies = {
+    'saghen/blink.lib',
     'rafamadriz/friendly-snippets',
     'giuxtaposition/blink-cmp-copilot',
   },
