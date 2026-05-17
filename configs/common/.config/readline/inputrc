@@ -6,6 +6,10 @@
 # Include system inputrc file
 $include /etc/inputrc
 
+# Vi-mode line editing — matches zsh's vi bindings across all readline-using programs
+# (psql, python -i, node, sqlite3, etc.). Frees Ctrl+Left/Right for tmux pane navigation.
+set editing-mode vi
+
 # Make Tab autocomplete regardless of filename case
 set completion-ignore-case on
 
