@@ -161,6 +161,16 @@ OVERRIDES
 # shellcheck shell=bash
 # shellcheck disable=SC1091
 
+# Larger, deduplicated history with timestamps. erasedups makes fzf history search far more useful.
+HISTSIZE=100000
+HISTFILESIZE=100000
+HISTCONTROL=ignoreboth:erasedups
+HISTTIMEFORMAT="%F %T "
+shopt -s histappend cmdhist
+
+# Navigation niceties: typo-tolerant cd, recursive ** globbing, redetect terminal size after resize
+shopt -s autocd cdspell dirspell globstar checkwinsize
+
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
 [[ -f "$HOME/.local/shell/combined.sh" ]] && source "$HOME/.local/shell/combined.sh"
