@@ -79,6 +79,12 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>wj', resize(0, 10, 'down'), { desc = 'Window resize down' })
   vim.keymap.set('n', '<leader>wk', resize(0, 10, 'up'), { desc = 'Window resize up' })
   vim.keymap.set('n', '<leader>wl', resize(0, 10, 'right'), { desc = 'Window resize right' })
+  -- Same resize action via Ctrl+Alt+arrow chord — pairs with tmux's matching binding
+  -- so resize works identically across pane and split boundaries.
+  vim.keymap.set('n', '<C-M-Left>', resize(0, 10, 'left'), { desc = 'Window resize left' })
+  vim.keymap.set('n', '<C-M-Down>', resize(0, 10, 'down'), { desc = 'Window resize down' })
+  vim.keymap.set('n', '<C-M-Up>', resize(0, 10, 'up'), { desc = 'Window resize up' })
+  vim.keymap.set('n', '<C-M-Right>', resize(0, 10, 'right'), { desc = 'Window resize right' })
   -- Maximize / restore current split using vim-maximizer
   vim.keymap.set('n', '<leader>wm', '<cmd>MaximizerToggle<CR>', { desc = 'Window maximize/minimize' })
 end
