@@ -175,7 +175,9 @@ BASHRC
   cp "$common_gitconfig" "$win_home/.config/git/common.gitconfig"
   echo "  Copied: .config/git/common.gitconfig"
 
-  cp "$DOTFILES_DIR/configs/common/.inputrc" "$win_home/.inputrc"
+  # Reuse the comprehensive readline config used on Mac/Linux:
+  # vi mode, case-insensitive + colored completion, Shift-Tab cycling, UTF-8, history search.
+  cp "$DOTFILES_DIR/configs/common/.config/readline/inputrc" "$win_home/.inputrc"
   echo "  Copied: .inputrc"
 
   # Add include to Windows .gitconfig if not already present
