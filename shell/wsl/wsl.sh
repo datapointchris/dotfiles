@@ -7,26 +7,34 @@ source "$SHELL_DIR/colors.sh"
 
 #@update-tldr
 #--> Update tldr pages from downloaded zip file (offline WSL)
-# Usage: update-tldr [zip-file-name]  (default: tldr-pages.zip)
-# Prerequisites: download tldr-pages.zip from github.com/tldr-pages/tldr/releases
+# Usage: update-tldr [zip-file-name]  (default: tldr-pages.en.zip)
+# Prerequisites: download tldr-pages.en.zip from
+#   https://github.com/tldr-pages/tldr/releases/latest
 # to Windows Downloads folder; set TLDR_CACHE_MAX_AGE=999999999 in ~/.env
+# Notes:
+# - tldr-pages.en.zip has platform dirs (common/, linux/, osx/, ...) at the
+#   archive root, and the python tldr client expects them at
+#   $XDG_CACHE_HOME/tldr/pages/, so we extract INTO pages/, not the cache root.
+# - tldr.zip (all languages) has pages.en/, pages.es/, ... at the root, which
+#   does NOT match the python client layout (it wants pages/ for English), so
+#   prefer tldr-pages.en.zip for offline installs.
 update-tldr() {
-  local zip_file="${1:-tldr-pages.zip}"
+  local zip_file="${1:-tldr-pages.en.zip}"
   local downloads_dir="${winchris}/Downloads"
   local zip_path="${downloads_dir}/${zip_file}"
   local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/tldr"
+  local pages_dir="${cache_dir}/pages"
 
-  # Verify zip file exists
   if [[ ! -f "$zip_path" ]]; then
     echo "$(color_red "Error:") Zip file not found at: $zip_path"
-    echo "Please download tldr-pages.zip from: https://github.com/tldr-pages/tldr/releases"
+    echo "Please download ${zip_file} from:"
+    echo "  https://github.com/tldr-pages/tldr/releases/latest"
     echo "Save it to: ${downloads_dir}/"
     return 1
   fi
 
   echo "$(color_blue "→") Found tldr archive: $(color_cyan "$zip_file")"
 
-  # Clear existing cache
   echo "$(color_blue "→") Clearing existing cache..."
   if command -v tldr >/dev/null 2>&1; then
     tldr --clear-cache 2>/dev/null || rm -rf "$cache_dir"
@@ -34,32 +42,36 @@ update-tldr() {
     rm -rf "$cache_dir"
   fi
 
-  # Create cache directory
-  mkdir -p "$cache_dir"
-  echo "$(color_blue "→") Created cache directory: $(color_cyan "$cache_dir")"
+  mkdir -p "$pages_dir"
+  echo "$(color_blue "→") Created cache directory: $(color_cyan "$pages_dir")"
 
-  # Extract zip file
   echo "$(color_blue "→") Extracting pages..."
-  if ! unzip -q "$zip_path" -d "$cache_dir"; then
+  if ! unzip -q "$zip_path" -d "$pages_dir"; then
     echo "$(color_red "Error:") Failed to extract zip file"
     return 1
   fi
 
-  # Verify extraction
-  if [[ -d "$cache_dir/pages" ]]; then
+  # tldr-pages.en.zip has common/, linux/, osx/, ... at the archive root.
+  # If we extracted an archive that put everything under a single pages/
+  # wrapper (the legacy tldr-pages.zip layout), flatten it back.
+  if [[ -d "$pages_dir/pages" && ! -d "$pages_dir/common" ]]; then
+    echo "$(color_blue "→") Detected legacy pages/ wrapper, flattening..."
+    mv "$pages_dir/pages"/* "$pages_dir/" && rmdir "$pages_dir/pages"
+  fi
+
+  if [[ -d "$pages_dir/common" ]]; then
     local page_count
-    page_count=$(find "$cache_dir/pages" -name "*.md" | wc -l)
+    page_count=$(find "$pages_dir" -name "*.md" | wc -l)
     echo "$(color_green "✓") Successfully installed $page_count tldr pages"
     echo "$(color_green "✓") Cache location: $(color_cyan "$cache_dir")"
 
-    # Test with a common command
     echo ""
     color_blue "Testing with tldr tar:"
     tldr tar 2>/dev/null | head -10 || echo "$(color_yellow "Note:") Run a tldr command to verify it works"
   else
-    echo "$(color_red "Error:") Pages directory not found after extraction"
-    echo "Archive contents:"
-    ls -la "$cache_dir"
+    echo "$(color_red "Error:") Expected platform directory 'common/' not found after extraction"
+    echo "Archive contents (top level):"
+    ls -la "$pages_dir"
     return 1
   fi
 }
