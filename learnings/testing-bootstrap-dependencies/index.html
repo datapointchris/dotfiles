@@ -4610,7 +4610,7 @@
 
 <h1 id="testing-bootstrap-dependencies">Testing Bootstrap Dependencies<a class="headerlink" href="#testing-bootstrap-dependencies" title="Permanent link">&para;</a></h1>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, <code>python3-pyyaml</code> is required before <code>parse-packages.py</code> can parse the package list.</p>
+<p>Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, <code>python3-pyyaml</code> is required before <code>parse_packages.py</code> can parse the package list.</p>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
 <p>Installation failed on fresh WSL during Phase 1 (system packages) with:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># wsl.yml:43 - Wrong package name</span>
@@ -4642,9 +4642,15 @@
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python3-yaml</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">pacman</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python-yaml</span>
 </span></code></pre></div>
-<p>macOS (bootstrap script):</p>
+<p>macOS (<code>install.sh</code> <code>main()</code>):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/usr/bin/python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>PyYAML
 </span></code></pre></div>
+<p>On macOS this bootstrap must run <strong>before</strong> the platform is read from the manifest.
+<code>manifest_field</code> calls <code>parse_packages.py</code>, which imports <code>yaml</code>, but Apple's bundled
+<code>/usr/bin/python3</code> ships without PyYAML. The macOS package phase installs it — but that
+phase runs only <em>after</em> the platform is known, so the bootstrap lives in <code>main()</code> (gated
+on <code>detect_os</code>, which uses <code>uname</code> and needs no Python dependency). Without it a fresh Mac
+parses an empty platform and dies with <code>Unsupported platform</code>.</p>
 <p><strong>3. Use Docker with WSL rootfs for testing</strong> (<code>install/test-wsl-docker.sh</code>):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Download official WSL Ubuntu rootfs (one-time, cached)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>curl<span class="w"> </span>-L<span class="w"> </span>https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz
