@@ -31,6 +31,25 @@ display_failure_summary  # Shows all failures at end
 - Only capture stderr for structured failure data — let stdout flow through for real-time progress
 - Capturing all output (`2>&1`) hides installation progress from the user (a critical bug found during testing)
 
+## Batch Commands: One Bad Item Must Not Sink the Batch
+
+The wrapper pattern above isolates failures *between* installer scripts. A second
+failure mode lives *inside* a script: a single batched package-manager command.
+`brew install pkg1 pkg2 ... pkgN` validates every formula up front and aborts the
+whole command — installing nothing — if even one name is unresolvable (e.g. a
+formula in a tap that wasn't added). A missing `borders` tap once silently took
+out tmux, neovim, and every other system package in the same invocation, which
+only surfaced phases later as "tmux: command not found" when tpm ran.
+
+The fix (`install/macos/system-packages.sh`) is a batch fast-path with a
+per-package fallback: attempt the batch (fast in the common case), and on failure
+retry each package individually so failures are isolated and the culprits are
+named explicitly, rather than reporting a vague "some packages may have failed."
+
+- Pay the slow per-package cost only when the batch actually fails
+- Report exactly which packages failed (`Failed to install: borders`), not a guess
+- Applies to any batched installer where one bad argument aborts the whole command
+
 ## Related
 
 - [Centralized Failure Registry](centralized-failure-registry.md)

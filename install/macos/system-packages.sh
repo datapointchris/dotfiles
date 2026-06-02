@@ -32,14 +32,27 @@ while IFS= read -r tap; do
   fi
 done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --taps)
 
-# Step 3: Install system packages from packages.yml
+# Step 3: Install system packages from packages.yml.
+# Try one batched install for speed, but a batched `brew install` aborts before
+# touching anything if a single formula is unresolvable — silently skipping every
+# package. So on failure, retry per-package to isolate the bad formula(e) and
+# report exactly which ones failed instead of nuking the whole set.
 log_info "Installing system packages from packages.yml..."
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew | tr '\n' ' ')
-# shellcheck disable=SC2086
-if brew install --quiet $PACKAGES; then
+mapfile -t SYSTEM_PACKAGES < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew)
+
+if brew install --quiet "${SYSTEM_PACKAGES[@]}"; then
   log_success "System packages installed"
 else
-  log_warning "Some packages may have failed to install"
+  log_warning "Batch install failed — retrying individually to isolate the failure(s)..."
+  failed_packages=()
+  for pkg in "${SYSTEM_PACKAGES[@]}"; do
+    brew install --quiet "$pkg" || failed_packages+=("$pkg")
+  done
+  if [[ ${#failed_packages[@]} -eq 0 ]]; then
+    log_success "System packages installed (individually)"
+  else
+    log_warning "Failed to install ${#failed_packages[@]} package(s): ${failed_packages[*]}"
+  fi
 fi
 
 # Step 4: Configure Docker CLI to discover OrbStack plugins
