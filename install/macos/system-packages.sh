@@ -18,7 +18,21 @@ else
   log_success "PyYAML installed"
 fi
 
-# Step 2: Install system packages from packages.yml
+# Step 2: Add third-party Homebrew taps before installing packages.
+# Some formulae (e.g. borders/JankyBorders) live in taps, not homebrew-core, so
+# the tap must be registered before `brew install` can resolve them. brew tap is
+# idempotent — re-tapping an existing tap is a no-op.
+log_info "Adding Homebrew taps from packages.yml..."
+while IFS= read -r tap; do
+  [[ -z "$tap" ]] && continue
+  if brew tap "$tap"; then
+    log_success "Tapped $tap"
+  else
+    log_warning "Failed to tap $tap"
+  fi
+done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --taps)
+
+# Step 3: Install system packages from packages.yml
 log_info "Installing system packages from packages.yml..."
 PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew | tr '\n' ' ')
 # shellcheck disable=SC2086
@@ -28,7 +42,7 @@ else
   log_warning "Some packages may have failed to install"
 fi
 
-# Step 3: Configure Docker CLI to discover OrbStack plugins
+# Step 4: Configure Docker CLI to discover OrbStack plugins
 # OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed.
 # We add OrbStack's xbin dir to cliPluginsExtraDirs so 'docker compose' and 'docker buildx' work.
 DOCKER_CFG="${DOCKER_CONFIG:-$HOME/.config/docker}"
@@ -53,7 +67,7 @@ else
   log_warning "OrbStack not found — install via: brew install --cask orbstack"
 fi
 
-# Step 4: Link libpq to make psql available in PATH
+# Step 5: Link libpq to make psql available in PATH
 # libpq is keg-only (not linked by default) because it conflicts with postgresql
 if brew list libpq &>/dev/null; then
   log_info "Linking libpq to make psql available..."
