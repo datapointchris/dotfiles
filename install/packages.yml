@@ -1222,8 +1222,12 @@ mas_apps:
     description: Password manager (includes Safari extension)
 
   - name: uBlock Origin Lite
-    id: 67545342698
+    id: 6745342698
     description: Block ads on Safari
+
+  - name: UnTrap
+    id: 1637438059
+    description: Remove YouTube distractions in Safari
 
 # ================================================================
 # ZEN / FIREFOX EXTENSIONS
@@ -1332,6 +1336,14 @@ macos_casks:
 
   - name: zen
     description: Privacy-focused Firefox fork with modern UI
+    tags: [gui]
+
+  - name: slack
+    description: Team chat platform
+    tags: [gui, communication]
+
+  - name: bettermouse
+    description: Mouse customization
     tags: [gui]
 
 # ================================================================
