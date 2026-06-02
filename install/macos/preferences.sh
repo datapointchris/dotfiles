@@ -268,6 +268,19 @@ log_info "  Open and save files as UTF-8"
 defaults write com.apple.TextEdit PlainTextEncoding -int 4
 defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
 
+# ================================================================
+# ACCESSIBILITY - Display Performance and Motion
+# ================================================================
+
+print_section "Configuring Accessibility"
+
+# Reduce GPU compositing load (helps integrated graphics on older Macs)
+log_info "  Reduce transparency (less blur/vibrancy compositing)"
+defaults write com.apple.universalaccess reduceTransparency -bool true
+
+log_info "  Reduce motion (disable window and Space animations)"
+defaults write com.apple.universalaccess reduceMotion -bool true
+
 # Note: App restarts removed - changes take effect on next login/reboot
 
 # ================================================================
