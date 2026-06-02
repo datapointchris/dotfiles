@@ -2,7 +2,7 @@
 
 ## Context
 
-Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, `python3-pyyaml` is required before `parse-packages.py` can parse the package list.
+Bootstrap dependencies are packages that must be installed before other installation scripts can run. In our case, `python3-pyyaml` is required before `parse_packages.py` can parse the package list.
 
 ## The Problem
 
@@ -53,11 +53,18 @@ Arch Linux (`install/packages.yml`):
   pacman: python-yaml
 ```
 
-macOS (bootstrap script):
+macOS (`install.sh` `main()`):
 
 ```bash
 /usr/bin/python3 -m pip install --user PyYAML
 ```
+
+On macOS this bootstrap must run **before** the platform is read from the manifest.
+`manifest_field` calls `parse_packages.py`, which imports `yaml`, but Apple's bundled
+`/usr/bin/python3` ships without PyYAML. The macOS package phase installs it — but that
+phase runs only *after* the platform is known, so the bootstrap lives in `main()` (gated
+on `detect_os`, which uses `uname` and needs no Python dependency). Without it a fresh Mac
+parses an empty platform and dies with `Unsupported platform`.
 
 **3. Use Docker with WSL rootfs for testing** (`install/test-wsl-docker.sh`):
 

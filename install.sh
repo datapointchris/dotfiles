@@ -346,6 +346,18 @@ main() {
   export HEADER_COLOR="brightblue"
   export SECTION_COLOR="orange"
 
+  # Bootstrap the YAML parser before reading the manifest. manifest_field runs
+  # parse_packages.py, which imports yaml, but Apple's bundled /usr/bin/python3
+  # ships without PyYAML — and the macOS install step that installs it runs only
+  # AFTER the platform is known. On a fresh Mac that ordering leaves platform
+  # empty and the run dies with "Unsupported platform". detect_os uses uname, so
+  # it works before any Python dependency exists. The macOS phase re-checks and
+  # no-ops if this already ran.
+  if [[ "$(detect_os)" == "darwin" ]] && ! /usr/bin/python3 -c "import yaml" &>/dev/null; then
+    log_info "Bootstrapping PyYAML for system Python (required to read manifest)..."
+    /usr/bin/python3 -m pip install --user PyYAML
+  fi
+
   platform=$(manifest_field "platform")
   start_time=$(date +%s)
 
