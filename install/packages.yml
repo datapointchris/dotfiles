@@ -1346,6 +1346,14 @@ macos_casks:
     description: Mouse customization
     tags: [gui]
 
+  - name: electrum
+    description: Bitcoin wallet (thin client)
+    tags: [gui, crypto]
+
+  - name: feather
+    description: Monero desktop wallet
+    tags: [gui, crypto]
+
 # ================================================================
 # NOTES
 # ================================================================
