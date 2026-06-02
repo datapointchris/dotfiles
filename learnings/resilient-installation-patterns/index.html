@@ -4634,6 +4634,23 @@
 <li>Only capture stderr for structured failure data — let stdout flow through for real-time progress</li>
 <li>Capturing all output (<code>2&gt;&amp;1</code>) hides installation progress from the user (a critical bug found during testing)</li>
 </ul>
+<h2 id="batch-commands-one-bad-item-must-not-sink-the-batch">Batch Commands: One Bad Item Must Not Sink the Batch<a class="headerlink" href="#batch-commands-one-bad-item-must-not-sink-the-batch" title="Permanent link">&para;</a></h2>
+<p>The wrapper pattern above isolates failures <em>between</em> installer scripts. A second
+failure mode lives <em>inside</em> a script: a single batched package-manager command.
+<code>brew install pkg1 pkg2 ... pkgN</code> validates every formula up front and aborts the
+whole command — installing nothing — if even one name is unresolvable (e.g. a
+formula in a tap that wasn't added). A missing <code>borders</code> tap once silently took
+out tmux, neovim, and every other system package in the same invocation, which
+only surfaced phases later as "tmux: command not found" when tpm ran.</p>
+<p>The fix (<code>install/macos/system-packages.sh</code>) is a batch fast-path with a
+per-package fallback: attempt the batch (fast in the common case), and on failure
+retry each package individually so failures are isolated and the culprits are
+named explicitly, rather than reporting a vague "some packages may have failed."</p>
+<ul>
+<li>Pay the slow per-package cost only when the batch actually fails</li>
+<li>Report exactly which packages failed (<code>Failed to install: borders</code>), not a guess</li>
+<li>Applies to any batched installer where one bad argument aborts the whole command</li>
+</ul>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../centralized-failure-registry/">Centralized Failure Registry</a></li>
