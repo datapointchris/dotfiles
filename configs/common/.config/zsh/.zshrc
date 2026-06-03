@@ -49,6 +49,10 @@ fi
 setopt EXTENDED_GLOB
 setopt PROMPT_SUBST
 
+# Silence the ZLE bell. With zsh-vi-mode, pressing ESC while already in normal
+# mode is a no-op that otherwise rings the terminal bell on every press.
+unsetopt BEEP LIST_BEEP HIST_BEEP
+
 # History settings
 HISTFILE="$HOME/.local/state/zsh/history"
 HISTSIZE=10000
