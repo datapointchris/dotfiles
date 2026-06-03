@@ -374,6 +374,7 @@ main() {
     bash "$macos/homebrew.sh"
     bash "$macos/system-packages.sh"
     bash "$macos/casks.sh"
+    bash "$macos/configure-docker.sh"
     bash "$macos/mas-apps.sh"
     bash "$macos/xcode.sh"
 

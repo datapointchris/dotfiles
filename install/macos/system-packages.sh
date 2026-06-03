@@ -61,32 +61,7 @@ else
   fi
 fi
 
-# Step 4: Configure Docker CLI to discover OrbStack plugins
-# OrbStack provides docker, compose, buildx, and completions — no Homebrew packages needed.
-# We add OrbStack's xbin dir to cliPluginsExtraDirs so 'docker compose' and 'docker buildx' work.
-DOCKER_CFG="${DOCKER_CONFIG:-$HOME/.config/docker}"
-DOCKER_CFG_FILE="$DOCKER_CFG/config.json"
-ORBSTACK_PLUGINS="/Applications/OrbStack.app/Contents/MacOS/xbin"
-
-if [[ -d "$ORBSTACK_PLUGINS" ]]; then
-  mkdir -p "$DOCKER_CFG"
-  if [[ -f "$DOCKER_CFG_FILE" ]] && command -v jq >/dev/null 2>&1; then
-    if ! jq -e '.cliPluginsExtraDirs' "$DOCKER_CFG_FILE" >/dev/null 2>&1; then
-      log_info "Adding OrbStack plugin directory to Docker config..."
-      jq --arg dir "$ORBSTACK_PLUGINS" '. + {cliPluginsExtraDirs: [$dir]}' "$DOCKER_CFG_FILE" > "$DOCKER_CFG_FILE.tmp" \
-        && mv "$DOCKER_CFG_FILE.tmp" "$DOCKER_CFG_FILE"
-      log_success "Docker CLI configured to use OrbStack plugins"
-    else
-      log_info "Docker CLI already configured with cliPluginsExtraDirs"
-    fi
-  else
-    log_warning "Docker config not found or jq not available — configure cliPluginsExtraDirs manually"
-  fi
-else
-  log_warning "OrbStack not found — install via: brew install --cask orbstack"
-fi
-
-# Step 5: Link libpq to make psql available in PATH
+# Step 4: Link libpq to make psql available in PATH
 # libpq is keg-only (not linked by default) because it conflicts with postgresql
 if brew list libpq &>/dev/null; then
   log_info "Linking libpq to make psql available..."
