@@ -158,6 +158,7 @@ nav:
       - Docker Setup: configuration/docker.md
   - Reference:
       - reference/index.md
+      - Rebuilding a Machine: reference/rebuilding-a-machine.md
       - Platforms:
           - Platform Differences: reference/platforms/differences.md
           - Package Differences: reference/platforms/packages.md
