@@ -26,6 +26,18 @@ osascript -e 'tell application "System Settings" to quit' 2>/dev/null || true
 osascript -e 'tell application "System Preferences" to quit' 2>/dev/null || true
 
 # ================================================================
+# APPEARANCE - Theme
+# ================================================================
+
+print_section "Configuring Appearance"
+
+log_info "  Enable Dark mode"
+defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
+
+log_info "  Reduce wallpaper tinting in windows"
+defaults write NSGlobalDomain AppleReduceDesktopTinting -bool true
+
+# ================================================================
 # FINDER - File Management and Display
 # ================================================================
 
@@ -47,6 +59,23 @@ defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
 
 log_info "  Enable Finder quit menu (⌘Q)"
 defaults write com.apple.finder QuitMenuItem -bool true
+
+log_info "  Show status bar (item count, free space)"
+defaults write com.apple.finder ShowStatusBar -bool true
+
+log_info "  Default to list view"
+# Nlsv=list, clmv=column, icnv=icon, Flwv=gallery
+defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+
+log_info "  Open new windows in Home folder"
+defaults write com.apple.finder NewWindowTarget -string "PfHm"
+
+# Desktop Icons
+log_info "  Show internal drives on desktop"
+defaults write com.apple.finder ShowHardDrivesOnDesktop -bool true
+
+log_info "  Show mounted servers on desktop"
+defaults write com.apple.finder ShowMountedServersOnDesktop -bool true
 
 # Search and Navigation
 log_info "  Search current directory by default"
@@ -176,6 +205,12 @@ defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 log_info "  Disable automatic spell correction"
 defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 
+log_info "  Disable inline predictive text"
+defaults write NSGlobalDomain NSAutomaticInlinePredictionEnabled -bool false
+
+log_info "  Hold key to repeat instead of showing accent picker"
+defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+
 log_info "  Enable full keyboard access for all controls"
 # Allows Tab to navigate to buttons/checkboxes (not just text fields)
 defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
@@ -187,6 +222,14 @@ defaults write NSGlobalDomain KeyRepeat -int 2
 log_info "  Set short initial key repeat delay"
 # Delay before repeat starts. Default: 25 (500ms), This: 15 (300ms, more responsive)
 defaults write NSGlobalDomain InitialKeyRepeat -int 15
+
+# Trackpad / Mouse
+log_info "  Disable natural scroll direction"
+# false = traditional scrolling; takes effect on next login
+defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false
+
+log_info "  Disable two-finger swipe to navigate pages"
+defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false
 
 # ================================================================
 # SCREENSHOTS - Location and Format
@@ -267,6 +310,44 @@ defaults write com.apple.TextEdit RichText -int 0
 log_info "  Open and save files as UTF-8"
 defaults write com.apple.TextEdit PlainTextEncoding -int 4
 defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
+
+# ================================================================
+# DESKTOP & MENU BAR
+# ================================================================
+
+print_section "Configuring Desktop and Menu Bar"
+
+log_info "  Don't hide windows when clicking the wallpaper"
+defaults write com.apple.WindowManager EnableStandardClickToShowDesktop -bool false
+
+log_info "  Show battery percentage in menu bar"
+defaults write com.apple.controlcenter BatteryShowPercentage -bool true
+
+# ================================================================
+# DIALOGS - Save and Print
+# ================================================================
+
+print_section "Configuring Dialogs"
+
+log_info "  Expand save panel by default"
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+
+log_info "  Expand print panel by default"
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+
+log_info "  Quit printer app once print jobs finish"
+defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
+
+# ================================================================
+# SECURITY
+# ================================================================
+
+print_section "Configuring Security"
+
+log_info "  Disable 'are you sure you want to open this application' prompt"
+# Removes the quarantine prompt for apps downloaded from the internet. Trades a
+# safety check for convenience.
+defaults write com.apple.LaunchServices LSQuarantine -bool false
 
 # ================================================================
 # ACCESSIBILITY - Display Performance and Motion
