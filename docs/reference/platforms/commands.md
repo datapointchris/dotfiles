@@ -92,7 +92,12 @@ All platforms use `~/.config/zsh/.zshrc` via ZDOTDIR.
 
 === "macOS"
 
-    Set in terminal emulator or user environment.
+    Set system-wide in `/etc/zshenv` (created automatically by `install.sh`):
+
+    ```bash
+    # /etc/zshenv
+    export ZDOTDIR="$HOME/.config/zsh"
+    ```
 
 === "Ubuntu/WSL & Arch"
 

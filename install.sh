@@ -160,32 +160,44 @@ install_manifest_phases() {
   fi
 }
 
-configure_zsh_default_shell() {
-  # Arch uses /etc/zsh/zshenv, macOS/Ubuntu use /etc/zshenv
+# Point the system-wide zshenv at the XDG zsh config via ZDOTDIR. Required on
+# every platform (including macOS) for ~/.config/zsh/.zshrc to load at all.
+# All state checks are sudo-free reads; sudo is invoked only when the setting
+# is actually missing, so repeat installs never prompt for a password.
+ensure_zdotdir_in_system_zshenv() {
+  # Arch (and other distros shipping /etc/zsh) read /etc/zsh/zshenv; macOS/Ubuntu use /etc/zshenv
   local zshenv_path="/etc/zshenv"
   if [[ -d /etc/zsh ]] || command -v pacman &>/dev/null; then
     zshenv_path="/etc/zsh/zshenv"
-    sudo mkdir -p /etc/zsh
   fi
 
-  # Set ZDOTDIR in system-wide zshenv if not already set
-  if ! grep -q "ZDOTDIR" "$zshenv_path" 2>/dev/null; then
-    # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
-    echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a "$zshenv_path" >/dev/null
-    log_success "ZDOTDIR configured in $zshenv_path"
-  else
-    log_success "ZDOTDIR already configured"
+  if grep -q "ZDOTDIR" "$zshenv_path" 2>/dev/null; then
+    log_success "ZDOTDIR already configured in $zshenv_path"
+    return 0
   fi
 
-  # Change default shell to zsh
-  if [[ "$SHELL" != *"zsh"* ]]; then
-    log_info "Changing default shell to zsh..."
-    sudo chsh -s "$(which zsh)" "$(whoami)"
-    log_success "Default shell changed to zsh"
-    log_info "(will take effect after logout/login)"
-  else
+  local zshenv_dir
+  zshenv_dir="$(dirname "$zshenv_path")"
+  [[ -d "$zshenv_dir" ]] || sudo mkdir -p "$zshenv_dir"
+  # shellcheck disable=SC2016  # $HOME needs to expand when zsh reads the file, not now
+  echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a "$zshenv_path" >/dev/null
+  log_success "ZDOTDIR configured in $zshenv_path"
+}
+
+# Make zsh the default login shell. A no-op (and no sudo) when the shell is
+# already zsh — which is always the case on macOS (zsh default since Catalina),
+# so only bash-default platforms (Arch/Ubuntu/WSL) ever trigger the chsh.
+set_zsh_as_default_shell() {
+  if [[ "$SHELL" == *"zsh"* ]]; then
     log_success "Default shell is already zsh"
+    return 0
   fi
+
+  local zsh_path
+  zsh_path="$(command -v zsh)"
+  log_info "Changing default shell to zsh ($zsh_path)..."
+  sudo chsh -s "$zsh_path" "$(whoami)"
+  log_success "Default shell changed to zsh (effective after next login)"
 }
 
 usage() {
@@ -421,13 +433,14 @@ main() {
   # Manifest-driven common phases
   install_manifest_phases
 
-  # Post-installation configuration
+  # Post-installation configuration. Runs on all platforms: setting ZDOTDIR in
+  # the system zshenv is what macOS needs for its XDG zsh config to load, while
+  # the chsh self-skips where zsh is already the default (i.e. macOS).
   if manifest_enabled "configure_zsh"; then
-    if [[ "$platform" != "macos" ]]; then
-      print_header "Post-Installation Configuration"
-      print_section "Configuring ZSH as default shell"
-      configure_zsh_default_shell
-    fi
+    print_header "Post-Installation Configuration"
+    print_section "Configuring ZSH"
+    ensure_zdotdir_in_system_zshenv
+    set_zsh_as_default_shell
   fi
 
   if [[ "$platform" == "archlinux" ]] && command -v hyprctl &>/dev/null; then
