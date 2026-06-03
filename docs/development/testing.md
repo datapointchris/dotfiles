@@ -6,7 +6,7 @@ The dotfiles repository has three layers of testing:
 2. **pytest** — Python code (packages CLI, `packages verify`, `parse_packages.py`)
 3. **Installation e2e tests** — Docker-based platform walkthroughs of `install.sh`
 
-All three run on every commit via pre-commit hooks. See `.pre-commit-config.yaml` for the full wiring.
+Fast tests run on every commit via pre-commit hooks: pytest, and BATS **unit** tests (gated to install-layer changes). The slower Docker-backed layers — BATS **integration** and the installation e2e tests — are run on demand (`task test:integration`, `task test`) rather than on every commit, to keep commits fast. See `.pre-commit-config.yaml` for the full wiring.
 
 ## BATS (Bash Tests)
 

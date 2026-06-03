@@ -84,13 +84,6 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 - Test individual phase scripts directly, or use Docker containers with passwordless sudo
 - Do NOT run `./install.sh` directly in Claude Code sessions
 
-**Pre-commit Failure: OrbStack Down** (⚠️ Project-specific override of the global "stop on infra failure" rule):
-
-- Symptom during `git commit`: `bats integration tests` hook fails with `Cannot connect to the Docker daemon at unix:///Users/chris/.orbstack/run/docker.sock` and one or more `setup_file failed` lines.
-- Root cause is almost always: OrbStack is not running. The bats integration tests build a Docker base image and need the daemon up.
-- Recovery: run `open -a OrbStack`, poll `docker info` until it succeeds (no sleep loop — use `until docker info >/dev/null 2>&1; do sleep 2; done` via Monitor or a short bash wait), then re-run the same `git commit`. Working tree is already clean of unrelated changes since the failed commit didn't modify anything.
-- Do NOT bypass with `--no-verify` for this failure mode — the tests are real and we want them to run. This carve-out only allows ONE retry attempt; if Docker still won't come up after starting OrbStack, fall back to the global "stop and ask user" rule.
-
 ## Package Management Philosophy
 
 This dotfiles setup maintains a clear separation between system package managers and language-specific version managers for cross-platform consistency.
