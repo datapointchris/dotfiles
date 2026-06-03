@@ -17,8 +17,7 @@ if [ "$(uname -s)" != "Darwin" ]; then
   exit 1
 fi
 
-# Mostly user-level (no sudo). The one exception is the startup-sound mute
-# (NVRAM), which is guarded by a non-interactive sudo check so it never blocks.
+# No sudo required - all preferences are user-level
 
 print_section "Configuring macOS Preferences"
 
@@ -349,22 +348,6 @@ log_info "  Disable 'are you sure you want to open this application' prompt"
 # Removes the quarantine prompt for apps downloaded from the internet. Trades a
 # safety check for convenience.
 defaults write com.apple.LaunchServices LSQuarantine -bool false
-
-# ================================================================
-# SOUND
-# ================================================================
-
-print_section "Configuring Sound"
-
-# Disable the startup chime. It lives in NVRAM (not a user default), so it is the
-# one setting here that needs sudo. Use non-interactive sudo so a fresh install
-# never blocks on a password prompt — otherwise log the manual command.
-if sudo -n true 2>/dev/null; then
-  log_info "  Disable startup sound"
-  sudo nvram StartupMute=%01
-else
-  log_warning "  Startup sound not muted (needs sudo) — run: sudo nvram StartupMute=%01"
-fi
 
 # ================================================================
 # ACCESSIBILITY - Display Performance and Motion
