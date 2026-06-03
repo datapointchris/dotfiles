@@ -13,6 +13,7 @@
 macos_taps:
   - FelixKratz/formulae # JankyBorders
   - TheZoraiz/ascii-image-converter # ASCII art from images
+  - nikitabobko/tap # AeroSpace tiling window manager
 
 # ================================================================
 # SYSTEM PACKAGES
