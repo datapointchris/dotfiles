@@ -4618,7 +4618,7 @@
 <li><strong>pytest</strong> — Python code (packages CLI, <code>packages verify</code>, <code>parse_packages.py</code>)</li>
 <li><strong>Installation e2e tests</strong> — Docker-based platform walkthroughs of <code>install.sh</code></li>
 </ol>
-<p>All three run on every commit via pre-commit hooks. See <code>.pre-commit-config.yaml</code> for the full wiring.</p>
+<p>Fast tests run on every commit via pre-commit hooks: pytest, and BATS <strong>unit</strong> tests (gated to install-layer changes). The slower Docker-backed layers — BATS <strong>integration</strong> and the installation e2e tests — are run on demand (<code>task test:integration</code>, <code>task test</code>) rather than on every commit, to keep commits fast. See <code>.pre-commit-config.yaml</code> for the full wiring.</p>
 <h2 id="bats-bash-tests">BATS (Bash Tests)<a class="headerlink" href="#bats-bash-tests" title="Permanent link">&para;</a></h2>
 <p>Shell library and installer tests using <a href="https://github.com/bats-core/bats-core">BATS (Bash Automated Testing System)</a>.</p>
 <h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
