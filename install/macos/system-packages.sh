@@ -38,7 +38,13 @@ done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --taps)
 # package. So on failure, retry per-package to isolate the bad formula(e) and
 # report exactly which ones failed instead of nuking the whole set.
 log_info "Installing system packages from packages.yml..."
-mapfile -t SYSTEM_PACKAGES < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew)
+# Populate the array with a read loop rather than `mapfile`: this script runs
+# under macOS system bash 3.2 during install (Homebrew's bash isn't on PATH yet),
+# and mapfile is a bash 4.0+ builtin.
+SYSTEM_PACKAGES=()
+while IFS= read -r pkg; do
+  [[ -n "$pkg" ]] && SYSTEM_PACKAGES+=("$pkg")
+done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew)
 
 if brew install --quiet "${SYSTEM_PACKAGES[@]}"; then
   log_success "System packages installed"
