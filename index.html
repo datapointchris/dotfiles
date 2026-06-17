@@ -4594,7 +4594,7 @@
 
 
 <h1 id="dotfiles">Dotfiles<a class="headerlink" href="#dotfiles" title="Permanent link">&para;</a></h1>
-<p>Cross-platform dotfiles for macOS, Ubuntu, WSL Ubuntu, and Arch Linux. Manifest-driven installation with shared configurations and platform-specific overrides.</p>
+<p>Cross-platform dotfiles for macOS, WSL Ubuntu, and Arch Linux. Manifest-driven installation with shared configurations and platform-specific overrides.</p>
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
 <p>Clone the repository and run the install script with a machine manifest:</p>
@@ -4607,12 +4607,11 @@
 <li><code>archlinux-personal-workstation</code> - Full Arch Linux development workstation</li>
 <li><code>macos-personal-workstation</code> - Full macOS development workstation</li>
 <li><code>wsl-work-workstation</code> - WSL Ubuntu for restricted work environment</li>
-<li><code>ubuntu-lxc-server</code> - Minimal Ubuntu server (LXC containers)</li>
 </ul>
 <p><strong>Platform-specific requirements:</strong></p>
 <ul>
 <li><strong>macOS</strong>: None (Homebrew installed automatically)</li>
-<li><strong>WSL/Ubuntu/Arch</strong>: Set ZDOTDIR before running:</li>
+<li><strong>WSL/Arch</strong>: Set ZDOTDIR before running:</li>
 </ul>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export ZDOTDIR=&quot;$HOME/.config/zsh&quot;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/zsh/zshenv
 </span></code></pre></div>
@@ -4706,7 +4705,7 @@
 </span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>toolbox<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cli-utility
 </span></code></pre></div>
 <h2 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h2>
-<p><code>configs/</code>, <code>apps/</code>, and <code>shell/</code> all follow the same layered pattern: a <code>common/</code> base shared across all platforms with platform-specific subdirectories (<code>macos/</code>, <code>archlinux/</code>, <code>wsl/</code>, <code>ubuntu/</code>) layered on top. <code>install/</code> handles provisioning — machine manifests in <code>install/manifests/</code>, platform-specific scripts in <code>install/{platform}/</code>, shared libraries in <code>install/common/</code>, and package definitions in <code>install/packages.yml</code>.</p>
+<p><code>configs/</code>, <code>apps/</code>, and <code>shell/</code> all follow the same layered pattern: a <code>common/</code> base shared across all platforms with platform-specific subdirectories (<code>macos/</code>, <code>archlinux/</code>, <code>wsl/</code>) layered on top. <code>install/</code> handles provisioning — machine manifests in <code>install/manifests/</code>, platform-specific scripts in <code>install/{platform}/</code>, shared libraries in <code>install/common/</code>, and package definitions in <code>install/packages.yml</code>.</p>
 <p><strong>External tools</strong> (installed from GitHub, not in this repo):</p>
 <ul>
 <li><code>toolbox</code>: Go app via <code>go install github.com/datapointchris/toolbox</code></li>
