@@ -18,7 +18,7 @@ cd ~/dotfiles
 bash install.sh --machine archlinux-personal-workstation
 ```
 
-Available manifests are in `install/manifests/` (Arch Linux, macOS, WSL, Ubuntu server).
+Available manifests are in `install/manifests/` (Arch Linux, macOS, WSL).
 
 **Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
 
@@ -26,7 +26,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 ## Structure
 
-`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`, `ubuntu/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
+`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
 **External tools** (installed from GitHub, not in this repo):
 

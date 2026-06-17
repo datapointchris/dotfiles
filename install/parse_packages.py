@@ -20,9 +20,9 @@ Usage:
     python parse_packages.py --custom-installer=terraform-ls --field=repo
 
 Manifest-filtered usage:
-    python parse_packages.py --type=go --manifest=ubuntu-lxc-server
-    python parse_packages.py --manifest-field=platform --manifest=arch-personal-workstation
-    python parse_packages.py --manifest-field=go_tools --manifest=ubuntu-lxc-server
+    python parse_packages.py --type=go --manifest=wsl-work-workstation
+    python parse_packages.py --manifest-field=platform --manifest=archlinux-personal-workstation
+    python parse_packages.py --manifest-field=go_tools --manifest=wsl-work-workstation
 
 Note: This script requires PyYAML to be installed.
     - Install scripts use /usr/bin/python3 which has PyYAML installed
@@ -394,7 +394,7 @@ def main():
     parser.add_argument('--filter', help='With --type=custom: only include installers where this field is truthy (e.g., bundle_install_script)')
     parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
                         help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline)')
-    parser.add_argument('--manifest', help='Machine manifest name (e.g., ubuntu-lxc-server) to filter packages')
+    parser.add_argument('--manifest', help='Machine manifest name (e.g., wsl-work-workstation) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
 
     args = parser.parse_args()

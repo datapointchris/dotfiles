@@ -1,6 +1,6 @@
 # Dotfiles
 
-Cross-platform dotfiles for macOS, Ubuntu, WSL Ubuntu, and Arch Linux. Manifest-driven installation with shared configurations and platform-specific overrides.
+Cross-platform dotfiles for macOS, WSL Ubuntu, and Arch Linux. Manifest-driven installation with shared configurations and platform-specific overrides.
 
 ## Getting Started
 
@@ -19,12 +19,11 @@ Machine manifests define exactly what gets installed on each type of computer. A
 - `archlinux-personal-workstation` - Full Arch Linux development workstation
 - `macos-personal-workstation` - Full macOS development workstation
 - `wsl-work-workstation` - WSL Ubuntu for restricted work environment
-- `ubuntu-lxc-server` - Minimal Ubuntu server (LXC containers)
 
 **Platform-specific requirements:**
 
 - **macOS**: None (Homebrew installed automatically)
-- **WSL/Ubuntu/Arch**: Set ZDOTDIR before running:
+- **WSL/Arch**: Set ZDOTDIR before running:
 
   ```bash
   echo 'export ZDOTDIR="$HOME/.config/zsh"' | sudo tee -a /etc/zsh/zshenv
@@ -156,7 +155,7 @@ toolbox list | grep cli-utility
 
 ## Structure
 
-`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`, `ubuntu/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
+`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
 **External tools** (installed from GitHub, not in this repo):
 

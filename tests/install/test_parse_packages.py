@@ -367,11 +367,8 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
 # This parametrized test runs the same assertion across every machine manifest
 # we ship. It's the strongest defense against two specific regression classes:
 #
-#   1. Filter goes back to "fetch everything" — webviewrs leaks into wsl/mac/ubuntu.
+#   1. Filter goes back to "fetch everything" — webviewrs leaks into wsl/mac.
 #   2. Someone hardcodes `if name == 'webviewrs': skip` — the arch row breaks.
-#
-# It also pins broot (which arch/mac/wsl have but ubuntu-lxc-server doesn't) so
-# any future package with similar selective-shipping semantics is covered.
 
 
 @pytest.mark.parametrize(
@@ -390,11 +387,6 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
         ("archlinux-personal-workstation",
             ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot", "webviewrs"],
             []),
-        # Ubuntu LXC server: smaller cargo set — no broot, no webviewrs.
-        # Catches mutations that hardcode-include broot for all linux machines.
-        ("ubuntu-lxc-server",
-            ["bat", "fd", "eza", "zoxide", "delta", "oxker"],
-            ["broot", "webviewrs"]),
     ],
 )
 def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):

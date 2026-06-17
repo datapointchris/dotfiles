@@ -115,7 +115,7 @@ This dotfiles setup maintains a clear separation between system package managers
 
 ## Project Overview
 
-A cross-platform dotfiles repository with manifest-driven installation and shared configurations with platform-specific overrides for macOS, Ubuntu, WSL Ubuntu, and Arch Linux. The repository emphasizes automation, documentation, and ergonomic developer workflows.
+A cross-platform dotfiles repository with manifest-driven installation and shared configurations with platform-specific overrides for macOS, WSL Ubuntu, and Arch Linux. The repository emphasizes automation, documentation, and ergonomic developer workflows.
 
 **Directory Structure**:
 
@@ -124,7 +124,6 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `macos/` - macOS-specific dotfiles and GUI app configs
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `archlinux/` - Arch Linux configurations
-  - `ubuntu/` - Ubuntu server configurations
 - `apps/` - Personal CLI applications (shell scripts only, see `apps/` for full listing)
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
@@ -134,7 +133,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
   - `offline/` - Offline installation support (connectivity testing, bundles)
-  - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, ubuntu/, wsl/)
+  - `{platform}/` - Platform-specific install scripts (archlinux/, macos/, wsl/)
   - `common/` - Cross-platform installer scripts (github-releases/, language-managers/, etc.) and `lib/` shared libraries
   - `packages.yml` - Package definitions
 - `docs/` - MkDocs-based documentation site

@@ -19,7 +19,7 @@ Two-layer approach: common base + platform overlay.
 **How it works**:
 
 1. Links `configs/common/` configs to `$HOME`
-2. Overlays platform-specific files (auto-detected: macos, wsl, arch, or ubuntu)
+2. Overlays platform-specific files (auto-detected: macos, wsl, or arch)
 3. Links apps from `apps/{platform}/` to `~/.local/bin/`
 4. Links shell source files from `shell/{platform}/` to `~/.local/shell/`
 

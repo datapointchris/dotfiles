@@ -224,7 +224,6 @@ usage() {
   echo "  MACHINE=name    Same as --machine (flag takes precedence)"
   echo "Examples:"
   echo "  ./install.sh --machine archlinux-personal-workstation"
-  echo "  ./install.sh --machine ubuntu-lxc-server"
   echo "  MACHINE=archlinux-personal-workstation ./install.sh"
   echo ""
   echo "  # Offline workflow:"
@@ -418,12 +417,6 @@ main() {
 
     print_header "System Configuration"
     bash "$DOTFILES_DIR/install/archlinux/system-config.sh"
-    ;;
-  ubuntu)
-    if manifest_enabled "system_packages"; then
-      print_header "System Packages (apt)"
-      bash "$DOTFILES_DIR/install/ubuntu/system-packages.sh"
-    fi
     ;;
   *)
     die "Unsupported platform: $platform"
