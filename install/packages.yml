@@ -1190,6 +1190,10 @@ mas_apps:
     id: 1545870783
     description: Color picker utility for macOS
 
+  - name: Copilot Money
+    id: 1447330651
+    description: Personal finance tracking and budgeting
+
   - name: Dark Reader for Safari
     id: 1438243180
     description: Dark mode for Safari websites
