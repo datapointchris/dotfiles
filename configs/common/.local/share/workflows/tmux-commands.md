@@ -24,15 +24,19 @@ prefix + < / >                    # swap window left / right
 # Panes
 prefix + |                        # split vertical (side-by-side)
 prefix + -                        # split horizontal (stacked)
-Ctrl + h/j/k/l                    # navigate panes (vim-tmux-navigator)
-Ctrl + Alt + h/j/k/l              # resize panes (5 units)
+Ctrl + ←/↓/↑/→                     # navigate panes (vim-tmux-navigator)
+Ctrl + Alt + ←/↓/↑/→               # resize panes (5 units)
 prefix + z                        # zoom pane (toggle fullscreen)
 prefix + x                        # close pane
+prefix + o                        # cycle to next pane
+prefix + q                        # show pane numbers (press number to jump)
+prefix + { / }                    # swap pane with previous / next
+prefix + M                        # mark pane (then :swap-pane to swap with marked)
 prefix + ;                        # toggle last active pane
 prefix + !                        # breakout pane to new window
 
 # Copy mode
-prefix + Enter                    # enter copy mode (vi keys)
+prefix + [                        # enter copy mode (vi keys)
 prefix + P                        # paste buffer
 prefix + y                        # copy current command to clipboard
 prefix + Y                        # copy current directory to clipboard
