@@ -4,9 +4,10 @@ icon: material/magnify
 
 # Menu
 
-Search across your tools, workflows, and Claude skills in one place, then jump straight to the
-right one. `menu` is a thin **pointer**: it federates your collections into one searchable index
-and hands each result back to the tool that owns it. It stores no content of its own.
+Search across your tools, workflows, and Claude skills in one place, then see everything known
+about the one you pick. `menu` is a thin **pointer**: it federates your collections into one
+searchable index and, on selection, assembles the full picture from whichever sources have it. It
+stores no content of its own.
 
 ## Quick Start
 
@@ -16,12 +17,13 @@ menu keybind            # Picker pre-filtered to a term
 menu find keybind       # Same, explicit
 ```
 
-**From tmux**: `Ctrl-Space` then `m` (opens `menu` in a popup at the current path).
+Type to filter, and press **Enter** on any result to open its full view. **From tmux**:
+`Ctrl-Space` then `m` (opens `menu` in a popup at the current path).
 
 ## What it searches
 
-`menu` builds a live index over three collections, each shown with a source tag so you know
-where a result lives:
+`menu` builds a live index over three collections, each shown with a source tag so you know where
+a result lives:
 
 | Source | Collection | Where it comes from |
 | --- | --- | --- |
@@ -29,33 +31,50 @@ where a result lives:
 | `[workflow]` | reference cards | `~/.local/share/workflows/*.md` (frontmatter tags) |
 | `[skill]` | Claude skills | `~/.claude/skills/*/SKILL.md` |
 
-Selecting a result opens it via the collection that owns it — `toolbox show` for a tool,
-`workflows show` for a card, `bat` on the raw `SKILL.md` for a skill. Adding a new collection
-later is one more index function; `menu` never grows heavy because the depth always lives in the
-collections, not here.
+Adding a new collection later is one more index function; `menu` never grows heavy because the
+depth always lives in the collections, not here.
 
-## Search is biased toward names and tags
+## Search is what you see
 
-fuzzy matching runs over each entry's **source, name, and tags** — not its full description. Tool
-descriptions are long and generate loose subsequence matches, so they are excluded from the
-search (every tool in the registry is tagged, so nothing becomes unreachable); they still appear
-in the list for context. Workflow *titles* and skill *descriptions* are included because those
-collections carry the concept words that tags alone would miss (e.g. `restore` finds the
-git-stash card, `motion` finds the neovim-motions card).
+Each result's line carries its **name, description or title, and tags** — and that whole line is
+exactly what fuzzy matching runs over. Search is WYSIWYG: if a result surfaced, you can see the
+word that matched it, right there in the line. This is a deliberate constraint of the picker
+(`fzf` can only search the text it displays), turned into a feature.
 
-The practical consequence: **tags are the discovery contract.** A search returns everything that
-carries the matching tag, ranked above looser matches. If something you expect doesn't surface,
-the fix is a better tag on that entry, not a change to `menu`.
+The practical consequence: **tags are the discovery contract.** Because tags ride along in every
+line, a search finds everything carrying a matching tag, and a name or tag hit ranks above a
+looser match buried in a description. If something you expect doesn't surface, the fix is a better
+tag on that entry, not a change to `menu`.
+
+## Enter opens the full view
+
+Finding a thing and understanding it are one motion. Pressing Enter assembles every **lens** that
+has content for the selected subject, in priority order, showing only the sections that exist:
+
+| Lens | Fires when | Answers |
+| --- | --- | --- |
+| `help` | the subject is one of *your own* tools and resolves on `PATH` | live flags, as of right now |
+| `toolbox` | the subject is in the registry | why you'd reach for it, curated examples |
+| `tldr` | a tldr page exists | common real-world invocations |
+| `cheat` | a cheat sheet exists | your saved snippets |
+| `workflow` | a card of the same name exists | your multi-step reference |
+| `skill` | a skill of the same name exists | the raw `SKILL.md` |
+
+So selecting your own `backmeup` shows its live `--help` alongside its registry entry, while an
+external `bat` shows its registry entry with the tldr and cheat pages. The `--help` lens is
+limited to your own tools on purpose: running `--help` against an arbitrary external command is
+not safe, and externals are covered by tldr and cheat anyway.
 
 ## Implementation
 
 **Location**: `apps/common/menu`
 
-**Dependencies**: `fzf` (picker), `yq` (registry), `bat` (skill preview), plus `toolbox` and
-`workflows` for delegated display; `formatting.sh` shell library.
+**Dependencies**: `fzf` (picker) and `yq` (registry) drive search; the full view delegates to
+`toolbox`, `workflows`, `tldr`, `cheat`, and `bat`; `formatting.sh` provides the shell styling.
 
-The `menu __index` subcommand prints the raw federated index (tab-separated: display, source,
-name, search-key) — useful for debugging what is indexed or composing with other tools.
+The index is a three-column tab-separated stream — display, source, name — built by
+`build_index`. Two internal subcommands help with debugging and scripting: `menu __index` prints
+the raw index, and `menu __show <name>` renders a subject's full view non-interactively.
 
 ## See Also
 

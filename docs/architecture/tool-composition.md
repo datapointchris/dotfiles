@@ -60,7 +60,7 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 **menu** (`apps/common/menu`) - Bash federated search
 
 - Builds one live fzf index over three collections: the tools registry, workflow cards, and Claude skills
-- Search is biased to name + tags; selecting a result delegates display to the owning tool (`toolbox show`, `workflows show`, `bat`)
+- Search is WYSIWYG over each result's displayed line (name + description + tags); Enter assembles a composite full view from every lens that has the subject (`--help`, `toolbox`, `tldr`, `cheat`, `workflow`, `skill`)
 - A thin pointer — owns no content of its own
 
 ## Composition Patterns

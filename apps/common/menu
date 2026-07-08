@@ -15,16 +15,23 @@ REGISTRY="${TOOLBOX_REGISTRY:-$HOME/dev/tools.yml}"
 WORKFLOWS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/workflows"
 SKILLS_DIR="$HOME/.claude/skills"
 
+# Registry membership tests, used to decide which lenses fire for a subject.
+in_registry() { yq -e ".tools.\"$1\"" "$REGISTRY" >/dev/null 2>&1; }
+is_custom_tool() { [[ "$(yq -r ".tools.\"$1\".category // \"\"" "$REGISTRY")" == "custom-tools" ]]; }
+
 show_help() {
   print_header "Menu - Search Your Tools, Workflows & Skills" "brightcyan"
   echo ""
   echo "A pointer across your collections. Search once, jump to the source."
   echo ""
   print_section "Usage" "brightmagenta"
-  echo "  $(print_cyan "menu")                Interactive picker across everything"
-  echo "  $(print_cyan "menu") <term>         Open the picker pre-filtered to <term>"
-  echo "  $(print_cyan "menu find") <term>    Same as above"
-  echo "  $(print_cyan "menu help")           Show this help"
+  echo "  $(print_cyan "menu")               Interactive picker; Enter opens the full view"
+  echo "  $(print_cyan "menu") <term>        Open the picker pre-filtered to <term>"
+  echo "  $(print_cyan "menu find") <term>   Same as above"
+  echo "  $(print_cyan "menu help")          Show this help"
+  echo ""
+  echo "  Enter on any result assembles every lens that has it:"
+  echo "  help · toolbox · tldr · cheat · workflow · skill."
   echo ""
   print_section "Collections" "brightblue"
   echo "  $(print_cyan "[tool]")      tools registry ($REGISTRY)"
@@ -33,19 +40,18 @@ show_help() {
 }
 
 # Format raw "name<TAB>desc<TAB>tags" rows into the index line:
-#   display <TAB> source <TAB> name <TAB> search-key
-# The search-key biases discovery toward name + tags. Tool descriptions are
-# long and generate loose fuzzy matches, so they are excluded from search (all
-# tools are tagged); they still appear in the display column. Workflows add
-# their title and skills add their (tagless) description to the key.
+#   display <TAB> source <TAB> name
+# Field 1 is both shown and searched (WYSIWYG). fzf can only search what it
+# displays, so the searchable tokens — name, description/title, and tags — all
+# live in the display column. You can see why any result matched, and tags stay
+# the discovery contract because they are right there in the line.
 build_rows() {
   local src="$1"
   awk -F'\t' -v src="$src" '{
-    disp_desc = substr($2, 1, 68)
-    display = sprintf("%-11s %-24s %s", "[" src "]", $1, disp_desc)
-    key = src " " $1 " " $3
-    if (src != "tool") key = key " " $2
-    print display "\t" src "\t" $1 "\t" key
+    context = $2
+    if ($3 != "") context = context "  " $3
+    display = sprintf("%-10s %-22s %s", "[" src "]", $1, context)
+    print display "\t" src "\t" $1
   }'
 }
 
@@ -79,6 +85,10 @@ index_skills() {
   done | build_rows skill
 }
 
+# The federated index: every collection's rows, sorted for stable dumps. fzf
+# re-ranks by score regardless, so the sort only makes __index readable.
+build_index() { { index_tools; index_workflows; index_skills; } | sort; }
+
 # Render one entry by delegating to the collection that owns it
 cmd_preview() {
   local src="$1" name="$2"
@@ -89,26 +99,96 @@ cmd_preview() {
   esac
 }
 
+# One lens = one source of truth for a subject. Each renders a section header
+# then delegates to the owning tool. Colors survive because the full view writes
+# straight to stdout (the terminal), not into a pipe.
+render_lens() {
+  local lens="$1" subject="$2"
+  case "$lens" in
+    help)
+      print_section "help — live flags ($subject --help)" "brightgreen"
+      timeout 5 "$subject" --help 2>/dev/null || true
+      ;;
+    toolbox)
+      print_section "toolbox — why you'd reach for it" "brightyellow"
+      toolbox show "$subject"
+      ;;
+    tldr)
+      print_section "tldr — common examples" "brightblue"
+      tldr "$subject" 2>/dev/null || true
+      ;;
+    cheat)
+      print_section "cheat — cheatsheet" "brightmagenta"
+      cheat "$subject" 2>/dev/null || true
+      ;;
+    workflow)
+      print_section "workflow — your reference card" "brightcyan"
+      workflows show "$subject"
+      ;;
+    skill)
+      print_section "skill — Claude skill" "brightgreen"
+      bat --style=plain --color=always --language=markdown "$SKILLS_DIR/$subject/SKILL.md"
+      ;;
+  esac
+  echo ""
+}
+
+# The full view for one subject: every lens that has content, in priority order
+# (help → toolbox → tldr → cheat → workflow → skill). This is what the picker
+# opens on Enter. Presence is probed cheaply first so only real sections render
+# and the banner can name them. The --help lens fires only for your own tools
+# that resolve on PATH — running --help on an arbitrary external command is
+# unsafe, and externals are covered by tldr/cheat.
+cmd_show() {
+  local subject="${1:-}"
+  [[ -n "$subject" ]] || return 1
+
+  local lenses=()
+  if is_custom_tool "$subject" && command -v "$subject" >/dev/null 2>&1; then lenses+=(help); fi
+  if in_registry "$subject"; then lenses+=(toolbox); fi
+  if tldr "$subject" >/dev/null 2>&1; then lenses+=(tldr); fi
+  if cheat "$subject" >/dev/null 2>&1; then lenses+=(cheat); fi
+  if [[ -f "$WORKFLOWS_DIR/$subject.md" ]]; then lenses+=(workflow); fi
+  if [[ -f "$SKILLS_DIR/$subject/SKILL.md" ]]; then lenses+=(skill); fi
+
+  if [[ ${#lenses[@]} -eq 0 ]]; then
+    print_warning "Nothing known about '$subject' in any lens."
+    echo "Lenses checked: help · toolbox · tldr · cheat · workflow · skill"
+    return 1
+  fi
+
+  print_header "$subject" "brightcyan"
+  print_info "Lenses: ${lenses[*]}"
+  echo ""
+  local lens
+  for lens in "${lenses[@]}"; do
+    render_lens "$lens" "$subject"
+  done
+}
+
 cmd_find() {
   local query="$*"
   local selected
   selected=$(
-    { index_tools; index_workflows; index_skills; } | sort \
-      | fzf --delimiter='\t' --with-nth=1 --nth=4 \
+    build_index \
+      | fzf --delimiter='\t' --with-nth=1 \
           --query="$query" \
           --preview 'menu __preview {2} {3}' \
           --preview-window=right:62% \
           --prompt='menu ❯ ' \
-          --header='Search tools · workflows · skills | Enter to open'
+          --header='Search tools · workflows · skills | Enter for the full view'
   )
   [[ -n "$selected" ]] || return 0
-  cmd_preview "$(cut -f2 <<<"$selected")" "$(cut -f3 <<<"$selected")"
+  # Enter opens the full composite view (every lens), not just the owning
+  # collection's card — finding and showing are one motion.
+  cmd_show "$(cut -f3 <<<"$selected")"
 }
 
 case "${1:-}" in
   help | -h | --help) show_help ;;
-  __index) { index_tools; index_workflows; index_skills; } | sort ;;
+  __index) build_index ;;
   __preview) cmd_preview "$2" "$3" ;;
+  __show) cmd_show "$2" ;;
   find)
     shift
     cmd_find "$@"
