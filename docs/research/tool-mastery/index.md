@@ -46,7 +46,7 @@ pieces rather than replacing them:
 | **Author** | `add-to-workflows` skill, `workflows new` | Working | `.claude/skills/`, `apps/common/workflows` |
 | **Browse (personal cards)** | `workflows search` — fzf + bat over 32 cards | Working | `~/.local/share/workflows/*.md` |
 | **Browse (tool catalog)** | `toolbox` — reads `~/dev/tools.yml` (69 KB) | Working | `~/tools/toolbox` |
-| **Browse (tool list)** | `menu` | Working — lists the registry's `custom-tools`, sorted, with descriptions | `apps/common/menu` |
+| **Browse (federated)** | `menu` | Working — fzf search across tools registry + tagged workflows + skills, biased to name/tags, delegating display to each collection | `apps/common/menu` |
 | **Browse (generic)** | `cheat` (community sheets), `tldr` | Working, but generic, not *yours* | `~/.config/cheat`, tealdeer |
 | **Surface** | `workflows motd` → random card on shell startup | Working (the review you like) | `.zshrc` line ~437 |
 | **Analyze** | `tool-usage` — grep frequency over history | Registry-driven list; raw counts only (no cwd/exit/duration) | `apps/common/tool-usage` |

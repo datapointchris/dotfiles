@@ -57,11 +57,11 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 - Interactive gum menu for quick access
 - Direct zk commands: `zk journal`, `zk devnote`, `zk learn`
 
-**menu** (`apps/common/menu`) - Bash launcher
+**menu** (`apps/common/menu`) - Bash federated search
 
-- Shows available tools and workflows
-- Interactive gum menu for quick access
-- Runs `--help` for selected tool
+- Builds one live fzf index over three collections: the tools registry, workflow cards, and Claude skills
+- Search is biased to name + tags; selecting a result delegates display to the owning tool (`toolbox show`, `workflows show`, `bat`)
+- A thin pointer — owns no content of its own
 
 ## Composition Patterns
 
@@ -239,7 +239,7 @@ Flow:
 
 ```text
 ┌──────────┐
-│   menu   │  Simple launcher, references all tools
+│   menu   │  Federated search over tools + workflows + skills
 └────┬─────┘
      │
      ├─────┐
