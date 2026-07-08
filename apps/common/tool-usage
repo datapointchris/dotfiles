@@ -10,17 +10,23 @@ source "$SHELL_DIR/formatting.sh"
 
 HISTORY="${HISTFILE:-$HOME/.local/state/zsh/history}"
 
-# Update this list when tools are added or retired
-TOOLS=(
-  forge syncer theme font
-  logsift signal todoui toolbox
-  refcheck workflows
-)
+# Canonical registry location, matching toolbox's own resolution (TOOLBOX_REGISTRY
+# env var, else ~/dev/tools.yml — Syncthing-synced, so this works on every machine)
+REGISTRY="${TOOLBOX_REGISTRY:-$HOME/dev/tools.yml}"
 
 if [[ ! -f "$HISTORY" ]]; then
   print_error "History file not found: $HISTORY"
   exit 1
 fi
+
+if [[ ! -f "$REGISTRY" ]]; then
+  print_error "Tool registry not found: $REGISTRY"
+  exit 1
+fi
+
+# Personal tools = the custom-tools category in the registry (the canonical,
+# Syncthing-synced source of truth), so the list never goes stale.
+mapfile -t TOOLS < <(yq -r '.tools | to_entries | map(select(.value.category == "custom-tools")) | .[].key' "$REGISTRY")
 
 print_header "Tool Usage" "brightcyan"
 echo ""
@@ -28,7 +34,9 @@ echo ""
 # Collect counts, then sort by usage descending
 declare -a entries
 for tool in "${TOOLS[@]}"; do
-  count=$(grep -cE "(^: [0-9]+:[0-9]+;|^)${tool}( |$)" "$HISTORY" 2>/dev/null || echo 0)
+  # grep -c prints 0 and exits 1 on no match; `|| true` keeps the single 0
+  # (a literal `echo 0` would append a second 0 and create phantom entries)
+  count=$(grep -cE "(^: [0-9]+:[0-9]+;|^)${tool}( |$)" "$HISTORY" 2>/dev/null || true)
   entries+=("${count} ${tool}")
 done
 
