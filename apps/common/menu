@@ -1,44 +1,28 @@
 #!/usr/bin/env bash
-# menu - List personal CLI tools with descriptions from the toolbox registry
+# menu - List personal CLI tools with descriptions from the tool registry
 
 set -euo pipefail
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
-REGISTRY="${DOTFILES_REGISTRY:-$HOME/.config/toolbox/registry.yml}"
+# Canonical registry location, matching toolbox's own resolution (TOOLBOX_REGISTRY
+# env var, else ~/dev/tools.yml — Syncthing-synced, so this works on every machine,
+# not just ones with the dev repos checked out)
+REGISTRY="${TOOLBOX_REGISTRY:-$HOME/dev/tools.yml}"
 
-lookup_desc() {
-  local name="$1"
-  local desc
-  desc=$(yq ".tools[\"$name\"].description" "$REGISTRY" 2>/dev/null)
-  [[ "$desc" == "null" || -z "$desc" ]] && echo "" || echo "$desc"
-}
-
-print_entry() {
-  local name="$1"
-  local desc
-  desc=$(lookup_desc "$name")
-  if [[ -n "$desc" ]]; then
-    echo "  $(print_cyan "$name") — $desc"
-  else
-    echo "  $(print_cyan "$name") $(print_yellow "(not in registry)")"
-  fi
-}
+if [[ ! -f "$REGISTRY" ]]; then
+  print_error "Tool registry not found: $REGISTRY"
+  exit 1
+fi
 
 print_header "Personal Tools" "brightcyan"
 echo ""
 
-print_section "$HOME/tools" "brightyellow"
-for dir in "$HOME"/tools/*/; do
-  [[ -d "$dir" ]] || continue
-  print_entry "$(basename "$dir")"
-done
+# Personal tools = the custom-tools category in the registry, sorted by name.
+# One yq call emits "name<TAB>description" lines.
+while IFS=$'\t' read -r name desc; do
+  echo "  $(print_cyan "$name") — $desc"
+done < <(yq -r '.tools | to_entries | map(select(.value.category == "custom-tools")) | sort_by(.key) | .[] | .key + "\t" + .value.description' "$REGISTRY")
 
-echo ""
-print_section "dotfiles scripts" "brightyellow"
-for file in "$HOME"/dotfiles/apps/common/*; do
-  [[ -f "$file" ]] || continue
-  print_entry "$(basename "$file")"
-done
 echo ""

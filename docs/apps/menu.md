@@ -4,66 +4,39 @@ icon: material/menu
 
 # Menu
 
-Simple workflow tools launcher providing quick access to common development tools.
+List every personal CLI tool with its description, so forgotten tools resurface at a glance.
+`menu` is the fast "what do I have" view; [`toolbox`](toolbox.md) is the deeper search-and-detail
+browser over the same catalog.
 
 ## Quick Start
 
 ```bash
-menu                    # Launch interactive menu
+menu                    # List all personal tools with descriptions
 ```
 
-**From tmux**: `Ctrl-Space + m`
+**From tmux**: `Ctrl-Space` then `m` (opens `menu` in a popup at the current path).
 
-## Available Options
+## How it works
 
-| Option | Tool | Description |
-|--------|------|-------------|
-| Switch tmux session | `sesh` | Tmux session management |
-| Change theme | `theme` | Theme management |
-| Change font | `font` | Font management |
-| Take notes | `notes` | Note-taking with zk |
-| Find a tool | `toolbox` | CLI tools discovery |
-| Browse workflows | `workflows` | Multi-step workflow reference |
-| Log an event | `patterns` | Timestamped event logging |
-| Check references | `refcheck` | Find broken file references |
-| Backup directories | `backmeup` | Compressed archive backup |
-| Preserve files | `safekeep` | Config-driven file preservation |
-| Incremental backup | `backup-incremental` | Rsync hard-link incremental backup |
-| Open documentation | browser | Opens MkDocs site |
+`menu` reads the tool registry and prints every tool in the `custom-tools` category, sorted by
+name, as `name — description`. It is a non-interactive listing, not a launcher — run the tool
+you spot directly.
 
-## Direct Tool Access
-
-Bypass menu for direct access:
-
-```bash
-sesh connect <name>     # Switch to or create a session
-theme preview           # Theme preview with fzf
-font change             # Font picker with preview
-notes                   # Interactive note menu
-toolbox search git      # Find git tools
-workflows search        # Search workflow docs
-patterns 'had coffee'   # Log an event
-refcheck                # Check for broken references
-backmeup -n projects -d ~/Documents ~/projects  # Backup directories
-safekeep                # Preserve files to network
-backup-incremental -n mybackup ~/data  # Incremental backup
-```
+The registry is the single source of truth shared with `toolbox` and `tool-usage`: it lives at
+`$TOOLBOX_REGISTRY`, or `~/dev/tools.yml` by default. Because the registry is Syncthing-synced
+rather than derived from the `~/tools` or `~/dotfiles` working trees, `menu` produces the same
+list on every machine, not only ones with the dev repos checked out. Adding a tool to the
+registry makes it appear in `menu`, `tool-usage`, and `toolbox` at once.
 
 ## Implementation
 
-**Location**: `apps/common/menu` (~65 lines of bash)
+**Location**: `apps/common/menu`
 
-**Dependencies**: gum (required)
-
-Uses `gum choose --height=20` to display all options without pagination.
+**Dependencies**: `yq` (registry query), `formatting.sh` (shell library)
 
 ## See Also
 
+- [Toolbox](toolbox.md) - Search and show details for any tool in the registry
 - [Theme](theme.md) - Theme management
 - [Font](font.md) - Font management
-- [Toolbox](toolbox.md) - Tool discovery
 - [Notes](notes.md) - Note-taking
-- [Backmeup](backmeup.md) - Directory backup
-- [Safekeep](safekeep.md) - File preservation
-- [Backup Incremental](backup-incremental.md) - Incremental backup
-- [Refcheck](refcheck.md) - Reference checker
