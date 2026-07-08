@@ -18,6 +18,10 @@ Comprehensive research documentation for AI-assisted development, tools, and wor
 
     Comprehensive comparison of development environments: devcontainers, WSL2, VMs, Docker, remote development, and Nix-based approaches with dotfiles integration patterns
 
+- :material-school: __[Tool Mastery & Rediscovery](tool-mastery/index.md)__
+
+    Solving the "tools I forget I have" problem — discovery, usage recording and analysis, and active review/retention for custom and daily CLI tools, with a consolidation architecture
+
 </div>
 
 ## About Research Documentation

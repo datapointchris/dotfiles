@@ -207,6 +207,13 @@ nav:
   - Research:
       - research/index.md
       - Development Environments: research/development-environments.md
+      - Tool Mastery & Rediscovery:
+          - Overview: research/tool-mastery/index.md
+          - Discovery & Terminal Docs: research/tool-mastery/discovery-and-terminal-docs.md
+          - Usage Recording & Analysis: research/tool-mastery/usage-recording-and-analysis.md
+          - Active Review & Retention: research/tool-mastery/active-review-and-retention.md
+          - Neovim Mastery: research/tool-mastery/neovim-mastery.md
+          - Consolidation Architecture: research/tool-mastery/consolidation-architecture.md
       - AI Research:
           - Overview: research/ai/overview.md
           - Context Engineering: research/ai/context-engineering.md
