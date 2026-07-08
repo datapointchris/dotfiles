@@ -47,12 +47,7 @@ show_help() {
   echo "  Location: $(print_cyan "$NOTES_DIR")"
   echo "  Config:   $(print_cyan "$HOME/.config/zk/config.toml")"
 
-  # Show warnings if dependencies are missing (but don't fail - help should always work)
-  if ! command -v zk &>/dev/null; then
-    echo ""
-    print_warning "zk is not installed - install with: brew install zk"
-  fi
-
+  # Warn if the notes directory is missing (but don't fail - help should always work)
   if [[ ! -d "$NOTES_DIR" ]]; then
     echo ""
     print_warning "Notes directory not found: $NOTES_DIR - run: zk init $NOTES_DIR"
@@ -67,13 +62,7 @@ case "${1:-}" in
     ;;
 esac
 
-# Validate dependencies for actual commands
-if ! command -v zk &>/dev/null; then
-  print_error "zk is not installed"
-  echo "Install with: brew install zk"
-  exit 1
-fi
-
+# Validate the notes directory exists for actual commands
 if [[ ! -d "$NOTES_DIR" ]]; then
   print_error "Notes directory not found: $NOTES_DIR"
   echo "Run: zk init $NOTES_DIR"
@@ -87,12 +76,6 @@ discover_sections() {
 
 # Search across all notes (full-text)
 cmd_search() {
-  if ! command -v rg &>/dev/null; then
-    print_error "ripgrep is required for full-text search"
-    echo "Install with: brew install ripgrep"
-    exit 1
-  fi
-
   # Full-text search with live reload
   # Start with empty query, reload as user types
   local selected
@@ -124,12 +107,6 @@ cmd_new() {
   if [[ ${#sections[@]} -eq 0 ]]; then
     print_warning "No sections found in: $NOTES_DIR"
     echo "Create a directory like: mkdir $NOTES_DIR/journal"
-    exit 1
-  fi
-
-  if ! command -v gum &>/dev/null; then
-    print_error "gum is required for interactive selection"
-    echo "Install with: brew install gum"
     exit 1
   fi
 
@@ -199,12 +176,6 @@ cmd_browse() {
 
   if [[ ${#sections[@]} -eq 0 ]]; then
     print_warning "No sections found in: $NOTES_DIR"
-    exit 1
-  fi
-
-  if ! command -v gum &>/dev/null; then
-    print_error "gum is required for interactive selection"
-    echo "Install with: brew install gum"
     exit 1
   fi
 

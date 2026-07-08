@@ -99,16 +99,6 @@ EOF
 }
 
 check_requirements() {
-  if ! command -v docker &>/dev/null; then
-    print_error "Docker not found. Please install Docker."
-    exit 1
-  fi
-
-  if ! command -v yq &>/dev/null; then
-    print_error "yq not found. Please install yq."
-    exit 1
-  fi
-
   if [[ ! -f "$BUILD_YAML" ]]; then
     print_error "No $BUILD_YAML found in current directory."
     print_info "Create a build.yaml with your board/shield configuration."
