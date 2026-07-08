@@ -33,6 +33,12 @@ show_help() {
   echo "  Enter on any result assembles every lens that has it:"
   echo "  help · toolbox · tldr · cheat · workflow · skill."
   echo ""
+  print_section "Review (what's due to revisit)" "brightyellow"
+  echo "  $(print_cyan "menu review")           What's due now, most overdue first"
+  echo "  $(print_cyan "menu review list")      Every registered item and its status"
+  echo "  $(print_cyan "menu review done") <id> Mark an item done (advances its due date)"
+  echo "  $(print_cyan "menu review edit")      Edit the register in \$EDITOR"
+  echo ""
   print_section "Collections" "brightblue"
   echo "  $(print_cyan "[tool]")      tools registry ($REGISTRY)"
   echo "  $(print_cyan "[workflow]")  reference cards ($WORKFLOWS_DIR)"
@@ -189,6 +195,12 @@ case "${1:-}" in
   __index) build_index ;;
   __preview) cmd_preview "$2" "$3" ;;
   __show) cmd_show "$2" ;;
+  review)
+    # The temporal half (cadence register) lives in the menu-review helper —
+    # dates and state are far cleaner in Python than in bash.
+    shift
+    exec menu-review "$@"
+    ;;
   find)
     shift
     cmd_find "$@"

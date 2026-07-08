@@ -34,8 +34,8 @@
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
-2. **Shell Script Apps** (menu, notes): Symlinked from repo
-   - Located in `apps/{platform}/` as executable files
+2. **Symlinked Script Apps** (menu, notes; also Python: safekeep, packages, menu-review): Symlinked from repo
+   - Located in `apps/{platform}/` as executable files (bash, or Python via a `uv run --script` / `python3` shebang)
    - Symlinked to `~/.local/bin/`
    - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
 
@@ -124,7 +124,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `macos/` - macOS-specific dotfiles and GUI app configs
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `archlinux/` - Arch Linux configurations
-- `apps/` - Personal CLI applications (shell scripts only, see `apps/` for full listing)
+- `apps/` - Personal CLI applications (bash or Python scripts, symlinked; see `apps/` for full listing)
   - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
   - `macos/` - macOS-specific tools
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)

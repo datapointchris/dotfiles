@@ -65,12 +65,44 @@ external `bat` shows its registry entry with the tldr and cheat pages. The `--he
 limited to your own tools on purpose: running `--help` against an arbitrary external command is
 not safe, and externals are covered by tldr and cheat anyway.
 
+## `menu review` — what's due to revisit
+
+Finding a tool once doesn't build retention; returning to it on a schedule does. `menu review` is
+the temporal half: a terminal-native cadence register for the things you mean to revisit or run
+periodically — a maintenance command, a skill, "relearn one neglected tool."
+
+```bash
+menu review               # what's due now, most overdue first
+menu review list          # every registered item and its status
+menu review done <id>     # mark an item done — advances its due date
+menu review edit          # edit the register in $EDITOR
+```
+
+The register is deliberately **two files**, following the split between configuration you own and
+state the tool manages:
+
+- `~/dev/review.yml` — declarative config you hand-edit: each item's `description`, `cadence`
+  (`2w`, `1mo`, `10d`, `1y`), and an optional `command` to show. `menu review` only ever reads
+  it, so your comments and layout are never disturbed.
+- `~/dev/review-state.json` — the last-done date per item, written by `done`.
+
+The due date is **derived, never stored**: `next_due = last_done + cadence`. Marking something done
+just stamps today, so there is no date to keep in sync and nothing to drift. A new item with no
+recorded done shows as *never done* and sorts to the top. Both files live in `~/dev` (Syncthing-
+synced) alongside the tools registry, so "due" is consistent across machines; override the paths
+with `MENU_REVIEW_REGISTER` and `MENU_REVIEW_STATE`.
+
+This half is written in Python (`apps/common/menu-review`), which `menu review` delegates to — date
+arithmetic and JSON state are far cleaner there than in shell. The picker stays bash, because it is
+just `fzf` glue.
+
 ## Implementation
 
-**Location**: `apps/common/menu`
+**Location**: `apps/common/menu` (picker, bash) and `apps/common/menu-review` (register, Python)
 
 **Dependencies**: `fzf` (picker) and `yq` (registry) drive search; the full view delegates to
-`toolbox`, `workflows`, `tldr`, `cheat`, and `bat`; `formatting.sh` provides the shell styling.
+`toolbox`, `workflows`, `tldr`, `cheat`, and `bat`; `formatting.sh` provides the shell styling. The
+register runs as a `uv` single-file script depending only on `pyyaml`.
 
 The index is a three-column tab-separated stream — display, source, name — built by
 `build_index`. Two internal subcommands help with debugging and scripting: `menu __index` prints
