@@ -1,3 +1,7 @@
+---
+tags: [neovim, motions, navigation, keybindings]
+---
+
 # neovim motions — movement and scrolling
 
 ```css

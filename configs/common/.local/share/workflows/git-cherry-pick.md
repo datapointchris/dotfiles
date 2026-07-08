@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, commits]
+---
+
 # git cherry-pick — apply specific commits
 
 ```bash

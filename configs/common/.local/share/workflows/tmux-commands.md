@@ -1,3 +1,7 @@
+---
+tags: [tmux, multiplexer, keybindings]
+---
+
 # tmux commands
 
 ```bash

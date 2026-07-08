@@ -1,3 +1,7 @@
+---
+tags: [broot, navigation, tui]
+---
+
 # broot — interactive directory tree navigation
 
 Note: use `br` (shell function) instead of `broot` so that cd-on-exit works

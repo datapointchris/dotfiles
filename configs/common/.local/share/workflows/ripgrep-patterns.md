@@ -1,3 +1,7 @@
+---
+tags: [ripgrep, search, shell]
+---
+
 # ripgrep — common search patterns
 
 ```bash

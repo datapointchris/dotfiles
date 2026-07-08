@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, rebase]
+---
+
 # git rebase — interactive workflow
 
 ```bash

@@ -1,3 +1,7 @@
+---
+tags: [neovim, buffers, windows, keybindings]
+---
+
 # neovim buffers, windows, and tabs
 
 **Buffer** — an open file in memory (primary unit of work).

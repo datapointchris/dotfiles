@@ -1,3 +1,7 @@
+---
+tags: [tmux, session, multiplexer, keybindings]
+---
+
 # tmux sessions — mental model and persistence
 
 **Session** — a project context (one per project), lives in RAM.

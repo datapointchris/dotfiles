@@ -1,3 +1,7 @@
+---
+tags: [fzf, search, shell]
+---
+
 # fzf search syntax
 
 fzf starts in extended-search mode. Multiple terms are delimited by spaces.

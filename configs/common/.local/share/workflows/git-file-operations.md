@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, staging]
+---
+
 # git file operations — mv, rm, and staging for clean history
 
 Use git-native commands so renames/deletes show up as renames/deletes in the log,

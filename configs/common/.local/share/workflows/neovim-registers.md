@@ -1,3 +1,7 @@
+---
+tags: [neovim, registers, clipboard, keybindings]
+---
+
 # neovim registers — clipboard and yank history
 
 ```text

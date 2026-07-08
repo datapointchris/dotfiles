@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, cleanup]
+---
+
 # git clean — remove untracked files and directories
 
 ```bash

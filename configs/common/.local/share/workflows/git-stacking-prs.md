@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, branches, pull-requests]
+---
+
 # git stacking PRs — branch-on-branch workflow
 
 Create a stack: `main → feature-a → feature-b → feature-c`

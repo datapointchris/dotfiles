@@ -1,3 +1,7 @@
+---
+tags: [neovim, molten, python, keybindings]
+---
+
 # molten.nvim — interactive Python execution in Neovim
 
 Requires: `uv tool install jupyter` (provides the python3 kernel)

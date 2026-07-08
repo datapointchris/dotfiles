@@ -1,3 +1,7 @@
+---
+tags: [aerospace, keybindings, window-manager]
+---
+
 # AeroSpace keybindings
 
 ```text

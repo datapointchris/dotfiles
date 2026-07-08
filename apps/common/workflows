@@ -56,26 +56,27 @@ if [[ ! -d "$WORKFLOWS_DIR" ]]; then
   exit 1
 fi
 
+# Strip leading YAML frontmatter (tags metadata) so cards render clean
+strip_frontmatter() {
+  awk 'NR==1 && $0=="---"{f=1;next} f && $0=="---"{f=0;next} !f' "$1"
+}
+
+# Render a card without its frontmatter, using bat when available
+render_card() {
+  local file="$1"
+  shift
+  # sed '/./,$!d' drops leading blank lines left behind after frontmatter
+  strip_frontmatter "$file" | sed '/./,$!d' | bat --style=plain --language=markdown "$@"
+}
+
 # Search and preview workflows with fzf
 cmd_search() {
-  if ! command -v fzf &>/dev/null; then
-    print_error "fzf is required for search"
-    echo "Install with: brew install fzf"
-    exit 1
-  fi
-
-  if ! command -v bat &>/dev/null; then
-    print_error "bat is required for previews"
-    echo "Install with: brew install bat"
-    exit 1
-  fi
-
   # Join all arguments as search query (handles multi-word searches)
   local query="$*"
 
   local fzf_opts=(
     --layout=reverse
-    --preview "bat --color=always --style=plain '$WORKFLOWS_DIR/{}.md'"
+    --preview "workflows __render '$WORKFLOWS_DIR/{}.md'"
     --preview-window=right:60%
     --prompt 'Workflow: '
     --header 'Select a workflow to view | Enter to open with bat'
@@ -96,7 +97,7 @@ cmd_search() {
   )
 
   if [[ -n "$selected" ]]; then
-    bat --style=plain "$WORKFLOWS_DIR/$selected.md"
+    render_card "$WORKFLOWS_DIR/$selected.md"
   fi
 }
 
@@ -122,11 +123,7 @@ cmd_random() {
     exit 1
   fi
 
-  if command -v bat &>/dev/null; then
-    bat --style=plain "$workflow"
-  else
-    cat "$workflow"
-  fi
+  render_card "$workflow"
 }
 
 # Show random workflow (colored output without pager for shell startup)
@@ -139,12 +136,7 @@ cmd_learn() {
     exit 1
   fi
 
-  # Use bat with --paging=never for colored output without pager
-  if command -v bat &>/dev/null; then
-    bat --style=plain --paging=never "$workflow"
-  else
-    cat "$workflow"
-  fi
+  render_card "$workflow" --paging=never
 }
 
 # Create a new workflow file and open in $EDITOR
@@ -257,11 +249,7 @@ cmd_show() {
     exit 1
   fi
 
-  if command -v bat &>/dev/null; then
-    bat --style=plain "$filepath"
-  else
-    cat "$filepath"
-  fi
+  render_card "$filepath"
 }
 
 # Main command routing
@@ -269,6 +257,11 @@ case "${1:-}" in
   "")
     # No args - show help
     show_help
+    ;;
+
+  __render)
+    # Internal: render a card (frontmatter stripped) for the fzf preview
+    render_card "$2" --color=always
     ;;
 
   search)

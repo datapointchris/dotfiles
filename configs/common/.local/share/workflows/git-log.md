@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, history]
+---
+
 # git log — useful formats and filters
 
 ```bash

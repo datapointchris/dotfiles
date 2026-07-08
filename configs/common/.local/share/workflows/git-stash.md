@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, stash]
+---
+
 # git stash — save and restore uncommitted work
 
 ```bash

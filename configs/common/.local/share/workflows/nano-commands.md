@@ -1,3 +1,7 @@
+---
+tags: [nano, editor, keybindings]
+---
+
 # nano commands
 
 ```sql

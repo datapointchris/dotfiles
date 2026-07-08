@@ -1,3 +1,7 @@
+---
+tags: [sesh, session, tmux]
+---
+
 # session management with sesh
 
 **New terminal window** — don't. Use tmux so sessions survive terminal close.

@@ -1,3 +1,7 @@
+---
+tags: [keybindings, resize, aerospace, tmux, neovim]
+---
+
 # keybindings — resize across AeroSpace, Tmux, Neovim
 
 ```text

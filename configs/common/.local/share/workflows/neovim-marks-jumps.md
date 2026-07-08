@@ -1,3 +1,7 @@
+---
+tags: [neovim, marks, navigation, keybindings]
+---
+
 # neovim marks and jumps
 
 ```sql

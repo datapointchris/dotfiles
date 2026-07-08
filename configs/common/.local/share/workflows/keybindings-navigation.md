@@ -1,3 +1,7 @@
+---
+tags: [keybindings, navigation, aerospace, tmux, neovim]
+---
+
 # keybindings — navigation across AeroSpace, Tmux, Neovim
 
 ```text

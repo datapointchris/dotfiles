@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, branches]
+---
+
 # `git checkout` vs `git switch` vs `git reset`
 
 | Action                        | Old Command                    | New Command                            |

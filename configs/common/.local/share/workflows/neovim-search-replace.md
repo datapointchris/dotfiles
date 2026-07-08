@@ -1,3 +1,7 @@
+---
+tags: [neovim, search, keybindings]
+---
+
 # neovim search and replace
 
 ```bash

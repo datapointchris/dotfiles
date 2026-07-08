@@ -1,3 +1,7 @@
+---
+tags: [keybindings, splits, aerospace, tmux, neovim]
+---
+
 # keybindings — splits and creation across AeroSpace, Tmux, Neovim
 
 ```yaml

@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, commits]
+---
+
 # git conventional commits
 
 Format: `type(scope): subject` — imperative mood, no period, 50 char max.

@@ -1,3 +1,7 @@
+---
+tags: [git, vcs, debugging]
+---
+
 # git bisect — binary search for the commit that introduced a bug
 
 ```bash

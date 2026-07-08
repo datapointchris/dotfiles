@@ -1,3 +1,7 @@
+---
+tags: [shell, redirects, logging]
+---
+
 # shell redirects and logging
 
 ```bash

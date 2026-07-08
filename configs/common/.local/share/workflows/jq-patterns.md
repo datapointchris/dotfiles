@@ -1,3 +1,7 @@
+---
+tags: [jq, json, data]
+---
+
 # jq — JSON processing patterns
 
 ```bash

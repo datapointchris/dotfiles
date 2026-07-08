@@ -1,3 +1,7 @@
+---
+tags: [zoxide, navigation, shell]
+---
+
 # zoxide — smart directory jumping
 
 Note: `z` is aliased to `cd` in .zshrc

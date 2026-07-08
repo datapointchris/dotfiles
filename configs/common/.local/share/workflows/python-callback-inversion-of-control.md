@@ -1,3 +1,7 @@
+---
+tags: [python, patterns, architecture]
+---
+
 # python callbacks — inversion of control for progress and hooks
 
 Decouple "what happens" from "how it's reported" by passing a callback from

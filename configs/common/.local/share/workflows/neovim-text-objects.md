@@ -1,3 +1,7 @@
+---
+tags: [neovim, text-objects, keybindings]
+---
+
 # neovim text objects — verb + modifier + noun
 
 Grammar: `{verb}{modifier}{noun}`
