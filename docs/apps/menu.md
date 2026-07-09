@@ -82,8 +82,9 @@ The register is deliberately **two files**, following the split between configur
 state the tool manages:
 
 - `~/dev/review.yml` — declarative config you hand-edit: each item's `description`, `cadence`
-  (`2w`, `1mo`, `10d`, `1y`), and an optional `command` to show. `menu review` only ever reads
-  it, so your comments and layout are never disturbed.
+  (`2w`, `1mo`, `10d`, `1y`), an optional `command` to show, and an optional `show:` command to
+  *run* (see the nudge below). `menu review` only ever reads the file, so your comments and layout
+  are never disturbed.
 - `~/dev/review-state.json` — the last-done date per item, written by `done`.
 
 The due date is **derived, never stored**: `next_due = last_done + cadence`. Marking something done
@@ -109,6 +110,17 @@ means the Python script launches twice a day, not on every prompt. `menu-review 
 renderer it calls — it prints due items or nothing, and does no throttling of its own. The marker
 lives in `$XDG_STATE_HOME/menu-review/nudge-slot` (machine-local, **not** Syncthing-synced), so each
 machine's first-shell-of-the-day is independent.
+
+**Live content (`show:`).** A register item can carry a `show:` command whose output is run and
+inlined *when that item is due in the nudge* — distinct from `command:`, which is only displayed.
+This is what makes "relearn a neglected tool" concrete: the `revisit-a-tool` item sets
+`show: toolbox remind`, so when it comes due the nudge shows the specific registry tool you have not
+used in 90 days (`toolbox remind` picks it, weighted by neglect and round-robined so it cycles). The
+`show:` command runs **only** in the nudge, never in `menu review` / `list`, because it has side
+effects — `toolbox remind` advances its own history each call — and running it on every manual view
+would burn through the rotation. It is timeout-guarded so a slow command cannot wedge startup. This
+replaced the old standalone `toolbox remind` shell-startup block, which fired a passive tool card on
+*every* shell; folding it into the register makes it one actionable, cadenced line instead.
 
 ## Implementation
 

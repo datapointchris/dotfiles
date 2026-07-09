@@ -108,6 +108,7 @@ def statuses() -> list[dict]:
                 "cadence": str(meta.get("cadence", "")),
                 "desc": meta.get("description", "") or "",
                 "command": meta.get("command", "") or "",
+                "show": meta.get("show", "") or "",
                 "last": last,
                 "overdue": overdue,
             }
@@ -204,6 +205,30 @@ def cmd_done(item_id: str) -> int:
     return 0
 
 
+def run_show(row: dict) -> None:
+    """Run a due item's `show:` command and let its output print inline.
+
+    Only the nudge calls this — a `show:` command produces live content and can
+    have side effects (e.g. `toolbox remind` advances its round-robin so it cycles
+    to the next neglected tool), so the manual `list`/`due` views only ever read.
+    This is the one place a review item runs rather than being displayed, and it
+    is opt-in per item: `command:` is shown, `show:` is run. Stdout is inherited
+    so colored output survives, and a timeout keeps a slow command from wedging
+    shell startup.
+    """
+    cmd = row.get("show")
+    if not cmd:
+        return
+    # Flush first: our print() output is buffered, but the subprocess writes to
+    # the inherited fd immediately, so without this its card jumps ahead of the
+    # header and item list we just printed.
+    sys.stdout.flush()
+    try:
+        subprocess.run(cmd, shell=True, timeout=10, check=False)
+    except subprocess.TimeoutExpired:
+        pass
+
+
 def cmd_nudge() -> int:
     """Startup nudge: print only what's due, and nothing at all when caught up.
 
@@ -221,6 +246,10 @@ def cmd_nudge() -> int:
     header("Review — due to revisit")
     for row in due:
         render_item(row)
+    # After the list, expand any items carrying live content (e.g. the neglected
+    # tool `toolbox remind` picks) so the roster stays scannable above it.
+    for row in due:
+        run_show(row)
     print(f"Mark one done:  {CYAN}menu review done <id>{RESET}")
     return 0
 

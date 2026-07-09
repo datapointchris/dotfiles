@@ -424,13 +424,6 @@ else
 fi
 
 # ------------------------------------------------------------------ #
-# TOOL REMINDER - Cycle through forgotten tools (Shell Startup)
-# ------------------------------------------------------------------ #
-if command -v toolbox &>/dev/null; then
-  toolbox remind
-fi
-
-# ------------------------------------------------------------------ #
 # MENU REVIEW - What's Due to Revisit (Shell Startup)
 # ------------------------------------------------------------------ #
 # Surface the review register's due items on the first shell of each half-day
