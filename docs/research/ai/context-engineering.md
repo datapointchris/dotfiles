@@ -6,7 +6,7 @@ Research on context management patterns and token optimization strategies for AI
 
 **Date**: 2025-12-04
 **Status**: Applied in commit agent and logsift workflows
-**Related**: [Commit Agent Research](commit-agent-research.md), [Agent Architecture](agent-architecture.md)
+**Related**: [Commit Agent Research](../../claude-code/commit-agent-research.md), [Agent Architecture](agent-architecture.md)
 
 ## What is Context Engineering?
 
@@ -510,9 +510,9 @@ With optimization:
 
 ## Related Research
 
-- [Commit Agent Research](commit-agent-research.md) - Applies all 4 strategies
+- [Commit Agent Research](../../claude-code/commit-agent-research.md) - Applies all 4 strategies
 - [Agent Architecture](agent-architecture.md) - Isolation strategy
-- [Logsift Workflow](logsift-workflow.md) - Compression strategy
+- [Logsift Workflow](../../claude-code/logsift-workflow.md) - Compression strategy
 
 ## References
 

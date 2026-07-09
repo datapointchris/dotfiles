@@ -713,7 +713,7 @@ This requires investigation. Passing control back to main agent.
 - **Select**: Only staged diffs
 - **Write**: Summary-only reporting
 
-**Reference**: [Context Engineering Research](context-engineering.md)
+**Reference**: [Context Engineering Research](../research/ai/context-engineering.md)
 
 ### Agent Architecture
 
@@ -724,7 +724,7 @@ This requires investigation. Passing control back to main agent.
 - Returns minimal summary
 - Scoped tool permissions
 
-**Reference**: [Agent Architecture Research](agent-architecture.md)
+**Reference**: [Agent Architecture Research](../research/ai/agent-architecture.md)
 
 ### Prompt Engineering
 
@@ -735,7 +735,7 @@ This requires investigation. Passing control back to main agent.
 - Examples (2 workflow examples)
 - Edge case documentation
 
-**Reference**: [Prompt Engineering Research](prompt-engineering.md)
+**Reference**: [Prompt Engineering Research](../research/ai/prompt-engineering.md)
 
 ## Future Directions
 

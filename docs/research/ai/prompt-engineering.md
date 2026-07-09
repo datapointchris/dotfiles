@@ -6,7 +6,7 @@ Modern prompt engineering best practices and systematic methodologies.
 
 **Date**: 2025-12-03, updated 2025-12-04  
 **Applied In**: Logsift slash commands, commit agent  
-**Related**: [Commit Agent](commit-agent-research.md), [Logsift Workflow](logsift-workflow.md)
+**Related**: [Commit Agent](../../claude-code/commit-agent-research.md), [Logsift Workflow](../../claude-code/logsift-workflow.md)
 
 ## Evolution: Prompts → Context
 
@@ -321,8 +321,8 @@ Poor: `update code`
 
 ## Related Research
 
-- [Commit Agent](commit-agent-research.md) - 400+ line agent prompt
-- [Logsift Workflow](logsift-workflow.md) - 5-phase methodology
+- [Commit Agent](../../claude-code/commit-agent-research.md) - 400+ line agent prompt
+- [Logsift Workflow](../../claude-code/logsift-workflow.md) - 5-phase methodology
 - [Agent Architecture](agent-architecture.md) - Prompt structure patterns
 
 ## References

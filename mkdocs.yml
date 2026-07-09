@@ -1,3 +1,6 @@
+# Shared docs standard — theme, features, and markdown_extensions below are the
+# canonical set kept identical across datapointchris/{docs,ichrisbirch,dotfiles}.
+# Only site_name/repo/nav/site_url and repo-specific plugins differ per repo.
 site_name: Dotfiles
 site_url: https://datapointchris.github.io/dotfiles/
 repo_name: datapointchris/dotfiles
@@ -6,7 +9,6 @@ repo_url: https://github.com/datapointchris/dotfiles
 theme:
   name: material
   palette:
-    # Dark mode (default)
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: indigo
@@ -14,7 +16,6 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-    # Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: indigo
@@ -22,100 +23,29 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-
   font:
     text: Inter
     code: JetBrains Mono
-
+  icon:
+    repo: fontawesome/brands/github
   features:
-    # Navigation
     - navigation.instant
     - navigation.instant.prefetch
     - navigation.tracking
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
-    - navigation.path
     - navigation.indexes
     - navigation.top
-
-    # Search
     - search.suggest
     - search.highlight
     - search.share
-
-    # Content
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
 
-  icon:
-    repo: fontawesome/brands/github
-    admonition:
-      note: octicons/tag-16
-      abstract: octicons/checklist-16
-      info: octicons/info-16
-      tip: octicons/light-bulb-16
-      success: octicons/check-16
-      question: octicons/question-16
-      warning: octicons/alert-16
-      failure: octicons/x-circle-16
-      danger: octicons/zap-16
-      bug: octicons/bug-16
-      example: octicons/beaker-16
-      quote: octicons/quote-16
-
-extra_css:
-  - stylesheets/extra.css
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/datapointchris/dotfiles
-  generator: false
-
-markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.highlight:
-      anchor_linenums: true
-      use_pygments: true
-      pygments_lang_class: true
-      line_spans: __span
-      auto_title: false
-  - pymdownx.inlinehilite
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
-  - pymdownx.snippets
-  - pymdownx.tabbed:
-      alternate_style: true
-  - def_list
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - attr_list
-  - md_in_html
-  - pymdownx.critic
-  - pymdownx.caret
-  - pymdownx.keys
-  - pymdownx.mark
-  - pymdownx.tilde
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - footnotes
-  - abbr
-  - toc:
-      permalink: true
-      title: On this page
-      toc_depth: 0
-
 plugins:
-  - search:
-      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - search
   - mkdocstrings:
       handlers:
         python:
@@ -129,6 +59,50 @@ plugins:
             separate_signature: true
             show_bases: true
             show_submodules: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - abbr
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      use_pygments: true
+      pygments_lang_class: true
+      line_spans: __span
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/datapointchris/dotfiles
+  generator: false
 
 nav:
   - Home: index.md
@@ -254,10 +228,3 @@ nav:
       - Centralized Failure Registry: learnings/centralized-failure-registry.md
       - GitHub Releases vs System Packages: learnings/github-releases-vs-system-packages.md
       - Version Comparison in Shell: learnings/version-comparison-in-shell.md
-
-validation:
-  links:
-    not_found: warn
-    absolute_links: warn
-    unrecognized_links: warn
-    anchors: warn

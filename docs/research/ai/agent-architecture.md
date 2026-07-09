@@ -7,7 +7,7 @@ How Claude Code agents work, when to use them, and implementation patterns.
 **Date**: 2025-12-04  
 **Sources**: Claude Code official documentation, ClaudeLog guides  
 **Implementation**: `.claude/agents/commit-agent.md`  
-**Related**: [Commit Agent Research](commit-agent-research.md), [Context Engineering](context-engineering.md)
+**Related**: [Commit Agent Research](../../claude-code/commit-agent-research.md), [Context Engineering](context-engineering.md)
 
 ## What Are Agents?
 
@@ -156,9 +156,9 @@ description: "Commit agent"
 
 ## Related Research
 
-- [Commit Agent Research](commit-agent-research.md) - Full implementation
+- [Commit Agent Research](../../claude-code/commit-agent-research.md) - Full implementation
 - [Context Engineering](context-engineering.md) - Isolation strategy  
-- [Claude Code Features](claude-code-features.md) - Agent vs others
+- [Claude Code Features](../../claude-code/claude-code-features.md) - Agent vs others
 
 ## References
 

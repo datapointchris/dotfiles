@@ -6,7 +6,7 @@ Error analysis, filtering methodology, and systematic fixing approach for comman
 
 **Date**: 2025-12-03 (initial), 2025-12-04 (updated)  
 **Implementation**: `/logsift` and `/logsift-auto` slash commands  
-**Related**: [Commit Agent](commit-agent-research.md), [Context Engineering](context-engineering.md)
+**Related**: [Commit Agent](commit-agent-research.md), [Context Engineering](../research/ai/context-engineering.md)
 
 ## Problem Statement
 
@@ -113,9 +113,9 @@ Logsift already saved massive context by filtering logs. Now use that savings to
 
 ## Related Research
 
-- [Context Engineering](context-engineering.md) - Compression strategy
+- [Context Engineering](../research/ai/context-engineering.md) - Compression strategy
 - [Commit Agent](commit-agent-research.md) - Uses logsift for pre-commit
-- [Prompt Engineering](prompt-engineering.md) - Systematic methodology
+- [Prompt Engineering](../research/ai/prompt-engineering.md) - Systematic methodology
 
 ## References
 

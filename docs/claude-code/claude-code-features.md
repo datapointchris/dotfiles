@@ -289,7 +289,7 @@ Run these commands...
 
 ## Related Research
 
-- [Agent Architecture](agent-architecture.md) - Agent deep dive
+- [Agent Architecture](../research/ai/agent-architecture.md) - Agent deep dive
 - [Commit Agent](commit-agent-research.md) - Agent implementation
 - [Logsift Workflow](logsift-workflow.md) - Slash command implementation
 

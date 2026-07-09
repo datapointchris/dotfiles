@@ -14,7 +14,7 @@ This directory captures all research conducted for AI tooling decisions in the d
 
 ## Research Areas
 
-### 1. [Commit Agent Research](commit-agent-research.md)
+### 1. [Commit Agent Research](../../claude-code/commit-agent-research.md)
 
 **Focus**: Automated git commit workflow with token optimization
 
@@ -62,7 +62,7 @@ This directory captures all research conducted for AI tooling decisions in the d
 
 **Research Source**: Claude Code documentation, ClaudeLog
 
-### 4. [Logsift Workflow](logsift-workflow.md)
+### 4. [Logsift Workflow](../../claude-code/logsift-workflow.md)
 
 **Focus**: Error analysis, filtering, and systematic fixing methodology
 
@@ -78,7 +78,7 @@ This directory captures all research conducted for AI tooling decisions in the d
 
 **Context Savings**: 10,000+ lines → ~200 lines of errors
 
-### 5. [Claude Code Features Comparison](claude-code-features.md)
+### 5. [Claude Code Features Comparison](../../claude-code/claude-code-features.md)
 
 **Focus**: Decision matrix for slash commands, hooks, skills, and agents
 
@@ -338,21 +338,21 @@ Each research document should:
 ### Claude Code Documentation
 
 - [Agent Architecture](agent-architecture.md)
-- [Claude Code Features Comparison](claude-code-features.md)
+- [Claude Code Features Comparison](../../claude-code/claude-code-features.md)
 
 ### Academic Research
 
 - [Context Engineering](context-engineering.md) - Git-Context-Controller
-- [Commit Agent Research](commit-agent-research.md) - GCC pattern
+- [Commit Agent Research](../../claude-code/commit-agent-research.md) - GCC pattern
 
 ### Industry Best Practices
 
 - [Prompt Engineering 2025](prompt-engineering.md)
-- [Commit Agent Research](commit-agent-research.md) - AI commit workflows
+- [Commit Agent Research](../../claude-code/commit-agent-research.md) - AI commit workflows
 
 ### Tool-Specific Research
 
-- [Logsift Workflow](logsift-workflow.md)
+- [Logsift Workflow](../../claude-code/logsift-workflow.md)
 
 ## Related Documentation
 
