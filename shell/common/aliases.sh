@@ -94,10 +94,9 @@ alias watchports='watch -n 1 -d lsof -iTCP -sTCP:LISTEN -n -P'
 # Git - different from alias in gitconfig where these don't have to use `git` first
 alias gst='git status'
 
-# Short git aliases in the same spirit as gst
+# Short git aliases in the same spirit as gst.
+# ga/gd deliberately omitted: forgit claims them for interactive add/diff.
 alias gp='git push'
 alias gl='git pull'
-alias gd='git diff'
-alias ga='git add'
 
 alias git-alias='cat ~/.gitconfig | grep --after-context=50 "\[alias\]"'
