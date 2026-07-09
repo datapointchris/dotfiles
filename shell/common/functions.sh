@@ -191,16 +191,6 @@ function server() {
   sleep 1 && open "http://localhost:2222"
 }
 
-#@opendir
-#--> Open current directory or given location
-function opendir() {
-  if [ $# -eq 0 ]; then
-    open .
-  else
-    open "$@"
-  fi
-}
-
 f() {
     # Run command/application and choose paths/files with fzf.
     # Always return control of the terminal to user (e.g. when opening GUIs).
