@@ -14,10 +14,21 @@ source "$SHELL_DIR/formatting.sh"
 REGISTRY="${TOOLBOX_REGISTRY:-$HOME/dev/tools.yml}"
 WORKFLOWS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/workflows"
 SKILLS_DIR="$HOME/.claude/skills"
+FUNCTIONS_FILE="$SHELL_DIR/functions.sh"
+ALIASES_FILE="$SHELL_DIR/aliases.sh"
 
 # Registry membership tests, used to decide which lenses fire for a subject.
 in_registry() { yq -e ".tools.\"$1\"" "$REGISTRY" >/dev/null 2>&1; }
 is_custom_tool() { [[ "$(yq -r ".tools.\"$1\".category // \"\"" "$REGISTRY")" == "custom-tools" ]]; }
+# A function is surfaced only if it carries the `#@name` discovery annotation
+# (unannotated functions are internal helpers). An alias just has to be defined.
+is_function() { grep -qE "^#@$1\$" "$FUNCTIONS_FILE" 2>/dev/null; }
+is_alias() { grep -qE "^alias $1=" "$ALIASES_FILE" 2>/dev/null; }
+
+# Pull one function's definition (annotation through its closing brace) or one
+# alias line, for the preview and full view.
+extract_function() { awk -v n="$1" '$0=="#@"n{p=1} p{print} p&&/^}/{exit}' "$FUNCTIONS_FILE"; }
+extract_alias() { grep -E "^alias $1=" "$ALIASES_FILE"; }
 
 show_help() {
   print_header "Menu - Search Your Tools, Workflows & Skills" "brightcyan"
@@ -31,7 +42,7 @@ show_help() {
   echo "  $(print_cyan "menu help")          Show this help"
   echo ""
   echo "  Enter on any result assembles every lens that has it:"
-  echo "  help · toolbox · tldr · cheat · workflow · skill."
+  echo "  help · toolbox · tldr · cheat · workflow · skill · function · alias."
   echo ""
   print_section "Review (what's due to revisit)" "brightyellow"
   echo "  $(print_cyan "menu review")           What's due now, most overdue first"
@@ -43,6 +54,8 @@ show_help() {
   echo "  $(print_cyan "[tool]")      tools registry ($REGISTRY)"
   echo "  $(print_cyan "[workflow]")  reference cards ($WORKFLOWS_DIR)"
   echo "  $(print_cyan "[skill]")     Claude skills ($SKILLS_DIR)"
+  echo "  $(print_cyan "[func]")      shell functions ($FUNCTIONS_FILE)"
+  echo "  $(print_cyan "[alias]")     shell aliases ($ALIASES_FILE)"
 }
 
 # Format raw "name<TAB>desc<TAB>tags" rows into the index line:
@@ -91,9 +104,32 @@ index_skills() {
   done | build_rows skill
 }
 
+# Shell functions carry a `#@name` / `#--> description` annotation (the same
+# discovery convention toolbox parses). Emit those pairs; unannotated functions
+# are internal helpers and stay hidden — the annotation IS the opt-in.
+index_functions() {
+  [[ -f "$FUNCTIONS_FILE" ]] || return 0
+  awk '
+    /^#@/ { name=substr($0,3); next }
+    /^#-->/ && name != "" { desc=substr($0,6); sub(/^[[:space:]]+/,"",desc); print name "\t" desc "\t"; name="" }
+  ' "$FUNCTIONS_FILE" | build_rows func
+}
+
+# Aliases: the `alias name=...` definition, with the immediately-preceding comment
+# as the description when there is one.
+index_aliases() {
+  [[ -f "$ALIASES_FILE" ]] || return 0
+  awk '
+    /^#/ { desc=$0; sub(/^#[[:space:]]*/,"",desc); next }
+    /^alias / { name=$0; sub(/^alias /,"",name); sub(/=.*/,"",name); print name "\t" desc "\t"; next }
+    /^[[:space:]]*$/ { next }
+    { desc="" }
+  ' "$ALIASES_FILE" | build_rows alias
+}
+
 # The federated index: every collection's rows, sorted for stable dumps. fzf
 # re-ranks by score regardless, so the sort only makes __index readable.
-build_index() { { index_tools; index_workflows; index_skills; } | sort; }
+build_index() { { index_tools; index_workflows; index_skills; index_functions; index_aliases; } | sort; }
 
 # Render one entry by delegating to the collection that owns it
 cmd_preview() {
@@ -102,6 +138,8 @@ cmd_preview() {
     tool) toolbox show "$name" ;;
     workflow) workflows show "$name" ;;
     skill) bat --style=plain --color=always --language=markdown "$SKILLS_DIR/$name/SKILL.md" ;;
+    func) extract_function "$name" | bat --style=plain --color=always --language=bash ;;
+    alias) extract_alias "$name" | bat --style=plain --color=always --language=bash ;;
   esac
 }
 
@@ -135,6 +173,14 @@ render_lens() {
       print_section "skill — Claude skill" "brightgreen"
       bat --style=plain --color=always --language=markdown "$SKILLS_DIR/$subject/SKILL.md"
       ;;
+    function)
+      print_section "function — your shell function" "brightcyan"
+      extract_function "$subject" | bat --style=plain --color=always --language=bash
+      ;;
+    alias)
+      print_section "alias — your shell alias" "brightcyan"
+      extract_alias "$subject" | bat --style=plain --color=always --language=bash
+      ;;
   esac
   echo ""
 }
@@ -156,10 +202,12 @@ cmd_show() {
   if cheat "$subject" >/dev/null 2>&1; then lenses+=(cheat); fi
   if [[ -f "$WORKFLOWS_DIR/$subject.md" ]]; then lenses+=(workflow); fi
   if [[ -f "$SKILLS_DIR/$subject/SKILL.md" ]]; then lenses+=(skill); fi
+  if is_function "$subject"; then lenses+=(function); fi
+  if is_alias "$subject"; then lenses+=(alias); fi
 
   if [[ ${#lenses[@]} -eq 0 ]]; then
     print_warning "Nothing known about '$subject' in any lens."
-    echo "Lenses checked: help · toolbox · tldr · cheat · workflow · skill"
+    echo "Lenses checked: help · toolbox · tldr · cheat · workflow · skill · function · alias"
     return 1
   fi
 
@@ -182,7 +230,7 @@ cmd_find() {
           --preview 'menu __preview {2} {3}' \
           --preview-window=right:62% \
           --prompt='menu ❯ ' \
-          --header='Search tools · workflows · skills | Enter for the full view'
+          --header='Search tools · funcs · aliases · workflows · skills | Enter for the full view'
   )
   [[ -n "$selected" ]] || return 0
   # Enter opens the full composite view (every lens), not just the owning

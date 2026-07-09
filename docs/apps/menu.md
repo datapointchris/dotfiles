@@ -4,10 +4,10 @@ icon: material/magnify
 
 # Menu
 
-Search across your tools, workflows, and Claude skills in one place, then see everything known
-about the one you pick. `menu` is a thin **pointer**: it federates your collections into one
-searchable index and, on selection, assembles the full picture from whichever sources have it. It
-stores no content of its own.
+Search across your tools, shell functions, aliases, workflows, and Claude skills in one place, then
+see everything known about the one you pick. `menu` is a thin **pointer**: it federates your
+collections into one searchable index and, on selection, assembles the full picture from whichever
+sources have it. It stores no content of its own.
 
 ## Quick Start
 
@@ -22,14 +22,20 @@ Type to filter, and press **Enter** on any result to open its full view. **From 
 
 ## What it searches
 
-`menu` builds a live index over three collections, each shown with a source tag so you know where
+`menu` builds a live index over five collections, each shown with a source tag so you know where
 a result lives:
 
 | Source | Collection | Where it comes from |
 | --- | --- | --- |
 | `[tool]` | tools registry | `$TOOLBOX_REGISTRY`, else `~/dev/tools.yml` |
+| `[func]` | shell functions | `~/.local/shell/functions.sh` (`#@name` / `#-->desc` annotations) |
+| `[alias]` | shell aliases | `~/.local/shell/aliases.sh` |
 | `[workflow]` | reference cards | `~/.local/share/workflows/*.md` (frontmatter tags) |
 | `[skill]` | Claude skills | `~/.claude/skills/*/SKILL.md` |
+
+Functions surface only if they carry the `#@name` / `#-->desc` annotation — the same convention
+`toolbox funcs` reads. That annotation is the opt-in: unannotated functions are internal helpers and
+stay hidden. Aliases are indexed by definition, with the preceding comment as the description.
 
 Adding a new collection later is one more index function; `menu` never grows heavy because the
 depth always lives in the collections, not here.
@@ -59,6 +65,8 @@ has content for the selected subject, in priority order, showing only the sectio
 | `cheat` | a cheat sheet exists | your saved snippets |
 | `workflow` | a card of the same name exists | your multi-step reference |
 | `skill` | a skill of the same name exists | the raw `SKILL.md` |
+| `function` | an annotated shell function of that name exists | its definition, syntax-highlighted |
+| `alias` | an alias of that name is defined | its expansion |
 
 So selecting your own `backmeup` shows its live `--help` alongside its registry entry, while an
 external `bat` shows its registry entry with the tldr and cheat pages. The `--help` lens is
