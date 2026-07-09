@@ -19,10 +19,12 @@ consensus) points the same direction. Accumulation is the anti-pattern you alrea
 Research date: 2026-07-07.
 
 !!! note "Build status (2026-07-08)"
-    Partially built. `menu` unifies the discovery doors; the retention layer (job 3) was rebuilt
-    by **removing** the `workflows motd` random card and replacing it with the `menu review`
-    register + a first-shell-of-each-half-day nudge. The "upgrade the motd to weekly rotation"
-    lines below are superseded by that replacement. See `docs/apps/menu.md`.
+    Substantially built. `menu` unifies the discovery doors (job 1); the retention layer (job 3)
+    was rebuilt by **removing** the `workflows motd` random card and replacing it with the
+    `menu review` register + a first-shell-of-each-half-day nudge; and the analysis layer (job 2)
+    now exists — **atuin** captures cwd/exit/session and the **`/flow-review`** skill turns that
+    history into codified fixes. The "upgrade the motd to weekly rotation" and "build the LLM
+    coach" lines below are now done. See `docs/apps/menu.md`.
 
 ## The single-source-of-truth pipeline
 
