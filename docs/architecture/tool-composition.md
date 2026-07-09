@@ -408,5 +408,5 @@ done
 ## Related Documentation
 
 - [Toolbox](../apps/toolbox.md) - Tool discovery and composition
-- [Menu](../apps/menu.md) - Simple launcher
+- [Menu](../apps/menu.md) - Federated search and cadence review over tools, workflows, and skills
 - [Notes](../apps/notes.md) - zk workflow guide
