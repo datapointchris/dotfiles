@@ -191,6 +191,8 @@ function server() {
   sleep 1 && open "http://localhost:2222"
 }
 
+#@f
+#--> Pick a command's path/file args with fzf, e.g. f vim (choose files) or f cd (choose dir)
 f() {
     # Run command/application and choose paths/files with fzf.
     # Always return control of the terminal to user (e.g. when opening GUIs).
@@ -271,6 +273,8 @@ f() {
 # This implementation below makes use of "open" on macOS, which can be replaced by other commands if needed.
 # allows to search in PDFs, E-Books, Office documents, zip, tar.gz, etc. (see https://github.com/phiresky/ripgrep-all)
 # find-in-file - usage: fif <searchTerm> or fif "string with spaces" or fif "regex"
+#@fif
+#--> Find in file contents with ripgrep-all + fzf, then open the match. Usage: fif <term>
 fif() {
     if [ ! "$#" -gt 0 ]; then echo "Need a string to search for!"; return 1; fi
     local file
@@ -278,6 +282,8 @@ fif() {
 }
 
 # fco_preview - checkout git branch/tag, with a preview showing the commits between the tag/branch and HEAD
+#@fco_preview
+#--> Fuzzy git checkout of a branch or tag, with a commit preview
 fco_preview() {
   local tags branches target
   branches=$(
@@ -298,6 +304,8 @@ _gitLogLineToHash="echo {} | grep -o '[a-f0-9]\{7\}' | head -1"
 _viewGitLogLine="$_gitLogLineToHash | xargs -I % sh -c 'git show --color=always % | diff-so-fancy'"
 
 # fcoc_preview - checkout git commit with previews
+#@fcoc_preview
+#--> Fuzzy git checkout of a specific commit, with a diff preview
 fcoc_preview() {
   local commit
   commit=$( glNoGraph |
@@ -307,6 +315,8 @@ fcoc_preview() {
 }
 
 # fshow_preview - git commit browser with previews
+#@fshow_preview
+#--> Browse git commits with fzf; enter to view, alt-y to copy the hash
 fshow_preview() {
     glNoGraph |
         fzf --no-sort --reverse --tiebreak=index --no-multi \
@@ -321,6 +331,8 @@ fshow_preview() {
 # enter shows you the contents of the stash
 # ctrl-d shows a diff of the stash against your current HEAD
 # ctrl-b checks the stash out as a branch, for easier merging
+#@fstash
+#--> Manage git stashes with fzf; enter views, ctrl-d diffs, ctrl-b branches
 fstash() {
   local out q k sha
   while out=$(
@@ -350,6 +362,8 @@ is_in_git_repo() {
   git rev-parse HEAD > /dev/null 2>&1
 }
 
+#@fgst
+#--> Fuzzy-pick changed files from git status (to stage or pipe)
 fgst() {
   # "Nothing to see here, move along"
   is_in_git_repo || return
@@ -363,6 +377,8 @@ fgst() {
 }
 
 # gh-watch -- watch the current actions
+#@gh-watch
+#--> Pick an in-progress GitHub Actions run on this branch and watch it live
 gh-watch() {
     gh run list \
       --branch $(git rev-parse --abbrev-ref HEAD) \
@@ -375,6 +391,8 @@ gh-watch() {
 # `tm` will allow you to select your tmux session via fzf.
 # `tm irc` will attach to the irc session (if it exists), else it will create it.
 
+#@tm
+#--> Switch or create tmux sessions via fzf; tm <name> attaches or creates it
 tm() {
   [[ -n "$TMUX" ]] && change="switch-client" || change="attach-session"
   if [ $1 ]; then
@@ -410,6 +428,8 @@ sesh() {
 }
 
 
+#@fzf-man-widget
+#--> Fuzzy man-page browser (Ctrl-H); alt-c for cheat.sh, alt-t for tldr in the preview
 fzf-man-widget() {
   manpage="echo {} | sed 's/\([[:alnum:][:punct:]]*\) (\([[:alnum:]]*\)).*/\2 \1/'"
   batman="${manpage} | xargs -r man | col -bx | bat --language=man --plain --color always --theme=\"Monokai Extended\""
