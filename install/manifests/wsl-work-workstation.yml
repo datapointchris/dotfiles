@@ -35,6 +35,7 @@ github_releases:
   - hadolint
   - tree-sitter
   - just
+  - atuin
   - win32yank
   - tenv
 

@@ -38,6 +38,7 @@ github_releases:
   - hadolint
   - tree-sitter
   - just
+  - atuin
   - tenv
 
 custom_installers:

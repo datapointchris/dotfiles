@@ -17,6 +17,7 @@ Tool support, version managers, and platform-specific quirks.
 | **lazygit**    | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **yazi**       | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **fzf**        | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
+| **atuin**      | ✅    | ✅     | ✅   | GitHub releases (Linux); brew (macOS)   |
 | **ripgrep**    | ✅    | ✅     | ✅   | System package manager                  |
 | **tmux**       | ✅    | ✅     | ✅   | System package manager                  |
 | **aerospace**  | ✅    | ❌     | ❌   | macOS-only window manager (cask)        |
@@ -27,6 +28,11 @@ Tool support, version managers, and platform-specific quirks.
 - ✅ Native package manager support
 - ⚠️ Alternative installation required
 - ❌ Not available or not applicable
+
+**atuin** is the one split-method tool. It uses GitHub releases on Linux like fzf and neovim, but
+macOS falls back to Homebrew: atuin publishes no Intel-macOS release binary (only Apple Silicon), and
+`cargo binstall` would compile it from source. brew's bottle covers both Mac architectures, so all
+Macs use it while every other platform uses the uniform GitHub-releases install.
 
 ## Version Managers
 

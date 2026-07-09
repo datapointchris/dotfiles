@@ -322,6 +322,18 @@ else
   log_error "Setup" "fzf not found"
 fi
 
+# atuin — SQLite history capture (command, exit, cwd, session) backing the
+# flow-review analysis. atuin owns Ctrl-R (its DB-backed search shows time, cwd,
+# and exit — richer than fzf's flat fuzzy match; it overrides fzf's Ctrl-R since
+# this sources after the fzf block). Up-arrow stays the prefix-search bound above
+# (--disable-up-arrow) rather than atuin's launch-a-TUI-every-press. To revert
+# Ctrl-R to fzf, add --disable-ctrl-r; to also hand up-arrow to atuin, drop the
+# flag. Guarded like fzf so a machine mid-bootstrap does not error.
+if command -v atuin >/dev/null 2>&1; then
+  eval "$(atuin init zsh --disable-up-arrow)"
+  log "Setup" "atuin"
+fi
+
 # nvm
 if [[ -s "$NVM_DIR/nvm.sh" ]]; then
   source "$NVM_DIR/nvm.sh"

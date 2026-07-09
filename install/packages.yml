@@ -100,6 +100,16 @@ system_packages:
     description: Fast grep alternative
     tags: [cli, search]
 
+  # macOS is the SINGLE exception to the uniform github_releases install (see that
+  # entry). atuin ships no Intel-macOS release binary and cargo binstall would compile
+  # from source, so brew's bottle is the only compile-free way onto an Intel Mac; brew
+  # covers Apple Silicon too, so all Macs use it. Every other platform uses github_releases.
+  - name: atuin
+    brew: atuin
+    command: atuin
+    description: SQLite-backed shell history capturing command, exit, cwd, and session
+    tags: [cli, shell, history]
+
   - name: tokei
     pacman: tokei
     brew: tokei
@@ -751,6 +761,17 @@ github_releases:
     binary_pattern: "just-{version}-{target}.tar.gz" # Target-specific: x86_64-apple-darwin, aarch64-apple-darwin, x86_64-unknown-linux-musl
     install_dir: "~/.local/bin"
     description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
+
+  # The uniform install method: the same musl release binary on every Linux platform
+  # (Arch + WSL). macOS is the lone exception (brew — see system_packages) because atuin
+  # ships no Intel-mac binary. atuin.sh guards darwin so only Linux reaches this path.
+  - name: atuin
+    repo: atuinsh/atuin
+    install_script: github-releases/atuin.sh
+    binary_pattern: "atuin-{target}.tar.gz" # No version in filename; binary nests under atuin-{target}/atuin
+    install_dir: "~/.local/bin"
+    description: SQLite-backed shell history capturing command, exit, cwd, and session
+    tags: [cli, shell, history]
 
   - name: tree-sitter
     repo: tree-sitter/tree-sitter

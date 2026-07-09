@@ -1,0 +1,17 @@
+# Atuin — SQLite-backed shell history. Managed by dotfiles.
+#
+# Atuin owns Ctrl-R (its DB-backed search — time, cwd, exit), while up-arrow stays
+# zsh's prefix-search; see the atuin block in .zshrc for the keybinding rationale.
+# Beyond search, atuin records the per-command metadata the flow-review analysis
+# needs — exit code, working directory, and session — in ~/.local/share/atuin/history.db.
+#
+# The flat ~/.local/state/zsh/history keeps being written too, so nothing that
+# reads it (tool-usage, toolbox remind) changes.
+
+# Local-first only. Not logged into any sync server, and this makes that explicit
+# so no network call is attempted. Self-hosted encrypted sync can be enabled later.
+auto_sync = false
+
+# We pin atuin's version through the dotfiles cargo_packages manifest, so its own
+# startup update check is just noise + a network round-trip.
+update_check = false
