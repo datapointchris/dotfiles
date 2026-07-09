@@ -431,11 +431,22 @@ if command -v toolbox &>/dev/null; then
 fi
 
 # ------------------------------------------------------------------ #
-# WORKFLOWS - Random Learning (Shell Startup)
+# MENU REVIEW - What's Due to Revisit (Shell Startup)
 # ------------------------------------------------------------------ #
-# Enable/disable with: workflows motd enable|disable
-if [[ -x "$HOME/.local/bin/workflows" ]]; then
-  _wf_motd="${XDG_STATE_HOME:-$HOME/.local/state}/workflows/motd"
-  [[ "$(cat "$_wf_motd" 2>/dev/null)" == "enabled" ]] && echo "" && workflows learn
-  unset _wf_motd
+# Surface the review register's due items on the first shell of each half-day
+# (morning / afternoon) — at most twice a day, and only when something is due.
+# The slot gate is a cheap `date +%F-%p` compare so the reviewer (a uv/python
+# script) only spawns on a new slot, never on every shell. The nudge itself is
+# silent when nothing is due, so a clear day adds no startup noise. The marker
+# is machine-local (XDG state, not synced) — each machine's first shell of the
+# day is its own.
+if [[ -x "$HOME/.local/bin/menu-review" ]]; then
+  _mr_slot="$(date +%F-%p)"
+  _mr_marker="${XDG_STATE_HOME:-$HOME/.local/state}/menu-review/nudge-slot"
+  if [[ "$(cat "$_mr_marker" 2>/dev/null)" != "$_mr_slot" ]]; then
+    mkdir -p "${_mr_marker:h}"
+    print -r -- "$_mr_slot" > "$_mr_marker"
+    menu-review nudge
+  fi
+  unset _mr_slot _mr_marker
 fi

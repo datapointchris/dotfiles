@@ -16,6 +16,12 @@ never checks whether you learned it).
 
 Research date: 2026-07-07.
 
+!!! note "Superseded (2026-07-08)"
+    Acted on: the `workflows motd` random startup card was **removed**, not upgraded. Its slot is
+    now the `menu review` cadence register plus a first-shell-of-each-half-day nudge — the
+    scheduled-return mechanism this document argues for. Read the "keep the motd, improve it"
+    advice below as the analysis that led there, not current guidance. See `docs/apps/menu.md`.
+
 ## Why the random startup tip is only half the answer
 
 Your `workflows motd` shows a random card on shell startup. That is the **fortune / motd

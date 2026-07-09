@@ -96,6 +96,20 @@ This half is written in Python (`apps/common/menu-review`), which `menu review` 
 arithmetic and JSON state are far cleaner there than in shell. The picker stays bash, because it is
 just `fzf` glue.
 
+### The startup nudge
+
+`menu review` is pull — it only helps when you remember to run it. The nudge makes it push: the
+first shell of each half-day (morning and afternoon, at most twice a day) surfaces what's due, and
+stays silent when you are caught up. This replaces the old `workflows motd` random-card-on-startup —
+scheduled return to a topic you chose beats random exposure to one you didn't.
+
+The gate lives in `.zshrc`: a cheap `date +%F-%p` slot compare against a marker file decides whether
+this is the first shell of a new slot, and only then spawns the reviewer. Keeping the gate in shell
+means the Python script launches twice a day, not on every prompt. `menu-review nudge` is the
+renderer it calls — it prints due items or nothing, and does no throttling of its own. The marker
+lives in `$XDG_STATE_HOME/menu-review/nudge-slot` (machine-local, **not** Syncthing-synced), so each
+machine's first-shell-of-the-day is independent.
+
 ## Implementation
 
 **Location**: `apps/common/menu` (picker, bash) and `apps/common/menu-review` (register, Python)

@@ -204,6 +204,27 @@ def cmd_done(item_id: str) -> int:
     return 0
 
 
+def cmd_nudge() -> int:
+    """Startup nudge: print only what's due, and nothing at all when caught up.
+
+    This is what the first shell of each half-day calls. The twice-a-day slot
+    gate lives in the shell caller (a cheap `date +%F-%p` compare), so this stays
+    a pure renderer — it never throttles itself, it just shows due items or stays
+    silent. Silence-when-caught-up is the whole point: a nudge you don't notice on
+    a clear day is a nudge you'll still read on a busy one.
+    """
+    if load_items() is None:
+        return 0
+    due = [row for row in statuses() if is_due(row)]
+    if not due:
+        return 0
+    header("Review — due to revisit")
+    for row in due:
+        render_item(row)
+    print(f"Mark one done:  {CYAN}menu review done <id>{RESET}")
+    return 0
+
+
 def cmd_edit() -> int:
     if not REGISTER.exists():
         REGISTER.parent.mkdir(parents=True, exist_ok=True)
@@ -230,6 +251,8 @@ def main() -> int:
         return show_help()
     if sub == "list":
         return cmd_list()
+    if sub == "nudge":
+        return cmd_nudge()
     if sub == "edit":
         return cmd_edit()
     if sub == "done":

@@ -14,6 +14,14 @@ and the design options so decisions can be made deliberately.
 
 Research date: 2026-07-07. Sources are cited inline in each document.
 
+!!! note "Build status (2026-07-08)"
+    This series is a point-in-time analysis; some "what you have today" cells below are now
+    historical. Acted on since: `menu` unifies the discovery doors (job 1), and the retention
+    layer (job 3) was rebuilt — the `workflows motd` random card was **removed** and replaced by
+    the `menu review` cadence register plus a first-shell-of-each-half-day nudge (the "first-shell
+    gating + scheduled active recall" this research recommended, achieved by replacing the motd
+    rather than keeping it). See `docs/apps/menu.md`.
+
 ## The core reframe
 
 The starting assumption was "I need a tool to record what I do and analyze it." The research

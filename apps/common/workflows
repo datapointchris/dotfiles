@@ -13,7 +13,6 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
 WORKFLOWS_DIR="${WORKFLOWS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/workflows}"
-MOTD_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/workflows/motd"
 
 show_help() {
   print_header "Workflows - Personal Process Reference" "brightcyan"
@@ -30,7 +29,6 @@ show_help() {
   echo "  $(print_cyan "workflows random")              Show a random workflow (paginated)"
   echo "  $(print_cyan "workflows show") <name>         Show specific workflow"
   echo "  $(print_cyan "workflows new") <name>          Create a new workflow and open in \$EDITOR"
-  echo "  $(print_cyan "workflows motd") <enable|disable|status>  Control shell startup display"
   echo ""
 
   print_section "Examples" "brightyellow"
@@ -38,16 +36,13 @@ show_help() {
   echo "  $(print_green "workflows git")                   # Search for 'git'"
   echo "  $(print_green "workflows search docker")         # Search for 'docker'"
   echo "  $(print_green "workflows list")                  # List all workflow names"
-  echo "  $(print_green "workflows learn")                 # Show random workflow (for shell startup)"
+  echo "  $(print_green "workflows learn")                 # Show a random workflow"
   echo "  $(print_green "workflows show tmux-sessions")    # Show specific workflow"
-  echo "  $(print_green "workflows motd enable")           # Show random workflow on shell startup"
-  echo "  $(print_green "workflows motd disable")          # Disable shell startup display"
   echo ""
 
   print_section "Location" "brightblue"
   echo "  Workflows: $(print_cyan "$WORKFLOWS_DIR")"
   echo "  Format:    $(print_cyan "*.md files")"
-  echo "  MOTD:      $(print_cyan "$MOTD_FILE")"
 }
 
 # Check if workflows directory exists
@@ -188,41 +183,6 @@ EOF
   exec "$editor" "$filepath"
 }
 
-# Control shell startup (motd) display
-cmd_motd() {
-  local action="${1:-}"
-  local motd_dir
-  motd_dir="$(dirname "$MOTD_FILE")"
-
-  case "$action" in
-    enable)
-      mkdir -p "$motd_dir"
-      echo "enabled" > "$MOTD_FILE"
-      print_success "Workflows MOTD enabled — a random workflow will show on shell startup"
-      ;;
-    disable)
-      mkdir -p "$motd_dir"
-      echo "disabled" > "$MOTD_FILE"
-      print_success "Workflows MOTD disabled"
-      ;;
-    status)
-      local current
-      current="$(cat "$MOTD_FILE" 2>/dev/null || echo "disabled (not set)")"
-      echo "MOTD status: $(print_cyan "$current")"
-      ;;
-    "")
-      print_error "Action required: enable, disable, or status"
-      echo "Usage: workflows motd <enable|disable|status>"
-      exit 1
-      ;;
-    *)
-      print_error "Unknown action: $action"
-      echo "Usage: workflows motd <enable|disable|status>"
-      exit 1
-      ;;
-  esac
-}
-
 # Show specific workflow
 cmd_show() {
   local name="${1:-}"
@@ -288,10 +248,6 @@ case "${1:-}" in
 
   new)
     cmd_new "${2:-}"
-    ;;
-
-  motd)
-    cmd_motd "${2:-}"
     ;;
 
   help|--help|-h)
