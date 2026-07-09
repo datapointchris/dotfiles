@@ -4,7 +4,7 @@ icon: material/magnify
 
 # Menu
 
-Search across your tools, shell functions, aliases, git aliases, workflows, and Claude skills in one place, then
+Search across your tools, shell functions, aliases, git aliases, forgit shortcuts, workflows, and Claude skills in one place, then
 see everything known about the one you pick. `menu` is a thin **pointer**: it federates your
 collections into one searchable index and, on selection, assembles the full picture from whichever
 sources have it. It stores no content of its own.
@@ -22,7 +22,7 @@ Type to filter, and press **Enter** on any result to open its full view. **From 
 
 ## What it searches
 
-`menu` builds a live index over six collections, each shown with a source tag so you know where
+`menu` builds a live index over seven collections, each shown with a source tag so you know where
 a result lives:
 
 | Source | Collection | Where it comes from |
@@ -31,6 +31,7 @@ a result lives:
 | `[func]` | shell functions | `~/.local/shell/functions.sh` + `$PLATFORM.sh` (`#@name` / `#-->desc` annotations) |
 | `[alias]` | shell aliases | `~/.local/shell/aliases.sh` + `$PLATFORM.sh` |
 | `[git]` | git aliases | `git config --get-regexp '^alias\.'` (invoke as `git <name>`) |
+| `[forgit]` | forgit fzf-git shortcuts | the forgit plugin (`ga`, `gd`, `glo`, …) — sourced after `aliases.sh`, so in no shell file menu reads |
 | `[workflow]` | reference cards | `~/.local/share/workflows/*.md` (frontmatter tags) |
 | `[skill]` | Claude skills | `~/.claude/skills/*/SKILL.md` |
 
@@ -69,6 +70,7 @@ has content for the selected subject, in priority order, showing only the sectio
 | `function` | an annotated shell function of that name exists | its definition, syntax-highlighted |
 | `alias` | an alias of that name is defined | its expansion |
 | `git alias` | a git alias of that name is defined | its expansion (invoke as `git <name>`) |
+| `forgit` | the name is a forgit plugin alias | the forgit action it runs (fzf-interactive git) |
 
 So selecting your own `backmeup` shows its live `--help` alongside its registry entry, while an
 external `bat` shows its registry entry with the tldr and cheat pages. The `--help` lens is
