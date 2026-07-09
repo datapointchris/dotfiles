@@ -28,8 +28,8 @@ a result lives:
 | Source | Collection | Where it comes from |
 | --- | --- | --- |
 | `[tool]` | tools registry | `$TOOLBOX_REGISTRY`, else `~/dev/tools.yml` |
-| `[func]` | shell functions | `~/.local/shell/functions.sh` (`#@name` / `#-->desc` annotations) |
-| `[alias]` | shell aliases | `~/.local/shell/aliases.sh` |
+| `[func]` | shell functions | `~/.local/shell/functions.sh` + `$PLATFORM.sh` (`#@name` / `#-->desc` annotations) |
+| `[alias]` | shell aliases | `~/.local/shell/aliases.sh` + `$PLATFORM.sh` |
 | `[workflow]` | reference cards | `~/.local/share/workflows/*.md` (frontmatter tags) |
 | `[skill]` | Claude skills | `~/.claude/skills/*/SKILL.md` |
 
