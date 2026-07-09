@@ -10,15 +10,11 @@ alias sudo='sudo '
 # Run claude with open permissions
 alias risky="claude --dangerously-skip-permissions"
 
-# Repeat the last command with sudo prefixed
-alias please='sudo $(fc -ln -1)'
+# Resume the last claude session with open permissions
+alias rr="claude --dangerously-skip-permissions --resume"
 
 # Move all files and folders including hidden to parent directory
 alias move_all_to_parent='find . -maxdepth 1 -exec mv {} .. \;'
-
-# Go to base of current git directory
-alias base='z $(git rev-parse --show-toplevel)'
-
 
 # tree should not display any gitignored files or directories
 alias tree='tree --gitignore'
@@ -32,13 +28,6 @@ alias pp='ssh ops -t "nvim ~/todo.md"'
 alias ..='z ..'
 alias ...='z ../..'
 alias ....='z ../../..'
-
-# Directory shortcuts using zoxide
-alias dl='z $HOME/Downloads'
-alias dt='z $HOME/Desktop'
-
-alias dots='z $HOME/dotfiles'
-alias nconf='z $HOME/.config/nvim'
 
 # ---------- List / Display ---------- #
 
@@ -76,9 +65,6 @@ alias varlogs="find /var/log -type f -exec file {} \; | grep 'text' | gcut -d ':
 # Check the python version and location
 alias checkpython='python -V && which python'
 
-# Make new Python virtual environment
-alias makevenv='python -m venv .venv'
-
 # Run pre-commit on all files in project
 alias pca='pre-commit run --all-files'
 
@@ -108,6 +94,10 @@ alias watchports='watch -n 1 -d lsof -iTCP -sTCP:LISTEN -n -P'
 # Git - different from alias in gitconfig where these don't have to use `git` first
 alias gst='git status'
 
-alias commitall='git add .; git commit -m'
+# Short git aliases in the same spirit as gst
+alias gp='git push'
+alias gl='git pull'
+alias gd='git diff'
+alias ga='git add'
 
 alias git-alias='cat ~/.gitconfig | grep --after-context=50 "\[alias\]"'
