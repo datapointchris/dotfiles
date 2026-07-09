@@ -66,7 +66,7 @@ phase runs only *after* the platform is known, so the bootstrap lives in `main()
 on `detect_os`, which uses `uname` and needs no Python dependency). Without it a fresh Mac
 parses an empty platform and dies with `Unsupported platform`.
 
-**3. Use Docker with WSL rootfs for testing** (`install/test-wsl-docker.sh`):
+**3. Use Docker with WSL rootfs for testing** (`tests/install/e2e/wsl-docker.sh`):
 
 ```bash
 # Download official WSL Ubuntu rootfs (one-time, cached)
@@ -76,7 +76,7 @@ curl -L https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64
 gunzip -c ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz | docker import - wsl-ubuntu:24.04
 
 # Run tests in authentic WSL environment
-./install/test-wsl-docker.sh
+./tests/install/e2e/wsl-docker.sh
 ```
 
 This provides **100% accurate testing** - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.
@@ -140,9 +140,9 @@ Best practice for testing system installations:
 
 ## Related
 
-- `install/test-wsl-docker.sh` - Docker-based WSL testing (recommended)
-- `install/wsl-docker-images.sh` - Manage WSL Docker images
-- `install/test-install.sh` - Multipass testing (alternative)
+- `tests/install/e2e/wsl-docker.sh` - Docker-based WSL testing (recommended)
+- `install/wsl/docker-images.sh` - Manage WSL Docker images
+- `tests/install/README.md` - Full install-test suite (e2e, integration, unit)
 - `install/wsl/` - WSL installation scripts
 - `install/verify-installation.sh` - Installation verification
 - `install/parse_packages.py` - Package list parser
