@@ -403,7 +403,12 @@ else
   log_error "Load" "$git_open_file"
 fi
 
-# zsh-vi-mode
+# zsh-vi-mode — explicit clipboard model. Leave the native sync OFF so vi-mode
+# yanks/deletes stay in the internal cut buffer and never touch the OS clipboard
+# (deletes don't pollute clipboard history). `gp` / `gP` still paste FROM the
+# system clipboard — those widgets read it regardless of this flag. On WSL the
+# platform file points zvm's paste command at win32yank. Set before sourcing.
+ZVM_SYSTEM_CLIPBOARD_ENABLED=false
 if [[ -f "$zsh_vi_mode_file" ]]; then
   source "$zsh_vi_mode_file"
   log "Load" "$zsh_vi_mode_file"

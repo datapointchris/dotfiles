@@ -73,8 +73,12 @@ if vim.env.PLATFORM == 'wsl' then
   }
 end
 
--- Use the system clipboard
-vim.opt.clipboard = 'unnamedplus'
+-- Explicit clipboard model: keep Neovim's registers separate from the OS
+-- clipboard so plain y/d/c/p stay internal and deletes never pollute clipboard
+-- history. Reach the system clipboard deliberately via the <leader>y / <leader>p
+-- maps (the `+` register). On WSL the provider above backs `+` with win32yank;
+-- elsewhere Neovim's default pbcopy/xclip/wl provider is used. See the
+-- clipboard-copy-paste workflow card.
 
 -- Open new split windows below the current window
 vim.opt.splitbelow = true

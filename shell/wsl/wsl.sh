@@ -151,6 +151,13 @@ export winchris="/mnt/c/Users/600002371"
 # Trim new lines and copy to clipboard
 alias copytoclip="tr -d '\n' | win32yank.exe -i"
 
+# zsh-vi-mode auto-detects pbcopy/wl-copy/xclip but not WSL, so point its
+# clipboard commands at win32yank. This makes `gp` / `gP` paste from the Windows
+# clipboard. Must be set before the plugin is sourced in .zshrc (this platform
+# file loads earlier), so no extra ordering work is needed.
+export ZVM_CLIPBOARD_COPY_CMD='win32yank.exe -i --crlf'
+export ZVM_CLIPBOARD_PASTE_CMD='win32yank.exe -o --lf'
+
 # ---------- Network ---------- #
 
 # Mount network shares moved to functions/platform-wsl.sh (need unmount logic for stale mounts)
