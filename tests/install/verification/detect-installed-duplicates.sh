@@ -496,7 +496,6 @@ check_tool "uv" "$HOME/.local/bin/uv" "uv"
 # We only care if they're installed via brew/apt (detected by package manager checks)
 
 # Custom Go Applications
-check_tool "sess" "$HOME/go/bin/sess" "sess"
 check_tool "toolbox" "$HOME/go/bin/toolbox" "toolbox"
 
 # Custom Shell Script Applications

@@ -99,7 +99,6 @@ echo ""
 # ================================================================
 echo "User Apps:"
 test_cmd "notes help" "notes --help"
-test_cmd "sess list" "sess list"
 test_cmd "toolbox list" "toolbox list"
 test_cmd "menu available" "command -v menu"
 test_cmd "menu-review available" "command -v menu-review"

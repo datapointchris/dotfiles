@@ -351,6 +351,32 @@ sesh() {
   command sesh "$@"
 }
 
+#@tmux-reload
+#--> Reload tmux.conf into every active session (replaces `sess reload`)
+tmux-reload() {
+  local config="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf"
+  if [[ ! -f "$config" ]]; then
+    echo "$(color_red "tmux config not found:") $config" >&2
+    return 1
+  fi
+
+  local sessions
+  sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null)
+  if [[ -z "$sessions" ]]; then
+    echo "$(color_yellow "No active tmux sessions")" >&2
+    return 1
+  fi
+
+  local session
+  while IFS= read -r session; do
+    if tmux source-file -t "$session" "$config"; then
+      echo "  $(color_green "✓") Reloaded session: $session"
+    else
+      echo "  $(color_red "✗") Failed to reload session: $session" >&2
+    fi
+  done <<< "$sessions"
+}
+
 
 #@fzf-man-widget
 #--> Fuzzy man-page browser (Ctrl-H); alt-c for cheat.sh, alt-t for tldr in the preview

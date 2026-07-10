@@ -37,7 +37,7 @@ bash tests/apps/all-apps.sh
 
 Tests all user-facing tools can be invoked:
 
-- apps: notes, sess, toolbox, theme-sync, menu
+- apps: notes, toolbox, theme-sync, menu
 - shell libraries: logging.sh, formatting.sh, error-handling.sh
 - platform-specific: ghostty-theme, aws-profiles
 

@@ -30,7 +30,7 @@ See the [full documentation](https://datapointchris.github.io/dotfiles/) for det
 
 **External tools** (installed from GitHub, not in this repo):
 
-- `sess`, `toolbox`: Go apps via `go install github.com/datapointchris/...`
+- `toolbox`: Go app via `go install github.com/datapointchris/...`
 - `theme`, `font`: Bash tools cloned to `~/.local/share/`
 
 The core philosophy: write configs once in `configs/common/`, override only what's platform-specific.

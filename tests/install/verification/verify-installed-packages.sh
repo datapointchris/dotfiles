@@ -310,7 +310,6 @@ check_command "font" "SKIP_VERSION"
 # Custom CLI Tools
 # ================================================================
 print_section "Custom CLI Tools (Universal)"
-check_command "sess"
 check_command "menu" "SKIP_VERSION"
 check_command "notes" "SKIP_VERSION"
 check_command "toolbox" "SKIP_VERSION"

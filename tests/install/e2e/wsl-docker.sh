@@ -349,7 +349,7 @@ else
     docker exec "$CONTAINER_NAME" bash -c "cp -rp /dotfiles/. ${CONTAINER_HOME}/dotfiles/ && cd ${CONTAINER_HOME}/dotfiles && git init -q"
 
     echo "  Cleaning pre-built binaries (force rebuild for Linux)..."
-    docker exec "$CONTAINER_NAME" bash -c "rm -f ${CONTAINER_HOME}/dotfiles/apps/common/sess/sess ${CONTAINER_HOME}/dotfiles/apps/common/toolbox/toolbox"
+    docker exec "$CONTAINER_NAME" bash -c "rm -f ${CONTAINER_HOME}/dotfiles/apps/common/toolbox/toolbox"
 
     log_success "Dotfiles updated in container"
   } 2>&1 | tee -a "$LOG_FILE"
