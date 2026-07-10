@@ -52,6 +52,36 @@ forgit_action() { grep -oE "forgit_[a-z_]+=\"\\\$\\{forgit_[a-z_]+:-$1\\}\"" "$F
 is_forgit() { [[ -n "$(forgit_action "$1")" ]]; }
 extract_forgit() { local a; a=$(forgit_action "$1"); printf '%s → forgit::%s\ninteractive git %s, via fzf\n' "$1" "${a//_/::}" "${a//_/ }"; }
 
+# tmux keybindings live in the tmux-commands workflow card so the in-tmux popup
+# (prefix + t) and menu share one source of truth. The card lays bindings out in
+# two aligned columns inside a code fence; split each line on runs of 2+ spaces
+# and pair every binding token (prefix/Ctrl/Alt) with the token that follows.
+# Section headers and bare copy-mode keys (v, y) fall through and are skipped.
+TMUX_COMMANDS_CARD="$WORKFLOWS_DIR/tmux-commands.md"
+parse_tmux_keys() {
+  [[ -f "$TMUX_COMMANDS_CARD" ]] || return 0
+  awk '
+    /^```/ { inblock = !inblock; next }
+    !inblock { next }
+    {
+      n = split($0, cells, /  +/)
+      i = 1
+      while (i <= n) {
+        key = cells[i]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+        if (key ~ /^(prefix|Ctrl|Alt)/) {
+          desc = (i + 1 <= n) ? cells[i + 1] : ""
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", desc)
+          print key "\t" desc
+          i += 2
+        } else {
+          i += 1
+        }
+      }
+    }
+  ' "$TMUX_COMMANDS_CARD"
+}
+is_tmux_key() { parse_tmux_keys | cut -f1 | grep -qxF "$1"; }
+
 show_help() {
   print_header "Menu - Search Your Tools, Workflows & Skills" "brightcyan"
   echo ""
@@ -64,7 +94,7 @@ show_help() {
   echo "  $(print_cyan "menu help")          Show this help"
   echo ""
   echo "  Enter on any result assembles every lens that has it:"
-  echo "  help · toolbox · tldr · cheat · workflow · skill · function · alias · git alias · forgit."
+  echo "  help · toolbox · tldr · cheat · workflow · skill · function · alias · git alias · forgit · tmux."
   echo ""
   print_section "Review (what's due to revisit)" "brightyellow"
   echo "  $(print_cyan "menu review")           What's due now, most overdue first"
@@ -80,6 +110,7 @@ show_help() {
   echo "  $(print_cyan "[alias]")     shell aliases ($SHELL_DIR/aliases.sh + platform)"
   echo "  $(print_cyan "[git]")       git aliases (git config alias.*)"
   echo "  $(print_cyan "[forgit]")    forgit fzf-git shortcuts ($FORGIT_PLUGIN)"
+  echo "  $(print_cyan "[tmux]")      tmux keybindings ($TMUX_COMMANDS_CARD)"
 }
 
 # Format raw "name<TAB>desc<TAB>tags" rows into the index line:
@@ -171,9 +202,16 @@ index_forgit() {
     | build_rows forgit
 }
 
+# tmux keybindings: one searchable row per binding (the key is the name, the
+# action is the description). The row itself is the answer — search "split" and
+# `prefix + |  split vertical` shows in the list. Enter opens the full card.
+index_tmux_keys() {
+  parse_tmux_keys | awk -F'\t' '{print $1 "\t" $2 "\t"}' | build_rows tmux
+}
+
 # The federated index: every collection's rows, sorted for stable dumps. fzf
 # re-ranks by score regardless, so the sort only makes __index readable.
-build_index() { { index_tools; index_workflows; index_skills; index_functions; index_aliases; index_git_aliases; index_forgit; } | sort; }
+build_index() { { index_tools; index_workflows; index_skills; index_functions; index_aliases; index_git_aliases; index_forgit; index_tmux_keys; } | sort; }
 
 # Render one entry by delegating to the collection that owns it
 cmd_preview() {
@@ -186,6 +224,7 @@ cmd_preview() {
     alias) extract_alias "$name" | bat --style=plain --color=always --language=bash ;;
     git) extract_gitalias "$name" | bat --style=plain --color=always --language=bash ;;
     forgit) extract_forgit "$name" ;;
+    tmux) workflows __render "$TMUX_COMMANDS_CARD" ;;
   esac
 }
 
@@ -235,6 +274,10 @@ render_lens() {
       print_section "forgit — fzf-interactive git shortcut" "brightcyan"
       extract_forgit "$subject"
       ;;
+    tmuxkey)
+      print_section "tmux — keybinding reference" "brightcyan"
+      workflows show tmux-commands
+      ;;
   esac
   echo ""
 }
@@ -248,6 +291,18 @@ render_lens() {
 cmd_show() {
   local subject="${1:-}"
   [[ -n "$subject" ]] || return 1
+
+  # tmux keybindings contain regex metacharacters (| { } [ \ +) that would
+  # inject into the name-based grep probes below (a bare | reads as alternation
+  # and matches everything). A keybinding is only ever a keybinding, so resolve
+  # it first with the fixed-string is_tmux_key test and short-circuit.
+  if is_tmux_key "$subject"; then
+    print_header "$subject" "brightcyan"
+    print_info "Lenses: tmuxkey"
+    echo ""
+    render_lens tmuxkey "$subject"
+    return 0
+  fi
 
   local lenses=()
   if is_custom_tool "$subject" && command -v "$subject" >/dev/null 2>&1; then lenses+=(help); fi
@@ -263,7 +318,7 @@ cmd_show() {
 
   if [[ ${#lenses[@]} -eq 0 ]]; then
     print_warning "Nothing known about '$subject' in any lens."
-    echo "Lenses checked: help · toolbox · tldr · cheat · workflow · skill · function · alias · git alias · forgit"
+    echo "Lenses checked: help · toolbox · tldr · cheat · workflow · skill · function · alias · git alias · forgit · tmux"
     return 1
   fi
 
@@ -286,7 +341,7 @@ cmd_find() {
           --preview 'menu __preview {2} {3}' \
           --preview-window=right:62% \
           --prompt='menu ❯ ' \
-          --header='Search tools · funcs · aliases · git · forgit · workflows · skills | Enter for the full view'
+          --header='Search tools · funcs · aliases · git · forgit · workflows · skills · tmux | Enter for the full view'
   )
   [[ -n "$selected" ]] || return 0
   # Enter opens the full composite view (every lens), not just the owning
