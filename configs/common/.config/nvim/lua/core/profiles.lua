@@ -27,7 +27,6 @@ local vscode_disabled = {
   ['telescope.nvim'] = true,
   ['telescope-fzf-native.nvim'] = true,
   ['telescope-ui-select.nvim'] = true,
-  ['oil.nvim'] = true,
   ['yazi.nvim'] = true,
   ['vim-tmux-navigator'] = true,
   -- Git (VSCode has built-in git)
