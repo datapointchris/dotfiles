@@ -214,17 +214,21 @@ if not vim.g.vscode then
 end
 
 --------------------------------------------------------------------------------
--- LSP Format ----------------------------------------------------------------------
+-- Code (format, fix, rename) --------------------------------------------------
 --------------------------------------------------------------------------------
--- VSCode handles formatting natively, these conflict with VSCode formatting keybindings
+-- VSCode handles these natively; Neovim-only here
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>fmt', function()
+  vim.keymap.set('n', '<leader>cf', function()
     require('conform').format({ async = true, lsp_fallback = true })
-  end, { desc = '[F]ormat buffer' })
-  vim.keymap.set('n', '<leader>fmi', function()
+  end, { desc = 'Code: [f]ormat buffer' })
+  vim.keymap.set('n', '<leader>ci', function()
     vim.lsp.buf.code_action({
       context = { only = { 'source.fixAll' }, diagnostics = {} },
       apply = true,
     })
-  end, { desc = '[F]ix all linting' })
+  end, { desc = 'Code: fix all l[i]nting' })
+  -- inc-rename: live-preview LSP rename, prefilled with the word under cursor
+  vim.keymap.set('n', '<leader>cr', function()
+    return ':IncRename ' .. vim.fn.expand('<cword>')
+  end, { expr = true, desc = 'Code: [r]ename symbol' })
 end

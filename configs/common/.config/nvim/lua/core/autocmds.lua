@@ -31,7 +31,7 @@ vim.api.nvim_create_autocmd('BufWritePre', {
   pattern = '*',
   callback = function()
     -- Skip auto-fixing for Python (preserves unused imports during experimentation)
-    -- Python users can manually run <leader>fmi when ready to clean up
+    -- Python users can manually run <leader>ci when ready to clean up
     if vim.bo.filetype ~= 'python' then
       vim.lsp.buf.code_action({
         context = { only = { 'source.fixAll' }, diagnostics = {} },

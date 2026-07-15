@@ -21,9 +21,11 @@ return {
     -- Group labels for which-key popup. Goal: every prefix with real keymaps
     -- has an accurate label; nothing is registered that has no bindings.
     wk.add({
+      -- Code / format / rename
+      { '<leader>c', group = 'Code' },
+
       -- Find / search
       { '<leader>f', group = 'Find & Search (Telescope)' },
-      { '<leader>fm', group = 'Format Code' },
 
       -- LSP / code navigation
       { '<leader>l', group = 'LSP' },
