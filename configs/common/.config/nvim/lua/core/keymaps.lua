@@ -28,19 +28,16 @@ vim.keymap.set({ 'n', 'v' }, '<leader>d', [["_d]], { desc = 'Delete without yank
 -- Yank text to the system clipboard in normal and visual modes
 vim.keymap.set({ 'n', 'v' }, '<leader>y', [["+y]], { desc = 'Yank to system clipboard' })
 
--- Yank the entire line to the system clipboard in normal mode
-vim.keymap.set('n', '<leader>Y', [["+Y]], { desc = 'Yank line to system clipboard' })
-
 -- Paste text from the system clipboard
 vim.keymap.set({ 'n', 'v' }, '<leader>p', [["+p]], { desc = 'Paste from system clipboard' })
 
--- Navigate the quickfix list
-vim.keymap.set('n', '<cmd>cn', '<cmd>cnext<CR>zz', { desc = 'Navigate quickfix next' })
-vim.keymap.set('n', '<cmd>cp', '<cmd>cprev<CR>zz', { desc = 'Navigate quickfix previous' })
+-- Navigate the quickfix list (vim-unimpaired convention)
+vim.keymap.set('n', ']q', '<cmd>cnext<CR>zz', { desc = 'Quickfix: next' })
+vim.keymap.set('n', '[q', '<cmd>cprev<CR>zz', { desc = 'Quickfix: previous' })
 
--- Navigate the location list
-vim.keymap.set('n', '<cmd>ln', '<cmd>lnext<CR>zz', { desc = 'Navigate location next' })
-vim.keymap.set('n', '<cmd>lp', '<cmd>lprev<CR>zz', { desc = 'Navigate location previous' })
+-- Navigate the location list (vim-unimpaired convention)
+vim.keymap.set('n', ']l', '<cmd>lnext<CR>zz', { desc = 'Loclist: next' })
+vim.keymap.set('n', '[l', '<cmd>lprev<CR>zz', { desc = 'Loclist: previous' })
 
 ----------------------------------------
 --- QUITTING -------------------------------

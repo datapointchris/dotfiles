@@ -65,7 +65,7 @@ return {
       { ']m', 'goto_next_start', '@function.outer', nil, 'Next method/function def start' },
       { ']c', 'goto_next_start', '@class.outer', nil, 'Next class start' },
       { ']i', 'goto_next_start', '@conditional.outer', nil, 'Next conditional start' },
-      { ']l', 'goto_next_start', '@loop.outer', nil, 'Next loop start' },
+      -- ']l'/'[l' (loop start) are given to loclist nav; loop-end stays on ']L'/'[L'
       { ']s', 'goto_next_start', '@scope', 'locals', 'Next scope' },
       { ']z', 'goto_next_start', '@fold', 'folds', 'Next fold' },
       -- goto_next_end
@@ -79,7 +79,6 @@ return {
       { '[m', 'goto_previous_start', '@function.outer', nil, 'Prev method/function def start' },
       { '[c', 'goto_previous_start', '@class.outer', nil, 'Prev class start' },
       { '[i', 'goto_previous_start', '@conditional.outer', nil, 'Prev conditional start' },
-      { '[l', 'goto_previous_start', '@loop.outer', nil, 'Prev loop start' },
       -- goto_previous_end
       { '[F', 'goto_previous_end', '@call.outer', nil, 'Prev function call end' },
       { '[M', 'goto_previous_end', '@function.outer', nil, 'Prev method/function def end' },
