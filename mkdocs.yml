@@ -148,6 +148,7 @@ nav:
           - Symlinks Manager: reference/tools/symlinks.md
           - Task Reference: reference/tools/tasks.md
           - Hooks: reference/tools/hooks.md
+          - Skills System: reference/tools/skills.md
       - Support:
           - Troubleshooting: reference/support/troubleshooting.md
           - Corporate Setup: reference/support/corporate.md
