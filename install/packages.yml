@@ -249,6 +249,14 @@ system_packages:
     brew: rclone
     description: Cloud storage sync and management
 
+  # FUSE runtime dependency for mount-s3 (see custom_installers). Linux only —
+  # mount-s3 has no macOS build, so no brew entry. libfuse2 is the FUSE 2 API the
+  # AWS binary links against (fuse2 on Arch).
+  - name: libfuse2
+    apt: libfuse2
+    pacman: fuse2
+    description: FUSE 2 library (required by mount-s3 to mount S3 buckets)
+
   - name: rsync
     apt: rsync
     pacman: rsync
@@ -801,6 +809,8 @@ github_releases:
 #   github_clone       — clone a GitHub repo and run its own installer
 #   hashicorp_release  — download from releases.hashicorp.com (GitHub repo for version lookup)
 #   official_installer — run a vendor-provided install script or package (awscli pkg, claude.ai)
+#   aws_release        — download an arch-specific binary tarball from an AWS S3 release
+#                        bucket (latest/ path, no version lookup), GPG-verified
 #
 # bundle_install_script: true marks installers whose downloadable script should
 # be cached in offline bundles (see install/offline/create-bundle.sh).
@@ -823,6 +833,11 @@ custom_installers:
     url: https://claude.ai/install.sh
     bundle_install_script: true
     description: Claude Code CLI (self-updating, installs to ~/.local/bin via official installer)
+
+  - name: mount-s3
+    source_type: aws_release
+    url: https://s3.amazonaws.com/mountpoint-s3-release
+    description: Mountpoint for Amazon S3 — mount an S3 bucket as a local filesystem (Linux only, GPG-verified)
 
   - name: terraform-ls
     source_type: hashicorp_release

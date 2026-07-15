@@ -46,6 +46,7 @@ custom_installers:
   - awscli
   - claude-code
   - terraform-ls
+  - mount-s3
   - theme
   - font
 
