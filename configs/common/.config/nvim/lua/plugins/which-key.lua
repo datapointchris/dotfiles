@@ -52,7 +52,6 @@ return {
       { '<leader>sp', group = 'Swap with Previous' },
 
       -- Tools
-      { '<leader>b', group = 'Debug Breakpoints (DAP)' },
       { '<leader>z', group = 'Zen Mode & ZK Notes' },
     })
   end,

@@ -54,7 +54,6 @@ local vscode_disabled = {
   ['nvim-autopairs'] = true,
   ['cinnamon.nvim'] = true,
   ['conform.nvim'] = true,
-  ['nvim-dap'] = true,
   ['gx.nvim'] = true,
   ['inc-rename.nvim'] = true,
   ['render-markdown.nvim'] = true,
