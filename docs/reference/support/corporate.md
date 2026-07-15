@@ -72,10 +72,6 @@ lazy = {
   checker = { enabled = false },
   change_detection = { enabled = false },
 }
-
--- Disable AI features if APIs blocked
-codecompanion = { enabled = false },
-copilot = { enabled = false },
 ```
 
 ## Troubleshooting

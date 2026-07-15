@@ -33,7 +33,7 @@ return {
         lualine_a = { 'mode' },
         lualine_b = { 'diff' },
         lualine_c = { { 'filename', path = 3, shorting_target = 30 } },
-        lualine_x = { 'copilot', 'filetype' },
+        lualine_x = { 'filetype' },
         lualine_y = { 'progress' },
         lualine_z = { 'location' },
       },

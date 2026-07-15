@@ -12,18 +12,10 @@ return {
   dependencies = {
     'saghen/blink.lib',
     'rafamadriz/friendly-snippets',
-    'giuxtaposition/blink-cmp-copilot',
   },
 
   opts = function()
-    -- Build sources list conditionally based on environment
     local default_sources = { 'lsp', 'path', 'snippets', 'buffer', 'lazydev' }
-
-    -- Only add copilot if AI is enabled and not in VSCode
-    -- This is the ONLY place to disable copilot and blink-cmp-copilot or it errors blink.cmp
-    if vim.env.NVIM_AI_ENABLED == 'true' and not vim.g.vscode then
-      table.insert(default_sources, 'copilot')
-    end
 
     return {
       enabled = function()
@@ -45,7 +37,6 @@ return {
       appearance = {
         nerd_font_variant = 'mono',
         kind_icons = {
-          Copilot = '',
           Text = '󰉿',
           Method = '󰊕',
           Function = '󰊕',
@@ -130,15 +121,6 @@ return {
             name = 'LazyDev',
             module = 'lazydev.integrations.blink',
             score_offset = 100, -- Prioritize lazydev completions for Lua
-          },
-          copilot = {
-            name = 'copilot',
-            module = 'blink-cmp-copilot',
-            score_offset = 100, -- Prioritize Copilot suggestions
-            async = true,
-            enabled = function()
-              return not vim.g.vscode
-            end,
           },
           lsp = {
             name = 'LSP',

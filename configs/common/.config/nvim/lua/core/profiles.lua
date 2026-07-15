@@ -5,22 +5,12 @@
 --   vscode  - auto-detected when embedded in VSCode (vim.g.vscode)
 --   minimal - set via NVIM_PROFILE=minimal (LXC server)
 --   full    - default, everything loads
---
--- AI flag (orthogonal): NVIM_AI_ENABLED=true gates AI plugins on full profile
 
 local M = {}
 
 M.is_vscode = vim.g.vscode ~= nil
 M.is_minimal = vim.env.NVIM_PROFILE == 'minimal'
 M.is_full = not M.is_vscode and not M.is_minimal
-M.ai_enabled = vim.env.NVIM_AI_ENABLED == 'true'
-
--- AI plugins: disabled when NVIM_AI_ENABLED ~= 'true'
-local ai_plugins = {
-  ['copilot.lua'] = true,
-  ['copilot-lualine'] = true,
-  ['blink-cmp-copilot'] = true,
-}
 
 -- VSCode: these plugins are DISABLED (blocklist)
 -- Everything not listed here loads in VSCode
@@ -45,10 +35,6 @@ local vscode_disabled = {
   ['lazygit.nvim'] = true,
   ['diffview.nvim'] = true,
   ['octo.nvim'] = true,
-  -- AI (VSCode has its own Copilot)
-  ['copilot.lua'] = true,
-  ['copilot-lualine'] = true,
-  ['blink-cmp-copilot'] = true,
   -- Completion & LSP (VSCode handles these)
   ['blink.cmp'] = true,
   ['friendly-snippets'] = true,
@@ -129,10 +115,6 @@ function M.plugin_enabled(plugin)
   end
   if M.is_minimal then
     return minimal_plugins[plugin.name] == true
-  end
-  -- Full profile: gate AI plugins
-  if ai_plugins[plugin.name] then
-    return M.ai_enabled
   end
   return true
 end

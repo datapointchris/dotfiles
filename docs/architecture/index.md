@@ -129,7 +129,7 @@ WSL (`configs/wsl/.gitconfig`):
 
 Common (`configs/common/.config/nvim/`): Base LSP, core plugins, keybindings
 
-Platform-specific (optional): AI plugins (CodeCompanion for macOS), platform LSP configs
+Platform-specific (optional): platform LSP configs
 
 ## Design Decisions
 
