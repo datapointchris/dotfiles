@@ -1,6 +1,10 @@
 [advice]
 addIgnoredFile = false
 
+[core]
+pager = delta
+editor = nvim
+
 [init]
 defaultBranch = main
 
