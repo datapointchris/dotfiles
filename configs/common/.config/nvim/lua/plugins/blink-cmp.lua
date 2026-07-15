@@ -3,11 +3,12 @@
 
 return {
   'saghen/blink.cmp',
-  -- v2 build: invokes the plugin's own build task so the binary lands in
-  -- the new lib/ path. Replaces v1's `build = 'cargo build --release'`,
-  -- which left the artifact in target/release/ where v2 no longer looks.
+  -- V2 build/download system: :pwait() fetches the prebuilt native fuzzy
+  -- library (or builds it if unsupported). The old :wait(timeout) form is
+  -- deprecated in V2 and triggers a startup warning + falls back to the
+  -- slower Lua matcher.
   build = function()
-    require('blink.cmp').build():wait(60000)
+    require('blink.cmp').build():pwait()
   end,
   dependencies = {
     'saghen/blink.lib',
