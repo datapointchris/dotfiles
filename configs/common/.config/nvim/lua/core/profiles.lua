@@ -34,7 +34,6 @@ local vscode_disabled = {
   ['gitsigns.nvim'] = true,
   ['lazygit.nvim'] = true,
   ['diffview.nvim'] = true,
-  ['octo.nvim'] = true,
   -- Completion & LSP (VSCode handles these)
   ['blink.cmp'] = true,
   ['friendly-snippets'] = true,
