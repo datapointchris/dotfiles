@@ -109,25 +109,6 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<C-\\>', '<cmd>TmuxNavigatePrevious<CR>', { desc = 'Navigate previous' })
 end
 
----------------------------------------------------------------------------------
---- AI Assistant Keymaps --------------------------------------------------------
----------------------------------------------------------------------------------
--- codecompanion.nvim: Chat with Copilot (quick questions, explanations)
--- sidekick.nvim: Next Edit Suggestions (Copilot multi-line completions)
---
--- Chat keybindings:
---   <leader>ca - Chat: Ask question (works in normal/visual mode)
---   <leader>cc - Chat: Toggle chat window
---   <leader>cq - Chat: Quick actions (prompt picker)
---
--- NES (Next Edit Suggestions):
---   <Tab>      - Accept/jump to next edit suggestion
---   <leader>ne - Toggle NES on/off
---
--- Terminal workflows (for focused Claude work):
---   <leader>tt - Floaterminal (Neovim floating terminal)
---   Ctrl-g     - Tmux popup with Claude CLI
-
 --------------------------------------------------------------------------------
 --- LSP ------------------------------------------------------------------------
 --------------------------------------------------------------------------------

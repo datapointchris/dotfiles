@@ -20,7 +20,6 @@ local ai_plugins = {
   ['copilot.lua'] = true,
   ['copilot-lualine'] = true,
   ['blink-cmp-copilot'] = true,
-  ['codecompanion.nvim'] = true,
 }
 
 -- VSCode: these plugins are DISABLED (blocklist)
@@ -50,7 +49,6 @@ local vscode_disabled = {
   ['copilot.lua'] = true,
   ['copilot-lualine'] = true,
   ['blink-cmp-copilot'] = true,
-  ['codecompanion.nvim'] = true,
   -- Completion & LSP (VSCode handles these)
   ['blink.cmp'] = true,
   ['friendly-snippets'] = true,
