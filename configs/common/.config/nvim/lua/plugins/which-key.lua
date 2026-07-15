@@ -27,7 +27,7 @@ return {
 
       -- LSP / code navigation
       { '<leader>l', group = 'LSP' },
-      { '<leader>g', group = 'Go To / Treesitter' },
+      { '<leader>g', group = 'Go To' },
       { '<leader>d', group = 'Document Symbols' },
       { '<leader>x', group = 'Trouble Diagnostics' },
 
@@ -47,7 +47,7 @@ return {
       { '<leader>y', group = 'Yank to Clipboard' },
       { '<leader>p', group = 'Paste from Clipboard' },
       { '<leader>n', group = 'Noice / Notifications' },
-      { '<leader>s', group = 'Swap (Treesitter)' },
+      { '<leader>s', group = 'Treesitter (Select & Swap)' },
       { '<leader>sn', group = 'Swap with Next' },
       { '<leader>sp', group = 'Swap with Previous' },
 
