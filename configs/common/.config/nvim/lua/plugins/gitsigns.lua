@@ -39,27 +39,19 @@ return {
           desc = 'Jump to previous git [c]hange',
         })
 
-        -- Actions
-        map('n', '<leader>hp', gitsigns.preview_hunk, {
+        -- Inspect (hunk staging is handled by lazygit; file diffs by diffview)
+        map('n', '<leader>gp', gitsigns.preview_hunk, {
           desc = 'git [p]review hunk',
         })
-        map('n', '<leader>hb', gitsigns.blame_line, {
+        map('n', '<leader>gb', gitsigns.blame_line, {
           desc = 'git [b]lame line',
         })
-        map('n', '<leader>hd', gitsigns.diffthis, {
-          desc = 'git [d]iff against index',
+        -- Toggles
+        map('n', '<leader>gtb', gitsigns.toggle_current_line_blame, {
+          desc = 'git: [t]oggle [b]lame line',
         })
-        map('n', '<leader>hD', function()
-          gitsigns.diffthis('@')
-        end, {
-          desc = 'git [D]iff against last commit',
-        })
-        -- Toggles (grouped under git-hunks prefix)
-        map('n', '<leader>htb', gitsigns.toggle_current_line_blame, {
-          desc = 'git: [T]oggle [b]lame line',
-        })
-        map('n', '<leader>htd', gitsigns.toggle_deleted, {
-          desc = 'git: [T]oggle [d]eleted',
+        map('n', '<leader>gtd', gitsigns.toggle_deleted, {
+          desc = 'git: [t]oggle [d]eleted',
         })
       end,
     },

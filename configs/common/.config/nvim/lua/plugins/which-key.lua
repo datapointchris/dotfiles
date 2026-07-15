@@ -30,8 +30,8 @@ return {
       { '<leader>x', group = 'Trouble Diagnostics' },
 
       -- Git
-      { '<leader>h', group = 'Git Hunks' },
-      { '<leader>ht', group = 'Git Toggles' },
+      { '<leader>g', group = 'Git' },
+      { '<leader>gt', group = 'Git Toggles' },
 
       -- Buffers / windows / sessions
       { '<leader>t', group = 'Tabs' },
