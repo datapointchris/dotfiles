@@ -56,7 +56,6 @@ return {
 
       -- Tools
       { '<leader>b', group = 'Debug Breakpoints (DAP)' },
-      { '<leader>m', group = 'Molten (Jupyter)' },
       { '<leader>O', group = 'Octo (GitHub PRs)' },
       { '<leader>z', group = 'Zen Mode & ZK Notes' },
     })
