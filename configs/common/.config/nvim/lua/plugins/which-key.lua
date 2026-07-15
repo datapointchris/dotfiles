@@ -43,9 +43,7 @@ return {
       -- Quit
       { '<leader>q', group = 'Quit & Exit' },
 
-      -- Editing / clipboard
-      { '<leader>y', group = 'Yank to Clipboard' },
-      { '<leader>p', group = 'Paste from Clipboard' },
+      -- Notifications / treesitter
       { '<leader>n', group = 'Noice / Notifications' },
       { '<leader>s', group = 'Treesitter (Select & Swap)' },
       { '<leader>sn', group = 'Swap with Next' },
