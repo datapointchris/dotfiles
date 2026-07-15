@@ -113,6 +113,16 @@ repos:
         always_run: true
         stages: [pre-commit]
 
+      # Strict docs build — catches broken links/anchors before CI deploy fails.
+      # Gated to docs changes so unrelated commits skip the ~5s build cost.
+      - id: mkdocs-strict
+        name: mkdocs build (strict)
+        entry: uv run mkdocs build --strict
+        language: system
+        pass_filenames: false
+        files: ^(docs/|mkdocs\.yml$)
+        stages: [pre-commit]
+
       # Bash/library unit tests via bats
       # Gated to install-layer changes — the tests only cover installer scripts
       # and shared libraries, so unrelated edits (shell/, configs/, docs/, apps/)
