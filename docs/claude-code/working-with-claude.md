@@ -6,7 +6,7 @@ Complete guide to using Claude Code effectively in this dotfiles repository.
 
 - **Just getting started?** → [Quick Start](#quick-start)
 - **Running tests/scripts?** → [Logsift Workflow](#logsift-workflow)
-- **Tracking performance?** → [Metrics and Quality Tracking](#metrics--quality-tracking)
+- **Tracking performance?** → [Metrics and Quality Tracking](#metrics-and-quality-tracking)
 - **Understanding the setup?** → [Architecture Overview](#architecture-overview)
 - **Need command reference?** → [Command Reference](#command-reference)
 
@@ -108,7 +108,7 @@ Use when you want to describe what to run:
 - Slight interpretation overhead
 - May need clarification if ambiguous
 
-**Comparison metrics**: See [Metrics and Quality Tracking](#metrics--quality-tracking) to track which works better for your use cases.
+**Comparison metrics**: See [Metrics and Quality Tracking](#metrics-and-quality-tracking) to track which works better for your use cases.
 
 ### How It Works
 
@@ -254,7 +254,7 @@ This is rare - logsift usually shows what you need.
 
 ---
 
-## Metrics & Quality Tracking
+## Metrics and Quality Tracking
 
 ### Why Track Metrics?
 
@@ -542,7 +542,7 @@ cat ~/.claude/settings.json
 
 **"I want to understand why errors happened"** → [Error Fixing Methodology](#error-fixing-methodology)
 
-**"I want to track token usage"** → [Metrics and Quality Tracking](#metrics--quality-tracking)
+**"I want to track token usage"** → [Metrics and Quality Tracking](#metrics-and-quality-tracking)
 
 **"I want to compare /logsift vs /logsift-auto"** → [Two Commands](#two-commands-explicit-vs-natural-language)
 
