@@ -6,7 +6,14 @@ return {
     preset = 'modern', -- Use modern preset for better appearance
     delay = 5, -- Delay before showing which-key popup
     sort = { 'local', 'order', 'group', 'alphanum', 'mod' }, -- Sort order
-    expand = 1, -- Always expand groups (show all items instead of "+X more")
+    expand = 1, -- Auto-expand groups with <= 1 child
+
+    -- The 'modern' preset caps the popup at 25 rows; raise it so the full
+    -- <leader>? listing fits on screen (scroll keys are <c-d>/<c-u>, but they
+    -- only engage when content overflows the window).
+    win = {
+      height = { min = 4, max = 0.75 },
+    },
 
     -- Configure icons (requires mini.icons or nvim-web-devicons)
     icons = {
@@ -36,7 +43,7 @@ return {
       { '<leader>gt', group = 'Git Toggles' },
 
       -- Buffers / windows / sessions
-      { '<leader>t', group = 'Tabs' },
+      { '<leader>t', group = 'Tabs & Terminal' },
       { '<leader>w', group = 'Windows & Sessions' },
       { '<leader>r', group = 'Reload Config' },
 

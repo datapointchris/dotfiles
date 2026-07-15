@@ -8,10 +8,10 @@ vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
 -- Select all
 vim.keymap.set('n', '<C-a>', 'gg<S-v>G', { desc = 'Select all' })
 
--- Reload neovim config or current line
-vim.keymap.set('n', '<leader>rr', '<cmd>source ~/.config/nvim/init.lua<cr>')
-vim.keymap.set('n', '<leader>rx', ':.lua<cr>')
-vim.keymap.set('v', '<leader>rx', 'lua<cr>')
+-- Reload neovim config or execute lua
+vim.keymap.set('n', '<leader>rr', '<cmd>source ~/.config/nvim/init.lua<cr>', { desc = 'Reload: source init.lua' })
+vim.keymap.set('n', '<leader>rx', ':.lua<cr>', { desc = 'Reload: run current line as lua' })
+vim.keymap.set('v', '<leader>rx', ':lua<cr>', { desc = 'Reload: run selection as lua' })
 
 -- Move selected line / block of text in visual mode down / up
 -- gv=gv reselects the text and reindents for proper formatting
@@ -50,7 +50,7 @@ vim.keymap.set('n', '<leader>qa', ':qa<CR>', { noremap = true, silent = true, de
 vim.keymap.set('n', '<leader>qs', ':wq<CR>', { noremap = true, silent = true, desc = 'Quit: Save and quit' })
 vim.keymap.set('n', '<leader>qx', ':wqa<CR>', { noremap = true, silent = true, desc = 'Quit: Save all and quit' })
 vim.keymap.set('n', '<leader>qQ', ':q!<CR>', { noremap = true, silent = true, desc = 'Quit: Force quit (no save)' })
-vim.keymap.set('n', '<leader>QQ', ':qa!<CR>', { noremap = true, silent = true, desc = 'Quit: Force quit all (no save)' })
+vim.keymap.set('n', '<leader>qA', ':qa!<CR>', { noremap = true, silent = true, desc = 'Quit: Force quit all (no save)' })
 
 ----------------------------------------
 --- TABS -------------------------------
@@ -188,22 +188,32 @@ end
 -- ZK --------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- Create a new note after asking for its title.
-vim.api.nvim_set_keymap('n', '<leader>zn', "<Cmd>ZkNew { title = vim.fn.input('Title: ') }<CR>", { noremap = true, silent = false })
+vim.api.nvim_set_keymap(
+  'n',
+  '<leader>zn',
+  "<Cmd>ZkNew { title = vim.fn.input('Title: ') }<CR>",
+  { noremap = true, silent = false, desc = 'Notes: new note' }
+)
 
 -- Open notes.
-vim.api.nvim_set_keymap('n', '<leader>zo', "<Cmd>ZkNotes { sort = { 'modified' } }<CR>", { noremap = true, silent = false })
+vim.api.nvim_set_keymap(
+  'n',
+  '<leader>zo',
+  "<Cmd>ZkNotes { sort = { 'modified' } }<CR>",
+  { noremap = true, silent = false, desc = 'Notes: open notes' }
+)
 -- Open notes associated with the selected tags.
-vim.api.nvim_set_keymap('n', '<leader>zt', '<Cmd>ZkTags<CR>', { noremap = true, silent = false })
+vim.api.nvim_set_keymap('n', '<leader>zt', '<Cmd>ZkTags<CR>', { noremap = true, silent = false, desc = 'Notes: open by tag' })
 
 -- Search for the notes matching a given query.
 vim.api.nvim_set_keymap(
   'n',
   '<leader>zf',
   "<Cmd>ZkNotes { sort = { 'modified' }, match = { vim.fn.input('Search: ') } }<CR>",
-  { noremap = true, silent = false }
+  { noremap = true, silent = false, desc = 'Notes: search by query' }
 )
 -- Search for the notes matching the current visual selection.
-vim.api.nvim_set_keymap('v', '<leader>zf', ":'<,'>ZkMatch<CR>", { noremap = true, silent = false })
+vim.api.nvim_set_keymap('v', '<leader>zf', ":'<,'>ZkMatch<CR>", { noremap = true, silent = false, desc = 'Notes: search by selection' })
 
 --------------------------------------------------------------------------------
 -- Zen Mode ----------------------------------------------------------------------
