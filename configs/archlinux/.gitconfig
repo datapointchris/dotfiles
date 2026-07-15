@@ -5,10 +5,6 @@
 	name = Chris Birch
 	email = datapointchris@gmail.com
 
-[core]
-	editor = nvim
-	pager = delta
-
 # The empty helper = clears any inherited/system helpers before setting ours,
 # preventing git from stacking multiple helpers and causing unexpected prompts.
 [credential "https://github.com"]
