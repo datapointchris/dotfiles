@@ -6,19 +6,19 @@
 
 ### 1. Go Apps (Remote Install via `go install`)
 
-**Examples**: `sess`, `toolbox`
+**Examples**: `todoui`, `toolbox`
 
 **Installation**: Installed from GitHub via `go install` in packages.yml:
 
 ```yaml
 go_tools:
-  - name: sess
-    package: github.com/datapointchris/sess/cmd/sess
+  - name: todoui
+    package: github.com/datapointchris/todoui
   - name: toolbox
     package: github.com/datapointchris/toolbox
 ```
 
-**Development**: Source code lives in `~/tools/sess/` and `~/tools/toolbox/`. Changes are tested locally with `go run .` or `go build`, then pushed to GitHub. Fresh installs get the latest from GitHub.
+**Development**: Source code lives in `~/tools/todoui/` and `~/tools/toolbox/`. Changes are tested locally with `go run .` or `go build`, then pushed to GitHub. Fresh installs get the latest from GitHub.
 
 **Binary location**: `~/go/bin/`
 

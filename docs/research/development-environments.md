@@ -904,7 +904,7 @@ cd ~/dotfiles
 - Complex tools (Neovim plugins, tmux configurations)
 - System-wide settings (Git config, SSH config)
 - Shell theme synchronization (theme CLI)
-- Personal CLI applications (menu, notes, sess)
+- Personal CLI applications (menu, notes, todoui)
 
 **Shell libraries integration**:
 
