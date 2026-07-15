@@ -1,3 +1,8 @@
+-- Buffer any notifications emitted during startup and replay them once Noice
+-- is ready, so early messages are readable and land in Noice history rather
+-- than flashing past. Must run before the first vim.notify below.
+require('core.early-notify')()
+
 -- ================================================================== --
 -- Environment Validation
 -- ================================================================== --
