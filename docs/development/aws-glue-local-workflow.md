@@ -9,7 +9,7 @@ This workflow enables **100% local development** of AWS Glue jobs without AWS Gl
 **Key Components:**
 
 - **Jupyter in Glue Docker** - Interactive PySpark development locally
-- **Neovim + Molten** - Edit notebooks in Neovim with your dotfiles
+- **Neovim + Jupyter** - Edit notebooks in Neovim, run the cells in the Dockerized Jupyter
 - **Three-level testing** - Unit → Integration → E2E
 - **Testable code structure** - Separate business logic from Glue boilerplate
 
@@ -32,13 +32,7 @@ Development Flow:
 
 ### Prerequisites
 
-```bash
-# Install Jupyter client (for kernel management)
-pip install jupyter-client pynvim
-
-# Ensure molten-nvim is installed (see Neovim config)
-# Plugin file: configs/common/.config/nvim/lua/plugins/molten.lua
-```
+Jupyter runs inside the Glue Docker container (configured below), so the host needs only Docker and a browser — no host-side Jupyter client or Neovim plugin.
 
 ### Project Structure
 
@@ -70,7 +64,7 @@ glue-project/
 │       └── test_customer_etl.py
 │
 ├── notebooks/                  # Interactive development
-│   └── customer_analysis.py   # Edit with Neovim + molten
+│   └── customer_analysis.py   # Edit in Neovim, run in Jupyter
 │
 ├── test_data/                  # Local test data
 │   ├── input/
@@ -548,7 +542,7 @@ addopts = -v --tb=short
 
 ## Interactive Development
 
-### Using Neovim with Molten
+### Editing in Neovim, running in Jupyter
 
 **Start Jupyter in Docker:**
 
@@ -617,44 +611,17 @@ result = transform_customer_data(dyf)
 result.toDF().show()
 ```
 
-**In Neovim:**
-
-```vim
-" Open notebook
-:e notebooks/customer_analysis.py
-
-" Initialize Molten kernel (connects to Docker Jupyter)
-<leader>mi
-
-" Run cell under cursor
-<leader>ml   " Run line
-<leader>mv   " Run visual selection
-
-" Show output
-<leader>mo
-
-" Re-run cell
-<leader>mr
-```
-
-**Keybindings** (from molten.lua config):
-
-- `<leader>mi` - Initialize kernel
-- `<leader>ml` - Evaluate line
-- `<leader>mv` - Evaluate visual selection
-- `<leader>mr` - Re-evaluate cell
-- `<leader>mo` - Show output
-- `<leader>mh` - Hide output
-
-### Alternative: Use Browser
+**Run it:** the `# %%` markers delimit cells. Edit the file in Neovim with your
+normal setup, then open Jupyter Lab in the browser to execute the cells against
+the Dockerized Glue kernel:
 
 ```bash
-# Open Jupyter Lab in browser
+# Full Glue libraries available in the container's kernel
 open http://localhost:8888
-
-# Create notebook, develop interactively
-# Full Glue libraries available!
 ```
+
+Neovim stays the editor; Jupyter Lab runs the cells. Keeping the notebook as a
+plain `# %%` .py file means it also diffs cleanly and stays in version control.
 
 ## Complete Development Cycle
 
@@ -664,10 +631,9 @@ open http://localhost:8888
 # 1. Start Jupyter in Glue container
 make jupyter-start
 
-# 2. Interactive development in Neovim
+# 2. Edit in Neovim, run cells in Jupyter Lab (http://localhost:8888)
 nvim notebooks/customer_transform.py
-# <leader>mi to initialize kernel
-# Develop and test function interactively
+# Develop and test the transformation interactively
 
 # 3. Extract working function to module
 # notebooks/customer_transform.py → glue_jobs/lib/transformations.py
@@ -750,7 +716,7 @@ docker-compose exec glue-jupyter jupyter kernelspec list
 
 ### GlueContext Not Found
 
-Make sure you're running code in the Docker container (via Molten connection to local Jupyter kernel, not a separate Python interpreter).
+Make sure you're running code in the Docker container's Jupyter kernel (via Jupyter Lab at localhost:8888), not a separate host Python interpreter.
 
 ### Import Errors in Tests
 
@@ -779,5 +745,4 @@ pytest tests/unit/
 - [AWS Glue 5.0 local development](https://aws.amazon.com/blogs/big-data/develop-and-test-aws-glue-5-0-jobs-locally-using-a-docker-container/)
 - [AWS Glue local testing documentation](https://docs.aws.amazon.com/glue/latest/dg/develop-local-docker-image.html)
 - [Pytest for AWS Glue jobs](https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/run-unit-tests-for-python-etl-jobs-in-aws-glue-using-the-pytest-framework.html)
-- [Molten-nvim Jupyter plugin](https://github.com/benlubas/molten-nvim)
 - [Running Jupyter in Glue Docker](https://github.com/purecloudlabs/aws_glue_etl_docker)
