@@ -124,11 +124,11 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>lr', tb.lsp_references, { silent = true, desc = 'Telescope: [L]SP [R]eferences' })
   vim.keymap.set('n', '<leader>li', tb.lsp_implementations, { silent = true, desc = 'Telescope: [L]SP [I]mplementations' })
   vim.keymap.set('n', '<leader>lt', tb.lsp_type_definitions, { silent = true, desc = 'Telescope: [L]SP [T]ype Definitions' })
-  vim.keymap.set('n', '<leader>ds', tb.lsp_document_symbols, { silent = true, desc = 'Telescope: [D]ocument [S]ymbols' })
-  vim.keymap.set('n', '<leader>ws', tb.lsp_dynamic_workspace_symbols, { silent = true, desc = 'Telescope: [W]orkspace [S]ymbols' })
+  vim.keymap.set('n', '<leader>ls', tb.lsp_document_symbols, { silent = true, desc = 'Telescope: [L]SP document [S]ymbols' })
+  vim.keymap.set('n', '<leader>lS', tb.lsp_dynamic_workspace_symbols, { silent = true, desc = 'Telescope: [L]SP workspace [S]ymbols' })
 
   -- Declaration is not provided by default, so we add it manually
-  vim.keymap.set('n', '<leader>gD', vim.lsp.buf.declaration, { silent = true, desc = '[G]oto [D]eclaration' })
+  vim.keymap.set('n', '<leader>lD', vim.lsp.buf.declaration, { silent = true, desc = '[L]SP [D]eclaration' })
 end
 
 --------------------------------------------------------------------------------

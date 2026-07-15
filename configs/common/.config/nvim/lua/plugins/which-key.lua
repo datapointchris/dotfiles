@@ -27,8 +27,6 @@ return {
 
       -- LSP / code navigation
       { '<leader>l', group = 'LSP' },
-      { '<leader>g', group = 'Go To' },
-      { '<leader>d', group = 'Document Symbols' },
       { '<leader>x', group = 'Trouble Diagnostics' },
 
       -- Git
