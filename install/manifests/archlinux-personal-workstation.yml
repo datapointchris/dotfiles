@@ -2,7 +2,7 @@ machine: archlinux-personal-workstation
 platform: archlinux
 
 # Installation
-system_packages: true
+system_packages: workstation
 flatpak: true
 
 go_tools:

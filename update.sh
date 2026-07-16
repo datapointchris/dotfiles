@@ -234,6 +234,17 @@ main() {
       update_common_tools
       ;;
 
+    linux)
+      print_section "Updating system packages via $(print_green "apt update && apt upgrade")"
+      if sudo apt update && sudo apt upgrade -y; then
+        log_success "system packages updated"
+      else
+        log_warning "system packages update failed"
+      fi
+
+      update_common_tools
+      ;;
+
     *)
       log_error "Unknown platform: $platform"
       exit 1

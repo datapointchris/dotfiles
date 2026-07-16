@@ -384,24 +384,33 @@ def relink(
     target_shell = _target_dir / ".local" / "shell"
     target_bin = _target_dir / ".local" / "bin"
 
-    if not platform_dir.exists():
-        print(f"[red]✗[/] Platform directory does not exist: {platform}")
-        return
+    # The platform config overlay is optional: a minimal platform like `linux`
+    # ships only a shell overlay. When configs/<platform> is absent, skip the
+    # platform config remove/create steps and let common + shell/apps carry it.
+    has_platform_config = platform_dir.exists()
 
     def link_if_exists(source: Path, layer: str, dest: Path) -> None:
         if source.exists():
             create_symlinks(source, layer, verbose=verbose, target_dir=dest)
 
+    def remove_platform_config() -> None:
+        if has_platform_config:
+            remove_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)
+
+    def create_platform_config() -> None:
+        if has_platform_config:
+            create_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)
+
     print(f"[bold cyan]Complete relink for {platform}[/]")
     print()
 
     steps = [
-        ("Removing platform symlinks", lambda: remove_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)),
+        ("Removing platform symlinks", remove_platform_config),
         ("Removing common symlinks", lambda: remove_symlinks(common_dir, "common", verbose=verbose, target_dir=_target_dir)),
         ("Removing shell symlinks", lambda: remove_symlinks(shell_dir, "shell", verbose=verbose, target_dir=_target_dir)),
         ("Checking for broken symlinks", lambda: check_and_clean(_target_dir, _dotfiles_dir)),
         ("Creating common base layer", lambda: create_symlinks(common_dir, "common", verbose=verbose, target_dir=_target_dir)),
-        ("Creating platform overlay", lambda: create_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)),
+        ("Creating platform overlay", create_platform_config),
         ("Linking shell files", lambda: (link_if_exists(shell_dir / "common", "shell-common", target_shell), link_if_exists(shell_dir / platform, f"shell-{platform}", target_shell))),
         ("Linking apps", lambda: (link_if_exists(_dotfiles_dir / "apps" / "common", "apps-common", target_bin), link_if_exists(_dotfiles_dir / "apps" / platform, f"apps-{platform}", target_bin))),
     ]

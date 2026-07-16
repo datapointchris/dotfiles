@@ -2,7 +2,7 @@ machine: wsl-work-workstation
 platform: wsl
 
 # Installation
-system_packages: true
+system_packages: workstation
 
 go_tools:
   - task

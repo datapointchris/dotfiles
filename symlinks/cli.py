@@ -28,22 +28,17 @@ def main(
 
 @app.command()
 def link(
-    target: str = typer.Argument(..., help="Target to link (common, macos, wsl, archlinux, etc.)"),
+    target: str = typer.Argument(..., help="Target to link (common, macos, wsl, archlinux, linux, etc.)"),
 ):
-    """Create symlinks for common or platform layer, including apps."""
+    """Create symlinks for common or platform layer, including apps.
+
+    A platform overlay is optional in every layer: a minimal platform like
+    `linux` ships only a shell overlay and no configs/ or apps/ dir, so a
+    missing layer is skipped rather than treated as an error. A genuine typo
+    (nothing found in any layer) still fails.
+    """
     source_dir = core.DOTFILES_DIR / "configs" / target
-
-    if not source_dir.exists():
-        console.print(f"[red]✗[/] Config directory does not exist: {target}")
-        configs_dir = core.DOTFILES_DIR / "configs"
-        console.print(f"[dim]Available configs in {configs_dir}:[/]")
-        if configs_dir.exists():
-            for item in configs_dir.iterdir():
-                if item.is_dir() and not item.name.startswith("."):
-                    console.print(f"  - {item.name}")
-        raise typer.Exit(1)
-
-    count = core.create_symlinks(source_dir, target, verbose=verbose)
+    count = core.create_symlinks(source_dir, target, verbose=verbose) if source_dir.exists() else 0
 
     shell_dir = core.DOTFILES_DIR / "shell" / target
     shell_count = core.create_symlinks(shell_dir, f"shell-{target}", verbose=verbose, target_dir=core.TARGET_DIR / ".local" / "shell") if shell_dir.exists() else 0
@@ -52,7 +47,13 @@ def link(
     app_count = core.create_symlinks(apps_dir, f"apps-{target}", verbose=verbose, target_dir=core.TARGET_DIR / ".local" / "bin") if apps_dir.exists() else 0
 
     if count == 0 and shell_count == 0 and app_count == 0:
-        console.print("[yellow]No symlinks created[/]")
+        console.print(f"[red]✗[/] No configs, shell, or apps overlay found for: {target}")
+        configs_dir = core.DOTFILES_DIR / "configs"
+        console.print(f"Available configs in {configs_dir}:")
+        if configs_dir.exists():
+            for item in configs_dir.iterdir():
+                if item.is_dir() and not item.name.startswith("."):
+                    console.print(f"  - {item.name}")
         raise typer.Exit(1)
 
 
@@ -110,15 +111,24 @@ def check(
 
 @app.command()
 def relink(
-    platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, archlinux, etc.)"),
+    platform: str = typer.Argument(..., help="Platform to relink (macos, wsl, archlinux, linux, etc.)"),
 ):
-    """Complete refresh: unlink platform, unlink common, check, link common, link platform."""
-    platform_dir = core.DOTFILES_DIR / "configs" / platform
+    """Complete refresh: unlink platform, unlink common, check, link common, link platform.
 
-    if not platform_dir.exists():
-        console.print(f"[red]✗[/] Config directory does not exist: {platform}")
+    The platform overlay is optional per layer (a minimal `linux` platform has
+    only a shell overlay), so relink proceeds as long as the platform exists in
+    at least one of configs/, shell/, or apps/. Nothing anywhere means a typo.
+    """
+    overlays = [
+        core.DOTFILES_DIR / "configs" / platform,
+        core.DOTFILES_DIR / "shell" / platform,
+        core.DOTFILES_DIR / "apps" / platform,
+    ]
+
+    if not any(d.exists() for d in overlays):
+        console.print(f"[red]✗[/] Unknown platform (no configs, shell, or apps overlay): {platform}")
         configs_dir = core.DOTFILES_DIR / "configs"
-        console.print(f"[dim]Available configs in {configs_dir}:[/]")
+        console.print(f"Available configs in {configs_dir}:")
         if configs_dir.exists():
             for item in configs_dir.iterdir():
                 if item.is_dir() and not item.name.startswith("."):

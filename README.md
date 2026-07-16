@@ -18,7 +18,10 @@ cd ~/dotfiles
 bash install.sh --machine archlinux-personal-workstation
 ```
 
-Available manifests are in `install/manifests/` (Arch Linux, macOS, WSL).
+Available manifests are in `install/manifests/`: full workstation profiles for
+Arch Linux, macOS, and WSL, plus `linux-lxc-server` — a minimal profile for
+headless LXCs and small Debian/Ubuntu boxes that installs only the lean `core`
+system-package tier.
 
 **Resilient Installation**: The installer continues even when individual downloads fail (common in corporate networks with firewalls). At the end, you get a comprehensive failure report with manual installation steps for any missing tools. Most of your system will be working - just a few packages might need manual attention.
 

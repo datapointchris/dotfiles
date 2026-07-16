@@ -44,7 +44,7 @@ log_info "Installing system packages from packages.yml..."
 SYSTEM_PACKAGES=()
 while IFS= read -r pkg; do
   [[ -n "$pkg" ]] && SYSTEM_PACKAGES+=("$pkg")
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew)
+done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=brew --tier="${SYSTEM_PACKAGE_TIER:-workstation}")
 
 if brew install --quiet "${SYSTEM_PACKAGES[@]}"; then
   log_success "System packages installed"

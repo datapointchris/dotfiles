@@ -387,6 +387,11 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
         ("archlinux-personal-workstation",
             ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot", "webviewrs"],
             []),
+        # Minimal LXC server: lean cargo set — no broot, no webviewrs. Catches
+        # mutations that hardcode-include workstation cargo tools for all Linux.
+        ("linux-lxc-server",
+            ["bat", "fd", "eza", "zoxide", "delta", "oxker"],
+            ["broot", "webviewrs"]),
     ],
 )
 def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):
@@ -401,3 +406,41 @@ def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name,
     leaked = [n for n in must_exclude if n in names]
     assert not missing, f"{manifest_name}: missing required cargo entries {missing}; got {sorted(names)}"
     assert not leaked, f"{manifest_name}: cargo bundle leaked {leaked}; got {sorted(names)}"
+
+
+# ================================================================
+# System-package tiering (core vs workstation)
+# ================================================================
+# The minimal LXC/server profile installs `system_packages: core`, which must
+# be a strict subset of the full workstation set. These guard the split so a
+# heavy workstation-only package (docker, ffmpeg, ...) can never leak onto a
+# minimal server, and a core-tagged base tool is never dropped from it.
+
+
+def test_system_core_is_subset_of_workstation(real_packages_data):
+    """The core tier must be a strict subset of the workstation tier for apt."""
+    core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
+    workstation = set(parse_packages.get_system_packages(real_packages_data, "apt", "workstation"))
+    assert core, "core tier unexpectedly empty"
+    assert core < workstation, "core must be a strict subset of workstation"
+
+
+def test_system_core_excludes_workstation_only_packages(real_packages_data):
+    """Heavy workstation-only packages must never appear in the core tier."""
+    core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
+    for pkg in ["docker-ce", "ffmpeg", "imagemagick", "mpv", "graphviz"]:
+        assert pkg not in core, f"{pkg} leaked into the core (server) tier"
+
+
+def test_system_core_includes_essential_base(real_packages_data):
+    """Bootstrap and everyday base tools must be present in the core tier."""
+    core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
+    for pkg in ["git", "zsh", "tmux", "ripgrep", "python3-yaml", "curl"]:
+        assert pkg in core, f"{pkg} missing from the core (server) tier"
+
+
+def test_system_default_tier_is_workstation(real_packages_data):
+    """Callers that omit a tier get the full workstation set (backward compatible)."""
+    default = parse_packages.get_system_packages(real_packages_data, "apt")
+    workstation = parse_packages.get_system_packages(real_packages_data, "apt", "workstation")
+    assert default == workstation

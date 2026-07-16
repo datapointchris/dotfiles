@@ -201,15 +201,30 @@ def get_value(data, path):
     return value
 
 
-def get_system_packages(data, manager):
-    """Extract system packages for a specific package manager."""
+def get_system_packages(data, manager, tier='workstation'):
+    """Extract system packages for a package manager, filtered by tier.
+
+    The tier lives on each entry in the single `system_packages` list (one
+    source of truth — no parallel core/workstation lists to drift):
+
+      - tier: core   Base tools every machine gets, including minimal LXC
+                     servers and small boxes. Must be tagged explicitly.
+      - untagged     Workstation-only extras (the default). Kept off servers
+                     so a heavy new package can never silently bloat them.
+
+    A 'core' request returns only core-tagged packages; a 'workstation'
+    request returns everything, since core is a subset of workstation.
+    """
     if 'system_packages' not in data:
         return []
 
     packages = []
     for pkg in data['system_packages']:
-        if manager in pkg:
-            packages.append(pkg[manager])
+        if manager not in pkg:
+            continue
+        if tier == 'core' and pkg.get('tier') != 'core':
+            continue
+        packages.append(pkg[manager])
     return packages
 
 
@@ -383,6 +398,8 @@ def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
     parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks'],
                         help='Type of packages to extract')
+    parser.add_argument('--tier', choices=['core', 'workstation'], default='workstation',
+                        help='System-package tier: core (minimal base for servers) or workstation (everything). Default workstation.')
     parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
                         help='Package manager for system packages')
     parser.add_argument('--get', help='Get a specific value using dot notation (e.g., runtimes.node.version)')
@@ -466,7 +483,7 @@ def main():
         if not args.manager:
             print("Error: --manager required for system packages", file=sys.stderr)
             sys.exit(1)
-        packages = get_system_packages(data, args.manager)
+        packages = get_system_packages(data, args.manager, args.tier)
     elif args.type == 'cargo':
         fmt = args.format if hasattr(args, 'format') and args.format else 'names'
         if manifest:

@@ -14,8 +14,7 @@ vars:
       elif [ -f /etc/arch-release ]; then
         echo "archlinux"
       else
-        echo "Unknown platform" >&2
-        exit 1
+        echo "linux"
       fi
 
 tasks:

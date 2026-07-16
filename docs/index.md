@@ -19,6 +19,7 @@ Machine manifests define exactly what gets installed on each type of computer. A
 - `archlinux-personal-workstation` - Full Arch Linux development workstation
 - `macos-personal-workstation` - Full macOS development workstation
 - `wsl-work-workstation` - WSL Ubuntu for restricted work environment
+- `linux-lxc-server` - Minimal headless LXC / small Debian/Ubuntu box (core tools only)
 
 **Platform-specific requirements:**
 
@@ -155,7 +156,7 @@ toolbox list | grep cli-utility
 
 ## Structure
 
-`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
+`configs/`, `apps/`, and `shell/` all follow the same layered pattern: a `common/` base shared across all platforms with platform-specific subdirectories (`macos/`, `archlinux/`, `wsl/`, `linux/`) layered on top. `install/` handles provisioning — machine manifests in `install/manifests/`, platform-specific scripts in `install/{platform}/`, shared libraries in `install/common/`, and package definitions in `install/packages.yml`.
 
 **External tools** (installed from GitHub, not in this repo):
 

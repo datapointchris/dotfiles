@@ -2,7 +2,7 @@ machine: macos-personal-workstation
 platform: macos
 
 # Installation
-system_packages: true
+system_packages: workstation
 
 go_tools:
   - task

@@ -119,6 +119,19 @@ See `install/packages.yml` (`cargo_packages` section) for the current list.
 - Outdated versions (6-12+ months behind)
 - Naming conflicts on Ubuntu (batcat, fdfind)
 
+#### Core vs workstation split
+
+System packages carry a second, orthogonal tier that controls *which machines*
+install them (distinct from the Tier 1/2/3 installation-method split above).
+Each entry in the single `system_packages` list may be tagged `tier: core`;
+untagged entries default to workstation-only. A manifest declares which set it
+wants via `system_packages: core | workstation` — a workstation installs
+everything, a minimal server (the `linux-lxc-server` manifest) installs only the
+core base. The multimedia and docker packages above are workstation-only; the
+shell/build/diagnostic essentials are `core`. `parse_packages.py --tier` does the
+filtering, so there is still one list, not two. See
+[Minimal Manifest for Servers](../learnings/minimal-manifest-for-servers.md).
+
 ## Shell Plugins (Git Clone)
 
 **When to use**: ZSH plugins that need to be sourced directly

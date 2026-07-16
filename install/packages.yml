@@ -23,43 +23,58 @@ macos_taps:
 # See notes at bottom for exclusions (bat, eza, fd, neovim, etc.)
 
 system_packages:
+  # Tier convention (one list, no parallel core/workstation lists to drift):
+  #   tier: core   -> base tools every machine gets, INCLUDING minimal LXC
+  #                   servers and small boxes. Tag explicitly.
+  #   (no tier)    -> workstation-only extras (the default). Kept off servers.
+  # A manifest picks its tier via `system_packages: core|workstation`; a
+  # workstation request installs everything, a core request only the tagged
+  # base. See install/parse_packages.py:get_system_packages.
+
   # Essential Build Tools
   - name: build-essential
+    tier: core
     apt: build-essential
     pacman: base-devel
     description: Compiler and build tools
 
   - name: ca-certificates
+    tier: core
     apt: ca-certificates
     pacman: ca-certificates
     brew: ca-certificates
     description: SSL/TLS certificates
 
   - name: pkg-config
+    tier: core
     apt: pkg-config
     pacman: pkgconf
     brew: pkg-config
     description: Build configuration tool
 
   - name: libssl-dev
+    tier: core
     apt: libssl-dev
     pacman: openssl
     description: SSL development libraries
 
   # Python YAML library (needed for parse_packages.py)
   - name: python3-yaml
+    tier: core
     apt: python3-yaml
     pacman: python-yaml
     description: Python YAML library for parsing packages.yml
 
   # Core Development Tools
   - name: git
+    tier: core
     apt: git
     pacman: git
     brew: git
     description: Version control system
 
   - name: gh
+    tier: core
     apt: gh
     pacman: github-cli
     brew: gh
@@ -70,29 +85,34 @@ system_packages:
     description: AWS CLI (macOS only - Linux uses official installer)
 
   - name: curl
+    tier: core
     apt: curl
     pacman: curl
     brew: curl
     description: Transfer data with URLs
 
   - name: man-db
+    tier: core
     apt: man-db
     pacman: man-db
     description: Manual page viewer (macOS has it built-in)
 
   - name: wget
+    tier: core
     apt: wget
     pacman: wget
     brew: wget
     description: File retrieval
 
   - name: unzip
+    tier: core
     apt: unzip
     pacman: unzip
     brew: unzip
     description: Archive extraction
 
   - name: ripgrep
+    tier: core
     apt: ripgrep
     pacman: ripgrep
     brew: ripgrep
@@ -117,6 +137,7 @@ system_packages:
     tags: [cli, development]
 
   - name: tmux
+    tier: core
     apt: tmux
     pacman: tmux
     brew: tmux
@@ -124,24 +145,28 @@ system_packages:
     tags: [cli, terminal]
 
   - name: jq
+    tier: core
     apt: jq
     pacman: jq
     brew: jq
     description: JSON processor
 
   - name: tree
+    tier: core
     apt: tree
     pacman: tree
     brew: tree
     description: Directory tree visualization
 
   - name: htop
+    tier: core
     apt: htop
     pacman: htop
     brew: htop
     description: Interactive process viewer
 
   - name: btop
+    tier: core
     apt: btop
     pacman: btop
     brew: btop
@@ -150,6 +175,7 @@ system_packages:
 
   # Shell
   - name: zsh
+    tier: core
     apt: zsh
     pacman: zsh
     description: Z shell (macOS has it pre-installed)
@@ -258,12 +284,14 @@ system_packages:
     description: FUSE 2 library (required by mount-s3 to mount S3 buckets)
 
   - name: rsync
+    tier: core
     apt: rsync
     pacman: rsync
     brew: rsync
     description: Fast incremental file transfer
 
   - name: direnv
+    tier: core
     apt: direnv
     pacman: direnv
     brew: direnv
@@ -271,6 +299,7 @@ system_packages:
 
   # Security
   - name: gnupg
+    tier: core
     apt: gnupg
     pacman: gnupg
     brew: gnupg
@@ -278,6 +307,7 @@ system_packages:
     description: GPG encryption
 
   - name: age
+    tier: core
     apt: age
     pacman: age
     brew: age
@@ -375,6 +405,7 @@ system_packages:
 
   # Shell and utilities
   - name: bash
+    tier: core
     apt: bash
     pacman: bash
     brew: bash
@@ -387,6 +418,7 @@ system_packages:
     description: Execute jobs in parallel
 
   - name: watch
+    tier: core
     apt: procps
     pacman: procps-ng
     brew: watch
@@ -399,6 +431,7 @@ system_packages:
     description: Continuous file synchronization
 
   - name: nmap
+    tier: core
     apt: nmap
     pacman: nmap
     brew: nmap

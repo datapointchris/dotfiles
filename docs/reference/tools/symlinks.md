@@ -80,11 +80,15 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 - .zshrc, .config/nvim, .config/tmux, etc.
 - Linked first
 
-**Platform overlay** (`macos/`, `wsl/`, `archlinux/`):
+**Platform overlay** (`macos/`, `wsl/`, `archlinux/`, `linux/`):
 
 - Platform-specific configs
 - Overrides or extends common configs
 - Linked second (can override common)
+- Optional per layer: a minimal platform like `linux` ships only a shell
+  overlay (`shell/linux/`) and no `configs/linux/` or `apps/linux/`. `link` and
+  `relink` skip a missing layer instead of erroring; only a platform absent from
+  every layer (a typo) fails.
 
 **Conflict handling**:
 
@@ -105,7 +109,7 @@ The symlinks manager maps `apps/` and `shell/` to specific target directories ra
 
 - Symlinked to `~/.local/shell/`
 - Common: `functions.sh` + `aliases.sh` on all platforms
-- Platform-specific: `macos.sh`, `archlinux.sh`, `wsl.sh`
+- Platform-specific: `macos.sh`, `archlinux.sh`, `wsl.sh`, `linux.sh`
 - These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
 **Go apps** (toolbox, sesh):

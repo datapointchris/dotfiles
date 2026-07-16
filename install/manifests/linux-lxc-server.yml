@@ -1,0 +1,42 @@
+machine: linux-lxc-server
+platform: linux
+
+# Minimal profile for a headless LXC or small Linux box (Debian/Ubuntu, apt).
+# The goal is a comfortable shell to SSH into and diagnose from — not a full
+# workstation. `system_packages: core` installs only the tier-tagged base from
+# packages.yml (no docker/media/GUI); every tool list below is deliberately
+# short. See docs/learnings/minimal-manifest-for-servers.md.
+
+# Installation
+system_packages: core
+flatpak: false
+
+go_tools:
+  - task      # Taskfile runner used across the repos
+  - toolbox   # tool discovery CLI
+  - gdu       # fast disk-usage analyzer (fills-up diagnosis)
+  - sops      # decrypt homelab secrets in place
+
+github_releases:
+  - fzf         # fuzzy finder — backs the shell functions
+  - neovim      # editor for on-box config/log edits
+  - lazygit     # git TUI
+  - yazi        # file-manager TUI
+  - glow        # render markdown/docs over SSH
+  - duf         # disk-free at a glance
+  - atuin       # shell history (zsh init expects it)
+  - tree-sitter # neovim highlighting
+  - shellcheck  # debug shell scripts on the box
+
+custom_installers: []
+
+cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker]
+
+npm_globals: []
+uv_tools: []
+git_uv_tools: []
+
+shell_plugins: true
+tmux_plugins: true
+nvim_plugins: true
+configure_zsh: true

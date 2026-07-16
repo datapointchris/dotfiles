@@ -43,6 +43,17 @@ manifest_enabled() {
   [[ "$(manifest_field "$field")" == "true" ]]
 }
 
+# System-package tier from the manifest: "core", "workstation", or "" (disabled).
+# `system_packages: false` (or absent) disables the phase entirely; a tier name
+# selects how much of packages.yml to install (see get_system_packages there).
+manifest_system_tier() {
+  local tier
+  tier=$(manifest_field "system_packages" 2>/dev/null) || tier=""
+  [[ "$tier" == "false" ]] && tier=""       # explicit disable
+  [[ "$tier" == "true" ]] && tier="workstation"  # legacy boolean = full set
+  echo "$tier"
+}
+
 # Check if a manifest list field has at least one entry
 manifest_list_non_empty() {
   local field="$1"
@@ -224,6 +235,7 @@ usage() {
   echo "  MACHINE=name    Same as --machine (flag takes precedence)"
   echo "Examples:"
   echo "  ./install.sh --machine archlinux-personal-workstation"
+  echo "  ./install.sh --machine linux-lxc-server   # minimal headless LXC / small box"
   echo "  MACHINE=archlinux-personal-workstation ./install.sh"
   echo ""
   echo "  # Offline workflow:"
@@ -370,6 +382,8 @@ main() {
   fi
 
   platform=$(manifest_field "platform")
+  local sys_tier
+  sys_tier=$(manifest_system_tier)
   start_time=$(date +%s)
 
   print_title "Dotfiles Installation - $MACHINE ($platform)"
@@ -383,7 +397,7 @@ main() {
 
     print_header "System Tools (Homebrew)"
     bash "$macos/homebrew.sh"
-    bash "$macos/system-packages.sh"
+    SYSTEM_PACKAGE_TIER="${sys_tier:-workstation}" bash "$macos/system-packages.sh"
     bash "$macos/casks.sh"
     bash "$macos/configure-docker.sh"
     bash "$macos/mas-apps.sh"
@@ -398,18 +412,18 @@ main() {
       log_warning "Continuing anyway..."
     fi
 
-    if manifest_enabled "system_packages"; then
+    if [[ -n "$sys_tier" ]]; then
       print_header "System Packages (apt)"
-      bash "$DOTFILES_DIR/install/wsl/system-packages.sh"
+      SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/wsl/system-packages.sh"
     fi
 
     print_section "WSL fontconfig setup"
     bash "$DOTFILES_DIR/install/wsl/fontconfig-setup.sh"
     ;;
   archlinux)
-    if manifest_enabled "system_packages"; then
+    if [[ -n "$sys_tier" ]]; then
       print_header "System Packages (pacman)"
-      bash "$DOTFILES_DIR/install/archlinux/system-packages.sh"
+      SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/archlinux/system-packages.sh"
     fi
     if manifest_enabled "flatpak"; then
       bash "$DOTFILES_DIR/install/archlinux/flatpak.sh"
@@ -417,6 +431,15 @@ main() {
 
     print_header "System Configuration"
     bash "$DOTFILES_DIR/install/archlinux/system-config.sh"
+    ;;
+  linux)
+    # Generic Debian/Ubuntu Linux — the minimal LXC/small-box target. No GUI,
+    # flatpak, or OS-preference steps; the manifest's tier (typically "core")
+    # keeps the apt payload lean.
+    if [[ -n "$sys_tier" ]]; then
+      print_header "System Packages (apt)"
+      SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/linux/system-packages.sh"
+    fi
     ;;
   *)
     die "Unsupported platform: $platform"

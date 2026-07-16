@@ -13,6 +13,14 @@ Comprehensive reference for platform-specific differences across macOS, WSL Ubun
 | **System Binaries**| /usr/local/bin | /usr/bin          | /usr/bin   |
 | **Machine Manifest**| macos-personal-workstation | wsl-work-workstation | archlinux-personal-workstation |
 
+A headless LXC or small Linux box uses the separate `linux-lxc-server` manifest
+(platform `linux`), a minimal profile installed with
+`install.sh --machine linux-lxc-server`. It installs the `core` system-package
+tier — the lean base tagged in `packages.yml`, without the docker/media/GUI
+packages the workstation manifests pull in. Do not point a small box at a
+workstation manifest; see
+[Minimal Manifest for Servers](../../learnings/minimal-manifest-for-servers.md).
+
 ## Deep Dive
 
 <!-- markdownlint-disable MD033 -->
