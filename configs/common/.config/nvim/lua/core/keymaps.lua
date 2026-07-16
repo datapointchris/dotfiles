@@ -150,9 +150,11 @@ if not vim.g.vscode then
       end,
       sorter = require('telescope.sorters').get_generic_fuzzy_sorter({ sorting_strategy = 'ascending' }),
       finder = require('telescope.finders').new_table({
-        results = vim.tbl_filter(function(colorscheme)
-          return vim.tbl_contains(good_colorschemes, colorscheme)
-        end, vim.fn.getcompletion('', 'color')),
+        -- Use the manager's curated list directly rather than getcompletion():
+        -- theme plugins are lazy-loaded, so unloaded ones aren't on the
+        -- runtimepath yet and wouldn't appear. Selecting one triggers
+        -- lazy.nvim's ColorSchemePre load.
+        results = good_colorschemes,
         entry_maker = function(cs)
           return { value = cs, display = display_map[cs] or cs, ordinal = display_map[cs] or cs }
         end,
