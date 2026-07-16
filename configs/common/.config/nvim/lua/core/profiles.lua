@@ -18,7 +18,6 @@ local vscode_disabled = {
   -- UI chrome (VSCode has its own)
   ['lualine.nvim'] = true,
   ['bufferline.nvim'] = true,
-  ['noice.nvim'] = true,
   ['fidget.nvim'] = true,
   ['indent-blankline.nvim'] = true,
   ['dressing.nvim'] = true,
@@ -81,8 +80,6 @@ local minimal_plugins = {
   -- UI
   ['lualine.nvim'] = true,
   ['bufferline.nvim'] = true,
-  ['noice.nvim'] = true,
-  ['nui.nvim'] = true,
   ['fidget.nvim'] = true,
   ['dressing.nvim'] = true,
   ['indent-blankline.nvim'] = true,

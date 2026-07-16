@@ -1,6 +1,7 @@
 return {
   'smjonas/inc-rename.nvim',
-  -- With noice's `inc_rename` preset enabled, noice owns the live-preview
-  -- cmdline input, so no `input_buffer_type` override is needed here.
+  -- inc-rename previews the rename live in the buffer via Neovim's native
+  -- command-preview while you type the new name in the cmdline (rendered by the
+  -- native ui2 message/cmdline UI). No input_buffer_type override is needed.
   opts = {},
 }

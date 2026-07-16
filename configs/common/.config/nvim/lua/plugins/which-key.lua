@@ -52,7 +52,7 @@ return {
       { '<leader>q', group = 'Quit & Exit' },
 
       -- Notifications / treesitter
-      { '<leader>n', group = 'Noice / Notifications' },
+      { '<leader>n', group = 'Notifications / Messages' },
       { '<leader>s', group = 'Treesitter (Select & Swap)' },
       { '<leader>sn', group = 'Swap with Next' },
       { '<leader>sp', group = 'Swap with Previous' },

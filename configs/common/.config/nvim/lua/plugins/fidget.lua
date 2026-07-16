@@ -17,7 +17,7 @@ return {
       },
     },
     notification = {
-      override_vim_notify = false, -- Let Noice handle vim.notify() instead
+      override_vim_notify = true, -- fidget is the vim.notify() backend
       window = {
         winblend = 0, -- Background transparency (0 = opaque)
         border = 'rounded',

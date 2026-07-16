@@ -1,9 +1,9 @@
 -- Buffer notifications emitted during startup and replay them once the real
--- notifier is ready. Noice loads on VeryLazy and only then replaces vim.notify,
--- so anything emitted before that — env errors, plugin build/version warnings
+-- notifier is ready. fidget replaces vim.notify only after it loads, so
+-- anything emitted before that — env errors, plugin build/version warnings
 -- (e.g. blink.cmp), lazy.nvim output — would otherwise flash past as a raw vim
--- message and never enter Noice history. Buffering + replay makes those early
--- messages readable and recorded. Mirrors LazyVim's lazy_notify().
+-- message and never enter the notification history. Buffering + replay makes
+-- those early messages readable and recorded. Mirrors LazyVim's lazy_notify().
 return function()
   local notifications = {}
   local function queue(...)
@@ -19,7 +19,7 @@ return function()
   local replay = function()
     timer:stop()
     check:stop()
-    -- If nothing replaced vim.notify (no Noice), restore the original.
+    -- If nothing replaced vim.notify (no notifier), restore the original.
     if vim.notify == queue then
       vim.notify = original_notify
     end
@@ -30,7 +30,7 @@ return function()
     end)
   end
 
-  -- Replay as soon as something (Noice) replaces vim.notify...
+  -- Replay as soon as something (fidget) replaces vim.notify...
   check:start(function()
     if vim.notify ~= queue then
       replay()

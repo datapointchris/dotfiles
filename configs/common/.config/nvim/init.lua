@@ -1,6 +1,7 @@
--- Buffer any notifications emitted during startup and replay them once Noice
--- is ready, so early messages are readable and land in Noice history rather
--- than flashing past. Must run before the first vim.notify below.
+-- Buffer any notifications emitted during startup and replay them once the
+-- notifier (fidget) is ready, so early messages are readable and land in the
+-- notification history rather than flashing past. Must run before the first
+-- vim.notify below.
 require('core.early-notify')()
 
 -- ================================================================== --
@@ -34,6 +35,8 @@ require('core.lazy') -- Load lazy.nvim in both VSCode and Neovim
 require('core.keymaps')
 
 if not profiles.is_vscode then
+  -- Native ui2 message/cmdline UI (replaces noice). VSCode owns its own UI.
+  require('core.ui2')
   require('core.autocmds')
 end
 
