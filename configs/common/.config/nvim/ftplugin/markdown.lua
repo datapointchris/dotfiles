@@ -1,3 +1,9 @@
+-- Soft-wrap prose in every markdown buffer. Buffer-local (opt_local) so it
+-- stays with this buffer instead of leaking into others — this replaces the
+-- global BufWinEnter/BufWinLeave wrap toggling that used to live in autocmds.
+vim.opt_local.wrap = true
+vim.opt_local.linebreak = true
+
 -- Add the key mappings only for Markdown files in a zk notebook.
 if require('zk.util').notebook_root(vim.fn.expand('%:p')) ~= nil then
   local function map(...)

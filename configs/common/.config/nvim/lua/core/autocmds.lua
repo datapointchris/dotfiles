@@ -50,20 +50,3 @@ vim.api.nvim_create_autocmd('BufWritePre', {
     end
   end,
 })
-
--- Set word wrapping for markdown and text files
-vim.api.nvim_create_autocmd('BufWinEnter', {
-  pattern = { '*.md' },
-  callback = function()
-    vim.opt.wrap = true
-    vim.opt.linebreak = true
-  end,
-})
-
-vim.api.nvim_create_autocmd('BufWinLeave', {
-  pattern = { '*.md' },
-  callback = function()
-    vim.opt.wrap = false
-    vim.opt.linebreak = false
-  end,
-})
