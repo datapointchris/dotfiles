@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "install"))
 import parse_packages
 
 PACKAGES_YML = Path(__file__).parent.parent.parent / "install" / "packages.yml"
+MANIFESTS_DIR = Path(__file__).parent.parent.parent / "install" / "manifests"
 
 
 @pytest.fixture
@@ -433,10 +434,33 @@ def test_system_core_excludes_workstation_only_packages(real_packages_data):
 
 
 def test_system_core_includes_essential_base(real_packages_data):
-    """Bootstrap and everyday base tools must be present in the core tier."""
+    """Bootstrap and everyday base tools must be present in the core tier.
+
+    ripgrep is intentionally absent here: it moved to cargo_packages (installed
+    via cargo binstall's prebuilt binaries). Its "reaches every machine including
+    servers" guarantee now lives in test_ripgrep_reaches_servers_via_cargo.
+    """
     core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
-    for pkg in ["git", "zsh", "tmux", "ripgrep", "python3-yaml", "curl"]:
+    for pkg in ["git", "zsh", "tmux", "python3-yaml", "curl"]:
         assert pkg in core, f"{pkg} missing from the core (server) tier"
+
+
+def test_ripgrep_reaches_servers_via_cargo(real_packages_data):
+    """ripgrep must still land on minimal servers, now through the cargo path.
+
+    It ships prebuilt release binaries, so cargo binstall installs it without
+    compiling — the reason it can move off system_packages yet still serve the
+    core (LXC server) tier that has no heavy build toolchain.
+    """
+    cargo_names = {pkg["name"] for pkg in real_packages_data.get("cargo_packages", [])}
+    assert "ripgrep" in cargo_names, "ripgrep must be in cargo_packages"
+
+    server_manifest = yaml.safe_load(
+        (MANIFESTS_DIR / "linux-lxc-server.yml").read_text()
+    )
+    assert "ripgrep" in server_manifest.get("cargo_packages", []), (
+        "ripgrep must be in the linux-lxc-server cargo list so servers still get it"
+    )
 
 
 def test_system_default_tier_is_workstation(real_packages_data):

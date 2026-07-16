@@ -11,7 +11,7 @@ Many tools have different package names across platforms. This table maps the to
 | **bat**       | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **eza**       | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **fd**        | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **ripgrep**   | `ripgrep`    | `ripgrep`        | `ripgrep`     | All platforms use `rg` binary      |
+| **ripgrep**   | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms; `rg` binary |
 | **fzf**       | `fzf`        | `fzf`            | `fzf`         | ✅ Consistent                      |
 | **zoxide**    | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **neovim**    | `neovim`     | `neovim`         | `neovim`      | All use `nvim` binary              |
@@ -44,6 +44,7 @@ cargo install cargo-binstall
 
 These tools are installed via `cargo-binstall` (pre-compiled binaries, fast) on all platforms:
 
+- `ripgrep` - fast grep alternative (`rg` binary)
 - `bat` - cat alternative
 - `fd-find` - find alternative
 - `eza` - ls alternative

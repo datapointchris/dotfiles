@@ -12,7 +12,7 @@
 | **neovim** | 0.9.5 | 0.10.3+ | ❌ Major version | GitHub releases |
 | **bat** | 0.24.0 | 0.26.0 | ⚠️ 2 versions | cargo-binstall |
 | **fd** | 9.0.0 | 10.2.0 | ⚠️ Minor version | cargo-binstall |
-| **ripgrep** | 14.1.0 | 14.1.0 | ✅ Current | apt acceptable |
+| **ripgrep** | 14.1.0 | 14.1.0 | ✅ Current | cargo-binstall (later unified) |
 | **tmux** | 3.4 | 3.5a | ✅ Minor bugfix | apt acceptable |
 | **zoxide** | 0.8.x | 0.9.6 | ⚠️ Minor version | cargo-binstall |
 | **eza** | N/A | 0.20+ | N/A | cargo-binstall |
@@ -85,7 +85,7 @@ Tools:
 Tools:
   - bat
   - fd-find (becomes just 'fd', no naming issues!)
-  - ripgrep (for latest, though apt is current)
+  - ripgrep (unified to cargo-binstall for cross-platform consistency)
   - zoxide
   - eza
   - git-delta

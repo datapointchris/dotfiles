@@ -13,12 +13,12 @@ Tool support, version managers, and platform-specific quirks.
 | **git-delta**  | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
 | **oxker**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
 | **broot**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
+| **ripgrep**    | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
 | **neovim**     | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **lazygit**    | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **yazi**       | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **fzf**        | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
 | **atuin**      | ✅    | ✅     | ✅   | GitHub releases (Linux); brew (macOS)   |
-| **ripgrep**    | ✅    | ✅     | ✅   | System package manager                  |
 | **tmux**       | ✅    | ✅     | ✅   | System package manager                  |
 | **aerospace**  | ✅    | ❌     | ❌   | macOS-only window manager (cask)        |
 | **borders**    | ✅    | ❌     | ❌   | macOS-only (JankyBorders)               |
@@ -189,7 +189,7 @@ When testing installations, verify these platform-specific items:
 
 === "Ubuntu/WSL"
 
-    - [ ] Cargo-binstall tools installed (bat, fd, eza, zoxide, delta, broot)
+    - [ ] Cargo-binstall tools installed (ripgrep, bat, fd, eza, zoxide, delta, broot)
     - [ ] GitHub release tools installed (neovim, lazygit, yazi, fzf)
     - [ ] ~/.local/bin in PATH
     - [ ] WSL-specific config applied (/etc/wsl.conf)

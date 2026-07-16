@@ -86,26 +86,15 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 
 ## Package Management Philosophy
 
-This dotfiles setup maintains a clear separation between system package managers and language-specific version managers for cross-platform consistency.
+This dotfiles setup maintains a clear separation between system package managers and language-specific version managers for cross-platform consistency. `install/packages.yml` is the single source of truth for which method installs each tool; the header comment there maps every section to its install method. To avoid drift, this file describes the *principle* for choosing a method, not per-tool lists.
 
-**System Package Managers** (Homebrew/apt/pacman):
+**Choosing an install method** (by what a tool is, not its name):
 
-- System utilities: bat, eza, fd, ripgrep, fzf, tmux, neovim, yazi
-- Infrastructure tools: docker, terraform, awscli
-- GUI applications (macOS): alfred, bettertouchtool, ghostty
-- Compiled libraries and system dependencies
-
-**Language Version Managers**:
-
-- **uv** for Python - version management, project dependencies, virtual environments
-- **nvm** for Node.js - version management, npm global packages, language servers
-
-**Installation Decision Tree**:
-
-- System utility? → brew/apt/pacman
-- Python tool/runtime? → uv
-- Node.js tool/runtime? → nvm/npm
-- Language server? → Usually npm (universal LSPs) or language-specific package manager
+- **OS-level utilities, infrastructure tools, GUI apps, compiled libraries** → system package manager (`system_packages`: apt/pacman/brew). This is the default for anything the OS packages well.
+- **Rust CLI tools** → `cargo binstall` (`cargo_packages`), which downloads prebuilt release binaries. Falls back to `system_packages` only when upstream ships no release binary (binstall would compile from source) or a native package is required on a platform (e.g. Intel-macOS bottles).
+- **Tools needing the latest upstream version, or with their own downstream manager** → prebuilt `github_releases`.
+- **Language runtimes** → version managers, never system language packages: **uv** (Python), **nvm** (Node.js), **rustup** (Rust), plus Go from GitHub releases.
+- **Language-scoped tools** → that language's manager: `npm_globals`, `uv_tools`, `go_tools`. Language servers are usually npm.
 
 **Platform Notes**:
 

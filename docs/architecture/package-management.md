@@ -91,7 +91,6 @@ See `install/packages.yml` (`cargo_packages` section) for the current list.
 
 **System utilities**:
 
-- `ripgrep` - Currently up-to-date in apt (14.1.0)
 - `tree`, `htop`, `jq`, `yq` - Stable tools, version doesn't matter
 
 **Build tools**:

@@ -50,7 +50,7 @@ custom_installers:
   - theme
   - font
 
-cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs]
+cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot, webviewrs]
 
 npm_globals:
   - typescript-language-server

@@ -30,7 +30,7 @@ github_releases:
 
 custom_installers: []
 
-cargo_packages: [bat, fd-find, eza, zoxide, git-delta, oxker]
+cargo_packages: [ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker]
 
 npm_globals: []
 uv_tools: []
