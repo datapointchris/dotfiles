@@ -1223,6 +1223,12 @@ go_tools:
     binary_pattern: "toolbox_{version_num}_{os}_{go_arch}.tar.gz"
     description: CLI for discovering installed development tools
 
+  - name: gowall
+    package: github.com/Achno/gowall
+    github_repo: Achno/gowall
+    binary_pattern: "gowall-{go_arch}-{os}.tar.gz"
+    description: Recolor images to a theme palette (used for theme wallpaper backgrounds)
+
 # ================================================================
 # SHELL PLUGINS
 # ================================================================
