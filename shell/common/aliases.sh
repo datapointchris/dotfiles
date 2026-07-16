@@ -33,8 +33,13 @@ alias ....='z ../../..'
 
 # Color LS command
 # Long format, human-readable, include hidden, with directory trailing `/` (same as la)
-# alias ls="ls -lhAFgo --color"
-alias ls="eza -l --all --git --git-repos --icons=always --group-directories-first --no-permissions --no-user --no-time"
+# Prefer eza when installed; fall back to native ls so machines without eza
+# (e.g. WSL where the binary is blocked) still have a working `ls`.
+if command -v eza &>/dev/null; then
+  alias ls="eza -l --all --git --git-repos --icons=always --group-directories-first --no-permissions --no-user --no-time"
+else
+  alias ls="ls -lhAFgo --color"
+fi
 
 # Long format, human-readable, with directory trailing '/'
 alias ll="ls -lhF --color"
@@ -44,7 +49,11 @@ alias la="ls -lhAF --color"
 
 # List only directories
 # alias lsdir="ls -ldh *"
-alias lsd="eza -l --all --git --git-repos --icons=always --no-permissions --no-user --no-time --only-dirs"
+if command -v eza &>/dev/null; then
+  alias lsd="eza -l --all --git --git-repos --icons=always --no-permissions --no-user --no-time --only-dirs"
+else
+  alias lsd="ls -ldh */"
+fi
 
 # Print each PATH entry on a separate line
 alias paths='echo -e ${PATH//:/\\n}'
