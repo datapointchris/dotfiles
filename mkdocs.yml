@@ -119,6 +119,7 @@ nav:
       - Backmeup: apps/backmeup.md
       - Safekeep: apps/safekeep.md
       - Backup Incremental: apps/backup-incremental.md
+      - Workflows: apps/workflows.md
   - Architecture:
       - architecture/index.md
       - Shell Libraries: architecture/shell-libraries.md
