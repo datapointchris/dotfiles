@@ -18,11 +18,11 @@ vim.keymap.set('v', '<leader>rx', ':lua<cr>', { desc = 'Reload: run selection as
 vim.keymap.set('v', 'J', ":m '>+1<CR>gv=gv", { desc = 'Move selected text down' })
 vim.keymap.set('v', 'K', ":m '<-2<CR>gv=gv", { desc = 'Move selected text up' })
 
--- Replace the selected text in visual mode
--- with the previously yanked or deleted text without overwriting the default register.
--- When you press `<leader>p` in visual mode, the selected text will be deleted and discarded
--- (sent to the black hole register), and the previously yanked or deleted text will be pasted in its place.
-vim.keymap.set('x', '<leader>p', [["_dP]], { desc = 'Replace selected text with yanked text' })
+-- Replace the selected text with the previously yanked text without overwriting
+-- the default register: the selection is deleted to the black hole register and
+-- the yank is pasted in its place. On <leader>P so it doesn't collide with the
+-- <leader>p system-clipboard paste below (which is also mapped for visual mode).
+vim.keymap.set('x', '<leader>P', [["_dP]], { desc = 'Replace selection with yanked text (keep register)' })
 vim.keymap.set({ 'n', 'v' }, '<leader>d', [["_d]], { desc = 'Delete without yanking' })
 
 -- Yank text to the system clipboard in normal and visual modes
