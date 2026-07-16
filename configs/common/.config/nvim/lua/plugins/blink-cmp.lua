@@ -106,7 +106,7 @@ return {
           },
         },
         ghost_text = {
-          enabled = true, -- Disable inline ghost text, use completion menu
+          enabled = false, -- No inline ghost text; use the completion menu only
         },
       },
 

@@ -20,10 +20,7 @@ return { -- Collection of various small independent plugins/modules
     -- - sd'   - [S]urround [D]elete [']quotes
     -- - sr)'  - [S]urround [R]eplace [)] [']
 
-    -- Commenting/uncommenting lines and blocks of code
-    require('mini.comment').setup()
-    -- - gc   - Toggle comment (like `gcip` - comment inner paragraph) for both Normal and Visual modes
-    -- - gcc  - [G]CC [C]omment [C]urrent line
-    -- - gc2j - [G]CC [C]omment [2] lines [J] below
+    -- Commenting (gc/gcc) is provided natively by Neovim 0.10+, so mini.comment
+    -- is no longer needed.
   end,
 }
