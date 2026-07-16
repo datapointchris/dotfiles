@@ -61,6 +61,20 @@ if not vim.g.vscode then
 end
 
 ----------------------------------------
+--- BUFFERS ----------------------------
+----------------------------------------
+-- VSCode manages buffers natively
+if not vim.g.vscode then
+  -- mini.bufremove deletes the buffer while keeping the window/tab layout intact
+  vim.keymap.set('n', '<leader>bd', function()
+    require('mini.bufremove').delete(0, false)
+  end, { desc = 'Buffer delete (keep window)' })
+  vim.keymap.set('n', '<leader>bD', function()
+    require('mini.bufremove').delete(0, true)
+  end, { desc = 'Buffer delete (force, discard changes)' })
+end
+
+----------------------------------------
 --- WINDOWS ----------------------------
 ----------------------------------------
 -- VSCode handles window management, these are Neovim-specific

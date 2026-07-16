@@ -22,5 +22,9 @@ return { -- Collection of various small independent plugins/modules
 
     -- Commenting (gc/gcc) is provided natively by Neovim 0.10+, so mini.comment
     -- is no longer needed.
+
+    -- Delete a buffer without closing its window/tab layout (unlike :bdelete).
+    -- Keymap: <leader>bd in core/keymaps.lua.
+    require('mini.bufremove').setup()
   end,
 }

@@ -43,6 +43,7 @@ return {
       { '<leader>gt', group = 'Git Toggles' },
 
       -- Buffers / windows / sessions
+      { '<leader>b', group = 'Buffers' },
       { '<leader>t', group = 'Tabs & Terminal' },
       { '<leader>w', group = 'Windows & Sessions' },
       { '<leader>r', group = 'Reload Config' },
