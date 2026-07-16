@@ -15,5 +15,6 @@ return {
     { '<C-Down>', '<cmd>TmuxNavigateDown<cr>', desc = 'Navigate pane down' },
     { '<C-Up>', '<cmd>TmuxNavigateUp<cr>', desc = 'Navigate pane up' },
     { '<C-Right>', '<cmd>TmuxNavigateRight<cr>', desc = 'Navigate pane right' },
+    { '<C-\\>', '<cmd>TmuxNavigatePrevious<cr>', desc = 'Navigate pane previous' },
   },
 }

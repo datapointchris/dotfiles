@@ -12,31 +12,19 @@ return {
           vim.keymap.set(mode, l, r, opts)
         end
 
-        -- Navigation
-        map('n', ']c', function()
-          if vim.wo.diff then
-            vim.cmd.normal({
-              ']c',
-              bang = true,
-            })
-          else
-            gitsigns.nav_hunk('next')
-          end
+        -- Hunk navigation on ]h/[h. Native ]c/[c stay free for vimdiff, and
+        -- treesitter-textobjects keeps ]c/[c for class navigation (a global
+        -- ]c/[c here would be shadowed buffer-locally in every git repo).
+        map('n', ']h', function()
+          gitsigns.nav_hunk('next')
         end, {
-          desc = 'Jump to next git [c]hange',
+          desc = 'Jump to next git [h]unk',
         })
 
-        map('n', '[c', function()
-          if vim.wo.diff then
-            vim.cmd.normal({
-              '[c',
-              bang = true,
-            })
-          else
-            gitsigns.nav_hunk('prev')
-          end
+        map('n', '[h', function()
+          gitsigns.nav_hunk('prev')
         end, {
-          desc = 'Jump to previous git [c]hange',
+          desc = 'Jump to previous git [h]unk',
         })
 
         -- Inspect (hunk staging is handled by lazygit; file diffs by diffview)
