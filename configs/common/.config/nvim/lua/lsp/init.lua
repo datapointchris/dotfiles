@@ -47,8 +47,9 @@ vim.lsp.enable({
 vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'noselect' }
 
 -- Configure diagnostic display
+-- Float border is inherited from the global 'winborder' option (set in
+-- core/options.lua), so no per-float border is configured here.
 vim.diagnostic.config({
   -- virtual_text = { current_line = true },
   virtual_text = true,
-  float = { border = 'rounded' },
 })

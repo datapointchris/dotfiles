@@ -89,7 +89,8 @@ return {
           },
         },
         menu = {
-          border = 'rounded',
+          -- border omitted: blink falls back to the global 'winborder' when
+          -- unset (nvim 0.11+), so no per-window border is needed here.
           draw = {
             columns = {
               { 'kind_icon' },
@@ -101,9 +102,7 @@ return {
         documentation = {
           auto_show = true,
           auto_show_delay_ms = 200,
-          window = {
-            border = 'rounded',
-          },
+          -- window.border omitted: inherits the global 'winborder'
         },
         ghost_text = {
           enabled = false, -- No inline ghost text; use the completion menu only
@@ -166,9 +165,7 @@ return {
 
       signature = {
         enabled = true,
-        window = {
-          border = 'rounded',
-        },
+        -- window.border omitted: inherits the global 'winborder'
       },
     }
   end,
