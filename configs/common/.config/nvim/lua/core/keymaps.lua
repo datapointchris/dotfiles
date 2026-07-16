@@ -161,7 +161,8 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>fr', tb.registers, { desc = 'Find: Registers' })
   vim.keymap.set('n', '<leader>fq', tb.quickfix, { desc = 'Find: Quickfix' })
   vim.keymap.set('n', '<leader>fl', tb.loclist, { desc = 'Find: Location list' })
-  vim.keymap.set('n', '<leader>fs', tb.lsp_document_symbols, { desc = 'Find: Document symbols' })
+  -- Document symbols live in the LSP group as <leader>ls (paired with <leader>lS
+  -- for workspace symbols); no duplicate under <leader>f.
   vim.keymap.set('n', '<leader>fk', tb.keymaps, { desc = 'Find: Keymaps' })
   vim.keymap.set('n', '<leader>ft', tb.treesitter, { desc = 'Find: Treesitter' })
   vim.keymap.set('n', '<leader>fz', filtered_colorschemes, { desc = 'Find: Colorschemes' })
