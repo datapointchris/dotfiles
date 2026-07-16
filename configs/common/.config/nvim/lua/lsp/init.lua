@@ -40,6 +40,17 @@ vim.lsp.enable({
   'yamlls',
 })
 
+-- Inline color swatches (0.12 documentColor): paints the background of hex/rgb
+-- values with the actual colour for servers that advertise it (e.g. cssls).
+-- The global enable attaches to every supporting client; style defaults to
+-- 'background' (alternatives: 'foreground', 'virtual').
+vim.lsp.document_color.enable(true)
+
+-- Linked editing (0.12 linkedEditingRange): editing an HTML open tag updates
+-- its closing tag live. The global enable installs an LspAttach hook for every
+-- client that supports the method (e.g. the html server).
+vim.lsp.linked_editing_range.enable(true)
+
 -- Buffer-local LSP behaviour on attach (K hover override, per-server capability
 -- tweaks) lives in the single LspAttach autocmd in core/autocmds.lua.
 
