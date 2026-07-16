@@ -11,6 +11,12 @@ on:
 permissions:
   contents: write # gh-deploy pushes to the gh-pages branch
 
+# Serialize gh-pages force-pushes: a second docs push waits for the first to
+# finish instead of racing it and losing the ref-lock compare-and-swap.
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: false
+
 jobs:
   docs:
     runs-on: ubuntu-latest

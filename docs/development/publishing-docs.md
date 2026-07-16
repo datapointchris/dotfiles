@@ -20,10 +20,12 @@ That's it. No other changes needed.
 
 ## How It Works
 
-1. The workflow in `.github/workflows/ci.yml` runs on every push to `main`
-2. It builds the mkdocs site using mkdocs-material
-3. It pushes the built static site to the `gh-pages` branch
+1. The workflow in `.github/workflows/deploy-docs.yml` runs on pushes to `main` that touch `docs/**` or `mkdocs.yml`
+2. It installs the project's uv-locked dependencies, then runs `mkdocs build --strict` to fail fast on broken links or nav
+3. It force-pushes the built static site to the `gh-pages` branch via `mkdocs gh-deploy --force`
 4. GitHub Pages serves the static files from `gh-pages`
+
+A `concurrency` group serializes deploys, so two docs pushes in quick succession queue instead of racing each other's `gh-pages` force-push. This is the single source of docs deployment — do not add a second workflow that also pushes `gh-pages`, or the two will race and one will fail the ref-lock with `cannot lock ref 'refs/heads/gh-pages'`.
 
 mkdocs automatically includes a `.nojekyll` file in the `gh-pages` branch to prevent Jekyll processing.
 
@@ -49,11 +51,4 @@ This runs `mkdocs gh-deploy --force` which builds and deploys to the gh-pages br
 
 ## Workflow Configuration
 
-The workflow has the necessary permissions already configured:
-
-```yaml
-permissions:
-  contents: write
-```
-
-This allows the workflow to push to the `gh-pages` branch.
+The workflow grants `contents: write` so `gh-deploy` can push to the `gh-pages` branch. See `.github/workflows/deploy-docs.yml` for the full definition.
