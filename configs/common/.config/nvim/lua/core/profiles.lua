@@ -57,7 +57,6 @@ local vscode_disabled = {
   ['conform.nvim'] = true,
   ['gx.nvim'] = true,
   ['inc-rename.nvim'] = true,
-  ['render-markdown.nvim'] = true,
   ['todo-comments.nvim'] = true,
   ['trouble.nvim'] = true,
   ['vim-maximizer'] = true,
@@ -88,7 +87,6 @@ local minimal_plugins = {
   ['dressing.nvim'] = true,
   ['indent-blankline.nvim'] = true,
   ['cinnamon.nvim'] = true,
-  ['render-markdown.nvim'] = true,
   -- Editing
   ['which-key.nvim'] = true,
   ['vim-visual-multi'] = true,
