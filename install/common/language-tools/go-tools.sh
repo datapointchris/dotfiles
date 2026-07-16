@@ -17,11 +17,17 @@ elif [[ "${1:-}" == "--update" ]]; then
   UPDATE_MODE=true
 fi
 
-# Check if Go is installed
+# Ensure the Go toolchain is on PATH. Non-interactive callers (cron, scripts) don't
+# source .zshrc, which is where /usr/local/go/bin is added, so `go install` below
+# would fail. Mirror go.sh's fallback to the standard install location.
 if ! command -v go &>/dev/null; then
-  log_error "Go is not installed"
-  echo "Install Go first: bash $DOTFILES_DIR/install/common/language-managers/install-go.sh"
-  exit 1
+  if [[ -x "/usr/local/go/bin/go" ]]; then
+    export PATH="/usr/local/go/bin:$PATH"
+  else
+    log_error "Go is not installed"
+    echo "Install Go first: bash $DOTFILES_DIR/install/common/language-managers/go.sh"
+    exit 1
+  fi
 fi
 
 # Check if packages.yml exists

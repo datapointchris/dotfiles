@@ -5,8 +5,11 @@ DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 
-# Set up PATH to find installed tools
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH"
+# Set up PATH to find installed tools.
+# /usr/local/go/bin is the Go toolchain deploy dir — it's only added to PATH in
+# .zshrc (interactive), so this non-interactive script must add it explicitly or
+# `command -v go` fails in go-tools.sh (matches install.sh's go-tools invocation).
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:$PATH"
 
 # Source nvm if available (for node/npm)
 export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
