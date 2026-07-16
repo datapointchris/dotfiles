@@ -2,16 +2,20 @@
 -- LSP Configuration
 -- ================================================================== --
 -- This module handles all LSP-related setup including:
--- - Server capabilities for blink.cmp integration
+-- - Advertising blink.cmp client capabilities to every server
 -- - Enabling language servers
--- - LspAttach autocmd for capability merging
 -- - Completion settings (completeopt)
 -- - Diagnostic configuration
+-- Buffer-local on-attach behaviour lives in core/autocmds.lua.
 
--- Set up LSP client capabilities for blink.cmp before enabling servers
-local capabilities = nil
+-- Advertise blink.cmp's client capabilities (snippet support, resolve, etc.)
+-- to every server. Setting them on the '*' config means each server receives
+-- them in its initialize request; deep-merges with per-server capabilities
+-- (e.g. gh_actions_ls). This is the correct wiring — the old approach merged
+-- them into client.server_capabilities on attach, which was too late and the
+-- wrong direction (server_capabilities describe what the server offers).
 if pcall(require, 'blink.cmp') then
-  capabilities = require('blink.cmp').get_lsp_capabilities()
+  vim.lsp.config('*', { capabilities = require('blink.cmp').get_lsp_capabilities() })
 end
 
 vim.lsp.enable({
@@ -36,26 +40,8 @@ vim.lsp.enable({
   'yamlls',
 })
 
--- Set up LSP capabilities for blink.cmp integration
-vim.api.nvim_create_autocmd('LspAttach', {
-  callback = function(ev)
-    local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client and capabilities then
-      -- Merge blink.cmp capabilities with client capabilities
-      client.server_capabilities = vim.tbl_deep_extend('force', client.server_capabilities or {}, capabilities)
-    end
-  end,
-})
-
--- Disable native LSP completion since we're using blink.cmp
--- vim.api.nvim_create_autocmd('LspAttach', {
---   callback = function(ev)
---     local client = vim.lsp.get_client_by_id(ev.data.client_id)
---     if client:supports_method('textDocument/completion') then
---       vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
---     end
---   end,
--- })
+-- Buffer-local LSP behaviour on attach (K hover override, per-server capability
+-- tweaks) lives in the single LspAttach autocmd in core/autocmds.lua.
 
 -- Set completeopt for blink.cmp compatibility
 vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'noselect' }

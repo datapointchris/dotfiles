@@ -35,6 +35,7 @@ local vscode_disabled = {
   ['diffview.nvim'] = true,
   -- Completion & LSP (VSCode handles these)
   ['blink.cmp'] = true,
+  ['blink.lib'] = true,
   ['friendly-snippets'] = true,
   ['lazydev.nvim'] = true,
   -- Colorschemes (VSCode has its own theme manager)
@@ -94,7 +95,9 @@ local minimal_plugins = {
   ['winresize.nvim'] = true,
   ['vim-maximizer'] = true,
   ['nvim-autopairs'] = true,
-  ['nvim-cmp'] = true,
+  ['blink.cmp'] = true,
+  ['blink.lib'] = true,
+  ['friendly-snippets'] = true,
   -- Git
   ['gitsigns.nvim'] = true,
   ['diffview.nvim'] = true,
