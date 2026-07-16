@@ -124,17 +124,17 @@ tasks:
   docs:serve:
     desc: Serve documentation site locally
     cmds:
-      - cd docs && mkdocs serve
+      - mkdocs serve
 
   docs:build:
     desc: Build documentation site
     cmds:
-      - cd docs && mkdocs build
+      - mkdocs build --strict
 
   docs:deploy:
     desc: Deploy documentation to GitHub Pages
     cmds:
-      - cd docs && mkdocs gh-deploy --force
+      - mkdocs gh-deploy --force
 
   # ================================================================
   # WINDOWS (WSL only)
