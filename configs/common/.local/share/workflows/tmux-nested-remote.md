@@ -27,22 +27,21 @@ by `bind C-Space send-prefix` (already set in tmux.conf).
 | Detach remote       | `C-Space C-Space d`   | remote keeps running |
 | Detach local        | `C-Space d`           | —                    |
 
-## Auto-color — remote sessions pick up the theme's red (already implemented)
+## Auto-color — ssh panes get a red border (host-side, already implemented)
 
-The `theme` CLI generates a `REMOTE / SSH INDICATOR` block into `themes/current.conf`
-(see `lib/generators/tmux.sh`): when `$SSH_CONNECTION` is set (this tmux started from
-an SSH shell), it recolors the host badge, active window, active pane border, and the
-pane path using the theme's own `diagnostic_error` red — the background stays `base00`
-so it still reads as the current theme. Any box you SSH into colors itself; nothing to
-configure per host, and switching themes re-derives the red.
+The **local** tmux detects when a pane is running ssh (`pane_current_command == ssh`)
+and paints that pane's border the theme's `diagnostic_error` red with a `󰢹 SSH` badge.
+It's a conditional in the theme-generated `pane-border-format` (see
+`lib/generators/tmux.sh`), so switching themes re-derives the red.
 
-- `$SSH_CONNECTION` is the signal, **not** `$TMUX`: `$TMUX` only catches same-host
-  tmux-in-tmux and doesn't survive the SSH hop.
-- Read from the server's startup environment, so it fires on the normal
-  `ssh box -t 'tmux attach || tmux new'` flow. A server first started detached
-  outside SSH (systemd) won't color until restarted.
-- It's part of the generated theme, so `theme apply <name>` regenerates it to match
-  the new palette.
+- **Nothing is required on the remote** — detection is local, so a bare box with no
+  tmux/theme (e.g. an LXC) still lights up red the moment you ssh into a pane.
+- Per-pane: in a split, the ssh pane border is red while the local pane stays normal —
+  both visible at once.
+- No SSH needed to preview: run `ssh <host>` in any local pane and its border turns red.
+- The remote host isn't shown (tmux can't read ssh's args reliably); the badge just
+  says `SSH`. `pane-border-status top` (set in tmux.conf) keeps the border visible even
+  for a single pane.
 
 ## Cleaner alternative — different remote prefix (no double-tap)
 
