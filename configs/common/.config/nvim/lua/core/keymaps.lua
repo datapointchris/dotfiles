@@ -52,13 +52,12 @@ vim.keymap.set('n', '<leader>qA', ':qa!<CR>', { noremap = true, silent = true, d
 ----------------------------------------
 --- TABS -------------------------------
 ----------------------------------------
--- VSCode handles tabs natively, these conflict with VSCode tab navigation
--- Fixed: Moved 'te' and 'tw' to leader keys to avoid shadowing 't' motion
+-- Tab next/previous use native gt/gT. <Tab>/<S-Tab> are deliberately NOT mapped:
+-- terminals send the same byte for <Tab> and <C-i>, so mapping <Tab> would shadow
+-- <C-i> (jump forward in the jumplist, the partner to <C-o>).
 if not vim.g.vscode then
   vim.keymap.set('n', '<leader>te', ':tabedit', { desc = 'Tab edit' })
   vim.keymap.set('n', '<leader>tw', ':tabclose<Return>', { desc = 'Tab close', silent = true })
-  vim.keymap.set('n', '<tab>', ':tabnext<Return>', { desc = 'Tab next', silent = true })
-  vim.keymap.set('n', '<s-tab>', ':tabprev<Return>', { desc = 'Tab previous', silent = true })
 end
 
 ----------------------------------------
