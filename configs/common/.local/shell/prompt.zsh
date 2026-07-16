@@ -123,6 +123,32 @@ PROMPT2='. '
 RPROMPT='%{$(echotc UP 1)%} $(git_remote_status)   $(return_status)   %{$(echotc DO 1)%}'
 
 # ================================================================
+# TERMINAL TITLE (OSC 2)
+# ================================================================
+# Report "host:cwd" as the terminal title on every prompt. tmux tracks this as
+# the pane title, so a pane running ssh into a dotfiles box shows the remote host
+# and directory in its border (see the theme's pane-border-format). On ssh launch
+# the local shell labels the pane "ssh: <target>", so a bare remote that can't set
+# its own title still reads honestly instead of a stale local directory.
+autoload -Uz add-zsh-hook
+
+__title_host_cwd() {
+  local dir=${PWD/#$HOME/\~}
+  printf '\033]2;%s:%s\033\\' "${HOST%%.*}" "$dir"
+}
+
+__title_ssh_target() {
+  # $1 is the command line about to run; label ssh sessions with their target
+  if [[ "$1" == ssh\ * ]]; then
+    printf '\033]2;ssh: %s\033\\' "${1#ssh }"
+  fi
+}
+
+add-zsh-hook precmd __title_host_cwd
+add-zsh-hook chpwd __title_host_cwd
+add-zsh-hook preexec __title_ssh_target
+
+# ================================================================
 # COLOR CONFIGURATION
 # ================================================================
 

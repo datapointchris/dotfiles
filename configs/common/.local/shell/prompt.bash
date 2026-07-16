@@ -224,8 +224,8 @@ _bash_prompt_command_fast() {
   local exit_status=""
   [[ $exit_code -ne 0 ]] && exit_status=" \033[31m${exit_code} ⚠️\033[0m"
 
-  # Update terminal title
-  printf '\033]0;%s\007' "$dir"
+  # Update terminal title to "host:cwd" (see _bash_prompt_command_full)
+  printf '\033]2;%s:%s\007' "${HOSTNAME%%.*}" "$dir"
 
   # Build prompt: directory git_info exit_status
   PS1="\n\[\033[1;37m\]${dir}\[\033[0m\]${git_info}${exit_status}\n\[\033[32m\]❯\[\033[0m\] "
@@ -241,10 +241,11 @@ _bash_prompt_command_full() {
     exit_status=" ${RC_RED}${exit_code} ⚠️${RC_RESET}"
   fi
 
-  # Update terminal title
+  # Update terminal title to "host:cwd" so tmux shows the remote host+dir in the
+  # pane border when this box is reached over ssh (see prompt.zsh for the rationale)
   local title_pwd="${PWD/#$HOME/\~}"
   if [[ "$TERM" == xterm* ]] || [[ "$TERM" == screen* ]] || [[ "$TERM" == tmux* ]]; then
-    printf '\033]0;%s\007' "$title_pwd"
+    printf '\033]2;%s:%s\007' "${HOSTNAME%%.*}" "$title_pwd"
   fi
 
   # Build the prompt components
