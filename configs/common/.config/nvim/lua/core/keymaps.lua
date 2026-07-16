@@ -241,6 +241,9 @@ if not vim.g.vscode then
       apply = true,
     })
   end, { desc = 'Code: fix all l[i]nting' })
+  -- Show the full diagnostic(s) under the cursor in a float — virtual_text
+  -- truncates long messages, so this reveals the rest on demand.
+  vim.keymap.set('n', '<leader>cd', vim.diagnostic.open_float, { desc = 'Code: show [d]iagnostic float' })
   -- inc-rename: live-preview LSP rename, prefilled with the word under cursor
   vim.keymap.set('n', '<leader>cr', function()
     return ':IncRename ' .. vim.fn.expand('<cword>')
