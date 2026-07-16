@@ -171,6 +171,11 @@ shopt -s histappend cmdhist
 # Navigation niceties: typo-tolerant cd, recursive ** globbing, redetect terminal size after resize
 shopt -s autocd cdspell dirspell globstar checkwinsize
 
+# Shell tool binaries (eza, rg, fd, fzf, ...) land here via `task windows:setup`
+# or an offline bundle. Git Bash auto-adds ~/bin but not ~/.local/bin, so set it
+# explicitly and ahead of the zoxide/fzf init below, which probe for the binaries.
+export PATH="$HOME/.local/bin:$PATH"
+
 [[ -f "$HOME/.env" ]] && source "$HOME/.env"
 
 [[ -f "$HOME/.local/shell/combined.sh" ]] && source "$HOME/.local/shell/combined.sh"

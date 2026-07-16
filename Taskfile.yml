@@ -141,9 +141,19 @@ tasks:
   # ================================================================
 
   windows:setup:
-    desc: One-time Windows Git Bash setup (run from WSL)
+    desc: One-time Windows Git Bash setup via winget (run from WSL)
     cmds:
       - bash "{{.DOTFILES_DIR}}/install/wsl/setup-windows.sh"
+
+  windows:bundle:
+    desc: "Bundle Windows tool binaries into a .tar.gz for offline install (any machine; default archive in repo root)"
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install/wsl/setup-windows.sh" --bundle {{.CLI_ARGS}}
+
+  windows:offline:
+    desc: "Install Windows tools from a bundle archive when winget is blocked (WSL): task windows:offline -- <archive>"
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install/wsl/setup-windows.sh" --offline {{.CLI_ARGS}}
 
   windows:sync:
     desc: Sync shell files to Windows Git Bash (run from WSL)

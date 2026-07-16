@@ -50,9 +50,13 @@ task docs:deploy        # Deploy documentation to GitHub Pages
 ### Windows Setup (WSL only)
 
 ```bash
-task windows:setup       # One-time Windows Git Bash setup (run from WSL)
-task windows:sync        # Sync shell files to Windows Git Bash (run from WSL)
+task windows:setup                # One-time Git Bash setup via winget (run from WSL)
+task windows:sync                 # Sync shell files to Windows Git Bash (run from WSL)
+task windows:bundle               # Bundle Windows tool binaries into a .tar.gz (any machine)
+task windows:offline -- <archive> # Install tools from a bundle when winget is blocked (WSL)
 ```
+
+`windows:bundle` downloads the Windows `.exe` for each shell tool from GitHub releases into a single archive that can be moved to a network-restricted machine, where `windows:offline` installs them without touching the network. Use this pair when winget is blocked; otherwise `windows:setup` handles everything online.
 
 ## Installation
 
