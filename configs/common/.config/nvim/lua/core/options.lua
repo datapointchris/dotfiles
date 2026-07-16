@@ -42,6 +42,14 @@ vim.opt.hlsearch = true
 -- Disable line wrapping
 vim.opt.wrap = false
 
+-- Folding via the native treesitter fold expression (no plugin). foldexpr
+-- returns 0 for buffers without a parser, so it is safe as a global default.
+-- foldlevelstart = 99 opens files fully unfolded — folds are available on
+-- demand (za / zM / zR) but never applied automatically on open.
+vim.o.foldmethod = 'expr'
+vim.o.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.o.foldlevelstart = 99
+
 -- Disable swap file creation
 vim.opt.swapfile = false
 -- Disable backup file creation

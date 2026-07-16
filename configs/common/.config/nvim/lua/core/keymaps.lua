@@ -271,4 +271,9 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>cr', function()
     return ':IncRename ' .. vim.fn.expand('<cword>')
   end, { expr = true, desc = 'Code: [r]ename symbol' })
+  -- Toggle native LSP inlay hints (inferred types, parameter names). Off by
+  -- default; noisy for some buffers, so it's on-demand rather than always-on.
+  vim.keymap.set('n', '<leader>ch', function()
+    vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+  end, { desc = 'Code: toggle inlay [h]ints' })
 end
