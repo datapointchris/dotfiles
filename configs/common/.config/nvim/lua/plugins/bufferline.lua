@@ -1,7 +1,7 @@
 return {
   'akinsho/bufferline.nvim',
   version = '*',
-  dependencies = 'nvim-tree/nvim-web-devicons',
+  dependencies = 'echasnovski/mini.nvim', -- provides icons via mini.icons mock
   config = function()
     require('bufferline').setup({
       options = {

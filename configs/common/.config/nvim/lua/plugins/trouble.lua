@@ -1,6 +1,6 @@
 return {
   'folke/trouble.nvim',
-  dependencies = { 'nvim-tree/nvim-web-devicons', 'folke/todo-comments.nvim' },
+  dependencies = { 'echasnovski/mini.nvim', 'folke/todo-comments.nvim' }, -- icons via mini.icons mock
   opts = {
     focus = true,
   },

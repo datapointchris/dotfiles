@@ -1,7 +1,14 @@
 return { -- Collection of various small independent plugins/modules
   'echasnovski/mini.nvim',
   config = function()
-    -- require("mini.icons").setup()
+    -- Icon provider for the whole config. The mock makes plugins that request
+    -- nvim-web-devicons (bufferline, lualine, telescope, trouble, yazi, …)
+    -- transparently use mini.icons, so nvim-web-devicons is no longer needed.
+    require('mini.icons').setup()
+    MiniIcons.mock_nvim_web_devicons()
+
+    -- Auto-close/pair brackets and quotes (replaces nvim-autopairs).
+    require('mini.pairs').setup()
 
     -- Better Around/Inside textobjects
     require('mini.ai').setup({

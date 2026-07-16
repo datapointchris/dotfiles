@@ -51,10 +51,8 @@ local vscode_disabled = {
   ['colorscheme-manager'] = true,
   -- Sessions & editing features VSCode handles
   ['auto-session'] = true,
-  ['nvim-autopairs'] = true,
   ['cinnamon.nvim'] = true,
   ['conform.nvim'] = true,
-  ['gx.nvim'] = true,
   ['inc-rename.nvim'] = true,
   ['todo-comments.nvim'] = true,
   ['trouble.nvim'] = true,
@@ -69,7 +67,6 @@ local minimal_plugins = {
   -- Core
   ['mini.nvim'] = true,
   ['plenary.nvim'] = true,
-  ['nvim-web-devicons'] = true,
   -- Navigation
   ['telescope.nvim'] = true,
   ['telescope-fzf-native.nvim'] = true,
@@ -89,7 +86,6 @@ local minimal_plugins = {
   ['vim-visual-multi'] = true,
   ['winresize.nvim'] = true,
   ['vim-maximizer'] = true,
-  ['nvim-autopairs'] = true,
   ['blink.cmp'] = true,
   ['blink.lib'] = true,
   ['friendly-snippets'] = true,
