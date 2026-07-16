@@ -27,20 +27,22 @@ by `bind C-Space send-prefix` (already set in tmux.conf).
 | Detach remote       | `C-Space C-Space d`   | remote keeps running |
 | Detach local        | `C-Space d`           | —                    |
 
-## Auto-color — remote sessions paint the bar red (already implemented)
+## Auto-color — remote sessions pick up the theme's red (already implemented)
 
-The shared `tmux.conf` has a `REMOTE / SSH INDICATOR` block: when `$SSH_CONNECTION`
-is set (this tmux started from an SSH shell), it repaints the whole status bar red
-and shows the hostname on the left. So any box you SSH into and run tmux on colors
-itself automatically — nothing to configure per host.
+The `theme` CLI generates a `REMOTE / SSH INDICATOR` block into `themes/current.conf`
+(see `lib/generators/tmux.sh`): when `$SSH_CONNECTION` is set (this tmux started from
+an SSH shell), it recolors the host badge, active window, active pane border, and the
+pane path using the theme's own `diagnostic_error` red — the background stays `base00`
+so it still reads as the current theme. Any box you SSH into colors itself; nothing to
+configure per host, and switching themes re-derives the red.
 
 - `$SSH_CONNECTION` is the signal, **not** `$TMUX`: `$TMUX` only catches same-host
   tmux-in-tmux and doesn't survive the SSH hop.
 - Read from the server's startup environment, so it fires on the normal
   `ssh box -t 'tmux attach || tmux new'` flow. A server first started detached
   outside SSH (systemd) won't color until restarted.
-- The override sits after the theme source and re-runs on every full reload
-  (`prefix + R`, `theme apply`), so it survives theme switches.
+- It's part of the generated theme, so `theme apply <name>` regenerates it to match
+  the new palette.
 
 ## Cleaner alternative — different remote prefix (no double-tap)
 
