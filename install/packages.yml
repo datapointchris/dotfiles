@@ -799,6 +799,17 @@ github_releases:
     install_dir: "~/.local/bin"
     description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
 
+  # mikefarah/yq (Go), NOT the Python jq-wrapper: the de-facto standard yq that every
+  # tutorial and Claude Code assumes. Direct binary, consistent version across platforms,
+  # and works behind the WSL work firewall (github release download, no Go module proxy).
+  - name: yq
+    repo: mikefarah/yq
+    install_script: github-releases/yq.sh
+    binary_pattern: "yq_{platform}_{arch}" # Direct binary: darwin/linux, amd64/arm64
+    install_dir: "~/.local/bin"
+    description: YAML/JSON/XML processor (consistent version across all platforms)
+    tags: [cli, yaml, json]
+
   # The uniform install method: the same musl release binary on every Linux platform
   # (Arch + WSL). macOS is the lone exception (brew — see system_packages) because atuin
   # ships no Intel-mac binary. atuin.sh guards darwin so only Linux reaches this path.
@@ -1071,9 +1082,6 @@ uv_tools:
 
   # Utilities
   utilities:
-    - name: yq
-      description: YAML/XML processor (jq wrapper for YAML)
-
     - name: keymap-drawer
       command: keymap
       description: Generate keyboard layout diagrams

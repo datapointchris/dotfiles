@@ -21,7 +21,7 @@ Many tools have different package names across platforms. This table maps the to
 | **git-delta** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **broot**     | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
 | **jq**        | `jq`         | `jq`             | `jq`          | ✅ Consistent                      |
-| **yq**        | `yq`         | snap or binary   | `yq`          | Ubuntu via snap or manual          |
+| **yq**        | GitHub release | GitHub release | GitHub release | mikefarah/yq binary, consistent across platforms (NOT the Python jq-wrapper) |
 | **htop**      | `htop`       | `htop`           | `htop`        | ✅ Consistent                      |
 | **tree**      | `tree`       | `tree`           | `tree`        | ✅ Consistent                      |
 | **go-task**   | `go install` | `go install`     | `go install`  | Installed via Go on all platforms  |

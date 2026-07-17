@@ -775,7 +775,7 @@ function layers() {
   fi
 
   local layer
-  layer=$(yq '.layers | keys | .[]' "$keymap_yaml" | tr -d '"' \
+  layer=$(yq '.layers | keys | sort | .[]' "$keymap_yaml" | tr -d '"' \
     | gum choose --header="Select a keyboard layer")
   [[ -z "$layer" ]] && return 0
 

@@ -38,6 +38,7 @@ github_releases:
   - tree-sitter
   - just
   - tenv
+  - yq
 
 custom_installers:
   - bats
@@ -69,7 +70,6 @@ uv_tools:
   - codespell
   - sqlfluff
   - djlint
-  - yq
   - keymap-drawer
   - nbpreview
   - numpy

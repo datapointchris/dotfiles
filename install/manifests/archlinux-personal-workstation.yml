@@ -40,6 +40,7 @@ github_releases:
   - just
   - atuin
   - tenv
+  - yq
 
 custom_installers:
   - bats
@@ -72,7 +73,6 @@ uv_tools:
   - codespell
   - sqlfluff
   - djlint
-  - yq
   - keymap-drawer
   - nbpreview
   - numpy

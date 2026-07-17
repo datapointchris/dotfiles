@@ -38,6 +38,7 @@ github_releases:
   - atuin
   - win32yank
   - tenv
+  - yq
 
 custom_installers:
   # - bats
@@ -70,7 +71,6 @@ uv_tools:
   - codespell
   - sqlfluff
   - djlint
-  - yq
   - keymap-drawer
   - nbpreview
   - numpy

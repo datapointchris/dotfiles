@@ -91,7 +91,7 @@ See `install/packages.yml` (`cargo_packages` section) for the current list.
 
 **System utilities**:
 
-- `tree`, `htop`, `jq`, `yq` - Stable tools, version doesn't matter
+- `tree`, `htop`, `jq` - Stable tools, version doesn't matter
 
 **Build tools**:
 
