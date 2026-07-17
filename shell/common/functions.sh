@@ -706,3 +706,36 @@ function layers() {
   keymap draw "$keymap_yaml" -s "$layer" 2>/dev/null \
     | chafa --size "${COLUMNS:-120}x${LINES:-40}" -
 }
+
+#@yt-transcript
+#--> Print a YouTube video's transcript as plain text to stdout (pipe into claude, a file, etc.)
+function yt-transcript() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: yt-transcript <youtube-url> [lang]" >&2
+    echo "  Emits the transcript as plain text on stdout." >&2
+    echo "  lang defaults to 'en'. Prefers human captions, falls back to auto-generated." >&2
+    return 1
+  fi
+  local url="$1"
+  local lang="${2:-en}"
+  local tmp
+  tmp="$(mktemp -d)" || return 1
+  local sub=""
+  # Two passes so human captions win over auto-generated without concatenating both.
+  # json3 avoids the rolling-duplicate lines that auto-caption VTT emits.
+  local subflag
+  for subflag in --write-subs --write-auto-subs; do
+    yt-dlp --skip-download "$subflag" --sub-langs "$lang" --sub-format json3 \
+      -o "$tmp/%(id)s.%(ext)s" "$url" >/dev/null 2>&1
+    sub=$(find "$tmp" -maxdepth 1 -name '*.json3' | head -1)
+    [[ -n "$sub" ]] && break
+  done
+  if [[ -z "$sub" ]]; then
+    echo "yt-transcript: no '$lang' captions available for that video" >&2
+    rm -rf "$tmp"
+    return 1
+  fi
+  jq -r '.events[]?.segs[]?.utf8 // empty' "$sub" | tr '\n' ' ' | sed 's/  */ /g'
+  echo
+  rm -rf "$tmp"
+}
