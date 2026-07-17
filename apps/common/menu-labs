@@ -21,6 +21,7 @@ practice-on-demand and never shows as due.
 """
 
 import os
+import random
 import subprocess
 import sys
 from datetime import date
@@ -51,6 +52,14 @@ STATE = Path(os.environ.get("MENU_LABS_STATE", Path.home() / "dev" / "labs-state
 # Authoring (new/edit) writes to the repo source so Syncthing/git track it,
 # resolved from this script's real location rather than a symlink.
 LABS_SRC = Path(__file__).resolve().parents[2] / "configs" / "common" / ".local" / "share" / "menu-labs"
+
+# The tool registry backs the zero-authoring flashcard deck (recall the command
+# from an example's description). Same path/override as toolbox and menu.
+REGISTRY = Path(os.environ.get("TOOLBOX_REGISTRY", Path.home() / "dev" / "tools.yml"))
+
+# A flashcard session stays short — the research says a few minutes / ≤5 new/day
+# beats long cramming — so a session samples at most this many cards.
+FLASH_SESSION = 10
 
 TEMPLATE = """\
 ---
@@ -365,21 +374,91 @@ def show_help() -> int:
     print(f"  {CYAN}menu labs list{RESET}        Every Lab and its schedule status")
     print(f"  {CYAN}menu labs pick{RESET}        Pick a Lab interactively (fzf)")
     print(f"  {CYAN}menu labs <id>{RESET}        Open a Lab to read while you work in another pane")
+    print(f"  {CYAN}menu labs <tool>{RESET}      A tool's constellation (menu lenses) + its flashcards")
+    print(f"  {CYAN}menu labs flash [x]{RESET}   Quick recall drill from tool examples (all, or one tool/tag)")
     print(f"  {CYAN}menu labs done <id>{RESET}   Mark a Lab practiced (advances its schedule)")
     print(f"  {CYAN}menu labs new <name>{RESET}  Scaffold a new Lab and open it in $EDITOR")
     print(f"  {CYAN}menu labs edit <id>{RESET}   Edit an existing Lab in $EDITOR")
     return 0
 
 
-def cmd_subject(arg: str) -> int:
-    """A bare argument: render it if it's a Lab, else treat it as a tool subject.
+def load_flashcards(subject: str | None = None) -> list[dict]:
+    """Recall cards from the registry: prompt = an example's description, answer =
+    its command. Zero authoring — every tool's examples become a deck.
 
-    The tool-subject path (constellation + flashcards) is wired in a later step;
-    for now an unknown subject just reports what's available.
+    A subject filters to one tool by name or by tag membership.
     """
+    if not REGISTRY.exists():
+        return []
+    data = yaml.safe_load(REGISTRY.read_text()) or {}
+    tools = data.get("tools") or {}
+    cards = []
+    for name, tool in tools.items():
+        tool = tool or {}
+        if subject and name != subject and subject not in (tool.get("tags") or []):
+            continue
+        for example in tool.get("examples") or []:
+            example = example or {}
+            cmd = example.get("cmd")
+            desc = example.get("desc")
+            if cmd and desc:
+                cards.append({"tool": name, "prompt": desc, "answer": cmd})
+    return cards
+
+
+def cmd_flash(subject: str | None = None) -> int:
+    """A quick recall pass: show a description, you recall the command, reveal,
+    self-mark. Ephemeral (no schedule) — the daily warm-up next to the Labs."""
+    cards = load_flashcards(subject)
+    if not cards:
+        if subject:
+            print(f"No examples to drill for '{subject}'.")
+        else:
+            print(f"No registry examples found at {REGISTRY}.")
+        return 0
+    random.shuffle(cards)
+    cards = cards[:FLASH_SESSION]
+    header("Flashcards — recall the command")
+    correct = 0
+    answered = 0
+    for i, card in enumerate(cards, 1):
+        print(f"  {YELLOW}{i}/{len(cards)}{RESET}  [{card['tool']}]")
+        print(f"  {card['prompt']}")
+        try:
+            if input(f"  {CYAN}Enter to reveal · q to quit ❯ {RESET}").strip().lower() == "q":
+                break
+            print(f"  {GREEN}$ {card['answer']}{RESET}")
+            got = input("  got it? [y/N] ❯ ").strip().lower()
+        except EOFError:
+            break
+        answered += 1
+        if got == "y":
+            correct += 1
+        print()
+    if answered:
+        print(f"{GREEN}✓{RESET} Recalled {correct}/{answered}.")
+    return 0
+
+
+def cmd_federate(arg: str) -> int:
+    """A bare argument that isn't a Lab: show the tool's whole constellation via
+    menu's own lens composer, then offer flashcards drilled from its examples."""
+    result = subprocess.run(["menu", "__show", arg], check=False)
+    if result.returncode != 0:
+        print(f"No Lab '{arg}', and nothing known about it in menu.")
+        print(f"Browse Labs with {CYAN}menu labs list{RESET}.")
+        return 1
+    if load_flashcards(arg):
+        print(f"\n{CYAN}Drill its examples:{RESET}  menu labs flash {arg}")
+    return 0
+
+
+def cmd_subject(arg: str) -> int:
+    """A bare argument: render it if it's a Lab, else treat it as a tool subject
+    (constellation + flashcards)."""
     if arg in load_labs():
         return render_lab(arg)
-    return unknown_lab(arg)
+    return cmd_federate(arg)
 
 
 def main() -> int:
@@ -395,6 +474,8 @@ def main() -> int:
         return cmd_list()
     if sub == "pick":
         return cmd_pick()
+    if sub == "flash":
+        return cmd_flash(rest[0] if rest else None)
     if sub == "__render":
         return cmd_render_preview(rest[0]) if rest else 1
     if sub == "done":

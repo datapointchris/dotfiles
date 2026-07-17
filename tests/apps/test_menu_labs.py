@@ -18,6 +18,7 @@ SCRIPT = REPO_ROOT / "apps" / "common" / "menu-labs"
 
 os.environ["MENU_LABS_DIR"] = str(FIXTURE_DIR)
 os.environ["MENU_LABS_STATE"] = str(FIXTURE_DIR / "does-not-exist-state.json")
+os.environ["TOOLBOX_REGISTRY"] = str(Path(__file__).resolve().parent / "fixtures" / "menu-labs-registry.yml")
 sys.path.insert(0, str(REPO_ROOT))
 
 _loader = importlib.machinery.SourceFileLoader("menu_labs", str(SCRIPT))
@@ -87,3 +88,28 @@ def test_first_heading_empty_when_none():
 def test_slugify():
     assert menu_labs.slugify("Find Files Fast!") == "find-files-fast"
     assert menu_labs.slugify("  rg/search  ") == "rgsearch"
+
+
+def test_load_flashcards_all():
+    cards = menu_labs.load_flashcards()
+    # fd (2 examples) + rg (1); the no-examples tool contributes nothing.
+    assert len(cards) == 3
+    card = next(c for c in cards if c["answer"] == "fd -e go")
+    assert card["tool"] == "fd"
+    assert card["prompt"] == "find Go files"
+
+
+def test_load_flashcards_filter_by_tool():
+    cards = menu_labs.load_flashcards("fd")
+    assert len(cards) == 2
+    assert {c["tool"] for c in cards} == {"fd"}
+
+
+def test_load_flashcards_filter_by_tag():
+    # Both fd and rg carry the `search` tag.
+    cards = menu_labs.load_flashcards("search")
+    assert {c["tool"] for c in cards} == {"fd", "rg"}
+
+
+def test_load_flashcards_unknown_subject_empty():
+    assert menu_labs.load_flashcards("nonexistent") == []
