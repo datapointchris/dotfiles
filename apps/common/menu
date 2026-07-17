@@ -102,6 +102,13 @@ show_help() {
   echo "  $(print_cyan "menu review done") <id> Mark an item done (advances its due date)"
   echo "  $(print_cyan "menu review edit")      Edit the register in \$EDITOR"
   echo ""
+  print_section "Labs (hands-on practice)" "brightgreen"
+  echo "  $(print_cyan "menu labs")             What's due to practice now"
+  echo "  $(print_cyan "menu labs list")        Every Lab and its schedule status"
+  echo "  $(print_cyan "menu labs") <id>        Open a Lab to read while you work in another pane"
+  echo "  $(print_cyan "menu labs done") <id>   Mark a Lab practiced (advances its schedule)"
+  echo "  $(print_cyan "menu labs new") <name>  Scaffold a new Lab in \$EDITOR"
+  echo ""
   print_section "Collections" "brightblue"
   echo "  $(print_cyan "[tool]")      tools registry ($REGISTRY)"
   echo "  $(print_cyan "[workflow]")  reference cards ($WORKFLOWS_DIR)"
@@ -359,6 +366,12 @@ case "${1:-}" in
     # dates and state are far cleaner in Python than in bash.
     shift
     exec menu-review "$@"
+    ;;
+  labs | drill)
+    # The practice half (hands-on Labs) lives in the menu-labs helper, same
+    # reasoning as review: dates, state, and deck loading are cleaner in Python.
+    shift
+    exec menu-labs "$@"
     ;;
   find)
     shift

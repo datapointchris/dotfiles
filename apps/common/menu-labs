@@ -1,0 +1,419 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pyyaml"]
+# ///
+"""menu-labs - hands-on practice Labs, the drill half of menu. Invoked as `menu labs`.
+
+A Lab is a single markdown file under ~/.local/share/menu-labs/ that teaches a
+tool the way a senior engineer walks a junior through it: what to do, what to
+expect, why it works, alternatives. Any environment setup is a copy-pasteable
+code block inside the Lab — you run it yourself in a second pane and work through
+the steps at your own keyboard. Nothing is graded; the point is the reps.
+
+Two concerns, kept apart like the review register:
+  - the Labs themselves   markdown, hand-authored, only ever read by this tool
+  - labs-state.json       the last-practiced date per Lab, written by `done`
+
+Scheduling reuses the review register's model via menucore: next_due =
+last_done + cadence, derived not stored. A Lab with no `cadence:` is
+practice-on-demand and never shows as due.
+"""
+
+import os
+import subprocess
+import sys
+from datetime import date
+from pathlib import Path
+
+import yaml
+
+# menu-labs is symlinked onto PATH; resolve the real path so the repo-root
+# menucore package (shared with menu-review) is importable. parents[2] is the
+# repo root: apps/common/menu-labs → apps/common → apps → <repo>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from menucore import CYAN
+from menucore import GREEN
+from menucore import RESET
+from menucore import YELLOW
+from menucore import header
+from menucore import is_due
+from menucore import load_state
+from menucore import overdue_days
+from menucore import parse_cadence
+from menucore import save_state
+from menucore import status_label
+
+# Runtime reads go through the installed dir (symlinks resolve to repo content).
+LABS_DIR = Path(os.environ.get("MENU_LABS_DIR", Path.home() / ".local" / "share" / "menu-labs"))
+STATE = Path(os.environ.get("MENU_LABS_STATE", Path.home() / "dev" / "labs-state.json"))
+
+# Authoring (new/edit) writes to the repo source so Syncthing/git track it,
+# resolved from this script's real location rather than a symlink.
+LABS_SRC = Path(__file__).resolve().parents[2] / "configs" / "common" / ".local" / "share" / "menu-labs"
+
+TEMPLATE = """\
+---
+tags: []
+cadence: 1mo
+---
+
+# {title}
+
+> One line: what this Lab drills and when you'd reach for it.
+
+## Setup
+
+Copy this into your other pane to stage a scratch dir to play in:
+
+```bash
+LAB=$(mktemp -d) && cd "$LAB"
+# ... create fixture files here ...
+```
+
+## Steps
+
+1. **Do the thing.** `some command`
+   - Expect: what you should see.
+   - Why: the reason it works.
+   - Alternative: another way to reach the same result.
+"""
+
+
+def split_frontmatter(text: str) -> tuple[dict, str]:
+    """(frontmatter dict, body) for a Lab file's text.
+
+    The frontmatter carries only `tags` and an optional `cadence`; the Lab's
+    title is its first `# ` heading, not a frontmatter field — same convention as
+    the workflow cards, and it keeps markdownlint happy (no duplicate H1).
+    """
+    if not text.startswith("---"):
+        return {}, text
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return {}, text
+    return (yaml.safe_load(parts[1]) or {}), parts[2].lstrip("\n")
+
+
+def parse_frontmatter(path: Path) -> dict:
+    """The YAML frontmatter of a Lab file as a dict (empty if there is none)."""
+    return split_frontmatter(path.read_text())[0]
+
+
+def strip_frontmatter(text: str) -> str:
+    """The Lab body with its leading YAML frontmatter block removed."""
+    return split_frontmatter(text)[1]
+
+
+def first_heading(body: str) -> str:
+    """The first level-1 markdown heading (`# ...`) in a Lab body, or ''."""
+    for line in body.splitlines():
+        if line.startswith("# "):
+            return line[2:].strip()
+    return ""
+
+
+def load_labs() -> dict:
+    """{lab_id: {title, tags, cadence, path}} for every Lab markdown file."""
+    labs = {}
+    if not LABS_DIR.exists():
+        return labs
+    for path in sorted(LABS_DIR.glob("*.md")):
+        meta, body = split_frontmatter(path.read_text())
+        lab_id = path.stem
+        labs[lab_id] = {
+            "title": first_heading(body) or lab_id,
+            "tags": meta.get("tags") or [],
+            "cadence": str(meta.get("cadence") or ""),
+            "path": path,
+        }
+    return labs
+
+
+def statuses() -> list[dict]:
+    """Every Lab with its derived schedule state, most urgent first.
+
+    Scheduled Labs (those with a cadence) sort ahead of on-demand ones; within
+    the scheduled group, never-practiced sorts first, then most overdue.
+    """
+    labs = load_labs()
+    state = load_state(STATE)
+    today = date.today()
+    rows = []
+    for lab_id, meta in labs.items():
+        cadence = meta["cadence"]
+        last = state.get(lab_id)
+        # No cadence → practice-on-demand: never scheduled, so never "due".
+        overdue = overdue_days(last, cadence, today) if cadence else None
+        rows.append(
+            {
+                "id": lab_id,
+                "title": meta["title"],
+                "tags": meta["tags"],
+                "cadence": cadence,
+                "last": last,
+                "overdue": overdue,
+                "scheduled": bool(cadence),
+            }
+        )
+    rows.sort(key=lambda r: (0 if r["scheduled"] else 1, -(float("inf") if r["overdue"] is None else r["overdue"])))
+    return rows
+
+
+def is_due_row(row: dict) -> bool:
+    """A row is due only if it is scheduled and its cadence has elapsed."""
+    return row["scheduled"] and is_due(row["overdue"])
+
+
+def render_row(row: dict) -> None:
+    if row["scheduled"]:
+        meta = f"every {row['cadence']}"
+        if row["last"]:
+            meta += f" · last {row['last']}"
+        status = status_label(row["overdue"])
+    else:
+        meta = "on demand"
+        status = "—"
+    print(f"  {YELLOW}{row['id']:<24}{RESET}  {status}  ·  {meta}")
+    print(f"      {row['title']}")
+    if row["tags"]:
+        print(f"      {CYAN}#{' #'.join(row['tags'])}{RESET}")
+    print()
+
+
+def _render_body(path: Path, *, for_preview: bool) -> None:
+    """Render a Lab's markdown body (frontmatter stripped) through bat."""
+    body = strip_frontmatter(path.read_text()).lstrip("\n")
+    args = ["bat", "--style=plain", "--language=markdown", "--color=always"]
+    if for_preview:
+        args.append("--paging=never")
+    try:
+        subprocess.run(args, input=body, text=True, check=False)
+    except FileNotFoundError:
+        # bat absent: fall back to raw text so the Lab is still readable.
+        print(body)
+
+
+def render_lab(lab_id: str) -> int:
+    labs = load_labs()
+    if lab_id not in labs:
+        return unknown_lab(lab_id)
+    _render_body(labs[lab_id]["path"], for_preview=False)
+    print(f"\n{CYAN}Work through it in your other pane, then:{RESET}  menu labs done {lab_id}")
+    return 0
+
+
+def cmd_render_preview(lab_id: str) -> int:
+    labs = load_labs()
+    if lab_id not in labs:
+        return 1
+    _render_body(labs[lab_id]["path"], for_preview=True)
+    return 0
+
+
+def cmd_due() -> int:
+    if not load_labs():
+        return warn_no_labs()
+    header("Labs — due to practice")
+    due = [r for r in statuses() if is_due_row(r)]
+    if due:
+        for row in due:
+            render_row(row)
+        print(f"Practice one:  {CYAN}menu labs <id>{RESET}   ·   mark done:  {CYAN}menu labs done <id>{RESET}")
+        return 0
+    print(f"{GREEN}✓{RESET} No Labs due. Browse them all with {CYAN}menu labs list{RESET}.")
+    return 0
+
+
+def cmd_list() -> int:
+    if not load_labs():
+        return warn_no_labs()
+    header("Labs — full deck")
+    for row in statuses():
+        render_row(row)
+    print(f"Practice one:  {CYAN}menu labs <id>{RESET}   ·   pick interactively:  {CYAN}menu labs pick{RESET}")
+    return 0
+
+
+def cmd_nudge() -> int:
+    """Startup nudge: print only what's due, and nothing at all when caught up."""
+    if not load_labs():
+        return 0
+    due = [r for r in statuses() if is_due_row(r)]
+    if not due:
+        return 0
+    header("Labs — due to practice")
+    for row in due:
+        render_row(row)
+    print(f"Practice one:  {CYAN}menu labs <id>{RESET}")
+    return 0
+
+
+def cmd_done(lab_id: str) -> int:
+    labs = load_labs()
+    if lab_id not in labs:
+        return unknown_lab(lab_id)
+    today = date.today().isoformat()
+    state = load_state(STATE)
+    state[lab_id] = today
+    save_state(STATE, state)
+    cadence = labs[lab_id]["cadence"]
+    if cadence:
+        print(f"{GREEN}✓{RESET} Marked '{lab_id}' practiced ({today}). Due again in {parse_cadence(cadence)}d.")
+    else:
+        print(f"{GREEN}✓{RESET} Marked '{lab_id}' practiced ({today}).")
+    return 0
+
+
+def cmd_pick() -> int:
+    labs = load_labs()
+    if not labs:
+        return warn_no_labs()
+    rows = "\n".join(f"{lab_id}\t{meta['title']}" for lab_id, meta in sorted(labs.items()))
+    try:
+        result = subprocess.run(
+            [
+                "fzf",
+                "--delimiter=\t",
+                "--with-nth=2",
+                "--prompt=lab ❯ ",
+                "--preview",
+                "menu labs __render {1}",
+                "--preview-window=right:62%",
+            ],
+            input=rows,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        print(f"fzf not found. Use {CYAN}menu labs list{RESET} then {CYAN}menu labs <id>{RESET}.")
+        return 1
+    selected = result.stdout.strip()
+    if not selected:
+        return 0
+    return render_lab(selected.split("\t", 1)[0])
+
+
+def _authoring_target(slug: str) -> Path:
+    """Where new/edit should write: the repo source dir, falling back to LABS_DIR."""
+    if LABS_SRC.exists() or LABS_SRC.parent.exists():
+        return LABS_SRC / f"{slug}.md"
+    return LABS_DIR / f"{slug}.md"
+
+
+def slugify(name: str) -> str:
+    slug = name.strip().lower().replace(" ", "-")
+    return "".join(c for c in slug if c.isalnum() or c == "-")
+
+
+def cmd_new(name: str) -> int:
+    slug = slugify(name)
+    if not slug:
+        print("A Lab needs a name with at least one letter or digit.")
+        return 1
+    target = _authoring_target(slug)
+    if target.exists():
+        print(f"Lab already exists: {target}")
+        return 1
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(TEMPLATE.format(title=name))
+    # Link into the installed dir so it's usable before the next symlinks:link.
+    if target.parent != LABS_DIR:
+        LABS_DIR.mkdir(parents=True, exist_ok=True)
+        link = LABS_DIR / f"{slug}.md"
+        if not link.exists():
+            link.symlink_to(target)
+    print(f"{GREEN}✓{RESET} Created {target}")
+    print("  Run `task symlinks:link` to make it permanent across machines.")
+    _open_editor(target)
+    return 0
+
+
+def cmd_edit(lab_id: str) -> int:
+    installed = LABS_DIR / f"{lab_id}.md"
+    if installed.exists():
+        # Edit the real repo file, not the symlink, so Syncthing/git see it.
+        _open_editor(installed.resolve())
+        return 0
+    source = LABS_SRC / f"{lab_id}.md"
+    if source.exists():
+        _open_editor(source)
+        return 0
+    return unknown_lab(lab_id)
+
+
+def _open_editor(path: Path) -> None:
+    subprocess.run([os.environ.get("EDITOR", "nvim"), str(path)], check=False)
+
+
+def unknown_lab(lab_id: str) -> int:
+    print(f"No Lab '{lab_id}'.")
+    print(f"See what's available with {CYAN}menu labs list{RESET}, or create it with {CYAN}menu labs new {lab_id}{RESET}.")
+    return 1
+
+
+def warn_no_labs() -> int:
+    print(f"No Labs yet in {LABS_DIR}.")
+    print(f"Create your first with {CYAN}menu labs new <name>{RESET}.")
+    return 0
+
+
+def show_help() -> int:
+    print("menu labs — hands-on practice Labs\n")
+    print(f"  {CYAN}menu labs{RESET}             What's due to practice now")
+    print(f"  {CYAN}menu labs list{RESET}        Every Lab and its schedule status")
+    print(f"  {CYAN}menu labs pick{RESET}        Pick a Lab interactively (fzf)")
+    print(f"  {CYAN}menu labs <id>{RESET}        Open a Lab to read while you work in another pane")
+    print(f"  {CYAN}menu labs done <id>{RESET}   Mark a Lab practiced (advances its schedule)")
+    print(f"  {CYAN}menu labs new <name>{RESET}  Scaffold a new Lab and open it in $EDITOR")
+    print(f"  {CYAN}menu labs edit <id>{RESET}   Edit an existing Lab in $EDITOR")
+    return 0
+
+
+def cmd_subject(arg: str) -> int:
+    """A bare argument: render it if it's a Lab, else treat it as a tool subject.
+
+    The tool-subject path (constellation + flashcards) is wired in a later step;
+    for now an unknown subject just reports what's available.
+    """
+    if arg in load_labs():
+        return render_lab(arg)
+    return unknown_lab(arg)
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args:
+        return cmd_due()
+    sub, rest = args[0], args[1:]
+    if sub in ("help", "-h", "--help"):
+        return show_help()
+    if sub in ("--due", "nudge"):
+        return cmd_nudge()
+    if sub == "list":
+        return cmd_list()
+    if sub == "pick":
+        return cmd_pick()
+    if sub == "__render":
+        return cmd_render_preview(rest[0]) if rest else 1
+    if sub == "done":
+        if not rest:
+            print("Usage: menu labs done <id>")
+            return 1
+        return cmd_done(rest[0])
+    if sub == "new":
+        if not rest:
+            print("Usage: menu labs new <name>")
+            return 1
+        return cmd_new(" ".join(rest))
+    if sub == "edit":
+        if not rest:
+            print("Usage: menu labs edit <id>")
+            return 1
+        return cmd_edit(rest[0])
+    return cmd_subject(sub)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
