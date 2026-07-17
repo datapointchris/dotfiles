@@ -122,6 +122,7 @@ nav:
       - Workflows: apps/workflows.md
   - Architecture:
       - architecture/index.md
+      - Management Interface: architecture/management-interface.md
       - Shell Libraries: architecture/shell-libraries.md
       - Package Management: architecture/package-management.md
       - PATH Ordering Strategy: architecture/path-ordering-strategy.md

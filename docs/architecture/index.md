@@ -23,13 +23,15 @@ Two-layer approach: common base + platform overlay.
 3. Links apps from `apps/{platform}/` to `~/.local/bin/`
 4. Links shell source files from `shell/{platform}/` to `~/.local/shell/`
 
-**Common commands**:
+**Common commands** (`task` is the single front door — see [Management Interface](management-interface.md)):
 
 ```bash
-task symlinks:link      # Deploy all symlinks
+task link               # Deploy all symlinks (→ symlinks:link)
+task relink             # Complete refresh (remove and recreate)
+task update             # Update everything
+task doctor             # Health check: symlinks + package-manifest drift
 task symlinks:check     # Verify symlinks are correct
 task symlinks:show      # Show all symlinks
-task symlinks:relink    # Complete refresh (remove and recreate)
 ```
 
 **Example results**:
