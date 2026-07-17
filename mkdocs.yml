@@ -191,6 +191,7 @@ nav:
           - Active Review & Retention: research/tool-mastery/active-review-and-retention.md
           - Neovim Mastery: research/tool-mastery/neovim-mastery.md
           - Consolidation Architecture: research/tool-mastery/consolidation-architecture.md
+          - Menu System Design: research/tool-mastery/menu-system-design.md
       - AI Research:
           - Overview: research/ai/overview.md
           - Context Engineering: research/ai/context-engineering.md
