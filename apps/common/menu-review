@@ -18,25 +18,32 @@ with no recorded done simply shows as never done. Storing only last_done means
 there is no date to keep in sync and nothing to drift.
 """
 
-import json
 import os
 import subprocess
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 import yaml
 
+# menu-review is symlinked onto PATH; resolve the real path so the repo-root
+# menucore package (shared with menu-labs) is importable. parents[2] is the repo
+# root: apps/common/menu-review → apps/common → apps → <repo>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from menucore import CYAN
+from menucore import GREEN
+from menucore import RESET
+from menucore import YELLOW
+from menucore import header
+from menucore import is_due
+from menucore import load_state
+from menucore import overdue_days
+from menucore import parse_cadence
+from menucore import save_state
+from menucore import status_label
+
 REGISTER = Path(os.environ.get("MENU_REVIEW_REGISTER", Path.home() / "dev" / "review.yml"))
 STATE = Path(os.environ.get("MENU_REVIEW_STATE", Path.home() / "dev" / "review-state.json"))
-
-CADENCE_UNITS = {"d": 1, "w": 7, "mo": 30, "y": 365}
-
-CYAN = "\033[0;96m"
-YELLOW = "\033[0;93m"
-GREEN = "\033[0;92m"
-RESET = "\033[0m"
-BAR = "━" * 48
 
 TEMPLATE = """\
 # Terminal-native review / cadence register, read by `menu review`.
@@ -55,33 +62,12 @@ items:
 """
 
 
-def parse_cadence(token: str) -> int:
-    """Days for a cadence token like 2w / 1mo / 10d / 1y (bare number = days)."""
-    token = str(token).strip()
-    num = "".join(c for c in token if c.isdigit())
-    unit = "".join(c for c in token if c.isalpha())
-    if not num:
-        return 0
-    return int(num) * CADENCE_UNITS.get(unit, 1)
-
-
 def load_items() -> dict | None:
     """The register's items, or None if there is no register file yet."""
     if not REGISTER.exists():
         return None
     data = yaml.safe_load(REGISTER.read_text()) or {}
     return data.get("items") or {}
-
-
-def load_state() -> dict:
-    if not STATE.exists():
-        return {}
-    return json.loads(STATE.read_text() or "{}")
-
-
-def save_state(state: dict) -> None:
-    STATE.parent.mkdir(parents=True, exist_ok=True)
-    STATE.write_text(json.dumps(state, indent=2) + "\n")
 
 
 def statuses() -> list[dict]:
@@ -91,17 +77,13 @@ def statuses() -> list[dict]:
     the item has never been done, which sorts to the very top as most urgent.
     """
     items = load_items() or {}
-    state = load_state()
+    state = load_state(STATE)
     today = date.today()
     rows = []
     for item_id, meta in items.items():
         meta = meta or {}
         last = state.get(item_id)
-        if last:
-            next_due = date.fromisoformat(last) + timedelta(days=parse_cadence(meta.get("cadence", "")))
-            overdue = (today - next_due).days
-        else:
-            overdue = None
+        overdue = overdue_days(last, meta.get("cadence", ""), today)
         rows.append(
             {
                 "id": item_id,
@@ -117,32 +99,11 @@ def statuses() -> list[dict]:
     return rows
 
 
-def is_due(row: dict) -> bool:
-    return row["overdue"] is None or row["overdue"] >= 0
-
-
-def status_label(row: dict) -> str:
-    overdue = row["overdue"]
-    if overdue is None:
-        return "never done"
-    if overdue > 0:
-        return f"overdue {overdue}d"
-    if overdue == 0:
-        return "due today"
-    return f"in {-overdue}d"
-
-
-def header(title: str) -> None:
-    print(f"{CYAN}{BAR}{RESET}")
-    print(f"{CYAN} {title}{RESET}")
-    print(f"{CYAN}{BAR}{RESET}\n")
-
-
 def render_item(row: dict) -> None:
     meta = f"every {row['cadence']}"
     if row["last"]:
         meta += f" · last {row['last']}"
-    print(f"  {YELLOW}{row['id']:<20}{RESET}  {status_label(row)}  ·  {meta}")
+    print(f"  {YELLOW}{row['id']:<20}{RESET}  {status_label(row['overdue'])}  ·  {meta}")
     print(f"      {row['desc']}")
     if row["command"]:
         print(f"      {CYAN}↳ {row['command']}{RESET}")
@@ -164,7 +125,7 @@ def cmd_due() -> int:
         return 0
 
     header("Review — what's due")
-    due = [row for row in rows if is_due(row)]
+    due = [row for row in rows if is_due(row["overdue"])]
     if due:
         for row in due:
             render_item(row)
@@ -197,9 +158,9 @@ def cmd_done(item_id: str) -> int:
         print(f"See what's registered with {CYAN}menu review list{RESET}.")
         return 1
     today = date.today().isoformat()
-    state = load_state()
+    state = load_state(STATE)
     state[item_id] = today
-    save_state(state)
+    save_state(STATE, state)
     days = parse_cadence(items[item_id].get("cadence", ""))
     print(f"{GREEN}✓{RESET} Marked '{item_id}' done ({today}). Due again in {days}d.")
     return 0
@@ -240,7 +201,7 @@ def cmd_nudge() -> int:
     """
     if load_items() is None:
         return 0
-    due = [row for row in statuses() if is_due(row)]
+    due = [row for row in statuses() if is_due(row["overdue"])]
     if not due:
         return 0
     header("Review — due to revisit")
