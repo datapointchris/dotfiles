@@ -1194,7 +1194,7 @@ go_tools:
     description: Stricter gofmt formatter for Go code
 
   - name: golangci-lint
-    package: github.com/golangci/golangci-lint/cmd/golangci-lint
+    package: github.com/golangci/golangci-lint/v2/cmd/golangci-lint
     github_repo: golangci/golangci-lint
     binary_pattern: "golangci-lint-{version_num}-{os}-{go_arch}.tar.gz"
     description: Comprehensive Go linter aggregating 100+ linters
