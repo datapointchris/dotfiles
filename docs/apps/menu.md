@@ -136,13 +136,67 @@ would burn through the rotation. It is timeout-guarded so a slow command cannot 
 replaced the old standalone `toolbox remind` shell-startup block, which fired a passive tool card on
 *every* shell; folding it into the register makes it one actionable, cadenced line instead.
 
+## `menu labs` — hands-on practice
+
+Reviewing a tool's card builds recognition; *using* it builds retention. `menu labs` is the
+practice half: a small deck of hands-on **Labs** that walk you through a tool the way a senior
+engineer walks a junior — do this, expect that, here's why, here's the alternative — while you type
+along in a scratch directory.
+
+```bash
+menu labs                 # what's due to practice now
+menu labs list            # every Lab and its schedule status
+menu labs <id>            # open a Lab to read while you work in another pane
+menu labs done <id>       # mark a Lab practiced — advances its schedule
+menu labs new <name>      # scaffold a new Lab and open it in $EDITOR
+menu labs flash [x]       # quick recall drill from your tool examples
+```
+
+**A Lab is one markdown file.** Labs live in `~/.local/share/menu-labs/*.md` (authored in the
+dotfiles source at `configs/common/.local/share/menu-labs/` and deployed by the symlink manager —
+the same convention as workflow cards). Each Lab teaches one tool or flow: a short copy-pasteable
+**setup block** that stages a throwaway directory, then numbered steps giving the command, the
+expected result, why it works, and alternatives. Frontmatter carries only `tags` (the same
+discovery vocabulary the picker uses) and an optional `cadence`; the title is the file's first
+`#` heading, exactly like a workflow card.
+
+**You drive the panes.** The runner is deliberately minimal — it renders the Lab and tracks the
+schedule, nothing more. Open two tmux panes yourself: read the Lab in one (`menu labs <id>` pipes
+it through `bat`), copy its setup block into the other, and work through the steps at your own
+keyboard. There is no grading, no sandbox automation, no keystroke capture — the point is the reps,
+not a score.
+
+**Scheduling reuses the review model.** A Lab with a `cadence` is scheduled exactly like a review
+item — `next_due = last_done + cadence`, derived not stored — with state in `~/dev/labs-state.json`
+(Syncthing-synced; override the deck path with `MENU_LABS_DIR` and state with `MENU_LABS_STATE`). A
+Lab with no cadence is practice-on-demand and never shows as due. `menu labs` shows what's due; mark
+one `done` once you've worked through it.
+
+**Flashcards need no authoring.** `menu labs flash` builds a recall deck straight from the tool
+registry's examples: it shows an example's description, you recall the command, then reveal and
+self-mark. Scope it to one tool or tag with `menu labs flash <x>`. This gives every tool something
+to drill from day one, before any Lab exists for it. Sessions stay short by design — a few minutes
+daily beats cramming.
+
+**Federation for a bare tool name.** `menu labs <tool>` (when the argument isn't a Lab) shells to
+`menu __show` to assemble that tool's whole constellation across every lens — its registry entry,
+a same-named workflow card, aliases, functions — then points you at its flashcards. So even with no
+Lab written, asking to practice a tool surfaces everything you already have on it.
+
+**In the nudge.** The review register carries a `practice-a-lab` item (`show: menu labs --due`), so
+the twice-daily startup nudge advertises when Labs come due, right beside the neglected-tool
+reminder — and stays silent when you're caught up.
+
 ## Implementation
 
-**Location**: `apps/common/menu` (picker, bash) and `apps/common/menu-review` (register, Python)
+**Location**: `apps/common/menu` (picker, bash), `apps/common/menu-review` (register, Python), and
+`apps/common/menu-labs` (Labs, Python). The two Python halves share `menucore` — a small repo-root
+package (cadence parsing, atomic state, the color palette) imported via each script's resolved path,
+so no install step is needed and the register and Labs never drift apart on scheduling.
 
 **Dependencies**: `fzf` (picker) and `yq` (registry) drive search; the full view delegates to
 `toolbox`, `workflows`, `tldr`, `cheat`, and `bat`; `formatting.sh` provides the shell styling. The
-register runs as a `uv` single-file script depending only on `pyyaml`.
+register and Labs run as `uv` single-file scripts depending only on `pyyaml`.
 
 The index is a three-column tab-separated stream — display, source, name — built by
 `build_index`. Two internal subcommands help with debugging and scripting: `menu __index` prints
