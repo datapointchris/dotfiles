@@ -24,6 +24,42 @@ tasks:
       - task --list
 
   # ================================================================
+  # PRIMARY COMMANDS (the front door — everyday verbs)
+  # ================================================================
+
+  install:
+    desc: "Bootstrap this machine (needs sudo): task install -- --machine NAME"
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install.sh" {{.CLI_ARGS}}
+
+  update:
+    desc: Update everything (system packages, language tools, plugins)
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/update.sh"
+
+  link:
+    desc: Create symlinks from dotfiles to home (alias for symlinks:link)
+    cmds:
+      - task: symlinks:link
+
+  relink:
+    desc: Rebuild all symlinks idempotently (alias for symlinks:relink)
+    cmds:
+      - task: symlinks:relink
+
+  doctor:
+    desc: Health check — verify symlinks and package-manifest drift
+    silent: true
+    cmds:
+      - |
+        export TERM=${TERM:-xterm}
+        source "{{.DOTFILES_DIR}}/configs/common/.local/shell/formatting.sh"
+        print_section "Checking symlinks" "cyan"
+        uv run symlinks check
+        print_section "Verifying package manifest" "cyan"
+        packages verify
+
+  # ================================================================
   # SYMLINKS MANAGEMENT
   # ================================================================
 
