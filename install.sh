@@ -129,21 +129,26 @@ install_manifest_phases() {
     run_installer "$lang_tools/cargo-tools.sh" "cargo-tools"
   fi
 
-  # Language Package Managers — derive runtime needs from tool-list presence
-  local need_nvm=false need_uv=false
+  # Language Package Managers — derive runtime needs from tool-list presence.
+  # uv is a special case: beyond any uv_tools, the symlink manager run by
+  # `task symlinks:relink` below is `uv run symlinks`, so uv is required on EVERY
+  # install regardless of the manifest's uv_tools/git_uv_tools lists. A minimal
+  # manifest with empty uv lists (e.g. linux-lxc-server) still needs uv, or the
+  # symlink step fails with exit 127 and no dotfiles get linked. So install the uv
+  # manager unconditionally and gate only the uv *tools* on the manifest lists.
+  local need_nvm=false need_uv_tools=false
   manifest_list_non_empty "npm_globals" && need_nvm=true
-  { manifest_list_non_empty "uv_tools" || manifest_list_non_empty "git_uv_tools"; } && need_uv=true
+  { manifest_list_non_empty "uv_tools" || manifest_list_non_empty "git_uv_tools"; } && need_uv_tools=true
 
-  if $need_nvm || $need_uv; then
-    print_header "Language Package Managers"
-  fi
+  print_header "Language Package Managers"
 
   if $need_nvm; then
     run_installer "$lang_managers/nvm.sh" "nvm"
     run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
   fi
-  if $need_uv; then
-    run_installer "$lang_managers/uv.sh" "uv"
+
+  run_installer "$lang_managers/uv.sh" "uv"
+  if $need_uv_tools; then
     run_installer "$lang_tools/uv-tools.sh" "uv-tools"
   fi
 
