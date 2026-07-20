@@ -1,3 +1,8 @@
+-- Custom toggling floating terminal (Space t t / :Floaterminal). Lives under
+-- lua/core/ and is required explicitly from init.lua rather than sitting in a
+-- top-level plugin/ directory — one stray auto-sourced file there was easy to
+-- overlook when searching the config, so all custom code stays under lua/.
+
 vim.keymap.set('t', '<esc><esc>', '<c-\\><c-n>')
 
 local state = {
@@ -53,7 +58,5 @@ local toggle_terminal = function()
   vim.cmd('normal i')
 end
 
--- Example usage:
--- Create a floating window with default dimensions
 vim.api.nvim_create_user_command('Floaterminal', toggle_terminal, {})
 vim.keymap.set({ 'n', 't' }, '<leader>tt', toggle_terminal, { desc = 'Terminal: toggle floating terminal' })
