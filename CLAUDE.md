@@ -141,9 +141,11 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Symlink Management Critical Rule**:
 
-After adding or removing files in the repository, run: `task symlinks:link`
+After **adding** files, run `task symlinks:link` (create-only — it adds new links but leaves stale ones behind).
 
-Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations.
+After **removing or renaming** files, run `task relink` (alias for `symlinks:relink`). Unlike `symlinks:link`, it removes every symlink and recreates them, so it **prunes dangling links** left by deletions/moves. `symlinks:link` does NOT prune — a deleted source leaves a broken symlink in `~`. When in doubt, `task relink` is always safe (idempotent).
+
+Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations, or broken symlinks pointing at deleted repo files.
 
 ## Documentation Philosophy
 
