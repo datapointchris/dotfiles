@@ -5,8 +5,9 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>', { desc = 'Clear highlights' 
 -- Put single character cut text in the black hole register
 vim.keymap.set('n', 'x', '"_x', { desc = 'Cut >> blackhole' })
 
--- Select all
-vim.keymap.set('n', '<C-a>', 'gg<S-v>G', { desc = 'Select all' })
+-- Select all. On <leader>a rather than <C-a> so the native <C-a>/<C-x>
+-- increment/decrement-number pair stays intact.
+vim.keymap.set('n', '<leader>a', 'gg<S-v>G', { desc = 'Select all' })
 
 -- Reload neovim config or execute lua
 vim.keymap.set('n', '<leader>rr', '<cmd>source ~/.config/nvim/init.lua<cr>', { desc = 'Reload: source init.lua' })
@@ -95,6 +96,13 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>bD', function()
     require('mini.bufremove').delete(0, true)
   end, { desc = 'Buffer delete (force, discard changes)' })
+
+  -- Cycle buffers on ]b/[b (vim-unimpaired convention, matching ]q/]h/]d).
+  -- Deliberately NOT <S-h>/<S-l>: those would shadow native H/L (jump cursor to
+  -- top/bottom of the visible screen). BufferLineCycle keeps the jump in sync
+  -- with the visual order shown in the bufferline tabline.
+  vim.keymap.set('n', ']b', '<cmd>BufferLineCycleNext<CR>', { desc = 'Buffer: next' })
+  vim.keymap.set('n', '[b', '<cmd>BufferLineCyclePrev<CR>', { desc = 'Buffer: previous' })
 end
 
 ----------------------------------------
