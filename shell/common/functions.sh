@@ -739,3 +739,100 @@ function yt-transcript() {
   echo
   rm -rf "$tmp"
 }
+
+#@doshell
+#--> doshell <task> — ask Claude for a shell command and preload it at your next prompt to edit or run
+function doshell() {
+  if [ $# -eq 0 ]; then
+    echo "Usage: doshell <what you want to do>"
+    echo "Loads a suggested command at your next prompt — review it, then Enter to run (or edit first)."
+    return 1
+  fi
+  # Pass the OS so Claude returns GNU-vs-BSD-correct commands (you run both macOS
+  # and Arch). Ask for only the command so it lands clean on the prompt line;
+  # strip any stray ``` fence lines defensively.
+  local cmd
+  cmd=$(claude -p "You are a shell expert on $(uname -s). Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d')
+  if [[ -z "$cmd" ]]; then
+    echo "doshell: no command returned" >&2
+    return 1
+  fi
+  # print -z pushes the command onto the zsh line-editor buffer, so it appears at
+  # your NEXT prompt ready to run (Enter) or edit — nothing executes on its own.
+  # This needs no clipboard, so it works even where copy/paste is flaky. Also
+  # copy it to the system clipboard when a clipboard command is available.
+  if command -v pbcopy >/dev/null 2>&1; then printf '%s' "$cmd" | pbcopy
+  elif command -v wl-copy >/dev/null 2>&1; then printf '%s' "$cmd" | wl-copy
+  elif command -v xclip >/dev/null 2>&1; then printf '%s' "$cmd" | xclip -selection clipboard
+  fi
+  if [[ -n "$ZSH_VERSION" ]]; then
+    print -z "$cmd"
+  else
+    printf '%s\n' "$cmd" # non-zsh: just print it
+  fi
+}
+
+#@find-commit
+#--> find-commit [-d DIR] [--msg|--code] <query> — search commits across every repo in a dir, newest first; Enter opens the diff in nvim
+function find-commit() {
+  local dir="." depth=3 limit=300 mode="all" query=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -d) dir="$2"; shift 2 ;;
+      -n) limit="$2"; shift 2 ;;
+      -L) depth="$2"; shift 2 ;;
+      --msg) mode="msg"; shift ;;
+      --code) mode="code"; shift ;;
+      --all) mode="all"; shift ;;
+      -h | --help)
+        echo "Usage: find-commit [-d DIR] [-n N] [-L N] [--msg|--code|--all] <query>"
+        echo "  Search commit messages (--msg, git log --grep) and/or diff content"
+        echo "  (--code, git log -G pickaxe) across every git repo under DIR, newest"
+        echo "  first. Enter opens the commit in nvim (Diffview); Ctrl-Y yanks the sha."
+        return 0
+        ;;
+      *) query="${query:+$query }$1"; shift ;;
+    esac
+  done
+  [[ -n "$query" ]] || { echo "Usage: find-commit [-d DIR] [--msg|--code] <query>" >&2; return 1; }
+
+  # One match line per commit: "repo sha date subject" (shown) + hidden repo-path
+  # and sha fields. Messages and diffs are searched separately (git has no single
+  # flag that ORs them) and deduped per repo, then the whole set is sorted newest
+  # first across ALL repos so a recent commit never hides below an older repo's.
+  local fmt='%H%x09%ad%x09%s' index
+  index=$(
+    fd -t d -t f -H --max-depth "$depth" '^\.git$' "$dir" 2>/dev/null | while IFS= read -r gitpath; do
+      repo=$(dirname "$gitpath")
+      {
+        [[ "$mode" == msg || "$mode" == all ]] && git -C "$repo" log -n "$limit" --date=short --pretty="$fmt" --grep="$query" -i 2>/dev/null
+        [[ "$mode" == code || "$mode" == all ]] && git -C "$repo" log -n "$limit" --date=short --pretty="$fmt" -G"$query" 2>/dev/null
+      } | awk -F'\t' -v repo="${repo##*/}" -v path="$repo" \
+            'NF && !seen[$1]++ {printf "%s\t%s\t%s\t%s\t%s\n", repo, substr($1,1,9), $2, $3, path}'
+    done | sort -t$'\t' -k3,3r | awk -F'\t' '{printf "%-16s %-10s %s  %s\t%s\t%s\n", $1, $2, $3, $4, $5, $2}'
+  )
+  [[ -n "$index" ]] || { echo "find-commit: no commits matched '$query' under $dir (mode: $mode)" >&2; return 1; }
+
+  local selected
+  selected=$(printf '%s\n' "$index" | fzf --delimiter='\t' --with-nth=1 \
+    --no-sort --no-hscroll \
+    --preview 'git -C {2} show --color=always {3} | delta --paging=never 2>/dev/null || git -C {2} show --color=always {3}' \
+    --preview-window='right:60%,border-left' \
+    --prompt='find-commit ❯ ' \
+    --header="$mode '$query' · newest first · Enter opens nvim · Ctrl-Y yanks sha" \
+    --bind='ctrl-y:execute-silent(printf %s {3} | pbcopy 2>/dev/null || printf %s {3} | wl-copy 2>/dev/null || printf %s {3} | xclip -selection clipboard 2>/dev/null)' \
+    --bind='ctrl-/:toggle-preview')
+  [[ -n "$selected" ]] || return 0
+
+  # -C<repo> points Diffview at the repo (no cd needed); ^! = just this commit.
+  # Inside neovim's terminal ($NVIM = server socket), hand the diff to the parent
+  # editor over RPC rather than nesting a second nvim.
+  local repo_path sha
+  repo_path=$(cut -f2 <<<"$selected")
+  sha=$(cut -f3 <<<"$selected")
+  if [[ -n "${NVIM:-}" ]]; then
+    nvim --server "$NVIM" --remote-expr "execute('DiffviewOpen -C${repo_path} ${sha}^!')" >/dev/null 2>&1
+  else
+    nvim -c "DiffviewOpen -C${repo_path} ${sha}^!"
+  fi
+}
