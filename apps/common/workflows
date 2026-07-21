@@ -61,7 +61,7 @@ render_card() {
   local file="$1"
   shift
   # sed '/./,$!d' drops leading blank lines left behind after frontmatter
-  strip_frontmatter "$file" | sed '/./,$!d' | bat --style=plain --language=markdown "$@"
+  strip_frontmatter "$file" | sed '/./,$!d' | bat --language=markdown "$@"
 }
 
 # Search and preview workflows with fzf
