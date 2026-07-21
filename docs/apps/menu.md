@@ -39,7 +39,7 @@ a result lives:
 
 | Source | Collection | Where it comes from |
 | --- | --- | --- |
-| `[tool]` | tools registry | `$TOOLBOX_REGISTRY`, else `~/dev/tools.yml` |
+| `[tool]` | tools registry | `$TOOLBOX_REGISTRY`, else the registry under the XDG data dir |
 | `[func]` | shell functions | `~/.local/shell/functions.sh` + `$PLATFORM.sh` (`#@name` / `#-->desc` annotations) |
 | `[alias]` | shell aliases | `~/.local/shell/aliases.sh` + `$PLATFORM.sh` |
 | `[git]` | git aliases | `git config --get-regexp '^alias\.'` (invoke as `git <name>`) |

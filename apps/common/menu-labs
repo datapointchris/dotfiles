@@ -57,7 +57,7 @@ LABS_SRC = Path(__file__).resolve().parents[2] / "configs" / "common" / ".local"
 
 # The tool registry backs the zero-authoring flashcard deck (recall the command
 # from an example's description). Same path/override as toolbox and menu.
-REGISTRY = Path(os.environ.get("TOOLBOX_REGISTRY", Path.home() / "dev" / "tools.yml"))
+REGISTRY = Path(os.environ.get("TOOLBOX_REGISTRY") or xdg_data_home() / "toolbox" / "registry.yml")
 
 # A flashcard session stays short — the research says a few minutes / ≤5 new/day
 # beats long cramming — so a session samples at most this many cards.

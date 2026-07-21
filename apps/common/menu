@@ -11,7 +11,7 @@ set -euo pipefail
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 source "$SHELL_DIR/formatting.sh"
 
-REGISTRY="${TOOLBOX_REGISTRY:-$HOME/dev/tools.yml}"
+REGISTRY="${TOOLBOX_REGISTRY:-${XDG_DATA_HOME:-$HOME/.local/share}/toolbox/registry.yml}"
 WORKFLOWS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/workflows"
 SKILLS_DIR="$HOME/.claude/skills"
 # Function/alias sources: the shared files plus the platform file (macos.sh /
