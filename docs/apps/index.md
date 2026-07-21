@@ -26,7 +26,7 @@ Personal CLI tools for enhanced workflows.
 
 - :fontawesome-solid-list: __[Menu](menu.md)__
 
-    Interactive workflow launcher
+    Launcher and federated search across your tools
 
 - :material-toolbox: __[Toolbox](toolbox.md)__
 

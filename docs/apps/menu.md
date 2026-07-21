@@ -12,13 +12,25 @@ sources have it. It stores no content of its own.
 ## Quick Start
 
 ```bash
-menu                    # Interactive picker across everything
-menu keybind            # Picker pre-filtered to a term
-menu find keybind       # Same, explicit
+menu                    # Launcher: your areas + every custom tool you own
+menu keybind            # Search the federated index, pre-filtered to a term
+menu find keybind       # Search, explicit
+menu search keybind     # Same as menu find
 ```
 
-Type to filter, and press **Enter** on any result to open its full view. **From tmux**:
-`Ctrl-Space` then `m` (opens `menu` in a popup at the current path).
+Bare `menu` opens the **launcher** (see below). Passing a term goes straight to the federated
+**search**; type to filter and press **Enter** on any result to open its full view in a pager.
+**From tmux**: `Ctrl-Space` then `m` (opens `menu` in a popup at the current path).
+
+## The launcher
+
+Bare `menu` — no arguments — opens a picker of **your own areas and tools**, so "what can I even run
+here" is one keystroke away. It lists menu's three areas (`find`, `review`, `labs`) followed by every
+tool in the registry's `custom-tools` category, each previewed with its `toolbox` entry. Selecting an
+area enters it; selecting a tool runs it with no arguments (which, by convention, shows that tool's
+help or status). This is the fix for forgetting a tool exists — `packages`, `syncer`, `patterns`,
+`notes`, and the rest are all right there. To skip straight to content search, give `menu` a term or
+use `menu find` / `menu search`.
 
 ## What it searches
 
@@ -78,6 +90,12 @@ So selecting your own `backmeup` shows its live `--help` alongside its registry 
 external `bat` shows its registry entry with the tldr and cheat pages. The `--help` lens is
 limited to your own tools on purpose: running `--help` against an arbitrary external command is
 not safe, and externals are covered by tldr and cheat anyway.
+
+The full view is piped through a pager (`less -FRX`): short subjects print inline, long composites
+scroll comfortably, and the output stays on screen after you quit so you can select and copy any
+command from it. Every lens also names its source — extracted functions and aliases carry the file
+path via `bat --file-name`, and the composite view prints a `↳ path` breadcrumb — so you always know
+what you're looking at.
 
 ## `menu review` — what's due to revisit
 
@@ -194,9 +212,10 @@ reminder — and stays silent when you're caught up.
 package (cadence parsing, atomic state, the color palette) imported via each script's resolved path,
 so no install step is needed and the register and Labs never drift apart on scheduling.
 
-**Dependencies**: `fzf` (picker) and `yq` (registry) drive search; the full view delegates to
-`toolbox`, `workflows`, `tldr`, `cheat`, and `bat`; `formatting.sh` provides the shell styling. The
-register and Labs run as `uv` single-file scripts depending only on `pyyaml`.
+**Dependencies**: `fzf` (picker) and `yq` (registry) drive search and the launcher; the full view
+delegates to `toolbox`, `workflows`, `tldr`, `cheat`, and `bat`, and is paged through `less`;
+`formatting.sh` provides the shell styling. The register and Labs run as `uv` single-file scripts
+depending only on `pyyaml`.
 
 The index is a three-column tab-separated stream — display, source, name — built by
 `build_index`. Two internal subcommands help with debugging and scripting: `menu __index` prints

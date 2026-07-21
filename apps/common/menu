@@ -88,9 +88,10 @@ show_help() {
   echo "A pointer across your collections. Search once, jump to the source."
   echo ""
   print_section "Usage" "brightmagenta"
-  echo "  $(print_cyan "menu")               Interactive picker; Enter opens the full view"
-  echo "  $(print_cyan "menu") <term>        Open the picker pre-filtered to <term>"
-  echo "  $(print_cyan "menu find") <term>   Same as above"
+  echo "  $(print_cyan "menu")               Launcher — your areas plus every tool you own"
+  echo "  $(print_cyan "menu") <term>        Search, pre-filtered to <term>"
+  echo "  $(print_cyan "menu find") <term>   Search (Enter opens the full view)"
+  echo "  $(print_cyan "menu search") <term> Search (same as menu find)"
   echo "  $(print_cyan "menu help")          Show this help"
   echo ""
   echo "  Enter on any result assembles every lens that has it:"
@@ -221,26 +222,54 @@ index_tmux_keys() {
 # re-ranks by score regardless, so the sort only makes __index readable.
 build_index() { { index_tools; index_workflows; index_skills; index_functions; index_aliases; index_git_aliases; index_forgit; index_tmux_keys; } | sort; }
 
-# Render one entry by delegating to the collection that owns it
+# Render one entry by delegating to the collection that owns it.
+#
+# In the preview pane we DO want bat's filename header (the width cost is fine),
+# so add it explicitly on top of your global plain default — `--style=+header`
+# is additive, so plain stays the default everywhere else. --decorations=always
+# forces it to draw even though fzf captures our output over a pipe, and
+# --file-name labels stdin content (extracted funcs/aliases) with its real path.
 cmd_preview() {
   local src="$1" name="$2"
+  local bat_header=(bat --style=+header --decorations=always --color=always)
   case "$src" in
     tool) toolbox show "$name" ;;
     workflow) workflows show "$name" ;;
-    skill) bat --style=plain --color=always --language=markdown "$SKILLS_DIR/$name/SKILL.md" ;;
-    func) extract_function "$name" | bat --style=plain --color=always --language=bash ;;
-    alias) extract_alias "$name" | bat --style=plain --color=always --language=bash ;;
-    git) extract_gitalias "$name" | bat --style=plain --color=always --language=bash ;;
+    skill) "${bat_header[@]}" --language=markdown "$SKILLS_DIR/$name/SKILL.md" ;;
+    func) extract_function "$name" | "${bat_header[@]}" --language=bash --file-name "$(lens_source function "$name")" ;;
+    alias) extract_alias "$name" | "${bat_header[@]}" --language=bash --file-name "$(lens_source alias "$name")" ;;
+    git) extract_gitalias "$name" | "${bat_header[@]}" --language=bash --file-name "$(lens_source gitalias "$name")" ;;
     forgit) extract_forgit "$name" ;;
     tmux) workflows __render "$TMUX_COMMANDS_CARD" ;;
   esac
 }
 
-# One lens = one source of truth for a subject. Each renders a section header
-# then delegates to the owning tool. Colors survive because the full view writes
-# straight to stdout (the terminal), not into a pipe.
+# Where a subject physically lives for a given lens. Extracted content (funcs,
+# aliases) and bat's plain default (from your bat config) both hide the origin,
+# so selecting a result left you not knowing what file you'd landed in. The full
+# view prints this path as a breadcrumb; the preview feeds it to bat --file-name.
+lens_source() {
+  case "$1" in
+    function) grep -lsE "^#@$2\$" "${FUNCTION_FILES[@]}" 2>/dev/null | head -1 ;;
+    alias)    grep -lsE "^alias $2=" "${ALIAS_FILES[@]}" 2>/dev/null | head -1 ;;
+    skill)    echo "$SKILLS_DIR/$2/SKILL.md" ;;
+    workflow) echo "$WORKFLOWS_DIR/$2.md" ;;
+    forgit)   echo "$FORGIT_PLUGIN" ;;
+    tmuxkey)  echo "$TMUX_COMMANDS_CARD" ;;
+    gitalias) echo "git config: alias.$2" ;;
+  esac
+}
+
+# One lens = one source of truth for a subject. Each renders a section header,
+# names its source file, then delegates to the owning tool. The full view is
+# piped into a pager (see cmd_show), so every delegate must force color even
+# when its stdout is not a terminal — bat gets --color=always, cheat --colorize,
+# and workflow cards go through `workflows __render` (which forces color) rather
+# than `workflows show` (which does not).
 render_lens() {
   local lens="$1" subject="$2"
+  local src; src=$(lens_source "$lens" "$subject")
+  [[ -n "$src" ]] && print_info "↳ $src"
   case "$lens" in
     help)
       print_section "help — live flags ($subject --help)" "brightgreen"
@@ -256,27 +285,27 @@ render_lens() {
       ;;
     cheat)
       print_section "cheat — cheatsheet" "brightmagenta"
-      cheat "$subject" 2>/dev/null || true
+      cheat --colorize "$subject" 2>/dev/null || true
       ;;
     workflow)
       print_section "workflow — your reference card" "brightcyan"
-      workflows show "$subject"
+      workflows __render "$WORKFLOWS_DIR/$subject.md"
       ;;
     skill)
       print_section "skill — Claude skill" "brightgreen"
-      bat --style=plain --color=always --language=markdown "$SKILLS_DIR/$subject/SKILL.md"
+      bat --color=always --language=markdown "$SKILLS_DIR/$subject/SKILL.md"
       ;;
     function)
       print_section "function — your shell function" "brightcyan"
-      extract_function "$subject" | bat --style=plain --color=always --language=bash
+      extract_function "$subject" | bat --color=always --language=bash
       ;;
     alias)
       print_section "alias — your shell alias" "brightcyan"
-      extract_alias "$subject" | bat --style=plain --color=always --language=bash
+      extract_alias "$subject" | bat --color=always --language=bash
       ;;
     gitalias)
       print_section "git alias — invoke as git $subject" "brightcyan"
-      extract_gitalias "$subject" | bat --style=plain --color=always --language=bash
+      extract_gitalias "$subject" | bat --color=always --language=bash
       ;;
     forgit)
       print_section "forgit — fzf-interactive git shortcut" "brightcyan"
@@ -284,10 +313,20 @@ render_lens() {
       ;;
     tmuxkey)
       print_section "tmux — keybinding reference" "brightcyan"
-      workflows show tmux-commands
+      workflows __render "$TMUX_COMMANDS_CARD"
       ;;
   esac
   echo ""
+}
+
+# Route the full view through a pager so you can scroll a long composite
+# comfortably instead of fighting terminal scrollback. less -F prints directly
+# when it fits one screen (short views feel inline); -R keeps the forced colors;
+# -X leaves the output on the terminal after you quit (no alternate screen), so
+# you can still select and copy any command from it. When our own stdout is not
+# a terminal (piped, e.g. tests), skip paging and pass through.
+page() {
+  if [[ -t 1 ]]; then less -FRX; else cat; fi
 }
 
 # The full view for one subject: every lens that has content, in priority order
@@ -305,10 +344,12 @@ cmd_show() {
   # and matches everything). A keybinding is only ever a keybinding, so resolve
   # it first with the fixed-string is_tmux_key test and short-circuit.
   if is_tmux_key "$subject"; then
-    print_header "$subject" "brightcyan"
-    print_info "Lenses: tmuxkey"
-    echo ""
-    render_lens tmuxkey "$subject"
+    {
+      print_header "$subject" "brightcyan"
+      print_info "Lenses: tmuxkey"
+      echo ""
+      render_lens tmuxkey "$subject"
+    } | page
     return 0
   fi
 
@@ -330,13 +371,72 @@ cmd_show() {
     return 1
   fi
 
-  print_header "$subject" "brightcyan"
-  print_info "Lenses: ${lenses[*]}"
-  echo ""
   local lens
-  for lens in "${lenses[@]}"; do
-    render_lens "$lens" "$subject"
-  done
+  {
+    print_header "$subject" "brightcyan"
+    print_info "Lenses: ${lenses[*]}"
+    echo ""
+    for lens in "${lenses[@]}"; do
+      render_lens "$lens" "$subject"
+    done
+  } | page
+}
+
+# The launcher: bare `menu` lists menu's own areas plus every custom tool you
+# own (registry category custom-tools), so "what can I even run here" is one
+# keystroke away — the fix for forgetting a tool exists. Selecting an area enters
+# it; selecting a tool runs it with no args (which, per your CLI convention,
+# shows that tool's help or status).
+launcher_rows() {
+  {
+    printf 'find\tSearch across tools, workflows, skills, funcs, aliases, git\n'
+    printf 'review\tWhat is due to revisit (cadence register)\n'
+    printf 'labs\tHands-on practice that is due now\n'
+    yq -r '.tools | to_entries | .[]
+      | select(.value.category == "custom-tools" and .key != "menu")
+      | .key + "\t" + (.value.description // "")' "$REGISTRY"
+  } | awk -F'\t' '{printf "%-16s %s\t%s\n", $1, $2, $1}'
+}
+
+cmd_launch_preview() {
+  case "$1" in
+    find) printf 'Federated search across every collection you own — tools,\nworkflows, skills, shell functions, aliases, git aliases, forgit,\ntmux keys. Enter opens the full composite view.\n\nInvoke directly: menu find <term>\n' ;;
+    review) menu-review list 2>/dev/null || echo "What's due to revisit." ;;
+    labs) menu-labs list 2>/dev/null || echo "Hands-on practice that's due." ;;
+    *) toolbox show "$1" 2>/dev/null || printf 'No registry entry for %s.\n' "$1" ;;
+  esac
+}
+
+launcher_run() {
+  case "$1" in
+    find) cmd_find "" ;;
+    review) exec menu-review ;;
+    labs) exec menu-labs ;;
+    *)
+      if command -v "$1" >/dev/null 2>&1; then
+        exec "$1"
+      else
+        print_warning "'$1' is in the registry but not on your PATH."
+        return 1
+      fi
+      ;;
+  esac
+}
+
+cmd_launch() {
+  local selected
+  selected=$(
+    launcher_rows \
+      | fzf --delimiter='\t' --with-nth=1 \
+          --tiebreak=begin,length \
+          --no-hscroll \
+          --preview 'menu __launch_preview {2}' \
+          --preview-window=right:62% \
+          --prompt='menu ❯ ' \
+          --header='Your areas & tools · Enter runs it · type to filter'
+  )
+  [[ -n "$selected" ]] || return 0
+  launcher_run "$(cut -f2 <<<"$selected")"
 }
 
 cmd_find() {
@@ -346,6 +446,8 @@ cmd_find() {
     build_index \
       | fzf --delimiter='\t' --with-nth=1 \
           --query="$query" \
+          --tiebreak=begin,length \
+          --no-hscroll \
           --preview 'menu __preview {2} {3}' \
           --preview-window=right:62% \
           --prompt='menu ❯ ' \
@@ -358,9 +460,11 @@ cmd_find() {
 }
 
 case "${1:-}" in
+  "") cmd_launch ;;
   help | -h | --help) show_help ;;
   __index) build_index ;;
   __preview) cmd_preview "$2" "$3" ;;
+  __launch_preview) cmd_launch_preview "$2" ;;
   __show) cmd_show "$2" ;;
   review)
     # The temporal half (cadence register) lives in the menu-review helper —
@@ -374,7 +478,8 @@ case "${1:-}" in
     shift
     exec menu-labs "$@"
     ;;
-  find)
+  find | search)
+    # search and find are the same motion — one name to remember, not two.
     shift
     cmd_find "$@"
     ;;
