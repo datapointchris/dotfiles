@@ -8,10 +8,12 @@
 Answers "what should I revisit or run on a cadence?". Invoked as `menu review`.
 
 Two files, by design:
-  - review.yml            declarative config you hand-edit (description, cadence,
+  - a register            declarative config you hand-edit (description, cadence,
                           optional command). This tool only ever reads it, so your
-                          comments and layout are never disturbed.
-  - review-state.json     the last-done date per item, written by `done`.
+                          comments and layout are never disturbed. Owned by
+                          dotfiles, symlinked under the XDG data dir.
+  - a state file          the last-done date per item, written by `done`. Under
+                          the XDG state dir. Paths resolve via the constants below.
 
 The due date is derived, never stored: next_due = last_done + cadence. A new item
 with no recorded done simply shows as never done. Storing only last_done means
@@ -19,6 +21,7 @@ there is no date to keep in sync and nothing to drift.
 """
 
 import os
+import re
 import subprocess
 import sys
 from datetime import date
@@ -41,9 +44,11 @@ from menucore import overdue_days
 from menucore import parse_cadence
 from menucore import save_state
 from menucore import status_label
+from menucore import xdg_data_home
+from menucore import xdg_state_home
 
-REGISTER = Path(os.environ.get("MENU_REVIEW_REGISTER", Path.home() / "dev" / "review.yml"))
-STATE = Path(os.environ.get("MENU_REVIEW_STATE", Path.home() / "dev" / "review-state.json"))
+REGISTER = Path(os.environ.get("MENU_REVIEW_REGISTER") or xdg_data_home() / "menu-review" / "register.yml")
+STATE = Path(os.environ.get("MENU_REVIEW_STATE") or xdg_state_home() / "menu" / "review-state.json")
 
 TEMPLATE = """\
 # Terminal-native review / cadence register, read by `menu review`.
@@ -193,11 +198,11 @@ def run_show(row: dict) -> None:
 def cmd_nudge() -> int:
     """Startup nudge: print only what's due, and nothing at all when caught up.
 
-    This is what the first shell of each half-day calls. The twice-a-day slot
-    gate lives in the shell caller (a cheap `date +%F-%p` compare), so this stays
-    a pure renderer — it never throttles itself, it just shows due items or stays
-    silent. Silence-when-caught-up is the whole point: a nudge you don't notice on
-    a clear day is a nudge you'll still read on a busy one.
+    The shell caller gates how often this fires (a cheap marker-mtime check
+    against the configured interval), so this stays a pure renderer — it never
+    throttles itself, it just shows due items or stays silent. Silence-when-
+    caught-up is the whole point: a nudge you don't notice on a clear day is a
+    nudge you'll still read on a busy one.
     """
     if load_items() is None:
         return 0
@@ -223,12 +228,41 @@ def cmd_edit() -> int:
     return 0
 
 
+# The nudge interval is stored as plain minutes in the synced state dir so the
+# shell gate can read it with a bare `cat` (no parsing) and the value is shared
+# across machines. NUDGE_INTERVAL is the same file the .zshrc gate reads.
+NUDGE_INTERVAL = xdg_state_home() / "menu" / "nudge-interval-minutes"
+
+
+def parse_duration_minutes(dur: str) -> int | None:
+    """'4h' → 240, '90m' → 90, bare '4' → hours. None if unparseable."""
+    match = re.fullmatch(r"(\d+)\s*([hm]?)", dur.strip())
+    if not match:
+        return None
+    count = int(match.group(1))
+    unit = match.group(2) or "h"  # a bare number means hours
+    return count * 60 if unit == "h" else count
+
+
+def cmd_nudge_every(dur: str) -> int:
+    """Set how often the startup nudge may fire (e.g. 4h, 90m, 4)."""
+    minutes = parse_duration_minutes(dur)
+    if minutes is None or minutes <= 0:
+        print("Usage: menu review nudge-every <duration>  (e.g. 4h, 90m, 4)")
+        return 1
+    NUDGE_INTERVAL.parent.mkdir(parents=True, exist_ok=True)
+    NUDGE_INTERVAL.write_text(f"{minutes}\n")
+    print(f"Nudge interval set to {minutes} minutes.")
+    return 0
+
+
 def show_help() -> int:
     print("menu review — what's due to revisit\n")
     print("  menu review            What's due now, most overdue first")
     print("  menu review list       Every registered item and its status")
     print("  menu review done <id>  Mark an item done (advances its due date)")
     print("  menu review edit       Edit the register in $EDITOR")
+    print("  menu review nudge-every <dur>  Set the startup-nudge interval (e.g. 4h)")
     return 0
 
 
@@ -243,6 +277,11 @@ def main() -> int:
         return cmd_list()
     if sub == "nudge":
         return cmd_nudge()
+    if sub == "nudge-every":
+        if not rest:
+            print("Usage: menu review nudge-every <duration>  (e.g. 4h, 90m, 4)")
+            return 1
+        return cmd_nudge_every(rest[0])
     if sub == "edit":
         return cmd_edit()
     if sub == "done":

@@ -110,20 +110,21 @@ menu review done <id>     # mark an item done — advances its due date
 menu review edit          # edit the register in $EDITOR
 ```
 
-The register is deliberately **two files**, following the split between configuration you own and
+The register is deliberately **two files**, following the split between authored content you own and
 state the tool manages:
 
-- `~/dev/review.yml` — declarative config you hand-edit: each item's `description`, `cadence`
-  (`2w`, `1mo`, `10d`, `1y`), an optional `command` to show, and an optional `show:` command to
-  *run* (see the nudge below). `menu review` only ever reads the file, so your comments and layout
-  are never disturbed.
-- `~/dev/review-state.json` — the last-done date per item, written by `done`.
+- a **register** — declarative config you hand-edit: each item's `description`, `cadence`, an
+  optional `command` to show, and an optional `show:` command to *run* (see the nudge below).
+  `menu review` only ever reads it, so your comments and layout are never disturbed. It is owned by
+  dotfiles and symlinked under the XDG data dir, so it is version-controlled and reaches every machine.
+- a **state file** — the last-done date per item, written by `done`. It lives under the XDG state
+  dir; keeping it out of git avoids a commit on every `done`.
 
 The due date is **derived, never stored**: `next_due = last_done + cadence`. Marking something done
 just stamps today, so there is no date to keep in sync and nothing to drift. A new item with no
-recorded done shows as *never done* and sorts to the top. Both files live in `~/dev` (Syncthing-
-synced) alongside the tools registry, so "due" is consistent across machines; override the paths
-with `MENU_REVIEW_REGISTER` and `MENU_REVIEW_STATE`.
+recorded done shows as *never done* and sorts to the top. Replication of the state across machines is
+arranged by the sync layer, not the tool; override either path with `MENU_REVIEW_REGISTER` /
+`MENU_REVIEW_STATE`.
 
 This half is written in Python (`apps/common/menu-review`), which `menu review` delegates to — date
 arithmetic and JSON state are far cleaner there than in shell. The picker stays bash, because it is
@@ -131,17 +132,17 @@ just `fzf` glue.
 
 ### The startup nudge
 
-`menu review` is pull — it only helps when you remember to run it. The nudge makes it push: the
-first shell of each half-day (morning and afternoon, at most twice a day) surfaces what's due, and
-stays silent when you are caught up. This replaces the old `workflows motd` random-card-on-startup —
-scheduled return to a topic you chose beats random exposure to one you didn't.
+`menu review` is pull — it only helps when you remember to run it. The nudge makes it push: at most
+once per interval (default 4h, set with `menu review nudge-every <dur>`), a shell surfaces what's due
+and stays silent when you are caught up. This replaces the old `workflows motd` random-card-on-startup
+— scheduled return to a topic you chose beats random exposure to one you didn't.
 
-The gate lives in `.zshrc`: a cheap `date +%F-%p` slot compare against a marker file decides whether
-this is the first shell of a new slot, and only then spawns the reviewer. Keeping the gate in shell
-means the Python script launches twice a day, not on every prompt. `menu-review nudge` is the
-renderer it calls — it prints due items or nothing, and does no throttling of its own. The marker
-lives in `$XDG_STATE_HOME/menu-review/nudge-slot` (machine-local, **not** Syncthing-synced), so each
-machine's first-shell-of-the-day is independent.
+The gate lives in `.zshrc`: a cheap check of the marker file's age against the interval decides
+whether enough time has passed, and only then spawns the reviewer. Keeping the gate in shell means
+the Python script launches at most once per interval, not on every prompt. `menu-review nudge` is the
+renderer it calls — it prints due items or nothing, and does no throttling of its own. The marker and
+interval live in the synced menu state dir, so the schedule is shared across machines — one rolling
+nudge budget, not one per machine.
 
 **Live content (`show:`).** A register item can carry a `show:` command whose output is run and
 inlined *when that item is due in the nudge* — distinct from `command:`, which is only displayed.

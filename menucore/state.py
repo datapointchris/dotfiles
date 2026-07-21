@@ -1,8 +1,8 @@
 """Last-done state: a ``{item_id: last_done_iso}`` JSON map, written atomically.
 
 The register/deck config is read-only to the tools; only this state file is ever
-written. Lives in ``~/dev/`` so it is Syncthing-synced and the schedule survives
-across machines.
+written. It lives under the XDG state dir (resolved by the caller); replication
+across machines, if any, is arranged by the sync layer, not by this module.
 """
 
 import json

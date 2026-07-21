@@ -1,0 +1,75 @@
+# Terminal-native review / cadence register, read by `menu review`.
+#
+# This file is declarative config — edit it freely; `menu review` only ever
+# reads it. The "done" state lives in review-state.json, which the tool writes,
+# so your comments and layout here are never touched.
+#
+#   description  what to revisit or run
+#   cadence      how often: <n>d / <n>w / <n>mo / <n>y  (e.g. 2w, 1mo)
+#   command      optional; shown so you know what to run (not auto-run)
+#
+# The due date derives from last-done + cadence, so there is no date to keep
+# here. A new item with no recorded "done" simply shows as never done.
+
+items:
+  brew-maintenance:
+    description: Update Homebrew, clean caches, run doctor
+    cadence: 2w
+    command: brew-maintenance
+
+  audit-docs:
+    description: Audit docs, CLAUDE.md, and memory for drift in the current repo
+    cadence: 1mo
+    command: claude /audit-docs
+
+  revisit-a-tool:
+    description: Relearn a tool you've let go cold
+    cadence: 1w
+    command: toolbox remind
+    show: toolbox remind
+
+  practice-a-lab:
+    description: Work through a Lab you're due on (hands-on practice)
+    cadence: 1w
+    command: menu labs
+    show: menu labs --due
+
+  flow-review:
+    description: Analyze how you work in the terminal; codify the better ways
+    cadence: 1mo
+    command: claude /flow-review
+
+  indy-reindex:
+    description: Re-index indy so semantic search stays current with code changes
+    cadence: 2w
+    command: indy index
+
+  pre-commit-update:
+    description: Autoupdate pre-commit hook versions across all repos
+    cadence: 1mo
+    command: forge dies run maintenance/pre-commit-update.sh
+
+  dev-review:
+    description: Cross-repo situational overview — activity, new tools, drift
+    cadence: 1mo
+    command: claude /dev-review
+
+  toolbox-check:
+    description: Check personal-tool drift (registry vs PATH vs disk)
+    cadence: 1mo
+    command: toolbox check
+
+  cleanup-claude-md:
+    description: Cross-project CLAUDE.md and memory coherence and dedup
+    cadence: 3mo
+    command: claude /cleanup-claude-md
+
+  audit-repo-quality:
+    description: Audit a repo's infrastructure and deployment quality
+    cadence: 3mo
+    command: claude /audit-repo-quality
+
+  repo-hygiene-checks:
+    description: Run repo-hygiene check dies (planning dir, pre-commit, gitignore, CLAUDE.md)
+    cadence: 3mo
+    command: forge dies run checks/has-planning-dir.sh

@@ -22,6 +22,8 @@ from menucore.render import GREEN
 from menucore.render import RESET
 from menucore.render import YELLOW
 from menucore.render import header
+from menucore.paths import xdg_data_home
+from menucore.paths import xdg_state_home
 from menucore.state import load_state
 from menucore.state import save_state
 
@@ -33,6 +35,8 @@ __all__ = [
     "status_label",
     "load_state",
     "save_state",
+    "xdg_data_home",
+    "xdg_state_home",
     "CYAN",
     "YELLOW",
     "GREEN",

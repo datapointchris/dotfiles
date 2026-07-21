@@ -44,10 +44,12 @@ from menucore import overdue_days
 from menucore import parse_cadence
 from menucore import save_state
 from menucore import status_label
+from menucore import xdg_data_home
+from menucore import xdg_state_home
 
 # Runtime reads go through the installed dir (symlinks resolve to repo content).
-LABS_DIR = Path(os.environ.get("MENU_LABS_DIR", Path.home() / ".local" / "share" / "menu-labs"))
-STATE = Path(os.environ.get("MENU_LABS_STATE", Path.home() / "dev" / "labs-state.json"))
+LABS_DIR = Path(os.environ.get("MENU_LABS_DIR") or xdg_data_home() / "menu-labs")
+STATE = Path(os.environ.get("MENU_LABS_STATE") or xdg_state_home() / "menu" / "labs-state.json")
 
 # Authoring (new/edit) writes to the repo source so Syncthing/git track it,
 # resolved from this script's real location rather than a symlink.

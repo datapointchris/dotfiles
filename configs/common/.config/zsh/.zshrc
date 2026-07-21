@@ -436,18 +436,20 @@ fi
 # ------------------------------------------------------------------ #
 # Surface the review register's due items on the first shell of each half-day
 # (morning / afternoon) — at most twice a day, and only when something is due.
-# The slot gate is a cheap `date +%F-%p` compare so the reviewer (a uv/python
-# script) only spawns on a new slot, never on every shell. The nudge itself is
-# silent when nothing is due, so a clear day adds no startup noise. The marker
-# is machine-local (XDG state, not synced) — each machine's first shell of the
-# day is its own.
+# The gate is a cheap marker-mtime check so the reviewer (a uv/python script)
+# only spawns once per interval, never on every shell. The nudge itself is silent
+# when nothing is due, so a clear day adds no startup noise. Marker and interval
+# live in the synced menu state dir, so the interval is shared across machines —
+# a rolling schedule (default 4h; set with `menu review nudge-every <dur>`), not
+# once per machine.
 if [[ -x "$HOME/.local/bin/menu-review" ]]; then
-  _mr_slot="$(date +%F-%p)"
-  _mr_marker="${XDG_STATE_HOME:-$HOME/.local/state}/menu-review/nudge-slot"
-  if [[ "$(cat "$_mr_marker" 2>/dev/null)" != "$_mr_slot" ]]; then
-    mkdir -p "${_mr_marker:h}"
-    print -r -- "$_mr_slot" > "$_mr_marker"
+  _mr_state="${XDG_STATE_HOME:-$HOME/.local/state}/menu"
+  _mr_marker="$_mr_state/nudge"
+  _mr_mins="$(cat "$_mr_state/nudge-interval-minutes" 2>/dev/null || echo 240)"
+  if [[ ! -f "$_mr_marker" || -n "$(find "$_mr_marker" -mmin +"$_mr_mins" 2>/dev/null)" ]]; then
+    mkdir -p "$_mr_state"
+    : > "$_mr_marker"  # touch: mtime = now = last-nudged
     menu-review nudge
   fi
-  unset _mr_slot _mr_marker
+  unset _mr_state _mr_marker _mr_mins
 fi
