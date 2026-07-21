@@ -93,7 +93,7 @@ This dotfiles setup maintains a clear separation between system package managers
 - **OS-level utilities, infrastructure tools, GUI apps, compiled libraries** → system package manager (`system_packages`: apt/pacman/brew). This is the default for anything the OS packages well.
 - **Rust CLI tools** → `cargo binstall` (`cargo_packages`), which downloads prebuilt release binaries. Falls back to `system_packages` only when upstream ships no release binary (binstall would compile from source) or a native package is required on a platform (e.g. Intel-macOS bottles).
 - **Tools needing the latest upstream version, or with their own downstream manager** → prebuilt `github_releases`.
-- **Language runtimes** → version managers, never system language packages: **uv** (Python), **nvm** (Node.js), **rustup** (Rust), plus Go from GitHub releases.
+- **Language runtimes** → version managers, never system language packages: **uv** (Python), **rustup** (Rust), plus Go from GitHub releases. **Node.js is the exception** — installed as a system package (brew/pacman), because no per-project version switching is used and a static-PATH install keeps `node`/`npm` available to non-interactive shells.
 - **Language-scoped tools** → that language's manager: `npm_globals`, `uv_tools`, `go_tools`. Language servers are usually npm.
 
 **Platform Notes**:

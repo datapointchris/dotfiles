@@ -44,7 +44,7 @@ task symlinks:show      # Show all symlinks
 
 **System Packages**: Homebrew (macOS), apt (Ubuntu/WSL, and generic Debian/Ubuntu LXCs), pacman (Arch)
 
-**Language Versions**: uv (Python), nvm (Node.js)
+**Language runtimes**: managed per language via `install/packages.yml` — version managers where useful (uv, rustup, go) or system packages otherwise (Node.js)
 
 **Why separate**: Version managers provide cross-platform consistency and project-specific versions without system conflicts.
 

@@ -63,12 +63,9 @@ Package manager commands and environment configuration across platforms.
 
 ### Version Manager Paths
 
-These paths are added by version managers (nvm, uv) and take precedence:
+These paths are added by version managers (uv) and take precedence:
 
 ```bash
-# nvm (Node.js)
-~/.local/share/nvm/versions/node/<version>/bin
-
 # uv (Python)
 ~/.local/bin        # uv tools installed here
 

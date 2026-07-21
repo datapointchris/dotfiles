@@ -106,7 +106,6 @@ echo ""
 echo -e "${YELLOW}Raw GitHub Content (install scripts):${NC}"
 test_url "theme-install" "https://raw.githubusercontent.com/datapointchris/theme/main/install.sh"
 test_url "font-install" "https://raw.githubusercontent.com/datapointchris/font/main/install.sh"
-test_url "nvm-install" "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh"
 test_url "homebrew-install" "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 echo ""
 

@@ -53,18 +53,5 @@ teardown_file() {
   assert_success
 }
 
-@test "nvm: accepts --update flag" {
-  run bash "$DOTFILES_DIR/install/common/language-managers/nvm.sh" --update
-  assert_success
-}
-
-@test "nvm: normal install mode works" {
-  run bash "$DOTFILES_DIR/install/common/language-managers/nvm.sh"
-  assert_success
-}
-
-@test "nvm: shows already at target version when current" {
-  skip "Requires nvm and Node.js to be installed at target version"
-  run bash "$DOTFILES_DIR/install/common/language-managers/nvm.sh" --update
-  assert_success
-}
+# Node.js is installed as a system package (brew/pacman), not via a language
+# manager, so it has no --update installer to exercise here.

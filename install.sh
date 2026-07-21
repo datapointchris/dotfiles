@@ -136,14 +136,15 @@ install_manifest_phases() {
   # manifest with empty uv lists (e.g. linux-lxc-server) still needs uv, or the
   # symlink step fails with exit 127 and no dotfiles get linked. So install the uv
   # manager unconditionally and gate only the uv *tools* on the manifest lists.
-  local need_nvm=false need_uv_tools=false
-  manifest_list_non_empty "npm_globals" && need_nvm=true
+  local need_npm_globals=false need_uv_tools=false
+  manifest_list_non_empty "npm_globals" && need_npm_globals=true
   { manifest_list_non_empty "uv_tools" || manifest_list_non_empty "git_uv_tools"; } && need_uv_tools=true
 
   print_header "Language Package Managers"
 
-  if $need_nvm; then
-    run_installer "$lang_managers/nvm.sh" "nvm"
+  # Node.js is a system package (installed in the system-packages phase), so npm
+  # globals only need npm on PATH — there is no version manager to bootstrap.
+  if $need_npm_globals; then
     run_installer "$lang_tools/npm-install-globals.sh" "npm-globals"
   fi
 

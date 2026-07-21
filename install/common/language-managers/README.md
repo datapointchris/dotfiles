@@ -2,12 +2,12 @@
 
 ## Pattern
 
-This directory contains installers for language version managers (uv, nvm, rustup, etc.). These tools manage multiple versions of programming languages and their associated toolchains.
+This directory contains installers for language version managers (uv, rustup, etc.). These tools manage multiple versions of programming languages and their associated toolchains.
 
 **Key characteristics**:
 
 - Each installer has unique installation method (curl install script, git clone, download binary)
-- Install to language-specific directories (`~/.cargo`, `~/.local/share/nvm`, etc.)
+- Install to language-specific directories (`~/.cargo`, `~/.local/bin`, etc.)
 - Modify PATH or require sourcing environment files
 - One-time setup (not upgraded through these scripts)
 
@@ -81,18 +81,6 @@ XDG_BIN_HOME="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 curl -LsSf https://astral.sh
 
 # Add to PATH for current session
 export PATH="$HOME/.local/bin:$PATH"
-```
-
-### Git clone pattern (nvm)
-
-```bash
-# nvm.sh
-export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
-
-if [[ ! -d "$NVM_DIR" ]]; then
-  git clone https://github.com/nvm-sh/nvm.git "$NVM_DIR"
-  cd "$NVM_DIR" && git checkout "$(git describe --abbrev=0 --tags --match "v[0-9]*" "$(git rev-list --tags --max-count=1)")"
-fi
 ```
 
 ### Binary download pattern (go, tenv)
@@ -185,30 +173,6 @@ export PATH="$HOME/.local/bin:$PATH"
 log_success "uv installed: $(uv --version)"
 ```
 
-### Git clone installer (nvm.sh)
-
-```bash
-export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
-
-if [[ ! -d "$NVM_DIR" ]]; then
-  log_info "Cloning nvm repository..."
-  if ! git clone https://github.com/nvm-sh/nvm.git "$NVM_DIR"; then
-    manual_steps="1. Clone nvm: git clone https://github.com/nvm-sh/nvm.git ~/.local/share/nvm
-2. Checkout latest: cd ~/.local/share/nvm && git checkout \$(git describe --abbrev=0 --tags)
-3. Source nvm: source ~/.local/share/nvm/nvm.sh
-4. Verify: nvm --version"
-    output_failure_data "nvm" "https://github.com/nvm-sh/nvm" "latest" "$manual_steps" "git clone failed"
-    log_error "nvm installation failed"
-    exit 1
-  fi
-
-  cd "$NVM_DIR" && git checkout "$(git describe --abbrev=0 --tags --match "v[0-9]*" "$(git rev-list --tags --max-count=1)")"
-fi
-
-source "$NVM_DIR/nvm.sh"
-log_success "nvm installed: $(nvm --version)"
-```
-
 ## Error Handling
 
 Language managers require careful error handling because:
@@ -226,7 +190,7 @@ Always wrap critical operations with error checks and provide helpful manual ins
 
 2. **PATH modifications**: Some tools (uv, rust) try to modify shell configs - prevent with flags (UV_NO_MODIFY_PATH, --no-modify-path)
 
-3. **Environment sourcing**: Some installers need to source environment files to verify installation (nvm, rust)
+3. **Environment sourcing**: Some installers need to source environment files to verify installation (rust)
 
 4. **TERM variable**: Export `TERM=${TERM:-xterm}` to prevent interactive prompts
 

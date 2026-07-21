@@ -99,7 +99,6 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 # Tool directories
 export CARGO_HOME="$HOME/.cargo"
-export NVM_DIR="$HOME/.local/share/nvm"
 
 # ------------------------------------------------------------------ #
 # XDG BASE DIRECTORY
@@ -334,14 +333,6 @@ if command -v atuin >/dev/null 2>&1; then
   log "Setup" "atuin"
 fi
 
-# nvm
-if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-  source "$NVM_DIR/nvm.sh"
-  source "$NVM_DIR/bash_completion"
-  log "Setup" "nvm"
-else
-  log_error "Setup" "nvm not found at $NVM_DIR/nvm.sh"
-fi
 
 # uv
 if command -v uv >/dev/null 2>&1; then

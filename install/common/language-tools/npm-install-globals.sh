@@ -9,19 +9,9 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 print_section "npm Global Packages"
 
-# Source nvm to get npm in PATH
-export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
-if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
-  log_error "nvm not found at $NVM_DIR"
-  exit 1
-fi
-
-# shellcheck disable=SC1091
-source "$NVM_DIR/nvm.sh"
-
-# Verify npm is available
+# Node.js is installed as a system package, so npm should already be on PATH.
 if ! command -v npm >/dev/null 2>&1; then
-  log_error "npm not found (Node.js may not be installed)"
+  log_error "npm not found on PATH (install the Node.js system package first)"
   exit 1
 fi
 

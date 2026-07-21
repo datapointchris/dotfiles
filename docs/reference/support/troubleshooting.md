@@ -15,7 +15,7 @@ Common issues and solutions.
     Should include:
 
     - `~/.local/bin`
-    - `~/.local/share/nvm/versions/node/<version>/bin` (if using nvm)
+    - `/usr/local/bin` (macOS) or `/usr/bin` (Arch) for the Node.js system package
     - `/usr/local/bin` or `/opt/homebrew/bin` (macOS)
 
 !!! tip "Fix: Reload shell"

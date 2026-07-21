@@ -492,7 +492,7 @@ check_tool "delta" "$HOME/.cargo/bin/delta" "delta" "git-delta"
 # Language Version Managers
 check_tool "rustup" "$HOME/.cargo/bin/rustup" "rustup"
 check_tool "uv" "$HOME/.local/bin/uv" "uv"
-# Note: node/npm are managed by nvm with version-specific paths
+# Note: node/npm are system packages (brew/pacman)
 # We only care if they're installed via brew/apt (detected by package manager checks)
 
 # Custom Go Applications

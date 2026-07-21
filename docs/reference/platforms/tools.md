@@ -36,31 +36,26 @@ Macs use it while every other platform uses the uniform GitHub-releases install.
 
 ## Version Managers
 
-### Node.js and npm (via nvm)
+### Node.js and npm (system package)
 
-nvm provides **consistent Node.js management** across all platforms.
-
-**All Platforms**:
+Node.js is installed as a **system package**, not through a version manager. There
+is no per-project version switching, and a static-PATH install keeps `node`/`npm`
+available to non-interactive shells (scripts, editors, agents) — which a shell-function
+manager like nvm cannot do.
 
 ```bash
-# Install nvm
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+# macOS
+brew install node
 
-# Install Node.js LTS
-nvm install --lts
-nvm alias default lts/*
+# Arch Linux
+sudo pacman -S nodejs npm
 ```
 
 **Configuration**:
 
-nvm directory: `~/.local/share/nvm` (consistent across platforms)
-
-Shell integration (added to `.zshrc`):
-
-```bash
-export NVM_DIR="$HOME/.local/share/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-```
+npm's global prefix is set to `~/.local/share/npm` (via `NPM_CONFIG_USERCONFIG` in
+`.zshrc`), so globally-installed tools (LSPs, formatters) live in
+`~/.local/share/npm/bin` independent of the Node.js package itself.
 
 ### Python (via uv)
 

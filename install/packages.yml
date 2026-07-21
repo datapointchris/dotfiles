@@ -52,6 +52,19 @@ system_packages:
     brew: pkg-config
     description: Build configuration tool
 
+  # Node.js — system-managed (replaced nvm; no per-project version switching used).
+  # Workstation-tier (untagged) so servers without npm_globals never pull it in.
+  - name: nodejs
+    brew: node
+    pacman: nodejs
+    apt: nodejs
+    description: Node.js runtime (brew's node bundles npm; Arch/Debian split npm out)
+
+  - name: npm
+    pacman: npm
+    apt: npm
+    description: npm package manager (separate package on Arch/Debian; bundled with brew node)
+
   - name: libssl-dev
     tier: core
     apt: libssl-dev
@@ -658,10 +671,6 @@ runtimes:
     install_method: github_release
     repo: golang/go
 
-  node:
-    version: "24.11.0"
-    install_method: nvm
-
   terraform:
     version: "1.10.5"
     install_method: tenv
@@ -997,7 +1006,7 @@ tmux_plugins:
 # NPM GLOBAL PACKAGES
 # ================================================================
 # Installed via: npm install -g <package>
-# Managed by nvm (Node.js version manager)
+# Requires the Node.js system package (see system_packages) to provide npm
 # These are system-wide tools, not project dependencies
 
 npm_globals:
@@ -1466,12 +1475,14 @@ macos_casks:
 #                      package is required for a platform (e.g. Intel-macOS bottles).
 #   - github_releases: prebuilt binaries pinned to latest upstream (also the fallback
 #                      when a tool has its own downstream manager, e.g. yazi's `ya`)
-#   - runtimes:        rustup / nvm / uv / go, not system language packages
+#   - runtimes:        rustup / uv / go, not system language packages (Node.js is
+#                      a system package — see system_packages — since no per-project
+#                      version switching is used)
 #   - npm_globals / uv_tools / go_tools: per-language package managers
 #   - custom_installers: official vendor installers where required (e.g. AWS CLI)
 #
 # Runtime Versions:
-#   - Node.js: Managed by nvm (see runtimes.node.version)
+#   - Node.js: System package via brew/pacman (see system_packages)
 #   - Python: Managed by uv
 #   - Go: Installed from GitHub releases (see runtimes.go.min_version)
 #   - Rust: Installed via rustup

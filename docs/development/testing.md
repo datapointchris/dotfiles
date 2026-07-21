@@ -197,7 +197,7 @@ The test scripts automatically run comprehensive verification using `install/ver
 - Task runner installation
 - Shell and terminal tools (zsh, tmux, bat, fd, fzf, ripgrep, zoxide, eza)
 - Development tools (neovim, lazygit, yazi, glow, duf)
-- Version managers (nvm, uv, cargo-binstall)
+- Version managers (uv, cargo-binstall)
 - Language servers and Go tools
 - Platform-specific tools
 

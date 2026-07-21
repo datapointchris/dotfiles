@@ -209,8 +209,7 @@ print_section "Language Runtimes (Universal)"
 # Go (installed via install-go.sh)
 check_command_at_path "go" "/usr/local/go/bin/go" "version"
 
-# Node.js (via nvm)
-check_file_exists "nvm" "$HOME/.local/share/nvm/nvm.sh"
+# Node.js (system package via brew/pacman)
 check_command "node"
 check_command "npm"
 

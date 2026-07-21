@@ -315,11 +315,14 @@ Located in `install/common/`:
 
 **Directory Structure**:
 
-- `github-releases/` - Tools installed from GitHub releases (neovim, lazygit, yazi, fzf, etc.)
-- `language-managers/` - Language runtime installers (go, rust, nvm, uv)
-- `language-tools/` - Language-specific tools (go-tools, npm-globals, cargo-tools)
-- `custom-installers/` - Special installers (theme, font, awscli, claude-code)
-- `plugins/` - Plugin installers (tmux, yazi)
+- `github-releases/` - Installers for tools shipped as prebuilt GitHub release binaries
+- `language-managers/` - Language runtime / version-manager bootstrappers (uv, rustup, go)
+- `language-tools/` - Per-language package installers, driven by the tool lists in `packages.yml`
+- `custom-installers/` - Vendor-specific installers that don't fit the other patterns
+- `plugins/` - Editor and terminal plugin installers
+
+The specific tools in each category are defined in `install/packages.yml` (the single
+source of truth) — this list describes what each directory is *for*, not its contents.
 
 **Core Library** (`install/common/lib/`):
 

@@ -200,7 +200,7 @@ download_go_binaries() {
 # Install Scripts
 # ============================================================================
 # Two sources:
-#   1. Language managers (nvm, uv) — hardcoded list; these are not in packages.yml
+#   1. Language managers (uv) — hardcoded list; these are not in packages.yml
 #      (language managers are bootstrap infrastructure, outside the custom_installers model).
 #   2. Custom installers with bundle_install_script: true — driven by packages.yml.
 
@@ -210,7 +210,6 @@ download_install_scripts() {
   local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
 
   local lang_manager_scripts=(
-    "$lang_managers/nvm.sh"
     "$lang_managers/uv.sh"
   )
 
@@ -393,7 +392,7 @@ Directory Structure:
   ├── README.txt      # This file
   ├── binaries/       # GitHub release binaries + cargo tools
   ├── go-binaries/    # Pre-built Go tool binaries
-  └── scripts/        # Install scripts (nvm, uv, theme, font, claude-code)
+  └── scripts/        # Install scripts (uv, theme, font, claude-code)
 EOF
 }
 

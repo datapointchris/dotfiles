@@ -9,11 +9,7 @@ export TERM=${TERM:-xterm}
 # /usr/local/go/bin is the Go toolchain deploy dir — it's only added to PATH in
 # .zshrc (interactive), so this non-interactive script must add it explicitly or
 # `command -v go` fails in go-tools.sh (matches install.sh's go-tools invocation).
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:$PATH"
-
-# Source nvm if available (for node/npm)
-export NVM_DIR="${NVM_DIR:-$HOME/.local/share/nvm}"
-[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:/usr/local/bin:$PATH"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
@@ -94,13 +90,6 @@ update_common_tools() {
     log_success "Python tools updated"
   else
     log_warning "Python tools update failed"
-  fi
-
-  print_section "Updating nvm and Node.js via $(print_green "nvm.sh --update")"
-  if bash "$DOTFILES_DIR/install/common/language-managers/nvm.sh" --update; then
-    log_success "nvm and Node.js updated"
-  else
-    log_warning "nvm and Node.js update failed"
   fi
 
   print_section "Updating npm global packages via $(print_green "npm update -g")"

@@ -28,7 +28,7 @@ All scripts in this directory source:
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-# Plus language-specific environment (e.g., $HOME/.cargo/env, nvm.sh)
+# Plus language-specific environment (e.g., $HOME/.cargo/env)
 ```
 
 ## Standard Pattern
@@ -207,7 +207,8 @@ done
 ### npm packages (npm-install-globals.sh)
 
 ```bash
-source "$NVM_DIR/nvm.sh"
+# Node.js is a system package, so npm is already on PATH (no manager to source).
+command -v npm >/dev/null || { log_error "npm not found on PATH"; exit 1; }
 
 NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse-packages.py" --type=npm)
 
@@ -244,7 +245,7 @@ Language tool installers handle errors by:
 
 ## Important Notes
 
-1. **Environment sourcing**: Always source the language environment before installing (nvm.sh, .cargo/env, etc.)
+1. **Environment sourcing**: Always source the language environment before installing (`.cargo/env`, etc.). Node.js is a system package, so `npm` is already on PATH — nothing to source.
 
 2. **Package manager availability**: Assumes language manager is already installed (via language-managers/)
 

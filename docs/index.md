@@ -62,7 +62,7 @@ Download from [nerdfonts.com](https://www.nerdfonts.com/). Recommended: FiraCode
 task --list              # Show available tasks
 toolbox list             # List installed tools
 theme current            # Show current theme
-node --version           # Check Node.js (via nvm)
+node --version           # Check Node.js (system package)
 ```
 
 See [Troubleshooting](reference/support/troubleshooting.md) if any commands fail.
@@ -166,7 +166,7 @@ toolbox list | grep cli-utility
 
 ## Key Concepts
 
-- **Version Managers** - uv (Python) and nvm (Node.js) provide cross-platform consistency without system package conflicts
+- **Language runtimes** - managed per language (version managers like uv/rustup/go, or system packages); `install/packages.yml` is the authoritative mapping
 - **Symlinks** - Deploy configs from repo to home directory with `task symlinks:link`
 - **Theme System** - Apply themes across ghostty/tmux/btop with one command via `theme` CLI
 - **Task Coordination** - Orchestrate complex workflows (install, update, verify) while keeping simple commands direct

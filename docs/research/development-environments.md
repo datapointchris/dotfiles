@@ -635,7 +635,7 @@ devbox shell  # Activates environment
 ```bash
 # Primary development: native
 git clone repo && cd repo
-npm install  # Uses system Node.js managed by nvm
+npm install  # Uses system Node.js (brew/pacman)
 npm run dev
 
 # Testing in container when needed

@@ -203,7 +203,7 @@ Uses official npm installer:
 # Requires Node.js/npm
 if ! command -v npm >/dev/null 2>&1; then
   manual_steps="Claude Code requires Node.js/npm:
-1. Install Node.js via nvm: bash install/common/language-managers/nvm.sh
+1. Install Node.js: brew install node (macOS) or sudo pacman -S nodejs npm (Arch)
 2. Then install Claude Code: npm install -g @anthropic/claude-code"
   output_failure_data "claude-code" "https://www.npmjs.com/package/@anthropic/claude-code" "latest" "$manual_steps" "npm not found"
   exit 1
