@@ -27,10 +27,11 @@ Bare `menu` opens the **launcher** (see below). Passing a term goes straight to 
 Bare `menu` — no arguments — opens a picker of **your own areas and tools**, so "what can I even run
 here" is one keystroke away. It lists menu's three areas (`find`, `review`, `labs`) followed by every
 tool in the registry's `custom-tools` category, each previewed with its `toolbox` entry. Selecting an
-area enters it; selecting a tool runs it with no arguments (which, by convention, shows that tool's
-help or status). This is the fix for forgetting a tool exists — `packages`, `syncer`, `patterns`,
-`notes`, and the rest are all right there. To skip straight to content search, give `menu` a term or
-use `menu find` / `menu search`.
+area enters it; selecting a tool prints its command so you can run it in your own shell. menu runs in
+its own process, so it prints rather than launches — uniformly, whether the tool is a binary or a shell
+function, so there is nothing to learn about which is which. This is the fix for forgetting a tool
+exists — `packages`, `syncer`, `patterns`, `notes`, and the rest are all right there. To skip straight
+to content search, give `menu` a term or use `menu find` / `menu search`.
 
 ## What it searches
 

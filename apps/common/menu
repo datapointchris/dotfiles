@@ -413,12 +413,7 @@ launcher_run() {
     review) exec menu-review ;;
     labs) exec menu-labs ;;
     *)
-      if command -v "$1" >/dev/null 2>&1; then
-        exec "$1"
-      else
-        print_warning "'$1' is in the registry but not on your PATH."
-        return 1
-      fi
+      printf '  %s\n' "$1"
       ;;
   esac
 }
