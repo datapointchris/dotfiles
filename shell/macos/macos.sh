@@ -61,12 +61,6 @@ alias copycommand='fc -ln -1 | pbcopy'
 # Terraform force-unlock with ID from plan
 alias terraform-force-unlock='terraform force-unlock -force $(terraform plan 2>&1 | grep "ID: " | awk "{print \$NF}")'
 
-# ---------- Directory Navigation ---------- #
-
-alias icloud="z ~/Library/Mobile\ Documents/com~apple~CloudDocs/"
-
-alias docs='z $HOME/code/docs'
-
 # ---------- Logs ---------- #
 
 # Show nginx logs (brew installed)
