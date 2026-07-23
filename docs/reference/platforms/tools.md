@@ -53,9 +53,14 @@ sudo pacman -S nodejs npm
 
 **Configuration**:
 
-npm's global prefix is set to `~/.local/share/npm` (via `NPM_CONFIG_USERCONFIG` in
-`.zshrc`), so globally-installed tools (LSPs, formatters) live in
-`~/.local/share/npm/bin` independent of the Node.js package itself.
+npm's global prefix is set to `~/.local/share/npm` by an XDG-located user config
+at `~/.config/npm/npmrc` (deployed from `configs/common/.config/npm/npmrc`).
+`.zshrc` exports `NPM_CONFIG_USERCONFIG` to point npm at that file for interactive
+shells, and the npm-globals installer exports the same variable so non-interactive
+bash sees it too. This keeps globally-installed tools (LSPs, formatters) in
+`~/.local/share/npm/bin` — a user-writable location — independent of the Node.js
+package itself. On Arch, where system npm's default prefix is `/usr`, this is
+what makes `npm install -g` work without sudo.
 
 ### Python (via uv)
 

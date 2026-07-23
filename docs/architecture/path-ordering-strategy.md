@@ -24,7 +24,8 @@ Listed from highest to lowest priority. First match wins during command executio
 
 ### `~/.local/share/npm/bin`
 
-- npm global packages (TypeScript, ESLint, Prettier, language servers). macOS only.
+- npm global packages (TypeScript, ESLint, Prettier, language servers). Added on
+  all platforms; the prefix is defined in `~/.config/npm/npmrc`.
 
 ### `/snap/bin`
 
@@ -67,20 +68,19 @@ add_path "/usr/local/sbin"
 # Platform-specific development tools
 if [[ "$OSTYPE" == "darwin"* ]]; then
     add_path "/usr/local/opt/postgresql@16/bin"
-    add_path "~/.local/share/npm/bin"
     add_path "~/go/bin"
 else
     # Linux
     add_path "/snap/bin"
-    add_path "/opt/nvim/bin"
     add_path "/usr/local/go/bin"
     add_path "~/go/bin"
 fi
 
 # Common (will be higher priority)
 add_path "$ZSH_PLUGINS_DIR/forgit/bin"
-add_path "~/.local/bin"          # User tools
-add_path "~/.cargo/bin"          # Rust tools (HIGHEST)
+add_path "~/.local/bin"                # User tools
+add_path "~/.local/share/npm/bin"      # npm globals (all platforms)
+add_path "~/.cargo/bin"                # Rust tools (HIGHEST)
 ```
 
 ## Tool Resolution Examples

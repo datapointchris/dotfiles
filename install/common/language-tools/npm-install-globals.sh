@@ -15,6 +15,13 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
+# Point npm at the XDG-located user config that sets a writable prefix.
+# .zshrc exports this for interactive shells; installers run under bash so we
+# must set it here too, otherwise npm falls back to the system prefix (/usr on
+# Arch) and global installs fail with EACCES.
+export NPM_CONFIG_USERCONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/npm/npmrc"
+mkdir -p "$HOME/.local/share/npm"
+
 log_info "Installing npm global packages from packages.yml..."
 
 MANIFEST_FLAG=()
