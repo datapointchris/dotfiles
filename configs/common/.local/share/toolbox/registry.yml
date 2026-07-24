@@ -1062,6 +1062,20 @@ tools:
     tags: [dotfiles, discovery, tools, search]
 
 
+  menu-dashboard:
+    category: custom-tools
+    description: "Cross-app glance behind menu dashboard — everything outstanding, in lanes"
+    installed_via: dotfiles
+    usage: "menu dashboard [--lane <name>] [--json] [--timeout <seconds>]"
+    why_use: "One read-only glance at what is outstanding everywhere: tasks, habits, learning, reading, maintenance, project items, and what is approaching. Independent lanes, each ordered by its own app, so you pick by time and energy rather than following an invented ranking. Use it through `menu dashboard`"
+    examples:
+      - cmd: "menu dashboard"
+        desc: "Every lane, three rows each"
+      - cmd: "menu dashboard --lane maintenance"
+        desc: "One lane in more depth"
+    see_also: [menu, menu-review, menu-labs, icb, learning]
+    tags: [dotfiles, dashboard, overview, outstanding, glance, json]
+
   menu-review:
     category: custom-tools
     description: "Cadence register behind menu review — what to revisit and when"

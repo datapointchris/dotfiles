@@ -97,6 +97,11 @@ show_help() {
   echo "  Enter on any result assembles every lens that has it:"
   echo "  help · toolbox · tldr · cheat · workflow · skill · function · alias · git alias · forgit · tmux."
   echo ""
+  print_section "Dashboard (everything outstanding)" "brightwhite"
+  echo "  $(print_cyan "menu dashboard")        Every lane: tasks, habits, learning, reading, maintenance, projects, upcoming"
+  echo "  $(print_cyan "menu dashboard --lane") <name>  One lane, in more depth"
+  echo "  $(print_cyan "menu dashboard --json") The lane model as JSON"
+  echo ""
   print_section "Review (what's due to revisit)" "brightyellow"
   echo "  $(print_cyan "menu review")           What's due now, most overdue first"
   echo "  $(print_cyan "menu review list")      Every registered item and its status"
@@ -389,6 +394,7 @@ cmd_show() {
 # shows that tool's help or status).
 launcher_rows() {
   {
+    printf 'dashboard\tEverything outstanding across your apps, in lanes\n'
     printf 'find\tSearch across tools, workflows, skills, funcs, aliases, git\n'
     printf 'review\tWhat is due to revisit (cadence register)\n'
     printf 'labs\tHands-on practice that is due now\n'
@@ -400,6 +406,9 @@ launcher_rows() {
 
 cmd_launch_preview() {
   case "$1" in
+    # A static description, not a live run: the preview re-runs on every
+    # selection change and the dashboard queries the network.
+    dashboard) printf 'Everything outstanding across your apps, in independent lanes:\ntasks, habits, learning, reading, maintenance, project items,\nupcoming. Read-only, one batched call per backend.\n\nInvoke directly: menu dashboard [--lane <name>] [--json]\n' ;;
     find) printf 'Federated search across every collection you own — tools,\nworkflows, skills, shell functions, aliases, git aliases, forgit,\ntmux keys. Enter opens the full composite view.\n\nInvoke directly: menu find <term>\n' ;;
     review) menu-review list 2>/dev/null || echo "What's due to revisit." ;;
     labs) menu-labs list 2>/dev/null || echo "Hands-on practice that's due." ;;
@@ -409,6 +418,7 @@ cmd_launch_preview() {
 
 launcher_run() {
   case "$1" in
+    dashboard) exec menu-dashboard ;;
     find) cmd_find "" ;;
     review) exec menu-review ;;
     labs) exec menu-labs ;;
@@ -461,6 +471,12 @@ case "${1:-}" in
   __preview) cmd_preview "$2" "$3" ;;
   __launch_preview) cmd_launch_preview "$2" ;;
   __show) cmd_show "$2" ;;
+  dashboard | dash)
+    # The cross-app glance lives in the menu-dashboard helper: concurrent
+    # subprocess fan-out and JSON composition are cleaner in Python than in bash.
+    shift
+    exec menu-dashboard "$@"
+    ;;
   review)
     # The temporal half (cadence register) lives in the menu-review helper —
     # dates and state are far cleaner in Python than in bash.

@@ -13,6 +13,7 @@ sources have it. It stores no content of its own.
 
 ```bash
 menu                    # Launcher: your areas + every custom tool you own
+menu dashboard          # Everything outstanding across your apps, in lanes
 menu keybind            # Search the federated index, pre-filtered to a term
 menu find keybind       # Search, explicit
 menu search keybind     # Same as menu find
@@ -25,9 +26,10 @@ Bare `menu` opens the **launcher** (see below). Passing a term goes straight to 
 ## The launcher
 
 Bare `menu` — no arguments — opens a picker of **your own areas and tools**, so "what can I even run
-here" is one keystroke away. It lists menu's three areas (`find`, `review`, `labs`) followed by every
-tool in the registry's `custom-tools` category, each previewed with its `toolbox` entry. Selecting an
-area enters it; selecting a tool prints its command so you can run it in your own shell. menu runs in
+here" is one keystroke away. It lists menu's four areas (`dashboard`, `find`, `review`, `labs`)
+followed by every tool in the registry's `custom-tools` category, each previewed with its `toolbox`
+entry. Selecting an area enters it; selecting a tool prints its command so you can run it in your own
+shell. menu runs in
 its own process, so it prints rather than launches — uniformly, whether the tool is a binary or a shell
 function, so there is nothing to learn about which is which. This is the fix for forgetting a tool
 exists — `packages`, `syncer`, `patterns`, `notes`, and the rest are all right there. To skip straight
@@ -97,6 +99,50 @@ scroll comfortably, and the output stays on screen after you quit so you can sel
 command from it. Every lens also names its source — extracted functions and aliases carry the file
 path via `bat --file-name`, and the composite view prints a `↳ path` breadcrumb — so you always know
 what you're looking at.
+
+## `menu dashboard` — everything outstanding
+
+Where search answers "how do I do this", the dashboard answers "what should I be doing". It is one
+read-only glance across every app: open tasks, habits still due, what you're learning, what you're
+reading, maintenance that's come due, the next project items, and what's approaching.
+
+```bash
+menu dashboard                     # every lane, three rows each
+menu dashboard --lane maintenance  # one lane, ten rows — repeatable
+menu dashboard --json              # the lane model, for scripting
+```
+
+**Lanes, not a merged list.** Each lane is ordered by its own app and nothing ranks across them.
+A single ordering over tasks, books, and habits would have to invent a comparison that doesn't
+exist, so the dashboard doesn't try — you pick a lane by the time and energy you actually have.
+
+**One call per backend.** Every lane's data comes from a backend that speaks `--json`, all queried
+concurrently:
+
+| Lane | Backend | Command |
+| --- | --- | --- |
+| Tasks, Habits, Reading, Projects, Upcoming | icb | `icb overview --json` |
+| Learning | learning | `learning overview --json` |
+| Maintenance | menu-review, menu-labs | `menu-review list --json`, `menu-labs list --json` |
+
+`icb overview` and `learning overview` are composites on their own side precisely so this stays one
+call each — the dashboard never fans out across an app's individual endpoints. It is also purely a
+renderer: which book counts as "next" and which habit is due today are decided by the app that owns
+that data, never re-derived here.
+
+**Degradation is per lane.** A backend that is missing, timed out, unauthenticated, or too old costs
+exactly one lane, which collapses to a single line naming the reason; everything else still renders.
+That matters most on the work machine, where `icb` and `learning` may legitimately be absent but
+maintenance still works. Because `icb` reserves exit code 2 for usage errors, a rejected `overview`
+is reported as an out-of-date binary rather than a runtime failure. A lane with nothing in it shows
+`—`; empty is not a failure.
+
+`menu dashboard` always exits 0 — it is a read-only glance, so degradation is displayed rather than
+raised. Anything consuming `--json` should check each lane's `status` field, not the exit code.
+
+**This is not `forge brief`.** They share the plumbing and nothing else: `forge brief` is the dev
+briefing across *repos* that a coding session reads, while the dashboard is a human's glance across
+*all* apps. Neither should grow to cover the other's job — see `~/dev/vision.md`.
 
 ## `menu review` — what's due to revisit
 
@@ -209,15 +255,17 @@ reminder — and stays silent when you're caught up.
 
 ## Implementation
 
-**Location**: `apps/common/menu` (picker, bash), `apps/common/menu-review` (register, Python), and
-`apps/common/menu-labs` (Labs, Python). The two Python halves share `menucore` — a small repo-root
+**Location**: `apps/common/menu` (picker, bash), plus three Python helpers —
+`apps/common/menu-review` (register), `apps/common/menu-labs` (Labs), and
+`apps/common/menu-dashboard` (the cross-app glance). All three share `menucore` — a small repo-root
 package (cadence parsing, atomic state, the color palette) imported via each script's resolved path,
 so no install step is needed and the register and Labs never drift apart on scheduling.
 
 **Dependencies**: `fzf` (picker) and `yq` (registry) drive search and the launcher; the full view
 delegates to `toolbox`, `workflows`, `tldr`, `cheat`, and `bat`, and is paged through `less`;
 `formatting.sh` provides the shell styling. The register and Labs run as `uv` single-file scripts
-depending only on `pyyaml`.
+depending only on `pyyaml`; the dashboard declares no dependencies at all, since every backend it
+composes speaks `--json` and it parses nothing else.
 
 The index is a three-column tab-separated stream — display, source, name — built by
 `build_index`. Two internal subcommands help with debugging and scripting: `menu __index` prints
