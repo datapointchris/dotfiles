@@ -20,6 +20,7 @@ last_done + cadence, derived not stored. A Lab with no `cadence:` is
 practice-on-demand and never shows as due.
 """
 
+import json
 import os
 import random
 import subprocess
@@ -236,7 +237,13 @@ def cmd_due() -> int:
     return 0
 
 
-def cmd_list() -> int:
+def cmd_list(as_json: bool = False) -> int:
+    # --json emits the whole deck with each Lab's derived status, so a consumer
+    # (menu dashboard) filters on `overdue`/`scheduled` itself. An empty deck is
+    # an empty list, not the prose hint: --json must always be parseable.
+    if as_json:
+        print(json.dumps(statuses(), indent=2))
+        return 0
     if not load_labs():
         return warn_no_labs()
     header("Labs — full deck")
@@ -374,6 +381,7 @@ def show_help() -> int:
     print("menu labs — hands-on practice Labs\n")
     print(f"  {CYAN}menu labs{RESET}             What's due to practice now")
     print(f"  {CYAN}menu labs list{RESET}        Every Lab and its schedule status")
+    print(f"  {CYAN}menu labs list --json{RESET} The same, as JSON")
     print(f"  {CYAN}menu labs pick{RESET}        Pick a Lab interactively (fzf)")
     print(f"  {CYAN}menu labs <id>{RESET}        Open a Lab to read while you work in another pane")
     print(f"  {CYAN}menu labs <tool>{RESET}      A tool's constellation (menu lenses) + its flashcards")
@@ -473,7 +481,7 @@ def main() -> int:
     if sub in ("--due", "nudge"):
         return cmd_nudge()
     if sub == "list":
-        return cmd_list()
+        return cmd_list("--json" in rest)
     if sub == "pick":
         return cmd_pick()
     if sub == "flash":

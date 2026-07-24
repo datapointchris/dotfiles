@@ -20,6 +20,7 @@ with no recorded done simply shows as never done. Storing only last_done means
 there is no date to keep in sync and nothing to drift.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -143,7 +144,14 @@ def cmd_due() -> int:
     return 0
 
 
-def cmd_list() -> int:
+def cmd_list(as_json: bool = False) -> int:
+    # --json emits every item with its derived status, due or not, so a consumer
+    # (menu dashboard) filters on `overdue` itself and can say "2 due of 9". A
+    # missing register is an empty list, not the prose hint: --json must always
+    # be parseable.
+    if as_json:
+        print(json.dumps(statuses(), indent=2))
+        return 0
     if load_items() is None:
         warn_no_register()
         return 0
@@ -260,6 +268,7 @@ def show_help() -> int:
     print("menu review — what's due to revisit\n")
     print("  menu review            What's due now, most overdue first")
     print("  menu review list       Every registered item and its status")
+    print("  menu review list --json  The same, as JSON")
     print("  menu review done <id>  Mark an item done (advances its due date)")
     print("  menu review edit       Edit the register in $EDITOR")
     print("  menu review nudge-every <dur>  Set the startup-nudge interval (e.g. 4h)")
@@ -274,7 +283,7 @@ def main() -> int:
     if sub in ("help", "-h", "--help"):
         return show_help()
     if sub == "list":
-        return cmd_list()
+        return cmd_list("--json" in rest)
     if sub == "nudge":
         return cmd_nudge()
     if sub == "nudge-every":
