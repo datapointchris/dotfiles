@@ -20,10 +20,10 @@ prefix + }         swap pane → next            prefix + y          copy comman
 prefix + ;         toggle last pane            prefix + Y          copy directory
                                                v                   begin selection
 RESHAPE (keeps history)                        Ctrl-v              rectangle toggle
-prefix + !         break pane → own window     y                   yank selection
-prefix + j / J     join window → pane (side/stack)
-prefix + v         layout: big main + stack    SIDEBAR TREE
-prefix + e         layout: even side-by-side   prefix + Backspace  tree + focus (quick tree)
+prefix + !         break pane → window         y                   yank selection
+prefix + j / J     join window as pane
+prefix + v         layout: main + stack        SIDEBAR TREE
+prefix + e         layout: even split          prefix + Backspace  tree + focus (quick tree)
 prefix + g         layout: tiled grid          prefix + Tab        tree, no focus
 prefix + Space     cycle layouts
                                                POPUPS & TOOLS
@@ -38,9 +38,3 @@ prefix + </>       swap window ← / →           prefix + :          command p
                                                prefix + I          install plugins (TPM)
                                                prefix + U          update plugins (TPM)
 ```
-
-Reshaping keeps each pane's process and scrollback. When a window gets narrowed
-(e.g. a browser tiles beside it), reflow with `prefix + v` (big main + thin
-stack) instead of living with squished equal columns — or `prefix + !` to break
-a pane out to its own labeled window and flip between them with `prefix + n/l`.
-`prefix + j` pulls a window back in as a pane when you want them side-by-side again.
