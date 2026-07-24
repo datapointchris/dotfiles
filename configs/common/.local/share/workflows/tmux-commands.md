@@ -4,37 +4,73 @@ tags: [tmux, multiplexer, keybindings]
 
 # tmux keybindings — prefix = `Ctrl + Space`
 
-```text
-PANES                                          SESSIONS
-prefix + |         split vertical              prefix + s          session picker (sesh)
-prefix + -         split horizontal            prefix + L          last session
-Ctrl + ←↓↑→        navigate panes (vim)        prefix + d          detach
-Ctrl + Alt + ←↓↑→  resize panes                prefix + $          rename session
-Ctrl + \           last pane (vim)             prefix + Ctrl-s     resurrect save
-prefix + z         zoom pane (fullscreen)      prefix + Ctrl-r     resurrect restore
-prefix + x         close pane (no confirm)
-prefix + o         cycle to next pane          COPY MODE
-prefix + q         show pane numbers           prefix + [          enter copy mode (vi)
-prefix + {         swap pane ← previous        prefix + P          paste buffer
-prefix + }         swap pane → next            prefix + y          copy command
-prefix + ;         toggle last pane            prefix + Y          copy directory
-                                               v                   begin selection
-RESHAPE (keeps history)                        Ctrl-v              rectangle toggle
-prefix + !         break pane → window         y                   yank selection
-prefix + j / J     join window as pane
-prefix + v         layout: main + stack        SIDEBAR TREE
-prefix + e         layout: even split          prefix + Backspace  tree + focus (quick tree)
-prefix + g         layout: tiled grid          prefix + Tab        tree, no focus
-prefix + Space     cycle layouts
-                                               POPUPS & TOOLS
-WINDOWS                                        prefix + m          universal menu
-prefix + c         new window                  prefix + t          this reference
-prefix + k         kill window                 prefix + a          Claude popup
-prefix + n/l       next window                 prefix + F          tmux-fzf menu
-prefix + p/h       previous window
-prefix + 0-9       select by number            GENERAL
-prefix + ,         rename window               prefix + R          reload config
-prefix + </>       swap window ← / →           prefix + :          command prompt
-                                               prefix + I          install plugins (TPM)
-                                               prefix + U          update plugins (TPM)
-```
+## Panes
+
+| prefix + \|       | split vertical          |
+| prefix + -        | split horizontal        |
+| Ctrl + ←↓↑→       | navigate panes (vim)    |
+| Ctrl + Alt + ←↓↑→ | resize panes            |
+| Ctrl + \          | last pane (vim)         |
+| prefix + z        | zoom pane (fullscreen)  |
+| prefix + x        | close pane (no confirm) |
+| prefix + o        | cycle to next pane      |
+| prefix + q        | show pane numbers       |
+| prefix + { / }    | swap pane prev / next   |
+| prefix + ;        | toggle last pane        |
+
+## Reshape (keeps history)
+
+| prefix + !     | break pane → its own window                 |
+| prefix + j / J | join a window in as a pane (side / stacked) |
+| prefix + v     | layout: big main + stack                    |
+| prefix + e     | layout: even split                          |
+| prefix + g     | layout: tiled grid                          |
+| prefix + Space | cycle layouts                               |
+
+## Windows
+
+| prefix + c     | new window               |
+| prefix + k     | kill window              |
+| prefix + n / l | next window              |
+| prefix + p / h | previous window          |
+| prefix + 0-9   | select by number         |
+| prefix + ,     | rename window            |
+| prefix + < / > | swap window left / right |
+
+## Sessions
+
+| prefix + s      | session picker (sesh) |
+| prefix + L      | last session          |
+| prefix + d      | detach                |
+| prefix + $      | rename session        |
+| prefix + Ctrl-s | resurrect save        |
+| prefix + Ctrl-r | resurrect restore     |
+
+## Copy mode
+
+| prefix + [ | enter copy mode (vi) |
+| prefix + P | paste buffer         |
+| prefix + y | copy command         |
+| prefix + Y | copy directory       |
+| v          | begin selection      |
+| Ctrl-v     | rectangle toggle     |
+| y          | yank selection       |
+
+## Sidebar tree
+
+| prefix + Backspace | tree + focus (quick tree) |
+| prefix + Tab       | tree, no focus            |
+
+## Popups & tools
+
+| prefix + m | universal menu |
+| prefix + t | this reference |
+| prefix + a | Claude popup   |
+| prefix + F | tmux-fzf menu  |
+
+## General
+
+| prefix + R | reload config         |
+| prefix + : | command prompt        |
+| prefix + I | install plugins (TPM) |
+| prefix + U | update plugins (TPM)  |
