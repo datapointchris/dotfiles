@@ -18,23 +18,29 @@ prefix + q         show pane numbers           prefix + [          enter copy mo
 prefix + {         swap pane ← previous        prefix + P          paste buffer
 prefix + }         swap pane → next            prefix + y          copy command
 prefix + ;         toggle last pane            prefix + Y          copy directory
-prefix + !         breakout to window          v                   begin selection
-                                               Ctrl-v              rectangle toggle
-WINDOWS                                        y                   yank selection
-prefix + c         new window
-prefix + k         kill window                 SIDEBAR TREE
-prefix + n/l       next window                 prefix + Backspace  tree + focus (quick tree)
-prefix + p/h       previous window             prefix + Tab        tree, no focus
-prefix + 0-9       select by number
-prefix + ,         rename window               POPUPS & TOOLS
-prefix + </>       swap window ← / →           prefix + m          universal menu
-                                               prefix + t          this reference
-                                               prefix + a          Claude popup
-                                               prefix + F          tmux-fzf menu
-
-                                               GENERAL
-                                               prefix + R          reload config
-                                               prefix + :          command prompt
+                                               v                   begin selection
+RESHAPE (keeps history)                        Ctrl-v              rectangle toggle
+prefix + !         break pane → own window     y                   yank selection
+prefix + j / J     join window → pane (side/stack)
+prefix + v         layout: big main + stack    SIDEBAR TREE
+prefix + e         layout: even side-by-side   prefix + Backspace  tree + focus (quick tree)
+prefix + g         layout: tiled grid          prefix + Tab        tree, no focus
+prefix + Space     cycle layouts
+                                               POPUPS & TOOLS
+WINDOWS                                        prefix + m          universal menu
+prefix + c         new window                  prefix + t          this reference
+prefix + k         kill window                 prefix + a          Claude popup
+prefix + n/l       next window                 prefix + F          tmux-fzf menu
+prefix + p/h       previous window
+prefix + 0-9       select by number            GENERAL
+prefix + ,         rename window               prefix + R          reload config
+prefix + </>       swap window ← / →           prefix + :          command prompt
                                                prefix + I          install plugins (TPM)
                                                prefix + U          update plugins (TPM)
 ```
+
+Reshaping keeps each pane's process and scrollback. When a window gets narrowed
+(e.g. a browser tiles beside it), reflow with `prefix + v` (big main + thin
+stack) instead of living with squished equal columns — or `prefix + !` to break
+a pane out to its own labeled window and flip between them with `prefix + n/l`.
+`prefix + j` pulls a window back in as a pane when you want them side-by-side again.

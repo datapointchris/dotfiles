@@ -16,6 +16,10 @@ prefix + :new -s name              new session
 prefix + c                         new window
 prefix + |                         split vertical (side-by-side)
 prefix + -                         split horizontal (stacked)
+prefix + !                         break pane → its own window (keeps history)
+prefix + j / J                     join a window back as a pane (side / stacked)
+prefix + v / e / g                 reflow layout: main+stack / even / tiled
+prefix + Space                     cycle layouts
 
 # Neovim
 <leader>te                         new tab
