@@ -1,0 +1,25 @@
+{
+  "current_section": {
+    "id": 5,
+    "name": "A Current Section",
+    "is_current": true,
+    "progress": {"total_items": 42, "completed_items": 6, "in_progress_items": 0, "skipped_items": 1, "abandoned_items": 0}
+  },
+  "tracks": [
+    {
+      "display_name": "First Track",
+      "percentage": 20,
+      "progress": {"total_items": 61, "completed_items": 2},
+      "current_unit": {"id": 1, "name": "Unit 1: The First Unit"}
+    },
+    {
+      "display_name": "Second Track",
+      "percentage": null,
+      "progress": {"total_items": 22, "completed_items": 2},
+      "current_unit": null
+    }
+  ],
+  "in_progress_resources": [
+    {"id": 995, "title": "A Resource In Progress", "url": "https://example.com/r"}
+  ]
+}

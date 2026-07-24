@@ -1,4 +1,4 @@
-"""Shared building blocks for the menu family of tools (menu-review, menu-labs).
+"""Shared building blocks for the menu family (menu-review, menu-labs, menu-dashboard).
 
 Both tools are uv single-file scripts under `apps/common/`, symlinked onto PATH.
 They import this package by resolving their own real path and adding the repo
@@ -18,7 +18,9 @@ from menucore.cadence import parse_cadence
 from menucore.cadence import status_label
 from menucore.render import BAR
 from menucore.render import CYAN
+from menucore.render import DIM
 from menucore.render import GREEN
+from menucore.render import RED
 from menucore.render import RESET
 from menucore.render import YELLOW
 from menucore.render import header
@@ -40,6 +42,8 @@ __all__ = [
     "CYAN",
     "YELLOW",
     "GREEN",
+    "RED",
+    "DIM",
     "RESET",
     "BAR",
     "header",
