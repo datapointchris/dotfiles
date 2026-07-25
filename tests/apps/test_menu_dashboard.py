@@ -63,27 +63,35 @@ def test_tasks_lane_reads_priority_name_and_category():
     lane = lanes_by_name(all_results())["tasks"]
 
     assert lane.meta == "12 open"
-    assert lane.rows[0].label == "1"
+    assert lane.rows[0].label == "p1", "a bare numeral in a gutter of words reads as a row number"
     assert lane.rows[0].text == "Renew passport"
     assert lane.rows[0].note == "chore"
 
 
-def test_habits_lane_summarises_into_one_row():
+def test_habits_lane_shows_every_habit_as_a_grid():
+    """Every current habit is due every day, so the useful view is the whole set
+    with the finished ones ticked off — not a ranked excerpt."""
     lane = lanes_by_name(all_results())["habits"]
 
     assert lane.meta == "1 of 4 done today"
-    assert len(lane.rows) == 1, "a dozen one-name rows would swamp every other lane"
-    assert lane.rows[0].text == "Stretch · Read · Journal"
+    assert lane.rows == [], "habits are a complete set, not ranked rows"
+    assert [cell.text for cell in lane.grid] == ["Exercise", "Stretch", "Journal", "Read"]
+    assert [cell.done for cell in lane.grid] == [True, False, False, False]
 
 
-def test_habits_lane_summarises_a_long_due_list():
+def test_habits_grid_keeps_a_completed_habit_in_place():
+    """Ordering by category and name, never by completion, so ticking one off
+    never shuffles the rest out from under you."""
+    before = menu_dashboard.build_habits_lane(all_results(), TODAY)
+
     payload = fixture("icb-overview.json")
-    payload["habits"]["due_today"] = [{"name": f"Habit {n}", "category_id": 1} for n in range(9)]
+    stretch = payload["habits"]["due_today"].pop(0)
+    payload["habits"]["completed_today"].append(stretch)
     results = {"icb": menu_dashboard.JsonResult(payload=payload, exit_code=0)}
+    after = menu_dashboard.build_habits_lane(results, TODAY)
 
-    lane = menu_dashboard.build_habits_lane(results, TODAY)
-
-    assert lane.rows[0].text.endswith("+5 more")
+    assert [cell.text for cell in after.grid] == [cell.text for cell in before.grid]
+    assert [cell.done for cell in after.grid] == [True, True, False, False]
 
 
 def test_reading_lane_leads_with_one_of_each_kind():
@@ -95,14 +103,40 @@ def test_reading_lane_leads_with_one_of_each_kind():
     assert lane.meta == "2 reading · 40 queued", "the backlog is context, not rows you are behind on"
 
 
-def test_learning_lane_leads_with_what_is_in_progress():
+def test_reading_total_spans_the_whole_pile_not_the_rows_built():
+    """A trailer measured against the handful of rows round-robin produced would
+    contradict the queue size in the heading."""
+    lane = lanes_by_name(all_results())["reading"]
+
+    assert lane.total == 43, "2 in progress + 40 queued + 1 article"
+
+
+def test_learning_lane_names_resources_rather_than_positions():
+    """A track's current unit is a position, not a thing you can open."""
     lane = lanes_by_name(all_results())["learning"]
 
-    assert lane.meta == "A Current Section · 6/42"
-    assert lane.rows[0].label == "doing"
-    assert lane.rows[1].label == "track"
-    # A track with no current unit contributes no row.
-    assert [row.text for row in lane.rows if row.label == "track"] == ["First Track — Unit 1: The First Unit"]
+    assert lane.meta == "A Current Section · 6 of 42 done"
+    assert [(row.label, row.text) for row in lane.rows] == [
+        ("open", "A Resource In Progress"),
+        ("open", "A Started Resource"),
+        ("start", "The Next Resource"),
+        ("start", "The One After Next"),
+    ], "started resources first, then the section's order; completed ones are gone"
+
+
+def test_learning_lane_does_not_repeat_a_resource_listed_twice():
+    lane = lanes_by_name(all_results())["learning"]
+
+    titles = [row.text for row in lane.rows]
+    assert titles.count("A Resource In Progress") == 1, "the section lists it too"
+
+
+def test_learning_tracks_become_context_not_rows():
+    lane = lanes_by_name(all_results())["learning"]
+
+    # A track with no current unit contributes nothing.
+    assert lane.context.text == "First Track 2/61"
+    assert "First Track" not in [row.text for row in lane.rows]
 
 
 def test_maintenance_lane_counts_only_what_is_due():
@@ -110,15 +144,41 @@ def test_maintenance_lane_counts_only_what_is_due():
 
     # 3 review items due (never-done, overdue, due-today) and 1 lab; the
     # not-yet-due and on-demand entries are excluded.
-    assert lane.meta == "3 review · 1 lab due"
-    assert {row.text for row in lane.rows} == {"never-done-item", "overdue-item", "due-today-item", "overdue-lab"}
+    assert lane.meta == "3 reviews · 1 lab due"
 
 
-def test_upcoming_lane_labels_days_relative_to_today():
+def test_maintenance_lane_says_what_an_entry_is_for():
+    """The register slug identifies a row to the tooling; what it is for only
+    exists in the description."""
+    lane = lanes_by_name(all_results())["maintenance"]
+
+    assert "never-done-item" not in {row.text for row in lane.rows}
+    assert "Has never been marked done" in {row.text for row in lane.rows}
+    assert "An Overdue Lab" in {row.text for row in lane.rows}, "labs carry a title instead"
+
+
+def test_maintenance_lane_ranks_by_how_late_a_row_actually_is():
+    """Sorting the note text would rank "16d overdue" below "9d overdue" and put
+    never-run entries above everything genuinely due."""
+    lane = lanes_by_name(all_results())["maintenance"]
+
+    assert [row.urgency for row in lane.rows] == [
+        menu_dashboard.Urgency.OVERDUE,
+        menu_dashboard.Urgency.OVERDUE,
+        menu_dashboard.Urgency.DUE,
+        menu_dashboard.Urgency.NONE,
+    ]
+    overdue = [row.note for row in lane.rows if row.urgency is menu_dashboard.Urgency.OVERDUE]
+    assert overdue == ["16d overdue", "9d overdue"], "most overdue first, numerically"
+    assert lane.rows[-1].note == "never run", "never run is the least urgent state, not the most"
+
+
+def test_upcoming_lane_uses_one_distance_format_and_names_the_day():
     lane = lanes_by_name(all_results())["upcoming"]
 
     assert lane.rows[0].label == "in 12d"
-    assert lane.rows[0].note == "countdown"
+    assert lane.rows[0].note == "05 Aug 2026", "the gutter says how far, the note says which day"
+    assert lane.meta == "2 countdowns · 1 event"
     assert lane.total == 3, "the total spans both countdowns and events"
 
 
@@ -127,6 +187,13 @@ def test_projects_lane_separates_next_from_blocked():
 
     assert lane.meta == "5 next · 1 blocked"
     assert [row.label for row in lane.rows] == ["next", "next", "blocked"]
+
+
+def test_projects_lane_carries_the_item_note_so_a_bare_title_says_something():
+    lane = lanes_by_name(all_results())["projects"]
+
+    assert lane.rows[0].text == "An actionable item — what it actually means"
+    assert lane.rows[1].text == "A second item", "no note means no dangling separator"
 
 
 def test_more_counts_come_from_the_backend_total_not_the_row_count():
@@ -224,9 +291,32 @@ def test_lanes_as_json_shape():
 
     assert [lane["name"] for lane in payload["lanes"]] == menu_dashboard.LANE_NAMES
     tasks = payload["lanes"][0]
-    assert set(tasks) == {"name", "title", "meta", "status", "reason", "rows", "total", "more"}
+    assert set(tasks) == {
+        "name",
+        "title",
+        "meta",
+        "status",
+        "reason",
+        "rows",
+        "grid",
+        "context",
+        "total",
+        "more",
+        "hints",
+    }
     assert tasks["status"] == "ok"
-    assert set(tasks["rows"][0]) == {"label", "text", "note"}
+    assert set(tasks["rows"][0]) == {"label", "text", "note", "urgency"}
+
+
+def test_lanes_as_json_carries_the_habits_grid():
+    lanes = menu_dashboard.build_lanes(all_results(), TODAY, ["habits"])
+
+    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY, menu_dashboard.ROW_CAP))
+    habits = payload["lanes"][0]
+
+    assert habits["rows"] == []
+    assert habits["grid"][0] == {"text": "Exercise", "done": True}
+    assert habits["more"] == 0, "a complete set has no remainder"
 
 
 def test_lanes_as_json_keeps_unavailable_lanes():
@@ -288,12 +378,34 @@ def test_round_robin_handles_empty_groups():
     assert menu_dashboard.round_robin([], []) == []
 
 
-def test_relative_day():
+def test_relative_day_changes_unit_never_format():
+    """Every row in the lane answers the same question, so a far-off date reads
+    as a distance too rather than switching to a calendar stamp."""
     assert menu_dashboard.relative_day("2026-07-24", TODAY) == "today"
     assert menu_dashboard.relative_day("2026-08-05", TODAY) == "in 12d"
-    # Beyond a season out, the exact day is noise and would overflow the gutter.
-    assert menu_dashboard.relative_day("2028-03-01", TODAY) == "2028-03"
+    assert menu_dashboard.relative_day("2026-10-22", TODAY) == "in 90d"
+    assert menu_dashboard.relative_day("2026-10-23", TODAY) == "in 3mo"
+    assert menu_dashboard.relative_day("2028-03-01", TODAY) == "in 20mo"
+    assert menu_dashboard.relative_day("2026-07-20", TODAY) == "4d ago"
     assert menu_dashboard.relative_day("not-a-date", TODAY) == "not-a-date"
+
+
+def test_calendar_day():
+    assert menu_dashboard.calendar_day("2026-08-05") == "05 Aug 2026"
+    assert menu_dashboard.calendar_day("not-a-date") == "not-a-date"
+
+
+def test_day_urgency():
+    assert menu_dashboard.day_urgency("2026-07-20", TODAY) is menu_dashboard.Urgency.OVERDUE
+    assert menu_dashboard.day_urgency("2026-07-24", TODAY) is menu_dashboard.Urgency.DUE
+    assert menu_dashboard.day_urgency("2026-08-05", TODAY) is menu_dashboard.Urgency.NONE
+    assert menu_dashboard.day_urgency("not-a-date", TODAY) is menu_dashboard.Urgency.NONE
+
+
+def test_plural():
+    assert menu_dashboard.plural(0, "lab") == "0 labs"
+    assert menu_dashboard.plural(1, "lab") == "1 lab"
+    assert menu_dashboard.plural(2, "lab") == "2 labs"
 
 
 def test_event_date_falls_back_on_an_unparseable_timestamp():
@@ -301,13 +413,24 @@ def test_event_date_falls_back_on_an_unparseable_timestamp():
     assert menu_dashboard.event_date("garbage-value") == "garbage-va"
 
 
-def test_is_due_row_and_overdue_note():
+def test_is_due_row():
     assert menu_dashboard.is_due_row({"overdue": None}) is True
     assert menu_dashboard.is_due_row({"overdue": 0}) is True
     assert menu_dashboard.is_due_row({"overdue": -1}) is False
-    assert menu_dashboard.overdue_note({"overdue": None}) == "never done"
-    assert menu_dashboard.overdue_note({"overdue": 0}) == "due today"
-    assert menu_dashboard.overdue_note({"overdue": 5}) == "overdue 5d"
+
+
+def test_maintenance_row_pairs_a_note_with_the_rank_it_sorts_on():
+    assert menu_dashboard.maintenance_row("review", "x", {"overdue": None})[0] == (2, 0)
+    assert menu_dashboard.maintenance_row("review", "x", {"overdue": 0})[0] == (1, 0)
+    assert menu_dashboard.maintenance_row("review", "x", {"overdue": 5})[0] == (0, -5)
+    assert menu_dashboard.maintenance_row("review", "x", {"overdue": 5})[1].note == "5d overdue"
+
+
+def test_describe_joins_a_title_to_its_note():
+    assert menu_dashboard.describe("A Title", "some detail") == "A Title — some detail"
+    assert menu_dashboard.describe("A Title", "") == "A Title"
+    assert menu_dashboard.describe("A Title", None) == "A Title"
+    assert menu_dashboard.describe("A Title", "two\nlines") == "A Title — two lines"
 
 
 def test_clip():

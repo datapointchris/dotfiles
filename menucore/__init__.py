@@ -17,8 +17,8 @@ from menucore.cadence import overdue_days
 from menucore.cadence import parse_cadence
 from menucore.cadence import status_label
 from menucore.render import BAR
+from menucore.render import BLUE
 from menucore.render import CYAN
-from menucore.render import DIM
 from menucore.render import GREEN
 from menucore.render import RED
 from menucore.render import RESET
@@ -43,7 +43,7 @@ __all__ = [
     "YELLOW",
     "GREEN",
     "RED",
-    "DIM",
+    "BLUE",
     "RESET",
     "BAR",
     "header",

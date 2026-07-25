@@ -107,7 +107,7 @@ read-only glance across every app: open tasks, habits still due, what you're lea
 reading, maintenance that's come due, the next project items, and what's approaching.
 
 ```bash
-menu dashboard                     # every lane, three rows each
+menu dashboard                     # every lane, a few ranked rows each
 menu dashboard --lane maintenance  # one lane, ten rows — repeatable
 menu dashboard --json              # the lane model, for scripting
 ```
@@ -115,6 +115,19 @@ menu dashboard --json              # the lane model, for scripting
 **Lanes, not a merged list.** Each lane is ordered by its own app and nothing ranks across them.
 A single ordering over tasks, books, and habits would have to invent a comparison that doesn't
 exist, so the dashboard doesn't try — you pick a lane by the time and energy you actually have.
+
+**Every row names something you could act on.** Where a backend can only report structure — a
+track's current unit, a maintenance entry's register slug — the lane resolves it to the underlying
+resource or restates it in the entry's own words rather than spending a row on a label you can't
+open. A lane that carries standing context it can't act on (long-running learning tracks) states it
+as one line beneath the rows instead of competing for slots.
+
+**Rows are ranked and capped; a complete set is not.** Most lanes show their most urgent few and
+report the remainder as a count. Habits are the exception: every current habit is due every day, so
+the lane shows the whole set in columns with the finished ones ticked off, ordered so a habit keeps
+its place all day and checking one off never shuffles the rest. A lane's `… N more` counts against
+everything that exists in it rather than the rows it happened to build, so the trailer and the
+heading always describe the same pile.
 
 **One call per backend.** Every lane's data comes from a backend that speaks `--json`, all queried
 concurrently:

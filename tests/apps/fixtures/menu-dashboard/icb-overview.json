@@ -12,12 +12,12 @@
   },
   "habits": {
     "due_today": [
-      {"id": 1, "name": "Stretch", "category_id": 2, "is_current": true},
-      {"id": 2, "name": "Read", "category_id": 2, "is_current": true},
-      {"id": 3, "name": "Journal", "category_id": 3, "is_current": true}
+      {"id": 1, "name": "Stretch", "category_id": 2, "category": {"id": 2, "name": "Health"}, "is_current": true},
+      {"id": 2, "name": "Read", "category_id": 3, "category": {"id": 3, "name": "Momentum"}, "is_current": true},
+      {"id": 3, "name": "Journal", "category_id": 3, "category": {"id": 3, "name": "Momentum"}, "is_current": true}
     ],
     "completed_today": [
-      {"id": 90, "name": "Exercise", "category_id": 2, "complete_date": "2026-07-24T12:00:00Z"}
+      {"id": 90, "name": "Exercise", "category_id": 2, "category": {"id": 2, "name": "Health"}, "complete_date": "2026-07-24T12:00:00Z"}
     ],
     "current_total": 4
   },
@@ -37,8 +37,8 @@
   },
   "project_items": {
     "next": [
-      {"id": "019f0000-0000-7000-8000-000000000001", "title": "An actionable item", "completed": false, "archived": false},
-      {"id": "019f0000-0000-7000-8000-000000000002", "title": "A second item", "completed": false, "archived": false}
+      {"id": "019f0000-0000-7000-8000-000000000001", "title": "An actionable item", "notes": "what it actually means", "completed": false, "archived": false},
+      {"id": "019f0000-0000-7000-8000-000000000002", "title": "A second item", "notes": null, "completed": false, "archived": false}
     ],
     "next_total": 5,
     "blocked": [

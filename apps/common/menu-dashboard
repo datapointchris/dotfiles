@@ -14,6 +14,10 @@ and you pick one by time and energy — there is no cross-source ranking, no
 scoring, and no metrics, because a single ordering over unlike things would be
 invented rather than meaningful.
 
+Every row names a thing you could act on. A lane that can only report structure
+(a track's current unit, a maintenance entry's slug) states it as context or
+resolves it to the underlying resource instead of spending a row on it.
+
 This is a renderer, nothing more. Every backend speaks `--json` and owns its own
 domain rules (which book is next, which habit is due today, when a Lab is
 overdue); the dashboard only lays out what they return. That is why it needs no
@@ -25,6 +29,7 @@ a coding session. Same plumbing, different audience — see ~/dev/vision.md.
 
 import argparse
 import json
+import math
 import shutil
 import subprocess
 import sys
@@ -39,8 +44,8 @@ from pathlib import Path
 # menu-dashboard is symlinked onto PATH; resolve the real path so the repo-root
 # menucore package (shared with menu-review and menu-labs) is importable.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from menucore import BLUE
 from menucore import CYAN
-from menucore import DIM
 from menucore import GREEN
 from menucore import RED
 from menucore import RESET
@@ -61,7 +66,7 @@ BACKENDS = {
 BACKEND_TIMEOUT_SECONDS = 5.0
 
 # The dashboard is a glance: three rows a lane, or ten when you asked for that
-# one lane specifically.
+# one lane specifically. Grids and context lines are exempt — see LaneView.
 ROW_CAP = 3
 FOCUSED_ROW_CAP = 10
 
@@ -69,15 +74,26 @@ FOCUSED_ROW_CAP = 10
 # rather than half-read: dotfiles and ichrisbirch install independently.
 ICB_SCHEMA_VERSION = 1
 
+# The status ids `learning` assigns; the names come from `learning statuses`.
+LEARNING_NOT_STARTED = 1
+LEARNING_IN_PROGRESS = 2
+
 MAX_WIDTH = 100
 LABEL_WIDTH = 8
-NOTE_WIDTH = 22
+NOTE_WIDTH_MAX = 22
 
-# How many habit names the single due row spells out before summarising.
-HABITS_NAMED = 4
+# Two columns of habits, because a dozen single-name rows would swamp every
+# other lane while a single run-on line hides which ones are left.
+GRID_COLUMNS = 2
+GRID_GUTTER = 3
+GRID_MIN_COLUMN_WIDTH = 24
 
 # How many queued books to list; the rest of the pile is a count in the heading.
 READING_QUEUE_ROWS = 3
+
+# Past a season out an exact day count stops meaning anything, so the relative
+# label switches unit rather than switching format.
+RELATIVE_DAYS_LIMIT = 90
 
 
 class BackendFailure(StrEnum):
@@ -85,6 +101,18 @@ class BackendFailure(StrEnum):
     TIMED_OUT = "timed-out"
     FAILED = "failed"
     UNREADABLE = "unreadable"
+
+
+class Urgency(StrEnum):
+    """How hard a row's note should push. Colour is derived from this, never
+    from matching the note text, so wording and emphasis stay independent."""
+
+    NONE = "none"
+    DUE = "due"
+    OVERDUE = "overdue"
+
+
+NOTE_COLOURS = {Urgency.NONE: "", Urgency.DUE: YELLOW, Urgency.OVERDUE: RED}
 
 
 @dataclass(frozen=True)
@@ -103,16 +131,33 @@ class Row:
     label: str
     text: str
     note: str = ""
+    urgency: Urgency = Urgency.NONE
+
+
+@dataclass(frozen=True)
+class GridCell:
+    text: str
+    done: bool
 
 
 @dataclass
 class LaneView:
+    """One lane's rendered model.
+
+    `rows` are the capped, ranked things to act on. `grid` and `context` are
+    exempt from the cap: a grid is a complete set that is only useful whole (the
+    habits for today), and context is a single standing line that frames the rows
+    without competing with them.
+    """
+
     name: str
     title: str
     meta: str = ""
     rows: list[Row] = field(default_factory=list)
+    grid: list[GridCell] = field(default_factory=list)
+    context: Row | None = None
     total: int = 0
-    hint: str = ""
+    hints: list[str] = field(default_factory=list)
     reason: str = ""
     available: bool = True
 
@@ -193,6 +238,17 @@ def unavailable(name: str, title: str, reason: str) -> LaneView:
     return LaneView(name=name, title=title, reason=reason, available=False)
 
 
+def plural(count: int, noun: str) -> str:
+    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
+
+
+def describe(title: str, detail: str) -> str:
+    """A row's own words plus whatever note the backend carries, because a bare
+    title like "Glove 80" names a thing without saying what to do with it."""
+    detail = (detail or "").strip().replace("\n", " ")
+    return f"{title} — {detail}" if detail else title
+
+
 def build_tasks_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     payload, reason = icb_context(results, ("tasks",))
     if payload is None:
@@ -201,14 +257,18 @@ def build_tasks_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     section = payload.get("tasks") or {}
     items = section.get("items") or []
     total = section.get("total", len(items))
-    rows = [Row(str(task.get("priority", "")), task.get("name", ""), task.get("category", "")) for task in items]
+    # `p3` rather than a bare `3`: in a gutter that elsewhere holds words, a lone
+    # numeral reads as a row number.
+    rows = [
+        Row(f"p{task.get('priority', '')}", task.get("name", ""), task.get("category", "")) for task in items
+    ]
     return LaneView(
         name="tasks",
         title="TASKS",
         meta=f"{total} open",
         rows=rows,
         total=total,
-        hint="icb tasks todo",
+        hints=["icb tasks todo"],
         reason=reason,
     )
 
@@ -223,23 +283,26 @@ def build_habits_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     done = section.get("completed_today") or []
     current_total = section.get("current_total", len(due) + len(done))
 
-    # One row, not one per habit: a dozen single-name rows would swamp every
-    # other lane, and which habits are outstanding reads fine as a list.
-    rows = []
-    if due:
-        names = [habit.get("name", "") for habit in due]
-        shown = names[:HABITS_NAMED]
-        remainder = f" +{len(names) - len(shown)} more" if len(names) > len(shown) else ""
-        rows.append(Row("due", " · ".join(shown) + remainder))
+    # Every current habit is due every day, so the useful view is the whole set
+    # with the finished ones ticked off — not a ranked excerpt. Ordering by
+    # category and name keeps a habit in the same place all day, so ticking one
+    # off never shuffles the rest.
+    entries = [(habit, False) for habit in due] + [(habit, True) for habit in done]
+    entries.sort(key=lambda entry: (habit_category(entry[0]), entry[0].get("name", "")))
+    grid = [GridCell(habit.get("name", ""), completed) for habit, completed in entries]
+
     return LaneView(
         name="habits",
         title="HABITS",
         meta=f"{len(done)} of {current_total} done today",
-        rows=rows,
-        total=len(rows),
-        hint="icb habits list --current",
+        grid=grid,
+        hints=["icb habits list --current"],
         reason=reason,
     )
+
+
+def habit_category(habit: dict) -> str:
+    return (habit.get("category") or {}).get("name", "")
 
 
 def build_reading_lane(results: dict[str, JsonResult], today: date) -> LaneView:
@@ -252,24 +315,27 @@ def build_reading_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     next_up = section.get("next_up") or []
     article = section.get("current_article")
 
-    # Only a few of the queue are worth listing: the rest is reported as a count
-    # below, and letting the row total track icb's --limit would make the "N
-    # more" line an artifact of an unrelated backend cap.
+    # Only a few of the queue are worth listing; the rest is a count in the
+    # heading. Letting the row total track icb's --limit would make the "N more"
+    # line an artifact of an unrelated backend cap.
     rows = round_robin(
         [Row("reading", book.get("title", ""), book.get("author", "")) for book in reading],
         [Row("next", book.get("title", ""), book.get("author", "")) for book in next_up[:READING_QUEUE_ROWS]],
         [Row("article", article.get("title", ""))] if article else [],
     )
     # The unread pile is a standing backlog, not a thing to be behind on, so it
-    # is reported as context rather than as rows you failed to get to.
+    # is reported as context rather than as rows you failed to get to. It still
+    # counts toward the total: a trailer measured against the handful of rows
+    # built here would contradict the queue size in the heading.
     queued = section.get("next_up_total", len(next_up))
+    total = len(reading) + queued + (1 if article else 0)
     return LaneView(
         name="reading",
         title="READING",
         meta=f"{len(reading)} reading · {queued} queued",
         rows=rows,
-        total=len(rows),
-        hint="icb books list --ownership owned",
+        total=total,
+        hints=["icb books list --ownership owned"],
         reason=reason,
     )
 
@@ -285,15 +351,15 @@ def build_projects_lane(results: dict[str, JsonResult], today: date) -> LaneView
     next_total = section.get("next_total", len(next_items))
     blocked_total = section.get("blocked_total", len(blocked))
 
-    rows = [Row("next", item.get("title", "")) for item in next_items]
-    rows += [Row("blocked", item.get("title", "")) for item in blocked]
+    rows = [Row("next", describe(item.get("title", ""), item.get("notes", ""))) for item in next_items]
+    rows += [Row("blocked", describe(item.get("title", ""), item.get("notes", ""))) for item in blocked]
     return LaneView(
         name="projects",
         title="PROJECTS",
         meta=f"{next_total} next · {blocked_total} blocked",
         rows=rows,
         total=next_total + blocked_total,
-        hint="icb items list",
+        hints=["icb items list"],
         reason=reason,
     )
 
@@ -308,19 +374,24 @@ def build_upcoming_lane(results: dict[str, JsonResult], today: date) -> LaneView
 
     entries = []
     for countdown in countdowns.get("items") or []:
-        entries.append((countdown.get("due_date", ""), countdown.get("name", ""), "countdown"))
+        entries.append((countdown.get("due_date", ""), countdown.get("name", "")))
     for event in events.get("items") or []:
-        entries.append((event_date(event.get("date", "")), event.get("name", ""), "event"))
+        entries.append((event_date(event.get("date", "")), event.get("name", "")))
     entries.sort(key=lambda entry: entry[0])
 
-    rows = [Row(relative_day(due, today), name, kind) for due, name, kind in entries]
-    total = countdowns.get("total", 0) + events.get("total", 0)
+    # The gutter always answers "how far away", the note always answers "which
+    # day". Which kind of entry it is says nothing about what you would do next,
+    # so it does not earn the column.
+    rows = [Row(relative_day(due, today), name, calendar_day(due), day_urgency(due, today)) for due, name in entries]
+    countdown_total = countdowns.get("total", 0)
+    event_total = events.get("total", 0)
     return LaneView(
         name="upcoming",
         title="UPCOMING",
+        meta=f"{plural(countdown_total, 'countdown')} · {plural(event_total, 'event')}",
         rows=rows,
-        total=total,
-        hint="icb countdowns list",
+        total=countdown_total + event_total,
+        hints=["icb countdowns list", "icb events list"],
         reason=reason,
     )
 
@@ -332,50 +403,74 @@ def build_learning_lane(results: dict[str, JsonResult], today: date) -> LaneView
 
     payload = result.payload
     section = payload.get("current_section") or {}
-    rows = []
-    meta = ""
-    if section:
-        progress = section.get("progress") or {}
-        completed = progress.get("completed_items", 0)
-        total_items = progress.get("total_items", 0)
-        meta = f"{section.get('name', '')} · {completed}/{total_items}"
+    progress = section.get("progress") or {}
+    completed = progress.get("completed_items", 0)
+    total_items = progress.get("total_items", 0)
+    meta = f"{section.get('name', '')} · {completed} of {total_items} done" if section else ""
 
-    track_rows = []
-    for track in payload.get("tracks") or []:
-        unit = (track.get("current_unit") or {}).get("name")
-        if not unit:
+    # A track's current unit is a position, not a thing you can open. The
+    # resources are, so the rows are resources and the tracks become one standing
+    # context line.
+    started = []
+    unstarted = []
+    seen = set()
+    for resource in payload.get("in_progress_resources") or []:
+        seen.add(resource.get("id"))
+        started.append(Row("open", resource.get("title", "")))
+    for item in section.get("items") or []:
+        resource = item.get("resource") or {}
+        if resource.get("id") in seen:
             continue
-        progress = track.get("progress") or {}
-        note = f"{progress.get('completed_items', 0)}/{progress.get('total_items', 0)}"
-        track_rows.append(Row("track", f"{track.get('display_name', '')} — {unit}", note))
+        if resource.get("status_id") == LEARNING_IN_PROGRESS:
+            seen.add(resource.get("id"))
+            started.append(Row("open", resource.get("title", "")))
+        elif resource.get("status_id") == LEARNING_NOT_STARTED:
+            seen.add(resource.get("id"))
+            unstarted.append(Row("start", resource.get("title", "")))
 
-    in_progress = [Row("doing", resource.get("title", "")) for resource in payload.get("in_progress_resources") or []]
-    rows = round_robin(in_progress, track_rows)
-
+    rows = started + unstarted
     return LaneView(
         name="learning",
         title="LEARNING",
         meta=meta,
         rows=rows,
+        context=track_context(payload.get("tracks") or []),
         total=len(rows),
-        hint="learning overview",
+        hints=["learning overview"],
     )
+
+
+def track_context(tracks: list[dict]) -> Row | None:
+    """Long-running tracks as one standing line. They are progress you carry, not
+    work the section hands you today, so they frame the rows instead of taking
+    slots from them."""
+    summaries = []
+    for track in tracks:
+        if not (track.get("current_unit") or {}).get("name"):
+            continue
+        progress = track.get("progress") or {}
+        completed = progress.get("completed_items", 0)
+        total = progress.get("total_items", 0)
+        summaries.append(f"{track.get('display_name', '')} {completed}/{total}")
+    return Row("tracks", " · ".join(summaries)) if summaries else None
 
 
 def build_maintenance_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     review = results.get("review")
     labs = results.get("labs")
 
-    rows = []
+    ranked = []
     reasons = []
     review_due = 0
     labs_due = 0
 
+    # The register slug (`indy-reindex`) identifies a row to the tooling; what it
+    # is for only exists in the description, so that is what gets shown.
     if isinstance(review.payload if review else None, list):
         for item in review.payload:
             if is_due_row(item):
                 review_due += 1
-                rows.append(Row("review", item.get("id", ""), overdue_note(item)))
+                ranked.append(maintenance_row("review", item.get("desc") or item.get("id", ""), item))
     else:
         reasons.append(backend_reason("menu-review", review))
 
@@ -383,23 +478,37 @@ def build_maintenance_lane(results: dict[str, JsonResult], today: date) -> LaneV
         for item in labs.payload:
             if item.get("scheduled") and is_due_row(item):
                 labs_due += 1
-                rows.append(Row("lab", item.get("id", ""), overdue_note(item)))
+                ranked.append(maintenance_row("lab", item.get("title") or item.get("id", ""), item))
     else:
         reasons.append(backend_reason("menu-labs", labs))
 
     if len(reasons) == 2:
         return unavailable("maintenance", "MAINTENANCE", "; ".join(reasons))
 
-    rows.sort(key=lambda row: row.note)
+    ranked.sort(key=lambda entry: entry[0])
+    rows = [row for _, row in ranked]
     return LaneView(
         name="maintenance",
         title="MAINTENANCE",
-        meta=f"{review_due} review · {labs_due} lab due",
+        meta=f"{plural(review_due, 'review')} · {plural(labs_due, 'lab')} due",
         rows=rows,
         total=len(rows),
-        hint="menu review · menu labs",
+        hints=["menu review", "menu labs"],
         reason="; ".join(reasons),
     )
+
+
+def maintenance_row(label: str, text: str, item: dict) -> tuple[tuple[int, int], Row]:
+    """A row plus how late it is, paired so the lane can rank on the number the
+    backend gave rather than on the sentence built from it. Sorting the note text
+    would put "12d overdue" above "3d overdue", and never-run entries — the least
+    urgent state there is — above everything genuinely due."""
+    overdue = item.get("overdue")
+    if overdue is None:
+        return (2, 0), Row(label, text, "never run", Urgency.NONE)
+    if overdue == 0:
+        return (1, 0), Row(label, text, "due today", Urgency.DUE)
+    return (0, -overdue), Row(label, text, f"{overdue}d overdue", Urgency.OVERDUE)
 
 
 def round_robin(*groups: list[Row]) -> list[Row]:
@@ -427,15 +536,6 @@ def is_due_row(item: dict) -> bool:
     return overdue is None or overdue >= 0
 
 
-def overdue_note(item: dict) -> str:
-    overdue = item.get("overdue")
-    if overdue is None:
-        return "never done"
-    if overdue == 0:
-        return "due today"
-    return f"overdue {overdue}d"
-
-
 def event_date(timestamp: str) -> str:
     """The calendar date of an RFC3339 event timestamp, for sorting alongside
     countdowns, which carry a bare date."""
@@ -445,18 +545,46 @@ def event_date(timestamp: str) -> str:
         return timestamp[:10]
 
 
-def relative_day(due: str, today: date) -> str:
-    """A gutter-width label. Beyond a season out, days stop meaning anything and
-    the exact day is noise, so it degrades to the month."""
+def days_away(due: str, today: date) -> int | None:
     try:
-        delta = (date.fromisoformat(due) - today).days
+        return (date.fromisoformat(due) - today).days
+    except ValueError:
+        return None
+
+
+def relative_day(due: str, today: date) -> str:
+    """A gutter-width distance. Past a season out the label changes unit, never
+    format, so every row in the lane still answers the same question."""
+    delta = days_away(due, today)
+    if delta is None:
+        return due
+    if delta == 0:
+        return "today"
+    if delta < 0:
+        return f"{-delta}d ago"
+    if delta <= RELATIVE_DAYS_LIMIT:
+        return f"in {delta}d"
+    target = date.fromisoformat(due)
+    months = (target.year - today.year) * 12 + (target.month - today.month)
+    return f"in {months}mo"
+
+
+def calendar_day(due: str) -> str:
+    try:
+        return date.fromisoformat(due).strftime("%d %b %Y")
     except ValueError:
         return due
-    if delta <= 0:
-        return "today"
-    if delta <= 90:
-        return f"in {delta}d"
-    return due[:7]
+
+
+def day_urgency(due: str, today: date) -> Urgency:
+    delta = days_away(due, today)
+    if delta is None:
+        return Urgency.NONE
+    if delta < 0:
+        return Urgency.OVERDUE
+    if delta == 0:
+        return Urgency.DUE
+    return Urgency.NONE
 
 
 LANE_BUILDERS = (
@@ -501,7 +629,7 @@ def clip(text: str, width: int) -> str:
 
 def render_lanes(lanes: list[LaneView], today: date, row_cap: int) -> None:
     width = terminal_width()
-    print(f"{CYAN}Dashboard{RESET} {DIM}· {today.strftime('%a %d %b')}{RESET}")
+    print(f"{CYAN}Dashboard{RESET} · {today.strftime('%a %d %b')}")
     print(f"{CYAN}{'━' * width}{RESET}")
 
     for lane in (lane for lane in lanes if lane.available):
@@ -511,37 +639,76 @@ def render_lanes(lanes: list[LaneView], today: date, row_cap: int) -> None:
     if degraded:
         print()
         for lane in degraded:
-            print(f"  {YELLOW}{lane.name:<12}{RESET}{DIM}unavailable — {lane.reason}{RESET}")
+            print(f"  {YELLOW}{lane.name:<12}{RESET}unavailable — {lane.reason}")
 
 
 def render_lane(lane: LaneView, width: int, row_cap: int) -> None:
     heading = f"\n{CYAN}{lane.title}{RESET}"
     if lane.meta:
-        heading += f"  {DIM}{lane.meta}{RESET}"
+        heading += f"  {lane.meta}"
     print(heading)
 
-    if not lane.rows:
-        print(f"  {DIM}—{RESET}")
+    if lane.grid:
+        render_grid(lane.grid, width)
     else:
-        note_width = NOTE_WIDTH if any(row.note for row in lane.rows) else 0
-        text_width = max(20, width - 3 - LABEL_WIDTH - (note_width + 1 if note_width else 0))
-        for row in lane.rows[:row_cap]:
-            label = f"{YELLOW}{row.label:<{LABEL_WIDTH}}{RESET}"
-            text = clip(row.text, text_width)
-            # A row without a note gets no padding and no colour codes, so the
-            # line ends where its text does rather than in trailing escapes.
-            if not row.note:
-                print(f"  {label} {text}")
-                continue
-            colour = RED if row.note.startswith("overdue") or row.note == "never done" else DIM
-            print(f"  {label} {text:<{text_width}} {colour}{clip(row.note, note_width)}{RESET}")
+        shown = lane.rows[:row_cap] + ([lane.context] if lane.context else [])
+        if shown:
+            render_rows(shown, width)
+        else:
+            print("  —")
 
-    more = lane.total - min(len(lane.rows), row_cap)
-    if more > 0 or lane.hint:
-        trailer = f"… {more} more · " if more > 0 else ""
-        print(f"  {DIM}{trailer}{lane.hint}{RESET}")
+    render_trailer(lane, width, row_cap)
     if lane.reason:
         print(f"  {YELLOW}partial — {lane.reason}{RESET}")
+
+
+def render_rows(rows: list[Row], width: int) -> None:
+    # Sized to the notes actually on screen, so a lane of short notes stops
+    # stealing width from its titles.
+    note_width = min(NOTE_WIDTH_MAX, max((len(row.note) for row in rows), default=0))
+    text_width = max(20, width - 3 - LABEL_WIDTH - (note_width + 1 if note_width else 0))
+    for row in rows:
+        label = f"{YELLOW}{row.label:<{LABEL_WIDTH}}{RESET}"
+        text = clip(row.text, text_width)
+        # A row without a note gets no padding and no colour codes, so the line
+        # ends where its text does rather than in trailing escapes.
+        if not row.note:
+            print(f"  {label} {text}")
+            continue
+        colour = NOTE_COLOURS[row.urgency]
+        note = clip(row.note, note_width)
+        print(f"  {label} {text:<{text_width}} {colour}{note}{RESET if colour else ''}")
+
+
+def render_grid(cells: list[GridCell], width: int) -> None:
+    available = width - 2
+    columns = GRID_COLUMNS if available >= GRID_COLUMNS * GRID_MIN_COLUMN_WIDTH else 1
+    column_width = (available - (columns - 1) * GRID_GUTTER) // columns
+    # Column-major, so the set still reads top-to-bottom in its sorted order.
+    per_column = math.ceil(len(cells) / columns)
+    for offset in range(per_column):
+        line = []
+        for column in range(columns):
+            index = column * per_column + offset
+            if index >= len(cells):
+                continue
+            cell = cells[index]
+            mark = f"{GREEN}✓{RESET}" if cell.done else f"{YELLOW}○{RESET}"
+            line.append(f"{mark} {clip(cell.text, column_width - 2):<{column_width - 2}}")
+        print("  " + (" " * GRID_GUTTER).join(line).rstrip())
+
+
+def render_trailer(lane: LaneView, width: int, row_cap: int) -> None:
+    segments = []
+    more = lane.total - min(len(lane.rows), row_cap)
+    if more > 0:
+        segments.append(f"… {more} more")
+    # An arrow and a distinct colour, because a hint is a command to run and the
+    # rest of the trailer is a count — the same separator for both reads as one
+    # run-on phrase.
+    segments += [f"{BLUE}→ {hint}{RESET}" for hint in lane.hints]
+    if segments:
+        print("  " + "   ".join(segments))
 
 
 def lanes_as_json(lanes: list[LaneView], today: date, row_cap: int) -> str:
@@ -554,9 +721,15 @@ def lanes_as_json(lanes: list[LaneView], today: date, row_cap: int) -> str:
                 "meta": lane.meta,
                 "status": "ok" if lane.available else "unavailable",
                 "reason": lane.reason or None,
-                "rows": [{"label": row.label, "text": row.text, "note": row.note} for row in lane.rows],
+                "rows": [
+                    {"label": row.label, "text": row.text, "note": row.note, "urgency": str(row.urgency)}
+                    for row in lane.rows
+                ],
+                "grid": [{"text": cell.text, "done": cell.done} for cell in lane.grid],
+                "context": lane.context.text if lane.context else None,
                 "total": lane.total,
                 "more": max(0, lane.total - min(len(lane.rows), row_cap)),
+                "hints": lane.hints,
             }
             for lane in lanes
         ],
