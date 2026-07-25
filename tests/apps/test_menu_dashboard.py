@@ -114,8 +114,8 @@ def test_books_lane_leads_with_one_of_each_kind():
 
 
 def test_books_total_spans_the_whole_pile_not_the_rows_built():
-    """A trailer measured against the handful of rows round-robin produced would
-    contradict the queue size in the heading."""
+    """The lane's reported size is the pile that exists, not the handful of rows
+    round-robin happened to build."""
     lane = lanes_by_name(all_results())["books"]
 
     assert lane.total == 42, "2 in progress + 40 queued"
@@ -272,13 +272,11 @@ def test_projects_lane_survives_an_icb_that_omits_membership():
     assert lane.rows[0].note == ""
 
 
-def test_more_counts_come_from_the_backend_total_not_the_row_count():
+def test_totals_come_from_the_backend_not_the_row_count():
     lane = lanes_by_name(all_results())["tasks"]
 
     assert len(lane.rows) == 4, "the payload carries fewer rows than the true total"
-    assert lane.total == 12
-    more = lane.total - min(len(lane.rows), menu_dashboard.ROW_CAP)
-    assert more == 9
+    assert lane.total == 12, "icb's --limit must not decide what the heading claims"
 
 
 def test_lane_is_unavailable_when_its_backend_is_missing():
@@ -363,7 +361,7 @@ def test_backends_for_selects_only_what_the_lanes_need():
 def test_lanes_as_json_shape():
     lanes = menu_dashboard.build_lanes(all_results(), TODAY, menu_dashboard.LANE_NAMES)
 
-    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY, menu_dashboard.ROW_CAP))
+    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY))
 
     assert [lane["name"] for lane in payload["lanes"]] == menu_dashboard.LANE_NAMES
     tasks = payload["lanes"][0]
@@ -376,7 +374,6 @@ def test_lanes_as_json_shape():
         "rows",
         "grid",
         "total",
-        "more",
         "hints",
     }
     assert tasks["status"] == "ok"
@@ -386,12 +383,11 @@ def test_lanes_as_json_shape():
 def test_lanes_as_json_carries_the_habits_grid():
     lanes = menu_dashboard.build_lanes(all_results(), TODAY, ["habits"])
 
-    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY, menu_dashboard.ROW_CAP))
+    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY))
     habits = payload["lanes"][0]
 
     assert habits["rows"] == []
     assert habits["grid"][0] == {"text": "Exercise", "done": True, "handle": ""}
-    assert habits["more"] == 0, "a complete set has no remainder"
 
 
 def test_cap_for_gives_tasks_more_room_but_focus_still_wins():
@@ -405,7 +401,7 @@ def test_lanes_as_json_keeps_unavailable_lanes():
     results["learning"] = menu_dashboard.JsonResult(failure=menu_dashboard.BackendFailure.NOT_INSTALLED)
     lanes = menu_dashboard.build_lanes(results, TODAY, menu_dashboard.LANE_NAMES)
 
-    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY, menu_dashboard.ROW_CAP))
+    payload = json.loads(menu_dashboard.lanes_as_json(lanes, TODAY))
     learning = next(lane for lane in payload["lanes"] if lane["name"] == "learning")
 
     assert learning["status"] == "unavailable"

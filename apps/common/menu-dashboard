@@ -334,17 +334,13 @@ def build_books_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     reading = section.get("reading") or []
     next_up = section.get("next_up") or []
 
-    # Only a few of the queue are worth listing; the rest is a count in the
-    # heading. Letting the row total track icb's --limit would make the "N more"
-    # line an artifact of an unrelated backend cap.
     rows = round_robin(
         [Row("reading", clean(book.get("title", "")), clean(book.get("author", ""))) for book in reading],
         [Row("next", clean(book.get("title", "")), clean(book.get("author", ""))) for book in next_up[:QUEUE_ROWS]],
     )
-    # The unread pile is a standing backlog, not a thing to be behind on, so it
-    # is reported as context rather than as rows you failed to get to. It still
-    # counts toward the total: a trailer measured against the handful of rows
-    # built here would contradict the queue size in the heading.
+    # The queue size comes from the backend's own total, never from the handful
+    # of rows built here — icb's --limit would otherwise decide what the heading
+    # claims the pile is.
     queued = section.get("next_up_total", len(next_up))
     return LaneView(
         name="books",
@@ -721,7 +717,7 @@ def render_lane(lane: LaneView, width: int, row_cap: int) -> None:
     else:
         print("  —")
 
-    render_trailer(lane, width, row_cap)
+    render_trailer(lane)
     if lane.reason:
         print(f"  {YELLOW}partial — {lane.reason}{RESET}")
 
@@ -765,20 +761,18 @@ def render_grid(cells: list[GridCell], width: int) -> None:
         print("  " + (" " * GRID_GUTTER).join(line).rstrip())
 
 
-def render_trailer(lane: LaneView, width: int, row_cap: int) -> None:
-    segments = []
-    more = lane.total - min(len(lane.rows), row_cap)
-    if more > 0:
-        segments.append(f"… {more} more")
-    # An arrow and a distinct colour, because a hint is a command to run and the
-    # rest of the trailer is a count — the same separator for both reads as one
-    # run-on phrase.
-    segments += [f"{BLUE}→ {hint}{RESET}" for hint in lane.hints]
-    if segments:
-        print("  " + "   ".join(segments))
+def render_trailer(lane: LaneView) -> None:
+    """Where to go for the rest, and nothing else.
+
+    A remainder count told you a lane was truncated without telling you anything
+    you could act on — the heading already states the lane's size, and the hint
+    is what you would run to see the rest.
+    """
+    if lane.hints:
+        print("  " + "   ".join(f"{BLUE}→ {hint}{RESET}" for hint in lane.hints))
 
 
-def lanes_as_json(lanes: list[LaneView], today: date, row_cap: int) -> str:
+def lanes_as_json(lanes: list[LaneView], today: date) -> str:
     payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "lanes": [
@@ -794,7 +788,6 @@ def lanes_as_json(lanes: list[LaneView], today: date, row_cap: int) -> str:
                 ],
                 "grid": [{"text": cell.text, "done": cell.done, "handle": cell.handle} for cell in lane.grid],
                 "total": lane.total,
-                "more": max(0, lane.total - min(len(lane.rows), cap_for(lane.name, row_cap))),
                 "hints": lane.hints,
             }
             for lane in lanes
@@ -836,7 +829,7 @@ def main() -> int:
     lanes = build_lanes(results, today, lane_names)
 
     if args.json:
-        print(lanes_as_json(lanes, today, row_cap))
+        print(lanes_as_json(lanes, today))
     else:
         render_lanes(lanes, today, row_cap)
     # A read-only glance always succeeds: degradation is shown per lane, and a

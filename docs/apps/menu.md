@@ -136,13 +136,17 @@ takes one and a name is not something you can act on from the keyboard. Only out
 carry it — a completion record identifies the completion, not the habit, and a finished one needs no
 handle.
 
-**Rows are ranked and capped; a complete set is not.** Most lanes show their most urgent few and
-report the remainder as a count; lanes whose useful unit is bigger set their own cap (tasks is the
-list you pick from, and learning carries one row per stream). Habits are the exception entirely:
-every current habit is due every day, so the lane shows the whole set in columns with the finished
-ones ticked off, ordered so a habit keeps its place all day and checking one off never shuffles the
-rest. A lane's `… N more` counts against everything that exists in it rather than the rows it
-happened to build, so the trailer and the heading always describe the same pile.
+**Rows are ranked and capped; a complete set is not.** Most lanes show their most urgent few; lanes
+whose useful unit is bigger set their own cap (tasks is the list you pick from, and learning carries
+one row per stream). Habits are the exception entirely: every current habit is due every day, so the
+lane shows the whole set in columns with the finished ones ticked off, ordered so a habit keeps its
+place all day and checking one off never shuffles the rest.
+
+**A truncated lane says where to go, not how much it hid.** The heading already reports the lane's
+real size, taken from the backend's own total rather than the rows it happened to build, so a
+remainder count added a number you could not act on. Each lane ends with the command that shows the
+rest. `--json` still carries every row the backend returned plus `total`, so a consumer applies its
+own cap rather than inheriting the terminal's.
 
 **One call per backend.** Every lane's data comes from a backend that speaks `--json`, all queried
 concurrently:
