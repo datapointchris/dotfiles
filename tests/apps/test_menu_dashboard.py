@@ -104,21 +104,45 @@ def test_habits_grid_keeps_a_completed_habit_in_place():
     assert [cell.done for cell in after.grid] == [True, True, False, False]
 
 
-def test_reading_lane_leads_with_one_of_each_kind():
+def test_books_lane_leads_with_one_of_each_kind():
     """With the small row cap, concatenation would hide what is next behind the
     books already in progress."""
-    lane = lanes_by_name(all_results())["reading"]
+    lane = lanes_by_name(all_results())["books"]
 
-    assert [row.label for row in lane.rows[:3]] == ["reading", "next", "article"]
+    assert [row.label for row in lane.rows[:3]] == ["reading", "next", "reading"]
     assert lane.meta == "2 reading · 40 queued", "the backlog is context, not rows you are behind on"
 
 
-def test_reading_total_spans_the_whole_pile_not_the_rows_built():
+def test_books_total_spans_the_whole_pile_not_the_rows_built():
     """A trailer measured against the handful of rows round-robin produced would
     contradict the queue size in the heading."""
-    lane = lanes_by_name(all_results())["reading"]
+    lane = lanes_by_name(all_results())["books"]
 
-    assert lane.total == 43, "2 in progress + 40 queued + 1 article"
+    assert lane.total == 42, "2 in progress + 40 queued"
+
+
+def test_articles_are_their_own_lane():
+    """Books and articles are separate apps; one section spanning both meant
+    neither count described the pile above it."""
+    lane = lanes_by_name(all_results())["articles"]
+
+    assert lane.meta == "60 unread"
+    assert lane.rows[0].label == "reading"
+    assert [row.label for row in lane.rows[1:]] == ["next", "next", "next"]
+    assert lane.total == 61, "60 queued plus the one being read"
+
+
+def test_article_titles_are_collapsed_onto_one_line():
+    """Scraped titles arrive wrapped in the source page's newlines and tabs."""
+    lane = lanes_by_name(all_results())["articles"]
+
+    assert lane.rows[0].text == "An Article Being Read"
+
+
+def test_clean_collapses_any_whitespace():
+    assert menu_dashboard.clean("\n\tRAG on structured data\n") == "RAG on structured data"
+    assert menu_dashboard.clean("  spaced   out  ") == "spaced out"
+    assert menu_dashboard.clean(None) == ""
 
 
 def test_learning_lane_names_resources_rather_than_positions():
@@ -281,13 +305,13 @@ def test_maintenance_renders_what_it_has_when_one_backend_is_missing():
 
 def test_section_warning_degrades_only_its_own_lane():
     payload = fixture("icb-overview.json")
-    payload["warnings"] = [{"section": "reading", "message": "books: API request failed (500)"}]
+    payload["warnings"] = [{"section": "books", "message": "books: API request failed (500)"}]
     results = all_results()
     results["icb"] = menu_dashboard.JsonResult(payload=payload, exit_code=0)
 
     lanes = lanes_by_name(results)
 
-    assert lanes["reading"].reason == "books: API request failed (500)"
+    assert lanes["books"].reason == "books: API request failed (500)"
     assert lanes["tasks"].reason == ""
 
 

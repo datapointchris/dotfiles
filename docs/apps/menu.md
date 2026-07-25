@@ -104,7 +104,15 @@ what you're looking at.
 
 Where search answers "how do I do this", the dashboard answers "what should I be doing". It is one
 read-only glance across every app: open tasks, habits still due, what you're learning, what you're
-reading, maintenance that's come due, the next project items, and what's approaching.
+reading and what you're queued to read, maintenance that's come due, the next project items, and
+what's approaching.
+
+**One lane per app, never per layout.** Books and articles are separate apps, so they are separate
+lanes — merging them into one "reading" lane meant neither of its counts described the pile above
+it. The shape of `icb overview` follows the app model for the same reason: it is the shared read
+surface for every renderer, so bending a section to suit one renderer's lanes would be the wrong
+trade. Consumers pin a schema version and report skew rather than half-reading a payload they
+don't understand.
 
 ```bash
 menu dashboard                     # every lane, a few ranked rows each
@@ -141,7 +149,7 @@ concurrently:
 
 | Lane | Backend | Command |
 | --- | --- | --- |
-| Tasks, Habits, Reading, Projects, Upcoming | icb | `icb overview --json` |
+| Tasks, Habits, Books, Articles, Projects, Upcoming | icb | `icb overview --json` |
 | Learning | learning | `learning overview --json` |
 | Maintenance | menu-review, menu-labs | `menu-review list --json`, `menu-labs list --json` |
 

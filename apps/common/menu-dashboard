@@ -77,7 +77,7 @@ LANE_ROW_CAPS = {"tasks": 5, "learning": 5}
 
 # The `icb overview` schema this build understands. A newer one is reported
 # rather than half-read: dotfiles and ichrisbirch install independently.
-ICB_SCHEMA_VERSION = 1
+ICB_SCHEMA_VERSION = 2
 
 # The status ids `learning` assigns; the names come from `learning statuses`.
 LEARNING_NOT_STARTED = 1
@@ -93,8 +93,8 @@ GRID_COLUMNS = 2
 GRID_GUTTER = 3
 GRID_MIN_COLUMN_WIDTH = 24
 
-# How many queued books to list; the rest of the pile is a count in the heading.
-READING_QUEUE_ROWS = 3
+# How many of a queue to list; the rest of the pile is a count in the heading.
+QUEUE_ROWS = 3
 
 # Past a season out an exact day count stops meaning anything, so the relative
 # label switches unit rather than switching format.
@@ -247,10 +247,19 @@ def plural(count: int, noun: str) -> str:
     return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
 
 
+def clean(text: str) -> str:
+    """Collapse a stored string onto one line.
+
+    Scraped article titles arrive wrapped in the source page's newlines and
+    tabs, which would otherwise break the row's alignment and its clip width.
+    """
+    return " ".join((text or "").split())
+
+
 def describe(title: str, detail: str) -> str:
     """A row's own words plus whatever note the backend carries, because a bare
     title like "Glove 80" names a thing without saying what to do with it."""
-    detail = (detail or "").strip().replace("\n", " ")
+    detail = clean(detail)
     return f"{title} — {detail}" if detail else title
 
 
@@ -316,37 +325,57 @@ def habit_category(habit: dict) -> str:
     return (habit.get("category") or {}).get("name", "")
 
 
-def build_reading_lane(results: dict[str, JsonResult], today: date) -> LaneView:
-    payload, reason = icb_context(results, ("reading",))
+def build_books_lane(results: dict[str, JsonResult], today: date) -> LaneView:
+    payload, reason = icb_context(results, ("books",))
     if payload is None:
-        return unavailable("reading", "READING", reason)
+        return unavailable("books", "BOOKS", reason)
 
-    section = payload.get("reading") or {}
+    section = payload.get("books") or {}
     reading = section.get("reading") or []
     next_up = section.get("next_up") or []
-    article = section.get("current_article")
 
     # Only a few of the queue are worth listing; the rest is a count in the
     # heading. Letting the row total track icb's --limit would make the "N more"
     # line an artifact of an unrelated backend cap.
     rows = round_robin(
-        [Row("reading", book.get("title", ""), book.get("author", "")) for book in reading],
-        [Row("next", book.get("title", ""), book.get("author", "")) for book in next_up[:READING_QUEUE_ROWS]],
-        [Row("article", article.get("title", ""))] if article else [],
+        [Row("reading", clean(book.get("title", "")), clean(book.get("author", ""))) for book in reading],
+        [Row("next", clean(book.get("title", "")), clean(book.get("author", ""))) for book in next_up[:QUEUE_ROWS]],
     )
     # The unread pile is a standing backlog, not a thing to be behind on, so it
     # is reported as context rather than as rows you failed to get to. It still
     # counts toward the total: a trailer measured against the handful of rows
     # built here would contradict the queue size in the heading.
     queued = section.get("next_up_total", len(next_up))
-    total = len(reading) + queued + (1 if article else 0)
     return LaneView(
-        name="reading",
-        title="READING",
+        name="books",
+        title="BOOKS",
         meta=f"{len(reading)} reading · {queued} queued",
         rows=rows,
-        total=total,
+        total=len(reading) + queued,
         hints=["icb books list --ownership owned"],
+        reason=reason,
+    )
+
+
+def build_articles_lane(results: dict[str, JsonResult], today: date) -> LaneView:
+    payload, reason = icb_context(results, ("articles",))
+    if payload is None:
+        return unavailable("articles", "ARTICLES", reason)
+
+    section = payload.get("articles") or {}
+    current = section.get("current")
+    unread = section.get("unread") or []
+    unread_total = section.get("unread_total", len(unread))
+
+    rows = [Row("reading", clean(current.get("title", "")))] if current else []
+    rows += [Row("next", clean(article.get("title", ""))) for article in unread[:QUEUE_ROWS]]
+    return LaneView(
+        name="articles",
+        title="ARTICLES",
+        meta=f"{unread_total} unread",
+        rows=rows,
+        total=unread_total + (1 if current else 0),
+        hints=["icb articles list"],
         reason=reason,
     )
 
@@ -619,7 +648,8 @@ LANE_BUILDERS = (
     ("tasks", ("icb",), build_tasks_lane),
     ("habits", ("icb",), build_habits_lane),
     ("learning", ("learning",), build_learning_lane),
-    ("reading", ("icb",), build_reading_lane),
+    ("books", ("icb",), build_books_lane),
+    ("articles", ("icb",), build_articles_lane),
     ("maintenance", ("review", "labs"), build_maintenance_lane),
     ("projects", ("icb",), build_projects_lane),
     ("upcoming", ("icb",), build_upcoming_lane),
