@@ -84,7 +84,16 @@ repos:
   #     - id: terraform_tflint
   #       stages: [pre-commit]
 
-  # Custom local hooks
+  - repo: local
+    hooks:
+      - id: prepare-commit-msg
+        name: Strip AI branding from commits
+        entry: bash -c 'exec "$HOME/.claude/hooks/prepare-commit-msg" "$@"' --
+        language: system
+        always_run: true
+        stages: [prepare-commit-msg]
+
+# > custom:after:all - Drift checks and test suites specific to dotfiles
   - repo: local
     hooks:
       # Test all user-facing apps can be invoked
@@ -135,11 +144,3 @@ repos:
         pass_filenames: false
         files: ^(install/|install\.sh$|update\.sh$|tests/install/|tests/libraries/)
         stages: [pre-commit]
-
-      # Strip Claude Code branding from commit messages
-      - id: prepare-commit-msg
-        name: Strip AI branding from commits
-        entry: /Users/chris/.claude/hooks/prepare-commit-msg
-        language: system
-        always_run: true
-        stages: [prepare-commit-msg]
