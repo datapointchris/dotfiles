@@ -846,6 +846,49 @@ github_releases:
     description: Windows clipboard bridge for WSL (enables Neovim/tmux clipboard integration)
     tags: [cli, wsl]
 
+  # ── Personal data CLIs ────────────────────────────────────────
+  # Each is a nested Go module inside its app repo, released by that repo's CI
+  # under a `cli/v*` tag so it never collides with the app's tag namespace.
+  # Their installers use the prefixed version lookup rather than
+  # /releases/latest, which would return whichever release is newest overall.
+  # Two of the repos are private; the installer library downloads those through
+  # the REST asset endpoint with a token, since the browser URL 404s on them.
+  - name: icb
+    repo: datapointchris/ichrisbirch
+    install_script: github-releases/icb.sh
+    release_tag_prefix: "cli/"
+    binary_pattern: "icb_{version_num}_{os}_{go_arch}.tar.gz"
+    install_dir: "~/.local/bin"
+    description: Tasks, habits, books, projects, articles, events, countdowns, recipes
+    tags: [cli, personal]
+
+  - name: learning
+    repo: datapointchris/learning
+    install_script: github-releases/learning.sh
+    release_tag_prefix: "cli/"
+    binary_pattern: "learning_{version_num}_{os}_{go_arch}.tar.gz"
+    install_dir: "~/.local/bin"
+    description: Structured learning tracks, sections, topics, and resources
+    tags: [cli, personal]
+
+  - name: nomad
+    repo: datapointchris/nomad
+    install_script: github-releases/nomad.sh
+    release_tag_prefix: "cli/"
+    binary_pattern: "nomad_{version_num}_{os}_{go_arch}.tar.gz"
+    install_dir: "~/.local/bin"
+    description: Digital-nomad city research, trip planning, stops, and attractions
+    tags: [cli, personal]
+
+  - name: meso
+    repo: datapointchris/meso
+    install_script: github-releases/meso.sh
+    release_tag_prefix: "cli/"
+    binary_pattern: "meso_{version_num}_{os}_{go_arch}.tar.gz"
+    install_dir: "~/.local/bin"
+    description: Fitness — mesocycle programming, workout logging, measurements
+    tags: [cli, personal]
+
 # ================================================================
 # CUSTOM INSTALLERS
 # ================================================================
@@ -1145,6 +1188,10 @@ git_uv_tools:
   - name: logsift
     repo: https://github.com/datapointchris/logsift.git
     description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
+
+  - name: dectl
+    repo: https://github.com/datapointchris/dectl.git
+    description: Verb-last data-engineering control CLI
 
 # ================================================================
 # GO TOOLS

@@ -29,6 +29,16 @@ version_compare() {
   fi
 }
 
+# Resolve a GitHub token, if one is available. Private repos need it for both
+# the API and the asset download; public repos work without it.
+github_token() {
+  local token="${GITHUB_TOKEN:-}"
+  if [[ -z "$token" ]] && command -v gh &>/dev/null; then
+    token=$(gh auth token 2>/dev/null || true)
+  fi
+  [[ -n "$token" ]] && echo "$token"
+}
+
 fetch_github_latest_version() {
   local repo="$1"
 
@@ -38,15 +48,43 @@ fetch_github_latest_version() {
   local version
 
   local -a curl_opts=(-fsSL)
-  local token="${GITHUB_TOKEN:-}"
-  if [[ -z "$token" ]] && command -v gh &>/dev/null; then
-    token=$(gh auth token 2>/dev/null || true)
-  fi
+  local token
+  token=$(github_token)
   if [[ -n "$token" ]]; then
-    curl_opts+=(-H "Authorization: token $token")
+    curl_opts+=(-H "Authorization: Bearer $token")
   fi
 
   version=$(curl "${curl_opts[@]}" "$api_url" 2>/dev/null | jq -r '.tag_name')
+
+  if [[ -z "$version" || "$version" == "null" ]]; then
+    return 1
+  fi
+
+  echo "$version"
+  return 0
+}
+
+# Latest release whose tag carries a given prefix, e.g. "cli/" in a repo whose
+# app owns the bare v* tags. /releases/latest cannot express this — it returns
+# whatever release is newest overall — so this lists and filters instead.
+# Usage: fetch_github_latest_version_prefixed <repo> <tag_prefix>
+fetch_github_latest_version_prefixed() {
+  local repo="$1"
+  local prefix="$2"
+
+  [[ -z "$repo" || -z "$prefix" ]] && return 1
+
+  local -a curl_opts=(-fsSL)
+  local token
+  token=$(github_token)
+  if [[ -n "$token" ]]; then
+    curl_opts+=(-H "Authorization: Bearer $token")
+  fi
+
+  # Releases come back newest-first, so the first prefix match is the latest.
+  local version
+  version=$(curl "${curl_opts[@]}" "https://api.github.com/repos/${repo}/releases?per_page=100" 2>/dev/null |
+    jq -r --arg p "$prefix" 'map(select(.draft | not) | select(.tag_name | startswith($p))) | .[0].tag_name // empty')
 
   if [[ -z "$version" || "$version" == "null" ]]; then
     return 1

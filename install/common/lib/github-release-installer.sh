@@ -11,6 +11,44 @@ source "$SCRIPT_DIR/version-helpers.sh"
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
 
+# Download a release asset to a path.
+#
+# The browser URL (github.com/.../releases/download/...) 404s on a private repo
+# no matter what token is presented — only the REST asset endpoint serves those,
+# and only with Accept: application/octet-stream. Resolve the asset id and use
+# that when a token is available; fall back to the browser URL otherwise, which
+# is all a public repo needs.
+#
+# Usage: download_release_asset <repo> <tag> <asset_name> <output_path> <browser_url>
+download_release_asset() {
+  local repo="$1"
+  local tag="$2"
+  local asset_name="$3"
+  local output_path="$4"
+  local browser_url="$5"
+
+  local token
+  token=$(github_token)
+
+  if [[ -n "$token" && -n "$repo" && -n "$tag" ]]; then
+    local asset_id
+    asset_id=$(curl -fsSL -H "Authorization: Bearer $token" \
+      "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null |
+      jq -r --arg n "$asset_name" '.assets[]? | select(.name == $n) | .id' | head -1)
+
+    if [[ -n "$asset_id" ]]; then
+      if curl -fsSL -H "Authorization: Bearer $token" \
+        -H "Accept: application/octet-stream" \
+        "https://api.github.com/repos/${repo}/releases/assets/${asset_id}" -o "$output_path"; then
+        return 0
+      fi
+      log_warning "Asset API download failed for $asset_name, falling back to the public URL"
+    fi
+  fi
+
+  curl -fsSL "$browser_url" -o "$output_path"
+}
+
 # Returns "darwin" or "linux"
 get_os() {
   [[ "$OSTYPE" == "darwin"* ]] && echo "darwin" || echo "linux"
@@ -166,11 +204,23 @@ install_from_tarball() {
     fi
   fi
 
-  # If not found in cache, try download
+  # If not found in cache, try download.
+  #
+  # repo and tag are derived from the URL rather than passed in, so every
+  # existing caller gets private-repo support without a signature change. The
+  # tag may itself contain slashes (a nested module's `cli/v1.2.0`), so it is
+  # everything between `/releases/download/` and the final filename segment.
   if [[ ! -f "$tarball_path" ]]; then
     log_info "Download URL: $download_url"
     log_info "Downloading $binary_name..."
-    if ! curl -fsSL "$download_url" -o "$tarball_path"; then
+
+    local asset_repo="" asset_tag=""
+    if [[ "$download_url" =~ ^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$ ]]; then
+      asset_repo="${BASH_REMATCH[1]}"
+      asset_tag="${BASH_REMATCH[2]}"
+    fi
+
+    if ! download_release_asset "$asset_repo" "$asset_tag" "$url_filename" "$tarball_path" "$download_url"; then
       local manual_steps="1. Download in your browser (bypasses firewall):
    $download_url
 

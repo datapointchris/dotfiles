@@ -205,6 +205,20 @@ See `install/common/github-releases/` for all current scripts.
 
 Some tools have unique requirements that don't fit the GitHub release pattern. These live in `install/common/custom-installers/` instead. All still use error-handling.sh for structured logging consistency.
 
+## Private Repositories
+
+The browser download URL (`github.com/<owner>/<repo>/releases/download/...`) returns 404 for a private repository no matter what credentials accompany it. Only the REST asset endpoint serves those, and only when the request carries `Accept: application/octet-stream` alongside a token.
+
+`download_release_asset` handles this: when a token is available it resolves the asset id for the tag and fetches through the REST endpoint, otherwise it falls back to the browser URL, which is all a public repo needs. `install_from_tarball` derives the repo and tag from the download URL rather than taking new parameters, so every existing installer inherits the behavior unchanged.
+
+Token resolution lives in `github_token` — `GITHUB_TOKEN` if exported, otherwise whatever `gh auth token` reports. `gh` is only ever a source of credentials here; the transfer itself is always curl.
+
+## Prefixed Release Tags
+
+A repository whose primary artifact is not the CLI cannot use `/releases/latest` to find the CLI's release — that endpoint returns whichever release is newest overall, which may belong to the application. The personal data CLIs (`icb`, `learning`, `nomad`, `meso`) are nested Go modules released under a `cli/v*` tag for exactly this reason, so their installers call `fetch_github_latest_version_prefixed` instead, which lists releases and takes the newest whose tag carries the prefix.
+
+The prefix is stripped before the version is used, so `cli/v1.2.0` compares as `v1.2.0` and expands `{version_num}` to `1.2.0`. The tag keeps its prefix only where it identifies the release itself — in the download URL.
+
 ## Design Decisions
 
 ### Why Not More Abstraction?

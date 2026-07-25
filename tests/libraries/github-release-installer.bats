@@ -144,6 +144,40 @@ SCRIPT
   [[ "$url" == *"/download//tool_"* ]]
 }
 
+# Release-asset URL parsing
+#
+# install_from_tarball derives repo and tag from the download URL so that every
+# existing caller gains private-repo support without a signature change. A
+# nested module's tag contains a slash (cli/v1.2.0), which is the case most
+# likely to be parsed wrong — the tag is everything between /releases/download/
+# and the final filename segment, not the single segment after it.
+
+parse_download_url() {
+  local url="$1"
+  if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$ ]]; then
+    echo "${BASH_REMATCH[1]}|${BASH_REMATCH[2]}|${BASH_REMATCH[3]}"
+  else
+    return 1
+  fi
+}
+
+@test "download url parsing: extracts repo and plain tag" {
+  run parse_download_url "https://github.com/owner/repo/releases/download/v1.2.0/tool_1.2.0_linux_amd64.tar.gz"
+  assert_success
+  assert_output "owner/repo|v1.2.0|tool_1.2.0_linux_amd64.tar.gz"
+}
+
+@test "download url parsing: keeps slashes inside a prefixed tag" {
+  run parse_download_url "https://github.com/datapointchris/nomad/releases/download/cli/v0.1.0/nomad_0.1.0_darwin_amd64.tar.gz"
+  assert_success
+  assert_output "datapointchris/nomad|cli/v0.1.0|nomad_0.1.0_darwin_amd64.tar.gz"
+}
+
+@test "download url parsing: rejects a non-release URL" {
+  run parse_download_url "https://example.com/some/file.tar.gz"
+  assert_failure
+}
+
 # Helper functions
 
 skip_if_not_macos() {

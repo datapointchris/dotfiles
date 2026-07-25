@@ -21,6 +21,7 @@ go_tools:
   - sops
   - todoui
   - forge
+  - gowall
 
 github_releases:
   - fzf
@@ -41,6 +42,11 @@ github_releases:
   - atuin
   - tenv
   - yq
+  # Personal data CLIs — released by their own app repos under a cli/v* tag
+  - icb
+  - learning
+  - nomad
+  - meso
 
 custom_installers:
   - bats
@@ -88,6 +94,7 @@ git_uv_tools:
   - indy
   - relate
   - logsift
+  - dectl
 
 shell_plugins: true
 tmux_plugins: true
