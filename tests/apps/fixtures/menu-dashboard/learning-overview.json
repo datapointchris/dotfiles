@@ -26,6 +26,32 @@
       "current_unit": null
     }
   ],
+  "track_focus": [
+    {
+      "track_id": 1,
+      "display_name": "First Track",
+      "unit_name": "Unit 1: The First Unit",
+      "resource": {"id": 800, "title": "What To Open On First Track", "status_id": 1},
+      "started": false,
+      "progress": {"total_items": 61, "completed_items": 2}
+    },
+    {
+      "track_id": 3,
+      "display_name": "Third Track",
+      "unit_name": "Unit 2: Already Underway",
+      "resource": {"id": 801, "title": "Already Open On Third Track", "status_id": 2},
+      "started": true,
+      "progress": {"total_items": 30, "completed_items": 9}
+    },
+    {
+      "track_id": 4,
+      "display_name": "Fourth Track",
+      "unit_name": "Unit 9: Nothing Left",
+      "resource": null,
+      "started": false,
+      "progress": {"total_items": 12, "completed_items": 12}
+    }
+  ],
   "in_progress_resources": [
     {"id": 995, "title": "A Resource In Progress", "url": "https://example.com/r"}
   ]

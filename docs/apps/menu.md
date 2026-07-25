@@ -119,15 +119,22 @@ exist, so the dashboard doesn't try — you pick a lane by the time and energy y
 **Every row names something you could act on.** Where a backend can only report structure — a
 track's current unit, a maintenance entry's register slug — the lane resolves it to the underlying
 resource or restates it in the entry's own words rather than spending a row on a label you can't
-open. A lane that carries standing context it can't act on (long-running learning tracks) states it
-as one line beneath the rows instead of competing for slots.
+open. The learning lane is the clearest case: `learning overview` answers which resource each
+track's current unit actually points at, so the dashboard lists titles you can open and notes which
+stream each one advances, instead of naming a unit you cannot sit down and do.
+
+**A row shows the handle you would type.** Habits carry their id, because `icb habits complete`
+takes one and a name is not something you can act on from the keyboard. Only outstanding habits
+carry it — a completion record identifies the completion, not the habit, and a finished one needs no
+handle.
 
 **Rows are ranked and capped; a complete set is not.** Most lanes show their most urgent few and
-report the remainder as a count. Habits are the exception: every current habit is due every day, so
-the lane shows the whole set in columns with the finished ones ticked off, ordered so a habit keeps
-its place all day and checking one off never shuffles the rest. A lane's `… N more` counts against
-everything that exists in it rather than the rows it happened to build, so the trailer and the
-heading always describe the same pile.
+report the remainder as a count; lanes whose useful unit is bigger set their own cap (tasks is the
+list you pick from, and learning carries one row per stream). Habits are the exception entirely:
+every current habit is due every day, so the lane shows the whole set in columns with the finished
+ones ticked off, ordered so a habit keeps its place all day and checking one off never shuffles the
+rest. A lane's `… N more` counts against everything that exists in it rather than the rows it
+happened to build, so the trailer and the heading always describe the same pile.
 
 **One call per backend.** Every lane's data comes from a backend that speaks `--json`, all queried
 concurrently:

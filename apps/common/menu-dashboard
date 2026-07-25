@@ -66,9 +66,14 @@ BACKENDS = {
 BACKEND_TIMEOUT_SECONDS = 5.0
 
 # The dashboard is a glance: three rows a lane, or ten when you asked for that
-# one lane specifically. Grids and context lines are exempt — see LaneView.
+# one lane specifically. Grids are exempt — see LaneView.
 ROW_CAP = 3
 FOCUSED_ROW_CAP = 10
+
+# Lanes whose useful unit is bigger than the default. Tasks is the list you
+# actually pick from; learning carries one row per stream (the current section
+# plus each track), so three would silently drop a whole stream.
+LANE_ROW_CAPS = {"tasks": 5, "learning": 5}
 
 # The `icb overview` schema this build understands. A newer one is reported
 # rather than half-read: dotfiles and ichrisbirch install independently.
@@ -138,16 +143,17 @@ class Row:
 class GridCell:
     text: str
     done: bool
+    # What you would type to act on this cell. Blank when there is nothing left
+    # to do, so a finished row does not offer a handle it does not need.
+    handle: str = ""
 
 
 @dataclass
 class LaneView:
     """One lane's rendered model.
 
-    `rows` are the capped, ranked things to act on. `grid` and `context` are
-    exempt from the cap: a grid is a complete set that is only useful whole (the
-    habits for today), and context is a single standing line that frames the rows
-    without competing with them.
+    `rows` are the capped, ranked things to act on. `grid` is exempt from the
+    cap: it is a complete set that is only useful whole (the habits for today).
     """
 
     name: str
@@ -155,7 +161,6 @@ class LaneView:
     meta: str = ""
     rows: list[Row] = field(default_factory=list)
     grid: list[GridCell] = field(default_factory=list)
-    context: Row | None = None
     total: int = 0
     hints: list[str] = field(default_factory=list)
     reason: str = ""
@@ -287,16 +292,22 @@ def build_habits_lane(results: dict[str, JsonResult], today: date) -> LaneView:
     # with the finished ones ticked off — not a ranked excerpt. Ordering by
     # category and name keeps a habit in the same place all day, so ticking one
     # off never shuffles the rest.
+    #
+    # Only the outstanding ones carry an id: a completion record identifies the
+    # completion, not the habit, and a finished habit needs no handle anyway.
     entries = [(habit, False) for habit in due] + [(habit, True) for habit in done]
     entries.sort(key=lambda entry: (habit_category(entry[0]), entry[0].get("name", "")))
-    grid = [GridCell(habit.get("name", ""), completed) for habit, completed in entries]
+    grid = [
+        GridCell(habit.get("name", ""), completed, "" if completed else str(habit.get("id", "")))
+        for habit, completed in entries
+    ]
 
     return LaneView(
         name="habits",
         title="HABITS",
         meta=f"{len(done)} of {current_total} done today",
         grid=grid,
-        hints=["icb habits list --current"],
+        hints=["icb habits complete <id>"],
         reason=reason,
     )
 
@@ -408,9 +419,10 @@ def build_learning_lane(results: dict[str, JsonResult], today: date) -> LaneView
     total_items = progress.get("total_items", 0)
     meta = f"{section.get('name', '')} · {completed} of {total_items} done" if section else ""
 
-    # A track's current unit is a position, not a thing you can open. The
-    # resources are, so the rows are resources and the tracks become one standing
-    # context line.
+    # Every row is a resource you could open right now. The section supplies its
+    # own next few; each track supplies exactly one, already chosen by `learning`
+    # — a unit name is a position in a curriculum, not something you can sit down
+    # and do.
     started = []
     unstarted = []
     seen = set()
@@ -428,31 +440,36 @@ def build_learning_lane(results: dict[str, JsonResult], today: date) -> LaneView
             seen.add(resource.get("id"))
             unstarted.append(Row("start", resource.get("title", "")))
 
-    rows = started + unstarted
+    # Interleaved, not appended: the tracks are the streams most easily crowded
+    # out, and they are the reason the lane spans more than the current section.
+    rows = round_robin(track_rows(payload.get("track_focus") or [], seen), started + unstarted)
     return LaneView(
         name="learning",
         title="LEARNING",
         meta=meta,
         rows=rows,
-        context=track_context(payload.get("tracks") or []),
         total=len(rows),
         hints=["learning overview"],
     )
 
 
-def track_context(tracks: list[dict]) -> Row | None:
-    """Long-running tracks as one standing line. They are progress you carry, not
-    work the section hands you today, so they frame the rows instead of taking
-    slots from them."""
-    summaries = []
-    for track in tracks:
-        if not (track.get("current_unit") or {}).get("name"):
+def track_rows(focuses: list[dict], seen: set) -> list[Row]:
+    """One openable resource per track, noted with the track it advances.
+
+    The note carries the track's name and progress because the row's title says
+    nothing about which stream it belongs to — and that, not the resource, is
+    what you are choosing between.
+    """
+    rows = []
+    for focus in focuses:
+        resource = focus.get("resource")
+        if not resource or resource.get("id") in seen:
             continue
-        progress = track.get("progress") or {}
-        completed = progress.get("completed_items", 0)
-        total = progress.get("total_items", 0)
-        summaries.append(f"{track.get('display_name', '')} {completed}/{total}")
-    return Row("tracks", " · ".join(summaries)) if summaries else None
+        seen.add(resource.get("id"))
+        progress = focus.get("progress") or {}
+        note = f"{focus.get('display_name', '')} {progress.get('completed_items', 0)}/{progress.get('total_items', 0)}"
+        rows.append(Row("open" if focus.get("started") else "start", resource.get("title", ""), note))
+    return rows
 
 
 def build_maintenance_lane(results: dict[str, JsonResult], today: date) -> LaneView:
@@ -627,13 +644,21 @@ def clip(text: str, width: int) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
+def cap_for(lane_name: str, row_cap: int) -> int:
+    """A lane's own cap, unless you asked for one lane — then you want to see it,
+    and the focused cap wins outright."""
+    if row_cap == FOCUSED_ROW_CAP:
+        return row_cap
+    return LANE_ROW_CAPS.get(lane_name, row_cap)
+
+
 def render_lanes(lanes: list[LaneView], today: date, row_cap: int) -> None:
     width = terminal_width()
     print(f"{CYAN}Dashboard{RESET} · {today.strftime('%a %d %b')}")
     print(f"{CYAN}{'━' * width}{RESET}")
 
     for lane in (lane for lane in lanes if lane.available):
-        render_lane(lane, width, row_cap)
+        render_lane(lane, width, cap_for(lane.name, row_cap))
 
     degraded = [lane for lane in lanes if not lane.available]
     if degraded:
@@ -650,12 +675,10 @@ def render_lane(lane: LaneView, width: int, row_cap: int) -> None:
 
     if lane.grid:
         render_grid(lane.grid, width)
+    elif lane.rows:
+        render_rows(lane.rows[:row_cap], width)
     else:
-        shown = lane.rows[:row_cap] + ([lane.context] if lane.context else [])
-        if shown:
-            render_rows(shown, width)
-        else:
-            print("  —")
+        print("  —")
 
     render_trailer(lane, width, row_cap)
     if lane.reason:
@@ -684,6 +707,8 @@ def render_grid(cells: list[GridCell], width: int) -> None:
     available = width - 2
     columns = GRID_COLUMNS if available >= GRID_COLUMNS * GRID_MIN_COLUMN_WIDTH else 1
     column_width = (available - (columns - 1) * GRID_GUTTER) // columns
+    handle_width = max((len(cell.handle) for cell in cells), default=0)
+    text_width = column_width - 2 - (handle_width + 1 if handle_width else 0)
     # Column-major, so the set still reads top-to-bottom in its sorted order.
     per_column = math.ceil(len(cells) / columns)
     for offset in range(per_column):
@@ -694,7 +719,8 @@ def render_grid(cells: list[GridCell], width: int) -> None:
                 continue
             cell = cells[index]
             mark = f"{GREEN}✓{RESET}" if cell.done else f"{YELLOW}○{RESET}"
-            line.append(f"{mark} {clip(cell.text, column_width - 2):<{column_width - 2}}")
+            handle = f"{YELLOW}{cell.handle:>{handle_width}}{RESET} " if handle_width else ""
+            line.append(f"{mark} {handle}{clip(cell.text, text_width):<{text_width}}")
         print("  " + (" " * GRID_GUTTER).join(line).rstrip())
 
 
@@ -725,10 +751,9 @@ def lanes_as_json(lanes: list[LaneView], today: date, row_cap: int) -> str:
                     {"label": row.label, "text": row.text, "note": row.note, "urgency": str(row.urgency)}
                     for row in lane.rows
                 ],
-                "grid": [{"text": cell.text, "done": cell.done} for cell in lane.grid],
-                "context": lane.context.text if lane.context else None,
+                "grid": [{"text": cell.text, "done": cell.done, "handle": cell.handle} for cell in lane.grid],
                 "total": lane.total,
-                "more": max(0, lane.total - min(len(lane.rows), row_cap)),
+                "more": max(0, lane.total - min(len(lane.rows), cap_for(lane.name, row_cap))),
                 "hints": lane.hints,
             }
             for lane in lanes

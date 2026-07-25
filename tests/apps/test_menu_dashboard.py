@@ -79,6 +79,16 @@ def test_habits_lane_shows_every_habit_as_a_grid():
     assert [cell.done for cell in lane.grid] == [True, False, False, False]
 
 
+def test_habits_grid_carries_the_id_you_would_type():
+    """`icb habits complete` takes an id, so the grid has to show one."""
+    lane = lanes_by_name(all_results())["habits"]
+
+    outstanding = {cell.text: cell.handle for cell in lane.grid if not cell.done}
+    assert outstanding == {"Stretch": "1", "Journal": "3", "Read": "2"}
+    completed = [cell for cell in lane.grid if cell.done]
+    assert completed[0].handle == "", "a completion identifies the completion, not the habit"
+
+
 def test_habits_grid_keeps_a_completed_habit_in_place():
     """Ordering by category and name, never by completion, so ticking one off
     never shuffles the rest out from under you."""
@@ -117,11 +127,13 @@ def test_learning_lane_names_resources_rather_than_positions():
 
     assert lane.meta == "A Current Section · 6 of 42 done"
     assert [(row.label, row.text) for row in lane.rows] == [
+        ("start", "What To Open On First Track"),
         ("open", "A Resource In Progress"),
+        ("open", "Already Open On Third Track"),
         ("open", "A Started Resource"),
         ("start", "The Next Resource"),
         ("start", "The One After Next"),
-    ], "started resources first, then the section's order; completed ones are gone"
+    ], "tracks interleave with the section so neither stream crowds the other out"
 
 
 def test_learning_lane_does_not_repeat_a_resource_listed_twice():
@@ -131,12 +143,32 @@ def test_learning_lane_does_not_repeat_a_resource_listed_twice():
     assert titles.count("A Resource In Progress") == 1, "the section lists it too"
 
 
-def test_learning_tracks_become_context_not_rows():
+def test_learning_track_rows_say_which_stream_they_advance():
     lane = lanes_by_name(all_results())["learning"]
 
-    # A track with no current unit contributes nothing.
-    assert lane.context.text == "First Track 2/61"
-    assert "First Track" not in [row.text for row in lane.rows]
+    notes = {row.text: row.note for row in lane.rows}
+    assert notes["What To Open On First Track"] == "First Track 2/61"
+    assert notes["Already Open On Third Track"] == "Third Track 9/30"
+    assert notes["A Resource In Progress"] == "", "section rows are already named by the heading"
+
+
+def test_learning_track_with_nothing_left_contributes_no_row():
+    lane = lanes_by_name(all_results())["learning"]
+
+    assert "Fourth Track" not in " ".join(row.note for row in lane.rows)
+
+
+def test_learning_track_focus_is_not_repeated_from_the_section():
+    """A track whose current unit is the section would otherwise list the same
+    resource twice."""
+    payload = fixture("learning-overview.json")
+    payload["track_focus"][0]["resource"] = {"id": 901, "title": "The Next Resource", "status_id": 1}
+    results = all_results()
+    results["learning"] = menu_dashboard.JsonResult(payload=payload, exit_code=0)
+
+    lane = menu_dashboard.build_learning_lane(results, TODAY)
+
+    assert [row.text for row in lane.rows].count("The Next Resource") == 1
 
 
 def test_maintenance_lane_counts_only_what_is_due():
@@ -299,7 +331,6 @@ def test_lanes_as_json_shape():
         "reason",
         "rows",
         "grid",
-        "context",
         "total",
         "more",
         "hints",
@@ -315,8 +346,14 @@ def test_lanes_as_json_carries_the_habits_grid():
     habits = payload["lanes"][0]
 
     assert habits["rows"] == []
-    assert habits["grid"][0] == {"text": "Exercise", "done": True}
+    assert habits["grid"][0] == {"text": "Exercise", "done": True, "handle": ""}
     assert habits["more"] == 0, "a complete set has no remainder"
+
+
+def test_cap_for_gives_tasks_more_room_but_focus_still_wins():
+    assert menu_dashboard.cap_for("tasks", menu_dashboard.ROW_CAP) == 5
+    assert menu_dashboard.cap_for("upcoming", menu_dashboard.ROW_CAP) == menu_dashboard.ROW_CAP
+    assert menu_dashboard.cap_for("tasks", menu_dashboard.FOCUSED_ROW_CAP) == menu_dashboard.FOCUSED_ROW_CAP
 
 
 def test_lanes_as_json_keeps_unavailable_lanes():
