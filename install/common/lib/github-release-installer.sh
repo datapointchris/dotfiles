@@ -183,17 +183,16 @@ install_from_tarball() {
   local binary_path_in_tarball="$3"
   local version="${4:-latest}"
 
-  # Detect file extension from URL
-  local ext="tar.gz"
-  if [[ "$download_url" == *.tar.xz ]]; then
-    ext="tar.xz"
-  elif [[ "$download_url" == *.tar.gz ]] || [[ "$download_url" == *.tgz ]]; then
-    ext="tar.gz"
-  fi
-
-  local tarball_path="/tmp/${binary_name}.${ext}"
   local url_filename
   url_filename=$(basename "$download_url")
+
+  # Scratch path carries the asset filename, and therefore the version. A path
+  # keyed on the binary name alone is reused across versions, and the download
+  # below is skipped when the file already exists — so an update silently
+  # reinstalls whatever version happened to be downloaded first. That shipped:
+  # `icb --update` reported v0.1.0 → v0.2.0 and reinstalled v0.1.0 from a
+  # month-old /tmp/icb.tar.gz.
+  local tarball_path="/tmp/${url_filename}"
 
   # Check offline cache first
   if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
@@ -252,6 +251,7 @@ install_from_tarball() {
   fi
 
   chmod +x "$target_bin"
+  rm -f "$tarball_path"
 
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed to: $target_bin"
@@ -282,9 +282,11 @@ install_from_zip() {
   local binary_path_in_zip="$3"
   local version="${4:-latest}"
 
-  local zip_path="/tmp/${binary_name}.zip"
   local url_filename
   url_filename=$(basename "$download_url")
+
+  # Version-keyed for the same reason as install_from_tarball's tarball_path.
+  local zip_path="/tmp/${url_filename}"
 
   # Check offline cache first
   if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
@@ -316,8 +318,11 @@ install_from_zip() {
   local extract_dir="/tmp/${binary_name}-extract"
   log_info "Extraction directory: $extract_dir"
   log_info "Extracting..."
+  # Cleared first, and -o so a leftover dir from a previous version neither
+  # prompts for overwrite nor leaves an older binary behind to be installed.
+  rm -rf "$extract_dir"
   mkdir -p "$extract_dir"
-  unzip -q "$zip_path" -d "$extract_dir"
+  unzip -qo "$zip_path" -d "$extract_dir"
 
   local target_bin="$HOME/.local/bin/$binary_name"
   log_info "Installation target: $target_bin"
@@ -325,6 +330,7 @@ install_from_zip() {
   mkdir -p "$HOME/.local/bin"
   mv "$extract_dir/$binary_path_in_zip" "$target_bin"
   chmod +x "$target_bin"
+  rm -rf "$zip_path" "$extract_dir"
 
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed to: $target_bin"
