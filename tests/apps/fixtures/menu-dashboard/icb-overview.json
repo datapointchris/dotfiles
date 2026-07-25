@@ -37,8 +37,8 @@
   },
   "project_items": {
     "next": [
-      {"id": "019f0000-0000-7000-8000-000000000001", "title": "An actionable item", "notes": "what it actually means", "completed": false, "archived": false},
-      {"id": "019f0000-0000-7000-8000-000000000002", "title": "A second item", "notes": null, "completed": false, "archived": false}
+      {"id": "019f0000-0000-7000-8000-000000000001", "title": "An actionable item", "notes": "what it actually means", "projects": [{"id": "p1", "name": "A Project"}], "completed": false, "archived": false},
+      {"id": "019f0000-0000-7000-8000-000000000002", "title": "A second item", "notes": null, "projects": [{"id": "p1", "name": "A Project"}, {"id": "p2", "name": "Another Project"}], "completed": false, "archived": false}
     ],
     "next_total": 5,
     "blocked": [

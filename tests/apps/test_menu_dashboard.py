@@ -228,6 +228,26 @@ def test_projects_lane_carries_the_item_note_so_a_bare_title_says_something():
     assert lane.rows[1].text == "A second item", "no note means no dangling separator"
 
 
+def test_projects_lane_names_the_work_an_item_belongs_to():
+    lane = lanes_by_name(all_results())["projects"]
+
+    assert lane.rows[0].note == "A Project"
+    assert lane.rows[1].note == "A Project · Another Project", "picking a first would be arbitrary"
+
+
+def test_projects_lane_survives_an_icb_that_omits_membership():
+    """Older `icb` builds have no projects field; that reads as no membership."""
+    payload = fixture("icb-overview.json")
+    for item in payload["project_items"]["next"]:
+        del item["projects"]
+    results = {"icb": menu_dashboard.JsonResult(payload=payload, exit_code=0)}
+
+    lane = menu_dashboard.build_projects_lane(results, TODAY)
+
+    assert lane.available is True
+    assert lane.rows[0].note == ""
+
+
 def test_more_counts_come_from_the_backend_total_not_the_row_count():
     lane = lanes_by_name(all_results())["tasks"]
 
