@@ -408,6 +408,16 @@ else
 fi
 
 # forgit
+# forgit pipes every diff into delta, and delta cannot detect the terminal width
+# through a pipe — it silently renders at a fixed 80 columns whatever the pane
+# is. Pass the real width; FORGIT_IN_PREVIEW is forgit's own marker for the
+# preview pane, and is more reliable here than FZF_PREVIEW_COLUMNS, which fzf
+# may also export to execute() bindings. Do not switch the preview to unified to
+# gain room: delta only wraps long lines in side-by-side mode, so unified runs
+# them past the pane edge where fzf clips them.
+export FORGIT_PAGER='delta --paging=never --width=$([ -n "$FORGIT_IN_PREVIEW" ] && echo "${FZF_PREVIEW_COLUMNS:-80}" || tput cols)'
+export FORGIT_DIFF_FZF_OPTS="--preview-window='right:70%'"
+
 if [[ -f "$forgit_file" ]]; then
   source "$forgit_file"
   log "Load" "$forgit_file"

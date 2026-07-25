@@ -1,7 +1,9 @@
 git:
   pagers:
     - colorArg: always
-      pager: delta --paging=never
+      # Without an explicit width delta renders at a fixed 80 columns, because a
+      # piped stdout hides the real terminal size from it.
+      pager: delta --paging=never --width={{columnWidth}}
       useConfig: false
 gui:
   nerdFontsVersion: "3"
