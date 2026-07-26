@@ -62,14 +62,6 @@ manifest_list_non_empty() {
   [[ -n "$value" ]]
 }
 
-show_failures_summary() {
-  [[ ! -f "$FAILURES_LOG" || ! -s "$FAILURES_LOG" ]] && return 0
-
-  print_header_error "Installation Failures"
-  cat "$FAILURES_LOG"
-  log_info "Full report saved to: $FAILURES_LOG"
-}
-
 # ================================================================
 # MANIFEST-DRIVEN INSTALLATION
 # ================================================================

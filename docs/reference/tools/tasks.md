@@ -1,6 +1,8 @@
 # Task Reference
 
-This dotfiles repository uses [go-task/task](https://taskfile.dev) for automation. The Taskfile is intentionally minimal - complex installation logic lives in dedicated shell scripts.
+This dotfiles repository uses [go-task/task](https://taskfile.dev) for automation from inside the repo. The Taskfile is intentionally minimal - complex installation logic lives in dedicated shell scripts.
+
+Every task here has a `dotfiles` CLI equivalent that works from any directory, and both call the same scripts under `install/ops/`. See [Management Interface](../../architecture/management-interface.md) for the layering.
 
 ## Available Tasks
 
@@ -45,7 +47,7 @@ task docs:deploy        # Deploy documentation to GitHub Pages
 
 **Minimal by design.** Complex installation logic lives in shell scripts under `install/`, not in YAML. This keeps the Taskfile readable and the logic testable.
 
-**Platform detection is automatic.** Tasks that need platform awareness detect it at runtime using system checks.
+**Platform detection is automatic.** It lives in `install/platform-detection.sh` and is used by the `install/ops/` scripts, not reimplemented in YAML.
 
 ### Windows Setup (WSL only)
 

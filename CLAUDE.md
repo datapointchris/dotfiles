@@ -141,9 +141,11 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Symlink Management Critical Rule**:
 
-After **adding** files, run `task symlinks:link` (create-only — it adds new links but leaves stale ones behind).
+After **adding** files, run `dotfiles link` (create-only — it adds new links but leaves stale ones behind).
 
-After **removing or renaming** files, run `task relink` (alias for `symlinks:relink`). Unlike `symlinks:link`, it removes every symlink and recreates them, so it **prunes dangling links** left by deletions/moves. `symlinks:link` does NOT prune — a deleted source leaves a broken symlink in `~`. When in doubt, `task relink` is always safe (idempotent).
+After **removing or renaming** files, run `dotfiles relink`. Unlike `link`, it removes every symlink and recreates them, so it **prunes dangling links** left by deletions/moves. `link` does NOT prune — a deleted source leaves a broken symlink in `~`. When in doubt, `dotfiles relink` is always safe (idempotent).
+
+`task link` / `task relink` are equivalent but only work from inside the repo; both front doors call `install/ops/symlinks.sh`.
 
 Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations, or broken symlinks pointing at deleted repo files.
 
@@ -180,10 +182,11 @@ docs/
 
 ## Key Custom Tools
 
-- **Symlinks Manager** — `task symlinks:{link,check,show}`
+- **dotfiles** (`dotfiles`) — the front door, usable from any directory: `update`, `install`, `link`/`relink`, `doctor`, `test`, `docs`, `pull`. See `docs/architecture/management-interface.md`
+- **Symlinks Manager** — `dotfiles symlinks {link,check,show}`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
 - **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `~/dev/tools.yml` (Syncthing-synced, not in dotfiles)
-- **Task** — `task --list-all` for available tasks; complex logic lives in `install/` scripts
+- **Task** — `task --list-all` from inside the repo; both front doors share `install/ops/`
 
 ## Learnings Directory
 

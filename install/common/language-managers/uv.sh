@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
 UV_INSTALL_URL="https://astral.sh/uv/install.sh"
 

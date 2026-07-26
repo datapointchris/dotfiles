@@ -155,8 +155,8 @@ filtering, so there is still one list, not two. See
 
 **Management**:
 
-- Install: `task shell:install` (reads from packages.yml)
-- Update: `task shell:update` or `task update-all`
+- Install: `install/common/plugins/shell-plugins.sh` (reads from packages.yml)
+- Update: `dotfiles update plugins`
 
 ## Installation Location Strategy
 

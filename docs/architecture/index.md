@@ -23,15 +23,16 @@ Two-layer approach: common base + platform overlay.
 3. Links apps from `apps/{platform}/` to `~/.local/bin/`
 4. Links shell source files from `shell/{platform}/` to `~/.local/shell/`
 
-**Common commands** (`task` is the single front door — see [Management Interface](management-interface.md)):
+**Common commands** (the `dotfiles` CLI works from any directory; `task` is equivalent
+but only from inside the repo — see [Management Interface](management-interface.md)):
 
 ```bash
-task link               # Deploy all symlinks (→ symlinks:link)
-task relink             # Complete refresh (remove and recreate)
-task update             # Update everything
-task doctor             # Health check: symlinks + package-manifest drift
-task symlinks:check     # Verify symlinks are correct
-task symlinks:show      # Show all symlinks
+dotfiles link               # Deploy all symlinks
+dotfiles relink             # Complete refresh (remove and recreate)
+dotfiles update             # Update everything (or a subset: --mine, --no-system)
+dotfiles doctor             # Health check: symlinks + package-manifest drift
+dotfiles symlinks check     # Verify symlinks are correct
+dotfiles symlinks show      # Show all symlinks
 ```
 
 **Example results**:

@@ -8,7 +8,7 @@ set -uo pipefail
 # resolves the version with the prefixed lookup rather than /releases/latest,
 # which would return whichever release is newest overall.
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 

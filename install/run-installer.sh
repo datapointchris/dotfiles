@@ -6,22 +6,36 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
+# Verb used in failure output. update.sh sets this to "update" so a failed
+# `--update` run isn't reported as a failed installation.
+INSTALLER_ACTION="${INSTALLER_ACTION:-installation}"
+
+show_failures_summary() {
+  [[ ! -f "$FAILURES_LOG" || ! -s "$FAILURES_LOG" ]] && return 0
+
+  print_header_error "${INSTALLER_ACTION^} Failures"
+  cat "$FAILURES_LOG"
+  log_info "Full report saved to: $FAILURES_LOG"
+}
+
+# Usage: run_installer <script> <tool_name> [script_args...]
 run_installer() {
   local script="$1"
   local tool_name="$2"
+  shift 2
 
   local stderr_file
   stderr_file=$(mktemp)
 
   # Capture stderr to file only (not console yet)
-  bash "$script" 2>"$stderr_file"
+  bash "$script" "$@" 2>"$stderr_file"
   exit_code=$?
 
   if [[ $exit_code -eq 0 ]]; then
     rm -f "$stderr_file"
     return 0
   else
-    log_warning "$tool_name installation failed (see $FAILURES_LOG)"
+    log_warning "$tool_name $INSTALLER_ACTION failed (see $FAILURES_LOG)"
 
     local output
     output=$(cat "$stderr_file")
@@ -57,7 +71,7 @@ run_installer() {
 
     # Use print_section_error for consistent formatting with error styling
     {
-      print_section_error "$failure_tool - Installation Failed"
+      print_section_error "$failure_tool - ${INSTALLER_ACTION^} Failed"
       echo "Installer: $(basename "$script")"
       [[ -n "$failure_reason" ]] && echo "Error: $failure_reason"
       [[ -n "$failure_url" ]] && echo "Download URL: $failure_url"

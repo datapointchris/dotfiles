@@ -468,3 +468,74 @@ def test_system_default_tier_is_workstation(real_packages_data):
     default = parse_packages.get_system_packages(real_packages_data, "apt")
     workstation = parse_packages.get_system_packages(real_packages_data, "apt", "workstation")
     assert default == workstation
+
+
+# ================================================================
+# Owner filtering (drives `update.sh --mine`)
+# ================================================================
+
+
+@pytest.mark.parametrize(
+    "entry,expected",
+    [
+        ({"repo": "datapointchris/ichrisbirch"}, "datapointchris"),
+        ({"repo": "https://github.com/datapointchris/indy.git"}, "datapointchris"),
+        ({"repo": "https://github.com/datapointchris/indy"}, "datapointchris"),
+        ({"github_repo": "datapointchris/todoui"}, "datapointchris"),
+        ({"package": "github.com/datapointchris/forge"}, "datapointchris"),
+        ({"package": "github.com/joshmedeski/sesh/v2"}, "joshmedeski"),
+        ({"apt": "curl", "brew": "curl"}, None),
+        ({"name": "ruff"}, None),
+    ],
+)
+def test_extract_owner_handles_every_field_shape(entry, expected):
+    """Sections disagree on which field carries the owner and in what form."""
+    assert parse_packages.extract_owner(entry) == expected
+
+
+def test_owner_filter_spans_every_install_method(real_packages_data):
+    """--mine must reach Chris's tools however they happen to be installed.
+
+    Regression guard for the reason owner-derivation was chosen over a `personal`
+    tag: a tag has to be remembered on each new tool, and silently excludes what
+    it misses.
+    """
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+
+    assert {i["name"] for i in owned["github_releases"]} == {"icb", "learning", "nomad", "meso"}
+    assert {i["name"] for i in owned["custom_installers"]} == {"theme", "font"}
+    assert {i["name"] for i in owned["go_tools"]} == {"todoui", "forge", "toolbox"}
+    assert "indy" in {i["name"] for i in owned["git_uv_tools"]}
+    assert "webviewrs" in {i["name"] for i in owned["cargo_packages"]}
+
+
+def test_owner_filter_excludes_third_party(real_packages_data):
+    """Third-party tools must not survive the owner filter."""
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+
+    assert "terraform-ls" not in {i["name"] for i in owned["custom_installers"]}
+    assert "sesh" not in {i["name"] for i in owned["go_tools"]}
+    assert "neovim" not in {i["name"] for i in owned["github_releases"]}
+
+
+def test_owner_filter_empties_ownerless_sections(real_packages_data):
+    """Registry-sourced sections have no GitHub owner and must match nothing."""
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+
+    assert owned["system_packages"] == []
+    # npm_globals and uv_tools nest their lists one level deeper, under categories
+    assert all(not entries for entries in owned["npm_globals"].values())
+    assert all(not entries for entries in owned["uv_tools"].values())
+
+
+def test_owner_filter_preserves_section_structure(real_packages_data):
+    """Getters run against the filtered data, so every section must still exist."""
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+    assert set(owned) == set(real_packages_data)
+
+
+def test_owner_filter_is_empty_for_unknown_owner(real_packages_data):
+    """An owner with nothing in packages.yml yields no packages, not an error."""
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, "nobody-at-all")
+    assert parse_packages.get_github_packages(owned) == []
+    assert parse_packages.get_custom_installers(owned) == []

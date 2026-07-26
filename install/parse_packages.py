@@ -19,6 +19,10 @@ Usage:
     python parse_packages.py --get=runtimes.node.version
     python parse_packages.py --custom-installer=terraform-ls --field=repo
 
+Owner-filtered usage (drives `update.sh --mine`):
+    python parse_packages.py --type=github --owner=datapointchris
+    python parse_packages.py --type=go --owner=datapointchris --format=name_package
+
 Manifest-filtered usage:
     python parse_packages.py --type=go --manifest=wsl-work-workstation
     python parse_packages.py --manifest-field=platform --manifest=archlinux-personal-workstation
@@ -394,6 +398,54 @@ def get_macos_casks(data):
     return [cask['name'] for cask in data['macos_casks']]
 
 
+def extract_owner(entry):
+    """Resolve the GitHub owner of a packages.yml entry, or None if it has none.
+
+    Sections disagree on which field carries the owner and in what shape: `repo`
+    is either `owner/name` (github_releases, custom_installers) or a clone URL
+    (git_uv_tools), and `package` is a Go import path. Entries sourced from a
+    registry rather than GitHub — npm, PyPI, apt/brew/pacman — have no owner and
+    correctly match nothing.
+    """
+    for field in ('repo', 'github_repo', 'package'):
+        value = entry.get(field)
+        if not isinstance(value, str):
+            continue
+        path = value.split('://', 1)[-1].removesuffix('.git').strip('/')
+        segments = [segment for segment in path.split('/') if segment]
+        # A leading host (github.com) is only present in the URL and Go-import forms
+        if segments and '.' in segments[0]:
+            segments = segments[1:]
+        if segments:
+            return segments[0]
+    return None
+
+
+def filter_packages_by_owner(data, owner):
+    """Prune every section to entries owned by `owner`.
+
+    Applied to the loaded data before dispatch so all existing getters, output
+    formats, and manifest filters compose with it unchanged.
+    """
+    def matching(entries):
+        return [entry for entry in entries if isinstance(entry, dict) and extract_owner(entry) == owner]
+
+    filtered = {}
+    for key, value in data.items():
+        if isinstance(value, list):
+            filtered[key] = matching(value)
+        elif isinstance(value, dict):
+            # uv_tools and npm_globals nest their lists one level deeper, under categories
+            filtered[key] = {
+                category: matching(entries)
+                for category, entries in value.items()
+                if isinstance(entries, list)
+            }
+        else:
+            filtered[key] = value
+    return filtered
+
+
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
     parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks'],
@@ -411,6 +463,7 @@ def main():
     parser.add_argument('--filter', help='With --type=custom: only include installers where this field is truthy (e.g., bundle_install_script)')
     parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
                         help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline)')
+    parser.add_argument('--owner', help='Only include packages owned by this GitHub owner (e.g., datapointchris)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., wsl-work-workstation) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
 
@@ -476,6 +529,9 @@ def main():
     if not args.type:
         parser.print_help()
         sys.exit(1)
+
+    if args.owner:
+        data = filter_packages_by_owner(data, args.owner)
 
     packages = []
 

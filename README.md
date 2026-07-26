@@ -125,16 +125,18 @@ theme apply rose-pine                   # Apply theme across terminal apps
 theme preview                           # Preview themes with fzf
 
 # Package updates
-task update                             # Update everything
+dotfiles update                         # Update everything
+dotfiles update --mine                  # Only my own tools
+dotfiles update --no-system             # Skip the sudo-gated, slowest group
 
 # Symlinks
-task symlinks:link                      # Deploy configs (also: relink, check, unlink)
+dotfiles link                           # Deploy configs (also: relink, check, unlink)
 
 # Discovery
 toolbox search python                   # Find Python tools
 ```
 
-Run `task --list` to see all available tasks.
+Run `dotfiles` for all commands, or `task --list` when working inside the repo.
 
 ## Symlink Management
 

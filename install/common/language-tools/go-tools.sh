@@ -41,6 +41,11 @@ if [[ -n "${MACHINE:-}" ]]; then
   MANIFEST_FLAG=(--manifest="$MACHINE")
 fi
 
+OWNER_FLAG=()
+if [[ -n "${PACKAGE_OWNER:-}" ]]; then
+  OWNER_FLAG=(--owner="$PACKAGE_OWNER")
+fi
+
 print_header "Go Tools"
 
 # Get Go tools from packages.yml via Python parser
@@ -83,6 +88,7 @@ while IFS='|' read -r binary_name tool; do
   fi
 
   # Check offline cache before go install
+  install_status=0
   cached_binary="$HOME/installers/go-binaries/$binary_name"
   if [[ -f "$cached_binary" ]] && [[ "$UPDATE_MODE" != "true" ]]; then
     log_info "Using cached binary: $cached_binary"
@@ -92,11 +98,16 @@ while IFS='|' read -r binary_name tool; do
     chmod +x "${binary_path}.new"
     mv "${binary_path}.new" "$binary_path"
   else
-    go install "$tool@latest" 2>&1 | grep -v "go: downloading" || true
+    # The exit status must be captured separately: an update leaves the previous
+    # binary in place, so its existence alone would report a failed install as
+    # "already at latest".
+    go_output=$(mktemp)
+    go install "$tool@latest" >"$go_output" 2>&1 || install_status=$?
+    grep -v "go: downloading" "$go_output" || true
+    rm -f "$go_output"
   fi
 
-  # Check if binary was actually created
-  if [[ -f "$binary_path" ]]; then
+  if [[ -f "$binary_path" ]] && [[ $install_status -eq 0 ]]; then
     version_after=$(get_tool_version "$binary_path")
     if [[ "$UPDATE_MODE" == "true" ]]; then
       if [[ -n "$version_before" ]] && [[ -n "$version_after" ]]; then
@@ -130,11 +141,16 @@ while IFS='|' read -r binary_name tool; do
 Tool will be installed to:
    $GOBIN"
 
-    output_failure_data "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "Failed to install via go install"
+    reason="Failed to install via go install"
+    if [[ -f "$binary_path" ]]; then
+      reason="go install failed; $binary_name left at the previously installed version"
+    fi
+
+    output_failure_data "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "$reason"
     log_warning "Failed to install $binary_name (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=name_package "${MANIFEST_FLAG[@]}")
+done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=name_package "${MANIFEST_FLAG[@]}" "${OWNER_FLAG[@]}")
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT tool(s) failed to install"
