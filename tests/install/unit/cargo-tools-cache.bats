@@ -29,7 +29,14 @@ set -euo pipefail
 export HOME="$FAKE_HOME"
 export OFFLINE_CACHE_DIR="$CACHE_DIR"
 export DOTFILES_DIR="$DOTFILES_DIR"
-export CARGO_TOOLS_SOURCE_ONLY=true
+# Refuse to source a cargo-tools.sh that would install on source. Without this a
+# copy predating the guard runs cargo binstall for every package in packages.yml
+# once per test — the failure mode that hit update.sh when a pre-commit stash
+# rolled it back to a version with no guard.
+if ! grep -q 'BASH_SOURCE\[0\]}" == "\${0}' "$DOTFILES_DIR/install/common/language-tools/cargo-tools.sh"; then
+  echo "refusing to source cargo-tools.sh: it has no execute-only guard" >&2
+  exit 1
+fi
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"

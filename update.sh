@@ -556,10 +556,9 @@ main() {
 # Run only when executed, never when sourced — unit tests source this file to
 # call parse_args/selected_phase_names directly.
 #
-# Deliberately NOT an opt-in env var (the CARGO_TOOLS_SOURCE_ONLY pattern): that
-# puts the guard in the caller's hands, so any copy of this file lacking the
-# check runs a full system update on `source`. This condition needs no
-# cooperation and cannot be defeated by the caller.
+# Deliberately not an opt-in env var: that puts the guard in the caller's hands,
+# so any copy of this file lacking the check runs a full system update on
+# `source`. This condition needs no cooperation and cannot be defeated.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"
 fi

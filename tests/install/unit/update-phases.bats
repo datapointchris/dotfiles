@@ -3,8 +3,8 @@
 # Unit tests for update.sh phase selection
 # ================================================================
 # What is under test is which phases an argument list selects, not what those
-# phases do. So these source update.sh with UPDATE_SOURCE_ONLY and call
-# selected_phase_names directly (the same function main() selects through).
+# phases do. So these source update.sh and call selected_phase_names directly
+# (the same function main() selects through); update.sh runs nothing on source.
 #
 # Going through `update.sh --dry-run` instead would resolve each phase's item
 # list, and every one of those is a python3 + packages.yml parse — roughly a

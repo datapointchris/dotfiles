@@ -89,9 +89,13 @@ if [[ -n "${MACHINE:-}" ]]; then
   MANIFEST_FLAG=(--manifest="$MACHINE")
 fi
 
-# Allow sourcing this script for unit testing without running the install loop.
-# Usage: CARGO_TOOLS_SOURCE_ONLY=true source cargo-tools.sh
-if [[ "${CARGO_TOOLS_SOURCE_ONLY:-false}" != "true" ]]; then
+# Install only when executed, never when sourced — unit tests source this file
+# to call install_from_cache directly.
+#
+# Deliberately not an opt-in env var: that puts the guard in the caller's hands,
+# so any copy of this file lacking the check installs every cargo package on
+# `source`. This condition needs no cooperation and cannot be defeated.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   log_info "Reading packages from packages.yml..."
 
   FAILURE_COUNT=0
