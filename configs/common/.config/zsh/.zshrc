@@ -7,7 +7,10 @@
 # ------------------------------------------------------------------ #
 # BOOTSTRAP: Load environment and utilities
 # ------------------------------------------------------------------ #
-[[ -f "$HOME/.env" ]] && source "$HOME/.env"
+# Sourced before anything else because .env is where ZSHRC_DEBUG is set; the
+# entry is logged further down, once log() exists to report it.
+env_file="$HOME/.env"
+[[ -f $env_file ]] && source $env_file
 ZSHRC_DEBUG="${ZSHRC_DEBUG:-0}"
 
 CHECK_MARK="☑️"
@@ -32,10 +35,9 @@ log() {
 log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
 # Log environment
-env_file="$HOME/.env"
 colors_file="$HOME/.local/shell/colors.sh"
 formatting_file="$HOME/.local/shell/formatting.sh"
-[[ -f $env_file ]] && source $env_file && log "Load" "$env_file" || log_error "Load" "$env_file"
+[[ -f $env_file ]] && log "Load" "$env_file" || log_error "Load" "$env_file"
 [[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
 [[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
 
@@ -117,6 +119,10 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 
 # Tool directories
 export CARGO_HOME="$HOME/.cargo"
+
+# Declared here rather than beside the plugin loading further down, because the
+# PATH section reads it first and silently added nothing when it was still empty.
+ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
 
 # ------------------------------------------------------------------ #
 # XDG BASE DIRECTORY
@@ -267,6 +273,11 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 # Strategy: User tools > Language ecosystems > System
 # add_path PREPENDS, so last call = highest priority
 
+# Keeps $path unique, dropping the later copy of any entry. .zshenv seeds a
+# minimal PATH for non-interactive shells and a login shell re-runs the lot, so
+# without this the same directories accumulated up to four times each.
+typeset -U path PATH
+
 function add_path() {
   [[ -d "$1" ]] && export PATH="$1:$PATH" && log "Path" "$1"
 }
@@ -378,7 +389,7 @@ fi
 # ZSH PLUGINS (manually cloned to ~/.config/zsh/plugins)
 # ------------------------------------------------------------------ #
 # NOTE: zsh-syntax-highlighting MUST be loaded last per their docs
-ZSH_PLUGINS_DIR="$HOME/.config/zsh/plugins"
+# ZSH_PLUGINS_DIR is set in the XDG section, above the PATH setup that reads it.
 
 # Plugin file paths
 git_open_file="$ZSH_PLUGINS_DIR/git-open/git-open"
