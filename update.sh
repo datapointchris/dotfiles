@@ -74,6 +74,42 @@ parse_packages() {
 }
 
 # ================================================================
+# REPORTING
+# ================================================================
+
+# Reports what moved between two sorted "<name> <version>" snapshots, for the
+# phases whose upgrade command updates many things at once and says nothing
+# useful about which. Prints up_to_date_message when nothing moved.
+#
+# Additions and removals are reported as such rather than folded into "updated":
+# a plugin that appears because the config gained it, or disappears because the
+# config dropped it, is not an upgrade and reading as one hides the real change.
+report_snapshot_changes() {
+  local before="$1" after="$2" up_to_date_message="$3"
+  local changed=false name version previous
+
+  while read -r name version; do
+    [[ -z "$name" ]] && continue
+    changed=true
+    previous=$(awk -v tracked="$name" '$1 == tracked { print $2 }' <<<"$before")
+    if [[ -z "$previous" ]]; then
+      log_success "$name installed ($version)"
+    else
+      log_success "$name updated: $previous → $version"
+    fi
+  done < <(comm -13 <(sort <<<"$before") <(sort <<<"$after"))
+
+  while read -r name; do
+    [[ -z "$name" ]] && continue
+    changed=true
+    log_success "$name removed"
+  done < <(comm -23 <(awk '{print $1}' <<<"$before" | sort) <(awk '{print $1}' <<<"$after" | sort))
+
+  [[ "$changed" == "true" ]] || log_success "$up_to_date_message"
+  return 0
+}
+
+# ================================================================
 # PHASES
 # ================================================================
 # A phase may define a companion <function>_items that echoes what it would act
@@ -303,18 +339,7 @@ update_npm_globals() {
     return 0
   fi
 
-  local changes
-  changes=$(comm -13 <(echo "$before") <(echo "$after"))
-  if [[ -z "$changes" ]]; then
-    log_success "npm global packages already at latest"
-    return 0
-  fi
-
-  local package version
-  while read -r package version; do
-    [[ -z "$package" ]] && continue
-    log_success "$package updated to $version"
-  done <<<"$changes"
+  report_snapshot_changes "$before" "$after" "npm global packages already at latest"
 }
 
 update_github_releases() {
@@ -374,14 +399,14 @@ update_shell_plugins() {
 
     # `git pull --quiet` on a current clone exits 0 and prints nothing, so the
     # commit is what distinguishes a real update from a no-op.
-    before=$(git -C "$plugin_dir" rev-parse --short HEAD 2>/dev/null)
+    before=$(git_checkout_commit "$plugin_dir") || before=""
 
     if ! git -C "$plugin_dir" pull origin "$branch" --quiet; then
       log_error "$name update failed"
       continue
     fi
 
-    after=$(git -C "$plugin_dir" rev-parse --short HEAD 2>/dev/null)
+    after=$(git_checkout_commit "$plugin_dir") || after=""
     if [[ "$before" == "$after" ]]; then
       log_success "$name already at latest ($after)"
     else
@@ -396,26 +421,50 @@ update_shell_plugins_items() {
 
 update_tmux_plugins() {
   print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")"
-  if "$HOME/.config/tmux/plugins/tpm/bin/update_plugins" all; then
-    log_success "tmux plugin update completed"
-  else
+  local plugins_dir="$HOME/.config/tmux/plugins"
+  local before after tpm_output tpm_status=0
+
+  # tpm exits 0 and prints the same "Done, thanks" whether or not a plugin moved,
+  # so the per-plugin commits are the only evidence of what it actually did.
+  before=$(git_checkouts_snapshot "$plugins_dir") || before=""
+
+  tpm_output=$("$plugins_dir/tpm/bin/update_plugins" all 2>&1) || tpm_status=$?
+  [[ "${DEBUG:-}" == "true" ]] && echo "$tpm_output"
+
+  if [[ $tpm_status -ne 0 ]]; then
     log_warning "tmux plugins update failed"
+    echo "$tpm_output" >&2
+    return 1
   fi
+
+  after=$(git_checkouts_snapshot "$plugins_dir") || after=""
+  report_snapshot_changes "$before" "$after" "tmux plugins already at latest"
 }
 
 update_nvim_plugins() {
   print_section "Updating Neovim plugins via $(print_green ":Lazy update")"
-  local nvim_output
-  nvim_output=$(mktemp)
-  if nvim --headless "+Lazy! update" +qa &>"$nvim_output"; then
-    log_success "Neovim plugin update completed"
-    [[ "${DEBUG:-}" == "true" ]] && cat "$nvim_output"
-  else
+  local plugins_dir="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy"
+  local before after nvim_output nvim_status=0
+
+  # `:Lazy! update` exits 0 for a no-op and its output is a rendered TUI frame,
+  # so the per-plugin commits are what say which plugins moved.
+  #
+  # The checkouts rather than lazy-lock.json: the lockfile only moves when
+  # upstream does, so a plugin dragged back to its pinned commit — the repair
+  # case — leaves it untouched and would read as nothing having happened.
+  before=$(git_checkouts_snapshot "$plugins_dir") || before=""
+
+  nvim_output=$(nvim --headless "+Lazy! update" +qa 2>&1) || nvim_status=$?
+  [[ "${DEBUG:-}" == "true" ]] && echo "$nvim_output"
+
+  if [[ $nvim_status -ne 0 ]]; then
     log_warning "Neovim plugins update failed"
-    log_warning "Full output:"
-    cat "$nvim_output"
+    echo "$nvim_output" >&2
+    return 1
   fi
-  rm -f "$nvim_output"
+
+  after=$(git_checkouts_snapshot "$plugins_dir") || after=""
+  report_snapshot_changes "$before" "$after" "Neovim plugins already at latest"
 }
 
 # ================================================================

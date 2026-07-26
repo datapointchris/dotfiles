@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Queries for what a package manager currently has installed.
+# Queries for what is currently installed, one per distribution mechanism.
 #
 # Usage:
 #   source "$DOTFILES_DIR/install/common/lib/installed-versions.sh"
@@ -9,9 +9,16 @@
 #   uv tool upgrade indy
 #   after=$(uv_tool_installed_ref indy) || after=""
 #
-# Update phases compare a before/after snapshot rather than trusting an exit
-# code: `uv tool upgrade`, `cargo binstall`, and `npm update -g` all exit 0 for a
-# no-op, so only observed state distinguishes "upgraded" from "nothing to do".
+# These exist for the upgrade commands that exit 0 whether or not anything
+# changed and print nothing distinguishing — `uv tool upgrade`, `cargo binstall`,
+# `npm update -g`, tpm's `update_plugins`, `:Lazy update`. For those, observed
+# state is the only thing that separates "upgraded" from "nothing to do".
+#
+# Not everything needs one. brew/pacman/apt, rustup, `uv self update`, and the
+# `theme`/`font` upgrade commands all report their own outcome accurately, and
+# the GitHub release installers compare the installed version against the release
+# tag before downloading. Re-deriving a result those already state is duplicated
+# logic that can only drift away from the truth.
 
 # Echoes "<version> (<commit>)" for a git-installed tool, or "<version>" for one
 # from an index. Returns 1 when the tool has no installed record.
@@ -69,4 +76,51 @@ npm_global_versions() {
   npm ls -g --depth=0 --json 2>/dev/null |
     jq -r '.dependencies // {} | to_entries[] | "\(.key) \(.value.version // "unknown")"' |
     sort
+}
+
+# Echoes the module version stamped into a Go binary, e.g. "v1.7.1", or "(devel)"
+# for one built outside a tagged module. Returns 1 when the file carries no Go
+# build info.
+#
+# Read from the binary's embedded build info rather than by running it: the
+# version is what `go install <pkg>@latest` actually resolved, no tool needs a
+# --version flag, and nothing has to guess which of several version-shaped tokens
+# in a tool's own output is the tool's.
+go_binary_module_version() {
+  local binary_path="$1"
+  [[ -f "$binary_path" ]] || return 1
+  command -v go >/dev/null 2>&1 || return 1
+  go version -m "$binary_path" 2>/dev/null | awk '
+    $1 == "mod" {
+      print $3
+      found = 1
+      exit
+    }
+    END { exit !found }
+  '
+}
+
+# Echoes the short HEAD commit of a git checkout. Returns 1 when the path is not
+# one.
+git_checkout_commit() {
+  local checkout_dir="$1"
+  [[ -d "$checkout_dir/.git" ]] || return 1
+  git -C "$checkout_dir" rev-parse --short HEAD 2>/dev/null
+}
+
+# Echoes "<name> <commit>" per line for every git checkout directly inside a
+# parent directory — the shape tpm, lazy.nvim, and any other clone-per-thing
+# manager leaves on disk.
+#
+# The checkouts are the state to diff even where a manager keeps a lockfile:
+# lazy-lock.json only moves when upstream does, so a plugin dragged back to its
+# pinned commit would leave it untouched.
+git_checkouts_snapshot() {
+  local parent_dir="$1"
+  [[ -d "$parent_dir" ]] || return 1
+  local checkout_dir commit
+  for checkout_dir in "$parent_dir"/*/; do
+    commit=$(git_checkout_commit "${checkout_dir%/}") || continue
+    echo "$(basename "$checkout_dir") $commit"
+  done | sort
 }

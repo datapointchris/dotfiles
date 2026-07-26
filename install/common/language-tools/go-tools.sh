@@ -7,6 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/installed-versions.sh"
 
 # Parse arguments
 FORCE_INSTALL="${FORCE_INSTALL:-false}"
@@ -55,15 +56,6 @@ FAILURE_COUNT=0
 INSTALLED_COUNT=0
 SKIPPED_COUNT=0
 
-get_tool_version() {
-  local bin="$1"
-  local ver=""
-  ver=$("$bin" --version 2>&1 | grep -oE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1) ||
-    ver=$("$bin" version 2>&1 | grep -oE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1) ||
-    ver=""
-  echo "$ver"
-}
-
 while IFS='|' read -r binary_name tool; do
   binary_path="$GOBIN/$binary_name"
 
@@ -77,7 +69,7 @@ while IFS='|' read -r binary_name tool; do
   # Get version before update (if updating)
   version_before=""
   if [[ "$UPDATE_MODE" == "true" ]] && [[ -f "$binary_path" ]]; then
-    version_before=$(get_tool_version "$binary_path")
+    version_before=$(go_binary_module_version "$binary_path") || version_before=""
   fi
 
   # Install/update the tool
@@ -108,7 +100,7 @@ while IFS='|' read -r binary_name tool; do
   fi
 
   if [[ -f "$binary_path" ]] && [[ $install_status -eq 0 ]]; then
-    version_after=$(get_tool_version "$binary_path")
+    version_after=$(go_binary_module_version "$binary_path") || version_after=""
     if [[ "$UPDATE_MODE" == "true" ]]; then
       if [[ -n "$version_before" ]] && [[ -n "$version_after" ]]; then
         if [[ "$version_before" == "$version_after" ]]; then

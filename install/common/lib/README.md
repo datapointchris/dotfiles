@@ -76,10 +76,18 @@ Version comparison and GitHub API lookups shared by the release installers.
 
 ### installed-versions.sh
 
-Queries for what a package manager currently has installed. Sourced by `update.sh`, which diffs a
-before/after snapshot to decide what to report: `uv tool upgrade`, `cargo binstall`, and
-`npm update -g` all exit 0 whether or not anything changed, so an exit code alone cannot
-distinguish a no-op from a real upgrade.
+Queries for what is currently installed, one per distribution mechanism. Sourced by `update.sh` and
+`go-tools.sh`, which diff a before/after snapshot to decide what to report.
+
+These exist only for upgrade commands that exit 0 whether or not anything changed and print nothing
+distinguishing — `uv tool upgrade`, `cargo binstall`, `npm update -g`, tpm's `update_plugins`,
+`:Lazy update`. For those, observed state is the only thing that separates "upgraded" from "nothing
+to do".
+
+Deliberately **not** used for brew/pacman/apt, rustup, `uv self update`, the `theme`/`font` upgrade
+commands, or the GitHub release installers. Those already report their own outcome accurately (the
+release installers by comparing the installed version against the release tag before downloading),
+and re-deriving a result they already state is duplicated logic that can only drift.
 
 **Functions:**
 
@@ -89,6 +97,13 @@ distinguish a no-op from a real upgrade.
 - `cargo_installed_version(crate)` - Installed version of a crate, or non-zero when the crate is not
   cargo-managed on this platform
 - `npm_global_versions()` - `<package> <version>` per line for every top-level global package
+- `go_binary_module_version(binary_path)` - Module version stamped into a Go binary's build info; no
+  tool needs a `--version` flag and nothing guesses which version-shaped token in its output is the
+  tool's own
+- `git_checkout_commit(dir)` - Short HEAD of a git checkout, or non-zero when the path is not one
+- `git_checkouts_snapshot(parent_dir)` - `<name> <commit>` per line for every checkout directly
+  inside a directory, for clone-per-thing managers like tpm and lazy.nvim; the checkouts rather than
+  a lockfile, which only moves when upstream does and so misses a repair
 
 ## Architecture
 

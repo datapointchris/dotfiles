@@ -20,6 +20,35 @@ setup_file() {
   DOTFILES_DIR="$(cd "${BATS_TEST_DIRNAME}/../../.." && pwd)"
   export DOTFILES_DIR
   export LIB="$DOTFILES_DIR/install/common/lib/installed-versions.sh"
+
+  # report_snapshot_changes lives in update.sh, which runs nothing on source.
+  # Same refusal-to-source guard as update-phases.bats: a copy predating the
+  # guard would run a full system update per test.
+  BATS_FILE_TMPDIR="${BATS_FILE_TMPDIR:-$(mktemp -d)}"
+  export REPORT="$BATS_FILE_TMPDIR/report.sh"
+  cat > "$REPORT" << SCRIPT
+#!/usr/bin/env bash
+if ! grep -q 'BASH_SOURCE\[0\]}" == "\${0}' "$DOTFILES_DIR/update.sh"; then
+  echo "refusing to source update.sh: it has no execute-only guard" >&2
+  exit 1
+fi
+source "$DOTFILES_DIR/update.sh"
+report_snapshot_changes "\$1" "\$2" "\$3"
+SCRIPT
+  chmod +x "$REPORT"
+}
+
+# Creates a git checkout with one commit and echoes its short HEAD.
+make_checkout() {
+  local checkout_dir="$1" content="$2"
+  mkdir -p "$checkout_dir"
+  git -C "$checkout_dir" init --quiet
+  git -C "$checkout_dir" config user.email test@example.com
+  git -C "$checkout_dir" config user.name Test
+  echo "$content" > "$checkout_dir/file"
+  git -C "$checkout_dir" add file
+  git -C "$checkout_dir" commit --quiet -m "$content"
+  git -C "$checkout_dir" rev-parse --short HEAD
 }
 
 # Populates a fake `uv tool` layout and echoes the directory to hand to UV_TOOL_DIR.
@@ -150,6 +179,131 @@ LIST'
   assert_line --index 0 "broken unknown"
   assert_line --index 1 "eslint 10.8.0"
   assert_line --index 2 "prettier 3.9.6"
+}
+
+# ================================================================
+# go_binary_module_version
+# ================================================================
+# The version this replaced ran the tool and grepped the first version-shaped
+# token out of whatever it printed, which is the Go toolchain version for any
+# tool whose --version says "built with go1.x".
+
+GO_BUILDINFO_STUB='printf "toolbox: go1.26.5\n\tpath\tgithub.com/datapointchris/toolbox\n\tmod\tgithub.com/datapointchris/toolbox\tv1.7.1\th1:abc=\n\tdep\tgithub.com/spf13/cobra\tv1.10.2\th1:def=\n"'
+
+@test "go_binary_module_version: reports the module version, not the toolchain or a dep" {
+  local stub_dir
+  stub_dir=$(make_stub go "$GO_BUILDINFO_STUB")
+  touch "$BATS_TEST_TMPDIR/toolbox"
+
+  run env PATH="$stub_dir:$PATH" bash -c \
+    "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/toolbox'"
+  assert_success
+  assert_output "v1.7.1"
+}
+
+@test "go_binary_module_version: a binary with no build info fails" {
+  local stub_dir
+  stub_dir=$(make_stub go 'echo "could not read Go build info" >&2; exit 1')
+  touch "$BATS_TEST_TMPDIR/notgo"
+
+  run env PATH="$stub_dir:$PATH" bash -c \
+    "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/notgo'"
+  assert_failure
+  assert_output ""
+}
+
+@test "go_binary_module_version: a missing binary fails without invoking go" {
+  local stub_dir
+  stub_dir=$(make_stub go 'echo "go should not have run" >&2; exit 1')
+
+  run env PATH="$stub_dir:$PATH" bash -c \
+    "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/absent'"
+  assert_failure
+  assert_output ""
+}
+
+# ================================================================
+# git_checkout_commit / git_checkouts_snapshot
+# ================================================================
+
+@test "git_checkout_commit: reports the short HEAD of a checkout" {
+  local commit
+  commit=$(make_checkout "$BATS_TEST_TMPDIR/plugin" one)
+
+  run bash -c "source '$LIB'; git_checkout_commit '$BATS_TEST_TMPDIR/plugin'"
+  assert_success
+  assert_output "$commit"
+}
+
+@test "git_checkout_commit: a directory that is not a checkout fails" {
+  mkdir -p "$BATS_TEST_TMPDIR/plain"
+
+  run bash -c "source '$LIB'; git_checkout_commit '$BATS_TEST_TMPDIR/plain'"
+  assert_failure
+  assert_output ""
+}
+
+@test "git_checkouts_snapshot: one sorted line per checkout, skipping non-checkouts" {
+  local plugins="$BATS_TEST_TMPDIR/plugins"
+  local yank_commit resurrect_commit
+  yank_commit=$(make_checkout "$plugins/tmux-yank" yank)
+  resurrect_commit=$(make_checkout "$plugins/tmux-resurrect" resurrect)
+  mkdir -p "$plugins/not-a-checkout"
+
+  run bash -c "source '$LIB'; git_checkouts_snapshot '$plugins'"
+  assert_success
+  assert_line --index 0 "tmux-resurrect $resurrect_commit"
+  assert_line --index 1 "tmux-yank $yank_commit"
+  refute_output --partial "not-a-checkout"
+}
+
+@test "git_checkouts_snapshot: a missing parent directory fails" {
+  run bash -c "source '$LIB'; git_checkouts_snapshot '$BATS_TEST_TMPDIR/absent'"
+  assert_failure
+}
+
+# ================================================================
+# report_snapshot_changes
+# ================================================================
+
+@test "report_snapshot_changes: identical snapshots report the up-to-date message" {
+  local snapshot="blink.cmp aaaaaaaaaaaa
+telescope.nvim bbbbbbbbbbbb"
+
+  run "$REPORT" "$snapshot" "$snapshot" "Neovim plugins already at latest"
+  assert_success
+  assert_output --partial "Neovim plugins already at latest"
+  refute_output --partial "updated"
+}
+
+@test "report_snapshot_changes: a moved commit reports both sides" {
+  run "$REPORT" "blink.cmp aaaaaaaaaaaa" "blink.cmp cccccccccccc" "already at latest"
+  assert_success
+  assert_output --partial "blink.cmp updated: aaaaaaaaaaaa → cccccccccccc"
+  refute_output --partial "already at latest"
+}
+
+@test "report_snapshot_changes: an added entry is not reported as an update" {
+  run "$REPORT" "blink.cmp aaaaaaaaaaaa" "blink.cmp aaaaaaaaaaaa
+oil.nvim dddddddddddd" "already at latest"
+  assert_success
+  assert_output --partial "oil.nvim installed (dddddddddddd)"
+  refute_output --partial "updated"
+}
+
+@test "report_snapshot_changes: a removed entry is reported as removed" {
+  run "$REPORT" "blink.cmp aaaaaaaaaaaa
+oil.nvim dddddddddddd" "blink.cmp aaaaaaaaaaaa" "already at latest"
+  assert_success
+  assert_output --partial "oil.nvim removed"
+  refute_output --partial "already at latest"
+}
+
+@test "report_snapshot_changes: an empty before snapshot reports installs, not updates" {
+  run "$REPORT" "" "blink.cmp aaaaaaaaaaaa" "already at latest"
+  assert_success
+  assert_output --partial "blink.cmp installed (aaaaaaaaaaaa)"
+  refute_output --partial "removed"
 }
 
 # ================================================================
