@@ -116,35 +116,26 @@ _prompt_git_info_fast() {
 }
 
 # Full git info for Linux/macOS - detailed status with icons
+# Reads the state loaded once by the PS1 builder; see prompt-lib.sh.
 _prompt_git_info_full() {
-  if ! prompt_in_git_repo; then
-    return
-  fi
+  [[ -n "$PROMPT_GIT_REPO" ]] || return
 
-  local branch_name git_status status_flags
+  local git_status=""
 
-  branch_name=$(prompt_git_branch)
-  status_flags=$(prompt_git_status_flags)
-
-  git_status=""
-
-  if [[ "$status_flags" == "clean" ]]; then
+  if [[ "$PROMPT_GIT_FLAGS" == "clean" ]]; then
     git_status="${RC_GREEN}${PROMPT_ICON_CLEAN}${RC_RESET} "
   else
-    [[ "$status_flags" == *untracked* ]] && git_status+="${RC_RED}${PROMPT_ICON_UNTRACKED}${RC_RESET} "
-    [[ "$status_flags" == *staged* ]] && git_status+="${RC_GREEN}${PROMPT_ICON_ADDED}${RC_RESET} "
-    [[ "$status_flags" == *modified* ]] && git_status+="${RC_YELLOW}${PROMPT_ICON_MODIFIED}${RC_RESET} "
-    [[ "$status_flags" == *deleted* ]] && git_status+="${RC_RED}${PROMPT_ICON_DELETED}${RC_RESET} "
-    [[ "$status_flags" == *renamed* ]] && git_status+="${RC_MAGENTA}${PROMPT_ICON_RENAMED}${RC_RESET} "
-    [[ "$status_flags" == *unmerged* ]] && git_status+="${RC_RED}${PROMPT_ICON_UNMERGED}${RC_RESET} "
+    [[ "$PROMPT_GIT_FLAGS" == *untracked* ]] && git_status+="${RC_RED}${PROMPT_ICON_UNTRACKED}${RC_RESET} "
+    [[ "$PROMPT_GIT_FLAGS" == *staged* ]] && git_status+="${RC_GREEN}${PROMPT_ICON_ADDED}${RC_RESET} "
+    [[ "$PROMPT_GIT_FLAGS" == *modified* ]] && git_status+="${RC_YELLOW}${PROMPT_ICON_MODIFIED}${RC_RESET} "
+    [[ "$PROMPT_GIT_FLAGS" == *deleted* ]] && git_status+="${RC_RED}${PROMPT_ICON_DELETED}${RC_RESET} "
+    [[ "$PROMPT_GIT_FLAGS" == *renamed* ]] && git_status+="${RC_MAGENTA}${PROMPT_ICON_RENAMED}${RC_RESET} "
+    [[ "$PROMPT_GIT_FLAGS" == *unmerged* ]] && git_status+="${RC_RED}${PROMPT_ICON_UNMERGED}${RC_RESET} "
   fi
 
-  # Check for stashes
-  if prompt_git_has_stash; then
-    git_status+="${RC_BLUE}${PROMPT_ICON_STASH}${RC_RESET} "
-  fi
+  (( PROMPT_GIT_STASH > 0 )) && git_status+="${RC_BLUE}${PROMPT_ICON_STASH}${RC_RESET} "
 
-  printf '%s' "${RC_GREEN}${PROMPT_ICON_BRANCH} ${branch_name}${RC_RESET} ${git_status}"
+  printf '%s' "${RC_GREEN}${PROMPT_ICON_BRANCH} ${PROMPT_GIT_BRANCH}${RC_RESET} ${git_status}"
 }
 
 # Wrapper that picks fast or full based on environment
@@ -159,24 +150,13 @@ _prompt_git_info() {
 _prompt_git_remote_status() {
   # Skip on Git Bash - too slow due to Windows process overhead
   _is_git_bash && return
+  [[ -n "$PROMPT_GIT_REPO" ]] || return
 
-  if ! prompt_in_git_repo; then
-    return
-  fi
+  local remote_status=""
+  (( PROMPT_GIT_AHEAD != 0 )) && remote_status+="${RC_GREEN}${PROMPT_ICON_UP}${PROMPT_GIT_AHEAD}${RC_RESET} "
+  (( PROMPT_GIT_BEHIND != 0 )) && remote_status+="${RC_RED}${PROMPT_ICON_DOWN}${PROMPT_GIT_BEHIND}${RC_RESET} "
 
-  local ahead_behind behind ahead remote_status
-  ahead_behind=$(prompt_git_ahead_behind)
-
-  if [[ -n "$ahead_behind" ]]; then
-    # Use read to split tab-separated values (avoids pipe overhead)
-    IFS=$'\t' read -r behind ahead <<< "$ahead_behind"
-
-    remote_status=""
-    [[ "$ahead" != "0" ]] && remote_status+="${RC_GREEN}${PROMPT_ICON_UP}${ahead}${RC_RESET} "
-    [[ "$behind" != "0" ]] && remote_status+="${RC_RED}${PROMPT_ICON_DOWN}${behind}${RC_RESET} "
-
-    printf '%s' "$remote_status"
-  fi
+  printf '%s' "$remote_status"
 }
 
 _prompt_caret() {
@@ -246,6 +226,14 @@ _bash_prompt_command_full() {
   local title_pwd="${PWD/#$HOME/\~}"
   if [[ "$TERM" == xterm* ]] || [[ "$TERM" == screen* ]] || [[ "$TERM" == tmux* ]]; then
     printf '\033]2;%s:%s\007' "${HOSTNAME%%.*}" "$title_pwd"
+  fi
+
+  # One git call feeds both git components below. Git Bash keeps its own cheaper
+  # path in _prompt_git_info_fast and shows no remote status, so it skips this.
+  if ! _is_git_bash && prompt_git_load_state; then
+    PROMPT_GIT_REPO=1
+  else
+    PROMPT_GIT_REPO=""
   fi
 
   # Build the prompt components

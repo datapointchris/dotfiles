@@ -49,55 +49,44 @@ function current_dir() {
   fi
 }
 
+# PROMPT and RPROMPT each expand in their own subshell, so loading the git state
+# inside them would run git twice per prompt. Load it once here instead; both
+# halves below then only read variables.
+autoload -Uz add-zsh-hook
+__prompt_load_git() {
+  prompt_git_load_state && PROMPT_GIT_REPO=1 || PROMPT_GIT_REPO=""
+}
+add-zsh-hook precmd __prompt_load_git
+
 function git_prompt_info() {
-  if ! prompt_in_git_repo; then
-    return
-  fi
+  [[ -n "$PROMPT_GIT_REPO" ]] || return
 
-  local branch_name git_status status_flags
+  local git_status=""
 
-  branch_name=$(prompt_git_branch)
-  status_flags=$(prompt_git_status_flags)
-
-  git_status=""
-
-  if [[ "$status_flags" == "clean" ]]; then
+  if [[ "$PROMPT_GIT_FLAGS" == "clean" ]]; then
     git_status="%F{green}${PROMPT_ICON_CLEAN}%f "
   else
-    [[ "$status_flags" == *untracked* ]] && git_status+="%F{red}${PROMPT_ICON_UNTRACKED}%f "
-    [[ "$status_flags" == *staged* ]] && git_status+="%F{green}${PROMPT_ICON_ADDED}%f "
-    [[ "$status_flags" == *modified* ]] && git_status+="%F{yellow}${PROMPT_ICON_MODIFIED}%f "
-    [[ "$status_flags" == *deleted* ]] && git_status+="%F{red}${PROMPT_ICON_DELETED}%f "
-    [[ "$status_flags" == *renamed* ]] && git_status+="%F{magenta}${PROMPT_ICON_RENAMED}%f "
-    [[ "$status_flags" == *unmerged* ]] && git_status+="%F{red}${PROMPT_ICON_UNMERGED}%f "
+    [[ "$PROMPT_GIT_FLAGS" == *untracked* ]] && git_status+="%F{red}${PROMPT_ICON_UNTRACKED}%f "
+    [[ "$PROMPT_GIT_FLAGS" == *staged* ]] && git_status+="%F{green}${PROMPT_ICON_ADDED}%f "
+    [[ "$PROMPT_GIT_FLAGS" == *modified* ]] && git_status+="%F{yellow}${PROMPT_ICON_MODIFIED}%f "
+    [[ "$PROMPT_GIT_FLAGS" == *deleted* ]] && git_status+="%F{red}${PROMPT_ICON_DELETED}%f "
+    [[ "$PROMPT_GIT_FLAGS" == *renamed* ]] && git_status+="%F{magenta}${PROMPT_ICON_RENAMED}%f "
+    [[ "$PROMPT_GIT_FLAGS" == *unmerged* ]] && git_status+="%F{red}${PROMPT_ICON_UNMERGED}%f "
   fi
 
-  # Check for stashes
-  if prompt_git_has_stash; then
-    git_status+="%F{blue}${PROMPT_ICON_STASH}%f "
-  fi
+  (( PROMPT_GIT_STASH > 0 )) && git_status+="%F{blue}${PROMPT_ICON_STASH}%f "
 
-  echo "%F{green}${PROMPT_ICON_BRANCH} ${branch_name}%f ${git_status}"
+  echo "%F{green}${PROMPT_ICON_BRANCH} ${PROMPT_GIT_BRANCH}%f ${git_status}"
 }
 
 function git_remote_status() {
-  if ! prompt_in_git_repo; then
-    return
-  fi
+  [[ -n "$PROMPT_GIT_REPO" ]] || return
 
-  local ahead_behind behind ahead remote_status
-  ahead_behind=$(prompt_git_ahead_behind)
+  local remote_status=""
+  (( PROMPT_GIT_AHEAD != 0 )) && remote_status+="%F{green}${PROMPT_ICON_UP} ${PROMPT_GIT_AHEAD}%f  "
+  (( PROMPT_GIT_BEHIND != 0 )) && remote_status+="%F{red}${PROMPT_ICON_DOWN} ${PROMPT_GIT_BEHIND}%f"
 
-  if [[ -n "$ahead_behind" ]]; then
-    # Use read to split tab-separated values (avoids pipe overhead)
-    IFS=$'\t' read -r behind ahead <<< "$ahead_behind"
-
-    remote_status=""
-    [[ "$ahead" != "0" ]] && remote_status+="%F{green}${PROMPT_ICON_UP} ${ahead}%f  "
-    [[ "$behind" != "0" ]] && remote_status+="%F{red}${PROMPT_ICON_DOWN} ${behind}%f"
-
-    echo "$remote_status"
-  fi
+  echo "$remote_status"
 }
 
 function current_caret() {
@@ -130,7 +119,6 @@ RPROMPT='%{$(echotc UP 1)%} $(git_remote_status)   $(return_status)   %{$(echotc
 # and directory in its border (see the theme's pane-border-format). On ssh launch
 # the local shell labels the pane "ssh: <target>", so a bare remote that can't set
 # its own title still reads honestly instead of a stale local directory.
-autoload -Uz add-zsh-hook
 
 __title_host_cwd() {
   local dir=${PWD/#$HOME/\~}
