@@ -229,6 +229,7 @@ nav:
       - Tools Over Instructions: learnings/tools-over-instructions.md
       - Font Terminal Compatibility: learnings/font-terminal-compatibility.md
       - Library Flag Pollution: learnings/library-flag-pollution.md
+      - Profiling Zsh Startup: learnings/profiling-zsh-startup.md
       - Resilient Installation Patterns: learnings/resilient-installation-patterns.md
       - Centralized Failure Registry: learnings/centralized-failure-registry.md
       - GitHub Releases vs System Packages: learnings/github-releases-vs-system-packages.md

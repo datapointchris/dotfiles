@@ -14,7 +14,21 @@ CHECK_MARK="☑️"
 ERROR_MARK="❌"
 [[ "$ZSHRC_DEBUG" == "1" ]] && echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
 
-log() { [[ "$ZSHRC_DEBUG" == "1" ]] && printf "  $CHECK_MARK %-6s : %s\n" "$1" "$2"; return 0 }
+# Columns are step and cumulative milliseconds. Timing lives inside log() rather
+# than at the call sites so every existing entry reports it for free, and a
+# startup stall reads as one slow step instead of having to be bisected by hand.
+zmodload zsh/datetime
+typeset -g ZSHRC_START=$EPOCHREALTIME
+typeset -g ZSHRC_LAST=$EPOCHREALTIME
+
+log() {
+  [[ "$ZSHRC_DEBUG" == "1" ]] || return 0
+  local now=$EPOCHREALTIME
+  printf "  $CHECK_MARK %6.0fms %7.0fms  %-6s : %s\n" \
+    $(( (now - ZSHRC_LAST) * 1000 )) $(( (now - ZSHRC_START) * 1000 )) "$1" "$2"
+  ZSHRC_LAST=$now
+  return 0
+}
 log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
 # Log environment
@@ -436,7 +450,8 @@ else
 fi
 
 if [[ "$ZSHRC_DEBUG" == "1" ]]; then
-  echo " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded 🟰🟰🟰🟰🟰🟰"
+  printf " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded in %.0fms 🟰🟰🟰🟰🟰🟰\n" \
+    $(( (EPOCHREALTIME - ZSHRC_START) * 1000 ))
 else
   echo " ✓ zsh loaded"
 fi
