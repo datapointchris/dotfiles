@@ -41,6 +41,12 @@ awk '/^\+[0-9]{10}\./ {
 
 Run that in a loop until a slow start is caught, since an intermittent stall will not appear on demand.
 
+Generated completions and hooks are then cached under `$XDG_CACHE_HOME/zsh/completions/`, keyed on the tool's binary mtime, so each is regenerated only after that tool is upgraded. Force a rebuild by deleting the directory:
+
+```bash
+rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
+```
+
 ## Key Learnings
 
 - Wall-clock far exceeding user+sys means blocking on I/O or network, not slow code — measure both before optimising anything

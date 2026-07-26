@@ -89,10 +89,9 @@ zle -N down-line-or-beginning-search
 zvm_after_init() {
   bindkey "^[[A" up-line-or-beginning-search    # Up arrow
   bindkey "^[[B" down-line-or-beginning-search  # Down arrow
-  # Re-source fzf keybindings (Ctrl+R, Ctrl+T, Alt+C) after vi-mode
-  if command -v fzf >/dev/null 2>&1; then
-    source <(fzf --zsh)
-  fi
+  # Re-apply fzf keybindings (Ctrl+R, Ctrl+T, Alt+C), which vi-mode has just
+  # overwritten. Reads the cache written during startup rather than re-running fzf.
+  cache_eval fzf fzf --zsh
 }
 
 # Create history directory if needed
@@ -192,6 +191,27 @@ zstyle ':completion:*:descriptions' format "%B--- %d%b"
 
 setopt COMPLETE_ALIASES
 
+# Generated completions and shell hooks are cached to disk and regenerated only
+# when the tool's binary is newer. Each of these otherwise spawns a subprocess per
+# shell to print a script that changes only when the tool does. Caching also keeps
+# a misbehaving tool out of the startup path: todoui reconciled with its API here
+# and cost 6s per shell. Writes via a temp file so a failed generation leaves the
+# last good cache in place rather than a truncated one. Absence is silent — these
+# are optional, and a machine without one should not warn on every shell.
+ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
+[[ -d "$ZSH_COMPLETION_CACHE" ]] || mkdir -p "$ZSH_COMPLETION_CACHE"
+
+cache_eval() {
+  local name="$1"; shift
+  local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin
+  bin="$(command -v "$1")" || return 0
+  if [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
+    "$@" >"$cache.new" 2>/dev/null && mv -f "$cache.new" "$cache" || rm -f "$cache.new"
+  fi
+  [[ -s "$cache" ]] && source "$cache"
+  log "Setup" "$name"
+}
+
 # Terraform completion
 if command -v terraform >/dev/null 2>&1; then
     autoload -U +X bashcompinit && bashcompinit
@@ -199,23 +219,9 @@ if command -v terraform >/dev/null 2>&1; then
     log "Setup" "terraform completions"
 fi
 
-# GitHub CLI completions
-if command -v gh >/dev/null 2>&1; then
-    eval "$(gh completion -s zsh)"
-    log "Setup" "gh completions"
-fi
-
-# Forge completions
-if command -v forge >/dev/null 2>&1; then
-    eval "$(forge completion zsh)"
-    log "Setup" "forge completions"
-fi
-
-# Todoui completions
-if command -v todoui >/dev/null 2>&1; then
-    eval "$(todoui completion zsh)"
-    log "Setup" "todoui completions"
-fi
+cache_eval gh gh completion -s zsh
+cache_eval forge forge completion zsh
+cache_eval todoui todoui completion zsh
 
 log "Setup" "Completions"
 
@@ -296,17 +302,11 @@ add_path "$CARGO_HOME/bin"
 # TERMINAL APPS
 # ------------------------------------------------------------------ #
 
-# zoxide
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init --cmd z zsh)"
-  log "Setup" "zoxide"
-else
-  log_error "Setup" "zoxide not found"
-fi
+cache_eval zoxide zoxide init --cmd z zsh
 
 # fzf
 if command -v fzf >/dev/null 2>&1; then
-  source <(fzf --zsh)
+  cache_eval fzf fzf --zsh
 
   export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
@@ -329,10 +329,6 @@ if command -v fzf >/dev/null 2>&1; then
 
   _fzf_compgen_path() { fd --hidden --follow --exclude .git . "$1"; }
   _fzf_compgen_dir() { fd --type d --hidden --follow --exclude .git . "$1"; }
-
-  log "Setup" "fzf"
-else
-  log_error "Setup" "fzf not found"
 fi
 
 # atuin — SQLite history capture (command, exit, cwd, session) backing the
@@ -341,26 +337,12 @@ fi
 # this sources after the fzf block). Up-arrow stays the prefix-search bound above
 # (--disable-up-arrow) rather than atuin's launch-a-TUI-every-press. To revert
 # Ctrl-R to fzf, add --disable-ctrl-r; to also hand up-arrow to atuin, drop the
-# flag. Guarded like fzf so a machine mid-bootstrap does not error.
-if command -v atuin >/dev/null 2>&1; then
-  eval "$(atuin init zsh --disable-up-arrow)"
-  log "Setup" "atuin"
-fi
+# flag.
+cache_eval atuin atuin init zsh --disable-up-arrow
 
+cache_eval uv uv generate-shell-completion zsh
 
-# uv
-if command -v uv >/dev/null 2>&1; then
-  eval "$(uv generate-shell-completion zsh)"
-  log "Setup" "uv"
-else
-  log_error "Setup" "uv not found"
-fi
-
-# direnv
-if command -v direnv >/dev/null 2>&1; then
-  eval "$(direnv hook zsh)"
-  log "Setup" "direnv"
-fi
+cache_eval direnv direnv hook zsh
 
 # yazi
 if command -v yazi >/dev/null 2>&1; then
