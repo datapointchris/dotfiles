@@ -202,25 +202,39 @@ zstyle ':completion:*:descriptions' format "%B--- %d%b"
 
 setopt COMPLETE_ALIASES
 
-# Generated completions and shell hooks are cached to disk and regenerated only
-# when the tool's binary is newer. Each of these otherwise spawns a subprocess per
-# shell to print a script that changes only when the tool does. Caching also keeps
-# a misbehaving tool out of the startup path: todoui reconciled with its API here
-# and cost 6s per shell. Writes via a temp file so a failed generation leaves the
-# last good cache in place rather than a truncated one. Absence is silent — these
-# are optional, and a machine without one should not warn on every shell.
+# Cache generated completions, regenerating when the tool's binary is newer. Each
+# otherwise spawns a subprocess per shell, and a slow one blocks startup — todoui
+# reconciled with its API here and cost 6s. A missing tool is normal and stays at
+# debug level; one that fails to generate always prints its stderr, and only a
+# cache that actually sourced gets the success mark.
 ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
 [[ -d "$ZSH_COMPLETION_CACHE" ]] || mkdir -p "$ZSH_COMPLETION_CACHE"
 
 cache_eval() {
   local name="$1"; shift
-  local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin
-  bin="$(command -v "$1")" || return 0
-  if [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
-    "$@" >"$cache.new" 2>/dev/null && mv -f "$cache.new" "$cache" || rm -f "$cache.new"
+  local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err
+
+  if ! bin="$(command -v "$1")"; then
+    log "Skip" "$name not installed"
+    return 0
   fi
-  [[ -s "$cache" ]] && source "$cache"
-  log "Setup" "$name"
+
+  if [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
+    # `2>&1 >file` splits the streams: stdout to the cache, stderr into $err.
+    if err="$("$@" 2>&1 >"$cache.new")" && [[ -s "$cache.new" ]]; then
+      mv -f "$cache.new" "$cache"
+    else
+      rm -f "$cache.new"
+      log_error "Setup" "$name: ${err:-generated nothing}"
+    fi
+  fi
+
+  # A failed regeneration above still leaves the previous cache usable.
+  if [[ -s "$cache" ]]; then
+    source "$cache"
+    log "Setup" "$name"
+  fi
+  return 0
 }
 
 # Terraform completion
