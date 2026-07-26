@@ -46,7 +46,7 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"  # For error report
 #!/usr/bin/env bash
 set -uo pipefail
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"

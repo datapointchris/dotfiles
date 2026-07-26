@@ -40,7 +40,7 @@ Install a plugin manager itself (Lazy.nvim, TPM):
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
@@ -75,7 +75,7 @@ Trigger plugin installation via plugin manager:
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
@@ -104,7 +104,7 @@ Install shell plugins from packages.yml:
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"

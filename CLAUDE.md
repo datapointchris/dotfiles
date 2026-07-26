@@ -23,7 +23,7 @@
 
 **Shell Script Patterns**:
 
-- ALWAYS use `DOTFILES_DIR="$(git rev-parse --show-toplevel)"` to get repo root
+- ALWAYS use `DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"` to get repo root. The exported value must win: `install.sh` and `update.sh` export it, and the `dotfiles` CLI runs from any directory, so a bare `git rev-parse` resolves to whatever repo the user happens to be standing in — or aborts outright outside one.
 - NEVER use relative path navigation like `$(cd "$(dirname ...)/../.." && pwd)`
 
 **App Installation Patterns** (⚠️ CRITICAL - Three distinct patterns):
