@@ -13,27 +13,18 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 
-# Format: verb|description
-VERBS=(
-  "link|Create symlinks for the common layer and this platform's overlay"
-  "relink|Remove and recreate every symlink (idempotent; prunes dangling links)"
-  "unlink|Remove all symlinks"
-  "check|Find broken symlinks and remove them"
-  "show|List every symlink this repo manages"
-)
-
 usage() {
-  local entry verb description
+  help_header "symlinks"
+  help_usage "symlinks.sh <link|relink|unlink|check|show>"
 
-  print_header "symlinks" "brightcyan"
-  print_cyan "Usage: symlinks.sh <link|relink|unlink|check|show>"
+  help_section "Verbs"
+  help_row "link" "" "Create symlinks for the common layer and this platform's overlay"
+  help_row "relink" "" "Remove and recreate every symlink (idempotent; prunes dangling links)"
+  help_row "unlink" "" "Remove all symlinks"
+  help_row "check" "" "Find broken symlinks and remove them"
+  help_row "show" "" "List every symlink this repo manages"
 
-  print_section "Verbs" "brightcyan"
-  for entry in "${VERBS[@]}"; do
-    IFS='|' read -r verb description <<<"$entry"
-    print_help_row 9 "$verb" "$description"
-  done
-  echo ""
+  help_end
   exit "${1:-0}"
 }
 

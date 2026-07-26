@@ -39,6 +39,11 @@ from menucore import GREEN
 from menucore import RESET
 from menucore import YELLOW
 from menucore import header
+from menucore import help_end
+from menucore import help_header
+from menucore import help_row
+from menucore import help_section
+from menucore import help_usage
 from menucore import is_due
 from menucore import load_state
 from menucore import overdue_days
@@ -265,13 +270,18 @@ def cmd_nudge_every(dur: str) -> int:
 
 
 def show_help() -> int:
-    print("menu review — what's due to revisit\n")
-    print("  menu review            What's due now, most overdue first")
-    print("  menu review list       Every registered item and its status")
-    print("  menu review list --json  The same, as JSON")
-    print("  menu review done <id>  Mark an item done (advances its due date)")
-    print("  menu review edit       Edit the register in $EDITOR")
-    print("  menu review nudge-every <dur>  Set the startup-nudge interval (e.g. 4h)")
+    help_header("menu review", "What's due to revisit.")
+    help_usage("menu review [<verb>] [ARGS]")
+
+    help_section("Commands")
+    help_row("menu review", "", "What's due now, most overdue first")
+    help_row("menu review list", "", "Every registered item and its status")
+    help_row("menu review list", "--json", "The same, as JSON")
+    help_row("menu review done", "<id>", "Mark an item done (advances its due date)")
+    help_row("menu review edit", "", "Edit the register in $EDITOR")
+    help_row("menu review nudge-every", "<dur>", "Set the startup-nudge interval (e.g. 4h)")
+
+    help_end()
     return 0
 
 

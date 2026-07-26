@@ -22,6 +22,17 @@ from typing import Any
 
 import yaml
 
+# packages is symlinked onto PATH; resolve the real path so the repo-root
+# menucore package is importable for the shared help grammar. parents[2] is the
+# repo root: apps/common/packages → apps/common → apps → <repo>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from menucore import help_end
+from menucore import help_header
+from menucore import help_row
+from menucore import help_section
+from menucore import help_text
+from menucore import help_usage
+
 VERSION = "1.0.0"
 
 SECTION_SPECS: dict[str, dict[str, Any]] = {
@@ -740,60 +751,44 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
 def show_help() -> None:
     """Show main help with examples."""
-    print_header("packages - Query packages.yml")
-    print()
-    print("Browse and search packages across all sections and platforms.")
-    print()
+    help_header("packages", "Browse and search packages across all sections and platforms.")
+    help_usage("packages <command> [FILTERS]")
 
-    print_section("Commands", Color.BRIGHT_MAGENTA)
-    commands = [
-        ("packages", "Show this help"),
-        ("packages list", "List all packages"),
-        ("packages show <name>", "Show package details"),
-        ("packages search <query>", "Search by name"),
-        ("packages sections", "List all sections"),
-        ("packages stats", "Show package counts"),
-        ("packages tags", "List all tags with counts"),
-        ("packages verify", "Check drift between packages.yml, manifests, and scripts"),
-    ]
-    for cmd, desc in commands:
-        print(f"  {colorize(cmd, Color.CYAN):<35} {desc}")
-    print()
+    help_section("Commands")
+    help_row("packages", "", "Show this help")
+    help_row("packages list", "", "List all packages")
+    help_row("packages show", "<name>", "Show package details")
+    help_row("packages search", "<query>", "Search by name")
+    help_row("packages sections", "", "List all sections")
+    help_row("packages stats", "", "Show package counts")
+    help_row("packages tags", "", "List all tags with counts")
+    help_row("packages verify", "", "Check drift between packages.yml, manifests, and scripts")
 
-    print_section("List Filters", Color.BRIGHT_BLUE)
-    filters = [
-        ("--section=<section>", "Filter by section"),
-        ("--tag=<tag>", "Filter by tag (gui, cli, terminal, etc.)"),
-        ("--platform=<plat>", "Filter by platform (macos, linux, all)"),
-        ("--verbose", "Show section, tags, platform"),
-        ("--json", "Output as JSON"),
-    ]
-    for flag, desc in filters:
-        print(f"  {colorize(flag, Color.CYAN):<25} {desc}")
-    print()
+    help_section("List Filters")
+    help_row("--section", "<section>", "Filter by section")
+    help_row("--tag", "<tag>", "Filter by tag (gui, cli, terminal, etc.)")
+    help_row("--platform", "<plat>", "Filter by platform (macos, linux, all)")
+    help_row("--verbose", "", "Show section, tags, platform")
+    help_row("--json", "", "Output as JSON")
 
-    print_section("Examples", Color.BRIGHT_YELLOW)
-    examples = [
-        ("packages list", "All packages"),
-        ("packages list --section=go_tools", "Just Go tools"),
-        ("packages list --tag=terminal", "Terminal emulators"),
-        ("packages list --platform=macos", "macOS packages"),
-        ("packages show ghostty", "Package details"),
-        ("packages search neovim", "Find by name"),
-    ]
-    for cmd, desc in examples:
-        print(f"  {colorize(cmd, Color.GREEN):<42} # {desc}")
-    print()
+    help_section("Examples")
+    help_row("packages list", "", "# All packages")
+    help_row("packages list --section=go_tools", "", "# Just Go tools")
+    help_row("packages list --tag=terminal", "", "# Terminal emulators")
+    help_row("packages list --platform=macos", "", "# macOS packages")
+    help_row("packages show ghostty", "", "# Package details")
+    help_row("packages search neovim", "", "# Find by name")
 
-    print_section("Tag Vocabulary", Color.ORANGE)
-    print("  Interface:   gui, cli, tui")
-    print("  Environment: terminal, browser, editor")
-    print("  Purpose:     lsp, linter, formatter, build, search, monitoring")
-    print("  Type:        font, plugin, runtime")
-    print()
+    help_section("Tag Vocabulary")
+    help_row("Interface", "", "gui, cli, tui")
+    help_row("Environment", "", "terminal, browser, editor")
+    help_row("Purpose", "", "lsp, linter, formatter, build, search, monitoring")
+    help_row("Type", "", "font, plugin, runtime")
 
-    print_section("Files", Color.BRIGHT_BLACK)
-    print(f"  Config: {colorize(str(get_packages_file()), Color.CYAN)}")
+    help_section("Files")
+    help_text(f"  Config: {get_packages_file()}")
+
+    help_end()
 
 
 def main() -> None:

@@ -7,25 +7,25 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 WSL_CACHE_DIR="${DOTFILES_DIR}/.wsl-rootfs-cache"
 
-# Show usage
 show_usage() {
-  echo "Usage: $(basename "$0") COMMAND [OPTIONS]"
-  echo ""
-  echo "Manage WSL Ubuntu Docker images for testing"
-  echo ""
-  echo "Commands:"
-  echo "  list              List available WSL Docker images"
-  echo "  build VERSION     Build/rebuild Docker image (currently only 22.04)"
-  echo "  remove VERSION    Remove Docker image"
-  echo "  clean             Remove all cached rootfs files"
-  echo "  clean-all         Remove both images and cached files"
-  echo "  info              Show cache and image information"
-  echo ""
-  echo "Examples:"
-  echo "  $(basename "$0") list"
-  echo "  $(basename "$0") build 22.04"
-  echo "  $(basename "$0") remove 22.04"
-  echo "  $(basename "$0") clean"
+  help_header "docker-images" "Manage WSL Ubuntu Docker images for testing"
+  help_usage "$(basename "$0") COMMAND [OPTIONS]"
+
+  help_section "Commands"
+  help_row "list" "" "List available WSL Docker images"
+  help_row "build" "VERSION" "Build/rebuild Docker image (currently only 22.04)"
+  help_row "remove" "VERSION" "Remove Docker image"
+  help_row "clean" "" "Remove all cached rootfs files"
+  help_row "clean-all" "" "Remove both images and cached files"
+  help_row "info" "" "Show cache and image information"
+
+  help_section "Examples"
+  help_row "$(basename "$0") list"
+  help_row "$(basename "$0") build 22.04"
+  help_row "$(basename "$0") remove 22.04"
+  help_row "$(basename "$0") clean"
+
+  help_end
   exit 0
 }
 

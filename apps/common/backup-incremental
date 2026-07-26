@@ -55,57 +55,49 @@ NETWORK_DEST=""
 VERBOSE=false
 EXCLUDE_PATTERNS=()
 
+# shellcheck disable=SC2088  # ~ in help text is illustrative, not a path to expand
 usage() {
-  color_bright_white "Space-efficient incremental backups using rsync hard links"
-  echo ""
-  echo "$(color_bright_white "Usage:") $(color_bright_yellow "backup-incremental") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<source_dir>")"
-  print_section "Options" "brightcyan"
-  echo "  $(color_bright_magenta "-n, --name") $(color_cyan "<name>")        Backup name $(color_bright_black "(required)")"
-  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")        Backup destination $(color_bright_black "(default: ~/Documents/backups)")"
-  echo "  $(color_bright_magenta "--exclude") $(color_cyan "<pattern>")      Exclude pattern $(color_bright_black "(can be used multiple times)")"
-  echo "  $(color_bright_magenta "--network") $(color_cyan "<host:path>")    Network destination $(color_bright_black "(e.g., homelab:/backups)")"
-  echo "  $(color_bright_magenta "-v, --verbose")             Show detailed rsync output"
-  echo "  $(color_bright_magenta "-h, --help")                Show this help message"
-  echo ""
-  print_section "Examples" "brightcyan"
-  echo "  $(color_bright_black "# Basic incremental backup")"
-  # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning") $(color_green "~/learning")"
-  echo "  $(color_bright_black "# Exclude large static content")"
-  # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --exclude books") $(color_green "~/learning")"
-  echo "  $(color_bright_black "# Backup to network storage")"
-  # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "backup-incremental") $(color_magenta "--name learning --network homelab:/backups") $(color_green "~/learning")"
-  echo ""
-  print_section "Restore" "brightcyan"
-  echo "  $(color_bright_black "# Backups are complete directories - just copy files directly")"
-  # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "cp") $(color_magenta "-r") $(color_green "~/Documents/backups/learning/latest/file.md") $(color_cyan "~/destination")"
-  echo "  $(color_bright_black "# Restore entire backup")"
-  # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "cp") $(color_magenta "-r") $(color_green "~/Documents/backups/learning/latest/") $(color_cyan "~/restore")"
-  echo "  $(color_bright_black "# Browse backup contents directly")"
-  # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "ls") $(color_green "~/Documents/backups/learning/latest/")"
-  echo ""
-  print_section "Identifying Backups" "brightcyan"
-  echo "  $(color_bright_white "Directories with 'latest' symlink")  Incremental backup $(color_bright_black "(this tool)")"
-  echo "  $(color_bright_white "*.tar.zst/*.tar.gz/*.tar.xz")        Compressed archive $(color_bright_black "(backmeup)")"
-  echo ""
-  print_section "How It Works" "brightcyan"
-  echo "  $(color_cyan "•") First backup: Full copy of all files"
-  echo "  $(color_cyan "•") Later backups: Only changed files copied"
-  echo "  $(color_cyan "•") Unchanged files: Hard-linked $(color_bright_black "(zero extra space)")"
-  echo "  $(color_cyan "•") Each backup: Complete browsable snapshot"
-  echo ""
-  print_section "Storage Example" "brightcyan"
-  echo "  Backup 1: $(color_bright_yellow "5.0 GB")  $(color_bright_black "(3GB books + 2GB docs)")"
-  echo "  Backup 2: $(color_bright_green "100 MB")  $(color_bright_black "(changed docs, books hard-linked)")"
-  echo "  Backup 3: $(color_bright_green "50 MB")   $(color_bright_black "(changed docs, books still linked)")"
-  echo "  $(color_bright_black "─────────────────────────────────────")"
-  echo "  Total:    $(color_bright_cyan "5.15 GB") $(color_bright_black "stored, appears as 15GB of backups")"
-  echo ""
+  help_header "backup-incremental" "Space-efficient incremental backups using rsync hard links"
+  help_usage "backup-incremental [OPTIONS] <source_dir>"
+
+  help_section "Options"
+  help_row "-n, --name" "<name>" "Backup name (required)"
+  help_row "-d, --dest" "<path>" "Backup destination (default: ~/Documents/backups)"
+  help_row "--exclude" "<pattern>" "Exclude pattern (can be used multiple times)"
+  help_row "--network" "<host:path>" "Network destination (e.g., homelab:/backups)"
+  help_row "-v, --verbose" "" "Show detailed rsync output"
+  help_row "-h, --help" "" "Show this help message"
+
+  help_section "Examples"
+  help_row "backup-incremental --name learning ~/learning" "" "# Basic incremental backup"
+  help_row "backup-incremental --name learning --exclude books ~/learning" "" "# Exclude large static content"
+  help_row "backup-incremental --name learning --network homelab:/backups ~/learning" "" "# Backup to network storage"
+
+  help_section "Restore"
+  help_text "  Backups are complete directories — copy files out of them directly."
+  help_row "cp -r ~/Documents/backups/learning/latest/file.md ~/destination" "" "# One file"
+  help_row "cp -r ~/Documents/backups/learning/latest/ ~/restore" "" "# Entire backup"
+  help_row "ls ~/Documents/backups/learning/latest/" "" "# Browse contents"
+
+  help_section "Identifying Backups"
+  help_row "Directories with 'latest' symlink" "" "Incremental backup (this tool)"
+  help_row "*.tar.zst/*.tar.gz/*.tar.xz" "" "Compressed archive (backmeup)"
+
+  help_section "How It Works"
+  help_row "First backup" "" "Full copy of all files"
+  help_row "Later backups" "" "Only changed files copied"
+  help_row "Unchanged files" "" "Hard-linked (zero extra space)"
+  help_row "Each backup" "" "Complete browsable snapshot"
+
+  help_section "Storage Example"
+  help_text \
+    "  Backup 1: 5.0 GB   (3GB books + 2GB docs)" \
+    "  Backup 2: 100 MB   (changed docs, books hard-linked)" \
+    "  Backup 3: 50 MB    (changed docs, books still linked)" \
+    "  ─────────────────────────────────────" \
+    "  Total:    5.15 GB  stored, appears as 15GB of backups"
+
+  help_end
 }
 
 parse_arguments() {

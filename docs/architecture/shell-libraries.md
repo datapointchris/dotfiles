@@ -67,16 +67,54 @@ log_error "Failed to backup config.yml" "$BASH_SOURCE" "$LINENO"
 - `print_warning(message)` - Yellow + ▲ icon (no [LEVEL] prefix)
 - `print_info(message)` - Cyan + ● icon (no [LEVEL] prefix)
 
-**Help Screen Functions**:
+**Help Screen Grammar**:
 
-- `print_help_row(width, name, [description], [color])` - Indented two-column row with a coloured left column
-- `print_example_row(width, command, [comment])` - The same row in the example colour
+- `help_header(name, [tagline])` - Opens a screen
+- `help_usage(line...)` - Usage lines; the `Usage:` label is the library's
+- `help_section(title)` - Section heading
+- `help_row(name, [args], [description])` - One row
+- `help_text(line...)` - Verbatim prose inside a screen
+- `help_end()` - Closes the screen
 
-Use these for every `usage()` listing rather than hand-padding inside `echo`. They exist because
-colour escapes count toward `printf`'s field width, so a naive `%-32s` around a coloured name
-misaligns the description column by the length of the escape sequence. They also emit the escape
-*before* the two-space indent, which keeps the indent flush against the name for anything grepping
-the help output.
+Build every `usage()` / `show_help()` from these and nothing else. One `help_row` per line, in the
+order it prints, so the source shows the shape of the screen:
+
+```bash
+show_help() {
+  help_header "menu" "A pointer across your collections."
+  help_usage  "menu [find|search] <term>"
+
+  help_section "Commands"
+  help_row "menu find"  "<term>"  "Search (Enter opens the full view)"
+  help_row "menu help"  ""        "Show this help"
+
+  help_end
+}
+```
+
+No call site passes a width or a colour, and none should:
+
+- **Widths are computed.** `help_row` buffers; the flush sizes the description column from the
+  longest row in the section. A row that outgrows its neighbours re-flows the section instead of
+  overrunning it, which is how the alignment drift in these screens kept happening.
+- **Colours come from the section name.** Commands/Verbs/Suites/Groups/Phases are bright cyan,
+  Options/Flags/Arguments/Environment Variables bright magenta, Examples bright yellow.
+  App-specific headings rotate through the rest of the palette by position, so adjacent sections
+  always differ.
+- **Blank lines belong to the library.** `help_section` emits its own leading blank — never write
+  `echo ""` around one.
+
+Two rules follow from the buffer: close a screen with `help_end`, and use `help_text` rather than a
+bare `echo` for prose between rows, so pending rows flush ahead of it.
+
+`menucore/render.py` mirrors all six functions for the Python apps (`packages`, `menu-labs`,
+`menu-review`); the two languages render byte-identical screens.
+
+The underlying `print_help_row(width, name, [description], [color])` and
+`print_example_row(width, command, [comment])` remain available for a one-off row outside a help
+screen. They emit the colour escape *outside* the padded field — `printf` counts escape bytes
+toward a field width — and *before* the two-space indent, so the indent stays contiguous with the
+name for anything grepping the output for it.
 
 **Utility**:
 
@@ -333,10 +371,17 @@ Each has color variants and `_success/_error/_warning/_info` variants with emoji
 
 ### Formatting - Help Screens
 
-| Function | Purpose | Visual Style |
-|----------|---------|--------------|
-| `print_help_row` | Command/flag listing | Bright cyan name, aligned description |
-| `print_example_row` | Example invocation | Cyan command, aligned comment |
+| Function | Purpose |
+|----------|---------|
+| `help_header` | Open a screen (rule, name, tagline) |
+| `help_usage` | Usage lines, `Usage:` label included |
+| `help_section` | Section heading, coloured by name |
+| `help_row` | One row; width computed across the section |
+| `help_text` | Verbatim prose (flushes pending rows) |
+| `help_end` | Close the screen |
+
+Low-level rows, for use outside a help screen: `print_help_row`, `print_example_row`.
+Mirrored for Python in `menucore/render.py`.
 
 ### Error Handling
 

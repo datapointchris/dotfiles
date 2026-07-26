@@ -17,6 +17,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 
 # ============================================================================
@@ -305,15 +306,18 @@ download_cargo_binaries() {
 # ============================================================================
 
 usage() {
-  echo "Usage: $0 [options]"
-  echo ""
-  echo "Options:"
-  echo "  --platform PLATFORM    Target platform (default: linux-x86_64)"
-  echo "                         Supported: linux-x86_64, linux-arm64,"
-  echo "                                    darwin-x86_64, darwin-arm64"
-  echo "  --manifest NAME        Machine manifest filter (default: wsl-work-workstation)"
-  echo "                         Bundles only the packages that manifest installs."
-  echo "  --help                 Show this help message"
+  help_header "create-bundle" "Create an offline installation bundle for dotfiles."
+  help_usage "$(basename "$0") [options]"
+
+  help_section "Options"
+  help_row "--platform" "PLATFORM" "Target platform (default: linux-x86_64)"
+  help_row "" "" "Supported: linux-x86_64, linux-arm64,"
+  help_row "" "" "           darwin-x86_64, darwin-arm64"
+  help_row "--manifest" "NAME" "Machine manifest filter (default: wsl-work-workstation)"
+  help_row "" "" "Bundles only the packages that manifest installs."
+  help_row "--help" "" "Show this help message"
+
+  help_end
   exit 0
 }
 

@@ -39,6 +39,11 @@ from menucore import GREEN
 from menucore import RESET
 from menucore import YELLOW
 from menucore import header
+from menucore import help_end
+from menucore import help_header
+from menucore import help_row
+from menucore import help_section
+from menucore import help_usage
 from menucore import is_due
 from menucore import load_state
 from menucore import overdue_days
@@ -378,17 +383,22 @@ def warn_no_labs() -> int:
 
 
 def show_help() -> int:
-    print("menu labs — hands-on practice Labs\n")
-    print(f"  {CYAN}menu labs{RESET}             What's due to practice now")
-    print(f"  {CYAN}menu labs list{RESET}        Every Lab and its schedule status")
-    print(f"  {CYAN}menu labs list --json{RESET} The same, as JSON")
-    print(f"  {CYAN}menu labs pick{RESET}        Pick a Lab interactively (fzf)")
-    print(f"  {CYAN}menu labs <id>{RESET}        Open a Lab to read while you work in another pane")
-    print(f"  {CYAN}menu labs <tool>{RESET}      A tool's constellation (menu lenses) + its flashcards")
-    print(f"  {CYAN}menu labs flash [x]{RESET}   Quick recall drill from tool examples (all, or one tool/tag)")
-    print(f"  {CYAN}menu labs done <id>{RESET}   Mark a Lab practiced (advances its schedule)")
-    print(f"  {CYAN}menu labs new <name>{RESET}  Scaffold a new Lab and open it in $EDITOR")
-    print(f"  {CYAN}menu labs edit <id>{RESET}   Edit an existing Lab in $EDITOR")
+    help_header("menu labs", "Hands-on practice Labs.")
+    help_usage("menu labs [<verb>] [ARGS]")
+
+    help_section("Commands")
+    help_row("menu labs", "", "What's due to practice now")
+    help_row("menu labs list", "", "Every Lab and its schedule status")
+    help_row("menu labs list", "--json", "The same, as JSON")
+    help_row("menu labs pick", "", "Pick a Lab interactively (fzf)")
+    help_row("menu labs", "<id>", "Open a Lab to read while you work in another pane")
+    help_row("menu labs", "<tool>", "A tool's constellation (menu lenses) + its flashcards")
+    help_row("menu labs flash", "[x]", "Quick recall drill from tool examples (all, or one tool/tag)")
+    help_row("menu labs done", "<id>", "Mark a Lab practiced (advances its schedule)")
+    help_row("menu labs new", "<name>", "Scaffold a new Lab and open it in $EDITOR")
+    help_row("menu labs edit", "<id>", "Edit an existing Lab in $EDITOR")
+
+    help_end()
     return 0
 
 

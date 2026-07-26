@@ -540,19 +540,20 @@ run_phase() {
 
 list_phases() {
   local group entry name phase_group owner_aware
-  print_title "Update Groups" "brightcyan"
+  help_header "Update Groups"
   for group in "${UPDATE_GROUPS[@]}"; do
-    print_section "$group" "brightcyan"
+    help_section "$group"
     for entry in "${UPDATE_PHASES[@]}"; do
       IFS='|' read -r name phase_group owner_aware _ <<<"$entry"
       [[ "$phase_group" != "$group" ]] && continue
       if [[ "$owner_aware" == "yes" ]]; then
-        print_help_row 24 "$name" "(supports --mine)"
+        help_row "$name" "" "(supports --mine)"
       else
-        print_help_row 0 "$name"
+        help_row "$name"
       fi
     done
   done
+  help_end
   exit 0
 }
 
@@ -561,33 +562,32 @@ list_phases() {
 # ================================================================
 
 usage() {
-  print_header "update" "brightcyan"
-  echo "Update system packages, language tools, and plugins."
-  echo "With no GROUP, every group runs."
-  echo ""
-  print_cyan "Usage: $(basename "$0") [GROUP...] [OPTIONS]"
+  help_header "update" "Update system packages, language tools, and plugins."
+  help_text "With no GROUP, every group runs."
+  help_usage "$(basename "$0") [GROUP...] [OPTIONS]"
 
-  print_section "Groups" "brightcyan"
-  print_help_row 13 "system" "OS packages (brew/apt/pacman/yay/flatpak/mas) — needs sudo, slowest"
-  print_help_row 13 "languages" "Language toolchains and package managers (go, rustup, uv)"
-  print_help_row 13 "tools" "Installed binaries (go, cargo, uv, npm, GitHub releases, custom)"
-  print_help_row 13 "plugins" "Shell, tmux, and Neovim plugins"
+  help_section "Groups"
+  help_row "system" "" "OS packages (brew/apt/pacman/yay/flatpak/mas) — needs sudo, slowest"
+  help_row "languages" "" "Language toolchains and package managers (go, rustup, uv)"
+  help_row "tools" "" "Installed binaries (go, cargo, uv, npm, GitHub releases, custom)"
+  help_row "plugins" "" "Shell, tmux, and Neovim plugins"
 
-  print_section "Options" "brightmagenta"
-  print_help_row 15 "--skip GROUP" "Skip a group (repeatable)"
-  print_help_row 15 "--no-system" "Alias for --skip system"
-  print_help_row 15 "--mine" "Only tools owned by $OWNER; groups without an owner are skipped"
-  print_help_row 15 "--list" "Show every group and its phases"
-  print_help_row 15 "--dry-run" "Show what would run without running it"
-  print_help_row 15 "--help, -h" "Show this help message"
+  help_section "Options"
+  help_row "--skip" "GROUP" "Skip a group (repeatable)"
+  help_row "--no-system" "" "Alias for --skip system"
+  help_row "--mine" "" "Only tools owned by $OWNER; groups without an owner are skipped"
+  help_row "--list" "" "Show every group and its phases"
+  help_row "--dry-run" "" "Show what would run without running it"
+  help_row "--help, -h" "" "Show this help message"
 
-  print_section "Examples" "brightyellow"
-  print_example_row 34 "./update.sh" "# everything"
-  print_example_row 34 "./update.sh tools" "# only installed binaries"
-  print_example_row 34 "./update.sh tools plugins" "# two groups"
-  print_example_row 34 "./update.sh --no-system" "# skip the sudo-gated, slowest group"
-  print_example_row 34 "./update.sh --mine" "# refresh only $OWNER tools"
-  echo ""
+  help_section "Examples"
+  help_row "./update.sh" "" "# everything"
+  help_row "./update.sh tools" "" "# only installed binaries"
+  help_row "./update.sh tools plugins" "" "# two groups"
+  help_row "./update.sh --no-system" "" "# skip the sudo-gated, slowest group"
+  help_row "./update.sh --mine" "" "# refresh only $OWNER tools"
+
+  help_end
   exit 0
 }
 

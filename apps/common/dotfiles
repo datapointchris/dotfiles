@@ -48,13 +48,7 @@ COMMANDS=(
   "edit|Repo||Open the repository in \$EDITOR"
 )
 
-# Format: name|color
-COMMAND_SECTIONS=(
-  "Manage|brightcyan"
-  "Symlinks|brightmagenta"
-  "Develop|brightyellow"
-  "Repo|brightgreen"
-)
+COMMAND_SECTIONS=(Manage Symlinks Develop Repo)
 
 command_names() {
   local entry
@@ -64,30 +58,21 @@ command_names() {
 }
 
 usage() {
-  local section section_name section_color entry name entry_section args summary invocation pad
+  local section entry name entry_section args summary
 
-  print_header "dotfiles" "brightcyan"
-  echo "Manage the dotfiles repository from anywhere."
-  echo ""
-  print_cyan "Usage: dotfiles <command> [ARGS]"
+  help_header "dotfiles" "Manage the dotfiles repository from anywhere."
+  help_usage "dotfiles <command> [ARGS]"
 
   for section in "${COMMAND_SECTIONS[@]}"; do
-    IFS='|' read -r section_name section_color <<<"$section"
-    print_section "$section_name" "$section_color"
+    help_section "$section"
     for entry in "${COMMANDS[@]}"; do
       IFS='|' read -r name entry_section args summary <<<"$entry"
-      [[ "$entry_section" != "$section_name" ]] && continue
-      # Only the name is coloured, so it alone occupies the padded field and the
-      # uncoloured args lead the description, spaced out to the summary column.
-      invocation="$name${args:+ $args}"
-      pad=$((33 - ${#invocation}))
-      ((pad < 1)) && pad=1
-      printf -v spacer '%*s' "$pad" ""
-      print_help_row "${#name}" "$name" "${args:+ $args}${spacer}${summary}"
+      [[ "$entry_section" != "$section" ]] && continue
+      help_row "$name" "$args" "$summary"
     done
   done
 
-  echo ""
+  help_end
   print_info "Run a command with --help for its own options, e.g. dotfiles update --help"
   exit "${1:-0}"
 }

@@ -16,16 +16,23 @@ from menucore.cadence import is_due
 from menucore.cadence import overdue_days
 from menucore.cadence import parse_cadence
 from menucore.cadence import status_label
+from menucore.paths import xdg_data_home
+from menucore.paths import xdg_state_home
 from menucore.render import BAR
 from menucore.render import BLUE
 from menucore.render import CYAN
 from menucore.render import GREEN
+from menucore.render import MAGENTA
 from menucore.render import RED
 from menucore.render import RESET
 from menucore.render import YELLOW
 from menucore.render import header
-from menucore.paths import xdg_data_home
-from menucore.paths import xdg_state_home
+from menucore.render import help_end
+from menucore.render import help_header
+from menucore.render import help_row
+from menucore.render import help_section
+from menucore.render import help_text
+from menucore.render import help_usage
 from menucore.state import load_state
 from menucore.state import save_state
 
@@ -44,7 +51,14 @@ __all__ = [
     "GREEN",
     "RED",
     "BLUE",
+    "MAGENTA",
     "RESET",
     "BAR",
     "header",
+    "help_header",
+    "help_usage",
+    "help_section",
+    "help_row",
+    "help_text",
+    "help_end",
 ]

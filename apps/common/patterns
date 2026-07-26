@@ -14,33 +14,28 @@ DATA_FILE="$DATA_DIR/entries.jsonl"
 # ================================================================
 
 show_help() {
-  print_header "Patterns - Timestamped Note Logging" "brightcyan"
-  echo ""
-  echo "Capture brief observations throughout the day to identify patterns"
-  echo "in health, mood, habits, and daily activities."
-  echo ""
+  help_header "patterns" "Capture brief observations throughout the day to identify patterns"
+  help_text "in health, mood, habits, and daily activities."
+  help_usage "patterns 'message'" "patterns <verb>"
 
-  print_section "Commands" "brightcyan"
-  echo "  patterns 'message'       Log a timestamped entry (quotes required)"
-  echo "  patterns list            View all entries in log format"
-  echo "  patterns search 'term'   Search entries for matching text"
-  echo "  patterns delete          Delete entries (interactive selection)"
-  echo "  patterns help            Show this help message"
-  echo ""
+  help_section "Commands"
+  help_row "patterns" "'message'" "Log a timestamped entry (quotes required)"
+  help_row "patterns list" "" "View all entries in log format"
+  help_row "patterns search" "'term'" "Search entries for matching text"
+  help_row "patterns delete" "" "Delete entries (interactive selection)"
+  help_row "patterns help" "" "Show this help message"
 
-  print_section "Examples" "brightyellow"
-  echo "  $(print_cyan "patterns 'had coffee around 3pm'")"
-  echo "  $(print_cyan "patterns 'feeling slight heartburn'")"
-  echo "  $(print_cyan "patterns list")"
-  echo "  $(print_cyan "patterns search coffee")"
-  echo "  $(print_cyan "patterns delete")"
-  echo ""
+  help_section "Examples"
+  help_row "patterns 'had coffee around 3pm'"
+  help_row "patterns 'feeling slight heartburn'"
+  help_row "patterns list"
+  help_row "patterns search coffee"
+  help_row "patterns delete"
 
-  print_section "Data File" "brightgreen"
-  echo "  Location: $DATA_FILE"
-  echo "  Format: JSONL (one JSON object per line)"
-  echo ""
+  help_section "Data File"
+  help_text "  Location: $DATA_FILE" "  Format: JSONL (one JSON object per line)"
 
+  help_end
   print_info "Use jq for advanced analysis: jq '.' $DATA_FILE"
 }
 

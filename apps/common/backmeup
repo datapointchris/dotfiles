@@ -145,34 +145,28 @@ PROGRESS_FILE=""
 # ============================================================================
 
 usage() {
-  color_bright_white "Create timestamped compressed backup archives with progress tracking"
-  echo ""
-  echo "$(color_bright_white "Usage:") $(color_bright_yellow "backmeup") $(color_bright_magenta "-n <name> -d <dest>") $(color_bright_magenta "[OPTIONS]") $(color_bright_green "<path1>") [path2] [path3...]"
-  print_section "Options" "brightcyan"
-  echo "  $(color_bright_magenta "-n, --name") $(color_cyan "<name>")        Backup name $(color_bright_black "(required)")"
-  echo "  $(color_bright_magenta "-d, --dest") $(color_cyan "<path>")        Destination directory $(color_bright_black "(required)")"
-  echo "  $(color_bright_magenta "-e, --exclude") $(color_cyan "<pattern>")  Additional exclusion pattern $(color_bright_black "(repeatable)")"
-  echo "  $(color_bright_magenta "-h, --help")              Show this help message"
-  echo ""
-  print_section "Examples" "brightcyan"
-  echo "  $(color_bright_black "# Backup dotfiles to Documents")"
-  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n dotfiles -d ~/Documents") $(color_green "dotfiles .config")"
-  echo "  $(color_bright_black "# Backup to external drive")"
-  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n code -d /Volumes/External") $(color_green "code")"
-  echo "  $(color_bright_black "# Exclude additional patterns")"
-  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n dotfiles -d ~/Documents --exclude .git") $(color_green "dotfiles")"
-  echo "  $(color_bright_black "# Mix directories and individual files")"
-  echo "  $(color_bright_yellow "backmeup") $(color_magenta "-n snapshot -d /tmp") $(color_green "dotfiles ~/.zshrc")"
-  echo ""
-  print_section "Restore" "brightcyan"
-  echo "  $(color_bright_black "# Extract archive to current directory")"
-  echo "  $(color_bright_yellow "tar") $(color_magenta "-xf") $(color_green "backup.tar.zst")"
-  echo "  $(color_bright_black "# Extract to specific directory")"
+  help_header "backmeup" "Create timestamped compressed backup archives with progress tracking"
+  help_usage "backmeup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]"
+
+  help_section "Options"
+  help_row "-n, --name" "<name>" "Backup name (required)"
+  help_row "-d, --dest" "<path>" "Destination directory (required)"
+  help_row "-e, --exclude" "<pattern>" "Additional exclusion pattern (repeatable)"
+  help_row "-h, --help" "" "Show this help message"
+
+  help_section "Examples"
+  help_row "backmeup -n dotfiles -d ~/Documents dotfiles .config" "" "# Backup dotfiles to Documents"
+  help_row "backmeup -n code -d /Volumes/External code" "" "# Backup to external drive"
+  help_row "backmeup -n dotfiles -d ~/Documents --exclude .git dotfiles" "" "# Exclude additional patterns"
+  help_row "backmeup -n snapshot -d /tmp dotfiles ~/.zshrc" "" "# Mix directories and files"
+
   # shellcheck disable=SC2088
-  echo "  $(color_bright_yellow "tar") $(color_magenta "-xf") $(color_green "backup.tar.zst") $(color_magenta "-C") $(color_cyan "~/restore")"
-  echo "  $(color_bright_black "# List contents without extracting")"
-  echo "  $(color_bright_yellow "tar") $(color_magenta "-tf") $(color_green "backup.tar.zst") $(color_magenta "| head")"
-  echo ""
+  help_section "Restore"
+  help_row "tar -xf backup.tar.zst" "" "# Extract to current directory"
+  help_row "tar -xf backup.tar.zst -C ~/restore" "" "# Extract to specific directory"
+  help_row "tar -tf backup.tar.zst | head" "" "# List contents without extracting"
+
+  help_end
 }
 
 # ============================================================================

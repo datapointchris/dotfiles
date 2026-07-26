@@ -15,41 +15,36 @@ source "$SHELL_DIR/formatting.sh"
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
 
 show_help() {
-  print_header "Notes - Quick Note-Taking with zk" "brightcyan"
-  echo ""
-  echo "Command-line interface for managing notes across sections."
-  echo ""
+  help_header "notes" "Command-line interface for managing notes across sections."
+  help_usage "notes <verb> [section]"
 
-  print_section "Commands" "brightmagenta"
-  echo "  $(print_cyan "notes")                  Show this help"
-  echo "  $(print_cyan "notes search")           Search across all notes (full-text)"
-  echo "  $(print_cyan "notes new") [section]    Create a new note (optionally specify section)"
-  echo "  $(print_cyan "notes recent")           Browse recent notes"
-  echo "  $(print_cyan "notes browse")           Browse notes by section"
-  echo ""
+  help_section "Commands"
+  help_row "notes" "" "Show this help"
+  help_row "notes search" "" "Search across all notes (full-text)"
+  help_row "notes new" "[section]" "Create a new note (optionally specify section)"
+  help_row "notes recent" "" "Browse recent notes"
+  help_row "notes browse" "" "Browse notes by section"
 
-  print_section "Examples" "brightyellow"
-  echo "  $(print_green "notes search")           # Full-text search, type to filter results"
-  echo "  $(print_green "notes new")              # Pick a section, then create a note"
-  echo "  $(print_green "notes new dev")          # Create a note directly in 'dev' section"
-  echo "  $(print_green "notes recent")           # Browse last 50 notes"
-  echo "  $(print_green "notes browse")           # Pick a section, browse its notes"
-  echo ""
+  help_section "Examples"
+  help_row "notes search" "" "# Full-text search, type to filter results"
+  help_row "notes new" "" "# Pick a section, then create a note"
+  help_row "notes new dev" "" "# Create a note directly in 'dev' section"
+  help_row "notes recent" "" "# Browse last 50 notes"
+  help_row "notes browse" "" "# Pick a section, browse its notes"
 
-  print_section "Direct zk Access" "orange"
-  echo "  For full zk functionality, use 'zk' directly:"
-  echo "  • $(print_yellow "zk list")              # List all notes"
-  echo "  • $(print_yellow "zk journal") \"...\"     # Create journal entry"
-  echo "  • $(print_yellow "zk edit")              # Edit notes"
-  echo ""
+  help_section "Direct zk Access"
+  help_text "  For full zk functionality, use 'zk' directly:"
+  help_row "zk list" "" "# List all notes"
+  help_row "zk journal" "\"...\"" "# Create journal entry"
+  help_row "zk edit" "" "# Edit notes"
 
-  print_section "Notebook" "brightblue"
-  echo "  Location: $(print_cyan "$NOTES_DIR")"
-  echo "  Config:   $(print_cyan "$HOME/.config/zk/config.toml")"
+  help_section "Notebook"
+  help_text "  Location: $NOTES_DIR" "  Config:   $HOME/.config/zk/config.toml"
+
+  help_end
 
   # Warn if the notes directory is missing (but don't fail - help should always work)
   if [[ ! -d "$NOTES_DIR" ]]; then
-    echo ""
     print_warning "Notes directory not found: $NOTES_DIR - run: zk init $NOTES_DIR"
   fi
 }

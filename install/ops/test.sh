@@ -19,26 +19,17 @@ LIBRARY_TESTS=(tests/libraries/*.bats)
 UNIT_TESTS=(tests/install/unit/*.bats tests/apps/*.bats)
 INTEGRATION_TESTS=(tests/install/integration/*.bats)
 
-# Format: suite|description
-SUITES=(
-  "all|Library, unit, and integration suites (default)"
-  "unit|Library and unit suites (no Docker)"
-  "integration|Integration suites (includes Docker tests if the image is built)"
-  "watch|Re-run everything on file changes (requires entr)"
-)
-
 usage() {
-  local entry suite description
+  help_header "test"
+  help_usage "test.sh [all|unit|integration|watch]"
 
-  print_header "test" "brightcyan"
-  print_cyan "Usage: test.sh [all|unit|integration|watch]"
+  help_section "Suites"
+  help_row "all" "" "Library, unit, and integration suites (default)"
+  help_row "unit" "" "Library and unit suites (no Docker)"
+  help_row "integration" "" "Integration suites (includes Docker tests if the image is built)"
+  help_row "watch" "" "Re-run everything on file changes (requires entr)"
 
-  print_section "Suites" "brightcyan"
-  for entry in "${SUITES[@]}"; do
-    IFS='|' read -r suite description <<<"$entry"
-    print_help_row 14 "$suite" "$description"
-  done
-  echo ""
+  help_end
   exit "${1:-0}"
 }
 

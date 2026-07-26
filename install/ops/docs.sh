@@ -14,25 +14,16 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
-# Format: verb|description
-VERBS=(
-  "serve|Serve the documentation site locally"
-  "build|Build the static site, failing on any warning"
-  "deploy|Publish the site to GitHub Pages"
-)
-
 usage() {
-  local entry verb description
+  help_header "docs"
+  help_usage "docs.sh <serve|build|deploy>"
 
-  print_header "docs" "brightcyan"
-  print_cyan "Usage: docs.sh <serve|build|deploy>"
+  help_section "Verbs"
+  help_row "serve" "" "Serve the documentation site locally"
+  help_row "build" "" "Build the static site, failing on any warning"
+  help_row "deploy" "" "Publish the site to GitHub Pages"
 
-  print_section "Verbs" "brightcyan"
-  for entry in "${VERBS[@]}"; do
-    IFS='|' read -r verb description <<<"$entry"
-    print_help_row 9 "$verb" "$description"
-  done
-  echo ""
+  help_end
   exit "${1:-0}"
 }
 

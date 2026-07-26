@@ -32,6 +32,9 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+export TERM=${TERM:-xterm}
+
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 # tool | github_repo | windows_asset_pattern | exe_name
 # {tag} = raw release tag (e.g. v0.26.1, 15.2.0); {ver} = tag with any
@@ -50,11 +53,16 @@ EOF
 )
 
 usage() {
-  echo "Usage:"
-  echo "  setup-windows.sh                  winget install + copy to ~/.local/bin (WSL)"
-  echo "  setup-windows.sh --bundle [file]  download Windows .exe files into a .tar.gz"
-  echo "                                    (any machine; default: dated archive in repo root)"
-  echo "  setup-windows.sh --offline <src>  install from a --bundle archive or dir (WSL, no network)"
+  help_header "setup-windows" "Provision Windows Git Bash with the shell tools used on Linux/macOS."
+  help_usage "setup-windows.sh [--bundle [file] | --offline <src>]"
+
+  help_section "Modes"
+  help_row "setup-windows.sh" "" "winget install + copy to ~/.local/bin (WSL)"
+  help_row "setup-windows.sh --bundle" "[file]" "download Windows .exe files into a .tar.gz"
+  help_row "" "" "(any machine; default: dated archive in repo root)"
+  help_row "setup-windows.sh --offline" "<src>" "install from a --bundle archive or dir (WSL, no network)"
+
+  help_end
 }
 
 require_wsl() {

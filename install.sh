@@ -210,43 +210,41 @@ set_zsh_as_default_shell() {
 }
 
 usage() {
-  print_header "install" "brightcyan"
-  echo "Install dotfiles and development tools"
-  echo ""
-  print_cyan "Usage: $(basename "$0") --machine NAME [OPTIONS]"
-  print_cyan "       $(basename "$0") --create-offline-bundle [BUNDLE OPTIONS]"
+  help_header "install" "Install dotfiles and development tools"
+  help_usage "$(basename "$0") --machine NAME [OPTIONS]" \
+    "$(basename "$0") --create-offline-bundle [BUNDLE OPTIONS]"
 
-  print_section "Options" "brightmagenta"
-  print_help_row 27 "--machine NAME" "Machine manifest to use (required for installation)"
-  print_help_row 27 "--force, -f" "Force reinstall of all tools even if already installed"
-  print_help_row 27 "--offline" "Use offline bundle (extracts ~/installers/ from tarball)"
-  print_help_row 27 "--create-offline-bundle" "Download all installers into an offline bundle tarball"
-  print_help_row 27 "--help, -h" "Show this help message"
+  help_section "Options"
+  help_row "--machine" "NAME" "Machine manifest to use (required for installation)"
+  help_row "--force, -f" "" "Force reinstall of all tools even if already installed"
+  help_row "--offline" "" "Use offline bundle (extracts ~/installers/ from tarball)"
+  help_row "--create-offline-bundle" "" "Download all installers into an offline bundle tarball"
+  help_row "--help, -h" "" "Show this help message"
 
-  print_section "Offline Bundle Options (with --create-offline-bundle)" "brightmagenta"
-  print_help_row 27 "--platform PLATFORM" "Target platform (default: linux-x86_64)"
-  print_help_row 27 "" "Supported: linux-x86_64, linux-arm64,"
-  print_help_row 27 "" "           darwin-x86_64, darwin-arm64"
+  help_section "Offline Bundle Options (with --create-offline-bundle)"
+  help_row "--platform" "PLATFORM" "Target platform (default: linux-x86_64)"
+  help_row "" "" "Supported: linux-x86_64, linux-arm64,"
+  help_row "" "" "           darwin-x86_64, darwin-arm64"
 
-  print_section "Environment Variables" "brightblue"
-  print_help_row 16 "MACHINE=name" "Same as --machine (flag takes precedence)"
+  help_section "Environment Variables"
+  help_row "MACHINE=name" "" "Same as --machine (flag takes precedence)"
 
-  print_section "Examples" "brightyellow"
-  print_example_row 42 "./install.sh --machine archlinux-personal-workstation"
-  print_example_row 42 "./install.sh --machine linux-lxc-server" "# minimal headless LXC / small box"
-  print_example_row 42 "MACHINE=archlinux-personal-workstation ./install.sh"
+  help_section "Examples"
+  help_row "./install.sh --machine archlinux-personal-workstation"
+  help_row "./install.sh --machine linux-lxc-server" "" "# minimal headless LXC / small box"
+  help_row "MACHINE=archlinux-personal-workstation ./install.sh"
 
-  print_section "Offline Workflow" "brightyellow"
-  print_example_row 59 "./install.sh --create-offline-bundle" "# 1. Create bundle (internet machine)"
-  echo ""
-  echo "  Transfer the bundle to the target machine (pick one):"
-  print_example_row 59 "python3 -m http.server 8000" "# 2a. Serve from source machine"
-  print_example_row 59 "curl -O http://<source-ip>:8000/dotfiles-offline-*.tar.gz" "# 2a. Download on target (run from ~/)"
-  print_example_row 59 "scp dotfiles-offline-*.tar.gz user@target-host:~/" "# 2b. Or use scp instead"
-  echo ""
-  print_example_row 59 "./install.sh --machine wsl-work-workstation --offline" "# 3. Install on target machine"
+  # Step 2 is a pick-one, which the 2a/2b numbering carries — spelling it out in
+  # prose between the rows would split the section into separately sized groups
+  # and stop the step comments lining up.
+  help_section "Offline Workflow"
+  help_row "./install.sh --create-offline-bundle" "" "# 1. Create bundle (internet machine)"
+  help_row "python3 -m http.server 8000" "" "# 2a. Serve from source machine, then:"
+  help_row "curl -O http://<source-ip>:8000/dotfiles-offline-*.tar.gz" "" "# 2a. Download on target (run from ~/)"
+  help_row "scp dotfiles-offline-*.tar.gz user@target-host:~/" "" "# 2b. Or use scp instead"
+  help_row "./install.sh --machine wsl-work-workstation --offline" "" "# 3. Install on target machine"
 
-  echo ""
+  help_end
   print_info "Machine manifests: install/manifests/*.yml"
   exit 0
 }

@@ -43,59 +43,58 @@ CONTAINER_SHARED="$CONTAINER_WORKSPACE/zmk-shared"
 # ================================================================
 
 show_help() {
-  cat << 'EOF'
-zmk-build - ZMK Firmware Builder
+  help_header "zmk-build" "ZMK firmware builder."
+  help_usage "zmk-build [OPTIONS]"
 
-USAGE:
-    zmk-build [OPTIONS]
+  help_section "Options"
+  help_row "--clean" "" "Remove current repo's workspace and exit"
+  help_row "--clean-all" "" "Remove all repo workspaces and exit"
+  help_row "--pristine" "" "Force clean rebuild of all targets (ignore cached build artifacts)"
+  help_row "--update" "" "Force update west dependencies before building"
+  help_row "--help" "" "Show this help message"
 
-OPTIONS:
-    --clean       Remove current repo's workspace and exit
-    --clean-all   Remove all repo workspaces and exit
-    --pristine    Force clean rebuild of all targets (ignore cached build artifacts)
-    --update      Force update west dependencies before building
-    --help        Show this help message
+  help_section "Description"
+  help_text \
+    "  Builds ZMK firmware using a per-repo workspace under ~/.local/share/zmk/<repo>/" \
+    "  and configuration from the current directory. Each repo gets its own isolated" \
+    "  workspace, so different ZMK versions don't interfere with each other." \
+    "" \
+    "  Builds are incremental by default — only changed files are recompiled." \
+    "  Use --pristine to force a full rebuild. When multiple targets are defined," \
+    "  they are built in parallel." \
+    "" \
+    "  Reads build.yaml for build targets (standard ZMK GitHub Actions format):" \
+    "" \
+    "      include:" \
+    "        - board: nice_nano//zmk" \
+    "          shield: corne_left nice_view_adapter nice_view" \
+    "        - board: piantor_pro_bt_left" \
+    "          snippet: studio-rpc-usb-uart" \
+    "          cmake-args: -DCONFIG_ZMK_STUDIO=y" \
+    "" \
+    "  Output files are named: artifact-name > shield (first word) > board"
 
-DESCRIPTION:
-    Builds ZMK firmware using a per-repo workspace under ~/.local/share/zmk/<repo>/
-    and configuration from the current directory. Each repo gets its own isolated
-    workspace, so different ZMK versions don't interfere with each other.
+  help_section "build.yaml Fields"
+  help_row "board" "" "Required. The board name."
+  help_row "shield" "" "Optional. Shield name(s)."
+  help_row "snippet" "" "Optional. Zephyr snippet to include."
+  help_row "cmake-args" "" "Optional. Extra CMake arguments."
+  help_row "artifact-name" "" "Optional. Custom output filename."
 
-    Builds are incremental by default - only changed files are recompiled.
-    Use --pristine to force a full rebuild.
+  help_section "Requirements"
+  help_text \
+    "  - Docker" \
+    "  - yq (YAML processor)" \
+    "  - build.yaml in current directory" \
+    "  - config/ directory with keymap and conf files" \
+    "  - Sibling shared/ directory (or ZMK_SHARED_DIR env var)"
 
-    When multiple targets are defined, they are built in parallel.
+  help_section "Examples"
+  help_row "zmk-build" "" "# Incremental build of all targets"
+  help_row "zmk-build --pristine" "" "# Full clean rebuild"
+  help_row "zmk-build --update" "" "# Update dependencies and build"
 
-    Reads build.yaml for build targets (standard ZMK GitHub Actions format):
-
-        include:
-          - board: nice_nano//zmk
-            shield: corne_left nice_view_adapter nice_view
-          - board: piantor_pro_bt_left
-            snippet: studio-rpc-usb-uart
-            cmake-args: -DCONFIG_ZMK_STUDIO=y
-
-    Supported build.yaml fields:
-        board         - Required. The board name.
-        shield        - Optional. Shield name(s).
-        snippet       - Optional. Zephyr snippet to include.
-        cmake-args    - Optional. Extra CMake arguments.
-        artifact-name - Optional. Custom output filename.
-
-    Output files are named: artifact-name > shield (first word) > board
-
-REQUIREMENTS:
-    - Docker
-    - yq (YAML processor)
-    - build.yaml in current directory
-    - config/ directory with keymap and conf files
-    - Sibling shared/ directory (or ZMK_SHARED_DIR env var)
-
-EXAMPLES:
-    zmk-build              # Incremental build of all targets
-    zmk-build --pristine   # Full clean rebuild
-    zmk-build --update     # Update dependencies and build
-EOF
+  help_end
 }
 
 check_requirements() {

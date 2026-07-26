@@ -504,6 +504,151 @@ print_example_row() {
 }
 
 # ================================================================
+# Help Screen Grammar
+# ================================================================
+# A help screen is built from these and nothing else:
+#
+#   show_help() {
+#     help_header "menu" "A pointer across your collections."
+#     help_usage  "menu [find|search] <term>"
+#
+#     help_section "Commands"
+#     help_row "menu find"  "<term>"  "Search (Enter opens the full view)"
+#     help_row "menu help"  ""        "Show this help"
+#
+#     help_end
+#   }
+#
+# help_row buffers rather than printing, so the flush can size the description
+# column from the longest row in the section — no call site types a width, and a
+# row that outgrows its neighbours re-flows the section instead of overrunning.
+# Two rules follow: close a screen with help_end, and use help_text rather than a
+# bare echo for prose, so pending rows flush ahead of it.
+
+HELP_PENDING_ROWS=()
+HELP_SECTION_TITLE=""
+HELP_SECTION_INDEX=0
+
+# The three roles that appear in nearly every CLI get a fixed colour, so they
+# become learnable across tools. App-specific headings rotate through the rest of
+# the palette by position, which keeps adjacent sections distinct without any
+# screen choosing — a single fallback colour made a screen whose headings are all
+# app-specific, like `dotfiles`, render entirely monochrome.
+#
+# Spelled as a case rather than an array lookup: this file is sourced into zsh,
+# where arrays are 1-based, so an index that is right in bash is off by one there.
+_help_section_color() {
+  local title index="${2:-0}"
+  title=$(echo "${1:-}" | tr '[:upper:]' '[:lower:]')
+  case "$title" in
+  commands | verbs | suites | groups | phases) echo "brightcyan" ;;
+  options | flags | arguments | "environment variables") echo "brightmagenta" ;;
+  examples) echo "brightyellow" ;;
+  *)
+    case $((index % 3)) in
+    0) echo "brightgreen" ;;
+    1) echo "brightblue" ;;
+    *) echo "brightwhite" ;;
+    esac
+    ;;
+  esac
+}
+
+# Rows are serialised on ASCII unit separator. It has to be a non-whitespace
+# delimiter: `read` collapses runs of an IFS *whitespace* character, so a tab
+# would merge the two delimiters of a row with empty args and shift every field.
+HELP_FIELD_SEPARATOR=$'\x1f'
+
+help_row() {
+  HELP_PENDING_ROWS+=("${1}${HELP_FIELD_SEPARATOR}${2:-}${HELP_FIELD_SEPARATOR}${3:-}")
+}
+
+_help_flush_rows() {
+  [[ ${#HELP_PENDING_ROWS[@]} -eq 0 ]] && return 0
+
+  local row name args description left width=0 color="$COLOR_BRIGHT_CYAN"
+  # An example is a command you would type, so it reads in the command colour
+  # rather than the name colour used for a listing.
+  [[ "$(echo "$HELP_SECTION_TITLE" | tr '[:upper:]' '[:lower:]')" == "examples" ]] && color="$COLOR_CYAN"
+
+  for row in "${HELP_PENDING_ROWS[@]}"; do
+    IFS="$HELP_FIELD_SEPARATOR" read -r name args description <<<"$row"
+    left="$name${args:+ $args}"
+    [[ ${#left} -gt $width ]] && width=${#left}
+  done
+  width=$((width + 2))
+
+  for row in "${HELP_PENDING_ROWS[@]}"; do
+    IFS="$HELP_FIELD_SEPARATOR" read -r name args description <<<"$row"
+    _help_print_row "$width" "$name" "$args" "$description" "$color"
+  done
+
+  HELP_PENDING_ROWS=()
+}
+
+# The coloured name and the uncoloured args share one padded column, so the pad
+# is measured across both rather than handed to printf's field width.
+_help_print_row() {
+  local width="$1" name="$2" args="$3" description="$4" color="$5"
+  local left="$name${args:+ $args}"
+
+  # A continuation row carries no name, so it gets no colour escape either.
+  [[ -z "$name" ]] && color=""
+
+  # A row with nothing in the right column gets no padding, so a section of bare
+  # commands does not trail invisible whitespace.
+  if [[ -z "$description" ]]; then
+    printf '%b  %s%b%s\n' "$color" "$name" "$COLOR_RESET" "${args:+ $args}"
+    return 0
+  fi
+
+  local pad=$((width - ${#left}))
+  ((pad < 0)) && pad=0
+  printf '%b  %s%b%s%*s%s\n' "$color" "$name" "$COLOR_RESET" "${args:+ $args}" "$pad" "" "$description"
+}
+
+help_header() {
+  local name="$1"
+  local tagline="${2:-}"
+  HELP_SECTION_INDEX=0
+  print_header "$name" "brightcyan"
+  [[ -n "$tagline" ]] && echo "$tagline"
+}
+
+# The "Usage: " label is the library's, so callers pass only the invocation and
+# every screen labels it identically. Extra lines align under the first.
+help_usage() {
+  local line prefix="Usage: "
+  echo ""
+  for line in "$@"; do
+    print_cyan "${prefix}${line}"
+    prefix="       "
+  done
+}
+
+help_section() {
+  _help_flush_rows
+  HELP_SECTION_TITLE="$1"
+  print_section "$1" "$(_help_section_color "$1" "$HELP_SECTION_INDEX")"
+  HELP_SECTION_INDEX=$((HELP_SECTION_INDEX + 1))
+}
+
+help_text() {
+  _help_flush_rows
+  local line
+  for line in "$@"; do
+    echo "$line"
+  done
+}
+
+help_end() {
+  _help_flush_rows
+  HELP_SECTION_TITLE=""
+  HELP_SECTION_INDEX=0
+  echo ""
+}
+
+# ================================================================
 # Utility Functions
 # ================================================================
 

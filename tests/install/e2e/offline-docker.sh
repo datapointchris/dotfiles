@@ -12,7 +12,9 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/tests/install/helpers.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 # Configuration
 DOCKER_IMAGE="dotfiles-test-base:ubuntu-24.04"
@@ -27,20 +29,21 @@ SKIP_BUNDLE=false
 REUSE_BUNDLE=false
 
 usage() {
-  echo "Usage: $(basename "$0") [OPTIONS]"
-  echo ""
-  echo "Test offline bundle installation using Docker with blocked network"
-  echo ""
-  echo "Options:"
-  echo "  -k, --keep          Keep container after test (for debugging)"
-  echo "  -s, --skip-bundle   Skip bundle creation, use existing bundle"
-  echo "  -r, --reuse-bundle  Reuse existing bundle if available, create if not"
-  echo "  -h, --help          Show this help message"
-  echo ""
-  echo "Examples:"
-  echo "  $(basename "$0")              # Full test: create bundle + test install"
-  echo "  $(basename "$0") -s           # Test with existing bundle (faster)"
-  echo "  $(basename "$0") -k           # Keep container for debugging"
+  help_header "offline-docker" "Test offline bundle installation using Docker with blocked network"
+  help_usage "$(basename "$0") [OPTIONS]"
+
+  help_section "Options"
+  help_row "-k, --keep" "" "Keep container after test (for debugging)"
+  help_row "-s, --skip-bundle" "" "Skip bundle creation, use existing bundle"
+  help_row "-r, --reuse-bundle" "" "Reuse existing bundle if available, create if not"
+  help_row "-h, --help" "" "Show this help message"
+
+  help_section "Examples"
+  help_row "$(basename "$0")" "" "# Full test: create bundle + test install"
+  help_row "$(basename "$0") -s" "" "# Test with existing bundle (faster)"
+  help_row "$(basename "$0") -k" "" "# Keep container for debugging"
+
+  help_end
 }
 
 # Parse arguments
