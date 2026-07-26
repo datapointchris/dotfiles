@@ -205,17 +205,17 @@ var rootCmd = &cobra.Command{
     },
 }
 
-var sessCmd = &cobra.Command{
-    Use:   "sess",
-    Short: "Session management",
+var browseCmd = &cobra.Command{
+    Use:   "browse",
+    Short: "Interactive browser",
     RunE: func(cmd *cobra.Command, args []string) error {
-        p := tea.NewProgram(newSessionModel())
+        p := tea.NewProgram(newBrowseModel())
         return p.Start()
     },
 }
 
 func init() {
-    rootCmd.AddCommand(sessCmd)
+    rootCmd.AddCommand(browseCmd)
 }
 
 func main() {

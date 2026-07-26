@@ -1106,25 +1106,6 @@ tools:
     see_also: [menu, menu-review, workflows]
     tags: [dotfiles, discovery, practice, spaced-repetition, labs]
 
-  sess:
-    category: custom-tools
-    description: "Tmux session manager with gum-based interactive selection"
-    installed_via: dotfiles
-    usage: "sess [session-name]"
-    why_use: "Quick tmux session switching, integrates with tmuxinator, manages default sessions from YAML config"
-    examples:
-      - cmd: "sess"
-        desc: "Interactive session selector (gum)"
-      - cmd: "sess dotfiles"
-        desc: "Attach to or create 'dotfiles' session"
-      - cmd: "sess list"
-        desc: "List all sessions (active, tmuxinator, defaults)"
-      - cmd: "sess last"
-        desc: "Switch to previously active session"
-    see_also: [menu, tmux, tmuxinator, sesh]
-    tags: [dotfiles, tmux, workflow, tui, go]
-    docs_url: "tools/sess/README.md"
-
   sesh:
     category: session-management
     description: "Smart tmux session manager with zoxide integration and fzf picker"
@@ -1140,7 +1121,7 @@ tools:
         desc: "List all available sessions"
       - cmd: "sesh last"
         desc: "Switch to previously active session"
-    see_also: [sess, menu, tmux]
+    see_also: [menu, tmux, tmuxinator]
     tags: [tmux, workflow, tui, go, zoxide]
     docs_url: "https://github.com/joshmedeski/sesh"
 

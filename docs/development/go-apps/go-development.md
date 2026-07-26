@@ -7,15 +7,15 @@ Standards and best practices for Go development in the dotfiles project.
 Follow the [Standard Go Project Layout](https://github.com/golang-standards/project-layout):
 
 ```text
-tools/sess/
+tools/mytool/
 ├── cmd/                    # Main applications
 │   ├── root.go            # Root command
 │   ├── list.go            # Subcommands
 │   └── create.go
 ├── internal/              # Private application code
 │   ├── config/           # Configuration parsing
-│   ├── session/          # Business logic
-│   ├── tmux/             # External integrations
+│   ├── core/             # Business logic
+│   ├── client/           # External integrations
 │   └── ui/               # User interface
 ├── pkg/                   # Public library code (if needed)
 ├── main.go               # Entry point
@@ -465,14 +465,14 @@ func (r *Registry) FindByName(name string) (*Command, error) {
 
 ```go
 var rootCmd = &cobra.Command{
-    Use:   "sess",
-    Short: "Fast tmux session manager",
-    Long:  `A simple and fast tmux session manager built in Go.`,
+    Use:   "mytool",
+    Short: "One-line summary of the tool",
+    Long:  `A longer description of what the tool does.`,
 }
 
 var listCmd = &cobra.Command{
     Use:   "list",
-    Short: "List all sessions",
+    Short: "List all items",
     RunE: func(cmd *cobra.Command, args []string) error {
         // Implementation
         return nil
@@ -592,13 +592,13 @@ func TestModel_Update(t *testing.T) {
 
 ```bash
 # Development
-go build -o sess .
+go build -o mytool .
 
 # Production (smaller binary)
-go build -ldflags="-s -w" -o sess .
+go build -ldflags="-s -w" -o mytool .
 
 # Static binary (no dependencies)
-CGO_ENABLED=0 go build -ldflags="-s -w" -o sess .
+CGO_ENABLED=0 go build -ldflags="-s -w" -o mytool .
 ```
 
 **Versioning:**
@@ -625,16 +625,16 @@ When installed via `go install pkg@latest`, the version automatically reflects g
 Each Go app has its own `Taskfile.yml` for local development:
 
 ```yaml
-# ~/tools/sess/Taskfile.yml
+# ~/tools/mytool/Taskfile.yml
 build:
-  desc: Build sess
+  desc: Build mytool
   vars:
     VERSION:
       sh: git describe --tags --always
     COMMIT:
       sh: git rev-parse --short HEAD
   cmds:
-    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}" -o sess ./cmd/sess
+    - go build -ldflags="-s -w -X main.version={{.VERSION}} -X main.commit={{.COMMIT}}" -o mytool ./cmd/mytool
 
 test:
   desc: Run tests
@@ -682,26 +682,26 @@ func (m *Manager) ListSessions() ([]Session, error) {
 **README.md per tool:**
 
 ```markdown
-# sess
+# mytool
 
-Fast tmux session manager written in Go.
+One-line summary of what the tool does.
 
 ## Features
-- List sessions
-- Create sessions
-- Switch sessions
-- Tmuxinator integration
+- List items
+- Create items
+- Switch between items
+- Integrates with <external tool>
 
 ## Installation
 \`\`\`bash
-task go:install-session
+task go:install-mytool
 \`\`\`
 
 ## Usage
 \`\`\`bash
-sess              # Interactive menu
-sess list         # List sessions
-sess create foo   # Create session
+mytool              # Interactive menu
+mytool list         # List items
+mytool create foo   # Create an item
 \`\`\`
 ```
 

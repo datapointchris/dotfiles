@@ -352,7 +352,7 @@ sesh() {
 }
 
 #@tmux-reload
-#--> Reload tmux.conf into every active session (replaces `sess reload`)
+#--> Reload tmux.conf into every active session
 tmux-reload() {
   local config="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf"
   if [[ ! -f "$config" ]]; then
