@@ -13,23 +13,18 @@ if [[ "${1:-}" == "--print-url" ]]; then
   exit 0
 fi
 
-# Support --update by delegating to theme's own upgrade command
+# `theme upgrade` already reports the outcome accurately and exits non-zero on
+# failure, so this delegates rather than re-deriving it. Capturing its output to
+# infer a result printed "theme upgraded" on every run, and the unconditional
+# `exit 0` hid genuine failures from run-installer.sh.
 if [[ "${1:-}" == "--update" ]]; then
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-  if command -v theme >/dev/null 2>&1; then
-    if upgrade_output=$(theme upgrade 2>&1); then
-      if [[ "$upgrade_output" == *"already up to date"* ]]; then
-        log_success "theme already at latest"
-      else
-        log_success "theme upgraded"
-      fi
-    else
-      log_warning "theme upgrade failed"
-    fi
-  else
+  if ! command -v theme >/dev/null 2>&1; then
     log_info "theme not installed, skipping update"
+    exit 0
   fi
-  exit 0
+  theme upgrade
+  exit $?
 fi
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"

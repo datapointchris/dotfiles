@@ -84,9 +84,29 @@ Updates are manifest-aware when `MACHINE` is set in `~/.env`, so a machine only 
 what it actually installs. Failures are collected through `run_installer` into a report
 printed at the end, the same machinery `install.sh` uses.
 
-The phase registry is also the seam the unit tests use: `UPDATE_SOURCE_ONLY=true source
-update.sh` exposes `selected_phase_names` without running anything, so selection is
-tested without resolving package lists.
+The phase registry is also the seam the unit tests use: sourcing `update.sh` exposes
+`selected_phase_names` without running anything — `main` is guarded on
+`BASH_SOURCE[0] == $0` — so selection is tested without resolving package lists.
+
+### What a phase is allowed to claim
+
+A per-tool line must be derived from observed state: a version or ref that changed, or a
+non-zero exit. It may never be derived from "the command returned", because
+`uv tool upgrade`, `cargo binstall`, `npm update -g`, and `git pull --quiet` all exit 0
+whether or not anything changed. Each of those phases snapshots the installed version
+through `install/common/lib/installed-versions.sh` before and after, and reports
+`already at latest`, `updated: <before> → <after>`, or a failure from the difference.
+
+A phase-level line reports only that the phase completed, and is worded so — `Homebrew
+update completed`, not `Homebrew packages updated` — because a system package manager
+offers no cheap way to tell a no-op from real work.
+
+Where a tool already reports its own outcome accurately, the installer delegates instead
+of re-deriving one. `theme.sh --update` and `font.sh --update` run `theme upgrade` /
+`font upgrade`, let their output through, and propagate the exit code. The earlier
+version matched a sentinel string against their output and always missed, printing
+`theme upgraded` on every run; it also ended in an unconditional `exit 0`, so a genuine
+failure never reached the report.
 
 ## Why there is a CLI now
 

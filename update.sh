@@ -23,6 +23,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/run-installer.sh"
+source "$DOTFILES_DIR/install/common/lib/installed-versions.sh"
 
 # ~/.env carries MACHINE, which selects the manifest. install.sh does the same.
 if [[ -f "$HOME/.env" ]]; then
@@ -84,14 +85,14 @@ update_system_packages() {
   macos)
     print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")"
     if brew update && brew upgrade && brew upgrade --cask --greedy; then
-      log_success "Homebrew packages updated"
+      log_success "Homebrew update completed"
     else
       log_warning "Homebrew packages update failed"
     fi
 
     print_section "Updating Mac App Store apps via $(print_green "mas upgrade")"
     if mas upgrade; then
-      log_success "Mac App Store apps updated"
+      log_success "Mac App Store update completed"
     else
       log_warning "Mac App Store apps update failed"
     fi
@@ -100,14 +101,14 @@ update_system_packages() {
   archlinux)
     print_section "Updating system packages via $(print_green "pacman -Syu")"
     if sudo pacman -Syu --noconfirm; then
-      log_success "system packages updated"
+      log_success "system package update completed"
     else
       log_warning "system packages update failed"
     fi
 
     print_section "Updating AUR packages via $(print_green "yay -Syu")"
     if yay -Syu --noconfirm; then
-      log_success "AUR packages updated"
+      log_success "AUR update completed"
     else
       log_warning "AUR packages update failed"
     fi
@@ -115,7 +116,7 @@ update_system_packages() {
     if command -v flatpak &>/dev/null; then
       print_section "Updating Flatpak apps via $(print_green "flatpak update")"
       if flatpak update -y; then
-        log_success "Flatpak apps updated"
+        log_success "Flatpak update completed"
       else
         log_warning "Flatpak apps update failed"
       fi
@@ -125,7 +126,7 @@ update_system_packages() {
   wsl | linux)
     print_section "Updating system packages via $(print_green "apt update && apt upgrade")"
     if sudo apt update && sudo apt upgrade -y; then
-      log_success "system packages updated"
+      log_success "system package update completed"
     else
       log_warning "system packages update failed"
     fi
@@ -141,7 +142,7 @@ update_system_packages() {
 update_go_toolchain() {
   print_section "Updating Go toolchain via $(print_green "go.sh --update")"
   if bash "$DOTFILES_DIR/install/common/language-managers/go.sh" --update; then
-    log_success "Go updated"
+    log_success "Go toolchain update completed"
   else
     log_warning "Go update failed"
   fi
@@ -150,7 +151,7 @@ update_go_toolchain() {
 update_rust_toolchain() {
   print_section "Updating Rust toolchain via $(print_green "rustup update")"
   if rustup update; then
-    log_success "Rust toolchain updated"
+    log_success "Rust toolchain update completed"
   else
     log_warning "Rust toolchain update failed"
   fi
@@ -159,7 +160,7 @@ update_rust_toolchain() {
 update_uv() {
   print_section "Updating uv package manager via $(print_green "uv self update")"
   if uv self update; then
-    log_success "uv updated"
+    log_success "uv update completed"
   else
     log_warning "uv update failed"
   fi
@@ -168,7 +169,7 @@ update_uv() {
 update_go_tools() {
   print_section "Updating Go tools via $(print_green "go-tools.sh --update")"
   if bash "$DOTFILES_DIR/install/common/language-tools/go-tools.sh" --update; then
-    log_success "Go tools updated"
+    log_success "Go tools update completed"
   else
     log_warning "Go tools update failed"
   fi
@@ -180,22 +181,48 @@ update_go_tools_items() {
 
 update_cargo_packages() {
   print_section "Updating Rust packages via $(print_green "cargo binstall")"
-  local cargo_failures=0
+  local cargo_failures=0 cargo_count=0
+  local package binary_name before after binstall_output binstall_status
   while IFS='|' read -r package binary_name; do
     [[ -z "$package" ]] && continue
-    if cargo binstall -y "$package" 2>&1 | grep -q "already installed"; then
-      log_success "$package already up-to-date"
-    elif command -v "$binary_name" >/dev/null 2>&1; then
-      log_success "$package updated"
-    else
+    cargo_count=$((cargo_count + 1))
+
+    before=$(cargo_installed_version "$package") || before=""
+
+    # Never through a pipe: piping to grep discarded binstall's exit status, so
+    # a failed download reported the package as updated.
+    binstall_status=0
+    binstall_output=$(cargo binstall -y "$package" 2>&1) || binstall_status=$?
+    [[ "${DEBUG:-}" == "true" ]] && echo "$binstall_output"
+
+    if [[ $binstall_status -ne 0 ]]; then
       log_warning "$package update failed"
+      echo "$binstall_output" >&2
       cargo_failures=$((cargo_failures + 1))
+      continue
+    fi
+
+    after=$(cargo_installed_version "$package") || after=""
+
+    if [[ -z "$after" ]]; then
+      if command -v "$binary_name" >/dev/null 2>&1; then
+        log_success "$package up to date (not cargo-managed on this platform)"
+      else
+        log_warning "$package update failed"
+        cargo_failures=$((cargo_failures + 1))
+      fi
+    elif [[ -z "$before" ]]; then
+      log_success "$package installed ($after)"
+    elif [[ "$before" == "$after" ]]; then
+      log_success "$package already at latest ($after)"
+    else
+      log_success "$package updated: $before → $after"
     fi
   done < <(parse_packages --type=cargo --format=name_command)
 
-  if [[ $cargo_failures -eq 0 ]]; then
-    log_success "Rust packages updated"
-  else
+  if [[ $cargo_count -eq 0 ]]; then
+    log_info "no Rust packages selected"
+  elif [[ $cargo_failures -gt 0 ]]; then
     log_warning "$cargo_failures Rust package(s) failed to update"
   fi
 }
@@ -204,51 +231,99 @@ update_cargo_packages_items() {
   parse_packages --type=cargo --format=name_command | cut -d'|' -f1
 }
 
-update_uv_tools() {
-  # `uv tool upgrade --all` cannot be narrowed, so --mine upgrades the owned
-  # tools by name instead.
-  if [[ "$MINE" == "true" ]]; then
-    print_section "Updating Python tools via $(print_green "uv tool upgrade <tool>")"
-    local tool
-    while IFS=: read -r tool _; do
-      [[ -z "$tool" ]] && continue
-      if uv tool upgrade "$tool"; then
-        log_success "$tool updated"
-      else
-        log_warning "$tool update failed"
-      fi
-    done < <(parse_packages --type=git_uv)
-    return 0
+upgrade_uv_tool() {
+  local tool="$1"
+  local before after upgrade_output upgrade_status=0
+
+  before=$(uv_tool_installed_ref "$tool") || before=""
+
+  upgrade_output=$(uv tool upgrade "$tool" 2>&1) || upgrade_status=$?
+  [[ "${DEBUG:-}" == "true" ]] && echo "$upgrade_output"
+
+  if [[ $upgrade_status -ne 0 ]]; then
+    log_warning "$tool update failed"
+    echo "$upgrade_output" >&2
+    return 1
   fi
 
-  print_section "Updating Python tools via $(print_green "uv tool upgrade --all")"
-  if uv tool upgrade --all; then
-    log_success "Python tools updated"
+  after=$(uv_tool_installed_ref "$tool") || after=""
+
+  if [[ -z "$after" ]]; then
+    log_success "$tool updated (version unknown)"
+  elif [[ -z "$before" ]]; then
+    log_success "$tool installed ($after)"
+  elif [[ "$before" == "$after" ]]; then
+    log_success "$tool already at latest ($after)"
   else
-    log_warning "Python tools update failed"
+    log_success "$tool updated: $before → $after"
   fi
 }
 
+update_uv_tools() {
+  # By name rather than `uv tool upgrade --all`: --all cannot be narrowed for
+  # --mine, and its exit code is 0 whether or not anything changed, so a
+  # per-tool before/after ref is the only way to report the truth. Under --mine
+  # the index-installed tools have no owner and come back empty.
+  print_section "Updating Python tools via $(print_green "uv tool upgrade <tool>")"
+  local tool count=0
+  while IFS= read -r tool; do
+    [[ -z "$tool" ]] && continue
+    count=$((count + 1))
+    upgrade_uv_tool "$tool"
+  done < <(update_uv_tools_items)
+  [[ $count -eq 0 ]] && log_info "no Python tools selected"
+  return 0
+}
+
 update_uv_tools_items() {
+  parse_packages --type=uv
   parse_packages --type=git_uv | cut -d: -f1
 }
 
 update_npm_globals() {
   print_section "Updating npm global packages via $(print_green "npm update -g")"
-  npm update -g 2>&1 | grep -v "npm warn" || true
-  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-    log_success "npm global packages updated"
-  else
+
+  local before after npm_output npm_status=0
+  before=$(npm_global_versions) || before=""
+
+  # Captured rather than piped: reading PIPESTATUS after `|| true` reported the
+  # status of `true`, so every failure was logged as a success.
+  npm_output=$(npm update -g 2>&1) || npm_status=$?
+  grep -v "npm warn" <<<"$npm_output" || true
+
+  if [[ $npm_status -ne 0 ]]; then
     log_warning "npm global packages update failed"
+    return 1
   fi
+
+  after=$(npm_global_versions) || after=""
+
+  if [[ -z "$before" || -z "$after" ]]; then
+    log_success "npm global packages update completed (versions unavailable)"
+    return 0
+  fi
+
+  local changes
+  changes=$(comm -13 <(echo "$before") <(echo "$after"))
+  if [[ -z "$changes" ]]; then
+    log_success "npm global packages already at latest"
+    return 0
+  fi
+
+  local package version
+  while read -r package version; do
+    [[ -z "$package" ]] && continue
+    log_success "$package updated to $version"
+  done <<<"$changes"
 }
 
 update_github_releases() {
   print_section "Updating GitHub Release Tools"
   local github_releases="$DOTFILES_DIR/install/common/github-releases"
-  local tool script
+  local tool script count=0
   while IFS= read -r tool; do
     [[ -z "$tool" ]] && continue
+    count=$((count + 1))
     script="$github_releases/${tool}.sh"
     if [[ ! -f "$script" ]]; then
       log_warning "No installer script for github release: $tool (packages verify should have caught this)"
@@ -256,6 +331,8 @@ update_github_releases() {
     fi
     run_installer "$script" "$tool" --update
   done < <(parse_packages --type=github)
+  [[ $count -eq 0 ]] && log_info "no GitHub release tools selected"
+  return 0
 }
 
 update_github_releases_items() {
@@ -265,9 +342,10 @@ update_github_releases_items() {
 update_custom_installers() {
   print_section "Updating Custom Distribution Tools"
   local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
-  local tool script
+  local tool script count=0
   while IFS= read -r tool; do
     [[ -z "$tool" ]] && continue
+    count=$((count + 1))
     script="$custom_installers/${tool}.sh"
     if [[ ! -f "$script" ]]; then
       log_warning "No installer script for custom installer: $tool (packages verify should have caught this)"
@@ -275,6 +353,8 @@ update_custom_installers() {
     fi
     run_installer "$script" "$tool" --update
   done < <(parse_packages --type=custom)
+  [[ $count -eq 0 ]] && log_info "no custom distribution tools selected"
+  return 0
 }
 
 update_custom_installers_items() {
@@ -283,7 +363,7 @@ update_custom_installers_items() {
 
 update_shell_plugins() {
   print_section "Updating Shell plugins via $(print_green "git pull")"
-  local name plugin_dir branch
+  local name plugin_dir branch before after
   while IFS= read -r name; do
     [[ -z "$name" ]] && continue
     plugin_dir="$HOME/.config/zsh/plugins/$name"
@@ -292,10 +372,20 @@ update_shell_plugins() {
     branch=$(git -C "$plugin_dir" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
     [[ -z "$branch" ]] && branch=$(git -C "$plugin_dir" remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
 
-    if git -C "$plugin_dir" pull origin "$branch" --quiet; then
-      log_success "$name updated"
-    else
+    # `git pull --quiet` on a current clone exits 0 and prints nothing, so the
+    # commit is what distinguishes a real update from a no-op.
+    before=$(git -C "$plugin_dir" rev-parse --short HEAD 2>/dev/null)
+
+    if ! git -C "$plugin_dir" pull origin "$branch" --quiet; then
       log_error "$name update failed"
+      continue
+    fi
+
+    after=$(git -C "$plugin_dir" rev-parse --short HEAD 2>/dev/null)
+    if [[ "$before" == "$after" ]]; then
+      log_success "$name already at latest ($after)"
+    else
+      log_success "$name updated: $before → $after"
     fi
   done < <(parse_packages --type=shell-plugins --format=names)
 }
@@ -307,7 +397,7 @@ update_shell_plugins_items() {
 update_tmux_plugins() {
   print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")"
   if "$HOME/.config/tmux/plugins/tpm/bin/update_plugins" all; then
-    log_success "tmux plugins updated"
+    log_success "tmux plugin update completed"
   else
     log_warning "tmux plugins update failed"
   fi
@@ -318,7 +408,7 @@ update_nvim_plugins() {
   local nvim_output
   nvim_output=$(mktemp)
   if nvim --headless "+Lazy! update" +qa &>"$nvim_output"; then
-    log_success "Neovim plugins updated"
+    log_success "Neovim plugin update completed"
     [[ "${DEBUG:-}" == "true" ]] && cat "$nvim_output"
   else
     log_warning "Neovim plugins update failed"

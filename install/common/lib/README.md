@@ -63,6 +63,33 @@ Helper functions for installing binaries from GitHub releases.
 **Usage:**
 See `docs/architecture/github-release-installer.md` for detailed documentation.
 
+### version-helpers.sh
+
+Version comparison and GitHub API lookups shared by the release installers.
+
+**Functions:**
+
+- `version_compare(current, latest)` - 0 when equal, 1 when current is older, 2 when newer
+- `parse_version(text)` - Extract a version string from arbitrary command output
+- `github_token()` - Resolve a token from `GITHUB_TOKEN` or `gh auth token`, if either is available
+- `fetch_github_latest_version(repo)` - Latest release tag from the GitHub API
+
+### installed-versions.sh
+
+Queries for what a package manager currently has installed. Sourced by `update.sh`, which diffs a
+before/after snapshot to decide what to report: `uv tool upgrade`, `cargo binstall`, and
+`npm update -g` all exit 0 whether or not anything changed, so an exit code alone cannot
+distinguish a no-op from a real upgrade.
+
+**Functions:**
+
+- `uv_tool_installed_ref(tool)` - `<version> (<commit>)` from the tool's dist-info and PEP 610
+  `direct_url.json`; the commit matters because the git-installed tools routinely upgrade without
+  their version string moving
+- `cargo_installed_version(crate)` - Installed version of a crate, or non-zero when the crate is not
+  cargo-managed on this platform
+- `npm_global_versions()` - `<package> <version>` per line for every top-level global package
+
 ## Architecture
 
 These libraries provide utilities FOR installer scripts:
@@ -73,6 +100,8 @@ installer script (github-releases/lazygit.sh)
 common/lib/ utilities
     - failure-logging.sh (error reporting)
     - github-release-installer.sh (GitHub release helpers)
+    - version-helpers.sh (version comparison, GitHub API)
+    - installed-versions.sh (what is installed right now, for update reporting)
 ```
 
 **Key distinction:**

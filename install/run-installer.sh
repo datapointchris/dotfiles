@@ -47,10 +47,15 @@ run_installer() {
 
     # Parse structured failure data from installer output
     # Format: FAILURE_FIELD='value'
+    # The fallback has to be tested on the value, not the pipeline: `cut` exits 0
+    # on empty input, so a `|| echo "$default"` after it never fires and an
+    # installer that emits no FAILURE_* markers produced a nameless report.
     parse_failure_field() {
       local field="$1"
       local default="${2:-}"
-      echo "$output" | grep "^FAILURE_$field=" | cut -d"'" -f2 || echo "$default"
+      local value
+      value=$(grep "^FAILURE_$field=" <<<"$output" | cut -d"'" -f2)
+      echo "${value:-$default}"
     }
 
     local failure_tool failure_url failure_version failure_reason failure_manual
