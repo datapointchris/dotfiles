@@ -6,6 +6,10 @@ set -uo pipefail
 OPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$OPS_DIR/../.." && pwd)"
 export DOTFILES_DIR
+export TERM=${TERM:-xterm}
+
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 
 # The globs below resolve relative to the repo, so this must precede them —
 # expanding them from an arbitrary caller's directory leaves the patterns literal.
@@ -15,20 +19,33 @@ LIBRARY_TESTS=(tests/libraries/*.bats)
 UNIT_TESTS=(tests/install/unit/*.bats tests/apps/*.bats)
 INTEGRATION_TESTS=(tests/install/integration/*.bats)
 
+# Format: suite|description
+SUITES=(
+  "all|Library, unit, and integration suites (default)"
+  "unit|Library and unit suites (no Docker)"
+  "integration|Integration suites (includes Docker tests if the image is built)"
+  "watch|Re-run everything on file changes (requires entr)"
+)
+
 usage() {
-  echo "Usage: test.sh [all|unit|integration|watch]"
+  local entry suite description
+
+  print_header "test" "brightcyan"
+  print_cyan "Usage: test.sh [all|unit|integration|watch]"
+
+  print_section "Suites" "brightcyan"
+  for entry in "${SUITES[@]}"; do
+    IFS='|' read -r suite description <<<"$entry"
+    print_help_row 14 "$suite" "$description"
+  done
   echo ""
-  echo "  all           Library, unit, and integration suites (default)"
-  echo "  unit          Library and unit suites (no Docker)"
-  echo "  integration   Integration suites (includes Docker tests if the image is built)"
-  echo "  watch         Re-run everything on file changes (requires entr)"
   exit "${1:-0}"
 }
 
 # The work WSL image lacks the Docker and system access these suites assume.
 skip_on_wsl() {
   if grep -qi microsoft /proc/version 2>/dev/null; then
-    echo "Skipping bats $1 tests on WSL"
+    print_warning "Skipping bats $1 tests on WSL"
     exit 0
   fi
 }
@@ -51,13 +68,14 @@ main() {
     ;;
   watch)
     if ! command -v entr >/dev/null 2>&1; then
-      echo "entr not installed. Install with: brew install entr (macOS) or pacman -S entr (Arch)"
+      log_error "entr is not installed"
+      print_info "Install with: brew install entr (macOS) or pacman -S entr (Arch)"
       exit 1
     fi
     find tests -name '*.bats' | entr -c bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
     ;;
   *)
-    echo "Unknown suite: $suite" >&2
+    log_error "Unknown suite: $suite"
     usage 1
     ;;
   esac

@@ -10,16 +10,30 @@ export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 
+# Format: verb|description
+VERBS=(
+  "link|Create symlinks for the common layer and this platform's overlay"
+  "relink|Remove and recreate every symlink (idempotent; prunes dangling links)"
+  "unlink|Remove all symlinks"
+  "check|Find broken symlinks and remove them"
+  "show|List every symlink this repo manages"
+)
+
 usage() {
-  echo "Usage: symlinks.sh <link|relink|unlink|check|show>"
+  local entry verb description
+
+  print_header "symlinks" "brightcyan"
+  print_cyan "Usage: symlinks.sh <link|relink|unlink|check|show>"
+
+  print_section "Verbs" "brightcyan"
+  for entry in "${VERBS[@]}"; do
+    IFS='|' read -r verb description <<<"$entry"
+    print_help_row 9 "$verb" "$description"
+  done
   echo ""
-  echo "  link     Create symlinks for the common layer and this platform's overlay"
-  echo "  relink   Remove and recreate every symlink (idempotent; prunes dangling links)"
-  echo "  unlink   Remove all symlinks"
-  echo "  check    Find broken symlinks and remove them"
-  echo "  show     List every symlink this repo manages"
   exit "${1:-0}"
 }
 
@@ -39,18 +53,18 @@ main() {
 
   case "$verb" in
   link)
-    print_section "Creating symlinks" "cyan"
+    print_section "Creating symlinks" "brightcyan"
     uv run symlinks link common
     uv run symlinks link "$PLATFORM"
     sync_windows_shell_on_wsl
     ;;
   relink)
-    print_section "Relinking symlinks" "cyan"
+    print_section "Relinking symlinks" "brightcyan"
     uv run symlinks relink "$PLATFORM"
     sync_windows_shell_on_wsl
     ;;
   unlink)
-    print_section "Removing symlinks" "cyan"
+    print_section "Removing symlinks" "brightcyan"
     # Platform is an overlay on top of common, so it comes off first.
     uv run symlinks unlink "$PLATFORM"
     uv run symlinks unlink common
@@ -62,7 +76,7 @@ main() {
     uv run symlinks show
     ;;
   *)
-    echo "Unknown verb: $verb" >&2
+    log_error "Unknown verb: $verb"
     usage 1
     ;;
   esac

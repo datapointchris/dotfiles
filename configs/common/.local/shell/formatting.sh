@@ -476,6 +476,34 @@ print_info() {
 }
 
 # ================================================================
+# Help Screen Functions
+# ================================================================
+
+# Indented two-column row for help output, with the left column coloured.
+# Usage: print_help_row 15 "--dry-run" "Show what would run" "$COLOR_BRIGHT_CYAN"
+#
+# The colour escapes are emitted around the padded field rather than inside it —
+# printf counts them toward the field width, which would break the alignment.
+# The escape also precedes the indent so the two spaces stay flush against the
+# name, which the CLI help tests grep for.
+print_help_row() {
+  local width="$1"
+  local name="$2"
+  local description="${3:-}"
+  local color="${4:-$COLOR_BRIGHT_CYAN}"
+  printf '%b  %-*s%b%s\n' "$color" "$width" "$name" "$COLOR_RESET" "$description"
+}
+
+# Help row for an example command, with an optional trailing comment.
+# Usage: print_example_row 34 "./update.sh tools" "# only installed binaries"
+print_example_row() {
+  local width="$1"
+  local command="$2"
+  local comment="${3:-}"
+  print_help_row "$width" "$command" "$comment" "$COLOR_CYAN"
+}
+
+# ================================================================
 # Utility Functions
 # ================================================================
 

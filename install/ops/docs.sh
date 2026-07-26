@@ -9,13 +9,30 @@ set -uo pipefail
 OPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$OPS_DIR/../.." && pwd)"
 export DOTFILES_DIR
+export TERM=${TERM:-xterm}
+
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+
+# Format: verb|description
+VERBS=(
+  "serve|Serve the documentation site locally"
+  "build|Build the static site, failing on any warning"
+  "deploy|Publish the site to GitHub Pages"
+)
 
 usage() {
-  echo "Usage: docs.sh <serve|build|deploy>"
+  local entry verb description
+
+  print_header "docs" "brightcyan"
+  print_cyan "Usage: docs.sh <serve|build|deploy>"
+
+  print_section "Verbs" "brightcyan"
+  for entry in "${VERBS[@]}"; do
+    IFS='|' read -r verb description <<<"$entry"
+    print_help_row 9 "$verb" "$description"
+  done
   echo ""
-  echo "  serve    Serve the documentation site locally"
-  echo "  build    Build the static site, failing on any warning"
-  echo "  deploy   Publish the site to GitHub Pages"
   exit "${1:-0}"
 }
 
@@ -30,7 +47,7 @@ main() {
   build) uv run mkdocs build --strict ;;
   deploy) uv run mkdocs gh-deploy --force ;;
   *)
-    echo "Unknown verb: $verb" >&2
+    log_error "Unknown verb: $verb"
     usage 1
     ;;
   esac

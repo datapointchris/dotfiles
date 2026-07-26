@@ -67,6 +67,17 @@ log_error "Failed to backup config.yml" "$BASH_SOURCE" "$LINENO"
 - `print_warning(message)` - Yellow + ▲ icon (no [LEVEL] prefix)
 - `print_info(message)` - Cyan + ● icon (no [LEVEL] prefix)
 
+**Help Screen Functions**:
+
+- `print_help_row(width, name, [description], [color])` - Indented two-column row with a coloured left column
+- `print_example_row(width, command, [comment])` - The same row in the example colour
+
+Use these for every `usage()` listing rather than hand-padding inside `echo`. They exist because
+colour escapes count toward `printf`'s field width, so a naive `%-32s` around a coloured name
+misaligns the description column by the length of the escape sequence. They also emit the escape
+*before* the two-space indent, which keeps the indent flush against the name for anything grepping
+the help output.
+
 **Utility**:
 
 - `has_command(cmd)` - Check if single command exists (returns 0/1)
@@ -319,6 +330,13 @@ exit_success
 | `print_title` | Page title | Centered, full-width |
 
 Each has color variants and `_success/_error/_warning/_info` variants with emojis.
+
+### Formatting - Help Screens
+
+| Function | Purpose | Visual Style |
+|----------|---------|--------------|
+| `print_help_row` | Command/flag listing | Bright cyan name, aligned description |
+| `print_example_row` | Example invocation | Cyan command, aligned comment |
 
 ### Error Handling
 

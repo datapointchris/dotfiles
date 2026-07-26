@@ -48,7 +48,13 @@ COMMANDS=(
   "edit|Repo||Open the repository in \$EDITOR"
 )
 
-COMMAND_SECTIONS=(Manage Symlinks Develop Repo)
+# Format: name|color
+COMMAND_SECTIONS=(
+  "Manage|brightcyan"
+  "Symlinks|brightmagenta"
+  "Develop|brightyellow"
+  "Repo|brightgreen"
+)
 
 command_names() {
   local entry
@@ -58,25 +64,31 @@ command_names() {
 }
 
 usage() {
-  local section entry name entry_section args summary invocation
+  local section section_name section_color entry name entry_section args summary invocation pad
 
-  print_header "dotfiles"
+  print_header "dotfiles" "brightcyan"
   echo "Manage the dotfiles repository from anywhere."
   echo ""
-  echo "Usage: dotfiles <command> [ARGS]"
+  print_cyan "Usage: dotfiles <command> [ARGS]"
 
   for section in "${COMMAND_SECTIONS[@]}"; do
-    print_section "$section"
+    IFS='|' read -r section_name section_color <<<"$section"
+    print_section "$section_name" "$section_color"
     for entry in "${COMMANDS[@]}"; do
       IFS='|' read -r name entry_section args summary <<<"$entry"
-      [[ "$entry_section" != "$section" ]] && continue
+      [[ "$entry_section" != "$section_name" ]] && continue
+      # Only the name is coloured, so it alone occupies the padded field and the
+      # uncoloured args lead the description, spaced out to the summary column.
       invocation="$name${args:+ $args}"
-      printf '  %-32s %s\n' "$invocation" "$summary"
+      pad=$((33 - ${#invocation}))
+      ((pad < 1)) && pad=1
+      printf -v spacer '%*s' "$pad" ""
+      print_help_row "${#name}" "$name" "${args:+ $args}${spacer}${summary}"
     done
   done
 
   echo ""
-  echo "Run a command with --help for its own options, e.g. dotfiles update --help"
+  print_info "Run a command with --help for its own options, e.g. dotfiles update --help"
   exit "${1:-0}"
 }
 
@@ -84,7 +96,7 @@ require_verb() {
   local command="$1" verb="$2" valid="$3"
   if [[ -z "$verb" ]]; then
     log_error "dotfiles $command requires a verb"
-    echo "Valid verbs: $valid"
+    print_info "Valid verbs: $valid"
     exit 1
   fi
 }
@@ -101,7 +113,7 @@ cmd_windows() {
   sync) bash "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh" ;;
   *)
     log_error "Unknown windows verb: $verb"
-    echo "Valid verbs: setup, bundle, offline, sync"
+    print_info "Valid verbs: setup, bundle, offline, sync"
     exit 1
     ;;
   esac
@@ -109,6 +121,7 @@ cmd_windows() {
 
 cmd_pull() {
   local before after changed
+  print_section "Pulling" "brightcyan"
   before=$(git -C "$DOTFILES_DIR" rev-parse HEAD)
 
   git -C "$DOTFILES_DIR" pull || exit 1
@@ -129,9 +142,9 @@ cmd_pull() {
 }
 
 cmd_status() {
-  print_section "Working tree"
+  print_section "Working tree" "brightcyan"
   git -C "$DOTFILES_DIR" status -sb
-  print_section "Last commit"
+  print_section "Last commit" "brightgreen"
   git -C "$DOTFILES_DIR" log -1 --format='%h %s (%cr)'
 }
 
@@ -184,7 +197,7 @@ main() {
     ;;
   *)
     log_error "Unknown command: $command"
-    echo "Run 'dotfiles' for usage information"
+    print_info "Run 'dotfiles' for usage information"
     exit 1
     ;;
   esac
