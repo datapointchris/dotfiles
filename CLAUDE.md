@@ -11,7 +11,6 @@
 - Code Comments Philosophy
 - Tools Over Instructions
 - Command Output Handling
-- Logsift Monitoring
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
