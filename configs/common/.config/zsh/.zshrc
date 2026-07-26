@@ -92,6 +92,11 @@ zvm_after_init() {
   # Re-apply fzf keybindings (Ctrl+R, Ctrl+T, Alt+C), which vi-mode has just
   # overwritten. Reads the cache written during startup rather than re-running fzf.
   cache_eval fzf fzf --zsh
+  # atuin has to follow fzf here for the same reason it does at startup: both bind
+  # Ctrl-R and the last one loaded wins. vi-mode runs this after the whole rc file,
+  # so re-applying fzf alone handed Ctrl-R back to it and the atuin binding set
+  # during startup never survived into the shell the user actually typed in.
+  cache_eval atuin atuin init zsh --disable-up-arrow
 }
 
 # Create history directory if needed
