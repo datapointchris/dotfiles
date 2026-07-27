@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Session switching for tmux.
 #
-# Sessions are named "repo·task" and the top status line draws them as a tabbed
-# list; windows are the roles inside one task. That list is drawn with #{S:},
-# which walks sessions in session-id order, while tmux's own switch-client -n/-p
-# walk them alphabetically. Navigating with the built-ins would therefore land
-# on a session other than the one sitting next to the current one on screen, so
-# next/prev re-derive the list's order here.
+# A session is a repo and its windows are the tasks in flight. The top status
+# line draws every session with #{S:}, which walks them in session-id order,
+# while tmux's own switch-client -n/-p walk them alphabetically. Navigating with
+# the built-ins would therefore land on a session other than the one sitting
+# next to the current one on screen, so next/prev re-derive the list's order
+# here.
 #
 # Id order also means the list never reshuffles: renaming a session leaves it in
 # place and a new one is appended at the end.
@@ -20,13 +20,11 @@ Usage: tmux-sessions <command> [args]
 Commands:
   next              Focus the session to the right (wraps)
   prev              Focus the session to the left (wraps)
-  new [name]        Open a session; a bare name inherits the current repo prefix
+  new <name>        Open a session by name, or focus it if it exists
   promote [name]    Move the focused window out into a session of its own
   windows           Fuzzy-find a window across every session
   list              Print sessions in status-line order, current one marked
   install-status    Move tmux's stock window row to the second status line
-
-Sessions are named "repo·task".
 EOF
 }
 
@@ -88,18 +86,11 @@ step() {
 }
 
 new_session() {
-  local requested="${1:-}"
+  local name="${1:-}"
 
-  if [[ -z $requested ]]; then
+  if [[ -z $name ]]; then
     echo "tmux-sessions: new needs a name" >&2
     exit 1
-  fi
-
-  local name="$requested"
-  if [[ $requested != *·* ]]; then
-    local current
-    current="$(current_session)"
-    name="${current%%·*}·$requested"
   fi
 
   if tmux has-session -t "=$name" 2> /dev/null; then
@@ -117,15 +108,10 @@ new_session() {
 # instead of being moved, since moving it would leave an empty session behind
 # for tmux to destroy.
 promote_window() {
-  local requested="${1:-}"
   local source_session
   source_session="$(current_session)"
 
-  local task="${requested:-$(tmux display-message -p '#{window_name}')}"
-  local name="$task"
-  if [[ $task != *·* ]]; then
-    name="${source_session%%·*}·$task"
-  fi
+  local name="${1:-$(tmux display-message -p '#{window_name}')}"
 
   if tmux has-session -t "=$name" 2> /dev/null; then
     echo "tmux-sessions: session '$name' already exists" >&2
