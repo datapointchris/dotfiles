@@ -29,6 +29,7 @@ tags: [tmux, multiplexer, keybindings]
 
 ## Windows
 
+| Alt + < / >    | previous / next window   |
 | prefix + c     | new window               |
 | prefix + k     | kill window              |
 | prefix + n / l | next window              |
@@ -36,6 +37,9 @@ tags: [tmux, multiplexer, keybindings]
 | prefix + 0-9   | select by number         |
 | prefix + ,     | rename window            |
 | prefix + < / > | swap window left / right |
+
+Hold Alt and tap to move several at once. Same two keys as sessions below —
+shift picks windows, the inner axis.
 
 ## Sessions
 

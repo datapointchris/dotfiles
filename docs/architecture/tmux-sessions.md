@@ -61,16 +61,33 @@ status bar colour the same way it owns `pane-border-format`.
 |-----|--------|
 | `M-.` | Next session |
 | `M-,` | Previous session |
+| `M->` | Next window |
+| `M-<` | Previous window |
 | `M-o` | Last session |
 | `M-t` | New session (a bare name inherits the current repo prefix) |
 | `prefix T` | Promote the focused window into its own session |
 | `prefix s` | sesh picker — open a session, or make one from a directory |
 | `prefix w` | Find a window in any session |
 
-These are unprefixed because switching sessions is the most frequent move of the day. Alt is free
-on both platforms: Hyprland binds SUPER, and AeroSpace's Alt bindings are letters and arrows that
-none of these collide with. `M-[` is avoided because Alt+`[` emits the CSI prefix, which terminals
-mis-parse.
+Sessions and windows share two physical keys, with shift picking the inner axis, and both repeat by
+holding Alt rather than re-arming a leader. They are unprefixed because moving between them is the
+most frequent action of the day; the prefixed `h` / `l` remain as a fallback and carry `-r` so they
+repeat too.
+
+Alt is not a preference, it is the only modifier available. tmux's key parser accepts `C-`, `M-`,
+and `S-` and nothing else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
+bound at any level, whatever the keyboard sends. `MEH` is expressible as `C-M-S-` but needs
+`extended-keys` turned on, and AeroSpace already holds `MEH` + `hjklg`. Shift works here without
+that negotiation because it is baked into the character: `,` and `<` are different bytes, so both
+arrive as plain escape sequences.
+
+The vim-natural `M-h` / `M-l` are unavailable — AeroSpace grabs them globally for window focus, so
+they never reach the terminal. `M-[` is avoided for a different reason: Alt+`[` emits the CSI
+prefix, leaving tmux to disambiguate it on the `escape-time` timer.
+
+On macOS this all rests on Ghostty delivering Option as Alt, which it does by default only for U.S.
+keyboard layouts. Setting `macos-option-as-alt` explicitly would pin it; it is deliberately left
+unset.
 
 ## Why Switching Needs a Helper
 
