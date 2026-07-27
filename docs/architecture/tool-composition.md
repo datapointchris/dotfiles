@@ -34,7 +34,7 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 **toolbox** - Go application (installed via `go install`)
 
 - CLI tool discovery and documentation
-- Registry: `configs/common/.config/toolbox/registry.yml`
+- Registry: `configs/common/.local/share/toolbox/registry.yml`
 - Commands: `list`, `show`, `search`, `random`, `installed`, `categories`
 - Development: `~/tools/toolbox/`
 
@@ -285,7 +285,7 @@ All tools available in PATH (both `~/.local/bin/` and `~/go/bin/` are in PATH), 
 Tools read from XDG-compliant locations:
 
 - `~/.config/sesh/sesh.toml` - Configured sessions
-- `~/.config/toolbox/registry.yml` - Tool definitions
+- `~/.local/share/toolbox/registry.yml` - Tool definitions (symlinked from the repo)
 - `~/.config/zk/config.toml` - Note configuration
 
 Source files in `configs/common/.config/` (symlinked to `~/.config/`).
