@@ -178,6 +178,23 @@ parse_download_url() {
   assert_failure
 }
 
+@test "checksum lookup: matches an asset whose recorded name differs only by case" {
+  local checksums="$BATS_TEST_TMPDIR/checksums.txt"
+  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" > "$checksums"
+
+  run checksum_for_asset "$checksums" "lazygit_0.63.1_Linux_x86_64.tar.gz"
+  assert_success
+  assert_output "$(printf 'a%.0s' {1..64})"
+}
+
+@test "checksum lookup: still finds nothing for an asset that is absent" {
+  local checksums="$BATS_TEST_TMPDIR/checksums.txt"
+  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" > "$checksums"
+
+  run checksum_for_asset "$checksums" "someothertool.tar.gz"
+  assert_output ""
+}
+
 # Offline bundle checksum tests
 #
 # The bundle exists for networks that cannot reach GitHub, so these must never

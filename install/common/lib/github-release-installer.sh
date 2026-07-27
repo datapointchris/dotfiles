@@ -161,10 +161,16 @@ checksum_for_asset() {
       base = name
       sub(/^.*[\/\\]/, "", base)
       if (by_base == "" && base == want) by_base = $1
+      if (by_case == "" && tolower(base) == tolower(want)) by_case = $1
     }
     END {
       if (exact != "") print exact
       else if (by_base != "") print by_base
+      # GitHub resolves a release asset path case-insensitively, so a download
+      # URL can name the asset differently from the checksums file and still
+      # fetch it: lazygit is downloaded as Linux_x86_64 and recorded as
+      # linux_x86_64. Rejecting that discards a checksum the project published.
+      else if (by_case != "") print by_case
       # A lone digest is only trustworthy in a file that contains nothing else;
       # in a combined file it would be an unrelated stray line.
       else if (bare != "" && lines == 1) print bare
