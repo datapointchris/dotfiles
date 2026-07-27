@@ -160,3 +160,12 @@ Verify in PATH:
   log_error "Installation verification failed"
   exit 1
 fi
+
+# A cold sum.golang.org lookup for a just-published version holds the connection
+# for ~60s and then answers 500, and `go install` retries — so updating an
+# own-namespace tool minutes after tagging it stalls for minutes with no output.
+# Written to the Go env file rather than shell config because go-tools.sh runs
+# non-interactively and never sources it. The proxy is deliberately left alone:
+# GOPRIVATE would also bypass it, and these repos are public.
+/usr/local/go/bin/go env -w GONOSUMDB="github.com/datapointchris/*"
+log_success "GONOSUMDB set for own-namespace modules: $(/usr/local/go/bin/go env GONOSUMDB)"
