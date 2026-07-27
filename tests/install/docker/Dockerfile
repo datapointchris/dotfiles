@@ -9,7 +9,8 @@
 # ================================================================
 # Stage 1: Base OS with user setup
 # ================================================================
-FROM ubuntu:24.04 AS base
+ARG UBUNTU_VERSION=26.04
+FROM ubuntu:${UBUNTU_VERSION} AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TERM=xterm-256color

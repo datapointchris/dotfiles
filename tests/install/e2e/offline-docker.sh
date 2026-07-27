@@ -17,7 +17,21 @@ source "$DOTFILES_DIR/tests/install/helpers.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 # Configuration
-DOCKER_IMAGE="dotfiles-test-base:ubuntu-24.04"
+DOCKER_IMAGE="${DOCKER_IMAGE:-dotfiles-test-base:ubuntu-26.04}"
+
+# Every GitHub host an installer can reach, not just the asset CDNs. Blocking
+# only the download hosts left api.github.com answering, so version resolution
+# kept working and the test could not see that offline mode was resolving
+# versions online — which is the failure that reaches the work machine.
+BLOCKED_HOSTS=(
+  api.github.com
+  github.com
+  codeload.github.com
+  objects.githubusercontent.com
+  release-assets.githubusercontent.com
+  github-releases.githubusercontent.com
+  raw.githubusercontent.com
+)
 CONTAINER_NAME="dotfiles-offline-test-$(date '+%Y%m%d-%H%M%S')"
 BUNDLE_SCRIPT_DIR="$DOTFILES_DIR/install/offline"
 BUNDLE_OUTPUT_DIR="$DOTFILES_DIR"
@@ -171,12 +185,15 @@ STEP_START=$(date +%s)
   # Block GitHub download domains via /etc/hosts
   # This simulates a corporate firewall that blocks GitHub file downloads
   # but allows other network access (npm, PyPI, Go proxy)
+  block_args=()
+  for host in "${BLOCKED_HOSTS[@]}"; do
+    block_args+=(--add-host "${host}:127.0.0.1")
+  done
+
   docker run -d \
     --name "$CONTAINER_NAME" \
     --user testuser \
-    --add-host "objects.githubusercontent.com:127.0.0.1" \
-    --add-host "github-releases.githubusercontent.com:127.0.0.1" \
-    --add-host "raw.githubusercontent.com:127.0.0.1" \
+    "${block_args[@]}" \
     --env DOTFILES_DOCKER_TEST=true \
     ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
     --env PATH="/home/testuser/.local/bin:/home/testuser/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
@@ -184,8 +201,8 @@ STEP_START=$(date +%s)
     "$DOCKER_IMAGE" \
     sleep infinity >/dev/null
 
-  log_success "Container started with blocked GitHub downloads"
-  log_info "Blocked hosts: objects.githubusercontent.com, github-releases.githubusercontent.com, raw.githubusercontent.com"
+  log_success "Container started with GitHub blocked"
+  log_info "Blocked hosts: ${BLOCKED_HOSTS[*]}"
 
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)
@@ -249,15 +266,15 @@ STEP_START=$(date +%s)
 {
   log_section "Step 6: Verifying Network Restrictions"
 
-  log_info "Testing that GitHub downloads are blocked..."
-
-  # This should fail (blocked)
-  if docker exec "$CONTAINER_NAME" curl -fsSL --connect-timeout 5 \
-    "https://objects.githubusercontent.com/test" 2>/dev/null; then
-    log_warning "GitHub downloads NOT blocked - test may not be valid"
-  else
-    log_success "GitHub downloads are blocked (as expected)"
-  fi
+  # Asserted rather than warned about: a green run on a container that could
+  # still reach GitHub tells you nothing about the machine that cannot.
+  for host in "${BLOCKED_HOSTS[@]}"; do
+    if docker exec "$CONTAINER_NAME" curl -fsS --connect-timeout 5 \
+      "https://${host}/" > /dev/null 2>&1; then
+      die "$host is reachable — the test would prove nothing"
+    fi
+  done
+  log_success "All ${#BLOCKED_HOSTS[@]} GitHub hosts are unreachable"
 
   # This should work (not blocked)
   if docker exec "$CONTAINER_NAME" curl -fsSL --connect-timeout 5 \
@@ -281,7 +298,12 @@ STEP_START=$(date +%s)
   log_info "This should use cached files from ~/installers/"
   echo ""
 
-  docker exec "$CONTAINER_NAME" bash -c "cd ~/dotfiles && ./install.sh --offline --machine wsl-work-workstation"
+  # Bounded so a phase that waits on an unreachable host cannot hang the test:
+  # Lazy.nvim sat for 52 minutes on blackholed git remotes before this was here.
+  # The plugin managers clone from github.com, which this test blocks, so they
+  # are expected to fail — the verification step below judges the run.
+  docker exec "$CONTAINER_NAME" \
+    timeout 900 bash -c "cd ~/dotfiles && ./install.sh --offline --machine wsl-work-workstation" || true
 
 } 2>&1 | tee -a "$LOG_FILE"
 STEP_END=$(date +%s)

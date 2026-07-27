@@ -18,6 +18,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "Build reusable Docker base image with system packages installed"
   echo ""
   echo "Options:"
+  echo "  --ubuntu VER   Ubuntu version for the base image (default: 26.04)"
   echo "  --no-cache     Force rebuild without using Docker cache"
   echo "  -h, --help     Show this help message"
   echo ""
@@ -28,8 +29,13 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 USE_CACHE=true
+UBUNTU_VERSION=26.04
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --ubuntu)
+      UBUNTU_VERSION="$2"
+      shift 2
+      ;;
     --no-cache)
       USE_CACHE=false
       shift
@@ -45,7 +51,7 @@ done
 print_header "Building Docker Base Image"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_NAME="dotfiles-test-base:ubuntu-24.04"
+IMAGE_NAME="dotfiles-test-base:ubuntu-${UBUNTU_VERSION}"
 
 log_info "Building system-packages stage"
 log_info "Image: $IMAGE_NAME"
@@ -58,6 +64,7 @@ BUILD_ARGS=(
   "--target=system-packages"
   "--tag=$IMAGE_NAME"
   "--file=$SCRIPT_DIR/Dockerfile"
+  "--build-arg=UBUNTU_VERSION=$UBUNTU_VERSION"
 )
 
 if [[ "$USE_CACHE" == "false" ]]; then

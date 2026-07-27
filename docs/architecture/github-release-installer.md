@@ -200,6 +200,8 @@ Both flags must be handled *before* the script sources logging/error-handling li
 
 The version returned by `--print-extras` should be pinned to the same release as `--print-url` so the bundle ships a matched pair. Compute the version once in the script and reuse it for both URL builders.
 
+The bundle also carries `installers/manifest.txt`, which is where an offline install reads each tool's version. `OFFLINE_MODE=true` makes both fetch helpers in `version-helpers.sh` resolve from it instead of the API — necessary because the asset filename is built from the version, so a version fetched live names a file the bundle does not contain the moment upstream ships a release. The short-circuit is keyed on `BINARY_NAME`, which every installer sets before resolving a version.
+
 ## Code Savings
 
 The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
@@ -372,7 +374,15 @@ Those are excluded by suffix, or the asset would be compared against a signature
 **Reading it.** The `sha256sum` format both GNU and goreleaser emit: digest, whitespace, an optional
 `*` binary marker, then the name. A CI step written as `sha256sum ./*.tar.gz` records `./tool.tar.gz`
 while the asset is named `tool.tar.gz`, so an exact match is tried first and the base name only
-consulted when nothing matched exactly.
+consulted when nothing matched exactly. A case-insensitive match is the last resort: GitHub resolves
+release asset paths case-insensitively, so lazygit downloads as `Linux_x86_64` while its checksums
+file records `linux_x86_64`, and rejecting that discards a checksum the project did publish.
+
+**Offline.** A cached file is verified against `installers/checksums.txt`, never the network —
+discovering which asset holds a checksum costs a release API call, and the network a bundle exists
+for is the one that blocks it. `create-bundle.sh` records only digests it verified against upstream
+while building, so an asset whose release publishes nothing usable is absent from that file and
+falls through to the normal path rather than being reported as verified.
 
 **On failure.** A mismatch deletes the download and aborts — never negotiable, and deleting matters
 because `/tmp` is the offline cache path, so a retry would otherwise extract bytes that already
