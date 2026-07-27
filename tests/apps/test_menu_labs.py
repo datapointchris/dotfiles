@@ -9,6 +9,7 @@ before the module is imported, since it binds those paths at import time.
 import importlib.machinery
 import importlib.util
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -50,6 +51,56 @@ def test_is_due_row():
     # Scheduled + never practiced → due; on-demand → never due.
     assert menu_labs.is_due_row(rows["scheduled-lab"]) is True
     assert menu_labs.is_due_row(rows["ondemand-lab"]) is False
+
+
+def test_nudge_is_a_single_line(capsys):
+    """The nudge runs inside `menu review`'s nudge, so it holds to one line.
+
+    It used to reuse the browse renderer and print the whole due deck — the bulk
+    of what shell startup emitted. `menu labs` remains the view for the rest.
+    """
+    assert menu_labs.cmd_nudge() == 0
+
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert len(lines) == 1
+    assert "1 due" in lines[0]
+    assert "scheduled-lab" in lines[0]
+
+
+def test_nudge_samples_and_counts_a_large_deck(tmp_path, monkeypatch, capsys):
+    """However much of the deck is due, the nudge names a few and counts the rest."""
+    for i in range(menu_labs.NUDGE_SAMPLE + 4):
+        (tmp_path / f"lab-{i}.md").write_text(f"---\ntags: []\ncadence: 1w\n---\n\n# Lab {i}\n")
+    monkeypatch.setattr(menu_labs, "LABS_DIR", tmp_path)
+
+    assert menu_labs.cmd_nudge() == 0
+
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert len(lines) == 1
+    assert f"{menu_labs.NUDGE_SAMPLE + 4} due" in lines[0]
+    assert lines[0].count("lab-") == menu_labs.NUDGE_SAMPLE
+
+
+def test_nudge_clips_rather_than_wraps_on_a_narrow_pane(tmp_path, monkeypatch, capsys):
+    """One line has to mean one line, or the nudge silently grows back."""
+    for i in range(6):
+        (tmp_path / f"a-very-long-lab-name-{i}.md").write_text(f"---\ntags: []\ncadence: 1w\n---\n\n# Lab {i}\n")
+    monkeypatch.setattr(menu_labs, "LABS_DIR", tmp_path)
+    monkeypatch.setenv("COLUMNS", "60")
+
+    assert menu_labs.cmd_nudge() == 0
+
+    plain = re.sub(r"\033\[[0-9;]*m", "", capsys.readouterr().out).rstrip("\n")
+    assert len(plain) <= 60, plain
+
+
+def test_nudge_is_silent_when_nothing_is_due(tmp_path, monkeypatch, capsys):
+    """On-demand Labs are never due, so a deck of them nudges not at all."""
+    (tmp_path / "ondemand.md").write_text("---\ntags: []\n---\n\n# On Demand\n")
+    monkeypatch.setattr(menu_labs, "LABS_DIR", tmp_path)
+
+    assert menu_labs.cmd_nudge() == 0
+    assert capsys.readouterr().out == ""
 
 
 def test_strip_frontmatter_removes_block():

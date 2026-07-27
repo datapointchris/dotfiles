@@ -26,6 +26,7 @@ from menucore.render import MAGENTA
 from menucore.render import RED
 from menucore.render import RESET
 from menucore.render import YELLOW
+from menucore.render import clip
 from menucore.render import header
 from menucore.render import help_end
 from menucore.render import help_header
@@ -33,6 +34,9 @@ from menucore.render import help_row
 from menucore.render import help_section
 from menucore.render import help_text
 from menucore.render import help_usage
+from menucore.render import nudge_header
+from menucore.render import nudge_row
+from menucore.render import nudge_width
 from menucore.state import load_state
 from menucore.state import save_state
 
@@ -54,7 +58,11 @@ __all__ = [
     "MAGENTA",
     "RESET",
     "BAR",
+    "clip",
     "header",
+    "nudge_header",
+    "nudge_row",
+    "nudge_width",
     "help_header",
     "help_usage",
     "help_section",

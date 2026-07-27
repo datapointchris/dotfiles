@@ -20,7 +20,14 @@ The help grammar mirrors ``formatting.sh`` function for function, so a
 column from the longest row in the section. No call site passes a width or a
 color. Close a screen with ``help_end``, and use ``help_text`` rather than
 ``print`` for prose between rows so pending rows flush ahead of it.
+
+``nudge_header``/``nudge_row`` are the startup-nudge counterparts to
+``header``/a listing row. A nudge is an interrupt you did not ask for, so it
+trades every browse-time field (description, tags, cadence, last-done) for one
+line per item, and every line is clipped to the terminal rather than wrapped.
 """
+
+import shutil
 
 CYAN = "\033[0;96m"
 YELLOW = "\033[0;93m"
@@ -34,6 +41,8 @@ RESET = "\033[0m"
 # Matches the default width of formatting.sh's _separator, so a Python screen and
 # a bash screen draw the same rule.
 BAR = "━" * 50
+# Wide enough for "overdue 999d", the longest status_label, plus a space.
+STATUS_WIDTH = 13
 
 # The three roles that appear in nearly every CLI get a fixed color, so they
 # become learnable across tools. App-specific headings rotate through the rest of
@@ -63,6 +72,49 @@ def header(title: str) -> None:
     print(f"{CYAN}{BAR}{RESET}")
     print(f"{CYAN} {title}{RESET}")
     print(f"{CYAN}{BAR}{RESET}\n")
+
+
+def nudge_header(title: str, count: int) -> None:
+    """Print a one-line nudge heading (``Review · 6 due``)."""
+    print(f"{CYAN}{title} · {count} due{RESET}")
+
+
+def nudge_width(names: list[str]) -> int:
+    """The name-column width for a set of nudge rows.
+
+    Measured on the uncolored names for the same reason ``flush_rows`` does it:
+    a format-string field width counts escape bytes and would shove every later
+    column right by the length of the color escape.
+    """
+    return max((len(name) for name in names), default=0) + 2
+
+
+def clip(text: str, used: int) -> str:
+    """``text`` shortened to fit the terminal alongside ``used`` other columns.
+
+    Callers pass the uncolored surrounding text's length and color the result
+    afterwards, so a clip can never land inside an escape sequence and leak a
+    raw code onto the screen. Every character this family clips around (``↳``,
+    ``·``, ``…``) is one column wide, so ``len`` is the display width.
+    """
+    room = shutil.get_terminal_size().columns - used
+    if len(text) <= room or room < 2:
+        return text
+    return text[: room - 1] + "…"
+
+
+def nudge_row(name: str, status: str, command: str, width: int) -> None:
+    """Print one due item as a single line, clipping rather than wrapping.
+
+    Only the command is clipped — the name and status are the identity of the
+    row, so losing them to a narrow pane would defeat the point.
+    """
+    pad = " " * max(width - len(name), 0)
+    status = status.ljust(STATUS_WIDTH)
+    if not command:
+        return print(f"  {YELLOW}{name}{RESET}{pad}{status}".rstrip())
+    command = clip(command, len(f"  {name}{pad}{status}↳ "))
+    return print(f"  {YELLOW}{name}{RESET}{pad}{status}{CYAN}↳ {command}{RESET}")
 
 
 def section_color(title: str, index: int = 0) -> str:

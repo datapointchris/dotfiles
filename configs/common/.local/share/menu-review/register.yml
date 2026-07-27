@@ -26,7 +26,7 @@ items:
     description: Relearn a tool you've let go cold
     cadence: 1w
     command: toolbox remind
-    show: toolbox remind
+    show: toolbox remind --brief
 
   practice-a-lab:
     description: Work through a Lab you're due on (hands-on practice)

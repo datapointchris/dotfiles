@@ -12,6 +12,7 @@ import importlib.machinery
 import importlib.util
 import json
 import os
+import re
 import sys
 from datetime import date
 from datetime import timedelta
@@ -92,6 +93,67 @@ def test_list_json_is_parseable_without_a_register(monkeypatch, capsys):
 
     assert menu_review.cmd_list(as_json=True) == 0
     assert json.loads(capsys.readouterr().out) == []
+
+
+def nudge_lines(capsys) -> list[str]:
+    """The nudge's non-blank output lines."""
+    return [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+
+
+def test_nudge_is_one_line_per_due_item(capsys):
+    """The nudge is a different density from `due`, not just a quieter one.
+
+    A line count is the regression guard that matters here: the nudge used to
+    reuse `render_item`, so each item silently cost four lines at shell startup.
+    """
+    assert menu_review.cmd_nudge() == 0
+
+    lines = nudge_lines(capsys)
+    due = [row for row in menu_review.statuses() if menu_review.is_due(row["overdue"])]
+
+    assert len(lines) == len(due) + 2, "one header, one line per due item, one trailer"
+    assert "never-done" in lines[1]
+    assert "echo overdue" in lines[2], "the command a row carries is the point of the row"
+    assert not any("Has never been marked done" in line for line in lines), (
+        "descriptions are browse-time information and stay in `menu review`"
+    )
+
+
+def test_nudge_caps_the_roster_and_says_so(tmp_path, monkeypatch, capsys):
+    """Overflow points at the browse view rather than printing itself."""
+    over_cap = menu_review.NUDGE_MAX_ITEMS + 3
+    register = tmp_path / "register.yml"
+    items = "\n".join(f"  item-{i}:\n    description: d{i}\n    cadence: 1w" for i in range(over_cap))
+    register.write_text(f"items:\n{items}\n")
+    monkeypatch.setattr(menu_review, "REGISTER", register)
+
+    assert menu_review.cmd_nudge() == 0
+
+    lines = nudge_lines(capsys)
+    assert len(lines) == menu_review.NUDGE_MAX_ITEMS + 3, "header, capped rows, +N more, trailer"
+    assert f"+{over_cap - menu_review.NUDGE_MAX_ITEMS} more" in lines[-2]
+
+
+def test_nudge_clips_long_commands_rather_than_wrapping(tmp_path, monkeypatch, capsys):
+    """A wrapped row is two lines, which is how the nudge grew in the first place."""
+    register = tmp_path / "register.yml"
+    register.write_text("items:\n  long-one:\n    description: d\n    cadence: 1w\n    command: " + "x" * 200 + "\n")
+    monkeypatch.setattr(menu_review, "REGISTER", register)
+    monkeypatch.setenv("COLUMNS", "60")
+
+    assert menu_review.cmd_nudge() == 0
+
+    rows = [re.sub(r"\033\[[0-9;]*m", "", line) for line in nudge_lines(capsys)]
+    assert all(len(row) <= 60 for row in rows), rows
+
+
+def test_nudge_is_silent_when_nothing_is_due(tmp_path, monkeypatch, capsys):
+    """A nudge you don't notice on a clear day is one you'll read on a busy one."""
+    today = date.today().isoformat()
+    write_state(tmp_path, monkeypatch, {"never-done": today, "overdue-item": today, "fresh-item": today})
+
+    assert menu_review.cmd_nudge() == 0
+    assert capsys.readouterr().out == ""
 
 
 def test_parse_duration_minutes():

@@ -223,6 +223,15 @@ renderer it calls — it prints due items or nothing, and does no throttling of 
 interval live in the synced menu state dir, so the schedule is shared across machines — one rolling
 nudge budget, not one per machine.
 
+**The nudge is a different density from `menu review`, not just a quieter one.** `menu review` is a
+browse view you asked for, so it carries every field. The nudge is an interrupt you didn't, so each
+due item collapses to one line — its id, how overdue it is, and the command to run. Descriptions,
+tags, and cadences are browse-time information; at first shell you already know what your own
+register items mean. The roster is capped, and the overflow points at `menu review` rather than
+printing itself. Every line is clipped to the terminal rather than wrapped, because a row that wraps
+is two rows and the nudge quietly doubles on a narrow pane. `nudge_header` / `nudge_row` in
+`menucore` are the shared renderers, so `menu review` and `menu labs` nudge identically.
+
 **Live content (`show:`).** A register item can carry a `show:` command whose output is run and
 inlined *when that item is due in the nudge* — distinct from `command:`, which is only displayed.
 This is what makes "relearn a neglected tool" concrete: the `revisit-a-tool` item sets
@@ -233,6 +242,13 @@ effects — `toolbox remind` advances its own history each call — and running 
 would burn through the rotation. It is timeout-guarded so a slow command cannot wedge startup. This
 replaced the old standalone `toolbox remind` shell-startup block, which fired a passive tool card on
 *every* shell; folding it into the register makes it one actionable, cadenced line instead.
+
+A `show:` command **must emit at most a couple of lines**, because it runs inside a nudge. This is
+the constraint that is easy to lose: a command that prints its own full listing turns the nudge back
+into a wall of text, and it does so silently, since nothing about editing that command brings you
+back to the register. Both current `show:` commands are bounded at their own source rather than
+trimmed here — `menu labs` has a one-line nudge form, and `toolbox remind --brief` caps its card —
+because rendering is the child's job and capturing its output would cost the colour.
 
 ## `menu labs` — hands-on practice
 
@@ -283,7 +299,10 @@ Lab written, asking to practice a tool surfaces everything you already have on i
 
 **In the nudge.** The review register carries a `practice-a-lab` item (`show: menu labs --due`), so
 the twice-daily startup nudge advertises when Labs come due, right beside the neglected-tool
-reminder — and stays silent when you're caught up.
+reminder — and stays silent when you're caught up. That form is a single line: a count plus a few
+sample ids. The deck comes due in clumps, and a startup nudge asking you to pick one of fifteen is a
+catalogue rather than a prompt — naming a few makes the choice concrete, and `menu labs` is still
+there for the rest.
 
 ## Implementation
 

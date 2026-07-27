@@ -38,6 +38,7 @@ from menucore import CYAN
 from menucore import GREEN
 from menucore import RESET
 from menucore import YELLOW
+from menucore import clip
 from menucore import header
 from menucore import help_end
 from menucore import help_header
@@ -258,17 +259,31 @@ def cmd_list(as_json: bool = False) -> int:
     return 0
 
 
+# How many Lab ids the nudge names before it stops. The deck comes due in
+# clumps, and a startup nudge asking you to pick one of fifteen is a catalogue,
+# not a prompt — three is enough to make the choice concrete.
+NUDGE_SAMPLE = 3
+
+
 def cmd_nudge() -> int:
-    """Startup nudge: print only what's due, and nothing at all when caught up."""
+    """Startup nudge: one line naming a few due Labs, silent when caught up.
+
+    Runs inside `menu review`'s nudge (the `practice-a-lab` item's `show:`), so
+    it has to hold to a line or two however much of the deck is due. `menu labs`
+    is the browse view for the rest — this only has to get you to open it.
+    """
     if not load_labs():
         return 0
     due = [r for r in statuses() if is_due_row(r)]
     if not due:
         return 0
-    header("Labs — due to practice")
-    for row in due:
-        render_row(row)
-    print(f"Practice one:  {CYAN}menu labs <id>{RESET}")
+    sample = ", ".join(row["id"] for row in due[:NUDGE_SAMPLE])
+    if len(due) > NUDGE_SAMPLE:
+        sample += ", …"
+    label = f"Labs · {len(due)} due"
+    tail = "   ↳ menu labs <id>"
+    sample = clip(sample, len(f"  {label}   {tail}"))
+    print(f"  {CYAN}{label}{RESET}   {sample}{CYAN}{tail}{RESET}")
     return 0
 
 

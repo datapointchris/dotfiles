@@ -46,6 +46,9 @@ from menucore import help_section
 from menucore import help_usage
 from menucore import is_due
 from menucore import load_state
+from menucore import nudge_header
+from menucore import nudge_row
+from menucore import nudge_width
 from menucore import overdue_days
 from menucore import parse_cadence
 from menucore import save_state
@@ -194,6 +197,12 @@ def run_show(row: dict) -> None:
     is opt-in per item: `command:` is shown, `show:` is run. Stdout is inherited
     so colored output survives, and a timeout keeps a slow command from wedging
     shell startup.
+
+    A `show:` command must emit at most a couple of lines — it runs inside a
+    nudge, so a command that prints its own full listing (`menu labs --due`
+    before it was made compact, `toolbox remind` without `--brief`) silently
+    turns the nudge back into a wall of text. Rendering stays the child's job;
+    this never captures or trims its output.
     """
     cmd = row.get("show")
     if not cmd:
@@ -208,8 +217,19 @@ def run_show(row: dict) -> None:
         pass
 
 
+# A nudge you have to scroll is a nudge you learn to ignore, so the roster is
+# bounded and the overflow points at the browse view instead of printing itself.
+NUDGE_MAX_ITEMS = 8
+
+
 def cmd_nudge() -> int:
     """Startup nudge: print only what's due, and nothing at all when caught up.
+
+    Deliberately a different density from `due`, not just a quieter one. `due`
+    is a browse view you asked for, so it carries every field; a nudge is an
+    interrupt you didn't, so each item collapses to identity, urgency, and the
+    command to run. The description is browse-time information — at first shell
+    you already know what your own register items mean.
 
     The shell caller gates how often this fires (a cheap marker-mtime check
     against the configured interval), so this stays a pure renderer — it never
@@ -222,14 +242,19 @@ def cmd_nudge() -> int:
     due = [row for row in statuses() if is_due(row["overdue"])]
     if not due:
         return 0
-    header("Review — due to revisit")
-    for row in due:
-        render_item(row)
-    # After the list, expand any items carrying live content (e.g. the neglected
-    # tool `toolbox remind` picks) so the roster stays scannable above it.
-    for row in due:
+    shown = due[:NUDGE_MAX_ITEMS]
+    nudge_header("Review", len(due))
+    width = nudge_width([row["id"] for row in shown])
+    for row in shown:
+        nudge_row(row["id"], status_label(row["overdue"]), row["command"], width)
+    if len(due) > len(shown):
+        print(f"  +{len(due) - len(shown)} more  ·  {CYAN}menu review{RESET}")
+    # After the roster, expand any items carrying live content (e.g. the
+    # neglected tool `toolbox remind` picks) so the roster stays scannable.
+    print()
+    for row in shown:
         run_show(row)
-    print(f"Mark one done:  {CYAN}menu review done <id>{RESET}")
+    print(f"Done:  {CYAN}menu review done <id>{RESET}")
     return 0
 
 
