@@ -936,6 +936,16 @@ custom_installers:
     repo: hashicorp/terraform-ls
     description: Terraform Language Server (direct download from releases.hashicorp.com)
 
+  # Installed before font and theme, which source it for their `update` command
+  # and daily update notice. Both bootstrap it themselves if it is missing, so
+  # ordering here is a convenience rather than a hard dependency.
+  - name: bashselfupdate
+    source_type: github_clone
+    repo: datapointchris/bashselfupdate
+    install_url: https://raw.githubusercontent.com/datapointchris/bashselfupdate/main/install.sh
+    bundle_install_script: true
+    description: Sourced bash library providing update and update-notify for git-checkout tools
+
   - name: theme
     source_type: github_clone
     repo: datapointchris/theme
