@@ -17,6 +17,31 @@ Three-tier Docker image strategy:
 - `run-installer-test.sh` - Run an installer test in a fresh container
 - `validate-installation.sh` - Validate that installed binaries exist and run correctly
 - `test-all-github-releases.sh` - Batch test runner for all GitHub release installers
+- `Dockerfile.offline` - Ubuntu 26.04 image matching the work WSL, for offline bundle testing
+- `test-offline-bundle.sh` - Install every bundled tool on a clean container with no network
+- `offline-install-check.sh` - The in-container half of that test
+
+## Testing an Offline Bundle
+
+Run this before carrying a bundle to a machine that cannot reach GitHub. It
+installs every tool the bundle contains on a fresh Ubuntu 26.04 container
+started with `--network none`, so a bundle that only works because the build
+machine had a route to GitHub fails here instead of there.
+
+```bash
+./install.sh --create-offline-bundle --manifest wsl-work-workstation
+./tests/install/docker/test-offline-bundle.sh
+```
+
+The container asserts it cannot reach `api.github.com` before installing
+anything — a passing run where the network was accidentally available proves
+nothing. Every version, checksum, and asset must come out of the bundle:
+versions from `installers/manifest.txt`, digests from `installers/checksums.txt`,
+and the assets from `installers/binaries/`.
+
+Tools that decline to install on the platform (win32yank is WSL-only) report
+`SKIP`, and `checksum-lines=0` means the release publishes nothing to verify
+against rather than that verification was skipped.
 
 ## Usage
 
