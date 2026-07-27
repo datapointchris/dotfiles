@@ -39,16 +39,26 @@ SCRIPT
 }
 
 # Creates a git checkout with one commit and echoes its short HEAD.
+#
+# The inherited git environment is cleared first. `-C` changes directory but does
+# not override GIT_INDEX_FILE, and pre-commit exports one pointing at its staged
+# index of the dotfiles repo — so `git add` here built a tree from *that* index
+# inside this throwaway repo's object store and died on blobs it has never seen.
+# The tests passed standalone and failed only under the commit hook.
 make_checkout() {
   local checkout_dir="$1" content="$2"
   mkdir -p "$checkout_dir"
-  git -C "$checkout_dir" init --quiet
-  git -C "$checkout_dir" config user.email test@example.com
-  git -C "$checkout_dir" config user.name Test
   echo "$content" > "$checkout_dir/file"
-  git -C "$checkout_dir" add file
-  git -C "$checkout_dir" commit --quiet -m "$content"
-  git -C "$checkout_dir" rev-parse --short HEAD
+  (
+    unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_OBJECT_DIRECTORY \
+      GIT_ALTERNATE_OBJECT_DIRECTORIES
+    git -C "$checkout_dir" init --quiet
+    git -C "$checkout_dir" config user.email test@example.com
+    git -C "$checkout_dir" config user.name Test
+    git -C "$checkout_dir" add file
+    git -C "$checkout_dir" commit --quiet -m "$content"
+    git -C "$checkout_dir" rev-parse --short HEAD
+  )
 }
 
 # Populates a fake `uv tool` layout and echoes the directory to hand to UV_TOOL_DIR.
