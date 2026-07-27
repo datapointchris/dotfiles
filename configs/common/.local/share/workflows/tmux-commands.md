@@ -29,19 +29,18 @@ tags: [tmux, multiplexer, keybindings]
 
 ## Windows
 
-| Alt + , / .    | previous / next window         |
-| Alt + p / n    | previous / next window         |
+| Alt + n / p    | previous / next window         |
 | prefix + c     | new window                     |
 | prefix + k     | kill window (asks first)       |
-| prefix + n / l | next window                    |
-| prefix + p / h | previous window                |
 | prefix + 0-9   | select by number               |
 | prefix + ,     | rename window                  |
 | prefix + < / > | swap window left / right       |
 | prefix + .     | move window to another session |
 | prefix + f     | find window in this session    |
 
-Hold Alt and tap to move several at once.
+Hold Alt and tap to move several at once. Direction is where the key sits, not
+what it stands for: `n` is left of `p`, so Alt+n goes left. This is the reverse
+of tmux's own `prefix n` / `prefix p`, which still mean next / previous.
 
 ## Sessions
 
@@ -50,7 +49,7 @@ places you touch to do it, often different repos, each named for the activity
 rather than the directory. Sessions are on the top status line, the focused
 session's windows on the second.
 
-| Alt + < / >     | previous / next session          |
+| Alt + , / .     | previous / next session          |
 | Alt + o         | last session                     |
 | Alt + t         | new session                      |
 | prefix + K      | kill session (asks first)        |
@@ -63,11 +62,9 @@ session's windows on the second.
 | prefix + Ctrl-s | resurrect save                   |
 | prefix + Ctrl-r | resurrect restore                |
 
-Windows take the unshifted `Alt + , / .` because moving between them is
-constant; sessions take the shifted pair because switching context is rare.
-Alt+Shift is awkward on the Corne — `require-prior-idle-ms` makes whichever mod
-is pressed second resolve as a tap, so press them a beat apart — which is why it
-sits on the axis you reach for least.
+Both axes sit on one modifier and one hand: windows on `Alt + n / p`, sessions
+on the two keys below them. No Alt+Shift chord — it misfires on the Corne, and
+with four single-modifier keys available there is no need for one.
 
 ## Copy mode
 

@@ -85,11 +85,8 @@ status bar colour the same way it owns `pane-border-format`.
 
 | Key | Action |
 |-----|--------|
-| `M-.` | Next window |
-| `M-,` | Previous window |
-| `M->` | Next session |
-| `M-<` | Previous session |
-| `M-n` / `M-p` | Next / previous window, single-modifier alternative |
+| `M-n` / `M-p` | Previous / next window |
+| `M-,` / `M-.` | Previous / next session |
 | `M-o` | Last session |
 | `M-t` | New session |
 | `prefix K` | Kill the session, after confirming |
@@ -98,36 +95,36 @@ status bar colour the same way it owns `pane-border-format`.
 | `prefix w` | Find a window in any session |
 | `prefix .` | Move the focused window into another session (tmux default) |
 
-All of these repeat by holding Alt rather than re-arming a leader, and they are unprefixed because
-moving around is the most frequent action of the day. The prefixed `h` / `l` remain as a fallback
-and carry `-r` so they repeat too. `M-n` / `M-p` are the unprefixed twins of tmux's own default
-`prefix n` / `prefix p`, kept alongside `M-,` / `M-.` while the two are compared in use.
+Both pairs repeat by holding Alt rather than re-arming a leader, and both are unprefixed because
+moving around is the most frequent action of the day.
 
-The two pairs are one gesture apart, and which one gets the shift is deliberate. The window is the
-unit of work — several are open at once and moving between them is constant — while a session
-change is a deliberate switch of context that happens a few times a day. Windows therefore take the
-unshifted `M-,` / `M-.`, and the awkward chord lands on the axis you rarely reach for.
+**Direction is physical, not semantic.** `n` sits left of `p` on the keyboard and `,` left of `.`,
+so each pair runs left-to-right where it is typed — which means `M-n` is *previous* even though `n`
+reads as "next", inverting tmux's own `prefix n` / `prefix p`. The keyboard direction is the one
+that gets used; the mnemonic is not.
 
-Awkward because holding Alt and Shift together is unreliable on the Corne, though **not** for the
-reason it first appears. The positional gate is satisfied: `COMMA` and `DOT` are keys 32 and 33, inside `KEYS_R`,
-and `hold-trigger-on-release` is set on every home-row mod — which is exactly the option that lets
-two same-hand mods chord, since it defers the hold-versus-tap decision until release.
+Every key here takes one modifier. An earlier arrangement put sessions on the shifted `M-<` / `M->`
+so the two axes were one gesture apart, and it was dropped once four single-modifier keys were
+available on the same hand: holding Alt and Shift together is unreliable on the Corne. Not for the
+reason it first appears — the positional gate is satisfied, since `COMMA` and `DOT` are keys 32 and
+33 inside `KEYS_R` and `hold-trigger-on-release` is set on every home-row mod, which is exactly what
+lets two same-hand mods chord. What breaks it is `require-prior-idle-ms` (150 on `hml`, 100 on
+`hmls`): whichever mod is pressed second sees the first as a prior keypress inside that window and
+resolves as a tap, emitting a letter. Pressing them a beat apart works. A ZMK combo would fix it
+outright and is deliberately not done — a tmux keybinding has no business reaching into keyboard
+firmware.
 
-What breaks it is `require-prior-idle-ms`, 150 on `hml` and 100 on `hmls`. Whichever mod is pressed
-*second* sees the first as a prior keypress inside that window and resolves immediately as a tap,
-emitting a letter. Pressing them a beat apart works. A ZMK combo mapping two keys to a single
-`LA(LS(COMMA))` would fix it outright and is deliberately not done: a tmux keybinding has no
-business reaching down into keyboard firmware. The definitions are in
-`~/code/zmk/shared/dts/shared_behaviors.dtsi`.
-
-Shift needs no terminal negotiation here, unlike a `C-M-S-` chord would: it is encoded in the
-character itself, so `,` and `<` arrive as different bytes.
+The prefixed `h` / `l` went at the same time. They existed as a fallback for the chord, and a
+fallback for keys that now need no fallback is one more binding to remember.
 
 Alt is also the only modifier tmux can take. Its key parser accepts `C-`, `M-`, and `S-` and
 rejects everything else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
 bound at any level, whatever the keyboard sends. The vim-natural `M-h` / `M-l` are unavailable too:
 AeroSpace grabs them globally for window focus. `M-[` is avoided because Alt+`[` emits the CSI
 prefix, leaving tmux to disambiguate it on the `escape-time` timer.
+
+Watch `aerospace.toml` for the same reason: `alt-comma` and `alt-period` are commented out there,
+and uncommenting either silently takes the session keys before tmux ever sees them.
 
 On macOS this all rests on Ghostty delivering Option as Alt, which it does by default only for U.S.
 keyboard layouts. Setting `macos-option-as-alt` explicitly would pin it; it is deliberately left
