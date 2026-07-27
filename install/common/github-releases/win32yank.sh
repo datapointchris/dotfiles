@@ -8,6 +8,11 @@ source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 BINARY_NAME="win32yank.exe"
 REPO="equalsraf/win32yank"
 
+# equalsraf/win32yank publishes no checksum file of any kind with its releases,
+# so there is nothing to verify against. Remove this the moment upstream starts
+# publishing one.
+CHECKSUM_REQUIRED=false
+
 get_download_url() {
   local version="$1"
   echo "https://github.com/${REPO}/releases/download/${version}/win32yank-x64.zip"

@@ -87,10 +87,15 @@ Complete installation pattern for tar.gz archives.
 
 1. Downloads tarball to /tmp
 2. Registers cleanup trap
-3. Extracts archive
-4. Moves binary to ~/.local/bin
-5. Sets executable permissions
-6. Verifies installation
+3. Verifies the download against the release's published SHA-256
+4. Extracts archive
+5. Moves binary to ~/.local/bin
+6. Sets executable permissions
+7. Verifies installation
+
+Step 3 precedes extraction deliberately, so unverified bytes are never parsed by `tar`. It also
+covers the offline-cache path, where a stale or truncated file is likelier than a fresh download.
+See "Checksum Verification" below.
 
 **Usage:**
 
@@ -349,11 +354,48 @@ bash install/common/github-releases/lazygit.sh
 bash install/common/github-releases/lazygit.sh 2>&1 | cat
 ```
 
+## Checksum Verification
+
+Every download is checked against the SHA-256 the release published, before extraction. This brings
+the installers level with `goselfupdate`, which each tool's own `update` command already uses — the
+two paths install the same binary and now trust it on the same terms.
+
+**Finding the checksum file.** It is discovered from the release's asset list rather than guessed,
+because the naming is not consistent across projects: `checksums.txt` (goreleaser), `SHA256SUMS`
+(just), `<tool>_<version>_checksums.txt` (fzf, trivy), or a per-asset `<asset>.sha256` sidecar
+(atuin, hadolint). A sidecar wins outright, since it names exactly one file and cannot be ambiguous.
+
+Detached signatures and certificates sit beside the checksums file and match a naive `*checksum*`
+search — tflint publishes `checksums.txt` next to `checksums.txt.keyless.sig` and `checksums.txt.pem`.
+Those are excluded by suffix, or the asset would be compared against a signature.
+
+**Reading it.** The `sha256sum` format both GNU and goreleaser emit: digest, whitespace, an optional
+`*` binary marker, then the name. A CI step written as `sha256sum ./*.tar.gz` records `./tool.tar.gz`
+while the asset is named `tool.tar.gz`, so an exact match is tried first and the base name only
+consulted when nothing matched exactly.
+
+**On failure.** A mismatch deletes the download and aborts — never negotiable, and deleting matters
+because `/tmp` is the offline cache path, so a retry would otherwise extract bytes that already
+failed. A release publishing no checksum file at all is a different case, decided by the caller:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CHECKSUM_REQUIRED` | `true` | `false` permits an install with a warning when upstream publishes nothing. Set only with a comment saying why. Currently `shellcheck`, `zk`, `win32yank`. |
+| `CHECKSUM_URL` | unset | Names the checksums file directly, for a release not on GitHub where the asset list cannot be queried. Currently `terraform-ls`. |
+
+Defaulting to required means a project that *starts* publishing checksums is covered automatically,
+and one that *stops* fails loudly instead of silently downgrading.
+
+**What this does and does not defend against.** It catches a corrupted, truncated, or intercepted
+download, given that the checksums file itself arrives over TLS from the same release. It does not
+defend against a compromised publishing account, which can rewrite the checksums file alongside the
+asset — that needs a signature verified against a key distributed out of band.
+
 ## Future Improvements
 
 ### Possible (Low Priority)
 
-- Optional checksum verification (verify if present, but not required)
+- Signature verification for the releases that publish one (sigstore bundles: glow, tflint, trivy)
 - Lightweight install log for audit trail (append-only)
 - Helper for multi-binary installation pattern
 

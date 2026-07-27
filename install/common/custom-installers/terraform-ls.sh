@@ -38,4 +38,9 @@ ARCH=$(detect_arch)
 
 DOWNLOAD_URL="https://releases.hashicorp.com/terraform-ls/${VERSION#v}/terraform-ls_${VERSION#v}_${OS}_${ARCH}.zip"
 
+# Released from releases.hashicorp.com rather than the GitHub release, so the
+# checksums file cannot be discovered from the release assets and has to be
+# named directly.
+export CHECKSUM_URL="https://releases.hashicorp.com/terraform-ls/${VERSION#v}/terraform-ls_${VERSION#v}_SHA256SUMS"
+
 install_from_zip "$BINARY_NAME" "$DOWNLOAD_URL" "terraform-ls" "$VERSION"

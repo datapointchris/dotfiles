@@ -59,6 +59,23 @@ Helper functions for installing binaries from GitHub releases.
 - `should_skip_install(binary_path, binary_name)` - Check if already installed
 - `install_from_tarball(binary, url, path_in_tarball, version)` - Download/extract/install from .tar.gz
 - `install_from_zip(binary, url, path_in_zip, version)` - Download/extract/install from .zip
+- `verify_release_checksum(file, asset, repo, tag)` - SHA-256 an asset against the release's published checksums
+- `compute_sha256(file)` - Bare hex digest, via whichever of `sha256sum`/`shasum` exists
+
+**Checksum verification:**
+
+Both install functions verify before extracting, so no unverified bytes ever reach `tar` or `unzip`.
+The checksum file is discovered from the release assets — a per-asset `.sha256` sidecar wins over a
+combined `checksums.txt`/`SHA256SUMS`, and detached signatures sitting beside it (`.sig`, `.pem`,
+`.sigstore.json`) are excluded. A mismatch deletes the download and aborts the install.
+
+Two knobs, both set by the calling installer before it invokes an install function:
+
+- `CHECKSUM_REQUIRED` - defaults to `true`. Set `false` only when upstream publishes no checksum
+  file at all, with a comment saying so; the install then proceeds with a warning. Currently
+  `shellcheck`, `zk`, and `win32yank`.
+- `CHECKSUM_URL` - names the checksums file directly, for a release not hosted on GitHub where the
+  asset list cannot be queried. Currently `terraform-ls`, which releases from `releases.hashicorp.com`.
 
 **Usage:**
 See `docs/architecture/github-release-installer.md` for detailed documentation.

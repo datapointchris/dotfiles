@@ -49,6 +49,239 @@ download_release_asset() {
   curl -fsSL "$browser_url" -o "$output_path"
 }
 
+# Split a GitHub release download URL into "<owner>/<repo>|<tag>".
+#
+# The tag may itself contain slashes (a nested module's `cli/v1.2.0`), so it is
+# everything between `/releases/download/` and the final filename segment.
+# Echoes nothing for a URL that is not a GitHub release asset, which is how a
+# caller distinguishes a HashiCorp or other non-GitHub source.
+parse_github_release_url() {
+  local url="$1"
+
+  if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$ ]]; then
+    printf '%s|%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+  fi
+}
+
+# A file's SHA-256, as a bare lowercase hex digest.
+#
+# GNU coreutils and macOS ship different tools and only one is guaranteed
+# present, so this picks whichever exists rather than assuming a platform.
+compute_sha256() {
+  local file="$1"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+  else
+    shasum -a 256 "$file" | awk '{print $1}'
+  fi
+}
+
+# Names that contain a checksum but are not one. Detached signatures,
+# certificates and sigstore bundles all sit beside the checksums file and match
+# a naive "*checksum*" match — tflint publishes checksums.txt alongside
+# checksums.txt.keyless.sig and checksums.txt.pem, and picking either of those
+# would compare the asset against a signature.
+CHECKSUM_AUX_PATTERN='\.(sig|asc|pem|gpgsig|bundle|json|crt|cert)$|_hashes_order$|-bsd$'
+
+# Name of the release asset holding the checksum for a given asset.
+#
+# A per-asset sidecar wins outright because it names exactly one file and
+# cannot be ambiguous; only when there is none does this fall back to the
+# combined file that goreleaser and coreutils both produce. Echoes nothing when
+# the release publishes neither.
+resolve_checksum_asset() {
+  local repo="$1"
+  local tag="$2"
+  local asset_name="$3"
+
+  local -a curl_opts=(-fsSL)
+  local token
+  token=$(github_token)
+  if [[ -n "$token" ]]; then
+    curl_opts+=(-H "Authorization: Bearer $token")
+  fi
+
+  local names
+  names=$(curl "${curl_opts[@]}" \
+    "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null |
+    jq -r '.assets[]?.name') || return 1
+  [[ -z "$names" ]] && return 1
+
+  local suffix candidate
+  for suffix in .sha256 .sha256sum .sha256.txt .sha256sum.txt; do
+    candidate=$(printf '%s\n' "$names" | grep -Fx "${asset_name}${suffix}" | head -1)
+    if [[ -n "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  candidate=$(printf '%s\n' "$names" |
+    grep -iE 'checksum|sha256sums?$' |
+    grep -ivE "$CHECKSUM_AUX_PATTERN" |
+    head -1)
+
+  [[ -n "$candidate" ]] || return 1
+  echo "$candidate"
+}
+
+# The expected digest for an asset, read out of a checksums file.
+#
+# Handles the sha256sum format GNU and goreleaser both emit — digest,
+# whitespace, an optional "*" binary marker, then the name — and the bare
+# single-digest sidecar some projects publish per asset.
+#
+# A CI step written as `sha256sum ./*.tar.gz`, which is a natural way to write
+# it, records "./tool.tar.gz" while the release asset is named "tool.tar.gz".
+# Both name the same file, so an exact match is tried first and the base name
+# only consulted when nothing matched exactly — a checksums file that
+# deliberately distinguishes two paths is never resolved by guessing.
+checksum_for_asset() {
+  local checksums_file="$1"
+  local asset_name="$2"
+
+  awk -v want="$asset_name" '
+    { sub(/\r$/, "") }
+    NF == 0 { next }
+    { lines++ }
+    NF == 1 && $1 ~ /^[0-9a-fA-F]{64}$/ { bare = $1; next }
+    NF < 2 { next }
+    {
+      name = $2
+      sub(/^\*/, "", name)
+      if (name == want) { exact = $1; exit }
+      base = name
+      sub(/^.*[\/\\]/, "", base)
+      if (by_base == "" && base == want) by_base = $1
+    }
+    END {
+      if (exact != "") print exact
+      else if (by_base != "") print by_base
+      # A lone digest is only trustworthy in a file that contains nothing else;
+      # in a combined file it would be an unrelated stray line.
+      else if (bare != "" && lines == 1) print bare
+    }
+  ' "$checksums_file"
+}
+
+# Verify a downloaded asset against the checksum its release published.
+#
+# Returns 0 verified, 1 failed, 2 nothing published. A mismatch is never
+# negotiable and deletes the file, so a retry cannot extract bytes that already
+# failed. Whether a 2 is acceptable is the caller's decision — see
+# CHECKSUM_REQUIRED in install_from_tarball.
+#
+# Set CHECKSUM_URL before calling to name the checksums file directly, for a
+# release that is not hosted on GitHub.
+#
+# Usage: verify_release_checksum <file> <asset_name> <repo> <tag>
+verify_release_checksum() {
+  local file="$1"
+  local asset_name="$2"
+  local repo="$3"
+  local tag="$4"
+
+  local checksums_path="/tmp/${asset_name}.checksums"
+  rm -f "$checksums_path"
+
+  if [[ -n "${CHECKSUM_URL:-}" ]]; then
+    if ! curl -fsSL "$CHECKSUM_URL" -o "$checksums_path"; then
+      log_error "Failed to download checksums from $CHECKSUM_URL"
+      return 1
+    fi
+  else
+    if [[ -z "$repo" || -z "$tag" ]]; then
+      return 2
+    fi
+
+    local checksum_asset
+    if ! checksum_asset=$(resolve_checksum_asset "$repo" "$tag" "$asset_name"); then
+      return 2
+    fi
+
+    local checksum_url="https://github.com/${repo}/releases/download/${tag}/${checksum_asset}"
+    if ! download_release_asset "$repo" "$tag" "$checksum_asset" "$checksums_path" "$checksum_url"; then
+      log_error "Failed to download $checksum_asset from $repo"
+      return 1
+    fi
+  fi
+
+  local expected
+  expected=$(checksum_for_asset "$checksums_path" "$asset_name")
+  rm -f "$checksums_path"
+
+  if [[ -z "$expected" ]]; then
+    log_error "Checksums file has no entry for $asset_name"
+    rm -f "$file"
+    return 1
+  fi
+
+  local actual
+  actual=$(compute_sha256 "$file")
+
+  if [[ "${expected,,}" != "${actual,,}" ]]; then
+    log_error "Checksum mismatch for $asset_name"
+    log_error "  published:  $expected"
+    log_error "  downloaded: $actual"
+    rm -f "$file"
+    return 1
+  fi
+
+  log_success "Checksum verified: $asset_name"
+  return 0
+}
+
+# Verify a downloaded asset, honouring the caller's CHECKSUM_REQUIRED setting.
+#
+# Factored out because install_from_tarball and install_from_zip need identical
+# handling and the failure path has to abort the install in both.
+#
+# Usage: verify_download_or_fail <file> <asset_name> <download_url> <binary_name> <version>
+verify_download_or_fail() {
+  local file="$1"
+  local asset_name="$2"
+  local download_url="$3"
+  local binary_name="$4"
+  local version="$5"
+
+  local repo="" tag="" parsed
+  parsed=$(parse_github_release_url "$download_url")
+  if [[ -n "$parsed" ]]; then
+    repo="${parsed%%|*}"
+    tag="${parsed#*|}"
+  fi
+
+  verify_release_checksum "$file" "$asset_name" "$repo" "$tag"
+  local status=$?
+
+  case $status in
+  0)
+    return 0
+    ;;
+  2)
+    if [[ "${CHECKSUM_REQUIRED:-true}" == "true" ]]; then
+      output_failure_data "$binary_name" "$download_url" "$version" \
+        "This release publishes no checksum file. If that is expected for this
+project, set CHECKSUM_REQUIRED=false in its installer with a comment saying
+why." "No checksum published"
+      log_error "$binary_name release publishes no checksum file"
+      rm -f "$file"
+      return 1
+    fi
+    log_warning "$binary_name publishes no checksums — installing unverified"
+    return 0
+    ;;
+  *)
+    output_failure_data "$binary_name" "$download_url" "$version" \
+      "The downloaded file did not match the published checksum. Re-run to
+download again; if it fails repeatedly the release asset or the network path
+between you and it is not trustworthy." "Checksum verification failed"
+    return 1
+    ;;
+  esac
+}
+
 # Returns "darwin" or "linux"
 get_os() {
   [[ "$OSTYPE" == "darwin"* ]] && echo "darwin" || echo "linux"
@@ -206,17 +439,16 @@ install_from_tarball() {
   # If not found in cache, try download.
   #
   # repo and tag are derived from the URL rather than passed in, so every
-  # existing caller gets private-repo support without a signature change. The
-  # tag may itself contain slashes (a nested module's `cli/v1.2.0`), so it is
-  # everything between `/releases/download/` and the final filename segment.
+  # existing caller gets private-repo support without a signature change.
   if [[ ! -f "$tarball_path" ]]; then
     log_info "Download URL: $download_url"
     log_info "Downloading $binary_name..."
 
-    local asset_repo="" asset_tag=""
-    if [[ "$download_url" =~ ^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$ ]]; then
-      asset_repo="${BASH_REMATCH[1]}"
-      asset_tag="${BASH_REMATCH[2]}"
+    local asset_repo="" asset_tag="" parsed_url
+    parsed_url=$(parse_github_release_url "$download_url")
+    if [[ -n "$parsed_url" ]]; then
+      asset_repo="${parsed_url%%|*}"
+      asset_tag="${parsed_url#*|}"
     fi
 
     if ! download_release_asset "$asset_repo" "$asset_tag" "$url_filename" "$tarball_path" "$download_url"; then
@@ -231,6 +463,14 @@ install_from_tarball() {
       log_error "Failed to download from $download_url"
       return 1
     fi
+  fi
+
+  # Verification precedes extraction so that no unverified bytes are ever
+  # parsed by tar or written outside /tmp. This also covers the offline cache
+  # path above, where a stale or truncated file is likelier than a fresh
+  # download.
+  if ! verify_download_or_fail "$tarball_path" "$url_filename" "$download_url" "$binary_name" "$version"; then
+    return 1
   fi
 
   log_info "Extraction directory: /tmp"
@@ -313,6 +553,10 @@ install_from_zip() {
       log_error "Failed to download from $download_url"
       return 1
     fi
+  fi
+
+  if ! verify_download_or_fail "$zip_path" "$url_filename" "$download_url" "$binary_name" "$version"; then
+    return 1
   fi
 
   local extract_dir="/tmp/${binary_name}-extract"

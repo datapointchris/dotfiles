@@ -8,6 +8,11 @@ source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 BINARY_NAME="shellcheck"
 REPO="koalaman/shellcheck"
 
+# koalaman/shellcheck publishes no checksum file of any kind with its releases,
+# so there is nothing to verify against. Remove this the moment upstream starts
+# publishing one.
+CHECKSUM_REQUIRED=false
+
 get_download_url() {
   local version="$1" os="$2" arch="$3"
   local platform_arch
