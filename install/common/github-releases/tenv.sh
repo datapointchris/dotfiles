@@ -145,6 +145,14 @@ if [[ ! -f "$DOTFILES_DIR/install/packages.yml" ]]; then
   exit 0
 fi
 
+# tenv downloads Terraform from releases.hashicorp.com on demand, so it is not
+# in the offline bundle and cannot be installed here without a network. Failing
+# the phase over it reports something the machine cannot act on.
+if [[ "${OFFLINE_MODE:-false}" == "true" ]]; then
+  log_warning "Offline mode: skipping Terraform (tenv fetches it on demand)"
+  exit 0
+fi
+
 # Read Terraform version from packages.yml
 TERRAFORM_VERSION=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --get=runtimes.terraform.version)
 
