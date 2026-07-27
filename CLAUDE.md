@@ -184,7 +184,8 @@ docs/
 - **dotfiles** (`dotfiles`) — the front door, usable from any directory: `update`, `install`, `link`/`relink`, `doctor`, `test`, `docs`, `pull`. See `docs/architecture/management-interface.md`
 - **Symlinks Manager** — `dotfiles symlinks {link,check,show}`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
-- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `~/dev/tools.yml` (Syncthing-synced, not in dotfiles)
+- **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `~/.local/share/toolbox/registry.yml`, symlinked from `configs/common/.local/share/toolbox/`
+- **tmux Sessions** (`tmux-sessions`) — session switching, creation, and the cross-session window finder behind the two-line status bar. See `docs/architecture/tmux-sessions.md`
 - **Task** — `task --list-all` from inside the repo; both front doors share `install/ops/`
 
 ## Learnings Directory

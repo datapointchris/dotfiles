@@ -37,22 +37,23 @@ tags: [tmux, multiplexer, keybindings]
 | prefix + ,     | rename window            |
 | prefix + < / > | swap window left / right |
 
-## Tabs (sessions)
+## Sessions
 
-Sessions are the tab strip on the top status line, named `repo·task`. Windows
-are the roles inside one task.
+Sessions are named `repo·task` and listed on the top status line. Windows are
+the roles inside one task.
 
-| Alt + .         | next tab                     |
-| Alt + ,         | previous tab                 |
-| Alt + o         | last tab                     |
-| Alt + t         | new tab                      |
-| prefix + T      | promote window → its own tab |
-| prefix + s      | tab picker (sesh)            |
-| prefix + L      | last tab (sesh)              |
-| prefix + d      | detach                       |
-| prefix + $      | rename tab                   |
-| prefix + Ctrl-s | resurrect save               |
-| prefix + Ctrl-r | resurrect restore            |
+| Alt + .         | next session                     |
+| Alt + ,         | previous session                 |
+| Alt + o         | last session                     |
+| Alt + t         | new session                      |
+| prefix + T      | promote window → its own session |
+| prefix + w      | find a window in ANY session     |
+| prefix + s      | session picker (sesh)            |
+| prefix + L      | last session (sesh)              |
+| prefix + d      | detach                           |
+| prefix + $      | rename session                   |
+| prefix + Ctrl-s | resurrect save                   |
+| prefix + Ctrl-r | resurrect restore                |
 
 ## Copy mode
 

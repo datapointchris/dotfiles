@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# Session switching for tmux.
+#
+# Sessions are named "repo·task" and the top status line draws them as a tabbed
+# list; windows are the roles inside one task. That list is drawn with #{S:},
+# which walks sessions in session-id order, while tmux's own switch-client -n/-p
+# walk them alphabetically. Navigating with the built-ins would therefore land
+# on a session other than the one sitting next to the current one on screen, so
+# next/prev re-derive the list's order here.
+#
+# Id order also means the list never reshuffles: renaming a session leaves it in
+# place and a new one is appended at the end.
+
+set -euo pipefail
+
+usage() {
+  cat << 'EOF'
+Usage: tmux-sessions <command> [args]
+
+Commands:
+  next              Focus the session to the right (wraps)
+  prev              Focus the session to the left (wraps)
+  new [name]        Open a session; a bare name inherits the current repo prefix
+  promote [name]    Move the focused window out into a session of its own
+  windows           Fuzzy-find a window across every session
+  list              Print sessions in status-line order, current one marked
+  install-status    Move tmux's stock window row to the second status line
+
+Sessions are named "repo·task".
+EOF
+}
+
+require_server() {
+  if ! tmux info > /dev/null 2>&1; then
+    echo "tmux-sessions: no tmux server running" >&2
+    exit 1
+  fi
+}
+
+# The status line's order: session id ascending. Sorting from character 2 skips
+# the leading "$" so $10 lands after $9 rather than between $1 and $2.
+session_order() {
+  tmux list-sessions -F '#{session_id} #{session_name}' | sort -k1.2,1n | cut -d' ' -f2-
+}
+
+current_session() {
+  tmux display-message -p '#{session_name}'
+}
+
+# "=" makes the target an exact match; without it tmux would resolve the name as
+# a prefix and could land on a different session.
+focus_session() {
+  tmux switch-client -t "=$1"
+}
+
+step() {
+  local direction="$1"
+  local current
+  current="$(current_session)"
+
+  local sessions=()
+  while IFS= read -r session; do
+    sessions+=("$session")
+  done < <(session_order)
+
+  local count=${#sessions[@]}
+  if [[ $count -lt 2 ]]; then
+    return 0
+  fi
+
+  local index=0
+  local position
+  for position in "${!sessions[@]}"; do
+    if [[ ${sessions[position]} == "$current" ]]; then
+      index=$position
+      break
+    fi
+  done
+
+  local target
+  if [[ $direction == next ]]; then
+    target=$(((index + 1) % count))
+  else
+    target=$(((index - 1 + count) % count))
+  fi
+
+  focus_session "${sessions[target]}"
+}
+
+new_session() {
+  local requested="${1:-}"
+
+  if [[ -z $requested ]]; then
+    echo "tmux-sessions: new needs a name" >&2
+    exit 1
+  fi
+
+  local name="$requested"
+  if [[ $requested != *·* ]]; then
+    local current
+    current="$(current_session)"
+    name="${current%%·*}·$requested"
+  fi
+
+  if tmux has-session -t "=$name" 2> /dev/null; then
+    focus_session "$name"
+    return 0
+  fi
+
+  tmux new-session -d -s "$name" -c "$(tmux display-message -p '#{pane_current_path}')"
+  focus_session "$name"
+}
+
+# Move the focused window out into a session of its own, which is how a task
+# that was started as a window in whatever session happened to be focused
+# becomes a first-class entry in the list. A lone window is renamed in place
+# instead of being moved, since moving it would leave an empty session behind
+# for tmux to destroy.
+promote_window() {
+  local requested="${1:-}"
+  local source_session
+  source_session="$(current_session)"
+
+  local task="${requested:-$(tmux display-message -p '#{window_name}')}"
+  local name="$task"
+  if [[ $task != *·* ]]; then
+    name="${source_session%%·*}·$task"
+  fi
+
+  if tmux has-session -t "=$name" 2> /dev/null; then
+    echo "tmux-sessions: session '$name' already exists" >&2
+    exit 1
+  fi
+
+  if [[ $(tmux display-message -p '#{session_windows}') -eq 1 ]]; then
+    tmux rename-session -t "=$source_session" "$name"
+    return 0
+  fi
+
+  local source_window
+  source_window="$(tmux display-message -p '#{window_id}')"
+
+  local placeholder
+  placeholder="$(tmux new-session -d -P -F '#{window_id}' -s "$name")"
+  tmux move-window -s "$source_window" -t "=$name:"
+  tmux kill-window -t "$placeholder"
+  focus_session "$name"
+}
+
+# Find a window anywhere, without knowing which session holds it. The status
+# line answers "where am I"; this answers "where did I leave that", and the two
+# want opposite layouts — visual search is measurably faster down a
+# left-justified vertical list than along a horizontal bar, because each
+# fixation takes in more candidates. So the bar stays short and recall happens
+# here, rather than by widening the bar until every window is on it.
+#
+# Rows are keyed by window id, which is unique server-wide, so no session
+# qualifier has to survive the round trip through fzf.
+find_window() {
+  local tab
+  tab="$(printf '\t')"
+
+  local rows
+  rows="$(
+    tmux list-windows -a -F "#{session_id}${tab}#{window_id}${tab}#{session_name}${tab}#{window_name}" \
+      | sort -k1.2,1n \
+      | while IFS="$tab" read -r _ window_id session_name window_name; do
+        printf '%s\t%-26s │ %s\n' "$window_id" "$session_name" "$window_name"
+      done
+  )"
+
+  # The preview is the window's own live pane content rather than a directory
+  # listing: two windows of one task often share a directory, so what is running
+  # in them is the only thing that tells them apart. -e keeps their colour.
+  local selection
+  selection="$(
+    printf '%s\n' "$rows" | fzf-tmux -p 80%,70% \
+      --delimiter="$tab" --with-nth=2.. \
+      --no-sort --ansi --border-label ' windows ' --prompt '  ' \
+      --header '  every window in every session' \
+      --bind 'tab:down,btab:up' \
+      --preview-window 'right:55%' \
+      --preview 'tmux capture-pane -ep -t {1}'
+  )" || return 0
+
+  local target
+  target="${selection%%"$tab"*}"
+  [[ -z $target ]] && return 0
+
+  focus_session "$(tmux display-message -p -t "$target" '#{session_name}')"
+  tmux select-window -t "$target"
+}
+
+list_sessions() {
+  local current
+  current="$(current_session)"
+
+  local session
+  while IFS= read -r session; do
+    if [[ $session == "$current" ]]; then
+      echo "* $session"
+    else
+      echo "  $session"
+    fi
+  done < <(session_order)
+}
+
+# Sessions belong on the first status line, above the windows, but tmux draws
+# status-format[0] topmost and ships the window row there. Copy that stock row
+# down to line 2 and leave line 1 for the theme's session list, which is sourced
+# after this runs. The guard makes a config reload a no-op — by then line 1
+# holds the session list and copying again would duplicate it.
+install_status() {
+  if tmux show-options -gv 'status-format[1]' | grep -q 'window-status-format'; then
+    return 0
+  fi
+  tmux set-option -g 'status-format[1]' "$(tmux show-options -gv 'status-format[0]')"
+}
+
+case "${1:-}" in
+  next)
+    require_server
+    step next
+    ;;
+  prev)
+    require_server
+    step prev
+    ;;
+  new)
+    require_server
+    new_session "${2:-}"
+    ;;
+  promote)
+    require_server
+    promote_window "${2:-}"
+    ;;
+  windows)
+    require_server
+    find_window
+    ;;
+  list)
+    require_server
+    list_sessions
+    ;;
+  install-status)
+    require_server
+    install_status
+    ;;
+  *)
+    usage
+    ;;
+esac
