@@ -21,7 +21,21 @@ REPO=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
   || { log_error "Could not read $BINARY_NAME.repo from packages.yml"; exit 1; }
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
-VERSION=$(get_latest_version "$REPO")
+# Released from releases.hashicorp.com, so create-bundle.sh never caches it and
+# the version cannot be resolved from the bundle manifest either. Same reasoning
+# as tenv: failing the phase reports manual steps the machine cannot follow.
+if [[ "${OFFLINE_MODE:-false}" == "true" ]]; then
+  log_warning "Offline mode: skipping $BINARY_NAME (released from releases.hashicorp.com, not bundled)"
+  exit 0
+fi
+
+# The asset filename is built from the version, so an unresolved version yields
+# a URL with an empty segment that 404s instead of failing here.
+VERSION=$(get_latest_version "$REPO") || exit 1
+if [[ -z "$VERSION" ]]; then
+  log_error "Could not resolve a $BINARY_NAME version from $REPO"
+  exit 1
+fi
 
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! check_if_update_needed "$BINARY_NAME" "$VERSION"; then
