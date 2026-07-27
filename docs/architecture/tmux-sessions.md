@@ -1,18 +1,28 @@
 # tmux Sessions
 
-How the tmux workspace is organised: a session is a task, and windows are the roles inside it.
+How the tmux workspace is organised: a session is a repo, and windows are named tasks inside it.
 
 ## The Model
 
-A session is a **task**, not a repository. Sessions are named `repo·task` —
-`dotfiles·tmux-sessions`, `learning·api` — and the first status line lists them all. Inside a
-session, windows are the roles that task needs: an editor, a shell, an agent, a log tail.
+A session is a **repo** — `dotfiles`, `learning`, `homelab` — opened by `sesh`, which names it
+after the directory. Inside it, windows are the named tasks in flight: `voice`, `comprehension`,
+`auto update`. The first status line lists every session; the second lists the focused session's
+windows.
 
-This inverts the more common arrangement, where a session is a repo and windows are whatever came
-up while working in it. That arrangement fails in a specific way: tasks do not map onto repos one
-to one, so a task gets started in whichever session happens to be focused, and finding it again
-means remembering where it was put. Naming the task as the session removes the question — the task
-*is* the session, and the status line shows all of them at once.
+The unit of work is the **window**, not the session. Several tasks are typically open at once
+across different repos, each one window, and moving between them is the most frequent action of the
+day.
+
+That creates one problem this architecture exists to solve: a task started in whichever session
+happened to be focused is hard to find later, because the status line only shows the current
+session's windows. `prefix w` answers that — see below — rather than the status line growing to
+hold everything.
+
+> A `repo·task` session naming scheme was built to make each task its own session and reverted the
+> same day. Tasks are one window each, so it left every session one window deep, the second status
+> line vestigial, and the first full of near-identical `repo·` rows. The remaining open question —
+> sessions accumulate, and nothing shows which are actually live — is tracked in the **dotfiles**
+> project in `icb`. Do not rebuild the naming scheme; read the item first.
 
 Terminal tabs are deliberately not used for this. On macOS, Ghostty uses native `NSWindow` tabs,
 which the Accessibility API reports as separate windows, so AeroSpace tiles each one; [Ghostty's
@@ -61,28 +71,32 @@ status bar colour the same way it owns `pane-border-format`.
 |-----|--------|
 | `M-.` | Next session |
 | `M-,` | Previous session |
-| `M->` | Next window |
-| `M-<` | Previous window |
+| `M-n` | Next window |
+| `M-p` | Previous window |
 | `M-o` | Last session |
 | `M-t` | New session (a bare name inherits the current repo prefix) |
 | `prefix T` | Promote the focused window into its own session |
 | `prefix s` | sesh picker — open a session, or make one from a directory |
 | `prefix w` | Find a window in any session |
 
-Sessions and windows share two physical keys, with shift picking the inner axis, and both repeat by
-holding Alt rather than re-arming a leader. They are unprefixed because moving between them is the
-most frequent action of the day; the prefixed `h` / `l` remain as a fallback and carry `-r` so they
-repeat too.
+All of these repeat by holding Alt rather than re-arming a leader, and they are unprefixed because
+moving around is the most frequent action of the day. The prefixed `h` / `l` remain as a fallback
+and carry `-r` so they repeat too. `M-n` / `M-p` are the unprefixed twins of tmux's own default
+`prefix n` / `prefix p`.
 
-Alt is not a preference, it is the only modifier available. tmux's key parser accepts `C-`, `M-`,
-and `S-` and nothing else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
-bound at any level, whatever the keyboard sends. `MEH` is expressible as `C-M-S-` but needs
-`extended-keys` turned on, and AeroSpace already holds `MEH` + `hjklg`. Shift works here without
-that negotiation because it is baked into the character: `,` and `<` are different bytes, so both
-arrive as plain escape sequences.
+**Every binding is one modifier plus a right-hand key, and that is a hardware constraint rather
+than a style choice.** The Corne's home-row mods are positional — `hold-trigger-key-positions =
+<KEYS_R ...>` — so a left-hand mod resolves as a *hold* only when the next key is on the right hand.
+Press another left-hand key and it resolves as a *tap* and types a letter. `LALT` and `LSHIFT` sit
+next to each other on the left home row (the `S` and `D` positions), so `Alt+Shift` chords degrade
+silently, and a left-plus-right mod pair fails too because each positional mod then demands the
+opposite hand. An `M-<` / `M->` pairing was built on these keys and had to be abandoned for exactly
+this. The definitions are in `~/code/zmk/shared/dts/shared_behaviors.dtsi`.
 
-The vim-natural `M-h` / `M-l` are unavailable — AeroSpace grabs them globally for window focus, so
-they never reach the terminal. `M-[` is avoided for a different reason: Alt+`[` emits the CSI
+Alt is also the only modifier tmux can take. Its key parser accepts `C-`, `M-`, and `S-` and
+rejects everything else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
+bound at any level, whatever the keyboard sends. The vim-natural `M-h` / `M-l` are unavailable too:
+AeroSpace grabs them globally for window focus. `M-[` is avoided because Alt+`[` emits the CSI
 prefix, leaving tmux to disambiguate it on the `escape-time` timer.
 
 On macOS this all rests on Ghostty delivering Option as Alt, which it does by default only for U.S.
@@ -127,24 +141,10 @@ usually share a directory — what is running in them is the only thing that dis
 
 ## Interaction with sesh
 
-The two naming schemes compose rather than collide, and `sesh` needs no configuration change.
-
-sesh names a session after the **basename** of its path (`dir_length` defaults to 1), or after the
-explicit `name` in a `[[session]]` block in `~/.config/sesh/sesh.toml`. It then sanitises the
-result, replacing `.`, `:`, and runs of whitespace with `_`. It does **not** touch `·`, so
-`repo·task` names survive sesh untouched and appear normally under `sesh list -t`.
-
-That splits the work cleanly:
-
-- **sesh opens a repo.** `prefix s` on `~/dotfiles` gives a session named `dotfiles` — no `·`, so
-  the status line lists it as a plain `dotfiles`. That is the repo's home session.
-- **`M-t` branches a task off it.** `tmux-sessions new` takes the current name up to the first `·`,
-  which for a sesh-created session is the whole name, so `M-t voice` from `dotfiles` yields
-  `dotfiles·voice`.
-
-sesh has no way to create a `repo·task` session and does not need one — that is what `M-t` and
-`prefix T` are for. A long-lived task session can still be given its own `[[session]]` block if it
-is worth a fixed entry in the picker.
+sesh owns session creation and naming, and needs no configuration change. It names a session after
+the **basename** of its path (`dir_length` defaults to 1), or after the explicit `name` in a
+`[[session]]` block in `~/.config/sesh/sesh.toml`, then sanitises the result by replacing `.`, `:`,
+and runs of whitespace with `_`. Sessions are therefore never named by hand.
 
 `prefix s` and `prefix w` are not two versions of the same picker. They sit at different levels,
 and the split mirrors the two status lines: `prefix s` is line 1, `prefix w` is line 2 for every
@@ -157,12 +157,15 @@ One pre-existing sesh behaviour is worth knowing, because it shows up in the sta
 names come from the basename, two repos sharing one (`~/homelab` and `~/code/refs/homelab`)
 produce the same session name. Setting `dir_length = 2` in `sesh.toml` disambiguates them.
 
-## Migrating an Existing Window
+## Promoting a Window
 
-`prefix T` moves the focused window out into a session of its own, prefilled with the window name.
-This is the escape hatch for a task that got started inside whatever session happened to be
-focused. A session holding a single window is renamed in place instead of being moved, since
-moving its only window would leave an empty session for tmux to destroy.
+`prefix T` moves the focused window out into a session of its own, prefilled with the window name —
+for a task that has outgrown being one window among several. A session holding a single window is
+renamed in place instead of being moved, since moving its only window would leave an empty session
+for tmux to destroy.
+
+This is occasional rather than routine. It was written to migrate every window into its own session
+under the reverted naming scheme; that use is gone, the command is not.
 
 ## Files
 

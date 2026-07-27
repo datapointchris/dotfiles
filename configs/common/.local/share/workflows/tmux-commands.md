@@ -29,7 +29,7 @@ tags: [tmux, multiplexer, keybindings]
 
 ## Windows
 
-| Alt + < / >    | previous / next window   |
+| Alt + p / n    | previous / next window   |
 | prefix + c     | new window               |
 | prefix + k     | kill window              |
 | prefix + n / l | next window              |
@@ -38,13 +38,13 @@ tags: [tmux, multiplexer, keybindings]
 | prefix + ,     | rename window            |
 | prefix + < / > | swap window left / right |
 
-Hold Alt and tap to move several at once. Same two keys as sessions below —
-shift picks windows, the inner axis.
+Hold Alt and tap to move several at once. One modifier only — Alt+Shift chords
+degrade on the Corne, whose positional home-row mods need the opposite hand.
 
 ## Sessions
 
-Sessions are named `repo·task` and listed on the top status line. Windows are
-the roles inside one task.
+A session is a repo, listed on the top status line. Its windows are the tasks
+in flight, on the second line.
 
 | Alt + .         | next session                     |
 | Alt + ,         | previous session                 |
