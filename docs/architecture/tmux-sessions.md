@@ -173,10 +173,22 @@ usually share a directory — what is running in them is the only thing that dis
 
 ## Interaction with sesh
 
-sesh owns session creation and naming, and needs no configuration change. It names a session after
-the **basename** of its path (`dir_length` defaults to 1), or after the explicit `name` in a
-`[[session]]` block in `~/.config/sesh/sesh.toml`, then sanitises the result by replacing `.`, `:`,
-and runs of whitespace with `_`. Sessions are therefore never named by hand.
+sesh names a session after the **basename** of its path (`dir_length` defaults to 1), or after the
+explicit `name` in a `[[session]]` block in `~/.config/sesh/sesh.toml`, sanitising the result by
+replacing `.`, `:`, and runs of whitespace with `_`.
+
+That naming is the one place sesh and the work-session model pull against each other, since a
+basename is a repo name and an initiative needs one you type. So the model splits sesh's job in
+two. Its **candidate discovery** — zoxide frecency, config entries, `fd` — is model-agnostic and
+still what `prefix s` is for; it emits paths, and what you do with a path is your choice. Its
+**session creation** is the model-bound half, and `M-t` is the road for a named initiative instead.
+
+`sesh.toml` therefore lists only long-lived contexts — `dotfiles`, `dev`, `ichrisbirch` — rather
+than every repo. A configured block cannot describe an initiative anyway: it carries a name and one
+directory and has no `windows` key (verified against the binary's toml tags), so a configured
+session opens one window and the rest is assembled by hand. Declaring initiative templates would
+mean handing off to tmuxinator via `sesh connect -T`, which is heavier than typing a name for work
+that lasts a few days.
 
 `prefix s` and `prefix w` are not two versions of the same picker. They sit at different levels,
 and the split mirrors the two status lines: `prefix s` is line 1, `prefix w` is line 2 for every
@@ -196,11 +208,15 @@ runs to a couple of hundred rows while only a handful are live. Those are places
 
 ## Killing Sessions
 
-Kill them freely. The `[[session]]` entry in `sesh.toml` is the durable record; the tmux session is
-disposable state on top of it, and `prefix s` rebuilds one at the same path in a keystroke. Keep a
-session alive only when it holds something that cannot be cheaply rebuilt — a running process,
-scrollback still being referenced, a pane layout that took setting up. A session sitting at an idle
-shell is pure clutter in the list.
+Kill them freely. An initiative genuinely ends, which is the sense in which this is truer now than
+it was under repo-sessions — a repo is never finished. The durable record is `sesh.toml` for the
+three configured contexts and zoxide for everything else, so `prefix s` rebuilds a session at the
+same path in a keystroke either way. Keep one alive only when it holds something that cannot be
+cheaply rebuilt — a running process, scrollback still being referenced, a pane layout that took
+setting up. A session sitting at an idle shell is pure clutter in the list.
+
+One caveat: killing a session does not remove it from the last resurrect save, and restore is
+all-or-nothing, so anything killed inside the current 15-minute window returns on a cold start.
 
 This matters because the status line has no automatic answer to "which of these am I still using".
 Ordering and fading were both tried and reverted (see above), so pruning by hand with `prefix K` is

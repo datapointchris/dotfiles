@@ -6,41 +6,9 @@ name = "dotfiles"
 path = "~/dotfiles"
 
 [[session]]
-name = "ichrisbirch"
-path = "~/webapps/ichrisbirch"
-
-[[session]]
-name = "theme"
-path = "~/tools/theme"
-
-[[session]]
-name = "font"
-path = "~/tools/font"
-
-[[session]]
-name = "todoui"
-path = "~/tools/todoui"
-
-[[session]]
-name = "homelab"
-path = "~/homelab"
-
-[[session]]
-name = "learning"
-path = "~/webapps/learning"
-
-[[session]]
-name = "zmk"
-path = "~/code/zmk/shared"
-
-[[session]]
 name = "dev"
 path = "~/dev"
 
 [[session]]
-name = "claude"
-path = "~/.claude"
-
-[[session]]
-name = "obsession"
-path = "~/obsession"
+name = "ichrisbirch"
+path = "~/webapps/ichrisbirch"
