@@ -581,6 +581,15 @@ system_packages:
     aur: zen-browser-bin
     description: Privacy-focused Firefox fork with modern UI
 
+  - name: vivaldi
+    pacman: vivaldi
+    description: Chromium browser with two-level tab stacks and workspaces
+
+  # Vivaldi ships no proprietary codecs; without this H.264/AAC video fails.
+  - name: vivaldi-ffmpeg-codecs
+    pacman: vivaldi-ffmpeg-codecs
+    description: Proprietary codec support for Vivaldi
+
   - name: kitty
     pacman: kitty
     description: GPU-accelerated terminal (backup for Ghostty)
@@ -1494,7 +1503,11 @@ macos_casks:
 
   - name: zen
     description: Privacy-focused Firefox fork with modern UI
-    tags: [gui]
+    tags: [gui, browser]
+
+  - name: vivaldi
+    description: Chromium browser with two-level tab stacks and workspaces
+    tags: [gui, browser]
 
   - name: slack
     description: Team chat platform
