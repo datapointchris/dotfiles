@@ -153,6 +153,16 @@ system_packages:
     description: Terminal multiplexer
     tags: [cli, terminal]
 
+  # tar shells out to the xz binary, which a minimal image does not carry — the
+  # shellcheck installer extracts a .tar.xz and fails without it.
+  - name: xz-utils
+    tier: core
+    apt: xz-utils
+    pacman: xz
+    brew: xz
+    description: XZ compression tools (tar needs them for .tar.xz assets)
+    tags: [cli, system]
+
   - name: jq
     tier: core
     apt: jq
