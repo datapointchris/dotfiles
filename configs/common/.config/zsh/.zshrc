@@ -442,6 +442,10 @@ fi
 # gain room: delta only wraps long lines in side-by-side mode, so unified runs
 # them past the pane edge where fzf clips them.
 export FORGIT_PAGER='delta --paging=never --width=$([ -n "$FORGIT_IN_PREVIEW" ] && echo "${FZF_PREVIEW_COLUMNS:-80}" || tput cols)'
+# forgit interpolates this after its own defaults, so these win on conflicts —
+# which is the point: ctrl-d/ctrl-u are fzf's delete-char/unix-line-discard, and
+# scrolling the diff matters more than editing the query in these pickers.
+export FORGIT_FZF_DEFAULT_OPTS="--bind='ctrl-d:preview-half-page-down,ctrl-u:preview-half-page-up'"
 export FORGIT_DIFF_FZF_OPTS="--preview-window='right:70%'"
 
 if [[ -f "$forgit_file" ]]; then
