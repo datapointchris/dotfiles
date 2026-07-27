@@ -18,11 +18,19 @@ happened to be focused is hard to find later, because the status line only shows
 session's windows. `prefix w` answers that — see below — rather than the status line growing to
 hold everything.
 
-> A `repo·task` session naming scheme was built to make each task its own session and reverted the
-> same day. Tasks are one window each, so it left every session one window deep, the second status
-> line vestigial, and the first full of near-identical `repo·` rows. The remaining open question —
-> sessions accumulate, and nothing shows which are actually live — is tracked in the **dotfiles**
-> project in `icb`. Do not rebuild the naming scheme; read the item first.
+> Two attempts at this have been built and reverted. Do not rebuild either without reading why.
+>
+> A `repo·task` session naming scheme made each task its own session. Tasks are one window each, so
+> it left every session one window deep, the second status line vestigial, and the first full of
+> near-identical `repo·` rows — and the separator was untypeable, an internal encoding leaking into
+> a name you have to enter by hand.
+>
+> Sorting the session list by recency, with untouched sessions faded, replaced the `#{S:}` loop with
+> a script that emitted the whole line. It worked and was still wrong to use: a recency order puts
+> the session you just left next to the one you are in, so `M-,` degrades into a two-session toggle
+> and `M-.` only ever reaches the least-used one, while every switch reshuffles the line. Where a
+> session landed after a re-sort was unpredictable in practice. Ordering is therefore creation
+> order, which never reshuffles, and sessions are pruned by hand with `prefix K` instead.
 
 Terminal tabs are deliberately not used for this. On macOS, Ghostty uses native `NSWindow` tabs,
 which the Accessibility API reports as separate windows, so AeroSpace tiles each one; [Ghostty's
@@ -71,10 +79,12 @@ status bar colour the same way it owns `pane-border-format`.
 |-----|--------|
 | `M-.` | Next session |
 | `M-,` | Previous session |
-| `M-n` | Next window |
-| `M-p` | Previous window |
+| `M->` | Next window |
+| `M-<` | Previous window |
+| `M-n` / `M-p` | Next / previous window, single-modifier alternative |
 | `M-o` | Last session |
-| `M-t` | New session (a bare name inherits the current repo prefix) |
+| `M-t` | New session |
+| `prefix K` | Kill the session, after confirming |
 | `prefix T` | Promote the focused window into its own session |
 | `prefix s` | sesh picker — open a session, or make one from a directory |
 | `prefix w` | Find a window in any session |
@@ -82,16 +92,23 @@ status bar colour the same way it owns `pane-border-format`.
 All of these repeat by holding Alt rather than re-arming a leader, and they are unprefixed because
 moving around is the most frequent action of the day. The prefixed `h` / `l` remain as a fallback
 and carry `-r` so they repeat too. `M-n` / `M-p` are the unprefixed twins of tmux's own default
-`prefix n` / `prefix p`.
+`prefix n` / `prefix p`, kept alongside `M-<` / `M->` while the two are compared in use.
 
-**Every binding is one modifier plus a right-hand key, and that is a hardware constraint rather
-than a style choice.** The Corne's home-row mods are positional — `hold-trigger-key-positions =
-<KEYS_R ...>` — so a left-hand mod resolves as a *hold* only when the next key is on the right hand.
-Press another left-hand key and it resolves as a *tap* and types a letter. `LALT` and `LSHIFT` sit
-next to each other on the left home row (the `S` and `D` positions), so `Alt+Shift` chords degrade
-silently, and a left-plus-right mod pair fails too because each positional mod then demands the
-opposite hand. An `M-<` / `M->` pairing was built on these keys and had to be abandoned for exactly
-this. The definitions are in `~/code/zmk/shared/dts/shared_behaviors.dtsi`.
+`M-<` / `M->` are the shifted twins of the session pair, which makes the two axes one gesture apart.
+Holding Alt and Shift together is unreliable on the Corne, but **not** for the reason it first
+appears. The positional gate is satisfied: `COMMA` and `DOT` are keys 32 and 33, inside `KEYS_R`,
+and `hold-trigger-on-release` is set on every home-row mod — which is exactly the option that lets
+two same-hand mods chord, since it defers the hold-versus-tap decision until release.
+
+What breaks it is `require-prior-idle-ms`, 150 on `hml` and 100 on `hmls`. Whichever mod is pressed
+*second* sees the first as a prior keypress inside that window and resolves immediately as a tap,
+emitting a letter. Pressing them a beat apart works. A ZMK combo mapping two keys to a single
+`LA(LS(COMMA))` would fix it outright and is deliberately not done: a tmux keybinding has no
+business reaching down into keyboard firmware. The definitions are in
+`~/code/zmk/shared/dts/shared_behaviors.dtsi`.
+
+Shift needs no terminal negotiation here, unlike a `C-M-S-` chord would: it is encoded in the
+character itself, so `,` and `<` arrive as different bytes.
 
 Alt is also the only modifier tmux can take. Its key parser accepts `C-`, `M-`, and `S-` and
 rejects everything else, so a chord containing GUI — which the keyboards' `HYPER` does — cannot be
@@ -157,6 +174,30 @@ One pre-existing sesh behaviour is worth knowing, because it shows up in the sta
 names come from the basename, two repos sharing one (`~/homelab` and `~/code/refs/homelab`)
 produce the same session name. Setting `dir_length = 2` in `sesh.toml` disambiguates them.
 
+Note also what `prefix s` lists. Most of its entries are not sessions: alongside the running ones it
+offers every `[[session]]` block in `sesh.toml` and every zoxide directory, which is why the picker
+runs to a couple of hundred rows while only a handful are live. Those are places sesh knows how to
+*make* a session from, created at the moment you pick one, and they never appear in the status bar.
+
+## Killing Sessions
+
+Kill them freely. The `[[session]]` entry in `sesh.toml` is the durable record; the tmux session is
+disposable state on top of it, and `prefix s` rebuilds one at the same path in a keystroke. Keep a
+session alive only when it holds something that cannot be cheaply rebuilt — a running process,
+scrollback still being referenced, a pane layout that took setting up. A session sitting at an idle
+shell is pure clutter in the list.
+
+This matters because the status line has no automatic answer to "which of these am I still using".
+Ordering and fading were both tried and reverted (see above), so pruning by hand with `prefix K` is
+what keeps the list short.
+
+Killing scales with case: `prefix x` a pane, `prefix k` a window, `prefix K` the session. The window
+and session both confirm first and name their target in the prompt, since each takes something that
+cannot be reconstructed from a name — a window carries its scrollback and whatever its panes are
+running. `detach-on-destroy` is off, so killing the session you are in drops you into another rather
+than ending the client. `prefix s` also kills the highlighted session with `Ctrl-d` without leaving
+the picker, which is better for pruning several at once.
+
 ## Promoting a Window
 
 `prefix T` moves the focused window out into a session of its own, prefilled with the window name —
@@ -164,8 +205,11 @@ for a task that has outgrown being one window among several. A session holding a
 renamed in place instead of being moved, since moving its only window would leave an empty session
 for tmux to destroy.
 
+The name is taken verbatim, as is `M-t`'s. Both once spliced a `repo·` prefix onto a bare name,
+which went with the naming scheme and went out with it.
+
 This is occasional rather than routine. It was written to migrate every window into its own session
-under the reverted naming scheme; that use is gone, the command is not.
+under that scheme; that use is gone, the command is not.
 
 ## Files
 

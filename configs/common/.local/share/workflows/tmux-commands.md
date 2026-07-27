@@ -29,9 +29,10 @@ tags: [tmux, multiplexer, keybindings]
 
 ## Windows
 
+| Alt + < / >    | previous / next window   |
 | Alt + p / n    | previous / next window   |
 | prefix + c     | new window               |
-| prefix + k     | kill window              |
+| prefix + k     | kill window (asks first) |
 | prefix + n / l | next window              |
 | prefix + p / h | previous window          |
 | prefix + 0-9   | select by number         |
@@ -50,6 +51,7 @@ in flight, on the second line.
 | Alt + ,         | previous session                 |
 | Alt + o         | last session                     |
 | Alt + t         | new session                      |
+| prefix + K      | kill session (asks first)        |
 | prefix + T      | promote window → its own session |
 | prefix + w      | find a window in ANY session     |
 | prefix + s      | session picker (sesh)            |
