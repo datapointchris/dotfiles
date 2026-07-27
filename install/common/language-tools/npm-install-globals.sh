@@ -15,12 +15,14 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-# Point npm at the XDG-located user config that sets a writable prefix.
-# .zshrc exports this for interactive shells; installers run under bash so we
-# must set it here too, otherwise npm falls back to the system prefix (/usr on
-# Arch) and global installs fail with EACCES.
-export NPM_CONFIG_USERCONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/npm/npmrc"
-mkdir -p "$HOME/.local/share/npm"
+# The prefix is set directly rather than through the npmrc that .zshrc points
+# npm at, because that npmrc is a symlink created by the symlink phase, which
+# runs after this one (it needs task, which needs Go). On a first install the
+# file does not exist yet, npm falls back to its built-in prefix (/usr/local on
+# Debian, /usr on Arch) and every global install dies with EACCES.
+# NPM_CONFIG_PREFIX outranks every config file, so it holds in both orders.
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+mkdir -p "$NPM_CONFIG_PREFIX"
 
 log_info "Installing npm global packages from packages.yml..."
 
