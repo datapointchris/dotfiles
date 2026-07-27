@@ -94,6 +94,14 @@ repos:
         stages: [prepare-commit-msg]
 
 # > custom:after:all - Drift checks and test suites specific to dotfiles
+  # Scans the whole repo, not the staged files: a `source` breaks in the file
+  # that was not edited. rev is pinned by hand — forge's toolchain.yml manages
+  # block repos, and this is a custom section.
+  - repo: https://github.com/datapointchris/refcheck
+    rev: v0.2.1
+    hooks:
+      - id: refcheck
+
   - repo: local
     hooks:
       # Test all user-facing apps can be invoked
