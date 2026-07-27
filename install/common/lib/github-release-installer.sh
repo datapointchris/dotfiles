@@ -11,6 +11,13 @@ source "$SCRIPT_DIR/version-helpers.sh"
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
 
+# Digests recorded by install/offline/create-bundle.sh, each already checked
+# against the checksum its release published. Learning which asset holds that
+# checksum costs a release API call, so a network that blocks GitHub cannot
+# verify a cached binary at all — every offline install would fail on a missing
+# checksum rather than a bad one. The bundle carries the answer across instead.
+OFFLINE_CHECKSUMS_FILE="${HOME}/installers/checksums.txt"
+
 # Download a release asset to a path.
 #
 # The browser URL (github.com/.../releases/download/...) 404s on a private repo
@@ -181,6 +188,29 @@ verify_release_checksum() {
   local asset_name="$2"
   local repo="$3"
   local tag="$4"
+
+  # A file taken from the bundle is checked against the bundle's own record.
+  # Falling through to the network here would defeat the point: the bundle
+  # exists because GitHub is unreachable, and its digests were verified against
+  # the published checksums on the machine that built it.
+  if [[ "${USED_OFFLINE_CACHE:-false}" == "true" && -f "$OFFLINE_CHECKSUMS_FILE" ]]; then
+    local bundled
+    bundled=$(checksum_for_asset "$OFFLINE_CHECKSUMS_FILE" "$asset_name")
+    if [[ -n "$bundled" ]]; then
+      local cached_actual
+      cached_actual=$(compute_sha256 "$file")
+      if [[ "${bundled,,}" != "${cached_actual,,}" ]]; then
+        log_error "Checksum mismatch for $asset_name (offline bundle)"
+        log_error "  bundled:  $bundled"
+        log_error "  on disk:  $cached_actual"
+        rm -f "$file"
+        return 1
+      fi
+      log_success "Checksum verified from offline bundle: $asset_name"
+      return 0
+    fi
+    log_warning "Offline bundle records no checksum for $asset_name"
+  fi
 
   local checksums_path="/tmp/${asset_name}.checksums"
   rm -f "$checksums_path"
@@ -427,12 +457,17 @@ install_from_tarball() {
   # month-old /tmp/icb.tar.gz.
   local tarball_path="/tmp/${url_filename}"
 
+  # Read by verify_release_checksum, which checks a bundled file against the
+  # bundle's digests and a downloaded one against the release's.
+  local USED_OFFLINE_CACHE=false
+
   # Check offline cache first
   if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
     local cached_file="$OFFLINE_CACHE_DIR/$url_filename"
     if [[ -f "$cached_file" ]]; then
       log_info "Using cached file: $cached_file"
       cp "$cached_file" "$tarball_path"
+      USED_OFFLINE_CACHE=true
     fi
   fi
 
@@ -528,12 +563,15 @@ install_from_zip() {
   # Version-keyed for the same reason as install_from_tarball's tarball_path.
   local zip_path="/tmp/${url_filename}"
 
+  local USED_OFFLINE_CACHE=false
+
   # Check offline cache first
   if [[ -d "$OFFLINE_CACHE_DIR" ]]; then
     local cached_file="$OFFLINE_CACHE_DIR/$url_filename"
     if [[ -f "$cached_file" ]]; then
       log_info "Using cached file: $cached_file"
       cp "$cached_file" "$zip_path"
+      USED_OFFLINE_CACHE=true
     fi
   fi
 

@@ -178,6 +178,55 @@ parse_download_url() {
   assert_failure
 }
 
+# Offline bundle checksum tests
+#
+# The bundle exists for networks that cannot reach GitHub, so these must never
+# fall through to a release lookup.
+
+setup_bundle() {
+  BUNDLE_DIR="$BATS_TEST_TMPDIR/installers"
+  mkdir -p "$BUNDLE_DIR/binaries"
+  OFFLINE_CHECKSUMS_FILE="$BUNDLE_DIR/checksums.txt"
+
+  ASSET="tool-1.2.3-linux-amd64.tar.gz"
+  CACHED_FILE="$BUNDLE_DIR/binaries/$ASSET"
+  echo "payload bytes" > "$CACHED_FILE"
+  printf '%s  %s\n' "$(compute_sha256 "$CACHED_FILE")" "$ASSET" > "$OFFLINE_CHECKSUMS_FILE"
+}
+
+@test "offline bundle: cached file matching the recorded digest verifies" {
+  setup_bundle
+
+  USED_OFFLINE_CACHE=true run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
+  assert_success
+  assert_output --partial "verified from offline bundle"
+}
+
+@test "offline bundle: tampered cached file is rejected and deleted" {
+  setup_bundle
+  echo "tampered" > "$CACHED_FILE"
+
+  USED_OFFLINE_CACHE=true run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
+  assert_failure
+  [[ ! -f "$CACHED_FILE" ]]
+}
+
+@test "offline bundle: a freshly downloaded file ignores the bundle digests" {
+  setup_bundle
+
+  USED_OFFLINE_CACHE=false run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
+  [[ "$status" -eq 2 ]]
+}
+
+@test "offline bundle: an asset the bundle never recorded falls through" {
+  setup_bundle
+  local other="$BUNDLE_DIR/binaries/other.tar.gz"
+  echo "payload" > "$other"
+
+  USED_OFFLINE_CACHE=true run verify_release_checksum "$other" "other.tar.gz" "" ""
+  [[ "$status" -eq 2 ]]
+}
+
 # Helper functions
 
 skip_if_not_macos() {

@@ -19,6 +19,9 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
+# For resolve_checksum_asset/checksum_for_asset/compute_sha256: the bundle is
+# verified against published checksums here, where GitHub is reachable.
+source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 
 # ============================================================================
 # Configuration
@@ -32,6 +35,7 @@ BUNDLE_NAME=""
 WORK_DIR=""
 CACHE_DIR=""
 MANIFEST_FILE=""
+CHECKSUMS_FILE=""
 TOTAL_DOWNLOADS=0
 
 # ============================================================================
@@ -79,6 +83,69 @@ download_file() {
   exit 1
 }
 
+# Verify a downloaded asset against the checksum its release published, then
+# record the digest for the installer to check the bundled copy against.
+#
+# Verification has to happen here. The install machine cannot resolve which
+# asset holds the checksum without the release API, and on the network this
+# bundle exists for, that API is unreachable — so an unverified bundle would
+# force the installer to accept unverified bytes.
+#
+# Only digests actually checked against upstream are recorded. Writing one for
+# an asset whose release publishes nothing usable would make the installer log
+# "verified" for bytes nobody verified; leaving it out instead lands that asset
+# on the same path it takes online, where CHECKSUM_REQUIRED decides.
+record_bundle_checksum() {
+  local file="$1" url="$2"
+
+  local asset_name shipped_name
+  asset_name=$(basename "$url")
+  shipped_name=$(basename "$file")
+
+  local parsed repo tag
+  parsed=$(parse_github_release_url "$url")
+  if [[ -z "$parsed" ]]; then
+    log_warning "    not a GitHub release, no checksum recorded: $shipped_name"
+    return 0
+  fi
+  repo="${parsed%%|*}"
+  tag="${parsed#*|}"
+
+  local checksum_asset
+  if ! checksum_asset=$(resolve_checksum_asset "$repo" "$tag" "$asset_name"); then
+    log_warning "    $repo publishes no checksums, none recorded"
+    return 0
+  fi
+
+  local checksums_path="$WORK_DIR/${asset_name}.checksums"
+  if ! curl -fsSL "https://github.com/${repo}/releases/download/${tag}/${checksum_asset}" -o "$checksums_path"; then
+    log_error "Failed to download $checksum_asset from $repo"
+    exit 1
+  fi
+
+  local expected
+  expected=$(checksum_for_asset "$checksums_path" "$asset_name")
+  rm -f "$checksums_path"
+  if [[ -z "$expected" ]]; then
+    # yq's checksums is an rhash table (name first, then one column per
+    # algorithm), which the sha256sum parser cannot read. Its installer does not
+    # verify either, so this is no worse than the online path.
+    log_warning "    $checksum_asset has no readable entry for $asset_name, none recorded"
+    return 0
+  fi
+
+  local actual
+  actual=$(compute_sha256 "$file")
+  if [[ "${expected,,}" != "${actual,,}" ]]; then
+    log_error "Checksum mismatch while bundling $asset_name"
+    log_error "  published:  $expected"
+    log_error "  downloaded: $actual"
+    exit 1
+  fi
+
+  printf '%s  %s\n' "$actual" "$shipped_name" >> "$CHECKSUMS_FILE"
+}
+
 # ============================================================================
 # GitHub Releases (driven by packages.yml github_releases:)
 # ============================================================================
@@ -103,6 +170,7 @@ download_github_releases() {
     filename=$(basename "$url")
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
+    record_bundle_checksum "$CACHE_DIR/binaries/$filename" "$url"
     echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
 
     # Companion files (e.g. fzf-tmux for fzf). Scripts opt in by handling
@@ -115,6 +183,7 @@ download_github_releases() {
         extra_filename=$(basename "$extra_url")
         log_info "    extra: $extra_name ($extra_version)..."
         download_file "$extra_url" "$CACHE_DIR/binaries/$extra_filename" "$extra_name"
+        record_bundle_checksum "$CACHE_DIR/binaries/$extra_filename" "$extra_url"
         echo "extra|$extra_name|$extra_version|$extra_filename" >> "$MANIFEST_FILE"
       done < <(bash "$script" --print-extras "$OS" "$ARCH")
     fi
@@ -365,8 +434,10 @@ setup_directories() {
   trap 'rm -rf "${WORK_DIR:-}"' EXIT
   CACHE_DIR="$WORK_DIR/installers"
   MANIFEST_FILE="$CACHE_DIR/manifest.txt"
+  CHECKSUMS_FILE="$CACHE_DIR/checksums.txt"
 
   mkdir -p "$CACHE_DIR/binaries" "$CACHE_DIR/scripts" "$CACHE_DIR/go-binaries"
+  : > "$CHECKSUMS_FILE"
 
   cat > "$MANIFEST_FILE" << EOF
 # Dotfiles Offline Bundle
@@ -393,10 +464,15 @@ The installer will find cached files in ~/installers/
 Directory Structure:
   installers/
   ├── manifest.txt    # List of included files with versions
+  ├── checksums.txt   # sha256 of each GitHub release binary, verified here
   ├── README.txt      # This file
   ├── binaries/       # GitHub release binaries + cargo tools
   ├── go-binaries/    # Pre-built Go tool binaries
   └── scripts/        # Install scripts (uv, theme, font, claude-code)
+
+checksums.txt is what lets the installer verify a cached binary without
+reaching GitHub. Keep it beside binaries/ — moving or deleting it makes every
+GitHub release install fail on a missing checksum.
 EOF
 }
 
