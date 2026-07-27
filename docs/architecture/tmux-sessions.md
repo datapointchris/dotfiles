@@ -1,22 +1,29 @@
 # tmux Sessions
 
-How the tmux workspace is organised: a session is a repo, and windows are named tasks inside it.
+How the tmux workspace is organised: a session is a unit of work, and its windows are the places you
+touch to do it.
 
 ## The Model
 
-A session is a **repo** — `dotfiles`, `learning`, `homelab` — opened by `sesh`, which names it
-after the directory. Inside it, windows are the named tasks in flight: `voice`, `comprehension`,
-`auto update`. The first status line lists every session; the second lists the focused session's
-windows.
+A session is an **initiative** — `standardize installs`, `repos` — and its windows are the places
+the work happens, named for the activity rather than the directory: `audit packages`, `apply`, `ci`.
+One initiative usually spans several repos, so the same repo can hold a window in more than one
+session at once, under different names and for different purposes. The first status line lists
+every session; the second lists the focused session's windows.
 
-The unit of work is the **window**, not the session. Several tasks are typically open at once
-across different repos, each one window, and moving between them is the most frequent action of the
-day.
+The unit of work is the **window**, not the session. Several are open at once and moving between
+them is the most frequent action of the day, which is why they hold the unshifted key pair.
 
-That creates one problem this architecture exists to solve: a task started in whichever session
-happened to be focused is hard to find later, because the status line only shows the current
-session's windows. `prefix w` answers that — see below — rather than the status line growing to
-hold everything.
+A session being a repo is the degenerate case of this, and it is what the layer was originally used
+for. It was abandoned because it carried no information: `sesh` names a session after a directory
+basename, work in flight is usually one task per repo, and the result was five sessions one window
+deep — the first status line and the second showing the same list at two granularities, with a
+session switch standing between you and every window. Naming sessions after the work restores the
+distinction the two lines are drawing.
+
+Because a repo now appears in several sessions, the **session name is what disambiguates** two
+windows sitting in the same directory. That makes `prefix w`'s session column load-bearing rather
+than a restatement of the window name.
 
 > Two attempts at this have been built and reverted. Do not rebuild either without reading why.
 >
@@ -27,10 +34,11 @@ hold everything.
 >
 > Sorting the session list by recency, with untouched sessions faded, replaced the `#{S:}` loop with
 > a script that emitted the whole line. It worked and was still wrong to use: a recency order puts
-> the session you just left next to the one you are in, so `M-,` degrades into a two-session toggle
-> and `M-.` only ever reaches the least-used one, while every switch reshuffles the line. Where a
-> session landed after a re-sort was unpredictable in practice. Ordering is therefore creation
-> order, which never reshuffles, and sessions are pruned by hand with `prefix K` instead.
+> the session you just left next to the one you are in, so the "previous session" key degrades into
+> a two-session toggle and "next session" only ever reaches the least-used one, while every switch
+> reshuffles the line. Where a session landed after a re-sort was unpredictable in practice.
+> Ordering is therefore creation order, which never reshuffles, and sessions are pruned by hand
+> with `prefix K` instead.
 
 Terminal tabs are deliberately not used for this. On macOS, Ghostty uses native `NSWindow` tabs,
 which the Accessibility API reports as separate windows, so AeroSpace tiles each one; [Ghostty's
@@ -77,10 +85,10 @@ status bar colour the same way it owns `pane-border-format`.
 
 | Key | Action |
 |-----|--------|
-| `M-.` | Next session |
-| `M-,` | Previous session |
-| `M->` | Next window |
-| `M-<` | Previous window |
+| `M-.` | Next window |
+| `M-,` | Previous window |
+| `M->` | Next session |
+| `M-<` | Previous session |
 | `M-n` / `M-p` | Next / previous window, single-modifier alternative |
 | `M-o` | Last session |
 | `M-t` | New session |
@@ -88,15 +96,20 @@ status bar colour the same way it owns `pane-border-format`.
 | `prefix T` | Promote the focused window into its own session |
 | `prefix s` | sesh picker — open a session, or make one from a directory |
 | `prefix w` | Find a window in any session |
+| `prefix .` | Move the focused window into another session (tmux default) |
 
 All of these repeat by holding Alt rather than re-arming a leader, and they are unprefixed because
 moving around is the most frequent action of the day. The prefixed `h` / `l` remain as a fallback
 and carry `-r` so they repeat too. `M-n` / `M-p` are the unprefixed twins of tmux's own default
-`prefix n` / `prefix p`, kept alongside `M-<` / `M->` while the two are compared in use.
+`prefix n` / `prefix p`, kept alongside `M-,` / `M-.` while the two are compared in use.
 
-`M-<` / `M->` are the shifted twins of the session pair, which makes the two axes one gesture apart.
-Holding Alt and Shift together is unreliable on the Corne, but **not** for the reason it first
-appears. The positional gate is satisfied: `COMMA` and `DOT` are keys 32 and 33, inside `KEYS_R`,
+The two pairs are one gesture apart, and which one gets the shift is deliberate. The window is the
+unit of work — several are open at once and moving between them is constant — while a session
+change is a deliberate switch of context that happens a few times a day. Windows therefore take the
+unshifted `M-,` / `M-.`, and the awkward chord lands on the axis you rarely reach for.
+
+Awkward because holding Alt and Shift together is unreliable on the Corne, though **not** for the
+reason it first appears. The positional gate is satisfied: `COMMA` and `DOT` are keys 32 and 33, inside `KEYS_R`,
 and `hold-trigger-on-release` is set on every home-row mod — which is exactly the option that lets
 two same-hand mods chord, since it defers the hold-versus-tap decision until release.
 
@@ -125,7 +138,9 @@ unset.
 The status line lists sessions with `#{S:}`, which walks them in **session-id order** — creation
 order. tmux's own `switch-client -n`/`-p` walk them **alphabetically**. Using the built-ins would
 mean "next" skipping past the session shown next to the current one, so `tmux-sessions` re-derives
-the status line's order before stepping.
+the status line's order before stepping. Windows need no such helper, which is why the two pairs are
+bound differently: `next-window`/`previous-window` already walk windows in the order line 2 draws
+them.
 
 Creation order is the right choice for the display, and the reason is worth keeping: it is stable.
 Renaming a session leaves it where it is and a new one is appended at the end. Alphabetical
@@ -198,18 +213,26 @@ running. `detach-on-destroy` is off, so killing the session you are in drops you
 than ending the client. `prefix s` also kills the highlighted session with `Ctrl-d` without leaving
 the picker, which is better for pruning several at once.
 
-## Promoting a Window
+## Moving Windows Between Sessions
 
-`prefix T` moves the focused window out into a session of its own, prefilled with the window name —
-for a task that has outgrown being one window among several. A session holding a single window is
-renamed in place instead of being moved, since moving its only window would leave an empty session
-for tmux to destroy.
+Reclassification is normal here, and it is the one operation the repo-per-session model never
+needed: a file's repo does not change, but work started in whatever session was focused very often
+belongs to a different initiative than the one it was born in. Two commands cover it.
+
+`prefix .` is tmux's own `move-window`, which takes a target session and completes on it. This is
+the routine case — pulling a window out of a catch-all session and into the initiative it turned
+out to belong to.
+
+`prefix T` moves the focused window out into a **new** session of its own, prefilled with the window
+name, for work that has outgrown being one window among several. A session holding a single window
+is renamed in place instead of being moved, since moving its only window would leave an empty
+session for tmux to destroy.
 
 The name is taken verbatim, as is `M-t`'s. Both once spliced a `repo·` prefix onto a bare name,
 which went with the naming scheme and went out with it.
 
-This is occasional rather than routine. It was written to migrate every window into its own session
-under that scheme; that use is gone, the command is not.
+Together these are what make a catch-all session safe. Work can start anywhere without a decision
+about where it belongs, and be filed once that is obvious.
 
 ## Files
 

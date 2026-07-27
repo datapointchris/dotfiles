@@ -4,17 +4,24 @@ tags: [tmux, session, multiplexer, keybindings]
 
 # tmux sessions — mental model and persistence
 
-**Session** — a project context (one per project), lives in RAM.
-**Window** — a tab within a session (editing, running, logs).
+**Session** — a unit of work (an initiative, not a repo), lives in RAM.
+**Window** — one place you touch to do that work, named for the activity.
 **Pane** — a split within a window (two things visible at once).
 
-| Component       | What it is                    | Survives reboot?          |
-| --------------- | ----------------------------- | ------------------------- |
-| sesh.toml       | Recipe for creating sessions  | YES                       |
-| Running session | Process in tmux server (RAM)  | NO (without continuum)    |
-| Resurrect state | ~/.local/share/tmux/resurrect | YES                       |
+One initiative usually spans several repos, so the same repo can hold a window
+in more than one session. The window name carries the activity; the session
+name is what tells two `homelab` windows apart.
 
-Continuum auto-saves every 15 minutes. After reboot, tmux restores from the last save automatically.
+| Component       | What it is                    | Survives reboot? |
+| --------------- | ----------------------------- | ---------------- |
+| sesh.toml       | Recipe for creating sessions  | YES              |
+| Running session | Process in tmux server (RAM)  | NO               |
+| Resurrect state | ~/.local/share/tmux/resurrect | YES              |
+
+Continuum auto-saves every 15 minutes, window names and pane contents included.
+Its own auto-restore is off — the `sesh` shell wrapper replays the last save
+instead, and only when no tmux server is already running. So the first `sesh`
+after a reboot brings everything back, including sessions you were done with.
 
 ```bash
 # Key bindings
