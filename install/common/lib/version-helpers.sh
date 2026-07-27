@@ -39,10 +39,41 @@ github_token() {
   [[ -n "$token" ]] && echo "$token"
 }
 
+# The version an offline bundle carries for a tool, read from its manifest.
+#
+# An offline install cannot ask GitHub what the latest version is — the network
+# that makes the bundle necessary is the same one that blocks the API. Resolving
+# from the manifest is also what makes the cache hit at all: the asset filename
+# is built from the version, so a version fetched live names a file the bundle
+# does not contain the moment upstream ships a release.
+#
+# Usage: offline_bundle_version <tool_name>
+offline_bundle_version() {
+  local tool="$1"
+  local manifest="${HOME}/installers/manifest.txt"
+
+  [[ -z "$tool" || ! -f "$manifest" ]] && return 1
+
+  local version
+  version=$(awk -F'|' -v want="$tool" \
+    '$1 ~ /^(binary|extra|go-binary|cargo|script)$/ && $2 == want { print $3; exit }' "$manifest")
+
+  [[ -n "$version" ]] || return 1
+  echo "$version"
+}
+
 fetch_github_latest_version() {
   local repo="$1"
 
   [[ -z "$repo" ]] && return 1
+
+  # Every installer sets BINARY_NAME before resolving a version, and both fetch
+  # paths short-circuit here rather than in get_latest_version, because neovim
+  # and the personal CLIs call these directly and would otherwise still hit the
+  # API on a network that blocks it.
+  if [[ "${OFFLINE_MODE:-false}" == "true" ]] && offline_bundle_version "${BINARY_NAME:-}"; then
+    return 0
+  fi
 
   local api_url="https://api.github.com/repos/${repo}/releases/latest"
   local version
@@ -73,6 +104,10 @@ fetch_github_latest_version_prefixed() {
   local prefix="$2"
 
   [[ -z "$repo" || -z "$prefix" ]] && return 1
+
+  if [[ "${OFFLINE_MODE:-false}" == "true" ]] && offline_bundle_version "${BINARY_NAME:-}"; then
+    return 0
+  fi
 
   local -a curl_opts=(-fsSL)
   local token
