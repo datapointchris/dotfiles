@@ -47,7 +47,7 @@ a result lives:
 | `[alias]` | shell aliases | `~/.local/shell/aliases.sh` + `$PLATFORM.sh` |
 | `[git]` | git aliases | `git config --get-regexp '^alias\.'` (invoke as `git <name>`) |
 | `[forgit]` | forgit fzf-git shortcuts | the forgit plugin (`ga`, `gd`, `glo`, …) — sourced after `aliases.sh`, so in no shell file menu reads |
-| `[tmux]` | tmux keybindings | the `tmux-commands` card (`~/.local/share/workflows/tmux-commands.md`), its two-column grid parsed into one row per binding |
+| `[tmux]` | tmux keybindings | the `tmux-commands` card (`~/.local/share/workflows/tmux-commands.md`), its key/description tables parsed into one row per binding |
 | `[workflow]` | reference cards | `~/.local/share/workflows/*.md` (frontmatter tags) |
 | `[skill]` | Claude skills | `~/.claude/skills/*/SKILL.md` |
 

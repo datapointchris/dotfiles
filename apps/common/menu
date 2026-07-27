@@ -53,30 +53,26 @@ is_forgit() { [[ -n "$(forgit_action "$1")" ]]; }
 extract_forgit() { local a; a=$(forgit_action "$1"); printf '%s → forgit::%s\ninteractive git %s, via fzf\n' "$1" "${a//_/::}" "${a//_/ }"; }
 
 # tmux keybindings live in the tmux-commands workflow card so the in-tmux popup
-# (prefix + t) and menu share one source of truth. The card lays bindings out in
-# two aligned columns inside a code fence; split each line on runs of 2+ spaces
-# and pair every binding token (prefix/Ctrl/Alt) with the token that follows.
-# Section headers and bare copy-mode keys (v, y) fall through and are skipped.
+# (prefix + t) and menu share one source of truth. The card is markdown tables of
+# key | description, so take the first two cells of every table row whose key
+# starts with a binding token. Separator rows, section headers and bare copy-mode
+# keys (v, y) fail that test and are skipped.
+#
+# A key cell may contain an escaped pipe (`prefix + \|`), which would otherwise
+# split as a column boundary, so those are swapped out before the split.
 TMUX_COMMANDS_CARD="$WORKFLOWS_DIR/tmux-commands.md"
 parse_tmux_keys() {
   [[ -f "$TMUX_COMMANDS_CARD" ]] || return 0
   awk '
-    /^```/ { inblock = !inblock; next }
-    !inblock { next }
-    {
-      n = split($0, cells, /  +/)
-      i = 1
-      while (i <= n) {
-        key = cells[i]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
-        if (key ~ /^(prefix|Ctrl|Alt)/) {
-          desc = (i + 1 <= n) ? cells[i + 1] : ""
-          gsub(/^[[:space:]]+|[[:space:]]+$/, "", desc)
-          print key "\t" desc
-          i += 2
-        } else {
-          i += 1
-        }
-      }
+    /^[[:space:]]*\|/ {
+      line = $0
+      gsub(/\\\|/, "\001", line)
+      if (split(line, cells, /\|/) < 3) next
+      key = cells[2]; desc = cells[3]
+      gsub(/\001/, "|", key); gsub(/\001/, "|", desc)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", desc)
+      if (key ~ /^(prefix|Ctrl|Alt)/) print key "\t" desc
     }
   ' "$TMUX_COMMANDS_CARD"
 }
