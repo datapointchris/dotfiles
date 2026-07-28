@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# work-monitor - Route this machine's spare HDMI output to the work desk monitor
+#
+# The output stays disabled in hyprland.conf so Hyprland never treats it as a
+# second monitor. This enables it on demand, parks workspace W on it, and
+# disables it again afterwards.
+#
+# Usage:
+#   work-monitor           Toggle the output
+#   work-monitor on        Enable and switch to workspace W
+#   work-monitor off       Disable
+#   work-monitor status    Report current state
+#
+# Override the connector or mode when the hardware changes:
+#   WORK_MONITOR_OUTPUT=HDMI-A-2 work-monitor on
+#   WORK_MONITOR_MODE=1920x1080@60 work-monitor on
+
+set -euo pipefail
+
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+source "$SHELL_DIR/formatting.sh"
+
+OUTPUT="${WORK_MONITOR_OUTPUT:-HDMI-A-1}"
+MODE="${WORK_MONITOR_MODE:-preferred}"
+POSITION="${WORK_MONITOR_POSITION:-auto-right}"
+SCALE="${WORK_MONITOR_SCALE:-1}"
+WORKSPACE="W"
+
+# Intent has to be tracked here rather than read back from `hyprctl monitors`:
+# whenever the Dell is showing the work laptop's input it drops hotplug detect,
+# so an enabled output vanishes from that list. Querying it would make toggle
+# fail in exactly the situation this tool exists for.
+STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/work-monitor/enabled"
+
+show_help() {
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+}
+
+has_signal() {
+    hyprctl monitors all -j | jq -e --arg o "$OUTPUT" 'any(.[]; .name == $o)' >/dev/null
+}
+
+is_enabled() {
+    [[ -f "$STATE_FILE" ]]
+}
+
+enable_output() {
+    hyprctl keyword monitor "$OUTPUT, $MODE, $POSITION, $SCALE" >/dev/null
+    hyprctl dispatch workspace "name:$WORKSPACE" >/dev/null
+    mkdir -p "$(dirname "$STATE_FILE")"
+    touch "$STATE_FILE"
+    print_success "$OUTPUT enabled — workspace $WORKSPACE is on the work desk monitor"
+
+    # Hyprland accepts the rule for a connector with no signal yet, so a warning
+    # beats an error: selecting the input on the Dell is what completes it.
+    if ! has_signal; then
+        print_warning "$OUTPUT has no signal — select this machine's input on the monitor"
+    fi
+}
+
+disable_output() {
+    hyprctl keyword monitor "$OUTPUT, disable" >/dev/null
+    rm -f "$STATE_FILE"
+    print_success "$OUTPUT disabled — back to a single monitor"
+}
+
+show_status() {
+    if is_enabled; then
+        print_info "$OUTPUT is enabled"
+    else
+        print_info "$OUTPUT is disabled"
+    fi
+
+    if has_signal; then
+        print_info "Signal present — the monitor is showing this machine"
+    else
+        print_info "No signal — the monitor is showing another input"
+    fi
+}
+
+case "${1:-toggle}" in
+    toggle)
+        if is_enabled; then disable_output; else enable_output; fi
+        ;;
+    on)
+        enable_output
+        ;;
+    off)
+        disable_output
+        ;;
+    status)
+        show_status
+        ;;
+    -h | --help | help)
+        show_help
+        ;;
+    *)
+        print_error "Unknown command: $1"
+        print_info "Usage: work-monitor [toggle|on|off|status]"
+        exit 1
+        ;;
+esac

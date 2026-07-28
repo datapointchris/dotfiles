@@ -120,6 +120,7 @@ nav:
       - Safekeep: apps/safekeep.md
       - Backup Incremental: apps/backup-incremental.md
       - Workflows: apps/workflows.md
+      - Work Monitor: apps/work-monitor.md
   - Architecture:
       - architecture/index.md
       - Management Interface: architecture/management-interface.md
