@@ -1308,6 +1308,12 @@ go_tools:
     binary_pattern: "forge_{version_num}_{os}_{go_arch}.tar.gz"
     description: Run commands and dies across all git repos
 
+  - name: bbkt
+    package: github.com/datapointchris/bbkt
+    github_repo: datapointchris/bbkt
+    binary_pattern: "bbkt_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Bitbucket Data Center pull request lifecycle from the terminal
+
   - name: sops
     package: github.com/getsops/sops/v3/cmd/sops
     github_repo: getsops/sops

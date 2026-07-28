@@ -504,7 +504,7 @@ def test_owner_filter_spans_every_install_method(real_packages_data):
 
     assert {i["name"] for i in owned["github_releases"]} == {"icb", "learning", "nomad", "meso"}
     assert {i["name"] for i in owned["custom_installers"]} == {"theme", "font", "bashselfupdate"}
-    assert {i["name"] for i in owned["go_tools"]} == {"todoui", "forge", "toolbox"}
+    assert {i["name"] for i in owned["go_tools"]} == {"todoui", "forge", "toolbox", "bbkt"}
     assert "indy" in {i["name"] for i in owned["git_uv_tools"]}
     assert "webviewrs" in {i["name"] for i in owned["cargo_packages"]}
 

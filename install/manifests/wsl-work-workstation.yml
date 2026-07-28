@@ -18,6 +18,7 @@ go_tools:
   - sesh
   - toolbox
   - todoui
+  - bbkt
 
 github_releases:
   - fzf
