@@ -1166,6 +1166,29 @@ tools:
     tags: [aws, data-engineering, lambda, glue, step-functions, python, cli]
     docs_url: "https://github.com/datapointchris/dectl"
 
+  bbkt:
+    category: custom-tools
+    description: "Pull request lifecycle for self-hosted Bitbucket Data Center, from the terminal"
+    installed_via: go
+    usage: "bbkt pr VERB [ID] [OPTIONS]"
+    why_use: "Every maintained Bitbucket CLI targets Cloud's REST 2.0, which self-hosted Data Center does not speak — this drives create/review/merge without the web UI, inferring the repo from the git remote"
+    examples:
+      - cmd: "bbkt pr list --reviewing"
+        desc: "What is waiting on your review, across every repo on the instance"
+      - cmd: "bbkt pr create"
+        desc: "Open a PR from the checked-out branch, title derived from the Jira key"
+      - cmd: "bbkt pr view 42"
+        desc: "Title, reviewers, approval state, and the command to diff it"
+      - cmd: "git diff origin/main...HEAD | delta"
+        desc: "Review the diff — the same merge-base diff the web view renders"
+      - cmd: "bbkt pr approve"
+        desc: "Approve the pull request for the current branch"
+      - cmd: "bbkt pr merge 42"
+        desc: "Merge after checking Bitbucket's own conflict and approval vetoes"
+    see_also: [dectl, forge, delta]
+    tags: [bitbucket, pull-request, code-review, jira, work, go, cli]
+    docs_url: "https://github.com/datapointchris/bbkt"
+
   theme:
     category: custom-tools
     description: "Unified theme management across terminal apps (ghostty, tmux, btop, waybar, rofi, dunst)"
