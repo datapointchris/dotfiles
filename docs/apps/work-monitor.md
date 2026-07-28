@@ -12,12 +12,12 @@ Arch Linux only.
 
 ```bash
 work-monitor           # Toggle the output
-work-monitor on        # Enable and switch to workspace W
+work-monitor on        # Enable and switch to workspace 9
 work-monitor off       # Disable
 work-monitor status    # Report current state
 ```
 
-Bound to ++super+ctrl+w++. Workspace W is reachable with ++super+w++, and ++super+shift+w++ moves the focused window there.
+Bound to ++super+ctrl+w++. Workspace 9 is reachable with ++super+9++, and ++super+shift+9++ moves the focused window there.
 
 ## The Problem This Solves
 
@@ -31,7 +31,7 @@ Leaving the cable plugged in and letting the output come and go on its own does 
 
 The output is declared disabled in `conf/monitors.conf`, after the catch-all so it overrides it. A disabled output is not a monitor at all — Hyprland assigns it no workspaces and nothing can open on it, so the default state is a clean single-monitor setup regardless of what the cable is doing.
 
-`work-monitor on` applies a live `monitor` rule with `hyprctl keyword`, which enables the output for that session only. Workspace W is bound to the connector in `conf/workspaces.conf`, so it lands there and nothing else moves. `work-monitor off` re-disables it, and any windows still on W migrate back to the 43".
+`work-monitor on` applies a live `monitor` rule with `hyprctl keyword`, which enables the output for that session only. Workspace 9 is bound to the connector in `conf/workspaces.conf`, so it lands there and nothing else moves. `work-monitor off` re-disables it, and any windows still on 9 migrate back to the 43".
 
 Because the rule is applied at runtime and the config default is `disable`, a Hyprland reload always returns to the single-monitor state.
 

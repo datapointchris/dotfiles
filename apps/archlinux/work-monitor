@@ -2,12 +2,12 @@
 # work-monitor - Route this machine's spare HDMI output to the work desk monitor
 #
 # The output stays disabled in hyprland.conf so Hyprland never treats it as a
-# second monitor. This enables it on demand, parks workspace W on it, and
+# second monitor. This enables it on demand, parks workspace 9 on it, and
 # disables it again afterwards.
 #
 # Usage:
 #   work-monitor           Toggle the output
-#   work-monitor on        Enable and switch to workspace W
+#   work-monitor on        Enable and switch to workspace 9
 #   work-monitor off       Disable
 #   work-monitor status    Report current state
 #
@@ -24,7 +24,7 @@ OUTPUT="${WORK_MONITOR_OUTPUT:-HDMI-A-1}"
 MODE="${WORK_MONITOR_MODE:-preferred}"
 POSITION="${WORK_MONITOR_POSITION:-auto-right}"
 SCALE="${WORK_MONITOR_SCALE:-1}"
-WORKSPACE="W"
+WORKSPACE="9"
 
 # Intent has to be tracked here rather than read back from `hyprctl monitors`:
 # whenever the Dell is showing the work laptop's input it drops hotplug detect,
@@ -46,7 +46,7 @@ is_enabled() {
 
 enable_output() {
     hyprctl keyword monitor "$OUTPUT, $MODE, $POSITION, $SCALE" >/dev/null
-    hyprctl dispatch workspace "name:$WORKSPACE" >/dev/null
+    hyprctl dispatch workspace "$WORKSPACE" >/dev/null
     mkdir -p "$(dirname "$STATE_FILE")"
     touch "$STATE_FILE"
     print_success "$OUTPUT enabled — workspace $WORKSPACE is on the work desk monitor"
