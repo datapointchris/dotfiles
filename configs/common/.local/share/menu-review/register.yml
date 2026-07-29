@@ -69,6 +69,11 @@ items:
     cadence: 3mo
     command: claude /audit-standards
 
+  audit-skills:
+    description: Deep check of the Claude skill library — naming, triggers, overlap, drift
+    cadence: 6mo
+    command: claude /audit-skills
+
   audit-repo:
     description: Audit a repo's infrastructure and config against ~/dev/standards
     cadence: 3mo
