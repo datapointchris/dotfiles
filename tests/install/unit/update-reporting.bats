@@ -73,6 +73,19 @@ make_uv_tool() {
   fi
 }
 
+# Writes the receipt uv keeps beside an installed tool, for a git requirement.
+make_uv_receipt() {
+  local uv_dir="$1" tool="$2" git_url="$3"
+  mkdir -p "$uv_dir/$tool"
+  cat > "$uv_dir/$tool/uv-receipt.toml" << RECEIPT
+[tool]
+requirements = [{ name = "$tool", git = "$git_url" }]
+entrypoints = [
+    { name = "$tool", install-path = "$HOME/.local/bin/$tool", from = "$tool" },
+]
+RECEIPT
+}
+
 # Writes an executable stub and echoes the directory to prepend to PATH.
 make_stub() {
   local name="$1" body="$2"
@@ -141,6 +154,49 @@ LIST'
   mkdir -p "$uv_dir"
 
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref nonexistent"
+  assert_failure
+  assert_output ""
+}
+
+# ================================================================
+# uv_tool_pinned_rev
+# ================================================================
+# The pin, not the installed version, decides whether `uv tool upgrade` can move
+# a git-installed tool at all — a pinned tag re-resolves to the same commit and
+# exits 0, which is how syncer was reported current eight releases behind.
+
+@test "uv_tool_pinned_rev: a pinned install reports its tag" {
+  local uv_dir="$BATS_TEST_TMPDIR/uv"
+  make_uv_receipt "$uv_dir" syncer "https://github.com/datapointchris/syncer.git?rev=v6.0.0"
+
+  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev syncer"
+  assert_success
+  assert_output "v6.0.0"
+}
+
+@test "uv_tool_pinned_rev: a branch install succeeds with no tag" {
+  local uv_dir="$BATS_TEST_TMPDIR/uv"
+  make_uv_receipt "$uv_dir" relate "https://github.com/datapointchris/relate.git"
+
+  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev relate"
+  assert_success
+  assert_output ""
+}
+
+@test "uv_tool_pinned_rev: a rev after another query parameter is still found" {
+  local uv_dir="$BATS_TEST_TMPDIR/uv"
+  make_uv_receipt "$uv_dir" syncer "https://github.com/datapointchris/syncer.git?subdirectory=cli&rev=v6.0.0"
+
+  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev syncer"
+  assert_success
+  assert_output "v6.0.0"
+}
+
+@test "uv_tool_pinned_rev: a tool with no receipt fails" {
+  local uv_dir="$BATS_TEST_TMPDIR/uv"
+  mkdir -p "$uv_dir"
+
+  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev nonexistent"
   assert_failure
   assert_output ""
 }

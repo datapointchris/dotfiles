@@ -53,6 +53,23 @@ uv_tool_installed_ref() {
   echo "$version"
 }
 
+# Echoes the release a git-installed tool's receipt pins, e.g. "v6.0.0", or
+# nothing when the install follows the default branch. Returns 1 when the tool
+# has no receipt.
+#
+# uv records `git+<url>@<tag>` as `git+<url>?rev=<tag>`, and re-resolves that pin
+# on every `uv tool upgrade` — so the pin, not the installed version, is what
+# says whether an upgrade can move at all. An install with no pin also has the
+# tool's own update notice disabled, which is why converting one is worth doing
+# even when the versions already match. See lib/uv-git-tools.sh.
+uv_tool_pinned_rev() {
+  local tool="$1"
+  local receipt="${UV_TOOL_DIR:-$HOME/.local/share/uv/tools}/$tool/uv-receipt.toml"
+  [[ -f "$receipt" ]] || return 1
+
+  sed -n 's/.*git = "[^"]*[?&]rev=\([^"&]*\)".*/\1/p' "$receipt" | head -n1
+}
+
 # Echoes the installed version of a crate, e.g. "v0.26.1". Returns 1 when the
 # crate is not cargo-managed — true for the packages that fall back to a system
 # package on platforms with no prebuilt binary.

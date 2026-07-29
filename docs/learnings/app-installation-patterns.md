@@ -57,17 +57,20 @@ ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 
 **Examples**: `relate`, `logsift`, `indy`, `refcheck`, `syncer`
 
-**Installation**: Installed from GitHub via `uv tool install` in packages.yml:
+**Installation**: Installed from GitHub via `uv tool install`, pinned to the repo's newest release tag, from packages.yml:
 
 ```yaml
 git_uv_tools:
   - name: relate
     repo: https://github.com/datapointchris/relate.git
-  - name: logsift
-    repo: https://github.com/datapointchris/logsift.git
+  - name: keymap-align
+    repo: https://github.com/datapointchris/keymap-align.git
+    tracks_branch: true    # publishes no releases, so there is no tag to pin
 ```
 
-**Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then pushed to GitHub. `uv tool install` gets the latest from GitHub.
+The pin is not optional. Each of these tools carries `pyselfupdate`, which reads uv's receipt to decide what it may do: a git requirement with no `rev=` is treated as a dev checkout, so the tool never prints an update notice and refuses to reinstall over itself. And once a receipt *is* pinned, `uv tool upgrade` re-resolves the pin to the same commit forever and reports "already at latest" however far behind it is. See `install/common/lib/uv-git-tools.sh`.
+
+**Development**: Source code lives in `~/tools/{app}/`. Changes are tested locally, then pushed to GitHub — and a release must be cut for the fleet to pick them up, since the install tracks release tags rather than `main`.
 
 **Binary location**: `~/.local/bin/` (managed by uv)
 

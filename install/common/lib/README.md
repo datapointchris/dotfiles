@@ -121,6 +121,29 @@ and re-deriving a result they already state is duplicated logic that can only dr
 - `git_checkouts_snapshot(parent_dir)` - `<name> <commit>` per line for every checkout directly
   inside a directory, for clone-per-thing managers like tpm and lazy.nvim; the checkouts rather than
   a lockfile, which only moves when upstream does and so misses a repair
+- `uv_tool_pinned_rev(tool)` - The release a git-installed tool's receipt pins, empty when it tracks
+  a branch; the pin, not the version, is what says whether `uv tool upgrade` can move it
+
+### uv-git-tools.sh
+
+Installing the personal Python CLIs that ship from a git repo rather than PyPI (`git_uv_tools`).
+Sourced by `uv-tools.sh` and `update.sh`.
+
+These installs are pinned to a release tag, because each tool's own `pyselfupdate`-based updater
+reads uv's receipt to decide what it may do: a git requirement with no `rev=` is a dev checkout, so
+the tool never prints an update notice and refuses to reinstall over itself. Pinning here writes the
+same receipt shape `<tool> update` writes, so the two agree instead of undoing each other, and both
+resolve the version from the same releases API. The cost of getting this wrong is silent: a pinned
+receipt makes `uv tool upgrade` a permanent no-op that still reports "already at latest", which hid
+eight syncer releases.
+
+**Functions:**
+
+- `github_slug_from_url(url)` - `owner/name` from an https or ssh clone URL; non-zero for any other
+  host, which has no releases API to ask
+- `uv_git_tool_latest_ref(repo)` - Newest release tag of a tool's repo
+- `uv_git_tool_requirement(tool, repo, ref)` - `<tool> @ git+<repo>@<ref>`, the requirement that
+  installs one release; the leading name is what makes the receipt readable afterwards
 
 ## Architecture
 
@@ -134,6 +157,7 @@ common/lib/ utilities
     - github-release-installer.sh (GitHub release helpers)
     - version-helpers.sh (version comparison, GitHub API)
     - installed-versions.sh (what is installed right now, for update reporting)
+    - uv-git-tools.sh (release-pinned installs of the git-hosted Python CLIs)
 ```
 
 **Key distinction:**

@@ -1190,8 +1190,13 @@ uv_tools:
 # ================================================================
 # GIT UV TOOLS
 # ================================================================
-# Installed via: uv tool install <repo_url>
+# Installed via: uv tool install <name> @ git+<repo_url>@<latest release tag>
 # Python tools installed from GitHub repositories
+#
+# Pinned to a release tag, because each tool's own updater refuses to touch an
+# install that tracks a branch — see install/common/lib/uv-git-tools.sh.
+# `tracks_branch: true` marks a repo that publishes no releases, and so has no
+# tag to pin.
 
 git_uv_tools:
   - name: refcheck
@@ -1205,6 +1210,7 @@ git_uv_tools:
   - name: keymap-align
     repo: https://github.com/datapointchris/keymap-align.git
     description: Align ZMK keymap bindings into readable columns
+    tracks_branch: true
 
   - name: indy
     repo: https://github.com/datapointchris/indy.git

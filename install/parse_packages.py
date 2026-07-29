@@ -114,7 +114,7 @@ def filter_git_uv_packages_by_manifest(data, manifest):
     if not manifest_tools:
         return []
     all_tools = data.get('git_uv_tools', [])
-    return [f"{pkg['name']}:{pkg['repo']}" for pkg in all_tools if pkg['name'] in manifest_tools]
+    return [format_git_uv_package(pkg) for pkg in all_tools if pkg['name'] in manifest_tools]
 
 
 def filter_npm_packages_by_manifest(data, manifest):
@@ -287,11 +287,23 @@ def get_uv_packages(data):
     return packages
 
 
+def format_git_uv_package(pkg):
+    """Format one git uv tool as 'name|repo|ref_mode'.
+
+    Pipe-delimited because a clone URL contains colons, and three fields because
+    the ref mode decides how the tool is installed: 'release' pins the newest
+    release tag, 'branch' follows the default branch for a repo that publishes
+    no releases. See install/common/lib/uv-git-tools.sh for why the pin matters.
+    """
+    ref_mode = 'branch' if pkg.get('tracks_branch') else 'release'
+    return f"{pkg['name']}|{pkg['repo']}|{ref_mode}"
+
+
 def get_git_uv_packages(data):
-    """Extract git uv tool name:repo pairs."""
+    """Extract git uv tool name|repo|ref_mode triples."""
     if 'git_uv_tools' not in data:
         return []
-    return [f"{pkg['name']}:{pkg['repo']}" for pkg in data['git_uv_tools']]
+    return [format_git_uv_package(pkg) for pkg in data['git_uv_tools']]
 
 
 

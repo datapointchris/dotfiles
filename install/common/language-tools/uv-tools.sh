@@ -6,6 +6,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/uv-git-tools.sh"
 
 # Check if uv is installed
 if ! command -v uv &>/dev/null; then
@@ -46,18 +47,27 @@ done
 
 print_section "Git Python Tools (uv)"
 
-/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=git_uv "${MANIFEST_FLAG[@]}" | while read -r line; do
-  name=$(echo "$line" | cut -d: -f1)
-  repo=$(echo "$line" | cut -d: -f2-)
-
+/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=git_uv "${MANIFEST_FLAG[@]}" | while IFS='|' read -r name repo ref_mode; do
   if uv tool list | grep -q "^$name "; then
     log_success "$name already installed, skipping"
-  else
-    log_info "Installing $name from $repo..."
-    if uv tool install "$repo"; then
-      log_success "$name installed"
+    continue
+  fi
+
+  # A release install is pinned to its tag so the tool's own updater will work
+  # on it at all; only a repo publishing no releases follows its branch.
+  requirement="$repo"
+  if [[ "$ref_mode" == "release" ]]; then
+    if ref=$(uv_git_tool_latest_ref "$repo"); then
+      requirement=$(uv_git_tool_requirement "$name" "$repo" "$ref")
     else
-      log_warning "Failed to install $name"
+      log_warning "$name: no release found, installing from the default branch (its own update will refuse to run)"
     fi
+  fi
+
+  log_info "Installing $name from $requirement..."
+  if uv tool install "$requirement"; then
+    log_success "$name installed"
+  else
+    log_warning "Failed to install $name"
   fi
 done

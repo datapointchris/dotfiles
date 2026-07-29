@@ -24,6 +24,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/run-installer.sh"
 source "$DOTFILES_DIR/install/common/lib/installed-versions.sh"
+source "$DOTFILES_DIR/install/common/lib/uv-git-tools.sh"
 
 # ~/.env carries MACHINE, which selects the manifest. install.sh does the same.
 if [[ -f "$HOME/.env" ]]; then
@@ -295,6 +296,57 @@ upgrade_uv_tool() {
   fi
 }
 
+# Moves a release-tracking git tool's pin to the newest release.
+#
+# `uv tool upgrade` cannot do this: it re-resolves the requirement it finds, and
+# a pinned tag resolves to the same commit every time, so it exits 0 having done
+# nothing — which is how syncer reported "already at latest" eight releases
+# behind. Reinstalling the requirement is the only thing that moves a pin.
+#
+# An install with no pin is reinstalled even when its version already matches
+# the newest release, because the pin is also what enables the tool's own update
+# notice. That converts the tools installed before this was the install shape.
+upgrade_released_uv_tool() {
+  local tool="$1" repo="$2" before="$3"
+  local latest pinned install_output install_status=0
+
+  if ! latest=$(uv_git_tool_latest_ref "$repo"); then
+    log_warning "$tool: failed to resolve the latest release of $repo"
+    return 1
+  fi
+
+  pinned=$(uv_tool_pinned_rev "$tool") || pinned=""
+  if [[ -n "$pinned" ]]; then
+    version_compare "$pinned" "$latest"
+    # 0 equal, 2 pinned ahead of the newest release — a prerelease build, so
+    # leave it rather than reinstalling backwards over it.
+    case $? in
+      0 | 2)
+        log_success "$tool already at latest (${before:-$pinned})"
+        return 0
+        ;;
+    esac
+  fi
+
+  install_output=$(uv tool install --force --quiet "$(uv_git_tool_requirement "$tool" "$repo" "$latest")" 2>&1) ||
+    install_status=$?
+  [[ "${DEBUG:-}" == "true" ]] && echo "$install_output"
+
+  if [[ $install_status -ne 0 ]]; then
+    log_warning "$tool update to $latest failed"
+    echo "$install_output" >&2
+    return 1
+  fi
+
+  local after
+  after=$(uv_tool_installed_ref "$tool") || after="$latest"
+  if [[ "$before" == "$after" ]]; then
+    log_success "$tool already at latest ($after, now pinned to $latest)"
+  else
+    log_success "$tool updated: ${before:-none} → $after"
+  fi
+}
+
 update_uv_tools() {
   # By name rather than `uv tool upgrade --all`: --all cannot be narrowed for
   # --mine, and its exit code is 0 whether or not anything changed, so a
@@ -306,14 +358,29 @@ update_uv_tools() {
     [[ -z "$tool" ]] && continue
     count=$((count + 1))
     upgrade_uv_tool "$tool"
-  done < <(update_uv_tools_items)
+  done < <(parse_packages --type=uv)
+
+  # The git tools carry their repo and ref mode, because moving a pin means
+  # reinstalling the requirement rather than upgrading the tool.
+  local name repo ref_mode before
+  while IFS='|' read -r name repo ref_mode; do
+    [[ -z "$name" ]] && continue
+    count=$((count + 1))
+    if [[ "$ref_mode" == "release" ]]; then
+      before=$(uv_tool_installed_ref "$name") || before=""
+      upgrade_released_uv_tool "$name" "$repo" "$before"
+    else
+      upgrade_uv_tool "$name"
+    fi
+  done < <(parse_packages --type=git_uv)
+
   [[ $count -eq 0 ]] && log_info "no Python tools selected"
   return 0
 }
 
 update_uv_tools_items() {
   parse_packages --type=uv
-  parse_packages --type=git_uv | cut -d: -f1
+  parse_packages --type=git_uv | cut -d'|' -f1
 }
 
 update_npm_globals() {

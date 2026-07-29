@@ -135,6 +135,46 @@ def test_get_uv_packages(sample_packages_data):
     assert packages == ["black", "isort"]
 
 
+def test_get_git_uv_packages_defaults_to_release_mode():
+    """A git uv tool is installed pinned to its newest release unless told otherwise.
+
+    The ref mode travels to the shell because it decides the install: pinning is
+    what lets a tool's own updater run on it, and what stops `uv tool upgrade`
+    re-resolving a pin to the same commit and calling it current forever.
+    """
+    data = {"git_uv_tools": [{"name": "syncer", "repo": "https://github.com/datapointchris/syncer.git"}]}
+
+    assert parse_packages.get_git_uv_packages(data) == [
+        "syncer|https://github.com/datapointchris/syncer.git|release"
+    ]
+
+
+def test_get_git_uv_packages_marks_a_branch_tracking_tool():
+    """`tracks_branch` is for a repo publishing no releases, so there is no tag to pin."""
+    data = {
+        "git_uv_tools": [
+            {
+                "name": "keymap-align",
+                "repo": "https://github.com/datapointchris/keymap-align.git",
+                "tracks_branch": True,
+            }
+        ]
+    }
+
+    assert parse_packages.get_git_uv_packages(data) == [
+        "keymap-align|https://github.com/datapointchris/keymap-align.git|branch"
+    ]
+
+
+def test_get_git_uv_packages_is_pipe_delimited(real_packages_data):
+    """Pipe, not colon: a clone URL contains colons, so the shell cannot split on them."""
+    for entry in parse_packages.get_git_uv_packages(real_packages_data):
+        name, repo, ref_mode = entry.split("|")
+        assert name
+        assert repo.startswith("https://")
+        assert ref_mode in ("release", "branch")
+
+
 def test_get_go_packages(sample_packages_data):
     """Test extracting go tool package paths."""
     packages = parse_packages.get_go_packages(sample_packages_data)
