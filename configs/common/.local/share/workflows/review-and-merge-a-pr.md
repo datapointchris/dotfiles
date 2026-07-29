@@ -7,6 +7,9 @@ tags: [gh, github, pr, pull-request, review, merge, ci, recipe]
 ```bash
 # GOAL: take a pull request from "haven't looked" to merged without leaving the
 # terminal — and actually RUN the code, not just read the diff, before approving.
+#
+# GITHUB. For work / Bitbucket Data Center, this is `bbkt` instead:
+#   workflows show review-and-merge-a-pr-with-bbkt
 
 # 1. FIND it
 gh pr list                 # open PRs in this repo (number, title, branch)
