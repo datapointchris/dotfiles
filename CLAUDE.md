@@ -1,16 +1,8 @@
 # Claude Code - Dotfiles Development Context
 
-## Critical Rules
-
-**Note**: The following universal rules are defined in `~/.claude/CLAUDE.md` and apply to ALL projects:
-
-- System Environment (GNU tools)
-- Git Safety Protocol, Git Commit Messages, Git Hygiene
-- Never Commit Untested Fixes
-- Problem Solving Philosophy (including "never repeat same test")
-- Code Comments Philosophy
-- Tools Over Instructions
-- Command Output Handling
+Universal rules — git safety and commit conventions, testing, code comments, environment and tool
+preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things lives in
+`~/dev/standards/`. Neither is restated here.
 
 **This file contains ONLY dotfiles-specific rules and patterns.**
 
