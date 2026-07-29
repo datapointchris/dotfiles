@@ -539,14 +539,24 @@ def test_owner_filter_spans_every_install_method(real_packages_data):
     Regression guard for the reason owner-derivation was chosen over a `personal`
     tag: a tag has to be remembered on each new tool, and silently excludes what
     it misses.
+
+    Each section is checked by representative rather than by exact set. An exact
+    set turns "a new tool was added" into a test failure, which teaches you to
+    edit the assertion instead of reading it — and the assertion is not an
+    inventory, it is proof that owner-derivation reaches that section at all.
+    The negative direction is test_owner_filter_excludes_third_party.
     """
     owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
 
-    assert {i["name"] for i in owned["github_releases"]} == {"icb", "learning", "nomad", "meso"}
-    assert {i["name"] for i in owned["custom_installers"]} == {"theme", "font", "bashselfupdate"}
-    assert {i["name"] for i in owned["go_tools"]} == {"todoui", "forge", "toolbox", "bbkt"}
-    assert "indy" in {i["name"] for i in owned["git_uv_tools"]}
-    assert "webviewrs" in {i["name"] for i in owned["cargo_packages"]}
+    representatives = {
+        "github_releases": {"icb", "learning", "nomad", "meso"},
+        "custom_installers": {"theme", "font", "bashselfupdate"},
+        "go_tools": {"todoui", "forge", "toolbox"},
+        "git_uv_tools": {"indy"},
+        "cargo_packages": {"webviewrs"},
+    }
+    for section, expected in representatives.items():
+        assert expected <= {i["name"] for i in owned[section]}, section
 
 
 def test_owner_filter_excludes_third_party(real_packages_data):

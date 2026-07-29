@@ -1320,6 +1320,12 @@ go_tools:
     binary_pattern: "bbkt_{version_num}_{os}_{go_arch}.tar.gz"
     description: Bitbucket Data Center pull request lifecycle from the terminal
 
+  - name: ifiles
+    package: github.com/datapointchris/ifiles
+    github_repo: datapointchris/ifiles
+    binary_pattern: "ifiles_{version_num}_{os}_{go_arch}.tar.gz"
+    description: Chunked file transfer to and from files.ichrisbirch.com
+
   - name: sops
     package: github.com/getsops/sops/v3/cmd/sops
     github_repo: getsops/sops
