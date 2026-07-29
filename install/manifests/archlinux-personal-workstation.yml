@@ -54,6 +54,7 @@ custom_installers:
   - claude-code
   - terraform-ls
   - mount-s3
+  - bashselfupdate
   - theme
   - font
 

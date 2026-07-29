@@ -51,6 +51,7 @@ custom_installers:
   - awscli
   - claude-code
   - terraform-ls
+  - bashselfupdate
   - theme
   - font
 
