@@ -17,10 +17,10 @@ items:
     cadence: 2w
     command: brew-maintenance
 
-  audit-docs:
+  audit-repo-docs:
     description: Audit docs, CLAUDE.md, and memory for drift in the current repo
     cadence: 1mo
-    command: claude /audit-docs
+    command: claude /audit-repo-docs
 
   revisit-a-tool:
     description: Relearn a tool you've let go cold
@@ -34,10 +34,10 @@ items:
     command: menu labs
     show: menu labs --due
 
-  flow-review:
+  audit-flow:
     description: Analyze how you work in the terminal; codify the better ways
     cadence: 1mo
-    command: claude /flow-review
+    command: claude /audit-flow
 
   indy-reindex:
     description: Re-index indy so semantic search stays current with code changes
@@ -49,25 +49,30 @@ items:
     cadence: 1mo
     command: forge dies run maintenance/pre-commit-update.sh
 
-  dev-review:
+  review-fleet:
     description: Cross-repo situational overview — activity, new tools, drift
     cadence: 1mo
-    command: claude /dev-review
+    command: claude /review-fleet
 
   toolbox-check:
     description: Check personal-tool drift (registry vs PATH vs disk)
     cadence: 1mo
     command: toolbox check
 
-  cleanup-claude-md:
-    description: Cross-project CLAUDE.md and memory coherence and dedup
+  audit-fleet-docs:
+    description: Fleetwide doc coherence — layer discipline, dedup, unreachable docs
     cadence: 3mo
-    command: claude /cleanup-claude-md
+    command: claude /audit-fleet-docs
 
-  audit-repo-quality:
-    description: Audit a repo's infrastructure and deployment quality
+  audit-standards:
+    description: Check ~/dev/standards still describes the repos it governs
     cadence: 3mo
-    command: claude /audit-repo-quality
+    command: claude /audit-standards
+
+  audit-repo:
+    description: Audit a repo's infrastructure and config against ~/dev/standards
+    cadence: 3mo
+    command: claude /audit-repo
 
   repo-hygiene-checks:
     description: Run repo-hygiene check dies (planning dir, pre-commit, gitignore, CLAUDE.md)

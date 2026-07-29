@@ -362,7 +362,7 @@ if command -v fzf >/dev/null 2>&1; then
 fi
 
 # atuin — SQLite history capture (command, exit, cwd, session) backing the
-# flow-review analysis. atuin owns Ctrl-R (its DB-backed search shows time, cwd,
+# audit-flow analysis. atuin owns Ctrl-R (its DB-backed search shows time, cwd,
 # and exit — richer than fzf's flat fuzzy match; it overrides fzf's Ctrl-R since
 # this sources after the fzf block). Up-arrow stays the prefix-search bound above
 # (--disable-up-arrow) rather than atuin's launch-a-TUI-every-press. To revert

@@ -22,7 +22,7 @@ Research date: 2026-07-07.
     Substantially built. `menu` unifies the discovery doors (job 1); the retention layer (job 3)
     was rebuilt by **removing** the `workflows motd` random card and replacing it with the
     `menu review` register + a first-shell-of-each-half-day nudge; and the analysis layer (job 2)
-    now exists — **atuin** captures cwd/exit/session and the **`/flow-review`** skill turns that
+    now exists — **atuin** captures cwd/exit/session and the **`/audit-flow`** skill turns that
     history into codified fixes. The "upgrade the motd to weekly rotation" and "build the LLM
     coach" lines below are now done. See `docs/apps/menu.md`.
 

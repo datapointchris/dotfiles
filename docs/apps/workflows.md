@@ -30,6 +30,6 @@ The distinction exists because a multi-tool sequence has no natural home among s
 
 ## Adding a card
 
-Create cards two ways. `workflows new <name>` scaffolds a file and opens it in `$EDITOR` for hand-authoring. Or, after working through something with Claude Code, the `/add-to-workflows` skill extracts what was learned into a correctly-formatted card and commits it — that skill encodes the reference-vs-recipe convention above so generated cards land in the right shape.
+Create cards two ways. `workflows new <name>` scaffolds a file and opens it in `$EDITOR` for hand-authoring. Or, after working through something with Claude Code, the `/capture-workflow` skill extracts what was learned into a correctly-formatted card and commits it — that skill encodes the reference-vs-recipe convention above so generated cards land in the right shape.
 
 Keep cards to roughly one terminal screen (around 60 lines). Enough to be a useful jog, not so much that the card becomes documentation — long-form explanation belongs here in `docs/`, not on a card.

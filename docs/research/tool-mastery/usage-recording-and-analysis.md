@@ -19,12 +19,12 @@ Research date: 2026-07-07.
 
 !!! note "Built (2026-07-08)"
     The LLM coach described below now exists. **atuin** was adopted as the capture layer (SQLite;
-    command, exit, cwd, session — the metadata the flat history lacks), and the **`/flow-review`**
+    command, exit, cwd, session — the metadata the flat history lacks), and the **`/audit-flow`**
     skill is the analysis pass: it reads atuin + the user's own aliases/functions/tools/workflows,
     finds inefficiencies, and codifies the accepted fixes. One caveat the "use what you have" section
     below understates: imported flat history has no cwd/exit/session, so the sequence and
     per-directory analysis only works on commands captured *after* atuin was installed, and ramps
-    over time. See `docs/apps/menu.md` and `~/.claude/skills/flow-review/`.
+    over time. See `docs/apps/menu.md` and `~/.claude/skills/audit-flow/`.
 
 ## What your own history already reveals
 

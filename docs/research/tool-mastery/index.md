@@ -51,7 +51,7 @@ pieces rather than replacing them:
 
 | Layer | Tool | State | Location |
 | --- | --- | --- | --- |
-| **Author** | `add-to-workflows` skill, `workflows new` | Working | `.claude/skills/`, `apps/common/workflows` |
+| **Author** | `capture-workflow` skill, `workflows new` | Working | `.claude/skills/`, `apps/common/workflows` |
 | **Browse (personal cards)** | `workflows search` — fzf + bat over 32 cards | Working | `~/.local/share/workflows/*.md` |
 | **Browse (tool catalog)** | `toolbox` — reads `~/dev/tools.yml` (69 KB) | Working | `~/tools/toolbox` |
 | **Browse (federated)** | `menu` | Working — fzf search across tools registry + tagged workflows + skills, biased to name/tags, delegating display to each collection | `apps/common/menu` |

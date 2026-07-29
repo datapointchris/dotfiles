@@ -58,7 +58,7 @@ exist:
 - `backmeup` (own tool) → help + toolbox.
 - `bat` (external) → toolbox + tldr + cheat.
 - `git-stash` (workflow) → tldr + workflow.
-- `add-to-notes` (skill) → skill.
+- `capture-note` (skill) → skill.
 
 The HELP lens fires only for your own tools that resolve on PATH (registry
 `category: custom-tools`), run under `timeout 5`; running `--help` on an arbitrary
@@ -92,7 +92,7 @@ Two files, a clean config/state split:
 
 `next_due = last_done + cadence` is **derived, not stored**. Subcommands:
 `menu review` (due list), `list`, `done <id>`, `edit`. Review items include
-skills that are themselves review cadences (`audit-docs`, `dev-review`).
+skills that are themselves review cadences (`audit-repo-docs`, `review-fleet`).
 
 ## Future directions
 
