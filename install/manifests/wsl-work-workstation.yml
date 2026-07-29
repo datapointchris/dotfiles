@@ -19,6 +19,7 @@ go_tools:
   - toolbox
   - todoui
   - bbkt
+  - ifiles
 
 github_releases:
   - fzf
