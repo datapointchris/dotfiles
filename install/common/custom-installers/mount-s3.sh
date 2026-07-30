@@ -20,6 +20,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
 BINARY_NAME="mount-s3"
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
@@ -43,6 +44,10 @@ fi
 
 UPDATE_MODE=false
 [[ "${1:-}" == "--update" ]] && UPDATE_MODE=true
+
+if [[ "$UPDATE_MODE" == "true" ]] && ! command -v mount-s3 >/dev/null 2>&1; then
+  skip_update_for_absent_tool "mount-s3"
+fi
 
 # Idempotency: skip if already installed, unless forcing or updating to latest.
 if [[ "$UPDATE_MODE" != "true" ]] && [[ "${FORCE_INSTALL:-false}" != "true" ]] \

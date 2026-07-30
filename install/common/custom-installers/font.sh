@@ -19,9 +19,9 @@ fi
 # `exit 0` hid genuine failures from run-installer.sh.
 if [[ "${1:-}" == "--update" ]]; then
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
   if ! command -v font >/dev/null 2>&1; then
-    log_info "font not installed, skipping update"
-    exit 0
+    skip_update_for_absent_tool "font"
   fi
   font upgrade
   exit $?

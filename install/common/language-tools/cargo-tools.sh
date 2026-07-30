@@ -6,6 +6,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
 source "$HOME/.cargo/env"
 
@@ -84,10 +85,7 @@ install_from_cache() {
   return 0
 }
 
-MANIFEST_FLAG=()
-if [[ -n "${MACHINE:-}" ]]; then
-  MANIFEST_FLAG=(--manifest="$MACHINE")
-fi
+init_package_filters
 
 # Install only when executed, never when sourced — unit tests source this file
 # to call install_from_cache directly.
@@ -123,7 +121,7 @@ Or download pre-built binary and place in:
       log_warning "$package installation failed (see summary)"
       FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi
-  done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=name_command "${MANIFEST_FLAG[@]}")
+  done < <(parse_packages --type=cargo --format=name_command)
 
   if [[ $FAILURE_COUNT -gt 0 ]]; then
     log_warning "$FAILURE_COUNT package(s) failed to install"

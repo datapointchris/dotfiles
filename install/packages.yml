@@ -928,6 +928,7 @@ github_releases:
 
 custom_installers:
   - name: awscli
+    command: aws
     source_type: official_installer
     url: https://awscli.amazonaws.com
     description: AWS Command Line Interface v2 (official installer, platform-specific archive)
@@ -940,6 +941,7 @@ custom_installers:
     description: Bash Automated Testing System (cloned from GitHub, builds from source)
 
   - name: claude-code
+    command: claude
     source_type: official_installer
     url: https://claude.ai/install.sh
     bundle_install_script: true
@@ -962,6 +964,9 @@ custom_installers:
     source_type: github_clone
     repo: datapointchris/bashselfupdate
     install_url: https://raw.githubusercontent.com/datapointchris/bashselfupdate/main/install.sh
+    # Sourced library, no binary on PATH — the checkout is the only evidence it
+    # is installed, so `packages missing` and the installer both read it here.
+    installed_path: ~/.local/lib/bashselfupdate
     bundle_install_script: true
     description: Sourced bash library providing update and update-notify for git-checkout tools
 
@@ -1088,6 +1093,7 @@ npm_globals:
       description: TypeScript & JavaScript LSP
 
     - name: typescript
+      command: tsc
       description: TypeScript compiler (peer dependency for ts-server)
 
     - name: bash-language-server
@@ -1097,12 +1103,14 @@ npm_globals:
       description: YAML LSP
 
     - name: vscode-langservers-extracted
+      command: vscode-json-language-server
       description: HTML, CSS, JSON, ESLint LSPs
 
     - name: gh-actions-language-server
       description: GitHub Actions LSP
 
     - name: "@taplo/cli"
+      command: taplo
       description: TOML language server and formatter
 
   # Linters & Formatters
@@ -1114,6 +1122,7 @@ npm_globals:
       description: Code formatter (multi-language)
 
     - name: markdownlint-cli
+      command: markdownlint
       description: Markdown linter
 
   # Build Tools
@@ -1176,6 +1185,7 @@ uv_tools:
   # Development Tools
   development:
     - name: jupyterlab
+      command: jupyter-lab
       description: Full Jupyter stack (provides `jupyter` CLI and kernel infrastructure for molten.nvim)
 
     - name: pre-commit

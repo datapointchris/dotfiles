@@ -7,6 +7,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/uv-git-tools.sh"
+source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
 # Check if uv is installed
 if ! command -v uv &>/dev/null; then
@@ -23,15 +24,12 @@ if [[ ! -f "$DOTFILES_DIR/install/packages.yml" ]]; then
   exit 1
 fi
 
-MANIFEST_FLAG=()
-if [[ -n "${MACHINE:-}" ]]; then
-  MANIFEST_FLAG=(--manifest="$MACHINE")
-fi
+init_package_filters
 
 print_section "Python Tools (uv)"
 
 # Get uv tools from packages.yml via Python parser
-/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=uv "${MANIFEST_FLAG[@]}" | while read -r tool; do
+parse_packages --type=uv | while read -r tool; do
   # Check if tool is already installed
   if uv tool list | grep -q "^$tool "; then
     log_success "$tool already installed, skipping"
@@ -47,7 +45,7 @@ done
 
 print_section "Git Python Tools (uv)"
 
-/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=git_uv "${MANIFEST_FLAG[@]}" | while IFS='|' read -r name repo ref_mode; do
+parse_packages --type=git_uv | while IFS='|' read -r name repo ref_mode; do
   if uv tool list | grep -q "^$name "; then
     log_success "$name already installed, skipping"
     continue

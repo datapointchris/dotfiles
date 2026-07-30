@@ -20,6 +20,13 @@
 # tag before downloading. Re-deriving a result those already state is duplicated
 # logic that can only drift away from the truth.
 
+# Whether uv has this tool at all. Distinct from uv_tool_installed_ref failing,
+# which also covers an installed tool whose dist-info could not be read — an
+# update should still run for that one.
+uv_tool_is_installed() {
+  [[ -d "${UV_TOOL_DIR:-$HOME/.local/share/uv/tools}/$1" ]]
+}
+
 # Echoes "<version> (<commit>)" for a git-installed tool, or "<version>" for one
 # from an index. Returns 1 when the tool has no installed record.
 #

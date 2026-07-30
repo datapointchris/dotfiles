@@ -4,13 +4,17 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 DOTFILES_DIR="$SCRIPT_DIR"
 FAILURES_LOG="/tmp/dotfiles-update-failures-$(date +%Y%m%d-%H%M%S).txt"
+MISSING_LOG="/tmp/dotfiles-update-missing-$(date +%Y%m%d-%H%M%S).txt"
 
 # Read by run-installer.sh, which is shared with install.sh — without this a
-# failed `--update` run would be reported as a failed installation.
+# failed `--update` run would be reported as a failed installation. The release
+# installers also read it to decide that an absent binary is a thing to report
+# rather than a thing to install.
 INSTALLER_ACTION="update"
 
 export DOTFILES_DIR
 export FAILURES_LOG
+export MISSING_LOG
 export INSTALLER_ACTION
 export TERM=${TERM:-xterm}
 
@@ -25,6 +29,8 @@ source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/run-installer.sh"
 source "$DOTFILES_DIR/install/common/lib/installed-versions.sh"
 source "$DOTFILES_DIR/install/common/lib/uv-git-tools.sh"
+source "$DOTFILES_DIR/install/common/lib/package-query.sh"
+source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
 # ~/.env carries MACHINE, which selects the manifest. install.sh does the same.
 if [[ -f "$HOME/.env" ]]; then
@@ -33,46 +39,8 @@ if [[ -f "$HOME/.env" ]]; then
   set +a
 fi
 
-OWNER="datapointchris"
-
-# ================================================================
-# PHASE REGISTRY
-# ================================================================
-# Single source of truth for --list, --dry-run, group membership, and help.
-# Format: name|group|owner_aware|function
-#
-# owner_aware marks a phase whose contents can be traced to a GitHub owner, and
-# so can be narrowed by --mine. Phases driven by a registry instead (apt, npm,
-# PyPI) have no owner and are skipped under --mine rather than silently running
-# in full.
-
-UPDATE_GROUPS=(system languages tools plugins)
-
-UPDATE_PHASES=(
-  "system-packages|system|no|update_system_packages"
-  "go-toolchain|languages|no|update_go_toolchain"
-  "rust-toolchain|languages|no|update_rust_toolchain"
-  "uv|languages|no|update_uv"
-  "go-tools|tools|yes|update_go_tools"
-  "cargo|tools|yes|update_cargo_packages"
-  "uv-tools|tools|yes|update_uv_tools"
-  "npm-globals|tools|no|update_npm_globals"
-  "github-releases|tools|yes|update_github_releases"
-  "custom-installers|tools|yes|update_custom_installers"
-  "shell-plugins|plugins|no|update_shell_plugins"
-  "tmux-plugins|plugins|no|update_tmux_plugins"
-  "nvim-plugins|plugins|no|update_nvim_plugins"
-)
-
-GROUPS_SELECTED=()
-GROUPS_SKIPPED=()
-PACKAGE_FILTERS=()
-MINE=false
-DRY_RUN=false
-
-parse_packages() {
-  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" "$@" "${PACKAGE_FILTERS[@]}"
-}
+PHASE_VERB="update"
+source "$DOTFILES_DIR/install/phases.sh"
 
 # ================================================================
 # REPORTING
@@ -113,9 +81,15 @@ report_snapshot_changes() {
 # ================================================================
 # PHASES
 # ================================================================
-# A phase may define a companion <function>_items that echoes what it would act
-# on; --dry-run prints it. Keeping it beside the phase avoids a second list to
-# maintain.
+# What each phase would act on is resolved by the items_<phase> functions in
+# install/phases.sh, which --dry-run prints and install shares.
+#
+# No phase installs a tool it finds missing. Three of them used to, purely
+# because `go install @latest`, `cargo binstall`, and the release installers are
+# install-or-upgrade commands while `uv tool upgrade` and `<tool> upgrade` are
+# not — so whether update created a tool came down to which section of
+# packages.yml it had been added to. Missing tools are recorded and reported at
+# the end instead.
 
 update_system_packages() {
   case "$(detect_platform)" in
@@ -212,9 +186,6 @@ update_go_tools() {
   fi
 }
 
-update_go_tools_items() {
-  parse_packages --type=go --format=name_package | cut -d'|' -f1
-}
 
 update_cargo_packages() {
   print_section "Updating Rust packages via $(print_green "cargo binstall")"
@@ -225,6 +196,16 @@ update_cargo_packages() {
     cargo_count=$((cargo_count + 1))
 
     before=$(cargo_installed_version "$package") || before=""
+
+    # `cargo binstall` installs whether or not the package is present, so an
+    # absent one has to be caught before the call rather than after it. The
+    # binary check covers the packages a platform installs from its own
+    # repository instead of cargo, which have no cargo-recorded version.
+    if [[ -z "$before" ]] && ! command -v "$binary_name" >/dev/null 2>&1; then
+      log_warning "$package not installed — skipping update"
+      record_missing_tool "$package" "cargo"
+      continue
+    fi
 
     # Never through a pipe: piping to grep discarded binstall's exit status, so
     # a failed download reported the package as updated.
@@ -264,13 +245,16 @@ update_cargo_packages() {
   fi
 }
 
-update_cargo_packages_items() {
-  parse_packages --type=cargo --format=name_command | cut -d'|' -f1
-}
 
 upgrade_uv_tool() {
   local tool="$1"
   local before after upgrade_output upgrade_status=0
+
+  if ! uv_tool_is_installed "$tool"; then
+    log_warning "$tool not installed — skipping update"
+    record_missing_tool "$tool" "uv-tools"
+    return 0
+  fi
 
   before=$(uv_tool_installed_ref "$tool") || before=""
 
@@ -309,6 +293,14 @@ upgrade_uv_tool() {
 upgrade_released_uv_tool() {
   local tool="$1" repo="$2" before="$3"
   local latest pinned install_output install_status=0
+
+  # `uv tool install --force` below would create the tool outright, so absence
+  # has to be caught here rather than left to uv to report.
+  if ! uv_tool_is_installed "$tool"; then
+    log_warning "$tool not installed — skipping update"
+    record_missing_tool "$tool" "uv-tools"
+    return 0
+  fi
 
   if ! latest=$(uv_git_tool_latest_ref "$repo"); then
     log_warning "$tool: failed to resolve the latest release of $repo"
@@ -378,10 +370,6 @@ update_uv_tools() {
   return 0
 }
 
-update_uv_tools_items() {
-  parse_packages --type=uv
-  parse_packages --type=git_uv | cut -d'|' -f1
-}
 
 update_npm_globals() {
   print_section "Updating npm global packages via $(print_green "npm update -g")"
@@ -427,9 +415,6 @@ update_github_releases() {
   return 0
 }
 
-update_github_releases_items() {
-  parse_packages --type=github
-}
 
 update_custom_installers() {
   print_section "Updating Custom Distribution Tools"
@@ -449,9 +434,6 @@ update_custom_installers() {
   return 0
 }
 
-update_custom_installers_items() {
-  parse_packages --type=custom
-}
 
 update_shell_plugins() {
   print_section "Updating Shell plugins via $(print_green "git pull")"
@@ -482,9 +464,6 @@ update_shell_plugins() {
   done < <(parse_packages --type=shell-plugins --format=names)
 }
 
-update_shell_plugins_items() {
-  parse_packages --type=shell-plugins --format=names
-}
 
 update_tmux_plugins() {
   print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")"
@@ -535,103 +514,14 @@ update_nvim_plugins() {
 }
 
 # ================================================================
-# SELECTION
-# ================================================================
-
-group_is_valid() {
-  local candidate="$1" group
-  for group in "${UPDATE_GROUPS[@]}"; do
-    [[ "$group" == "$candidate" ]] && return 0
-  done
-  return 1
-}
-
-array_contains() {
-  local needle="$1"
-  shift
-  local item
-  for item in "$@"; do
-    [[ "$item" == "$needle" ]] && return 0
-  done
-  return 1
-}
-
-phase_selected() {
-  local group="$1" owner_aware="$2"
-
-  if [[ ${#GROUPS_SELECTED[@]} -gt 0 ]] && ! array_contains "$group" "${GROUPS_SELECTED[@]}"; then
-    return 1
-  fi
-  if [[ ${#GROUPS_SKIPPED[@]} -gt 0 ]] && array_contains "$group" "${GROUPS_SKIPPED[@]}"; then
-    return 1
-  fi
-  if [[ "$MINE" == "true" && "$owner_aware" != "yes" ]]; then
-    return 1
-  fi
-  return 0
-}
-
-# Names of the phases the current selection resolves to, in registry order.
-# main() and the unit tests both read the selection through this, so there is no
-# second implementation to disagree with.
-selected_phase_names() {
-  local entry name group owner_aware
-  for entry in "${UPDATE_PHASES[@]}"; do
-    IFS='|' read -r name group owner_aware _ <<<"$entry"
-    phase_selected "$group" "$owner_aware" && echo "$name"
-  done
-  return 0
-}
-
-run_phase() {
-  local name="$1" group="$2" fn="$3"
-
-  if [[ "$DRY_RUN" != "true" ]]; then
-    "$fn"
-    return $?
-  fi
-
-  print_section "$name ($group)"
-  if declare -F "${fn}_items" >/dev/null; then
-    local items item
-    items=$("${fn}_items")
-    if [[ -n "$items" ]]; then
-      while IFS= read -r item; do
-        echo "  $item"
-      done <<<"$items"
-    else
-      log_warning "  nothing selected"
-    fi
-  fi
-}
-
-list_phases() {
-  local group entry name phase_group owner_aware
-  help_header "Update Groups"
-  for group in "${UPDATE_GROUPS[@]}"; do
-    help_section "$group"
-    for entry in "${UPDATE_PHASES[@]}"; do
-      IFS='|' read -r name phase_group owner_aware _ <<<"$entry"
-      [[ "$phase_group" != "$group" ]] && continue
-      if [[ "$owner_aware" == "yes" ]]; then
-        help_row "$name" "" "(supports --mine)"
-      else
-        help_row "$name"
-      fi
-    done
-  done
-  help_end
-  exit 0
-}
-
-# ================================================================
 # ARGUMENTS
 # ================================================================
 
 usage() {
   help_header "update" "Update system packages, language tools, and plugins."
-  help_text "With no GROUP, every group runs."
-  help_usage "$(basename "$0") [GROUP...] [OPTIONS]"
+  help_text "With no SELECTOR, every group runs. Update never installs a tool that"
+  help_text "is missing — it reports it and leaves it to \`dotfiles install\`."
+  help_usage "$(basename "$0") [SELECTOR...] [OPTIONS]"
 
   help_section "Groups"
   help_row "system" "" "OS packages (brew/apt/pacman/yay/flatpak/mas) — needs sudo, slowest"
@@ -640,16 +530,13 @@ usage() {
   help_row "plugins" "" "Shell, tmux, and Neovim plugins"
 
   help_section "Options"
-  help_row "--skip" "GROUP" "Skip a group (repeatable)"
-  help_row "--no-system" "" "Alias for --skip system"
-  help_row "--mine" "" "Only tools owned by $OWNER; groups without an owner are skipped"
-  help_row "--list" "" "Show every group and its phases"
-  help_row "--dry-run" "" "Show what would run without running it"
+  help_shared_options
   help_row "--help, -h" "" "Show this help message"
 
   help_section "Examples"
   help_row "./update.sh" "" "# everything"
   help_row "./update.sh tools" "" "# only installed binaries"
+  help_row "./update.sh go-tools" "" "# a single phase"
   help_row "./update.sh tools plugins" "" "# two groups"
   help_row "./update.sh --no-system" "" "# skip the sudo-gated, slowest group"
   help_row "./update.sh --mine" "" "# refresh only $OWNER tools"
@@ -660,68 +547,25 @@ usage() {
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
+    consume_shared_arg "$@"
+    if [[ $SHARED_ARG_CONSUMED -gt 0 ]]; then
+      shift "$SHARED_ARG_CONSUMED"
+      continue
+    fi
     case $1 in
-    --skip)
-      if [[ -z "${2:-}" ]]; then
-        log_error "--skip requires a group name"
-        exit 1
-      fi
-      if ! group_is_valid "$2"; then
-        log_error "Unknown group: $2"
-        echo "Valid groups: ${UPDATE_GROUPS[*]}"
-        exit 1
-      fi
-      GROUPS_SKIPPED+=("$2")
-      shift 2
-      ;;
-    --no-system)
-      GROUPS_SKIPPED+=("system")
-      shift
-      ;;
-    --mine)
-      MINE=true
-      shift
-      ;;
-    --dry-run)
-      DRY_RUN=true
-      shift
-      ;;
-    --list)
-      list_phases
-      ;;
     --help | -h)
       usage
       ;;
-    -*)
+    *)
       log_error "Unknown option: $1"
       echo "Run with --help for usage information"
       exit 1
       ;;
-    *)
-      if ! group_is_valid "$1"; then
-        log_error "Unknown group: $1"
-        echo "Valid groups: ${UPDATE_GROUPS[*]}"
-        exit 1
-      fi
-      GROUPS_SELECTED+=("$1")
-      shift
-      ;;
     esac
   done
 
-  if [[ -n "${MACHINE:-}" ]]; then
-    if [[ -f "$DOTFILES_DIR/install/manifests/${MACHINE}.yml" ]]; then
-      PACKAGE_FILTERS+=(--manifest="$MACHINE")
-    else
-      log_warning "Manifest not found for MACHINE=$MACHINE — updating every package in packages.yml"
-    fi
-  fi
-
-  if [[ "$MINE" == "true" ]]; then
-    PACKAGE_FILTERS+=(--owner="$OWNER")
-    # go-tools.sh reads this to narrow its own packages.yml query
-    export PACKAGE_OWNER="$OWNER"
-  fi
+  export_selection_environment
+  init_package_filters
 }
 
 # ================================================================
@@ -740,20 +584,12 @@ main() {
   [[ "$MINE" == "true" ]] && log_info "Filtering to $OWNER tools"
   [[ "$DRY_RUN" == "true" ]] && log_info "Dry run — nothing will be modified"
 
-  local entry name group owner_aware fn ran=0
-  for entry in "${UPDATE_PHASES[@]}"; do
-    IFS='|' read -r name group owner_aware fn <<<"$entry"
-    phase_selected "$group" "$owner_aware" || continue
-    run_phase "$name" "$group" "$fn"
-    ran=$((ran + 1))
-  done
+  run_selected_phases || exit 1
 
-  if [[ $ran -eq 0 ]]; then
-    log_warning "No phases selected"
-    exit 1
+  if [[ "$DRY_RUN" != "true" ]]; then
+    show_failures_summary
+    show_missing_summary
   fi
-
-  [[ "$DRY_RUN" != "true" ]] && show_failures_summary
 
   end_time=$(date +%s)
   total_duration=$((end_time - start_time))

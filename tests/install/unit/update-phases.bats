@@ -97,6 +97,43 @@ SCRIPT
 }
 
 # ================================================================
+# Phase selection
+# ================================================================
+
+@test "update: a positional phase narrows to that phase alone" {
+  run bash "$SELECT" go-tools
+  assert_success
+  assert_output "go-tools"
+}
+
+@test "update: phases and groups combine" {
+  run bash "$SELECT" plugins go-tools
+  assert_success
+  assert_line "go-tools"
+  assert_line "nvim-plugins"
+  refute_line "cargo"
+}
+
+@test "update: --skip takes a phase name too" {
+  run bash "$SELECT" tools --skip cargo
+  assert_success
+  assert_line "go-tools"
+  refute_line "cargo"
+}
+
+@test "update: the install-only phases are not selectable" {
+  run bash "$SELECT" symlinks
+  assert_failure
+  assert_output --partial "Unknown group or phase"
+}
+
+@test "update: the config group is not offered, having no update phases" {
+  run bash "$SELECT" config
+  assert_failure
+  refute_output --partial "Valid groups: system languages tools config"
+}
+
+# ================================================================
 # Owner filtering
 # ================================================================
 

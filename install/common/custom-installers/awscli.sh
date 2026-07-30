@@ -11,6 +11,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
 OS=$(detect_os)
 ARCH=$(detect_arch)
@@ -38,7 +39,7 @@ fi
 # Linux: Version checking
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! command -v aws >/dev/null 2>&1; then
-    log_info "AWS CLI not installed, will install"
+    skip_update_for_absent_tool "awscli"
   else
     CURRENT_VERSION=$(aws --version 2>&1 | awk '{print $1}' | cut -d/ -f2)
     log_info "Current version: $CURRENT_VERSION"

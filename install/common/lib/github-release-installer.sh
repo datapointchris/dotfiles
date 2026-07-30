@@ -7,6 +7,7 @@
 # This library sources:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/version-helpers.sh"
+source "$SCRIPT_DIR/missing-tools.sh"
 
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
@@ -403,6 +404,14 @@ check_if_update_needed() {
   local latest_version="$2"
 
   if ! command -v "$binary_name" >/dev/null 2>&1; then
+    # An update reconciles what is installed; creating the binary here is what
+    # made `dotfiles update` silently install tools added to a manifest
+    # elsewhere. The drift is reported in the run summary instead.
+    if [[ "${INSTALLER_ACTION:-install}" == "update" ]]; then
+      log_warning "$binary_name not installed — skipping update"
+      record_missing_tool "$binary_name" "github-releases"
+      return 1
+    fi
     log_info "$binary_name not installed, will install"
     return 0
   fi

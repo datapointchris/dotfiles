@@ -6,6 +6,7 @@ export TERM=${TERM:-xterm}
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
 print_section "npm Global Packages"
 
@@ -26,13 +27,10 @@ mkdir -p "$NPM_CONFIG_PREFIX"
 
 log_info "Installing npm global packages from packages.yml..."
 
-MANIFEST_FLAG=()
-if [[ -n "${MACHINE:-}" ]]; then
-  MANIFEST_FLAG=(--manifest="$MACHINE")
-fi
+init_package_filters
 
 # Get npm packages from packages.yml (filtered by manifest) via Python parser
-NPM_PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=npm "${MANIFEST_FLAG[@]}")
+NPM_PACKAGES=$(parse_packages --type=npm)
 
 FAILURE_COUNT=0
 for package in $NPM_PACKAGES; do

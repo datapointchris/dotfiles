@@ -16,15 +16,15 @@ fi
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
 # Claude Code self-updates, no need to manually update
 if [[ "${1:-}" == "--update" ]]; then
-  if command -v claude >/dev/null 2>&1; then
-    CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
-    log_success "claude-code $CURRENT_VERSION (self-updates automatically)"
-  else
-    log_info "claude-code not installed"
+  if ! command -v claude >/dev/null 2>&1; then
+    skip_update_for_absent_tool "claude-code"
   fi
+  CURRENT_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
+  log_success "claude-code $CURRENT_VERSION (self-updates automatically)"
   exit 0
 fi
 

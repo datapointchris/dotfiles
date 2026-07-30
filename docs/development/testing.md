@@ -49,6 +49,7 @@ Test files:
 - `tests/install/test_parse_packages.py` — packages.yml parser (filtered-by-manifest behavior, section field extraction).
 - `tests/install/test_parse_packages_simple.py` — core parse-helper sanity.
 - `tests/apps/test_packages_verify.py` — `packages verify` drift detection. Every test builds a synthetic `install/packages.yml` + manifest tree in `tmp_path`, invokes `packages verify --root <tmp_path>` via subprocess, and asserts on stdout/stderr + exit code. One test per check. The real repo is never read.
+- `tests/apps/test_packages_missing.py` — `packages missing`, same synthetic-tree approach. It additionally has to control what "installed" means, so each test runs with `PATH` pointing at a temp directory holding only `uv` (needed for the script's own shebang) plus whatever binaries that test installs.
 
 ## packages verify
 

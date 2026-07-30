@@ -8,6 +8,8 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/installed-versions.sh"
+source "$DOTFILES_DIR/install/common/lib/package-query.sh"
+source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
 # Parse arguments
 FORCE_INSTALL="${FORCE_INSTALL:-false}"
@@ -37,15 +39,7 @@ if [[ ! -f "$DOTFILES_DIR/install/packages.yml" ]]; then
   exit 1
 fi
 
-MANIFEST_FLAG=()
-if [[ -n "${MACHINE:-}" ]]; then
-  MANIFEST_FLAG=(--manifest="$MACHINE")
-fi
-
-OWNER_FLAG=()
-if [[ -n "${PACKAGE_OWNER:-}" ]]; then
-  OWNER_FLAG=(--owner="$PACKAGE_OWNER")
-fi
+init_package_filters
 
 print_header "Go Tools"
 
@@ -62,6 +56,15 @@ while IFS='|' read -r binary_name tool; do
   # Check if already installed (unless --force or --update)
   if [[ -f "$binary_path" ]] && [[ "$FORCE_INSTALL" != "true" ]] && [[ "$UPDATE_MODE" != "true" ]]; then
     log_success "$binary_name already installed, skipping"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+    continue
+  fi
+
+  # `go install @latest` builds whether or not the binary exists, so an update
+  # would otherwise create tools it was never asked to install.
+  if [[ ! -f "$binary_path" ]] && [[ "$UPDATE_MODE" == "true" ]]; then
+    log_warning "$binary_name not installed — skipping update"
+    record_missing_tool "$binary_name" "go-tools"
     SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
     continue
   fi
@@ -142,7 +145,7 @@ Tool will be installed to:
     log_warning "Failed to install $binary_name (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi
-done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=name_package "${MANIFEST_FLAG[@]}" "${OWNER_FLAG[@]}")
+done < <(parse_packages --type=go --format=name_package)
 
 if [[ $FAILURE_COUNT -gt 0 ]]; then
   log_warning "$FAILURE_COUNT tool(s) failed to install"

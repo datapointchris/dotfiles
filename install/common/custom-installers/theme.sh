@@ -19,9 +19,9 @@ fi
 # `exit 0` hid genuine failures from run-installer.sh.
 if [[ "${1:-}" == "--update" ]]; then
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+  source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
   if ! command -v theme >/dev/null 2>&1; then
-    log_info "theme not installed, skipping update"
-    exit 0
+    skip_update_for_absent_tool "theme"
   fi
   theme upgrade
   exit $?

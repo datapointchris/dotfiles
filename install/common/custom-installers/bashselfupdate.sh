@@ -16,7 +16,10 @@ fi
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
-INSTALL_DIR="${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate"
+INSTALL_DIR=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+  --custom-installer bashselfupdate --field installed_path) \
+  || { log_error "Could not read bashselfupdate.installed_path from packages.yml"; exit 1; }
+INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 
 # Offline cache
 OFFLINE_CACHE_DIR="${HOME}/installers/scripts"
@@ -47,9 +50,9 @@ run_bashselfupdate_install() {
 # whether or not the directory already exists. There is no `bashselfupdate
 # update` to delegate to, because this is a sourced library and not a command.
 if [[ "${1:-}" == "--update" ]]; then
+  source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
   if [[ ! -d "$INSTALL_DIR/.git" ]]; then
-    log_info "bashselfupdate not installed, skipping update"
-    exit 0
+    skip_update_for_absent_tool "bashselfupdate"
   fi
   run_bashselfupdate_install
   exit $?

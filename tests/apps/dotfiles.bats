@@ -100,7 +100,13 @@ teardown() {
 @test "dotfiles: update forwards its arguments to update.sh" {
   run "$CLI" update --list
   assert_success
-  assert_output --partial "Update Groups"
+  assert_output --partial "update groups and phases"
+}
+
+@test "dotfiles: install forwards its arguments to install.sh" {
+  run "$CLI" install --list
+  assert_success
+  assert_output --partial "install groups and phases"
 }
 
 @test "dotfiles: update rejects a bad group via update.sh" {

@@ -11,6 +11,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 
 # Installation configuration
 INSTALL_PREFIX="$HOME/.local"
@@ -43,7 +44,7 @@ fi
 # Check if BATS is already installed
 if [[ "$UPDATE_MODE" == "true" ]]; then
   if ! command -v bats >/dev/null 2>&1; then
-    log_info "bats not installed, will install"
+    skip_update_for_absent_tool "bats"
   else
     CURRENT_VERSION=$(bats --version 2>&1 | head -n1)
     CURRENT_VERSION=$(parse_version "$CURRENT_VERSION")
