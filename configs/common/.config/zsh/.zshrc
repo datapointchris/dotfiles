@@ -188,6 +188,14 @@ fi
 # This helps in storing completion cache files in a standardized location.
 zstyle ':completion:*' cache-path "$XDG_CACHE_HOME"/zsh/zcompcache
 
+# Rust keeps _cargo inside the toolchain rather than anywhere already on fpath,
+# so it is the one completion that arrives as a file to autoload instead of as a
+# generator to run. This has to precede compinit, which scans fpath once to build
+# the dump — anything added after it is never registered. Stable explicitly: with
+# a nightly toolchain also installed both would match, and nightly's _cargo lists
+# flags the stable cargo rejects.
+fpath+=(~/.rustup/toolchains/stable-*/share/zsh/site-functions(N))
+
 # Initialize the Zsh completion system using a version-specific dump file.
 # The dump file stores the state of the completion system and is located in the XDG cache home.
 # Using a version-specific file ensures compatibility with the current Zsh version.
@@ -280,6 +288,11 @@ cache_eval tenv tenv completion zsh
 cache_eval trivy trivy completion zsh
 cache_eval yq yq completion zsh
 cache_eval cheat cheat --completion zsh
+cache_eval ruff ruff generate-shell-completion zsh
+# docker covers `docker compose` too — the compose plugin has no completion of
+# its own. brew ships no _docker, and neither does OrbStack.
+cache_eval docker docker completion zsh
+cache_eval rustup rustup completions zsh
 
 log "Setup" "Completions"
 
