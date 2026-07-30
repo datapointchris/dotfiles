@@ -85,6 +85,7 @@ uv_tools:
 git_uv_tools:
   - refcheck
   - indy
+  - dectl
 
 shell_plugins: true
 tmux_plugins: true
