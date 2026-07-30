@@ -22,6 +22,11 @@ return {
       analysis = {
         -- Ignore all files for analysis to exclusively use Ruff for linting
         ignore = { '*' },
+        diagnosticSeverityOverrides = {
+          -- basedpyright-only; demands annotations on every class attribute
+          -- unless the class is @final, which is not a decorator worth adding
+          reportUnannotatedClassAttribute = 'none',
+        },
       },
     },
   },
