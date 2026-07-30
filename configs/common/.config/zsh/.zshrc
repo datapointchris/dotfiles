@@ -214,7 +214,10 @@ cache_eval() {
   local name="$1"; shift
   local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err
 
-  if ! bin="$(command -v "$1")"; then
+  # Staleness is measured against $name, not $1: a generator invoked as
+  # `env VAR=x tool` would otherwise stat env(1), whose mtime never moves, and
+  # the cache would outlive every upgrade of the tool itself.
+  if ! bin="$(command -v "$name")"; then
     log "Skip" "$name not installed"
     return 0
   fi
@@ -245,8 +248,38 @@ if command -v terraform >/dev/null 2>&1; then
 fi
 
 cache_eval gh gh completion -s zsh
+
+# Own cobra tools.
 cache_eval forge forge completion zsh
 cache_eval todoui todoui completion zsh
+cache_eval icb icb completion zsh
+cache_eval learning learning completion zsh
+cache_eval meso meso completion zsh
+cache_eval nomad nomad completion zsh
+cache_eval toolbox toolbox completion zsh
+# ifiles completes remote paths by calling the server, so each Tab there is a
+# request rather than a lookup. The generated script is static; the network call
+# happens inside `ifiles __complete`.
+cache_eval ifiles ifiles completion zsh
+
+# Own Typer tools. The shell is named through the env var rather than with
+# --show-completion, which detects it from the parent process and answers
+# "Shell  not supported." when generated from anything but an interactive shell.
+# Each Tab spawns Python, so these are the slow ones.
+cache_eval dectl env _DECTL_COMPLETE=source_zsh dectl
+cache_eval indy env _INDY_COMPLETE=source_zsh indy
+cache_eval relate env _RELATE_COMPLETE=source_zsh relate
+cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
+
+# Third party, kept to what is typed at a prompt rather than run from a Taskfile
+# or a hook. task completes task names out of the Taskfile and sesh completes
+# session names, which is most of the value here.
+cache_eval task task --completion zsh
+cache_eval sesh sesh completion zsh
+cache_eval tenv tenv completion zsh
+cache_eval trivy trivy completion zsh
+cache_eval yq yq completion zsh
+cache_eval cheat cheat --completion zsh
 
 log "Setup" "Completions"
 
