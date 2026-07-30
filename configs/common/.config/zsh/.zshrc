@@ -485,6 +485,11 @@ if [[ -f "$forgit_file" ]]; then
   source "$forgit_file"
   log "Load" "$forgit_file"
   fpath+=($forgit_completions)
+  # compinit ran hundreds of lines ago and scanned fpath once, so the directory
+  # alone registered nothing and `git forgit <TAB>` was silent. Autoloading the
+  # function is what makes zsh's _git dispatch to it, and the compdef binds the
+  # git-forgit command that forgit also puts on PATH.
+  autoload -Uz _git-forgit && compdef _git-forgit git-forgit
   log "Load" "$forgit_completions"
 else
   log_error "Load" "$forgit_file"
