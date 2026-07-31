@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "install"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install'))
 import parse_packages
 
-PACKAGES_YML = Path(__file__).parent.parent.parent / "install" / "packages.yml"
-MANIFESTS_DIR = Path(__file__).parent.parent.parent / "install" / "manifests"
+PACKAGES_YML = Path(__file__).parent.parent.parent / 'install' / 'packages.yml'
+MANIFESTS_DIR = Path(__file__).parent.parent.parent / 'install' / 'manifests'
 
 
 @pytest.fixture
@@ -29,110 +29,83 @@ def real_packages_data():
 def sample_packages_data():
     """Sample packages.yml data for testing."""
     return {
-        "runtimes": {
-            "node": {"version": "22"},
-            "python": {"version": "3.12"}
+        'runtimes': {'node': {'version': '22'}, 'python': {'version': '3.12'}},
+        'system_packages': [
+            {'apt': 'curl', 'brew': 'curl', 'pacman': 'curl'},
+            {'apt': 'git', 'brew': 'git', 'pacman': 'git'},
+            {'apt': 'build-essential', 'pacman': 'base-devel'},
+        ],
+        'cargo_packages': [{'name': 'ripgrep'}, {'name': 'fd-find'}],
+        'npm_globals': {
+            'formatters': [{'name': 'prettier'}, {'name': 'markdownlint-cli'}],
+            'language_servers': [{'name': 'typescript-language-server'}],
         },
-        "system_packages": [
-            {"apt": "curl", "brew": "curl", "pacman": "curl"},
-            {"apt": "git", "brew": "git", "pacman": "git"},
-            {"apt": "build-essential", "pacman": "base-devel"}
+        'uv_tools': {'formatters': [{'name': 'black'}, {'name': 'isort'}]},
+        'go_tools': [
+            {'package': 'github.com/jesseduffield/lazydocker@latest'},
+            {'package': 'github.com/rhysd/actionlint/cmd/actionlint@latest'},
         ],
-        "cargo_packages": [
-            {"name": "ripgrep"},
-            {"name": "fd-find"}
+        'mas_apps': [{'id': 937984704, 'name': 'Amphetamine'}, {'id': 1352778147, 'name': 'Bitwarden'}],
+        'github_releases': [
+            {'name': 'neovim', 'repo': 'neovim/neovim', 'min_version': '0.9.0'},
+            {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'},
         ],
-        "npm_globals": {
-            "formatters": [
-                {"name": "prettier"},
-                {"name": "markdownlint-cli"}
-            ],
-            "language_servers": [
-                {"name": "typescript-language-server"}
-            ]
-        },
-        "uv_tools": {
-            "formatters": [
-                {"name": "black"},
-                {"name": "isort"}
-            ]
-        },
-        "go_tools": [
-            {"package": "github.com/jesseduffield/lazydocker@latest"},
-            {"package": "github.com/rhysd/actionlint/cmd/actionlint@latest"}
+        'shell_plugins': [
+            {'name': 'zsh-autosuggestions', 'repo': 'zsh-users/zsh-autosuggestions'},
+            {'name': 'fast-syntax-highlighting', 'repo': 'zdharma-continuum/fast-syntax-highlighting'},
         ],
-        "mas_apps": [
-            {"id": 937984704, "name": "Amphetamine"},
-            {"id": 1352778147, "name": "Bitwarden"}
-        ],
-        "github_releases": [
-            {"name": "neovim", "repo": "neovim/neovim", "min_version": "0.9.0"},
-            {"name": "lazygit", "repo": "jesseduffield/lazygit"}
-        ],
-        "shell_plugins": [
-            {"name": "zsh-autosuggestions", "repo": "zsh-users/zsh-autosuggestions"},
-            {"name": "fast-syntax-highlighting", "repo": "zdharma-continuum/fast-syntax-highlighting"}
-        ],
-        "macos_taps": [
-            "homebrew/cask-fonts"
-        ],
-        "flatpak_apps": [
-            {"flatpak_id": "com.slack.Slack"},
-            {"flatpak_id": "us.zoom.Zoom"}
-        ],
-        "macos_casks": [
-            {"name": "alfred"},
-            {"name": "bettertouchtool"}
-        ]
+        'macos_taps': ['homebrew/cask-fonts'],
+        'flatpak_apps': [{'flatpak_id': 'com.slack.Slack'}, {'flatpak_id': 'us.zoom.Zoom'}],
+        'macos_casks': [{'name': 'alfred'}, {'name': 'bettertouchtool'}],
     }
 
 
 def test_get_value_simple(sample_packages_data):
     """Test getting simple nested value."""
-    value = parse_packages.get_value(sample_packages_data, "runtimes.node.version")
-    assert value == "22"
+    value = parse_packages.get_value(sample_packages_data, 'runtimes.node.version')
+    assert value == '22'
 
 
 def test_get_value_deep_nesting(sample_packages_data):
     """Test getting deeply nested value."""
-    value = parse_packages.get_value(sample_packages_data, "runtimes.python.version")
-    assert value == "3.12"
+    value = parse_packages.get_value(sample_packages_data, 'runtimes.python.version')
+    assert value == '3.12'
 
 
 def test_get_system_packages_apt(sample_packages_data):
     """Test extracting apt packages."""
-    packages = parse_packages.get_system_packages(sample_packages_data, "apt")
-    assert packages == ["curl", "git", "build-essential"]
+    packages = parse_packages.get_system_packages(sample_packages_data, 'apt')
+    assert packages == ['curl', 'git', 'build-essential']
 
 
 def test_get_system_packages_brew(sample_packages_data):
     """Test extracting brew packages."""
-    packages = parse_packages.get_system_packages(sample_packages_data, "brew")
-    assert packages == ["curl", "git"]
+    packages = parse_packages.get_system_packages(sample_packages_data, 'brew')
+    assert packages == ['curl', 'git']
 
 
 def test_get_system_packages_pacman(sample_packages_data):
     """Test extracting pacman packages."""
-    packages = parse_packages.get_system_packages(sample_packages_data, "pacman")
-    assert packages == ["curl", "git", "base-devel"]
+    packages = parse_packages.get_system_packages(sample_packages_data, 'pacman')
+    assert packages == ['curl', 'git', 'base-devel']
 
 
 def test_get_cargo_packages(sample_packages_data):
     """Test extracting cargo package names."""
     packages = parse_packages.get_cargo_packages(sample_packages_data)
-    assert packages == ["ripgrep", "fd-find"]
+    assert packages == ['ripgrep', 'fd-find']
 
 
 def test_get_npm_packages(sample_packages_data):
     """Test extracting npm package names from all categories."""
     packages = parse_packages.get_npm_packages(sample_packages_data)
-    assert packages == ["prettier", "markdownlint-cli", "typescript-language-server"]
+    assert packages == ['prettier', 'markdownlint-cli', 'typescript-language-server']
 
 
 def test_get_uv_packages(sample_packages_data):
     """Test extracting uv tool names."""
     packages = parse_packages.get_uv_packages(sample_packages_data)
-    assert packages == ["black", "isort"]
+    assert packages == ['black', 'isort']
 
 
 def test_get_git_uv_packages_defaults_to_release_mode():
@@ -142,106 +115,99 @@ def test_get_git_uv_packages_defaults_to_release_mode():
     what lets a tool's own updater run on it, and what stops `uv tool upgrade`
     re-resolving a pin to the same commit and calling it current forever.
     """
-    data = {"git_uv_tools": [{"name": "syncer", "repo": "https://github.com/datapointchris/syncer.git"}]}
+    data = {'git_uv_tools': [{'name': 'syncer', 'repo': 'https://github.com/datapointchris/syncer.git'}]}
 
-    assert parse_packages.get_git_uv_packages(data) == [
-        "syncer|https://github.com/datapointchris/syncer.git|release"
-    ]
+    assert parse_packages.get_git_uv_packages(data) == ['syncer|https://github.com/datapointchris/syncer.git|release']
 
 
 def test_get_git_uv_packages_marks_a_branch_tracking_tool():
     """`tracks_branch` is for a repo publishing no releases, so there is no tag to pin."""
     data = {
-        "git_uv_tools": [
+        'git_uv_tools': [
             {
-                "name": "keymap-align",
-                "repo": "https://github.com/datapointchris/keymap-align.git",
-                "tracks_branch": True,
+                'name': 'keymap-align',
+                'repo': 'https://github.com/datapointchris/keymap-align.git',
+                'tracks_branch': True,
             }
         ]
     }
 
-    assert parse_packages.get_git_uv_packages(data) == [
-        "keymap-align|https://github.com/datapointchris/keymap-align.git|branch"
-    ]
+    assert parse_packages.get_git_uv_packages(data) == ['keymap-align|https://github.com/datapointchris/keymap-align.git|branch']
 
 
 def test_get_git_uv_packages_is_pipe_delimited(real_packages_data):
     """Pipe, not colon: a clone URL contains colons, so the shell cannot split on them."""
     for entry in parse_packages.get_git_uv_packages(real_packages_data):
-        name, repo, ref_mode = entry.split("|")
+        name, repo, ref_mode = entry.split('|')
         assert name
-        assert repo.startswith("https://")
-        assert ref_mode in ("release", "branch")
+        assert repo.startswith('https://')
+        assert ref_mode in ('release', 'branch')
 
 
 def test_get_go_packages(sample_packages_data):
     """Test extracting go tool package paths."""
     packages = parse_packages.get_go_packages(sample_packages_data)
-    assert packages == [
-        "github.com/jesseduffield/lazydocker@latest",
-        "github.com/rhysd/actionlint/cmd/actionlint@latest"
-    ]
+    assert packages == ['github.com/jesseduffield/lazydocker@latest', 'github.com/rhysd/actionlint/cmd/actionlint@latest']
 
 
 def test_get_mas_apps(sample_packages_data):
     """Test extracting Mac App Store app IDs."""
     packages = parse_packages.get_mas_apps(sample_packages_data)
-    assert packages == ["937984704", "1352778147"]
+    assert packages == ['937984704', '1352778147']
 
 
 def test_get_github_packages(sample_packages_data):
     """Test extracting GitHub release package names."""
     packages = parse_packages.get_github_packages(sample_packages_data)
-    assert packages == ["neovim", "lazygit"]
+    assert packages == ['neovim', 'lazygit']
 
 
 def test_get_shell_plugins_names(sample_packages_data):
     """Test extracting shell plugin names."""
     packages = parse_packages.get_shell_plugins(sample_packages_data, output_format='names')
-    assert packages == ["zsh-autosuggestions", "fast-syntax-highlighting"]
+    assert packages == ['zsh-autosuggestions', 'fast-syntax-highlighting']
 
 
 def test_get_shell_plugins_name_repo(sample_packages_data):
     """Test extracting shell plugin name|repo pairs."""
     packages = parse_packages.get_shell_plugins(sample_packages_data, output_format='name_repo')
     assert packages == [
-        "zsh-autosuggestions|zsh-users/zsh-autosuggestions",
-        "fast-syntax-highlighting|zdharma-continuum/fast-syntax-highlighting"
+        'zsh-autosuggestions|zsh-users/zsh-autosuggestions',
+        'fast-syntax-highlighting|zdharma-continuum/fast-syntax-highlighting',
     ]
 
 
 def test_get_github_release_field(sample_packages_data):
     """Test getting field from GitHub release."""
-    value = parse_packages.get_github_release_field(sample_packages_data, "neovim", "min_version")
-    assert value == "0.9.0"
+    value = parse_packages.get_github_release_field(sample_packages_data, 'neovim', 'min_version')
+    assert value == '0.9.0'
 
-    value = parse_packages.get_github_release_field(sample_packages_data, "neovim", "repo")
-    assert value == "neovim/neovim"
+    value = parse_packages.get_github_release_field(sample_packages_data, 'neovim', 'repo')
+    assert value == 'neovim/neovim'
 
 
 def test_get_github_release_field_not_found(sample_packages_data):
     """Test getting field from non-existent release."""
-    value = parse_packages.get_github_release_field(sample_packages_data, "nonexistent", "repo")
+    value = parse_packages.get_github_release_field(sample_packages_data, 'nonexistent', 'repo')
     assert value is None
 
 
 def test_get_macos_taps(sample_packages_data):
     """Test extracting macOS Homebrew taps."""
     taps = parse_packages.get_macos_taps(sample_packages_data)
-    assert taps == ["homebrew/cask-fonts"]
+    assert taps == ['homebrew/cask-fonts']
 
 
 def test_get_flatpak_apps(sample_packages_data):
     """Test extracting Flatpak app IDs."""
     apps = parse_packages.get_flatpak_apps(sample_packages_data)
-    assert apps == ["com.slack.Slack", "us.zoom.Zoom"]
+    assert apps == ['com.slack.Slack', 'us.zoom.Zoom']
 
 
 def test_get_macos_casks(sample_packages_data):
     """Test extracting macOS cask names."""
     casks = parse_packages.get_macos_casks(sample_packages_data)
-    assert casks == ["alfred", "bettertouchtool"]
+    assert casks == ['alfred', 'bettertouchtool']
 
 
 def test_get_cargo_packages_empty():
@@ -254,7 +220,7 @@ def test_get_cargo_packages_empty():
 def test_get_system_packages_empty():
     """Test with no system packages."""
     data = {}
-    packages = parse_packages.get_system_packages(data, "apt")
+    packages = parse_packages.get_system_packages(data, 'apt')
     assert packages == []
 
 
@@ -270,31 +236,27 @@ def test_broot_uses_version_pattern_not_target(real_packages_data):
     """broot releases a fat zip named by version (broot_1.56.2.zip), NOT by
     target triple (broot_x86_64-unknown-linux-gnu.zip). Using {target} causes
     a 404 on every bundle build. This test pins the correct placeholder."""
-    cargo_packages = real_packages_data.get("cargo_packages", [])
-    broot = next((p for p in cargo_packages if p.get("name") == "broot"), None)
+    cargo_packages = real_packages_data.get('cargo_packages', [])
+    broot = next((p for p in cargo_packages if p.get('name') == 'broot'), None)
 
-    assert broot is not None, "broot must be present in cargo_packages"
-    pattern = broot.get("binary_pattern", "")
+    assert broot is not None, 'broot must be present in cargo_packages'
+    pattern = broot.get('binary_pattern', '')
 
-    assert pattern, "broot must have a binary_pattern field"
-    assert "{target}" not in pattern, (
-        f"broot binary_pattern must NOT use {{target}} — broot ships a fat zip "
-        f"with all platforms, named only by version. Got: {pattern!r}"
+    assert pattern, 'broot must have a binary_pattern field'
+    assert '{target}' not in pattern, (
+        f'broot binary_pattern must NOT use {{target}} — broot ships a fat zip with all platforms, named only by version. Got: {pattern!r}'
     )
-    assert "{version_num}" in pattern or "{version}" in pattern, (
-        f"broot binary_pattern must use a version placeholder. Got: {pattern!r}"
-    )
+    assert '{version_num}' in pattern or '{version}' in pattern, f'broot binary_pattern must use a version placeholder. Got: {pattern!r}'
 
 
 def test_cargo_packages_with_binary_pattern_have_github_repo(real_packages_data):
     """Any cargo package with a binary_pattern must also have a github_repo,
     since the pattern is only used to construct a GitHub release download URL."""
-    cargo_packages = real_packages_data.get("cargo_packages", [])
+    cargo_packages = real_packages_data.get('cargo_packages', [])
     for pkg in cargo_packages:
-        if "binary_pattern" in pkg:
-            assert "github_repo" in pkg, (
-                f"Cargo package {pkg['name']!r} has binary_pattern but no github_repo. "
-                f"binary_pattern is only used for GitHub release URLs."
+        if 'binary_pattern' in pkg:
+            assert 'github_repo' in pkg, (
+                f'Cargo package {pkg["name"]!r} has binary_pattern but no github_repo. binary_pattern is only used for GitHub release URLs.'
             )
 
 
@@ -316,85 +278,67 @@ def test_cargo_packages_with_binary_pattern_have_github_repo(real_packages_data)
 def custom_installers_sample():
     """Realistic sample mirroring the structure of packages.yml custom_installers."""
     return {
-        "custom_installers": [
-            {"name": "claude-code", "bundle_install_script": True},
-            {"name": "theme", "bundle_install_script": True},
-            {"name": "font", "bundle_install_script": True},
-            {"name": "awscli"},
-            {"name": "terraform-ls"},
+        'custom_installers': [
+            {'name': 'claude-code', 'bundle_install_script': True},
+            {'name': 'theme', 'bundle_install_script': True},
+            {'name': 'font', 'bundle_install_script': True},
+            {'name': 'awscli'},
+            {'name': 'terraform-ls'},
         ]
     }
 
 
 @pytest.mark.parametrize(
-    "case_id, manifest, filter_field, expected",
+    'case_id, manifest, filter_field, expected',
     [
         # Intersection: list of names returns only names present in BOTH manifest and packages.yml.
         # Mutation it catches: inverting `in` to `not in` flips intersection to complement.
-        ("list_intersection",
-            {"custom_installers": ["claude-code", "awscli"]}, None,
-            ["claude-code", "awscli"]),
-
+        ('list_intersection', {'custom_installers': ['claude-code', 'awscli']}, None, ['claude-code', 'awscli']),
         # True branch returns every entry in declaration order.
         # Mutation it catches: True branch returning [] or filtered list.
-        ("true_returns_all",
-            {"custom_installers": True}, None,
-            ["claude-code", "theme", "font", "awscli", "terraform-ls"]),
-
+        ('true_returns_all', {'custom_installers': True}, None, ['claude-code', 'theme', 'font', 'awscli', 'terraform-ls']),
         # Missing field defaults to [], not all.
         # Mutation it catches: `manifest.get('custom_installers', True)` (wrong default).
-        ("missing_field_returns_empty",
-            {}, None,
-            []),
-
+        ('missing_field_returns_empty', {}, None, []),
         # Empty list returns []. Note this is distinct from True — falsy list must NOT fall
         # through to the True branch.
         # Mutation it catches: `if not manifest_installers` placed BEFORE the `is True` check.
-        ("empty_list_returns_empty",
-            {"custom_installers": []}, None,
-            []),
-
+        ('empty_list_returns_empty', {'custom_installers': []}, None, []),
         # filter_field ANDs with manifest membership. terraform-ls and awscli are in the
         # manifest but lack bundle_install_script; only claude-code survives both predicates.
         # Mutation it catches: dropping the filter_field clause (would return all 3).
-        ("filter_field_ands_with_manifest",
-            {"custom_installers": ["claude-code", "awscli", "terraform-ls"]}, "bundle_install_script",
-            ["claude-code"]),
-
+        (
+            'filter_field_ands_with_manifest',
+            {'custom_installers': ['claude-code', 'awscli', 'terraform-ls']},
+            'bundle_install_script',
+            ['claude-code'],
+        ),
         # filter_field still applies when manifest_installers is True.
         # Mutation it catches: filter_field clause skipped on the True branch only.
-        ("filter_field_with_true_manifest",
-            {"custom_installers": True}, "bundle_install_script",
-            ["claude-code", "theme", "font"]),
-
+        ('filter_field_with_true_manifest', {'custom_installers': True}, 'bundle_install_script', ['claude-code', 'theme', 'font']),
         # filter_field with manifest containing only un-flagged names yields []. Catches the
         # case where manifest says "yes install awscli" but the bundle has no script for it.
         # Mutation it catches: filter_field treated as OR (would return both names).
-        ("filter_field_excludes_all_unflagged",
-            {"custom_installers": ["awscli", "terraform-ls"]}, "bundle_install_script",
-            []),
-
+        ('filter_field_excludes_all_unflagged', {'custom_installers': ['awscli', 'terraform-ls']}, 'bundle_install_script', []),
         # Stale manifest names (no matching packages.yml entry) are silently dropped, not errors.
         # Mutation it catches: emitting manifest names verbatim instead of intersecting.
-        ("unknown_manifest_names_dropped",
-            {"custom_installers": ["claude-code", "ghost-installer", "another-ghost"]}, None,
-            ["claude-code"]),
-
+        (
+            'unknown_manifest_names_dropped',
+            {'custom_installers': ['claude-code', 'ghost-installer', 'another-ghost']},
+            None,
+            ['claude-code'],
+        ),
         # filter_field with missing manifest field still returns [] (not "all where flag").
         # Mutation it catches: filter_field path bypassing the manifest check entirely.
-        ("filter_field_with_missing_manifest",
-            {}, "bundle_install_script",
-            []),
+        ('filter_field_with_missing_manifest', {}, 'bundle_install_script', []),
     ],
     ids=lambda v: v if isinstance(v, str) else None,
 )
 def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id, manifest, filter_field, expected):
     """Parametrized contract for filter_custom_installers_by_manifest. See the case
     comments above for the specific mutation each row defends against."""
-    result = parse_packages.filter_custom_installers_by_manifest(
-        custom_installers_sample, manifest, filter_field=filter_field
-    )
-    assert result == expected, f"case={case_id!r}: expected {expected}, got {result}"
+    result = parse_packages.filter_custom_installers_by_manifest(custom_installers_sample, manifest, filter_field=filter_field)
+    assert result == expected, f'case={case_id!r}: expected {expected}, got {result}'
 
 
 # ================================================================
@@ -413,40 +357,30 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
 
 
 @pytest.mark.parametrize(
-    "manifest_name, must_include, must_exclude",
+    'manifest_name, must_include, must_exclude',
     [
         # WSL work: the manifest that triggered the bug.
-        ("wsl-work-workstation",
-            ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot"],
-            ["webviewrs"]),
+        ('wsl-work-workstation', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
         # macOS personal: same cargo set as WSL, also no webviewrs.
-        ("macos-personal-workstation",
-            ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot"],
-            ["webviewrs"]),
+        ('macos-personal-workstation', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
         # Arch personal: the only machine that actually installs webviewrs.
         # Proves the filter is data-driven, not a hardcoded skip.
-        ("archlinux-personal-workstation",
-            ["bat", "fd", "eza", "zoxide", "delta", "oxker", "broot", "webviewrs"],
-            []),
+        ('archlinux-personal-workstation', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot', 'webviewrs'], []),
         # Minimal LXC server: lean cargo set — no broot, no webviewrs. Catches
         # mutations that hardcode-include workstation cargo tools for all Linux.
-        ("linux-lxc-server",
-            ["bat", "fd", "eza", "zoxide", "delta", "oxker"],
-            ["broot", "webviewrs"]),
+        ('linux-lxc-server', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker'], ['broot', 'webviewrs']),
     ],
 )
 def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):
     """Each machine's cargo bundle must contain its manifest's packages and nothing else.
     Names compared are commands (binary_info first column), since fd-find→fd, git-delta→delta."""
     manifest = parse_packages.load_manifest(manifest_name)
-    result = parse_packages.filter_cargo_packages_by_manifest(
-        real_packages_data, manifest, output_format="binary_info"
-    )
-    names = {line.split("|", 1)[0] for line in result}
+    result = parse_packages.filter_cargo_packages_by_manifest(real_packages_data, manifest, output_format='binary_info')
+    names = {line.split('|', 1)[0] for line in result}
     missing = [n for n in must_include if n not in names]
     leaked = [n for n in must_exclude if n in names]
-    assert not missing, f"{manifest_name}: missing required cargo entries {missing}; got {sorted(names)}"
-    assert not leaked, f"{manifest_name}: cargo bundle leaked {leaked}; got {sorted(names)}"
+    assert not missing, f'{manifest_name}: missing required cargo entries {missing}; got {sorted(names)}'
+    assert not leaked, f'{manifest_name}: cargo bundle leaked {leaked}; got {sorted(names)}'
 
 
 # ================================================================
@@ -460,17 +394,17 @@ def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name,
 
 def test_system_core_is_subset_of_workstation(real_packages_data):
     """The core tier must be a strict subset of the workstation tier for apt."""
-    core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
-    workstation = set(parse_packages.get_system_packages(real_packages_data, "apt", "workstation"))
-    assert core, "core tier unexpectedly empty"
-    assert core < workstation, "core must be a strict subset of workstation"
+    core = set(parse_packages.get_system_packages(real_packages_data, 'apt', 'core'))
+    workstation = set(parse_packages.get_system_packages(real_packages_data, 'apt', 'workstation'))
+    assert core, 'core tier unexpectedly empty'
+    assert core < workstation, 'core must be a strict subset of workstation'
 
 
 def test_system_core_excludes_workstation_only_packages(real_packages_data):
     """Heavy workstation-only packages must never appear in the core tier."""
-    core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
-    for pkg in ["docker-ce", "ffmpeg", "imagemagick", "mpv", "graphviz"]:
-        assert pkg not in core, f"{pkg} leaked into the core (server) tier"
+    core = set(parse_packages.get_system_packages(real_packages_data, 'apt', 'core'))
+    for pkg in ['docker-ce', 'ffmpeg', 'imagemagick', 'mpv', 'graphviz']:
+        assert pkg not in core, f'{pkg} leaked into the core (server) tier'
 
 
 def test_system_core_includes_essential_base(real_packages_data):
@@ -480,9 +414,9 @@ def test_system_core_includes_essential_base(real_packages_data):
     via cargo binstall's prebuilt binaries). Its "reaches every machine including
     servers" guarantee now lives in test_ripgrep_reaches_servers_via_cargo.
     """
-    core = set(parse_packages.get_system_packages(real_packages_data, "apt", "core"))
-    for pkg in ["git", "zsh", "tmux", "python3-yaml", "curl"]:
-        assert pkg in core, f"{pkg} missing from the core (server) tier"
+    core = set(parse_packages.get_system_packages(real_packages_data, 'apt', 'core'))
+    for pkg in ['git', 'zsh', 'tmux', 'python3-yaml', 'curl']:
+        assert pkg in core, f'{pkg} missing from the core (server) tier'
 
 
 def test_ripgrep_reaches_servers_via_cargo(real_packages_data):
@@ -492,21 +426,19 @@ def test_ripgrep_reaches_servers_via_cargo(real_packages_data):
     compiling — the reason it can move off system_packages yet still serve the
     core (LXC server) tier that has no heavy build toolchain.
     """
-    cargo_names = {pkg["name"] for pkg in real_packages_data.get("cargo_packages", [])}
-    assert "ripgrep" in cargo_names, "ripgrep must be in cargo_packages"
+    cargo_names = {pkg['name'] for pkg in real_packages_data.get('cargo_packages', [])}
+    assert 'ripgrep' in cargo_names, 'ripgrep must be in cargo_packages'
 
-    server_manifest = yaml.safe_load(
-        (MANIFESTS_DIR / "linux-lxc-server.yml").read_text()
-    )
-    assert "ripgrep" in server_manifest.get("cargo_packages", []), (
-        "ripgrep must be in the linux-lxc-server cargo list so servers still get it"
+    server_manifest = yaml.safe_load((MANIFESTS_DIR / 'linux-lxc-server.yml').read_text())
+    assert 'ripgrep' in server_manifest.get('cargo_packages', []), (
+        'ripgrep must be in the linux-lxc-server cargo list so servers still get it'
     )
 
 
 def test_system_default_tier_is_workstation(real_packages_data):
     """Callers that omit a tier get the full workstation set (backward compatible)."""
-    default = parse_packages.get_system_packages(real_packages_data, "apt")
-    workstation = parse_packages.get_system_packages(real_packages_data, "apt", "workstation")
+    default = parse_packages.get_system_packages(real_packages_data, 'apt')
+    workstation = parse_packages.get_system_packages(real_packages_data, 'apt', 'workstation')
     assert default == workstation
 
 
@@ -516,16 +448,16 @@ def test_system_default_tier_is_workstation(real_packages_data):
 
 
 @pytest.mark.parametrize(
-    "entry,expected",
+    'entry,expected',
     [
-        ({"repo": "datapointchris/ichrisbirch"}, "datapointchris"),
-        ({"repo": "https://github.com/datapointchris/indy.git"}, "datapointchris"),
-        ({"repo": "https://github.com/datapointchris/indy"}, "datapointchris"),
-        ({"github_repo": "datapointchris/todoui"}, "datapointchris"),
-        ({"package": "github.com/datapointchris/forge"}, "datapointchris"),
-        ({"package": "github.com/joshmedeski/sesh/v2"}, "joshmedeski"),
-        ({"apt": "curl", "brew": "curl"}, None),
-        ({"name": "ruff"}, None),
+        ({'repo': 'datapointchris/ichrisbirch'}, 'datapointchris'),
+        ({'repo': 'https://github.com/datapointchris/indy.git'}, 'datapointchris'),
+        ({'repo': 'https://github.com/datapointchris/indy'}, 'datapointchris'),
+        ({'github_repo': 'datapointchris/todoui'}, 'datapointchris'),
+        ({'package': 'github.com/datapointchris/forge'}, 'datapointchris'),
+        ({'package': 'github.com/joshmedeski/sesh/v2'}, 'joshmedeski'),
+        ({'apt': 'curl', 'brew': 'curl'}, None),
+        ({'name': 'ruff'}, None),
     ],
 )
 def test_extract_owner_handles_every_field_shape(entry, expected):
@@ -546,46 +478,46 @@ def test_owner_filter_spans_every_install_method(real_packages_data):
     inventory, it is proof that owner-derivation reaches that section at all.
     The negative direction is test_owner_filter_excludes_third_party.
     """
-    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, 'datapointchris')
 
     representatives = {
-        "github_releases": {"icb", "learning", "nomad", "meso"},
-        "custom_installers": {"theme", "font", "bashselfupdate"},
-        "go_tools": {"todoui", "forge", "toolbox"},
-        "git_uv_tools": {"indy"},
-        "cargo_packages": {"webviewrs"},
+        'github_releases': {'icb', 'learning', 'nomad', 'meso'},
+        'custom_installers': {'theme', 'font', 'bashselfupdate'},
+        'go_tools': {'todoui', 'forge', 'toolbox'},
+        'git_uv_tools': {'indy'},
+        'cargo_packages': {'webviewrs'},
     }
     for section, expected in representatives.items():
-        assert expected <= {i["name"] for i in owned[section]}, section
+        assert expected <= {i['name'] for i in owned[section]}, section
 
 
 def test_owner_filter_excludes_third_party(real_packages_data):
     """Third-party tools must not survive the owner filter."""
-    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, 'datapointchris')
 
-    assert "terraform-ls" not in {i["name"] for i in owned["custom_installers"]}
-    assert "sesh" not in {i["name"] for i in owned["go_tools"]}
-    assert "neovim" not in {i["name"] for i in owned["github_releases"]}
+    assert 'terraform-ls' not in {i['name'] for i in owned['custom_installers']}
+    assert 'sesh' not in {i['name'] for i in owned['go_tools']}
+    assert 'neovim' not in {i['name'] for i in owned['github_releases']}
 
 
 def test_owner_filter_empties_ownerless_sections(real_packages_data):
     """Registry-sourced sections have no GitHub owner and must match nothing."""
-    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, 'datapointchris')
 
-    assert owned["system_packages"] == []
+    assert owned['system_packages'] == []
     # npm_globals and uv_tools nest their lists one level deeper, under categories
-    assert all(not entries for entries in owned["npm_globals"].values())
-    assert all(not entries for entries in owned["uv_tools"].values())
+    assert all(not entries for entries in owned['npm_globals'].values())
+    assert all(not entries for entries in owned['uv_tools'].values())
 
 
 def test_owner_filter_preserves_section_structure(real_packages_data):
     """Getters run against the filtered data, so every section must still exist."""
-    owned = parse_packages.filter_packages_by_owner(real_packages_data, "datapointchris")
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, 'datapointchris')
     assert set(owned) == set(real_packages_data)
 
 
 def test_owner_filter_is_empty_for_unknown_owner(real_packages_data):
     """An owner with nothing in packages.yml yields no packages, not an error."""
-    owned = parse_packages.filter_packages_by_owner(real_packages_data, "nobody-at-all")
+    owned = parse_packages.filter_packages_by_owner(real_packages_data, 'nobody-at-all')
     assert parse_packages.get_github_packages(owned) == []
     assert parse_packages.get_custom_installers(owned) == []

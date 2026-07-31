@@ -14,7 +14,7 @@ def load_state(path: Path) -> dict:
     """The ``{item_id: last_done_iso}`` map, or an empty dict if none exists yet."""
     if not path.exists():
         return {}
-    return json.loads(path.read_text() or "{}")
+    return json.loads(path.read_text() or '{}')
 
 
 def save_state(path: Path, state: dict) -> None:
@@ -25,7 +25,7 @@ def save_state(path: Path, state: dict) -> None:
     partial one.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    data = json.dumps(state, indent=2) + "\n"
-    tmp = path.with_name(path.name + ".tmp")
+    data = json.dumps(state, indent=2) + '\n'
+    tmp = path.with_name(path.name + '.tmp')
     tmp.write_text(data)
     os.replace(tmp, path)

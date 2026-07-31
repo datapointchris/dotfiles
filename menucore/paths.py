@@ -14,9 +14,9 @@ from pathlib import Path
 
 def xdg_data_home() -> Path:
     """`$XDG_DATA_HOME`, or its spec default when unset or empty."""
-    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+    return Path(os.environ.get('XDG_DATA_HOME') or Path.home() / '.local' / 'share')
 
 
 def xdg_state_home() -> Path:
     """`$XDG_STATE_HOME`, or its spec default when unset or empty."""
-    return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    return Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state')

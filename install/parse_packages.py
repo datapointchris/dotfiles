@@ -46,9 +46,9 @@ import yaml
 def get_packages_file():
     """Find packages.yml relative to script location."""
     script_dir = Path(__file__).parent
-    packages_file = script_dir / "packages.yml"
+    packages_file = script_dir / 'packages.yml'
     if not packages_file.exists():
-        print(f"Error: packages.yml not found at {packages_file}", file=sys.stderr)
+        print(f'Error: packages.yml not found at {packages_file}', file=sys.stderr)
         sys.exit(1)
     return packages_file
 
@@ -63,9 +63,9 @@ def load_packages():
 def get_manifest_file(machine_name):
     """Find machine manifest YAML relative to script location."""
     script_dir = Path(__file__).parent
-    manifest_file = script_dir / "manifests" / f"{machine_name}.yml"
+    manifest_file = script_dir / 'manifests' / f'{machine_name}.yml'
     if not manifest_file.exists():
-        print(f"Error: manifest not found at {manifest_file}", file=sys.stderr)
+        print(f'Error: manifest not found at {manifest_file}', file=sys.stderr)
         sys.exit(1)
     return manifest_file
 
@@ -87,11 +87,13 @@ def filter_go_packages_by_manifest(data, manifest, output_format='packages'):
     all_tools = data.get('go_tools', [])
     filtered = [pkg for pkg in all_tools if pkg['name'] in manifest_tools]
     if output_format == 'name_package':
-        return [f"{pkg['name']}|{pkg['package']}" for pkg in filtered]
+        return [f'{pkg["name"]}|{pkg["package"]}' for pkg in filtered]
     elif output_format == 'binary_info':
-        return [f"{pkg['name']}|{pkg['github_repo']}|{pkg['binary_pattern']}"
-                for pkg in filtered
-                if 'github_repo' in pkg and 'binary_pattern' in pkg]
+        return [
+            f'{pkg["name"]}|{pkg["github_repo"]}|{pkg["binary_pattern"]}'
+            for pkg in filtered
+            if 'github_repo' in pkg and 'binary_pattern' in pkg
+        ]
     return [pkg['package'] for pkg in filtered]
 
 
@@ -174,10 +176,9 @@ def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     all_pkgs = data.get('cargo_packages', [])
     filtered = [pkg for pkg in all_pkgs if pkg['name'] in manifest_pkgs]
     if output_format == 'name_command':
-        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in filtered]
+        return [f'{pkg["name"]}|{pkg.get("command", pkg["name"])}' for pkg in filtered]
     elif output_format == 'github_repos':
-        return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
-                for pkg in filtered if 'github_repo' in pkg]
+        return [f'{pkg.get("command", pkg["name"])}|{pkg["github_repo"]}' for pkg in filtered if 'github_repo' in pkg]
     elif output_format == 'binary_info':
         results = []
         for pkg in filtered:
@@ -186,7 +187,7 @@ def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
                 repo = pkg['github_repo']
                 pattern = pkg['binary_pattern']
                 linux_target = pkg.get('linux_target', '')
-                results.append(f"{cmd}|{repo}|{pattern}|{linux_target}")
+                results.append(f'{cmd}|{repo}|{pattern}|{linux_target}')
         return results
     else:
         return [pkg['name'] for pkg in filtered]
@@ -245,10 +246,9 @@ def get_cargo_packages(data, output_format='names'):
         return []
 
     if output_format == 'name_command':
-        return [f"{pkg['name']}|{pkg.get('command', pkg['name'])}" for pkg in data['cargo_packages']]
+        return [f'{pkg["name"]}|{pkg.get("command", pkg["name"])}' for pkg in data['cargo_packages']]
     elif output_format == 'github_repos':
-        return [f"{pkg.get('command', pkg['name'])}|{pkg['github_repo']}"
-                for pkg in data['cargo_packages'] if 'github_repo' in pkg]
+        return [f'{pkg.get("command", pkg["name"])}|{pkg["github_repo"]}' for pkg in data['cargo_packages'] if 'github_repo' in pkg]
     elif output_format == 'binary_info':
         results = []
         for pkg in data['cargo_packages']:
@@ -257,7 +257,7 @@ def get_cargo_packages(data, output_format='names'):
                 repo = pkg['github_repo']
                 pattern = pkg['binary_pattern']
                 linux_target = pkg.get('linux_target', '')
-                results.append(f"{cmd}|{repo}|{pattern}|{linux_target}")
+                results.append(f'{cmd}|{repo}|{pattern}|{linux_target}')
         return results
     else:
         return [pkg['name'] for pkg in data['cargo_packages']]
@@ -296,7 +296,7 @@ def format_git_uv_package(pkg):
     no releases. See install/common/lib/uv-git-tools.sh for why the pin matters.
     """
     ref_mode = 'branch' if pkg.get('tracks_branch') else 'release'
-    return f"{pkg['name']}|{pkg['repo']}|{ref_mode}"
+    return f'{pkg["name"]}|{pkg["repo"]}|{ref_mode}'
 
 
 def get_git_uv_packages(data):
@@ -304,7 +304,6 @@ def get_git_uv_packages(data):
     if 'git_uv_tools' not in data:
         return []
     return [format_git_uv_package(pkg) for pkg in data['git_uv_tools']]
-
 
 
 def get_go_packages(data, output_format='packages'):
@@ -318,11 +317,13 @@ def get_go_packages(data, output_format='packages'):
     if 'go_tools' not in data:
         return []
     if output_format == 'name_package':
-        return [f"{pkg['name']}|{pkg['package']}" for pkg in data['go_tools']]
+        return [f'{pkg["name"]}|{pkg["package"]}' for pkg in data['go_tools']]
     elif output_format == 'binary_info':
-        return [f"{pkg['name']}|{pkg['github_repo']}|{pkg['binary_pattern']}"
-                for pkg in data['go_tools']
-                if 'github_repo' in pkg and 'binary_pattern' in pkg]
+        return [
+            f'{pkg["name"]}|{pkg["github_repo"]}|{pkg["binary_pattern"]}'
+            for pkg in data['go_tools']
+            if 'github_repo' in pkg and 'binary_pattern' in pkg
+        ]
     return [pkg['package'] for pkg in data['go_tools']]
 
 
@@ -350,7 +351,7 @@ def get_shell_plugins(data, output_format='names'):
         return []
 
     if output_format == 'name_repo':
-        return [f"{pkg['name']}|{pkg['repo']}" for pkg in data['shell_plugins']]
+        return [f'{pkg["name"]}|{pkg["repo"]}' for pkg in data['shell_plugins']]
     else:  # names
         return [pkg['name'] for pkg in data['shell_plugins']]
 
@@ -439,6 +440,7 @@ def filter_packages_by_owner(data, owner):
     Applied to the loaded data before dispatch so all existing getters, output
     formats, and manifest filters compose with it unchanged.
     """
+
     def matching(entries):
         return [entry for entry in entries if isinstance(entry, dict) and extract_owner(entry) == owner]
 
@@ -448,11 +450,7 @@ def filter_packages_by_owner(data, owner):
             filtered[key] = matching(value)
         elif isinstance(value, dict):
             # uv_tools and npm_globals nest their lists one level deeper, under categories
-            filtered[key] = {
-                category: matching(entries)
-                for category, entries in value.items()
-                if isinstance(entries, list)
-            }
+            filtered[key] = {category: matching(entries) for category, entries in value.items() if isinstance(entries, list)}
         else:
             filtered[key] = value
     return filtered
@@ -460,21 +458,35 @@ def filter_packages_by_owner(data, owner):
 
 def main():
     parser = argparse.ArgumentParser(description='Parse packages.yml')
-    parser.add_argument('--type', choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks'],
-                        help='Type of packages to extract')
-    parser.add_argument('--tier', choices=['core', 'workstation'], default='workstation',
-                        help='System-package tier: core (minimal base for servers) or workstation (everything). Default workstation.')
-    parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'],
-                        help='Package manager for system packages')
+    parser.add_argument(
+        '--type',
+        choices=['system', 'cargo', 'npm', 'uv', 'git_uv', 'go', 'mas', 'github', 'custom', 'shell-plugins', 'flatpak', 'macos-casks'],
+        help='Type of packages to extract',
+    )
+    parser.add_argument(
+        '--tier',
+        choices=['core', 'workstation'],
+        default='workstation',
+        help='System-package tier: core (minimal base for servers) or workstation (everything). Default workstation.',
+    )
+    parser.add_argument('--manager', choices=['apt', 'pacman', 'brew', 'aur'], help='Package manager for system packages')
     parser.add_argument('--get', help='Get a specific value using dot notation (e.g., runtimes.node.version)')
-    parser.add_argument('--taps', action='store_true',
-                        help='Get macOS Homebrew taps')
+    parser.add_argument('--taps', action='store_true', help='Get macOS Homebrew taps')
     parser.add_argument('--github-release', help='Name of GitHub release (e.g., neovim)')
     parser.add_argument('--custom-installer', help='Name of custom installer (e.g., terraform-ls)')
     parser.add_argument('--field', help='Field to extract from --github-release or --custom-installer (e.g., repo, url)')
-    parser.add_argument('--filter', help='With --type=custom: only include installers where this field is truthy (e.g., bundle_install_script)')
-    parser.add_argument('--format', choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'], default='names',
-                        help='Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), name|package pairs (go), github_repos/binary_info (cargo/go for offline)')
+    parser.add_argument(
+        '--filter', help='With --type=custom: only include installers where this field is truthy (e.g., bundle_install_script)'
+    )
+    parser.add_argument(
+        '--format',
+        choices=['names', 'name_repo', 'name_command', 'name_package', 'packages', 'full', 'github_repos', 'binary_info'],
+        default='names',
+        help=(
+            'Output format: names, name|repo pairs (shell-plugins), name|command pairs (cargo), '
+            'name|package pairs (go), github_repos/binary_info (cargo/go for offline)'
+        ),
+    )
     parser.add_argument('--owner', help='Only include packages owned by this GitHub owner (e.g., datapointchris)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., wsl-work-workstation) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
@@ -484,7 +496,7 @@ def main():
     # Handle manifest-field extraction (no packages.yml needed)
     if args.manifest_field:
         if not args.manifest:
-            print("Error: --manifest required with --manifest-field", file=sys.stderr)
+            print('Error: --manifest required with --manifest-field', file=sys.stderr)
             sys.exit(1)
         manifest = load_manifest(args.manifest)
         value = manifest.get(args.manifest_field)
@@ -495,7 +507,7 @@ def main():
             for item in value:
                 print(item)
         elif isinstance(value, bool):
-            print("true" if value else "false")
+            print('true' if value else 'false')
         else:
             print(value)
         return
@@ -511,25 +523,25 @@ def main():
 
     if args.github_release:
         if not args.field:
-            print("Error: --field required with --github-release", file=sys.stderr)
+            print('Error: --field required with --github-release', file=sys.stderr)
             sys.exit(1)
         value = get_github_release_field(data, args.github_release, args.field)
         if value is not None:
             print(value)
         else:
-            print(f"Error: {args.github_release}.{args.field} not found", file=sys.stderr)
+            print(f'Error: {args.github_release}.{args.field} not found', file=sys.stderr)
             sys.exit(1)
         return
 
     if args.custom_installer:
         if not args.field:
-            print("Error: --field required with --custom-installer", file=sys.stderr)
+            print('Error: --field required with --custom-installer', file=sys.stderr)
             sys.exit(1)
         value = get_custom_installer_field(data, args.custom_installer, args.field)
         if value is not None:
             print(value)
         else:
-            print(f"Error: {args.custom_installer}.{args.field} not found", file=sys.stderr)
+            print(f'Error: {args.custom_installer}.{args.field} not found', file=sys.stderr)
             sys.exit(1)
         return
 
@@ -549,7 +561,7 @@ def main():
 
     if args.type == 'system':
         if not args.manager:
-            print("Error: --manager required for system packages", file=sys.stderr)
+            print('Error: --manager required for system packages', file=sys.stderr)
             sys.exit(1)
         packages = get_system_packages(data, args.manager, args.tier)
     elif args.type == 'cargo':

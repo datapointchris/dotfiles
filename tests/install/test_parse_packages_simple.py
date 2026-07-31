@@ -9,144 +9,129 @@ or: python3 tests/install/test_parse_packages_simple.py (if yaml is available)
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "install"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install'))
 import parse_packages
 
 
 def test_get_value():
     """Test getting nested values with dot notation."""
-    data = {
-        "runtimes": {
-            "node": {"version": "22"},
-            "python": {"version": "3.12"}
-        }
-    }
+    data = {'runtimes': {'node': {'version': '22'}, 'python': {'version': '3.12'}}}
 
-    assert parse_packages.get_value(data, "runtimes.node.version") == "22"
-    assert parse_packages.get_value(data, "runtimes.python.version") == "3.12"
-    print("✓ test_get_value passed")
+    assert parse_packages.get_value(data, 'runtimes.node.version') == '22'
+    assert parse_packages.get_value(data, 'runtimes.python.version') == '3.12'
+    print('✓ test_get_value passed')
 
 
 def test_get_cargo_packages():
     """Test extracting cargo packages."""
-    data = {
-        "cargo_packages": [
-            {"name": "ripgrep"},
-            {"name": "fd-find"}
-        ]
-    }
+    data = {'cargo_packages': [{'name': 'ripgrep'}, {'name': 'fd-find'}]}
 
     packages = parse_packages.get_cargo_packages(data)
-    assert packages == ["ripgrep", "fd-find"]
+    assert packages == ['ripgrep', 'fd-find']
 
     # Test with empty data
     empty_packages = parse_packages.get_cargo_packages({})
     assert empty_packages == []
 
-    print("✓ test_get_cargo_packages passed")
+    print('✓ test_get_cargo_packages passed')
 
 
 def test_get_npm_packages():
     """Test extracting npm packages from categories."""
     data = {
-        "npm_globals": {
-            "formatters": [
-                {"name": "prettier"},
-                {"name": "markdownlint-cli"}
-            ],
-            "language_servers": [
-                {"name": "typescript-language-server"}
-            ]
+        'npm_globals': {
+            'formatters': [{'name': 'prettier'}, {'name': 'markdownlint-cli'}],
+            'language_servers': [{'name': 'typescript-language-server'}],
         }
     }
 
     packages = parse_packages.get_npm_packages(data)
-    assert packages == ["prettier", "markdownlint-cli", "typescript-language-server"]
-    print("✓ test_get_npm_packages passed")
+    assert packages == ['prettier', 'markdownlint-cli', 'typescript-language-server']
+    print('✓ test_get_npm_packages passed')
 
 
 def test_get_system_packages():
     """Test extracting system packages by manager."""
     data = {
-        "system_packages": [
-            {"apt": "curl", "brew": "curl", "pacman": "curl"},
-            {"apt": "git", "brew": "git", "pacman": "git"},
-            {"apt": "build-essential", "pacman": "base-devel"}
+        'system_packages': [
+            {'apt': 'curl', 'brew': 'curl', 'pacman': 'curl'},
+            {'apt': 'git', 'brew': 'git', 'pacman': 'git'},
+            {'apt': 'build-essential', 'pacman': 'base-devel'},
         ]
     }
 
-    apt_pkgs = parse_packages.get_system_packages(data, "apt")
-    assert apt_pkgs == ["curl", "git", "build-essential"]
+    apt_pkgs = parse_packages.get_system_packages(data, 'apt')
+    assert apt_pkgs == ['curl', 'git', 'build-essential']
 
-    brew_pkgs = parse_packages.get_system_packages(data, "brew")
-    assert brew_pkgs == ["curl", "git"]
+    brew_pkgs = parse_packages.get_system_packages(data, 'brew')
+    assert brew_pkgs == ['curl', 'git']
 
-    pacman_pkgs = parse_packages.get_system_packages(data, "pacman")
-    assert pacman_pkgs == ["curl", "git", "base-devel"]
+    pacman_pkgs = parse_packages.get_system_packages(data, 'pacman')
+    assert pacman_pkgs == ['curl', 'git', 'base-devel']
 
-    print("✓ test_get_system_packages passed")
+    print('✓ test_get_system_packages passed')
 
 
 def test_get_go_packages():
     """Test extracting go tool packages."""
     data = {
-        "go_tools": [
-            {"package": "github.com/jesseduffield/lazydocker@latest"},
-            {"package": "github.com/rhysd/actionlint/cmd/actionlint@latest"}
+        'go_tools': [
+            {'package': 'github.com/jesseduffield/lazydocker@latest'},
+            {'package': 'github.com/rhysd/actionlint/cmd/actionlint@latest'},
         ]
     }
 
     packages = parse_packages.get_go_packages(data)
     assert len(packages) == 2
-    assert packages[0] == "github.com/jesseduffield/lazydocker@latest"
-    print("✓ test_get_go_packages passed")
+    assert packages[0] == 'github.com/jesseduffield/lazydocker@latest'
+    print('✓ test_get_go_packages passed')
 
 
 def test_get_github_release_field():
     """Test getting fields from GitHub releases."""
     data = {
-        "github_releases": [
-            {"name": "neovim", "repo": "neovim/neovim", "min_version": "0.9.0"},
-            {"name": "lazygit", "repo": "jesseduffield/lazygit"}
+        'github_releases': [
+            {'name': 'neovim', 'repo': 'neovim/neovim', 'min_version': '0.9.0'},
+            {'name': 'lazygit', 'repo': 'jesseduffield/lazygit'},
         ]
     }
 
-    min_version = parse_packages.get_github_release_field(data, "neovim", "min_version")
-    assert min_version == "0.9.0"
+    min_version = parse_packages.get_github_release_field(data, 'neovim', 'min_version')
+    assert min_version == '0.9.0'
 
-    repo = parse_packages.get_github_release_field(data, "neovim", "repo")
-    assert repo == "neovim/neovim"
+    repo = parse_packages.get_github_release_field(data, 'neovim', 'repo')
+    assert repo == 'neovim/neovim'
 
-    not_found = parse_packages.get_github_release_field(data, "nonexistent", "repo")
+    not_found = parse_packages.get_github_release_field(data, 'nonexistent', 'repo')
     assert not_found is None
 
-    print("✓ test_get_github_release_field passed")
+    print('✓ test_get_github_release_field passed')
 
 
 def test_get_shell_plugins():
     """Test extracting shell plugins in different formats."""
     data = {
-        "shell_plugins": [
-            {"name": "zsh-autosuggestions", "repo": "zsh-users/zsh-autosuggestions"},
-            {"name": "fast-syntax-highlighting", "repo": "zdharma-continuum/fast-syntax-highlighting"}
+        'shell_plugins': [
+            {'name': 'zsh-autosuggestions', 'repo': 'zsh-users/zsh-autosuggestions'},
+            {'name': 'fast-syntax-highlighting', 'repo': 'zdharma-continuum/fast-syntax-highlighting'},
         ]
     }
 
     # Test names format
     names = parse_packages.get_shell_plugins(data, output_format='names')
-    assert names == ["zsh-autosuggestions", "fast-syntax-highlighting"]
+    assert names == ['zsh-autosuggestions', 'fast-syntax-highlighting']
 
     # Test name|repo format
     pairs = parse_packages.get_shell_plugins(data, output_format='name_repo')
-    assert pairs[0] == "zsh-autosuggestions|zsh-users/zsh-autosuggestions"
+    assert pairs[0] == 'zsh-autosuggestions|zsh-users/zsh-autosuggestions'
     assert len(pairs) == 2
 
-    print("✓ test_get_shell_plugins passed")
+    print('✓ test_get_shell_plugins passed')
 
 
 def main():
     """Run all tests."""
-    print("Running parse_packages.py tests...\n")
+    print('Running parse_packages.py tests...\n')
 
     test_get_value()
     test_get_cargo_packages()
@@ -156,9 +141,9 @@ def main():
     test_get_github_release_field()
     test_get_shell_plugins()
 
-    print("\n✅ All tests passed!")
+    print('\n✅ All tests passed!')
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

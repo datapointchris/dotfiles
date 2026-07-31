@@ -1,3 +1,3 @@
 """Dotfiles symlink manager with layered architecture."""
 
-__version__ = "1.0.0"
+__version__ = '1.0.0'

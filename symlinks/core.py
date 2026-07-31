@@ -1,5 +1,6 @@
 """Dotfiles symlink manager: configuration constants, utilities, and management functions."""
 
+import contextlib
 import fnmatch
 import os
 from pathlib import Path
@@ -8,78 +9,78 @@ from rich import print
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-DOTFILES_DIR = Path(os.environ.get("DOTFILES", Path.home() / "dotfiles")).resolve()
+DOTFILES_DIR = Path(os.environ.get('DOTFILES', Path.home() / 'dotfiles')).resolve()
 TARGET_DIR = Path.home().resolve()
 SEARCH_DEPTH = 5
 
-CLEANUP_DIRS = [".config", ".local/shell", ".local/share/workflows", ".local/share/applications"]
+CLEANUP_DIRS = ['.config', '.local/shell', '.local/share/workflows', '.local/share/applications']
 
 PROTECTED_DIRS = {
-    ".local/state/claude",
-    ".local/state/claude/locks",
-    ".local/state/nvim",
-    ".local/share/nvim",
-    ".cache",
-    ".venv",
-    ".git",
+    '.local/state/claude',
+    '.local/state/claude/locks',
+    '.local/state/nvim',
+    '.local/share/nvim',
+    '.cache',
+    '.venv',
+    '.git',
 }
 
 EXCLUDE_PATTERNS = [
-    "tmux/plugins/",
-    ".tmux/plugins/",
-    ".git/",
-    ".DS_Store",
-    "Thumbs.db",
-    "desktop.ini",
-    "*.tmp",
-    "*.temp",
-    "*.log",
-    "*.cache",
-    "*.swap",
-    "*.swp",
-    "*~",
-    "node_modules/",
-    ".venv/",
-    "__pycache__/",
-    "*.pyc",
-    ".pytest_cache/",
+    'tmux/plugins/',
+    '.tmux/plugins/',
+    '.git/',
+    '.DS_Store',
+    'Thumbs.db',
+    'desktop.ini',
+    '*.tmp',
+    '*.temp',
+    '*.log',
+    '*.cache',
+    '*.swap',
+    '*.swp',
+    '*~',
+    'node_modules/',
+    '.venv/',
+    '__pycache__/',
+    '*.pyc',
+    '.pytest_cache/',
 ]
 
 # Directories to skip entirely during symlink searches (never descend into these)
 EXCLUDE_SEARCH_DIRS = [
-    "Library/",
-    ".Trash/",
-    "Applications/",
-    "Movies/",
-    "Music/",
-    "Pictures/",
-    "Downloads/",
-    ".cache/",
-    ".local/share/Trash/",
-    "snap/",
-    "node_modules/",
-    ".npm/",
-    ".nvm/",
-    ".pyenv/",
-    ".cargo/",
-    ".rustup/",
-    ".rbenv/",
-    ".git/",
-    "venv/",
-    ".venv/",
-    "env/",
-    "__pycache__/",
-    ".pytest_cache/",
-    ".mypy_cache/",
-    ".ruff_cache/",
-    "vendor/",
-    ".bundle/",
-    "target/",
-    "dist/",
-    "build/",
-    ".idea/",
-    ".vscode/",
-    ".vim/",
+    'Library/',
+    '.Trash/',
+    'Applications/',
+    'Movies/',
+    'Music/',
+    'Pictures/',
+    'Downloads/',
+    '.cache/',
+    '.local/share/Trash/',
+    'snap/',
+    'node_modules/',
+    '.npm/',
+    '.nvm/',
+    '.pyenv/',
+    '.cargo/',
+    '.rustup/',
+    '.rbenv/',
+    '.git/',
+    'venv/',
+    '.venv/',
+    'env/',
+    '__pycache__/',
+    '.pytest_cache/',
+    '.mypy_cache/',
+    '.ruff_cache/',
+    'vendor/',
+    '.bundle/',
+    'target/',
+    'dist/',
+    'build/',
+    '.idea/',
+    '.vscode/',
+    '.vim/',
 ]
 
 
@@ -92,14 +93,12 @@ def should_exclude(path: Path) -> bool:
     filename = path.name
 
     for pattern in EXCLUDE_PATTERNS:
-        if pattern.endswith("/"):
+        if pattern.endswith('/'):
             # e.g. ".git/" must match path components, not prefix-match filenames like ".gitconfig"
-            dir_name = pattern.rstrip("/")
-            if f"/{dir_name}/" in path_str or path_str.startswith(f"{dir_name}/"):
+            dir_name = pattern.rstrip('/')
+            if f'/{dir_name}/' in path_str or path_str.startswith(f'{dir_name}/'):
                 return True
-        elif "*" in pattern and fnmatch.fnmatch(filename, pattern):
-            return True
-        elif filename == pattern:
+        elif '*' in pattern and fnmatch.fnmatch(filename, pattern) or filename == pattern:
             return True
 
     return False
@@ -132,16 +131,13 @@ def cleanup_empty_directories(base_dir: Path, dirs_to_clean: list[Path]) -> list
             continue
 
         # Walk deepest-first so parent dirs become empty after children are removed
-        for dirpath in sorted(cleanup_dir.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        for dirpath in sorted(cleanup_dir.rglob('*'), key=lambda p: len(p.parts), reverse=True):
             if not dirpath.is_dir() or any(dirpath.iterdir()):
                 continue
 
             try:
                 relative = dirpath.relative_to(base_dir)
-                if any(
-                    str(relative) == p or str(relative).startswith(f"{p}/")
-                    for p in PROTECTED_DIRS
-                ):
+                if any(str(relative) == p or str(relative).startswith(f'{p}/') for p in PROTECTED_DIRS):
                     continue
             except ValueError:
                 pass
@@ -164,7 +160,7 @@ def _find_symlinks(base_dir: Path) -> list[Path]:
 
     def should_skip(path: Path) -> bool:
         path_str = str(path)
-        return any(pattern.rstrip("/") in path_str for pattern in EXCLUDE_SEARCH_DIRS)
+        return any(pattern.rstrip('/') in path_str for pattern in EXCLUDE_SEARCH_DIRS)
 
     def walk(directory: Path, depth: int = 0) -> None:
         if depth >= SEARCH_DEPTH:
@@ -198,13 +194,13 @@ def create_symlinks(
     _target_dir = (target_dir or TARGET_DIR).resolve()
 
     if not source_dir.exists():
-        print(f"[red]✗[/] Source directory does not exist: {source_dir}")
+        print(f'[red]✗[/] Source directory does not exist: {source_dir}')
         return 0
 
-    print(f"[blue]Creating {layer} symlinks...[/]")
+    print(f'[blue]Creating {layer} symlinks...[/]')
     count = 0
 
-    for item in source_dir.rglob("*"):
+    for item in source_dir.rglob('*'):
         if not (item.is_file() or item.is_symlink()):
             continue
 
@@ -225,12 +221,12 @@ def create_symlinks(
                 target_path.unlink()
             target_path.symlink_to(relative_link, target_is_directory=item.is_dir())
             if verbose:
-                print(f"[green]✓[/] [default]{relative_path}[/] → [magenta]{relative_link}[/]")
+                print(f'[green]✓[/] [default]{relative_path}[/] → [magenta]{relative_link}[/]')
             count += 1
         except (OSError, PermissionError) as e:
-            print(f"[yellow]⚠[/] Failed to link {relative_path}: {e}")
+            print(f'[yellow]⚠[/] Failed to link {relative_path}: {e}')
 
-    print(f"[green]Created {count} symlinks[/]")
+    print(f'[green]Created {count} symlinks[/]')
     return count
 
 
@@ -245,7 +241,7 @@ def remove_symlinks(
     _target_dir = (target_dir or TARGET_DIR).resolve()
     source_dir = source_dir.resolve()
 
-    print(f"[blue]Removing {layer} symlinks...[/]")
+    print(f'[blue]Removing {layer} symlinks...[/]')
     count = 0
 
     for symlink in _find_symlinks(_target_dir):
@@ -254,16 +250,16 @@ def remove_symlinks(
             if target and str(target).startswith(str(source_dir)):
                 symlink.unlink()
                 if verbose:
-                    print(f"[green]✓[/] Removed: {symlink.relative_to(_target_dir)}")
+                    print(f'[green]✓[/] Removed: {symlink.relative_to(_target_dir)}')
                 count += 1
         except (OSError, ValueError):
             continue
 
     removed_dirs = cleanup_empty_directories(_target_dir, [_target_dir / d for d in CLEANUP_DIRS])
     if removed_dirs and verbose:
-        print(f"[dim]Cleaned up {len(removed_dirs)} empty directories[/]")
+        print(f'[dim]Cleaned up {len(removed_dirs)} empty directories[/]')
 
-    print(f"[green]Removed {count} symlinks[/]")
+    print(f'[green]Removed {count} symlinks[/]')
     return count
 
 
@@ -294,21 +290,19 @@ def check_and_clean(
     _target_dir = (target_dir or TARGET_DIR).resolve()
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
 
-    print("[blue]Scanning for broken symlinks...[/]")
+    print('[blue]Scanning for broken symlinks...[/]')
     broken = find_broken_symlinks(_target_dir, _dotfiles_dir)
 
     if not broken:
-        print("[green]✓[/] No broken symlinks found")
+        print('[green]✓[/] No broken symlinks found')
         return 0
 
-    print(f"[yellow]Found {len(broken)} broken symlinks:[/]")
+    print(f'[yellow]Found {len(broken)} broken symlinks:[/]')
     for symlink in broken:
-        try:
-            print(f"  [red]✗[/] {symlink.relative_to(_target_dir)} → {symlink.readlink()}")
-        except (OSError, ValueError):
-            pass
+        with contextlib.suppress(OSError, ValueError):
+            print(f'  [red]✗[/] {symlink.relative_to(_target_dir)} → {symlink.readlink()}')
 
-    print("\n[blue]Removing broken symlinks...[/]")
+    print('\n[blue]Removing broken symlinks...[/]')
     count = 0
     for symlink in broken:
         try:
@@ -319,9 +313,9 @@ def check_and_clean(
 
     removed_dirs = cleanup_empty_directories(_target_dir, [_target_dir / d for d in CLEANUP_DIRS])
     if removed_dirs:
-        print(f"[dim]Cleaned up {len(removed_dirs)} empty directories[/]")
+        print(f'[dim]Cleaned up {len(removed_dirs)} empty directories[/]')
 
-    print(f"[green]✓[/] Removed {count} broken symlinks")
+    print(f'[green]✓[/] Removed {count} broken symlinks')
     return count
 
 
@@ -336,7 +330,7 @@ def show_symlinks(
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
     source_filter = source_dir.resolve() if source_dir else _dotfiles_dir
 
-    print(f"[blue]Symlinks for {layer}:[/]")
+    print(f'[blue]Symlinks for {layer}:[/]')
     count = 0
     broken_count = 0
 
@@ -350,19 +344,19 @@ def show_symlinks(
             link_target = symlink.readlink()
 
             if not symlink.exists():
-                print(f"  [red]✗[/] {relative_path} → {link_target} (BROKEN)")
+                print(f'  [red]✗[/] {relative_path} → {link_target} (BROKEN)')
                 broken_count += 1
             else:
-                print(f"  [green]→[/] {relative_path} → {link_target}")
+                print(f'  [green]→[/] {relative_path} → {link_target}')
             count += 1
         except (OSError, ValueError):
             continue
 
     if count == 0:
-        print("[dim]No symlinks found[/]")
+        print('[dim]No symlinks found[/]')
     else:
-        suffix = f" [yellow]({broken_count} broken)[/]" if broken_count else ""
-        print(f"\n[green]Found {count} symlinks[/]{suffix}")
+        suffix = f' [yellow]({broken_count} broken)[/]' if broken_count else ''
+        print(f'\n[green]Found {count} symlinks[/]{suffix}')
 
     return count
 
@@ -378,11 +372,11 @@ def relink(
     _dotfiles_dir = (dotfiles_dir or DOTFILES_DIR).resolve()
     _target_dir = (target_dir or TARGET_DIR).resolve()
 
-    platform_dir = _dotfiles_dir / "configs" / platform
-    common_dir = _dotfiles_dir / "configs" / "common"
-    shell_dir = _dotfiles_dir / "shell"
-    target_shell = _target_dir / ".local" / "shell"
-    target_bin = _target_dir / ".local" / "bin"
+    platform_dir = _dotfiles_dir / 'configs' / platform
+    common_dir = _dotfiles_dir / 'configs' / 'common'
+    shell_dir = _dotfiles_dir / 'shell'
+    target_shell = _target_dir / '.local' / 'shell'
+    target_bin = _target_dir / '.local' / 'bin'
 
     # The platform config overlay is optional: a minimal platform like `linux`
     # ships only a shell overlay. When configs/<platform> is absent, skip the
@@ -401,23 +395,35 @@ def relink(
         if has_platform_config:
             create_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)
 
-    print(f"[bold cyan]Complete relink for {platform}[/]")
+    print(f'[bold cyan]Complete relink for {platform}[/]')
     print()
 
     steps = [
-        ("Removing platform symlinks", remove_platform_config),
-        ("Removing common symlinks", lambda: remove_symlinks(common_dir, "common", verbose=verbose, target_dir=_target_dir)),
-        ("Removing shell symlinks", lambda: remove_symlinks(shell_dir, "shell", verbose=verbose, target_dir=_target_dir)),
-        ("Checking for broken symlinks", lambda: check_and_clean(_target_dir, _dotfiles_dir)),
-        ("Creating common base layer", lambda: create_symlinks(common_dir, "common", verbose=verbose, target_dir=_target_dir)),
-        ("Creating platform overlay", create_platform_config),
-        ("Linking shell files", lambda: (link_if_exists(shell_dir / "common", "shell-common", target_shell), link_if_exists(shell_dir / platform, f"shell-{platform}", target_shell))),
-        ("Linking apps", lambda: (link_if_exists(_dotfiles_dir / "apps" / "common", "apps-common", target_bin), link_if_exists(_dotfiles_dir / "apps" / platform, f"apps-{platform}", target_bin))),
+        ('Removing platform symlinks', remove_platform_config),
+        ('Removing common symlinks', lambda: remove_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir)),
+        ('Removing shell symlinks', lambda: remove_symlinks(shell_dir, 'shell', verbose=verbose, target_dir=_target_dir)),
+        ('Checking for broken symlinks', lambda: check_and_clean(_target_dir, _dotfiles_dir)),
+        ('Creating common base layer', lambda: create_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir)),
+        ('Creating platform overlay', create_platform_config),
+        (
+            'Linking shell files',
+            lambda: (
+                link_if_exists(shell_dir / 'common', 'shell-common', target_shell),
+                link_if_exists(shell_dir / platform, f'shell-{platform}', target_shell),
+            ),
+        ),
+        (
+            'Linking apps',
+            lambda: (
+                link_if_exists(_dotfiles_dir / 'apps' / 'common', 'apps-common', target_bin),
+                link_if_exists(_dotfiles_dir / 'apps' / platform, f'apps-{platform}', target_bin),
+            ),
+        ),
     ]
 
     for i, (desc, fn) in enumerate(steps, 1):
-        print(f"[yellow]Step [green]{i}/{len(steps)}[/green]: {desc}[/yellow]")
+        print(f'[yellow]Step [green]{i}/{len(steps)}[/green]: {desc}[/yellow]')
         fn()
         print()
 
-    print(f"[bold green]✓ Relink complete![/] {platform} environment refreshed.")
+    print(f'[bold green]✓ Relink complete![/] {platform} environment refreshed.')

@@ -6,16 +6,17 @@ number means days). The due date is always derived, never stored:
 second date to keep in sync and nothing to drift.
 """
 
-from datetime import date, timedelta
+from datetime import date
+from datetime import timedelta
 
-CADENCE_UNITS = {"d": 1, "w": 7, "mo": 30, "y": 365}
+CADENCE_UNITS = {'d': 1, 'w': 7, 'mo': 30, 'y': 365}
 
 
 def parse_cadence(token: str) -> int:
     """Days for a cadence token like 2w / 1mo / 10d / 1y (bare number = days)."""
     token = str(token).strip()
-    num = "".join(c for c in token if c.isdigit())
-    unit = "".join(c for c in token if c.isalpha())
+    num = ''.join(c for c in token if c.isdigit())
+    unit = ''.join(c for c in token if c.isalpha())
     if not num:
         return 0
     return int(num) * CADENCE_UNITS.get(unit, 1)
@@ -41,9 +42,9 @@ def is_due(overdue: int | None) -> bool:
 def status_label(overdue: int | None) -> str:
     """Human-readable status for an overdue value from :func:`overdue_days`."""
     if overdue is None:
-        return "never done"
+        return 'never done'
     if overdue > 0:
-        return f"overdue {overdue}d"
+        return f'overdue {overdue}d'
     if overdue == 0:
-        return "due today"
-    return f"in {-overdue}d"
+        return 'due today'
+    return f'in {-overdue}d'
