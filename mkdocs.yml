@@ -239,3 +239,4 @@ nav:
       - GitHub Releases vs System Packages: learnings/github-releases-vs-system-packages.md
       - cargo binstall Needs Release Binaries: learnings/cargo-binstall-needs-release-binaries.md
       - Version Comparison in Shell: learnings/version-comparison-in-shell.md
+      - Pyright Config File Precedence: learnings/pyright-config-file-precedence.md

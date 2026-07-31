@@ -20,13 +20,11 @@ return {
     },
     python = {
       analysis = {
-        -- Ignore all files for analysis to exclusively use Ruff for linting
+        -- Ignore all files for analysis to exclusively use Ruff for linting.
+        -- Only reaches the server when the project has no [tool.basedpyright]
+        -- or [tool.pyright] section; a config file discards this whole table,
+        -- so per-rule silencing belongs in pyproject.toml, never here.
         ignore = { '*' },
-        diagnosticSeverityOverrides = {
-          -- basedpyright-only; demands annotations on every class attribute
-          -- unless the class is @final, which is not a decorator worth adding
-          reportUnannotatedClassAttribute = 'none',
-        },
       },
     },
   },
