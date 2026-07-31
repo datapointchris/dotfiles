@@ -24,28 +24,37 @@ brew install --cask orbstack
 
 Open the OrbStack app. Docker is available immediately — no manual daemon start required. OrbStack runs in the menu bar and starts automatically on login.
 
-### Linux (WSL/Arch)
+### Arch
 
-Linux runs containers natively without virtualization.
+Linux runs containers natively without virtualization, so Arch talks to the Docker daemon directly with no VM overhead.
 
 **Container Runtime**: Docker Engine (native)
 
-Linux uses the Docker daemon directly without VM overhead.
-
-**Installation (WSL)**:
-
-```bash
-sudo apt install docker.io docker-compose-plugin
-```
-
-**Installation (Arch)**:
+**Installation**:
 
 ```bash
 sudo pacman -S docker docker-compose
 ```
 
-**docker-compose Plugin**:
-Linux package managers install docker-compose-plugin automatically with proper integration. No manual symlink needed.
+The `docker-compose-plugin` equivalent comes from the package manager with the plugin path already wired up — no manual symlink needed.
+
+### WSL (Docker Desktop integration)
+
+WSL does **not** run its own Docker Engine. The distro borrows the CLI and daemon from Docker Desktop on the Windows side, which is why `install/wsl/system-packages.sh` filters the Docker packages out of the apt install and `install/wsl/docker-repo.sh` exits early when it detects WSL. Two engines competing for one distro is the thing being avoided; Docker Desktop already runs one in its own utility VM and shares it across every enabled distro.
+
+Enable it in **Docker Desktop → Settings → Resources → WSL Integration**, toggle the Ubuntu distro, then Apply & Restart. The CLI appears at `/mnt/wsl/docker-desktop/cli-tools/usr/bin/` and is put on `PATH` for the distro.
+
+Until that toggle is on, Ubuntu's own `/usr/bin/docker` stub answers instead. It exists only to print the "could not be found in this WSL 2 distro" hint and exits 1 for every subcommand, including `docker completion zsh` — which is why `cache_eval` in `.zshrc` records a failure marker for it rather than retrying the generator in every shell. Enabling the integration changes what `docker` resolves to, the marker no longer matches, and completion regenerates on the next shell.
+
+Where Docker Desktop is not an option — its license is per-seat for commercial use, so a work machine may not have it — the alternative is a native engine inside the distro: run `install/wsl/docker-repo.sh` past its WSL guard, install `docker-ce` and the plugins by hand, and enable systemd so `systemctl start docker` works. That is a deliberate departure from the setup above, not a supported path through the installer.
+
+```ini
+# /etc/wsl.conf
+[boot]
+systemd = true
+```
+
+Systemd takes effect after `wsl --shutdown` from Windows and needs WSL 0.67.6 or newer.
 
 ## Docker Compose: V1 vs V2
 
@@ -68,7 +77,7 @@ Linux package managers install docker-compose-plugin automatically with proper i
 
 ## Docker Completions
 
-Completions are provided automatically by OrbStack (macOS) and docker packages (Linux). No separate installation needed.
+`.zshrc` generates the zsh completion from the CLI itself with `docker completion zsh` and caches it under `$XDG_CACHE_HOME/zsh/completions`. Neither Homebrew nor OrbStack installs a `_docker` on fpath, and the compose plugin ships no completion of its own — the generated one covers `docker compose` as well. Where a package does supply `_docker`, the generated copy wins anyway, since it is sourced after compinit and re-registers the command.
 
 ## XDG Base Directory Compliance
 
@@ -121,11 +130,15 @@ lazydocker
 
 Open OrbStack (runs in menu bar, starts on login by default).
 
-**Linux**:
+**Arch**:
 
 ```bash
 sudo systemctl start docker
 ```
+
+**WSL**:
+
+Start Docker Desktop on Windows. The daemon is shared with the distro through the WSL integration; there is no service to start inside Ubuntu.
 
 ### Verify Installation
 
@@ -152,7 +165,9 @@ docker system prune
 lazydocker
 ```
 
-## Why Not Docker Desktop?
+## Why Not Docker Desktop? (macOS)
+
+This applies to macOS, where a VM is unavoidable and the choice is open. WSL takes Docker Desktop because Windows offers no comparable alternative and the work machine already has it.
 
 Docker Desktop was replaced with OrbStack + lazydocker because:
 
@@ -197,9 +212,10 @@ newgrp docker
 
 If missing, re-run `install/macos/configure-docker.sh` or add it manually.
 
-**Linux**: Install docker-compose-plugin:
+**Arch**: Install docker-compose-plugin:
 
 ```bash
-sudo apt install docker-compose-plugin  # WSL
-sudo pacman -S docker-compose            # Arch
+sudo pacman -S docker-compose
 ```
+
+**WSL**: The plugin comes from Docker Desktop along with the CLI. If `docker compose` is missing, the WSL integration is off — see the WSL section above.
