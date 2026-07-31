@@ -220,7 +220,7 @@ ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
 
 cache_eval() {
   local name="$1"; shift
-  local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err
+  local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err ret
 
   # Staleness is measured against $name, not $1: a generator invoked as
   # `env VAR=x tool` would otherwise stat env(1), whose mtime never moves, and
@@ -232,11 +232,18 @@ cache_eval() {
 
   if [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
     # `2>&1 >file` splits the streams: stdout to the cache, stderr into $err.
-    if err="$("$@" 2>&1 >"$cache.new")" && [[ -s "$cache.new" ]]; then
+    err="$("$@" 2>&1 >"$cache.new")"
+    ret=$?
+    if (( ret == 0 )) && [[ -s "$cache.new" ]]; then
       mv -f "$cache.new" "$cache"
     else
+      # A tool that answers an unknown subcommand with its usage text writes it
+      # to stdout and exits non-zero, leaving stderr empty — report whichever
+      # stream said something, and the status either way, or the failure is
+      # indistinguishable from a generator that legitimately printed nothing.
+      [[ -n "$err" ]] || err="$(head -n1 "$cache.new" 2>/dev/null)"
       rm -f "$cache.new"
-      log_error "Setup" "$name: ${err:-generated nothing}"
+      log_error "Setup" "$name: exit $ret: ${err:-generated nothing}"
     fi
   fi
 
