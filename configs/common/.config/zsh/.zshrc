@@ -221,6 +221,9 @@ ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
 cache_eval() {
   local name="$1"; shift
   local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err ret
+  # Its own statement: zsh expands every word of a `local` before assigning any
+  # of them, so $cache on that line is still empty and this becomes ./.failed.
+  local failed="$cache.failed"
 
   # Staleness is measured against $name, not $1: a generator invoked as
   # `env VAR=x tool` would otherwise stat env(1), whose mtime never moves, and
@@ -230,12 +233,23 @@ cache_eval() {
     return 0
   fi
 
-  if [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
+  # Being on PATH does not mean the tool can generate anything: WSL ships a
+  # /usr/bin/docker stub for Docker Desktop's distro integration that exits 1
+  # for every subcommand, so `command -v` finds it and generation can never
+  # succeed. Remember the failure against the tool that caused it, or that costs
+  # a subprocess and an error line in every shell forever. The marker holds the
+  # resolved target, so swapping a stub for the real binary retries even when
+  # the replacement's mtime predates the marker — enabling the integration fixes
+  # completion on the next shell without anything to clear by hand.
+  if [[ -f "$failed" && "$(<"$failed")" == "${bin:A}" && ! "$bin" -nt "$failed" ]]; then
+    log "Skip" "$name generated nothing last time"
+  elif [[ ! -s "$cache" || "$bin" -nt "$cache" ]]; then
     # `2>&1 >file` splits the streams: stdout to the cache, stderr into $err.
     err="$("$@" 2>&1 >"$cache.new")"
     ret=$?
     if (( ret == 0 )) && [[ -s "$cache.new" ]]; then
       mv -f "$cache.new" "$cache"
+      rm -f "$failed"
     else
       # A tool that answers an unknown subcommand with its usage text writes it
       # to stdout and exits non-zero, leaving stderr empty — report whichever
@@ -243,6 +257,7 @@ cache_eval() {
       # indistinguishable from a generator that legitimately printed nothing.
       [[ -n "$err" ]] || err="$(head -n1 "$cache.new" 2>/dev/null)"
       rm -f "$cache.new"
+      print -r -- "${bin:A}" >| "$failed"
       log_error "Setup" "$name: exit $ret: ${err:-generated nothing}"
     fi
   fi
