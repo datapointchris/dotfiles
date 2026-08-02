@@ -33,6 +33,7 @@ return {
   { 'craftzdog/solarized-osaka.nvim', lazy = true },
   { 'mhartington/oceanic-next', lazy = true },
   { 'datapointchris/flexoki-moon-nvim', lazy = true },
+  { 'Aejkatappaja/cendre', lazy = true },
   {
     'neanias/everforest-nvim',
     version = false,
@@ -189,15 +190,24 @@ return {
           if type == 'directory' then
             local meta = parse_theme_yml(themes_dir .. '/' .. name)
             if meta and meta.neovim_colorscheme_name then
-              local display_name = meta.display_name or name
-              local source = meta.neovim_colorscheme_source or ''
-              local source_label = ''
-              if source == 'generated' then
-                source_label = ' (Generated)'
-              elseif source == 'plugin' then
-                source_label = ' (Neovim Plugin)'
+              local colorscheme = meta.neovim_colorscheme_name
+              -- Several themes can share one colorscheme name when the plugin
+              -- exposes its variants as setup options (cendre's three depths).
+              -- The picker only ever shows one entry for them, so label it from
+              -- the theme whose id is the bare colorscheme name rather than from
+              -- whichever directory scandir happened to reach last.
+              local is_collision = display_map[colorscheme] ~= nil
+              if not is_collision or meta.id == colorscheme then
+                local display_name = meta.display_name or name
+                local source = meta.neovim_colorscheme_source or ''
+                local source_label = ''
+                if source == 'generated' then
+                  source_label = ' (Generated)'
+                elseif source == 'plugin' then
+                  source_label = ' (Neovim Plugin)'
+                end
+                display_map[colorscheme] = display_name .. source_label
               end
-              display_map[meta.neovim_colorscheme_name] = display_name .. source_label
             end
           end
         end
@@ -305,6 +315,20 @@ return {
           vim.o.background = 'dark'
         elseif meta.variant == 'light' then
           vim.o.background = 'light'
+        end
+
+        -- Some plugins expose a variant as a setup option rather than as its own
+        -- colorscheme name, so the variant has to be selected before the
+        -- colorscheme loads or Neovim keeps the plugin default while every other
+        -- app moves. The module is assumed to be named after the colorscheme,
+        -- which holds for every plugin using this key so far.
+        if meta.neovim_plugin_background then
+          local configured, err = pcall(function()
+            require(colorscheme).setup({ background = meta.neovim_plugin_background })
+          end)
+          if not configured then
+            vim.notify('colorscheme-manager: could not set ' .. colorscheme .. ' background: ' .. tostring(err), vim.log.levels.WARN)
+          end
         end
 
         local ok = pcall(vim.cmd, 'colorscheme ' .. colorscheme)
