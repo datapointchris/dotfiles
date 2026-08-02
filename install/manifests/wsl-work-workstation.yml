@@ -20,6 +20,8 @@ go_tools:
   - todoui
   - bbkt
   - ifiles
+  - gowall
+  - ascii-image-converter
 
 github_releases:
   - fzf

@@ -22,6 +22,7 @@ go_tools:
   - forge
   - ifiles
   - gowall
+  - ascii-image-converter
 
 github_releases:
   - fzf
