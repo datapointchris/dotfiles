@@ -34,6 +34,7 @@ return {
   { 'mhartington/oceanic-next', lazy = true },
   { 'datapointchris/flexoki-moon-nvim', lazy = true },
   { 'Aejkatappaja/cendre', lazy = true },
+  { 'Aejkatappaja/sora', lazy = true },
   {
     'neanias/everforest-nvim',
     version = false,
@@ -331,9 +332,18 @@ return {
           end
         end
 
-        local ok = pcall(vim.cmd, 'colorscheme ' .. colorscheme)
+        -- A plugin theme whose lazy.nvim entry was never added fails here, and
+        -- silently: the terminal moves and the editor keeps the old colorscheme
+        -- with nothing to say why. Startup falls back to a random theme, but the
+        -- watcher path has no fallback, so report it.
+        local ok, err = pcall(vim.cmd, 'colorscheme ' .. colorscheme)
         if ok then
           require('fidget').notify('Theme: ' .. colorscheme)
+        else
+          vim.notify(
+            'colorscheme-manager: ' .. colorscheme .. ' failed to load (plugin registered?): ' .. tostring(err),
+            vim.log.levels.WARN
+          )
         end
         return ok
       end
