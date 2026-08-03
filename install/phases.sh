@@ -37,6 +37,9 @@ PHASE_REGISTRY=(
   "github-releases|tools|yes|install_github_releases|update_github_releases"
   "custom-installers|tools|yes|install_custom_installers|update_custom_installers"
   "cargo|tools|yes|install_cargo_packages|update_cargo_packages"
+  # Between cargo and npm-globals, not in the languages group: fnm ships as a
+  # cargo package, and the globals must install against the Node this pins.
+  "node-toolchain|tools|no|install_node_toolchain|update_node_toolchain"
   "npm-globals|tools|no|install_npm_globals|update_npm_globals"
   "uv-tools|tools|yes|install_uv_tools|update_uv_tools"
   "shell-plugins|plugins|no|install_shell_plugins|update_shell_plugins"

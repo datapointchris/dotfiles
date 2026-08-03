@@ -36,12 +36,26 @@ Macs use it while every other platform uses the uniform GitHub-releases install.
 
 ## Version Managers
 
-### Node.js and npm (system package)
+### Node.js and npm (via fnm)
 
-Node.js is installed as a **system package**, not through a version manager. There
-is no per-project version switching, and a static-PATH install keeps `node`/`npm`
-available to non-interactive shells (scripts, editors, agents) — which a shell-function
-manager like nvm cannot do.
+Node.js versions come from **fnm**, installed as a cargo package. Repos across the
+portfolio pin different versions in `.nvmrc` — several want 24, meso wants 26 — and
+running the wrong one is not a subtle failure: ichrisbirch's frontend suite dies
+outright on 26 with `localStorage is undefined`.
+
+`install/common/language-managers/node.sh` installs the fleet default and links it
+as fnm's `default` alias. `.zshenv` puts `~/.local/share/fnm/aliases/default/bin`
+on PATH ahead of everything else, so scripts, editors, agents and pre-commit hooks
+resolve `node` to that version without any shell integration. `.zshrc` layers
+`fnm env --use-on-cd` over it, so entering a directory with an `.nvmrc` switches.
+
+This is the arrangement nvm could not provide: nvm is a shell function defined in
+`.zshrc`, so it never existed in a non-interactive shell. fnm is a binary, so the
+default alias and `fnm exec` work anywhere. Removing nvm on the grounds that
+per-project switching was unused was the wrong diagnosis of a real problem.
+
+The brew/pacman `node` package stays installed, but only as the bootstrap npm the
+installer needs before fnm has fetched anything.
 
 ```bash
 # macOS

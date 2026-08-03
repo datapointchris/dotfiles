@@ -160,6 +160,15 @@ update_go_toolchain() {
   fi
 }
 
+update_node_toolchain() {
+  print_section "Updating Node default via $(print_green "node.sh --update")"
+  if bash "$DOTFILES_DIR/install/common/language-managers/node.sh" --update; then
+    log_success "Node toolchain update completed"
+  else
+    log_warning "Node update failed"
+  fi
+}
+
 update_rust_toolchain() {
   print_section "Updating Rust toolchain via $(print_green "rustup update")"
   if rustup update; then

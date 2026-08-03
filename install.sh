@@ -202,8 +202,15 @@ install_cargo_packages() {
   run_installer "$INSTALL_COMMON/language-tools/cargo-tools.sh" "cargo-tools"
 }
 
-# Node.js is a system package, so npm globals only need npm on PATH — there is
-# no version manager to bootstrap.
+# Runs after cargo packages, which is where fnm comes from, and before npm
+# globals, so those install against the fleet's Node rather than whatever the
+# system package happens to be.
+install_node_toolchain() {
+  packages_present --type=npm || return 0
+  print_header "Node Toolchain"
+  run_installer "$INSTALL_COMMON/language-managers/node.sh" "node"
+}
+
 install_npm_globals() {
   packages_present --type=npm || return 0
   print_header "npm Globals"

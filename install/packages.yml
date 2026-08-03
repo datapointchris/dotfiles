@@ -51,7 +51,18 @@ system_packages:
     brew: pkg-config
     description: Build configuration tool
 
-  # Node.js — system-managed (replaced nvm; no per-project version switching used).
+  # Node.js — the system package is the floor, not the version projects build
+  # against. fnm (cargo_packages) supplies the per-project version from .nvmrc
+  # and owns what bare `node` resolves to; this package only guarantees an npm
+  # exists to bootstrap npm_globals before fnm has installed anything.
+  #
+  # Per-project switching is emphatically used: ichrisbirch, nomad and timeline
+  # pin 24 and meso pins 26, and running the wrong one is not a subtle failure —
+  # ichrisbirch's whole vitest suite dies with `localStorage is undefined` under
+  # 26. Removing nvm on the grounds that switching was unused was wrong; the
+  # real fault was nvm being a shell function, invisible to every
+  # non-interactive shell. fnm is a binary and does not have that problem.
+  #
   # Workstation-tier (untagged) so servers without npm_globals never pull it in.
   - name: nodejs
     brew: node
@@ -984,6 +995,20 @@ custom_installers:
 # Fast pre-compiled binaries (much faster than cargo install)
 
 cargo_packages:
+  # Node version manager. Reads .nvmrc, and unlike nvm it is a binary rather
+  # than a shell function, so `fnm exec` and the default-alias PATH entry work
+  # in non-interactive shells — the exact failure that got nvm removed.
+  #
+  # The install script pins a default version and links it; .zshenv puts that
+  # alias on PATH ahead of the system node so scripts, hooks and agents get the
+  # fleet version, and .zshrc adds --use-on-cd for per-directory switching.
+  - name: fnm
+    command: fnm
+    description: Node version manager (reads .nvmrc; binary, not a shell function)
+    github_repo: Schniz/fnm
+    binary_pattern: "fnm-{target}.zip"
+    tags: [cli, development]
+
   - name: ripgrep
     command: rg
     description: Fast grep alternative
@@ -1596,14 +1621,15 @@ macos_casks:
 #                      package is required for a platform (e.g. Intel-macOS bottles).
 #   - github_releases: prebuilt binaries pinned to latest upstream (also the fallback
 #                      when a tool has its own downstream manager, e.g. yazi's `ya`)
-#   - runtimes:        rustup / uv / go, not system language packages (Node.js is
-#                      a system package — see system_packages — since no per-project
-#                      version switching is used)
+#   - runtimes:        rustup / uv / go, not system language packages. Node is
+#                      split: fnm (cargo_packages) owns the version, the system
+#                      package is only a bootstrap npm.
 #   - npm_globals / uv_tools / go_tools: per-language package managers
 #   - custom_installers: official vendor installers where required (e.g. AWS CLI)
 #
 # Runtime Versions:
-#   - Node.js: System package via brew/pacman (see system_packages)
+#   - Node.js: Managed by fnm, default pinned in language-managers/node.sh; the
+#              brew/pacman package is only the bootstrap npm
 #   - Python: Managed by uv
 #   - Go: Installed from GitHub releases (see runtimes.go.min_version)
 #   - Rust: Installed via rustup

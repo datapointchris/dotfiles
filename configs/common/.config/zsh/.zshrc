@@ -443,6 +443,18 @@ add_path "$CARGO_HOME/bin"
 
 cache_eval zoxide zoxide init --cmd z zsh
 
+# Not cache_eval'd: `fnm env` emits a per-shell multishell directory in its
+# PATH, so a cached copy would point every later shell at the first shell's
+# directory, which is removed when that shell exits.
+#
+# --use-on-cd reads .nvmrc on entering a directory, which is the whole point:
+# ichrisbirch, nomad and timeline pin 24 while meso pins 26. .zshenv already
+# puts the default alias on PATH for non-interactive shells; this layers
+# per-directory switching over it for interactive ones.
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env --use-on-cd --shell zsh)"
+fi
+
 # fzf
 if command -v fzf >/dev/null 2>&1; then
   cache_eval fzf fzf --zsh
