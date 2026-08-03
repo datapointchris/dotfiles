@@ -8,6 +8,7 @@ tags: [bbkt, bitbucket, pr, pull-request, review, merge, diff, develop, uat, pro
 # GOAL: raise a PR against develop/uat/prod and review one, without ever making a
 # local copy of those branches. `bbkt` for the PR lifecycle, git for the diff.
 # The GitHub/gh version of this is `workflows show review-and-merge-a-pr`.
+# The Jira half of this loop is `workflows show jira-from-the-terminal`.
 
 # 0. REFRESH the remote refs. syncer does this on every run, so usually it's done.
 git fetch --prune
