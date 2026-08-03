@@ -359,8 +359,8 @@ session3"), nil
         {"move down again", "j", 1, 2},
         {"move up", "up", 2, 1},
         {"move up again", "k", 1, 0},
-        {"cant go below 0", "up", 0, 0},
-        {"cant go above max", "down", 2, 2},
+        {"cannot go below 0", "up", 0, 0},
+        {"cannot go above max", "down", 2, 2},
     }
 
     for _, tt := range tests {

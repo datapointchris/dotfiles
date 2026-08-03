@@ -90,12 +90,13 @@ end
 -- VSCode manages buffers natively
 if not vim.g.vscode then
   -- mini.bufremove deletes the buffer while keeping the window/tab layout intact
-  vim.keymap.set('n', '<leader>bd', function()
-    require('mini.bufremove').delete(0, false)
-  end, { desc = 'Buffer delete (keep window)' })
-  vim.keymap.set('n', '<leader>bD', function()
-    require('mini.bufremove').delete(0, true)
-  end, { desc = 'Buffer delete (force, discard changes)' })
+  vim.keymap.set('n', '<leader>bd', function() require('mini.bufremove').delete(0, false) end, { desc = 'Buffer delete (keep window)' })
+  vim.keymap.set(
+    'n',
+    '<leader>bD',
+    function() require('mini.bufremove').delete(0, true) end,
+    { desc = 'Buffer delete (force, discard changes)' }
+  )
 
   -- Cycle buffers on ]b/[b (vim-unimpaired convention, matching ]q/]h/]d).
   -- Deliberately NOT <S-h>/<S-l>: those would shadow native H/L (jump cursor to
@@ -112,9 +113,7 @@ end
 if not vim.g.vscode then
   -- Resize window with larger amounts, using winresize to resize intuitively
   local resize = function(win, amt, dir)
-    return function()
-      require('winresize').resize(win, amt, dir)
-    end
+    return function() require('winresize').resize(win, amt, dir) end
   end
   vim.keymap.set('n', '<leader>wh', resize(0, 10, 'left'), { desc = 'Window resize left' })
   vim.keymap.set('n', '<leader>wj', resize(0, 10, 'down'), { desc = 'Window resize down' })
@@ -134,9 +133,7 @@ end
 --- AUTO-SESSION -----------------------
 ----------------------------------------
 -- VSCode doesn't use Neovim sessions, these are Neovim-specific
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>wr', '<cmd>SessionRestore<CR>', { desc = 'Restore session for cwd' })
-end
+if not vim.g.vscode then vim.keymap.set('n', '<leader>wr', '<cmd>SessionRestore<CR>', { desc = 'Restore session for cwd' }) end
 
 --------------------------------------------------------------------------------
 -- Tmux pane navigation (<C-arrow>, <C-\>) is defined as lazy `keys` in
@@ -191,9 +188,7 @@ if not vim.g.vscode then
         -- runtimepath yet and wouldn't appear. Selecting one triggers
         -- lazy.nvim's ColorSchemePre load.
         results = good_colorschemes,
-        entry_maker = function(cs)
-          return { value = cs, display = display_map[cs] or cs, ordinal = display_map[cs] or cs }
-        end,
+        entry_maker = function(cs) return { value = cs, display = display_map[cs] or cs, ordinal = display_map[cs] or cs } end,
       }),
     })
   end
@@ -210,13 +205,18 @@ if not vim.g.vscode then
   vim.keymap.set('n', '<leader>fk', tb.keymaps, { desc = 'Find: Keymaps' })
   vim.keymap.set('n', '<leader>ft', tb.treesitter, { desc = 'Find: Treesitter' })
   vim.keymap.set('n', '<leader>fz', filtered_colorschemes, { desc = 'Find: Colorschemes' })
-  vim.keymap.set('n', '<leader>fn', function()
-    tb.find_files({
-      cwd = vim.fn.stdpath('config'),
-      hidden = true,
-      follow = true,
-    })
-  end, { desc = 'Find: Neovim config files' })
+  vim.keymap.set(
+    'n',
+    '<leader>fn',
+    function()
+      tb.find_files({
+        cwd = vim.fn.stdpath('config'),
+        hidden = true,
+        follow = true,
+      })
+    end,
+    { desc = 'Find: Neovim config files' }
+  )
 end
 
 --------------------------------------------------------------------------------
@@ -254,34 +254,46 @@ vim.api.nvim_set_keymap('v', '<leader>zf', ":'<,'>ZkMatch<CR>", { noremap = true
 -- Zen Mode ----------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode has native zen mode, this conflicts with VSCode zen mode keybinding
-if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>zz', '<cmd>ZenMode<CR>', { desc = 'Toggle Zen Mode' })
-end
+if not vim.g.vscode then vim.keymap.set('n', '<leader>zz', '<cmd>ZenMode<CR>', { desc = 'Toggle Zen Mode' }) end
 
 --------------------------------------------------------------------------------
 -- Code (format, fix, rename) --------------------------------------------------
 --------------------------------------------------------------------------------
 -- VSCode handles these natively; Neovim-only here
 if not vim.g.vscode then
-  vim.keymap.set('n', '<leader>cf', function()
-    require('conform').format({ async = true, lsp_fallback = true })
-  end, { desc = 'Code: [f]ormat buffer' })
-  vim.keymap.set('n', '<leader>ci', function()
-    vim.lsp.buf.code_action({
-      context = { only = { 'source.fixAll' }, diagnostics = {} },
-      apply = true,
-    })
-  end, { desc = 'Code: fix all l[i]nting' })
+  vim.keymap.set(
+    'n',
+    '<leader>cf',
+    function() require('conform').format({ async = true, lsp_fallback = true }) end,
+    { desc = 'Code: [f]ormat buffer' }
+  )
+  vim.keymap.set(
+    'n',
+    '<leader>ci',
+    function()
+      vim.lsp.buf.code_action({
+        context = { only = { 'source.fixAll' }, diagnostics = {} },
+        apply = true,
+      })
+    end,
+    { desc = 'Code: fix all l[i]nting' }
+  )
   -- Show the full diagnostic(s) under the cursor in a float — virtual_text
   -- truncates long messages, so this reveals the rest on demand.
   vim.keymap.set('n', '<leader>cd', vim.diagnostic.open_float, { desc = 'Code: show [d]iagnostic float' })
   -- inc-rename: live-preview LSP rename, prefilled with the word under cursor
-  vim.keymap.set('n', '<leader>cr', function()
-    return ':IncRename ' .. vim.fn.expand('<cword>')
-  end, { expr = true, desc = 'Code: [r]ename symbol' })
+  vim.keymap.set(
+    'n',
+    '<leader>cr',
+    function() return ':IncRename ' .. vim.fn.expand('<cword>') end,
+    { expr = true, desc = 'Code: [r]ename symbol' }
+  )
   -- Toggle native LSP inlay hints (inferred types, parameter names). Off by
   -- default; noisy for some buffers, so it's on-demand rather than always-on.
-  vim.keymap.set('n', '<leader>ch', function()
-    vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
-  end, { desc = 'Code: toggle inlay [h]ints' })
+  vim.keymap.set(
+    'n',
+    '<leader>ch',
+    function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled()) end,
+    { desc = 'Code: toggle inlay [h]ints' }
+  )
 end

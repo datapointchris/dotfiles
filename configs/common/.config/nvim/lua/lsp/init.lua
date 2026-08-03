@@ -14,9 +14,7 @@
 -- (e.g. gh_actions_ls). This is the correct wiring — the old approach merged
 -- them into client.server_capabilities on attach, which was too late and the
 -- wrong direction (server_capabilities describe what the server offers).
-if pcall(require, 'blink.cmp') then
-  vim.lsp.config('*', { capabilities = require('blink.cmp').get_lsp_capabilities() })
-end
+if pcall(require, 'blink.cmp') then vim.lsp.config('*', { capabilities = require('blink.cmp').get_lsp_capabilities() }) end
 
 vim.lsp.enable({
   'bashls',

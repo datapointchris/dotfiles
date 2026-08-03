@@ -15,15 +15,11 @@ return {
         -- Hunk navigation on ]h/[h. Native ]c/[c stay free for vimdiff, and
         -- treesitter-textobjects keeps ]c/[c for class navigation (a global
         -- ]c/[c here would be shadowed buffer-locally in every git repo).
-        map('n', ']h', function()
-          gitsigns.nav_hunk('next')
-        end, {
+        map('n', ']h', function() gitsigns.nav_hunk('next') end, {
           desc = 'Jump to next git [h]unk',
         })
 
-        map('n', '[h', function()
-          gitsigns.nav_hunk('prev')
-        end, {
+        map('n', '[h', function() gitsigns.nav_hunk('prev') end, {
           desc = 'Jump to previous git [h]unk',
         })
 

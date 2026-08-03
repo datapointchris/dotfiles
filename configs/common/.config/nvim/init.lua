@@ -14,9 +14,7 @@ local required_env_vars = {
 
 local missing_vars = {}
 for _, var in ipairs(required_env_vars) do
-  if not vim.env[var] then
-    table.insert(missing_vars, var)
-  end
+  if not vim.env[var] then table.insert(missing_vars, var) end
 end
 
 if #missing_vars > 0 then
@@ -42,6 +40,4 @@ if not profiles.is_vscode then
   require('core.floaterminal')
 end
 
-if profiles.is_full then
-  require('lsp')
-end
+if profiles.is_full then require('lsp') end

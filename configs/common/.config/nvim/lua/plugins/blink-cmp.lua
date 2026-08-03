@@ -7,9 +7,7 @@ return {
   -- library (or builds it if unsupported). The old :wait(timeout) form is
   -- deprecated in V2 and triggers a startup warning + falls back to the
   -- slower Lua matcher.
-  build = function()
-    require('blink.cmp').build():pwait()
-  end,
+  build = function() require('blink.cmp').build():pwait() end,
   dependencies = {
     'saghen/blink.lib',
     'rafamadriz/friendly-snippets',
@@ -19,9 +17,7 @@ return {
     local default_sources = { 'lsp', 'path', 'snippets', 'buffer', 'lazydev' }
 
     return {
-      enabled = function()
-        return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype)
-      end,
+      enabled = function() return not vim.tbl_contains({ 'TelescopePrompt', 'markdown', 'text' }, vim.bo.filetype) end,
       keymap = {
         preset = 'none',
         ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
@@ -132,9 +128,7 @@ return {
             opts = {
               trailing_slash = false,
               label_trailing_slash = true,
-              get_cwd = function(context)
-                return vim.fn.expand(('#%d:p:h'):format(context.bufnr))
-              end,
+              get_cwd = function(context) return vim.fn.expand(('#%d:p:h'):format(context.bufnr)) end,
               show_hidden_files_by_default = true,
             },
           },

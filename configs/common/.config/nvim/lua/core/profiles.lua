@@ -102,12 +102,8 @@ local minimal_plugins = {
 ---@param plugin LazyPlugin
 ---@return boolean
 function M.plugin_enabled(plugin)
-  if M.is_vscode then
-    return not vscode_disabled[plugin.name]
-  end
-  if M.is_minimal then
-    return minimal_plugins[plugin.name] == true
-  end
+  if M.is_vscode then return not vscode_disabled[plugin.name] end
+  if M.is_minimal then return minimal_plugins[plugin.name] == true end
   return true
 end
 

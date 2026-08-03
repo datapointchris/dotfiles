@@ -7,9 +7,7 @@ return {
     'TmuxNavigateRight',
     'TmuxNavigatePrevious',
   },
-  init = function()
-    vim.g.tmux_navigator_no_mappings = 1
-  end,
+  init = function() vim.g.tmux_navigator_no_mappings = 1 end,
   keys = {
     { '<C-Left>', '<cmd>TmuxNavigateLeft<cr>', desc = 'Navigate pane left' },
     { '<C-Down>', '<cmd>TmuxNavigateDown<cr>', desc = 'Navigate pane down' },

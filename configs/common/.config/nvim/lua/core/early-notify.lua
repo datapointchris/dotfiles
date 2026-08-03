@@ -6,9 +6,7 @@
 -- those early messages readable and recorded. Mirrors LazyVim's lazy_notify().
 return function()
   local notifications = {}
-  local function queue(...)
-    table.insert(notifications, vim.F.pack_len(...))
-  end
+  local function queue(...) table.insert(notifications, vim.F.pack_len(...)) end
 
   local original_notify = vim.notify
   vim.notify = queue
@@ -20,9 +18,7 @@ return function()
     timer:stop()
     check:stop()
     -- If nothing replaced vim.notify (no notifier), restore the original.
-    if vim.notify == queue then
-      vim.notify = original_notify
-    end
+    if vim.notify == queue then vim.notify = original_notify end
     vim.schedule(function()
       for _, notification in ipairs(notifications) do
         vim.notify(vim.F.unpack_len(notification))
@@ -32,9 +28,7 @@ return function()
 
   -- Replay as soon as something (fidget) replaces vim.notify...
   check:start(function()
-    if vim.notify ~= queue then
-      replay()
-    end
+    if vim.notify ~= queue then replay() end
   end)
   -- ...or after 500ms if nothing does, so messages are never lost.
   timer:start(500, 0, replay)

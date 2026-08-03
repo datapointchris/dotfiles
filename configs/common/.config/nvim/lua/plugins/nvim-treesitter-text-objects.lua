@@ -28,9 +28,7 @@ return {
 
     local ts_select = require('nvim-treesitter-textobjects.select')
     for lhs, map in pairs(select_maps) do
-      vim.keymap.set({ 'x', 'o' }, lhs, function()
-        ts_select.select_textobject(map.query)
-      end, { desc = map.desc })
+      vim.keymap.set({ 'x', 'o' }, lhs, function() ts_select.select_textobject(map.query) end, { desc = map.desc })
     end
 
     -- Swap keymaps (normal mode)
@@ -47,14 +45,10 @@ return {
     }
 
     for lhs, map in pairs(swap_next_maps) do
-      vim.keymap.set('n', lhs, function()
-        ts_swap.swap_next(map.query)
-      end, { desc = map.desc })
+      vim.keymap.set('n', lhs, function() ts_swap.swap_next(map.query) end, { desc = map.desc })
     end
     for lhs, map in pairs(swap_prev_maps) do
-      vim.keymap.set('n', lhs, function()
-        ts_swap.swap_previous(map.query)
-      end, { desc = map.desc })
+      vim.keymap.set('n', lhs, function() ts_swap.swap_previous(map.query) end, { desc = map.desc })
     end
 
     -- Move keymaps (normal + visual + operator-pending)
@@ -89,9 +83,7 @@ return {
 
     for _, map in ipairs(move_maps) do
       local lhs, fn_name, query, query_group, desc = map[1], map[2], map[3], map[4], map[5]
-      vim.keymap.set({ 'n', 'x', 'o' }, lhs, function()
-        ts_move[fn_name](query, query_group)
-      end, { desc = desc })
+      vim.keymap.set({ 'n', 'x', 'o' }, lhs, function() ts_move[fn_name](query, query_group) end, { desc = desc })
     end
 
     -- Repeatable movements with ; and ,
