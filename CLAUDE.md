@@ -49,7 +49,7 @@ See `docs/learnings/app-installation-patterns.md` for full details.
 **Shell Libraries** (`~/.local/shell/`) — see `docs/architecture/shell-libraries.md`:
 
 | Scenario | Library | Functions |
-|----------|---------|-----------|
+| --- | --- | --- |
 | Logged/monitored scripts | logging.sh | `log_info/success/warning/error/fatal` |
 | Visual/interactive scripts | formatting.sh | `print_success/error/warning/info` |
 | Visual structure | formatting.sh | `print_header/section/banner/title` |

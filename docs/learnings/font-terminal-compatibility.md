@@ -15,7 +15,7 @@ Terminal emulators use different font metadata to determine if a font is monospa
 Official Nerd Fonts ship with broken metadata in non-Mono variants:
 
 | Variant | isFixedPitch | Kitty Status |
-|---------|--------------|--------------|
+| --- | --- | --- |
 | JetBrainsMono Nerd Font | 0 | Rejected |
 | JetBrainsMono Nerd Font Mono | 1 | Works |
 

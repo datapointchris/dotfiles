@@ -4,14 +4,14 @@ Comprehensive reference for platform-specific differences across macOS, WSL Ubun
 
 ## Quick Reference
 
-| Aspect             | macOS          | WSL Ubuntu        | Arch Linux |
-| ------------------ | -------------- | ----------------- | ---------- |
-| **Package Manager**| brew           | apt               | pacman     |
-| **Shell**          | zsh (default)  | bash (default)    | bash       |
-| **Binary Prefix**  | None           | Some (bat, fd)    | None       |
-| **User Binaries**  | ~/.local/bin   | ~/.local/bin      | ~/.local/bin |
-| **System Binaries**| /usr/local/bin | /usr/bin          | /usr/bin   |
-| **Machine Manifest**| macos-personal-workstation | wsl-work-workstation | archlinux-personal-workstation |
+| Aspect | macOS | WSL Ubuntu | Arch Linux |
+| --- | --- | --- | --- |
+| **Package Manager** | brew | apt | pacman |
+| **Shell** | zsh (default) | bash (default) | bash |
+| **Binary Prefix** | None | Some (bat, fd) | None |
+| **User Binaries** | ~/.local/bin | ~/.local/bin | ~/.local/bin |
+| **System Binaries** | /usr/local/bin | /usr/bin | /usr/bin |
+| **Machine Manifest** | macos-personal-workstation | wsl-work-workstation | archlinux-personal-workstation |
 
 A headless LXC or small Linux box uses the separate `linux-lxc-server` manifest
 (platform `linux`), a minimal profile installed with

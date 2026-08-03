@@ -26,7 +26,7 @@ DiffviewOpen auto-detects the conflict and opens the resolver. Layout is
 OURS | MERGED (editable, center) | THEIRS, with BASE available.
 
 | Key | Action |
-|-----|--------|
+| --- | --- |
 | `]x` / `[x` | jump to next / previous conflict |
 | `<leader>co` | choose OURS (your side) |
 | `<leader>ct` | choose THEIRS (incoming) |

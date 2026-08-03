@@ -356,7 +356,7 @@ This repository uses a layered approach to Claude Code integration:
 ### Decision Matrix: When to Use Each
 
 | Need | Use | Example |
-|------|-----|---------|
+| --- | --- | --- |
 | User explicitly runs a task | Slash Command | /logsift, /commit |
 | Something happens automatically | Hook | Session startup context |
 

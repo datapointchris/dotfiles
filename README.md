@@ -92,7 +92,7 @@ See `configs/common/.local/shell/formatting.sh` and `configs/common/.local/shell
 This setup uses different package managers for different purposes, because that's apparently the world we live in:
 
 | What | How | Examples |
-|------|-----|----------|
+| --- | --- | --- |
 | System utilities | brew / apt / pacman | ripgrep, tmux, zsh, jq |
 | Rust CLI tools | cargo-binstall | bat, eza, fd, broot, git-delta |
 | Editor / binaries | GitHub releases | neovim, lazygit, yazi, fzf |

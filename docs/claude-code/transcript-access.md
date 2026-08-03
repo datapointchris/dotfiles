@@ -43,7 +43,7 @@ cat "$transcript_path" | jq .
 ## Hook Types for Capturing Context
 
 | Hook Type | When It Runs | Access To |
-|-----------|-------------|-----------|
+| --- | --- | --- |
 | `SessionStart` | Session initialization | Full prior conversation, additionalContext field |
 | `PreToolUse` | Before tool execution | tool_name, tool_input, tool_use_id |
 | `PostToolUse` | After tool execution | tool_name, tool_input, tool_result |

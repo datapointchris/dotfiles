@@ -44,7 +44,7 @@ The one gap is a config reload while the output is on: `hyprctl reload` restores
 Defaults suit the Minisforum, whose 43" runs on `DP-4`, leaving the HDMI connectors free. Override with environment variables when the hardware changes:
 
 | Variable | Default | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `WORK_MONITOR_OUTPUT` | `HDMI-A-1` | Connector name from `hyprctl monitors all` |
 | `WORK_MONITOR_MODE` | `preferred` | Set explicitly when a long cheap cable cannot hold 4K60 |
 | `WORK_MONITOR_POSITION` | `auto-right` | Placement relative to the 43" |

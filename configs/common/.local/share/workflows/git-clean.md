@@ -39,7 +39,7 @@ git clean -fdx                    # also deletes gitignored files
 ## Flags
 
 | Flag | What it does |
-|------|-------------|
+| --- | --- |
 | `-f` | Force (required, safety measure) |
 | `-d` | Include untracked directories (not just files) |
 | `-n` | Dry run — show what would be deleted, delete nothing |

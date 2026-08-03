@@ -9,7 +9,7 @@ You have approximately **20 font families** in `~/Documents/code_fonts/`. This g
 ## Quick Reference Table
 
 | Font | Width | Ligatures | Best For | Character | Priority |
-|------|-------|-----------|----------|-----------|----------|
+| --- | --- | --- | --- | --- | --- |
 | **FiraCode** | Normal | ★★★ Extensive | Modern code, JS/Python | Professional | High |
 | **JetBrains Mono** | Normal | ★★ Good | Long sessions, clarity | Clean | High |
 | **Iosevka** | Narrow | ★★ Optional | Dense code, small screens | Technical | High |
@@ -647,7 +647,7 @@ Fonts you're unsure about, save for 6 months then delete.
 ### By Use Case
 
 | Use Case | Top Choice | Alternative |
-|----------|------------|-------------|
+| --- | --- | --- |
 | Ligatures | FiraCode | JetBrains Mono |
 | No ligatures | Source Code Pro | Meslo |
 | Maximum density | Iosevka | - |
@@ -659,7 +659,7 @@ Fonts you're unsure about, save for 6 months then delete.
 ### By Priority
 
 | Priority | Fonts | Why |
-|----------|-------|-----|
+| --- | --- | --- |
 | Must Test | FiraCode, JetBrains, Source Code Pro | Industry standards, proven |
 | Should Test | Iosevka, Meslo | Excellent, specific strengths |
 | Keep | SeriousShanns | You already like it! |

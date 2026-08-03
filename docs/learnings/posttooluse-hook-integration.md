@@ -118,7 +118,7 @@ bash log-commit-metrics.sh \
 **Comparison**:
 
 | Aspect | Parent Transcript | Agent Transcript |
-|--------|------------------|------------------|
+| --- | --- | --- |
 | Size | ~90k tokens | ~30 lines (8-30KB) |
 | Parse Time | ~2-3 seconds | 50-150ms |
 | Concurrency | Mixed content, requires filtering | Clean, isolated |

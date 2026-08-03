@@ -606,7 +606,7 @@ git log -1 --oneline
 ### Token Optimization Breakdown
 
 | Approach | Main Agent Tokens | Agent Tokens | Total | Savings |
-|----------|-------------------|--------------|-------|---------|
+| --- | --- | --- | --- | --- |
 | **Without Agent** | 3000-5900 | 0 | 3000-5900 | - |
 | **With Agent** | 200 | 1300 | 1500 | 2800-5700 |
 

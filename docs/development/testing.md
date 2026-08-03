@@ -93,7 +93,7 @@ Testing dotfiles installation across platforms using containers and virtual mach
 ## Testing Strategy
 
 | Platform | Method | Tool | Accuracy | Machine Manifest |
-|----------|--------|------|----------|-----------------|
+| --- | --- | --- | --- | --- |
 | Ubuntu (WSL) | Docker | Official WSL rootfs | 100% exact match | `wsl-work-workstation` |
 | Arch Linux | Docker | Official Arch base image | 100% exact match | `archlinux-personal-workstation` |
 | macOS | Fresh user account | Local testing | Full | `macos-personal-workstation` |

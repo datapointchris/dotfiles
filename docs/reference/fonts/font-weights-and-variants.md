@@ -7,7 +7,7 @@ Understanding when and why to use Bold, Italic, Light, and other font variants i
 Fonts use a standardized weight scale from 100 (thinnest) to 900 (thickest):
 
 | Weight Value | Name | Common Use |
-|--------------|------|------------|
+| --- | --- | --- |
 | 100 | Thin / Hairline | Rarely used in code |
 | 200 | Extra Light / Ultra Light | Minimal use |
 | 300 | Light | Subtle, less prominent text |

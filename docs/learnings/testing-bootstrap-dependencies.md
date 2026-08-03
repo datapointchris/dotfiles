@@ -131,7 +131,7 @@ Best practice for testing system installations:
 ## Docker vs VM Comparison
 
 | Aspect | Docker + WSL Rootfs | Multipass Cloud Image |
-|--------|-------------------|---------------------|
+| --- | --- | --- |
 | Accuracy | 100% (563 packages) | ~75% (426 packages) |
 | Startup | <5 seconds | 1-2 minutes |
 | Resources | Lightweight | VM overhead |

@@ -266,7 +266,7 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 ### Without Agent (Traditional Approach)
 
 | Phase | Tokens |
-|-------|--------|
+| --- | --- |
 | Git status + diff | 500-1000 |
 | Review and staging | 200-400 |
 | Pre-commit run #1 (full output) | 1000-2000 |
@@ -278,7 +278,7 @@ Pre-commit iterations: 1 (all auto-fixed in background)
 ### With Commit Agent (Optimized Workflow)
 
 | Phase | Tokens | Context |
-|-------|--------|---------|
+| --- | --- | --- |
 | **Main Agent** | | |
 | Task invocation + context | 100 | **Main** |
 | Receive summary | 44 | **Main** |
@@ -413,7 +413,7 @@ Task(subagent_type="commit-agent",
 **Token Savings**:
 
 | Operation | Traditional | Optimized | Savings |
-|-----------|------------|-----------|---------|
+| --- | --- | --- | --- |
 | git status/diff | ~300 tokens | 0 tokens | 300 |
 | File staging | ~100 tokens | 0 tokens | 100 |
 | Context reading | ~500 tokens | ~50 tokens | 450 |

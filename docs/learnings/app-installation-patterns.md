@@ -77,7 +77,7 @@ The pin is not optional. Each of these tools carries `pyselfupdate`, which reads
 ## Directory Summary
 
 | Category | Development | Installed | Binary/Symlink |
-|----------|-------------|-----------|----------------|
+| --- | --- | --- | --- |
 | Go apps | ~/tools/{app}/ | GitHub | ~/go/bin/{app} |
 | Shell scripts | apps/{platform}/ | (same) | ~/.local/bin/{app} → repo |
 | Personal tools | ~/tools/{app}/ | ~/.local/share/{app}/ | ~/.local/bin/{app} → .local/share |

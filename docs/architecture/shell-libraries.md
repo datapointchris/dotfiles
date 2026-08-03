@@ -340,7 +340,7 @@ exit_success
 ### Logging (with [LEVEL] prefixes)
 
 | Function | Purpose | Output | Exit Code |
-|----------|---------|--------|-----------|
+| --- | --- | --- | --- |
 | `log_info` | Informational message | [INFO] ● cyan | - |
 | `log_success` | Success message | [INFO] ✓ green | - |
 | `log_warning` | Warning message | [WARNING] ▲ yellow | - |
@@ -352,7 +352,7 @@ exit_success
 ### Formatting - Status (no [LEVEL] prefixes)
 
 | Function | Purpose | Output | Exit Code |
-|----------|---------|--------|-----------|
+| --- | --- | --- | --- |
 | `print_success` | Visual success | ✓ green | - |
 | `print_error` | Visual error | ✗ red | - |
 | `print_warning` | Visual warning | ▲ yellow | - |
@@ -361,7 +361,7 @@ exit_success
 ### Formatting - Structure
 
 | Function | Purpose | Visual Style |
-|----------|---------|--------------|
+| --- | --- | --- |
 | `print_header` | Main header | Thick borders (━) |
 | `print_section` | Section header | Thin underline (─) |
 | `print_banner` | Tool banner | Double bars (═) |
@@ -372,7 +372,7 @@ Each has color variants and `_success/_error/_warning/_info` variants with emoji
 ### Formatting - Help Screens
 
 | Function | Purpose |
-|----------|---------|
+| --- | --- |
 | `help_header` | Open a screen (rule, name, tagline) |
 | `help_usage` | Usage lines, `Usage:` label included |
 | `help_section` | Section heading, coloured by name |
@@ -386,7 +386,7 @@ Mirrored for Python in `menucore/render.py`.
 ### Error Handling
 
 | Function | Purpose |
-|----------|---------|
+| --- | --- |
 | `enable_error_traps` | Set up ERR/EXIT handlers |
 | `register_cleanup` | Add cleanup command |
 | `require_commands` | Verify multiple commands |

@@ -7,7 +7,7 @@
 ## Version Comparison Table
 
 | Tool | Ubuntu 24.04 | Latest (2025-01) | Gap | Install Method |
-|------|--------------|------------------|-----|----------------|
+| --- | --- | --- | --- | --- |
 | **fzf** | 0.44.1 | 0.66.1 | ❌ 22 versions | GitHub releases |
 | **neovim** | 0.9.5 | 0.10.3+ | ❌ Major version | GitHub releases |
 | **bat** | 0.24.0 | 0.26.0 | ⚠️ 2 versions | cargo-binstall |
@@ -171,7 +171,7 @@ cargo-binstall   GitHub releases
 ## Performance Comparison
 
 | Method | Speed | Pros | Cons |
-|--------|-------|------|------|
+| --- | --- | --- | --- |
 | **apt** | ⚡⚡⚡ Instant | Pre-compiled, cached | Old versions |
 | **cargo-binstall** | ⚡⚡ 10-30s | Pre-compiled, latest | Requires Rust |
 | **cargo install** | ⏳ 5-10 min | Optimized for system | SLOW compilation |

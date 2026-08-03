@@ -190,7 +190,7 @@ Hyprland Display Stack
 ### Conceptual Mapping
 
 | Feature | AeroSpace (macOS) | Hyprland (Linux) |
-|---------|-------------------|------------------|
+| --- | --- | --- |
 | Window tiling | Yes | Yes |
 | Workspaces | Yes (virtual) | Yes (native) |
 | Focus follows mouse | No (macOS limitation) | Yes (configurable) |
@@ -227,7 +227,7 @@ These patterns translate well to Hyprland:
 ### Critical (Your Desktop Won't Work Without These)
 
 | Component | Purpose | Recommended Options |
-|-----------|---------|---------------------|
+| --- | --- | --- |
 | **Notification Daemon** | Display notifications; some apps freeze without one | dunst, mako, swaync |
 | **Polkit Agent** | Password prompts for privilege escalation | hyprpolkitagent, polkit-kde-agent |
 | **Pipewire** | Screen sharing, audio | pipewire, wireplumber |
@@ -237,7 +237,7 @@ These patterns translate well to Hyprland:
 ### Essential for Usability
 
 | Component | Purpose | Recommended Options |
-|-----------|---------|---------------------|
+| --- | --- | --- |
 | **Status Bar** | System info, workspaces | Waybar (beginner-friendly), AGS (programmable) |
 | **App Launcher** | Start applications | Rofi (powerful), Wofi (simple), fuzzel (fast) |
 | **Clipboard Manager** | Clipboard history | cliphist (simple), clipvault (advanced) |
@@ -248,7 +248,7 @@ These patterns translate well to Hyprland:
 ### Recommended for Daily Use
 
 | Component | Purpose | Recommended Options |
-|-----------|---------|---------------------|
+| --- | --- | --- |
 | **Screenshot Tool** | Screen capture | grim + slurp (selection), grimblast (convenient wrapper) |
 | **File Manager** | Browse files | Yazi (TUI, already in your setup), Nautilus (GUI) |
 | **Terminal** | You know this | Ghostty, Kitty, Alacritty |

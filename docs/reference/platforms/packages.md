@@ -6,25 +6,25 @@ Package name and binary name differences across platforms.
 
 Many tools have different package names across platforms. This table maps the tool name to its package name on each platform.
 
-| Tool Name     | macOS (brew) | Ubuntu (apt)     | Arch (pacman) | Notes                              |
-| ------------- | ------------ | ---------------- | ------------- | ---------------------------------- |
-| **bat**       | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **eza**       | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **fd**        | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **ripgrep**   | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms; `rg` binary |
-| **fzf**       | `fzf`        | `fzf`            | `fzf`         | ✅ Consistent                      |
-| **zoxide**    | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **neovim**    | `neovim`     | `neovim`         | `neovim`      | All use `nvim` binary              |
-| **tmux**      | `tmux`       | `tmux`           | `tmux`        | ✅ Consistent                      |
-| **lazygit**   | `lazygit`    | via snap/release | `lazygit`     | Ubuntu needs manual install        |
-| **yazi**      | `yazi`       | via cargo        | `yazi`        | Ubuntu needs Rust                  |
+| Tool Name | macOS (brew) | Ubuntu (apt) | Arch (pacman) | Notes |
+| --- | --- | --- | --- | --- |
+| **bat** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **eza** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **fd** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **ripgrep** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms; `rg` binary |
+| **fzf** | `fzf` | `fzf` | `fzf` | ✅ Consistent |
+| **zoxide** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **neovim** | `neovim` | `neovim` | `neovim` | All use `nvim` binary |
+| **tmux** | `tmux` | `tmux` | `tmux` | ✅ Consistent |
+| **lazygit** | `lazygit` | via snap/release | `lazygit` | Ubuntu needs manual install |
+| **yazi** | `yazi` | via cargo | `yazi` | Ubuntu needs Rust |
 | **git-delta** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **broot**     | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
-| **jq**        | `jq`         | `jq`             | `jq`          | ✅ Consistent                      |
-| **yq**        | GitHub release | GitHub release | GitHub release | mikefarah/yq binary, consistent across platforms (NOT the Python jq-wrapper) |
-| **htop**      | `htop`       | `htop`           | `htop`        | ✅ Consistent                      |
-| **tree**      | `tree`       | `tree`           | `tree`        | ✅ Consistent                      |
-| **go-task**   | `go install` | `go install`     | `go install`  | Installed via Go on all platforms  |
+| **broot** | cargo-binstall | cargo-binstall | cargo-binstall | Installed via Rust on all platforms |
+| **jq** | `jq` | `jq` | `jq` | ✅ Consistent |
+| **yq** | GitHub release | GitHub release | GitHub release | mikefarah/yq binary, consistent across platforms (NOT the Python jq-wrapper) |
+| **htop** | `htop` | `htop` | `htop` | ✅ Consistent |
+| **tree** | `tree` | `tree` | `tree` | ✅ Consistent |
+| **go-task** | `go install` | `go install` | `go install` | Installed via Go on all platforms |
 
 ## Binary Name Differences
 

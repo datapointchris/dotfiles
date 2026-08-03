@@ -38,7 +38,7 @@ You are an expert at...
 ### Required Fields
 
 | Field | Purpose | Example |
-|-------|---------|---------|
+| --- | --- | --- |
 | `name` | Unique identifier | `commit-agent` |
 | `description` | Auto-delegation trigger | "Automatically invoked to analyze staged changes..." |
 | `tools` | Tool permissions | `Read, Grep, Glob, Bash` |
@@ -72,7 +72,7 @@ Claude reads agent descriptions and auto-delegates:
 ## Agent vs Other Features
 
 | Feature | Discovery | Context | Best For |
-|---------|-----------|---------|----------|
+| --- | --- | --- | --- |
 | **Agent** | Automatic (LLM) | Isolated window | Complex, multi-step tasks |
 | **Slash Command** | Manual (`/cmd`) | Main context | Quick prompts, templates |
 | **Hook** | Event-triggered | Decision gate | Auto-actions on events |

@@ -122,7 +122,7 @@ The `books/` directory in the second backup doesn't consume any extra space - th
 Real-world scenario for `~/learning` with large static books:
 
 | Backup | Changes | New Data | Disk Used | Appears As |
-|--------|---------|----------|-----------|------------|
+| --- | --- | --- | --- | --- |
 | #1 | Full backup | 5.0 GB | 5.0 GB | 5.0 GB |
 | #2 | Modified 100MB of docs | 100 MB | 5.1 GB | 10 GB |
 | #3 | Modified 50MB of docs | 50 MB | 5.15 GB | 15 GB |
@@ -255,7 +255,7 @@ cp ~/Documents/backups/learning/learning_2025-12-11_140000/docs/important.md ~/l
 ## Comparison with backmeup
 
 | Feature | backmeup | backup-incremental |
-|---------|-------------|-------------------|
+| --- | --- | --- |
 | **Storage** | Full compressed archive each time | Only stores changes |
 | **Speed** | Slower (compression) | Faster (rsync) |
 | **Portability** | Single file, easy to move | Directory structure |

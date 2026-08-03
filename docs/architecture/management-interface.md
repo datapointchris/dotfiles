@@ -60,7 +60,7 @@ the same selectors and flags and differ only in the verb. The CLI passes its arg
 straight through, so `task update -- --no-system` behaves identically.
 
 | Group | Contents | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `system` | brew/mas, apt, pacman/yay/flatpak | Needs sudo, dominates the runtime |
 | `languages` | Go toolchain, rustup, uv | The managers themselves |
 | `tools` | go, cargo, uv, npm, GitHub releases, custom installers | The installed binaries |
@@ -163,7 +163,7 @@ already the update mechanism, which is what `dotfiles pull` wraps.
 ## Ownership
 
 | Concern | Owner |
-|---|---|
+| --- | --- |
 | Machine bootstrap | `install.sh` (`--machine`, sudo) |
 | Installing and updating | `install.sh` / `update.sh` over the shared `install/phases.sh` registry |
 | Phase selection | `install/phases.sh` — groups, phases, `--mine`, `--skip`, `--dry-run` |

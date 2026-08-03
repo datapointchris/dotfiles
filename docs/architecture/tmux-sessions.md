@@ -51,7 +51,7 @@ would otherwise compete with tmux for the same job.
 The status bar runs two lines, set in `configs/common/.config/tmux/tmux.conf`:
 
 | Line | Shows |
-|------|-------|
+| --- | --- |
 | 1 | Every session |
 | 2 | The focused session's windows |
 
@@ -84,7 +84,7 @@ status bar colour the same way it owns `pane-border-format`.
 ## Switching
 
 | Key | Action |
-|-----|--------|
+| --- | --- |
 | `M-n` / `M-p` | Previous / next window |
 | `M-,` / `M-.` | Previous / next session |
 | `M-o` | Last session |
@@ -250,7 +250,7 @@ about where it belongs, and be filed once that is obvious.
 ## Files
 
 | File | Role |
-|------|------|
+| --- | --- |
 | `apps/common/tmux-sessions` | Switching, creation, promotion, status relocation |
 | `configs/common/.config/tmux/tmux.conf` | Two-line status, keybindings, relocation call |
 | `~/tools/theme/lib/generators/tmux.sh` | Generates line 1's format and colours |

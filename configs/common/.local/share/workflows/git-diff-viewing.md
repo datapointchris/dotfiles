@@ -52,7 +52,7 @@ lazygit     # or <leader>gg in neovim; delta is its pager too
 ## Neovim — diffview for review, gitsigns for in-buffer awareness
 
 | Key | Action |
-|-----|--------|
+| --- | --- |
 | `<leader>gd` | Diffview: working tree vs HEAD (side-by-side review) |
 | `<leader>gh` | Diffview: current file history |
 | `<leader>gH` | Diffview: whole-repo history |

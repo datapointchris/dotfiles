@@ -20,7 +20,7 @@ This guide provides a comprehensive overview of bash testing frameworks availabl
 ## Framework Comparison Table
 
 | Feature | Bats-core | ShellSpec | shunit2 | Bach |
-|---------|-----------|-----------|---------|------|
+| --- | --- | --- | --- | --- |
 | **Installation** | ✓ Homebrew/apt | ✓ Homebrew | Manual | Git clone |
 | **Shell Support** | Bash 3.2+ | All POSIX shells | Bourne shells | Bash |
 | **Test Style** | TAP/xUnit | BDD (Describe/It) | xUnit | xUnit |

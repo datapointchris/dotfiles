@@ -252,7 +252,7 @@ This provides automated insights (cache hit rate trends, token usage patterns, p
 **Comparison to Current Metrics**:
 
 | Capability | Current Transcript Parsing | OpenTelemetry |
-|------------|---------------------------|---------------|
+| --- | --- | --- |
 | **Token metrics** | ✅ 13 fields (total, input, output, cache rates) | ✅ Similar data |
 | **Tool usage** | ✅ Tool types, counts, timing | ✅ Similar data |
 | **Git operations** | ✅ Commits, diffs, status checks | ✅ Would need custom instrumentation |
@@ -758,7 +758,7 @@ Start with lightweight Python analysis, keep path open for OpenTelemetry experim
 ### Quick Decision Matrix
 
 | Factor | Weight | Option 1 (Custom) | Option 2 (OTel) | Option 3 (Hybrid) |
-|--------|--------|------------------|-----------------|-------------------|
+| --- | --- | --- | --- | --- |
 | **Time to value** | High | ⭐⭐⭐ 2-3 weeks | ⭐ 4-6 weeks | ⭐⭐⭐ 2-3 weeks |
 | **Effort required** | High | ⭐⭐⭐ 12-20h | ⭐ 30-40h | ⭐⭐ 32-50h |
 | **Maintenance burden** | Medium | ⭐⭐⭐ Minimal | ⭐ 5-10h/month | ⭐⭐ Low |

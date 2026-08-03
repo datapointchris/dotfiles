@@ -181,7 +181,7 @@ font-download -f firacode --standardize-only
 ## Expected Results After Pruning
 
 | Font Family | Before Prune | After Prune | Variants Kept |
-|-------------|--------------|-------------|---------------|
+| --- | --- | --- | --- |
 | JetBrains Mono | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
 | Cascadia Code | 18 files | 4 files | Mono: Regular, Bold, Italic, BoldItalic |
 | Meslo | 48 files | 8 files | MesloLGM Mono: Regular, Bold, Italic, BoldItalic (×2 for NL) |

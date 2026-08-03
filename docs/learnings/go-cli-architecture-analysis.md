@@ -582,7 +582,7 @@ func Context(timeout time.Duration) (context.Context, context.CancelFunc) {
 ## Comparison Matrix
 
 | Feature | sesh | lazygit | gum |
-|---------|------|---------|-----|
+| --- | --- | --- | --- |
 | **CLI Framework** | Cobra | Cobra | Kong |
 | **TUI Framework** | - | gocui | Bubbletea |
 | **Dependency Injection** | Manual | Manual | Minimal |

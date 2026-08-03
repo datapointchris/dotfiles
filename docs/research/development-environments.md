@@ -133,7 +133,7 @@ Open source projects increasingly include `.devcontainer` configurations: NestJS
 WSL2 uses a **lightweight utility virtual machine** with a real Linux kernel, but it is fundamentally different from traditional VMs:
 
 | Aspect | WSL2 | Traditional VM |
-|--------|------|----------------|
+| --- | --- | --- |
 | **Kernel** | Real Linux kernel | Full guest OS kernel |
 | **Boot time** | Near-instant (seconds) | Minutes |
 | **Resource allocation** | Dynamic, shared with Windows | Fixed allocation (CPU, RAM) |
@@ -300,7 +300,7 @@ npm run dev
 #### Differences from Dev Containers
 
 | Aspect | Raw Docker | Dev Containers |
-|--------|-----------|----------------|
+| --- | --- | --- |
 | **Configuration** | Dockerfile or docker-compose.yml | devcontainer.json (declarative) |
 | **Editor integration** | Manual SSH or volume mounts | Automatic IDE connection |
 | **Extensions** | Not managed | Automatically installed |
@@ -403,7 +403,7 @@ devpod ssh repo  # SSH into the devcontainer
 #### Comparison: Codespaces vs Gitpod vs DevPod
 
 | Feature | GitHub Codespaces | Gitpod | DevPod |
-|---------|-------------------|--------|--------|
+| --- | --- | --- | --- |
 | **Cost** | $0.18/hr (4-core) | $9/mo (50hrs) | Free (self-hosted) |
 | **Editor support** | VSCode | VSCode, JetBrains, SSH | Any (SSH-based) |
 | **GitHub integration** | Native | Good | Manual |
@@ -537,7 +537,7 @@ devbox shell  # Activates environment
 #### Nix vs Containers
 
 | Aspect | Nix | Containers |
-|--------|-----|------------|
+| --- | --- | --- |
 | **Paradigm** | Declarative packages | Packaged filesystem |
 | **Isolation** | Process-level (shared kernel) | Strong (separate filesystem) |
 | **Disk usage** | Shared dependencies | Duplicated layers |
@@ -565,7 +565,7 @@ devbox shell  # Activates environment
 ### Quick Reference Table
 
 | Feature | Dev Containers | WSL2 | Traditional VMs | Raw Docker | Codespaces/Gitpod | Nix + direnv |
-|---------|---------------|------|-----------------|------------|-------------------|--------------|
+| --- | --- | --- | --- | --- | --- | --- |
 | **Isolation** | Container | Managed VM | Full VM | Container | Container (cloud) | Process-level |
 | **Boot time** | 10-30s | 2-5s | 1-5min | 5-10s | 30-60s | Instant (cached) |
 | **Disk overhead** | 100MB-1GB | 5-10GB | 10-40GB | 100MB-1GB | 0 (cloud) | ~100MB-500MB |
@@ -583,7 +583,7 @@ devbox shell  # Activates environment
 **File I/O Performance** (relative to native):
 
 | Environment | Local filesystem | Cross-boundary | Network |
-|-------------|-----------------|----------------|---------|
+| --- | --- | --- | --- |
 | **Native** | 100% | N/A | 100% |
 | **WSL2** | 95-100% (in Linux FS) | 20-40% (/mnt/c) | 95% |
 | **Dev container** | 90-95% (volumes) | 50-70% (bind mounts) | 95% |
@@ -602,7 +602,7 @@ devbox shell  # Activates environment
 **Typical resource consumption** (4-core CPU, 16GB RAM host):
 
 | Environment | Idle RAM | Active Development | Peak (build) |
-|-------------|----------|-------------------|--------------|
+| --- | --- | --- | --- |
 | **Native** | 0 | 0 | 0 (host resources) |
 | **WSL2** | 80MB | 200MB-1GB | 2-4GB |
 | **Dev container** | 50MB | 300MB-2GB | 2-6GB |
@@ -782,7 +782,7 @@ Developer's Machine
 **What goes where**:
 
 | Configuration | Location | Example |
-|--------------|----------|---------|
+| --- | --- | --- |
 | **Project** | `.devcontainer/` | Runtime versions, databases, project extensions |
 | **Team standards** | `.devcontainer/` | Linters, formatters, testing frameworks |
 | **Personal shell** | Dotfiles repo | Zsh theme, git aliases, tmux config |

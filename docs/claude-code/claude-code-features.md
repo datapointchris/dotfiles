@@ -11,7 +11,7 @@ Decision matrix for slash commands, hooks, skills, and agents.
 ## Feature Comparison Matrix
 
 | Aspect | Slash Command | Hook | Skill | Agent |
-|--------|---------------|------|-------|-------|
+| --- | --- | --- | --- | --- |
 | **Discovery** | Manual (`/cmd`) | Automatic (event) | Context-aware | Automatic (LLM) |
 | **Invocation** | User types `/cmd` | Lifecycle event | Keyword/file match | Natural language |
 | **Context** | Main agent | Decision gate | Main agent | Isolated window |

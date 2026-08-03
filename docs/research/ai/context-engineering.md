@@ -347,7 +347,7 @@ export OTEL_METRICS_EXPORTER=otlp
 **Before** (traditional workflow):
 
 | Phase | Tokens |
-|-------|--------|
+| --- | --- |
 | Git status + diff | 500-1000 |
 | Pre-commit run #1 | 1000-2000 |
 | Pre-commit run #2 | 1000-2000 |
@@ -358,7 +358,7 @@ export OTEL_METRICS_EXPORTER=otlp
 **After** (commit agent):
 
 | Phase | Main Agent | Agent Context |
-|-------|------------|---------------|
+| --- | --- | --- |
 | Summary only | 200 | - |
 | Agent internals | - | 1300 |
 | **Total (Main)** | **200** | (discarded) |

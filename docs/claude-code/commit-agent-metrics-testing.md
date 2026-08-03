@@ -19,7 +19,7 @@
 ### Token Measurement
 
 | Metric | Value |
-|--------|-------|
+| --- | --- |
 | **Before invocation** | 56,910 tokens |
 | **After completion** | 57,354 tokens |
 | **Main context overhead** | **444 tokens** |
