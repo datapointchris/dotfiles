@@ -30,10 +30,10 @@ while IFS='|' read -r name repo; do
   else
     log_info "Installing $name to: $PLUGIN_DIR"
     log_info "Repository: $repo"
-    if git clone "$repo" "$PLUGIN_DIR" --quiet; then
+    if clone_output=$(git clone "$repo" "$PLUGIN_DIR" --quiet 2>&1); then
       log_success "$name installed: $PLUGIN_DIR"
     else
-      output_failure_data "$name" "$repo" "latest" "Failed to git clone plugin"
+      output_failure_data "$name" "$repo" "latest" "Failed to git clone plugin" "$clone_output"
       log_warning "Failed to install $name (see summary)"
     fi
   fi

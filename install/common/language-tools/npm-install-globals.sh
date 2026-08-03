@@ -38,10 +38,10 @@ for package in $NPM_PACKAGES; do
     log_success "$package already installed, skipping"
   else
     log_info "Installing $package..."
-    if npm install -g "$package"; then
+    if npm_output=$(npm install -g "$package" 2>&1); then
       log_success "$package installed"
     else
-      output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" "Failed to install via npm"
+      output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" "Failed to install via npm" "$npm_output"
       log_warning "$package installation failed (see summary)"
       FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi

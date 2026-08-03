@@ -109,10 +109,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     # Try cached binary first, then fall back to cargo binstall
     if install_from_cache "$package" "$binary_name"; then
       log_success "$package installed from cache: $HOME/.cargo/bin/$binary_name"
-    elif cargo binstall -y "$package"; then
+    elif binstall_output=$(cargo binstall -y "$package" 2>&1); then
       log_success "$package installed: $HOME/.cargo/bin/$binary_name"
     else
-      output_failure_data "$package" "https://crates.io/crates/$package" "latest" "Failed to install via cargo-binstall"
+      output_failure_data "$package" "https://crates.io/crates/$package" "latest" "Failed to install via cargo-binstall" "$binstall_output"
       log_warning "$package installation failed (see summary)"
       FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi

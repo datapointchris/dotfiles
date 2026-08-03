@@ -56,7 +56,7 @@ run_installer() {
   local tool_name="$2"
   shift 2
 
-  local stderr_file
+  local stderr_file exit_code
   stderr_file=$(mktemp)
 
   # Capture stderr to file only (not console yet)
@@ -87,8 +87,14 @@ run_installer() {
     local unattributed
     unattributed=$(strip_failure_markers <<<"$output" | tail -n "${FAILURE_DETAIL_MAX_LINES:-25}")
 
+    # An installer that dies before it can call output_failure_data emits no
+    # record at all. Name the exit status rather than writing a blank entry —
+    # tmux-plugins.sh aborted at a pipeline under `set -o pipefail` and reached
+    # the report as a heading with nothing under it, indistinguishable from the
+    # report itself having dropped the failure.
     if [[ "${record_count:-0}" -eq 0 ]]; then
-      write_failure_entry "$script" "$tool_name" "" "" "" "" "$unattributed"
+      write_failure_entry "$script" "$tool_name" "" "" "" \
+        "Installer exited $exit_code without reporting a failure" "$unattributed"
       return 1
     fi
 
@@ -135,6 +141,10 @@ write_failure_entry() {
     version_line="Version: $failure_version"
   fi
 
+  # "unknown" is the sentinel installers pass when the failure has no download
+  # behind it; printing it back reads as a corrupted field.
+  [[ "$failure_url" == "unknown" ]] && failure_url=""
+
   # Use print_section_error for consistent formatting with error styling
   {
     print_section_error "$failure_tool - ${INSTALLER_ACTION^} Failed"
@@ -142,9 +152,14 @@ write_failure_entry() {
     [[ -n "$failure_reason" ]] && echo "Error: $failure_reason"
     [[ -n "$failure_url" ]] && echo "Download URL: $failure_url"
     [[ -n "$version_line" ]] && echo "$version_line"
+    echo ""
     if [[ -n "$failure_detail" ]]; then
-      echo ""
       echo "$failure_detail"
+    else
+      # Silence is a finding: it says the installer wrote nothing to stderr, not
+      # that the report lost the output. Without it a reader retries the install
+      # to find out which of the two happened.
+      echo "(no error output captured — the installer wrote nothing to stderr)"
     fi
     echo ""
   } >>"$FAILURES_LOG"

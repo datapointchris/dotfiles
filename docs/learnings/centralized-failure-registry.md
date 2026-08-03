@@ -38,6 +38,23 @@ first read, and on the machine that actually fails — the one behind the corpor
 "download it in your browser" is not something the reader can act on. Removed, and replaced
 with `FAILURE_DETAIL_START/END` carrying the failing command's real output.
 
+## The Second Follow-Up: A Fix Applied Three Places Out of Seven
+
+The next WSL run still produced a nameless entry — `tmux-plugins` as a heading with nothing
+beneath it. Two causes, both survivors of the previous round.
+
+The installer piped TPM into a reader loop, so under `set -o pipefail` a failing TPM aborted
+the script *at the pipeline*, before the branch that calls `output_failure_data`. No record
+was emitted at all. The loop had also re-emitted TPM's output through `log_info`, onto
+stdout, where the wrapper cannot see it — the same stdout-versus-stderr mistake as
+`go-tools.sh`, in a second file.
+
+The deeper problem was the shape of the previous fix: three call sites were passed their
+error output by hand and the remaining four were left to a fallback that scrapes unattributed
+stderr. That fallback deliberately declines to fire when a script reports more than one tool,
+because there is no way to say which one produced the output — and every one of the four
+left behind loops over packages. The fallback could never have covered them.
+
 ## Key Learnings
 
 - One shared, append-only file beats per-script registries — PID isolation works against you here
@@ -52,6 +69,14 @@ with `FAILURE_DETAIL_START/END` carrying the failing command's real output.
 - Parse one report entry per `FAILURE_TOOL` record. A flat grep over stderr spliced two
   tools' fields into a single entry, and `go-tools.sh` fails several tools in one run
 - Tests that reimplement the wrapper instead of sourcing it verify a format nothing produces
+- Never pipe a command whose failure you intend to report — under `set -o pipefail` the
+  script dies at the pipeline and the reporting branch below it never runs. Redirect to a
+  file, capture the status with `|| status=$?`, then read the file
+- A fallback that cannot fire for the common case is not coverage. Fixing the loud call
+  sites by hand and trusting a fallback for the rest left four multi-package installers
+  reporting no cause, because the fallback refuses to guess among several tools
+- When nothing was captured, say so in the report. A blank entry cannot be told apart from
+  the report having dropped the failure, and the reader re-runs the install to find out which
 
 ## Related
 

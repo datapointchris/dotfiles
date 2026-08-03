@@ -22,9 +22,9 @@ if nvim --headless "+Lazy! sync" +qa &>"$nvim_output"; then
   fi
   rm -f "$nvim_output"
 else
-  output_failure_data "neovim-plugins" "unknown" "latest" "Lazy.nvim plugin sync failed"
+  output_failure_data "neovim-plugins" "" "latest" "Lazy.nvim plugin sync failed" "$(<"$nvim_output")"
   log_warning "Neovim plugin installation failed (see summary)"
   log_warning "Full output:"
-  cat "$nvim_output"
+  cat "$nvim_output" >&2
   rm -f "$nvim_output"
 fi

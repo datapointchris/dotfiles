@@ -113,6 +113,54 @@ setup() {
 }
 
 # ================================================================
+# Test: Installers that die before they can report
+# ================================================================
+# An installer aborting early — `set -o pipefail` tripping on a failing
+# pipeline, an unbound variable — never reaches output_failure_data. These
+# reached the report as a heading with nothing beneath it, which reads as the
+# report having dropped the failure rather than the installer having been mute.
+
+@test "orchestration: installer that reports nothing still names its exit code" {
+  printf '#!/usr/bin/env bash\nexit 7\n' >"$TEMP_DIR/silent.sh"
+  chmod +x "$TEMP_DIR/silent.sh"
+
+  run_installer "$TEMP_DIR/silent.sh" "silent-tool" >/dev/null 2>&1 || true
+
+  run cat "$FAILURES_LOG"
+  assert_output --partial "silent-tool"
+  assert_output --partial "Installer exited 7 without reporting a failure"
+  assert_output --partial "no error output captured"
+}
+
+@test "orchestration: unreported failure still carries the installer's stderr" {
+  printf '#!/usr/bin/env bash\necho "ssl: unable to get local issuer certificate" >&2\nexit 1\n' \
+    >"$TEMP_DIR/noisy.sh"
+  chmod +x "$TEMP_DIR/noisy.sh"
+
+  run_installer "$TEMP_DIR/noisy.sh" "noisy-tool" >/dev/null 2>&1 || true
+
+  run cat "$FAILURES_LOG"
+  assert_output --partial "ssl: unable to get local issuer certificate"
+  refute_output --partial "no error output captured"
+}
+
+@test "orchestration: the unknown URL sentinel is not printed back" {
+  cat >"$TEMP_DIR/nourl.sh" <<'EOF'
+#!/usr/bin/env bash
+source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+output_failure_data "nourl-tool" "unknown" "latest" "Sync failed" "boom"
+exit 1
+EOF
+  chmod +x "$TEMP_DIR/nourl.sh"
+
+  run_installer "$TEMP_DIR/nourl.sh" "nourl-tool" >/dev/null 2>&1 || true
+
+  run cat "$FAILURES_LOG"
+  assert_output --partial "Error: Sync failed"
+  refute_output --partial "Download URL"
+}
+
+# ================================================================
 # Test: Mixed success and failure
 # ================================================================
 
