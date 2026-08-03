@@ -29,7 +29,10 @@ skips = ["B113", "B311"]
 
 [tool.codespell]
 skip = '*.css.map'
-ignore-words-list = "astroid,aNULL,ANULL,anull"
+# Each of these is a name or literal, not prose: ags and noice are tools
+# (Aylur's GTK Shell, folke/noice.nvim), fpr is gpg's fingerprint record field,
+# te is a `<leader>te` keybinding, afterall is a test-framework hook.
+ignore-words-list = "astroid,aNULL,ANULL,anull,ags,noice,fpr,te,afterall,unparseable"
 check-filenames = true
 
 
