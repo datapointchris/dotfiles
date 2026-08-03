@@ -101,14 +101,18 @@ jobs:
       # guard covers absence only: if tests exist, bats runs and its exit status
       # stands.
       #
-      # Discovery recurses. `tests/*.bats` matched only a flat layout, so
-      # dotfiles — whose 24 suites all live in tests/apps, tests/install and
-      # tests/libraries — took the no-tests exit and reported a green bats step
-      # having run nothing, which is the exact failure this guard exists to
-      # prevent. The pre-commit block deliberately keeps the flat glob: running
-      # the full suite costs three minutes, which belongs on a runner and not on
-      # every commit, and a repo that wants it locally gates it behind a
-      # # > custom: hook of its own.
+      # Discovery stays flat, and says so when it finds a nested layout it will
+      # not run. Recursing was tried: dotfiles keeps its 24 suites under
+      # tests/apps, tests/install and tests/libraries, so `tests/*.bats` matched
+      # nothing and the step reported green having run nothing. But `bats -r`
+      # then swept in that repo's integration tier, which wants Docker images
+      # and live network and fails on a bare runner.
+      #
+      # A generic block cannot tell a unit suite from an integration one — only
+      # the repo knows which of its tiers is runner-safe. So this runs the flat
+      # case, and a nested repo adds a # > custom: step naming its own subset.
+      # What it must not do is exit 0 in silence, which is how the layout went
+      # unnoticed in the first place.
       - name: bats
         run: |
           bats_version="1.14.0"
@@ -117,6 +121,14 @@ jobs:
 
           if [ -z "$(find tests -name '*.bats' -print -quit 2>/dev/null)" ]; then
             echo "no bats tests found"
+            exit 0
+          fi
+
+          if ! compgen -G "tests/*.bats" > /dev/null; then
+            echo "bats suites exist under tests/ but none at its root."
+            echo "This step runs tests/*.bats only — a nested layout names its"
+            echo "own runner-safe subset in a # > custom: step."
+            find tests -name '*.bats' | sed 's/^/  /'
             exit 0
           fi
 
@@ -129,7 +141,7 @@ jobs:
           git clone --depth 1 --branch "v${bats_assert_version}" \
             https://github.com/bats-core/bats-assert.git "$HOME/.local/lib/bats-assert"
 
-          bats -r tests/
+          bats tests/
 
   lua:
     runs-on: ubuntu-latest
@@ -202,3 +214,36 @@ jobs:
           set -e
           if [ "$code" -eq 0 ] || [ "$code" -eq 5 ]; then exit 0; fi
           exit 1
+
+# > custom:after:all - The bats tier the generic shell step cannot pick
+  # The generated step runs tests/*.bats and this repo has none at that level,
+  # so it prints the nested layout and exits. Only the repo knows which of its
+  # tiers is runner-safe: tests/libraries, tests/install/unit and tests/apps
+  # need nothing but a checkout, which is exactly what `task test:unit` runs.
+  # tests/install/integration is left out deliberately — it builds Docker
+  # images and calls release APIs live.
+  #
+  # Its own job rather than a step inside `shell`: it shares no setup with
+  # shellcheck or shfmt, and a separate job runs it in parallel with them.
+  bats-unit:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v7
+
+      - name: bats
+        run: |
+          bats_version="1.14.0"
+          bats_support_version="0.3.0"
+          bats_assert_version="2.2.4"
+
+          git clone --depth 1 --branch "v${bats_version}" \
+            https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats"
+          sudo "$RUNNER_TEMP/bats/install.sh" /usr/local
+
+          git clone --depth 1 --branch "v${bats_support_version}" \
+            https://github.com/bats-core/bats-support.git "$HOME/.local/lib/bats-support"
+          git clone --depth 1 --branch "v${bats_assert_version}" \
+            https://github.com/bats-core/bats-assert.git "$HOME/.local/lib/bats-assert"
+
+          bats tests/libraries/*.bats tests/install/unit/*.bats tests/apps/*.bats
