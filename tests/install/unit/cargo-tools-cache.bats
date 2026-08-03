@@ -20,10 +20,10 @@ setup() {
   CACHE_DIR="$TEST_DIR/binaries"
   FAKE_HOME="$TEST_DIR/home"
   mkdir -p "$CACHE_DIR" "$FAKE_HOME/.cargo/bin"
-  touch "$FAKE_HOME/.cargo/env"  # empty mock — cargo-tools.sh sources this
+  touch "$FAKE_HOME/.cargo/env" # empty mock — cargo-tools.sh sources this
 
   HELPER_SCRIPT="$TEST_DIR/run-fn.sh"
-  cat > "$HELPER_SCRIPT" << SCRIPT
+  cat >"$HELPER_SCRIPT" <<SCRIPT
 #!/usr/bin/env bash
 set -euo pipefail
 export HOME="$FAKE_HOME"
@@ -62,7 +62,7 @@ create_single_tarball() {
   local binary_name="$1" tar_path="$2"
   local build_dir="$TEST_DIR/build-single-$$"
   mkdir -p "$build_dir"
-  printf 'SINGLE-PLATFORM-BINARY' > "$build_dir/$binary_name"
+  printf 'SINGLE-PLATFORM-BINARY' >"$build_dir/$binary_name"
   (cd "$build_dir" && tar czf "$tar_path" "$binary_name")
   rm -rf "$build_dir"
 }

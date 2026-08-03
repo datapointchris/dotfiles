@@ -8,6 +8,7 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
+# shellcheck source=/dev/null
 source "$HOME/.cargo/env"
 
 # Offline cache directory for pre-built binaries; override via env for testing

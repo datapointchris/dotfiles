@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Source shell libraries
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=../../configs/common/.local/shell/formatting.sh
 source "$SHELL_DIR/formatting.sh"
 
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -62,7 +63,7 @@ log_entry() {
     --arg message "$message" \
     '{timestamp: $timestamp, message: $message}')
 
-  echo "$entry" >> "$DATA_FILE"
+  echo "$entry" >>"$DATA_FILE"
   print_success "Logged"
 }
 
@@ -115,16 +116,16 @@ delete_entries() {
   echo ""
 
   local selected
-  selected=$(jq --raw-output '"\(.timestamp) | \(.message)"' "$DATA_FILE" | \
-    tac | \
-    fzf --multi \
-        --layout=reverse \
-        --height=80% \
-        --border=rounded \
-        --prompt="Delete entries > " \
-        --header="TAB: select/deselect | ENTER: confirm deletion | ESC: cancel" \
-        --bind="ctrl-a:select-all" \
-        --bind="ctrl-d:deselect-all")
+  selected=$(jq --raw-output '"\(.timestamp) | \(.message)"' "$DATA_FILE" \
+    | tac \
+    | fzf --multi \
+      --layout=reverse \
+      --height=80% \
+      --border=rounded \
+      --prompt="Delete entries > " \
+      --header="TAB: select/deselect | ENTER: confirm deletion | ESC: cancel" \
+      --bind="ctrl-a:select-all" \
+      --bind="ctrl-d:deselect-all")
 
   if [[ -z "$selected" ]]; then
     print_info "No entries selected, nothing deleted"
@@ -156,7 +157,7 @@ delete_entries() {
 
   jq --argjson timestamps "$timestamps_to_delete" \
     'select([.timestamp] | inside($timestamps) | not)' \
-    "$DATA_FILE" > "$temp_file"
+    "$DATA_FILE" >"$temp_file"
 
   mv "$temp_file" "$DATA_FILE"
 
@@ -177,7 +178,7 @@ case "${1:-help}" in
   delete)
     delete_entries
     ;;
-  help|--help|-h)
+  help | --help | -h)
     show_help
     ;;
   -*)

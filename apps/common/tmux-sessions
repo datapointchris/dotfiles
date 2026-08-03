@@ -14,7 +14,7 @@
 set -euo pipefail
 
 usage() {
-  cat << 'EOF'
+  cat <<'EOF'
 Usage: tmux-sessions <command> [args]
 
 Commands:
@@ -29,7 +29,7 @@ EOF
 }
 
 require_server() {
-  if ! tmux info > /dev/null 2>&1; then
+  if ! tmux info >/dev/null 2>&1; then
     echo "tmux-sessions: no tmux server running" >&2
     exit 1
   fi
@@ -93,7 +93,7 @@ new_session() {
     exit 1
   fi
 
-  if tmux has-session -t "=$name" 2> /dev/null; then
+  if tmux has-session -t "=$name" 2>/dev/null; then
     focus_session "$name"
     return 0
   fi
@@ -113,7 +113,7 @@ promote_window() {
 
   local name="${1:-$(tmux display-message -p '#{window_name}')}"
 
-  if tmux has-session -t "=$name" 2> /dev/null; then
+  if tmux has-session -t "=$name" 2>/dev/null; then
     echo "tmux-sessions: session '$name' already exists" >&2
     exit 1
   fi

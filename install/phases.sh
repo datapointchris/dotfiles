@@ -288,46 +288,46 @@ export SHARED_ARG_CONSUMED=0
 consume_shared_arg() {
   SHARED_ARG_CONSUMED=0
   case "$1" in
-  --skip)
-    if [[ -z "${2:-}" ]]; then
-      log_error "--skip requires a group or phase name"
-      exit 1
-    fi
-    if group_is_valid "$2"; then
-      GROUPS_SKIPPED+=("$2")
-    elif phase_name_is_valid "$2"; then
-      PHASES_SKIPPED+=("$2")
-    else
-      reject_selector "$2"
-    fi
-    SHARED_ARG_CONSUMED=2
-    ;;
-  --no-system)
-    GROUPS_SKIPPED+=("system")
-    SHARED_ARG_CONSUMED=1
-    ;;
-  --mine)
-    MINE=true
-    SHARED_ARG_CONSUMED=1
-    ;;
-  --dry-run)
-    DRY_RUN=true
-    SHARED_ARG_CONSUMED=1
-    ;;
-  --list)
-    list_phases
-    ;;
-  -*) ;;
-  *)
-    if group_is_valid "$1"; then
-      GROUPS_SELECTED+=("$1")
-    elif phase_name_is_valid "$1"; then
-      PHASES_SELECTED+=("$1")
-    else
-      reject_selector "$1"
-    fi
-    SHARED_ARG_CONSUMED=1
-    ;;
+    --skip)
+      if [[ -z "${2:-}" ]]; then
+        log_error "--skip requires a group or phase name"
+        exit 1
+      fi
+      if group_is_valid "$2"; then
+        GROUPS_SKIPPED+=("$2")
+      elif phase_name_is_valid "$2"; then
+        PHASES_SKIPPED+=("$2")
+      else
+        reject_selector "$2"
+      fi
+      SHARED_ARG_CONSUMED=2
+      ;;
+    --no-system)
+      GROUPS_SKIPPED+=("system")
+      SHARED_ARG_CONSUMED=1
+      ;;
+    --mine)
+      MINE=true
+      SHARED_ARG_CONSUMED=1
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      SHARED_ARG_CONSUMED=1
+      ;;
+    --list)
+      list_phases
+      ;;
+    -*) ;;
+    *)
+      if group_is_valid "$1"; then
+        GROUPS_SELECTED+=("$1")
+      elif phase_name_is_valid "$1"; then
+        PHASES_SELECTED+=("$1")
+      else
+        reject_selector "$1"
+      fi
+      SHARED_ARG_CONSUMED=1
+      ;;
   esac
 }
 

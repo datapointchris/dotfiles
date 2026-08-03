@@ -97,9 +97,9 @@ cargo_installed_version() {
 npm_global_versions() {
   command -v npm >/dev/null 2>&1 || return 1
   command -v jq >/dev/null 2>&1 || return 1
-  npm ls -g --depth=0 --json 2>/dev/null |
-    jq -r '.dependencies // {} | to_entries[] | "\(.key) \(.value.version // "unknown")"' |
-    sort
+  npm ls -g --depth=0 --json 2>/dev/null \
+    | jq -r '.dependencies // {} | to_entries[] | "\(.key) \(.value.version // "unknown")"' \
+    | sort
 }
 
 # Echoes the module version stamped into a Go binary, e.g. "v1.7.1", or "(devel)"

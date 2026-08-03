@@ -42,14 +42,14 @@ done
 
 unused=()
 while IFS=' ' read -r count tool; do
-  if (( count == 0 )); then
+  if ((count == 0)); then
     unused+=("$tool")
   else
     echo "  $(print_green "$tool") — ${count}x"
   fi
 done < <(printf '%s\n' "${entries[@]}" | sort -rn)
 
-if (( ${#unused[@]} > 0 )); then
+if ((${#unused[@]} > 0)); then
   echo ""
   print_section "Never used (in history)" "brightyellow"
   for t in "${unused[@]}"; do
@@ -58,6 +58,6 @@ if (( ${#unused[@]} > 0 )); then
 fi
 
 echo ""
-echo "  $(print_cyan "History:") $HISTORY  ($(wc -l < "$HISTORY") lines)"
+echo "  $(print_cyan "History:") $HISTORY  ($(wc -l <"$HISTORY") lines)"
 echo "  $(print_cyan "Tip:") setopt EXTENDED_HISTORY in .zshrc to track dates"
 echo ""

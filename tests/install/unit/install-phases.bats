@@ -22,7 +22,7 @@ setup_file() {
 
   BATS_FILE_TMPDIR="${BATS_FILE_TMPDIR:-$(mktemp -d)}"
   export SELECT="$BATS_FILE_TMPDIR/select.sh"
-  cat > "$SELECT" << SCRIPT
+  cat >"$SELECT" <<SCRIPT
 #!/usr/bin/env bash
 # Refuse to source an install.sh that would execute on source — that is a full
 # machine install per test, with sudo, brew, and every release installer.

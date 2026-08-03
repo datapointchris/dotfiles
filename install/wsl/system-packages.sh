@@ -22,9 +22,9 @@ log_info "Installing system packages from packages.yml..."
 
 # Exclude Docker packages - WSL uses Windows Docker Desktop, not native Docker
 # The Docker apt repo is intentionally not configured on WSL (see docker-repo.sh)
-PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=apt --tier="${SYSTEM_PACKAGE_TIER:-workstation}" | \
-  grep -v -E '^(docker-ce|docker-ce-cli|containerd\.io|docker-buildx-plugin|docker-compose-plugin)$' | \
-  tr '\n' ' ')
+PACKAGES=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=system --manager=apt --tier="${SYSTEM_PACKAGE_TIER:-workstation}" \
+  | grep -v -E '^(docker-ce|docker-ce-cli|containerd\.io|docker-buildx-plugin|docker-compose-plugin)$' \
+  | tr '\n' ' ')
 
 # shellcheck disable=SC2086
 if sudo apt install -y $PACKAGES; then

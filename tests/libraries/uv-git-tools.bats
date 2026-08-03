@@ -23,7 +23,7 @@ stub_releases_api() {
   local body="$1"
   local stub_dir="$BATS_TEST_TMPDIR/stubs"
   mkdir -p "$stub_dir"
-  printf '#!/usr/bin/env bash\nprintf %%s %s\n' "'$body'" > "$stub_dir/curl"
+  printf '#!/usr/bin/env bash\nprintf %%s %s\n' "'$body'" >"$stub_dir/curl"
   chmod +x "$stub_dir/curl"
   PATH="$stub_dir:$PATH"
 }

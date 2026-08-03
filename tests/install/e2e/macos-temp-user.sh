@@ -34,7 +34,7 @@ fi
 KEEP_USER=false
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -k|--keep)
+    -k | --keep)
       KEEP_USER=true
       shift
       ;;
@@ -48,7 +48,7 @@ done
 
 # Configuration
 TEST_USER="dotfiles-test-$(date '+%Y%m%d-%H%M%S')"
-TEST_UID=599  # Use UID 599 (below 500, typically hidden from login screen)
+TEST_UID=599 # Use UID 599 (below 500, typically hidden from login screen)
 LOG_FILE="${DOTFILES_DIR}/test-macos-user.log"
 
 # Timing arrays
@@ -78,7 +78,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Overwrite log file (not append)
-: > "$LOG_FILE"
+: >"$LOG_FILE"
 
 log_info "Testing macOS installation with temporary user account"
 log_info "Test user: ${TEST_USER}"

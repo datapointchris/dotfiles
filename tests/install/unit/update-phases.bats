@@ -25,7 +25,7 @@ setup_file() {
   # Written once per file, not once per test.
   BATS_FILE_TMPDIR="${BATS_FILE_TMPDIR:-$(mktemp -d)}"
   export SELECT="$BATS_FILE_TMPDIR/select.sh"
-  cat > "$SELECT" << SCRIPT
+  cat >"$SELECT" <<SCRIPT
 #!/usr/bin/env bash
 # Refuse to source an update.sh that would execute on source. Without this a
 # copy predating the guard runs a full system update per test — brew upgrade,

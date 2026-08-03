@@ -38,6 +38,7 @@ if [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
 else
   # Fallback to repo location
+  # shellcheck source=colors.sh
   source "$HOME/dotfiles/configs/common/.local/shell/colors.sh"
 fi
 

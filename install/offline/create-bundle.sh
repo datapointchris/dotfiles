@@ -143,7 +143,7 @@ record_bundle_checksum() {
     exit 1
   fi
 
-  printf '%s  %s\n' "$actual" "$shipped_name" >> "$CHECKSUMS_FILE"
+  printf '%s  %s\n' "$actual" "$shipped_name" >>"$CHECKSUMS_FILE"
 }
 
 # ============================================================================
@@ -171,7 +171,7 @@ download_github_releases() {
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
     record_bundle_checksum "$CACHE_DIR/binaries/$filename" "$url"
-    echo "binary|$tool|$version|$filename" >> "$MANIFEST_FILE"
+    echo "binary|$tool|$version|$filename" >>"$MANIFEST_FILE"
 
     # Companion files (e.g. fzf-tmux for fzf). Scripts opt in by handling
     # --print-extras and emitting <name>|<version>|<url> lines. Scripts
@@ -184,7 +184,7 @@ download_github_releases() {
         log_info "    extra: $extra_name ($extra_version)..."
         download_file "$extra_url" "$CACHE_DIR/binaries/$extra_filename" "$extra_name"
         record_bundle_checksum "$CACHE_DIR/binaries/$extra_filename" "$extra_url"
-        echo "extra|$extra_name|$extra_version|$extra_filename" >> "$MANIFEST_FILE"
+        echo "extra|$extra_name|$extra_version|$extra_filename" >>"$MANIFEST_FILE"
       done < <(bash "$script" --print-extras "$OS" "$ARCH")
     fi
   done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=github --manifest="$MANIFEST")
@@ -254,7 +254,7 @@ download_go_binaries() {
       fi
       mv "$found_bin" "$final_binary"
     elif [[ "$expanded" == *.gz ]]; then
-      gunzip -c "$download_path" > "$final_binary"
+      gunzip -c "$download_path" >"$final_binary"
     else
       # Raw binary (goose, gofumpt)
       mv "$download_path" "$final_binary"
@@ -265,7 +265,7 @@ download_go_binaries() {
     [[ -f "$download_path" ]] && [[ "$download_path" != "$final_binary" ]] && rm -f "$download_path"
     rm -rf "$extract_dir"
 
-    echo "go-binary|$binary_name|$version|$binary_name" >> "$MANIFEST_FILE"
+    echo "go-binary|$binary_name|$version|$binary_name" >>"$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=go --format=binary_info --manifest="$MANIFEST")
 }
 
@@ -295,7 +295,7 @@ download_install_scripts() {
     filename="${name}-install.sh"
     log_info "  $name..."
     download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
-    echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
+    echo "script|$name|$version|$filename" >>"$MANIFEST_FILE"
   done
 
   while IFS= read -r tool; do
@@ -312,7 +312,7 @@ download_install_scripts() {
     filename="${name}-install.sh"
     log_info "  $name..."
     download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
-    echo "script|$name|$version|$filename" >> "$MANIFEST_FILE"
+    echo "script|$name|$version|$filename" >>"$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=custom --filter=bundle_install_script --manifest="$MANIFEST")
 }
 
@@ -369,7 +369,7 @@ download_cargo_binaries() {
       filename="$repackaged"
     fi
 
-    echo "cargo|$tool|$version|$filename" >> "$MANIFEST_FILE"
+    echo "cargo|$tool|$version|$filename" >>"$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=cargo --format=binary_info --manifest="$MANIFEST")
 }
 
@@ -396,10 +396,19 @@ usage() {
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --platform)   TARGET_PLATFORM="$2"; shift 2 ;;
-      --manifest)   MANIFEST="$2"; shift 2 ;;
-      --help|-h)    usage ;;
-      *)            log_error "Unknown option: $1"; exit 1 ;;
+      --platform)
+        TARGET_PLATFORM="$2"
+        shift 2
+        ;;
+      --manifest)
+        MANIFEST="$2"
+        shift 2
+        ;;
+      --help | -h) usage ;;
+      *)
+        log_error "Unknown option: $1"
+        exit 1
+        ;;
     esac
   done
 }
@@ -419,10 +428,22 @@ validate_manifest() {
 
 parse_platform() {
   case "$TARGET_PLATFORM" in
-    linux-x86_64|linux-amd64)     OS="linux";  ARCH="x86_64" ;;
-    linux-arm64|linux-aarch64)    OS="linux";  ARCH="arm64" ;;
-    darwin-x86_64|macos-x86_64)   OS="darwin"; ARCH="x86_64" ;;
-    darwin-arm64|macos-arm64)     OS="darwin"; ARCH="arm64" ;;
+    linux-x86_64 | linux-amd64)
+      OS="linux"
+      ARCH="x86_64"
+      ;;
+    linux-arm64 | linux-aarch64)
+      OS="linux"
+      ARCH="arm64"
+      ;;
+    darwin-x86_64 | macos-x86_64)
+      OS="darwin"
+      ARCH="x86_64"
+      ;;
+    darwin-arm64 | macos-arm64)
+      OS="darwin"
+      ARCH="arm64"
+      ;;
     *)
       log_error "Unsupported platform: $TARGET_PLATFORM"
       log_info "Supported: linux-x86_64, linux-arm64, darwin-x86_64, darwin-arm64"
@@ -440,9 +461,9 @@ setup_directories() {
   CHECKSUMS_FILE="$CACHE_DIR/checksums.txt"
 
   mkdir -p "$CACHE_DIR/binaries" "$CACHE_DIR/scripts" "$CACHE_DIR/go-binaries"
-  : > "$CHECKSUMS_FILE"
+  : >"$CHECKSUMS_FILE"
 
-  cat > "$MANIFEST_FILE" << EOF
+  cat >"$MANIFEST_FILE" <<EOF
 # Dotfiles Offline Bundle
 # Created: $(date)
 # Platform: $OS/$ARCH
@@ -452,7 +473,7 @@ EOF
 }
 
 create_readme() {
-  cat > "$CACHE_DIR/README.txt" << 'EOF'
+  cat >"$CACHE_DIR/README.txt" <<'EOF'
 Dotfiles Offline Installers
 ============================
 

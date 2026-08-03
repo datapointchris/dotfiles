@@ -5,34 +5,34 @@
 set -euo pipefail
 
 format_modifiers() {
-    local mods="$1"
-    mods="${mods//SUPER/Super}"
-    mods="${mods//SHIFT/Shift}"
-    mods="${mods//CTRL/Ctrl}"
-    mods="${mods//ALT/Alt}"
-    echo "$mods"
+  local mods="$1"
+  mods="${mods//SUPER/Super}"
+  mods="${mods//SHIFT/Shift}"
+  mods="${mods//CTRL/Ctrl}"
+  mods="${mods//ALT/Alt}"
+  echo "$mods"
 }
 
 get_keybinds() {
-    hyprctl binds -j | jq -r '
+  hyprctl binds -j | jq -r '
         .[] |
         select(.description != null and .description != "") |
         "\(.modmask_str) + \(.key) → \(.description)"
     ' | while read -r line; do
-        mods="${line%% + *}"
-        rest="${line#* + }"
-        formatted_mods=$(format_modifiers "$mods")
-        echo "$formatted_mods + $rest"
-    done | sort
+    mods="${line%% + *}"
+    rest="${line#* + }"
+    formatted_mods=$(format_modifiers "$mods")
+    echo "$formatted_mods + $rest"
+  done | sort
 }
 
 main() {
-    get_keybinds | rofi -dmenu -i -p "Keybinds" -no-custom || true
+  get_keybinds | rofi -dmenu -i -p "Keybinds" -no-custom || true
 }
 
 # If called with --list, just output the keybinds (for piping)
 if [[ "${1:-}" == "--list" ]]; then
-    get_keybinds
+  get_keybinds
 else
-    main
+  main
 fi

@@ -34,13 +34,13 @@ main() {
   cd "$DOTFILES_DIR" || exit 1
 
   case "$verb" in
-  serve) uv run mkdocs serve ;;
-  build) uv run mkdocs build --strict ;;
-  deploy) uv run mkdocs gh-deploy --force ;;
-  *)
-    log_error "Unknown verb: $verb"
-    usage 1
-    ;;
+    serve) uv run mkdocs serve ;;
+    build) uv run mkdocs build --strict ;;
+    deploy) uv run mkdocs gh-deploy --force ;;
+    *)
+      log_error "Unknown verb: $verb"
+      usage 1
+      ;;
   esac
 }
 

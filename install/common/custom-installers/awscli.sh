@@ -65,7 +65,10 @@ case $OS in
 
     AWSCLI_URL_BASE=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
       --custom-installer awscli --field url) \
-      || { log_error "Could not read awscli.url from packages.yml"; exit 1; }
+      || {
+        log_error "Could not read awscli.url from packages.yml"
+        exit 1
+      }
 
     case $ARCH in
       amd64)

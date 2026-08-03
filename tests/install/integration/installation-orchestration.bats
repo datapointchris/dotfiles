@@ -47,7 +47,7 @@ setup_file() {
   mkdir -p "$TEMP_DIR"
 
   # Create mock successful installer
-  cat > "$TEMP_DIR/success.sh" << 'EOF'
+  cat >"$TEMP_DIR/success.sh" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
@@ -55,7 +55,7 @@ EOF
 
   # Create mock failing installer with structured output
   # Accepts tool name via MOCK_TOOL_NAME environment variable
-  cat > "$TEMP_DIR/failure.sh" << 'EOF'
+  cat >"$TEMP_DIR/failure.sh" <<'EOF'
 #!/usr/bin/env bash
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
@@ -151,13 +151,13 @@ setup() {
   run_installer "$TEMP_DIR/failure.sh" "fail-tool" >/dev/null 2>&1 || true
 
   # Get initial log size
-  initial_size=$(wc -l < "$FAILURES_LOG")
+  initial_size=$(wc -l <"$FAILURES_LOG")
 
   # Succeed
   run_installer "$TEMP_DIR/success.sh" "success-tool" >/dev/null 2>&1 || true
 
   # Log size should not have changed
-  final_size=$(wc -l < "$FAILURES_LOG")
+  final_size=$(wc -l <"$FAILURES_LOG")
   [[ "$initial_size" == "$final_size" ]]
 }
 
@@ -216,7 +216,7 @@ setup() {
 
 @test "orchestration: failure without manual steps does not cause unbound variable" {
   # Create a simple failing installer WITHOUT FAILURE_MANUAL_START block
-  cat > "$TEMP_DIR/simple-failure.sh" << 'EOF'
+  cat >"$TEMP_DIR/simple-failure.sh" <<'EOF'
 #!/usr/bin/env bash
 echo "FAILURE_TOOL='simple-tool'" >&2
 echo "FAILURE_REASON='Simple failure without manual steps'" >&2

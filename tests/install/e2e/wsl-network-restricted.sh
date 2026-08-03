@@ -42,11 +42,11 @@ UBUNTU_VERSION="24.04"
 KEEP_CONTAINER=false
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -v|--version)
+    -v | --version)
       UBUNTU_VERSION="${2:-24.04}"
       shift 2
       ;;
-    -k|--keep)
+    -k | --keep)
       KEEP_CONTAINER=true
       shift
       ;;
@@ -84,7 +84,7 @@ DOCKER_IMAGE="wsl-ubuntu:${UBUNTU_VERSION}"
 
 # Test tracking
 FAILURE_TRACKER="/tmp/test-failures-$$"
-: > "$FAILURE_TRACKER"  # Create empty file
+: >"$FAILURE_TRACKER" # Create empty file
 # shellcheck disable=SC2030,SC2031
 
 # Cleanup function
@@ -98,7 +98,7 @@ cleanup() {
       docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
     fi
   else
-    if [[ $exit_code -ne 0 ]] || [[ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) -gt 0 ]]; then
+    if [[ $exit_code -ne 0 ]] || [[ $(wc -l <"$FAILURE_TRACKER" 2>/dev/null || echo 0) -gt 0 ]]; then
       echo ""
       log_info "Container kept for debugging: $CONTAINER_NAME"
       echo "  • Shell into container: docker exec -it $CONTAINER_NAME bash"
@@ -112,7 +112,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Overwrite log file (not append)
-: > "$LOG_FILE"
+: >"$LOG_FILE"
 
 log_info "Testing WSL installation with network restrictions"
 log_info "Ubuntu version: ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
@@ -170,7 +170,7 @@ STEP_START=$(date +%s)
     echo ""
     echo "Importing WSL rootfs into Docker..."
     if [[ "$ROOTFS_FILE" == *.wsl ]]; then
-      docker import - "$DOCKER_IMAGE" < "$ROOTFS_FILE"
+      docker import - "$DOCKER_IMAGE" <"$ROOTFS_FILE"
     else
       gunzip -c "$ROOTFS_FILE" | docker import - "$DOCKER_IMAGE"
     fi
@@ -304,7 +304,7 @@ STEP_START=$(date +%s)
   else
     log_error "✗ Expected 1 failure log, found $FAILURE_LOG_COUNT"
     docker exec "$CONTAINER_NAME" bash -c "ls -la /tmp/dotfiles-install-failures-*.txt 2>/dev/null || true"
-    echo "F" >> "$FAILURE_TRACKER"
+    echo "F" >>"$FAILURE_TRACKER"
   fi
   echo ""
 
@@ -320,7 +320,7 @@ STEP_START=$(date +%s)
       log_success "✓ Multiple GitHub tool failures logged (>= 7)"
     else
       log_error "✗ Expected at least 7 GitHub tool failures, found $FAILURE_COUNT"
-      echo "F" >> "$FAILURE_TRACKER"
+      echo "F" >>"$FAILURE_TRACKER"
     fi
     echo ""
 
@@ -348,14 +348,14 @@ STEP_START=$(date +%s)
       log_success "✓ Summary was displayed during installation"
     else
       log_error "✗ Summary was NOT displayed during installation"
-      echo "F" >> "$FAILURE_TRACKER"
+      echo "F" >>"$FAILURE_TRACKER"
     fi
     echo ""
 
   else
     log_error "✗ No failure log file found at all!"
     docker exec "$CONTAINER_NAME" bash -c "ls -la /tmp/ | grep dotfiles || true"
-    echo "F" >> "$FAILURE_TRACKER"
+    echo "F" >>"$FAILURE_TRACKER"
   fi
 
   # Test 6: Verify apt packages still worked
@@ -364,7 +364,7 @@ STEP_START=$(date +%s)
     log_success "✓ Apt packages installed (build-essential found)"
   else
     log_error "✗ Apt packages failed to install"
-    echo "F" >> "$FAILURE_TRACKER"
+    echo "F" >>"$FAILURE_TRACKER"
   fi
   echo ""
 
@@ -404,7 +404,7 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
 # Summary
 {
   echo ""
-  if [[ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) -eq 0 ]]; then
+  if [[ $(wc -l <"$FAILURE_TRACKER" 2>/dev/null || echo 0) -eq 0 ]]; then
     print_header_success "Network-Restricted Test PASSED"
   else
     print_header_error "Network-Restricted Test FAILED"
@@ -414,14 +414,14 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   print_section "Test Results" "cyan"
   echo ""
   echo "  Failure Handling Tests:"
-  if [[ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) -eq 0 ]]; then
+  if [[ $(wc -l <"$FAILURE_TRACKER" 2>/dev/null || echo 0) -eq 0 ]]; then
     echo "    ✓ All tests passed"
     echo "    ✓ Only ONE failure log created"
     echo "    ✓ Multiple GitHub failures logged"
     echo "    ✓ Summary displayed correctly"
     echo "    ✓ Installation continued despite failures"
   else
-    echo "    ✗ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) test(s) failed"
+    echo "    ✗ $(wc -l <"$FAILURE_TRACKER" 2>/dev/null || echo 0) test(s) failed"
     echo "    Review the log above for details"
   fi
   echo ""
@@ -449,7 +449,7 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
 } 2>&1 | tee -a "$LOG_FILE"
 
 # Exit with error if any tests failed
-if [[ $(wc -l < "$FAILURE_TRACKER" 2>/dev/null || echo 0) -gt 0 ]]; then
+if [[ $(wc -l <"$FAILURE_TRACKER" 2>/dev/null || echo 0) -gt 0 ]]; then
   rm -f "$FAILURE_TRACKER" 2>/dev/null || true
   exit 1
 fi

@@ -41,8 +41,8 @@ download_release_asset() {
   if [[ -n "$token" && -n "$repo" && -n "$tag" ]]; then
     local asset_id
     asset_id=$(curl -fsSL -H "Authorization: Bearer $token" \
-      "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null |
-      jq -r --arg n "$asset_name" '.assets[]? | select(.name == $n) | .id' | head -1)
+      "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null \
+      | jq -r --arg n "$asset_name" '.assets[]? | select(.name == $n) | .id' | head -1)
 
     if [[ -n "$asset_id" ]]; then
       if curl -fsSL -H "Authorization: Bearer $token" \
@@ -112,8 +112,8 @@ resolve_checksum_asset() {
 
   local names
   names=$(curl "${curl_opts[@]}" \
-    "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null |
-    jq -r '.assets[]?.name') || return 1
+    "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null \
+    | jq -r '.assets[]?.name') || return 1
   [[ -z "$names" ]] && return 1
 
   local suffix candidate
@@ -125,10 +125,10 @@ resolve_checksum_asset() {
     fi
   done
 
-  candidate=$(printf '%s\n' "$names" |
-    grep -iE 'checksum|sha256sums?$' |
-    grep -ivE "$CHECKSUM_AUX_PATTERN" |
-    head -1)
+  candidate=$(printf '%s\n' "$names" \
+    | grep -iE 'checksum|sha256sums?$' \
+    | grep -ivE "$CHECKSUM_AUX_PATTERN" \
+    | head -1)
 
   [[ -n "$candidate" ]] || return 1
   echo "$candidate"
@@ -293,29 +293,29 @@ verify_download_or_fail() {
   local status=$?
 
   case $status in
-  0)
-    return 0
-    ;;
-  2)
-    if [[ "${CHECKSUM_REQUIRED:-true}" == "true" ]]; then
-      output_failure_data "$binary_name" "$download_url" "$version" \
-        "This release publishes no checksum file. If that is expected for this
+    0)
+      return 0
+      ;;
+    2)
+      if [[ "${CHECKSUM_REQUIRED:-true}" == "true" ]]; then
+        output_failure_data "$binary_name" "$download_url" "$version" \
+          "This release publishes no checksum file. If that is expected for this
 project, set CHECKSUM_REQUIRED=false in its installer with a comment saying
 why." "No checksum published"
-      log_error "$binary_name release publishes no checksum file"
-      rm -f "$file"
-      return 1
-    fi
-    log_warning "$binary_name publishes no checksums — installing unverified"
-    return 0
-    ;;
-  *)
-    output_failure_data "$binary_name" "$download_url" "$version" \
-      "The downloaded file did not match the published checksum. Re-run to
+        log_error "$binary_name release publishes no checksum file"
+        rm -f "$file"
+        return 1
+      fi
+      log_warning "$binary_name publishes no checksums — installing unverified"
+      return 0
+      ;;
+    *)
+      output_failure_data "$binary_name" "$download_url" "$version" \
+        "The downloaded file did not match the published checksum. Re-run to
 download again; if it fails repeatedly the release asset or the network path
 between you and it is not trustworthy." "Checksum verification failed"
-    return 1
-    ;;
+      return 1
+      ;;
   esac
 }
 
@@ -329,9 +329,9 @@ get_arch() {
   local arch
   arch=$(uname -m)
   case "$arch" in
-    x86_64)        echo "x86_64" ;;
-    aarch64|arm64) echo "arm64" ;;
-    *)             echo "$arch" ;;
+    x86_64) echo "x86_64" ;;
+    aarch64 | arm64) echo "arm64" ;;
+    *) echo "$arch" ;;
   esac
 }
 
@@ -382,15 +382,15 @@ should_skip_install() {
   local binary_name="$2"
 
   if [[ "${FORCE_INSTALL:-false}" == "true" ]]; then
-    return 1  # Don't skip, install
+    return 1 # Don't skip, install
   fi
 
   if [[ -f "$binary_path" ]] && command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name already installed: $binary_path"
-    return 0  # Skip
+    return 0 # Skip
   fi
 
-  return 1  # Don't skip, install
+  return 1 # Don't skip, install
 }
 
 # Check if update is needed for a binary
@@ -419,10 +419,10 @@ check_if_update_needed() {
   local version_output current_version
 
   # Try different version command patterns (some tools use subcommands)
-  version_output=$("$binary_name" --version 2>&1) ||
-    version_output=$("$binary_name" version 2>&1) ||
-    version_output=$("$binary_name" -version 2>&1) ||
-    version_output=""
+  version_output=$("$binary_name" --version 2>&1) \
+    || version_output=$("$binary_name" version 2>&1) \
+    || version_output=$("$binary_name" -version 2>&1) \
+    || version_output=""
 
   if [[ -z "$version_output" ]]; then
     log_warning "Could not determine $binary_name version, will reinstall"

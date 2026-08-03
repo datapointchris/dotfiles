@@ -79,7 +79,7 @@ teardown() {
   local name
   while read -r name; do
     [[ -z "$name" ]] && continue
-    run grep -qE "^  ($name|.*\| ?$name)[ )|]" "$CLI_SOURCE"
+    run grep -qE "^[[:space:]]*($name|.*\| ?$name)[ )|]" "$CLI_SOURCE"
     assert_success
   done < <("$CLI" __commands)
 }

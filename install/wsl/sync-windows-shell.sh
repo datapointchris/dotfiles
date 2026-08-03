@@ -153,11 +153,11 @@ alias open='start'
 OVERRIDES
     echo ""
 
-  } > "$combined_file"
+  } >"$combined_file"
 
-  echo "  Generated: combined.sh ($(wc -l < "$combined_file") lines)"
+  echo "  Generated: combined.sh ($(wc -l <"$combined_file") lines)"
 
-  cat > "$win_home/.bashrc" <<'BASHRC'
+  cat >"$win_home/.bashrc" <<'BASHRC'
 # shellcheck shell=bash
 # shellcheck disable=SC1091
 
@@ -198,7 +198,7 @@ BASHRC
   # Add include to Windows .gitconfig if not already present
   local win_gitconfig="$win_home/.gitconfig"
   if ! grep -q "common.gitconfig" "$win_gitconfig" 2>/dev/null; then
-    printf '[include]\n\tpath = ~/.config/git/common.gitconfig\n' >> "$win_gitconfig"
+    printf '[include]\n\tpath = ~/.config/git/common.gitconfig\n' >>"$win_gitconfig"
     echo "  Updated: .gitconfig (added include)"
   else
     echo "  Skipped: .gitconfig include already present"

@@ -89,9 +89,9 @@ source "$DOTFILES_DIR/configs/common/.local/shell/colors.sh"
 #   terminal rendering, too slow feels unresponsive. 90ms hits sweet spot.
 # COLOR_CYCLE_FILES (20): Changes color frequently enough to show progress but not so
 #   fast it's distracting or induces seizures.
-readonly COLOR_CYCLE_FILES=20           # Files per color change (visual rhythm)
-readonly UPDATE_INTERVAL_NS=90000000    # 90ms update interval (smooth without thrashing)
-readonly ARCHIVE_SPINNER_SLEEP=0.02     # 20ms: Responsive animation during archiving
+readonly COLOR_CYCLE_FILES=20        # Files per color change (visual rhythm)
+readonly UPDATE_INTERVAL_NS=90000000 # 90ms update interval (smooth without thrashing)
+readonly ARCHIVE_SPINNER_SLEEP=0.02  # 20ms: Responsive animation during archiving
 
 # Spinner animation characters - Braille dot patterns
 # These Unicode characters create a smooth circular animation that works in all modern
@@ -192,7 +192,7 @@ usage() {
 cleanup() {
   # Kill background spinner process
   if [[ -n "${ARCHIVE_SPINNER_PID:-}" ]]; then
-    kill "$ARCHIVE_SPINNER_PID" 2>/dev/null || true  # May already be dead
+    kill "$ARCHIVE_SPINNER_PID" 2>/dev/null || true # May already be dead
   fi
 
   # Remove temporary IPC files
@@ -218,11 +218,11 @@ trap cleanup EXIT INT TERM
 parse_arguments() {
   while [[ $# -gt 0 ]]; do
     case $1 in
-      -h|--help)
+      -h | --help)
         usage
         exit 0
         ;;
-      -n|--name)
+      -n | --name)
         if [[ -z "${2:-}" ]]; then
           echo "Error: --name requires a name" >&2
           exit 1
@@ -230,7 +230,7 @@ parse_arguments() {
         BACKUP_NAME="$2"
         shift 2
         ;;
-      -d|--dest)
+      -d | --dest)
         if [[ -z "${2:-}" ]]; then
           echo "Error: --dest requires a directory path" >&2
           exit 1
@@ -238,7 +238,7 @@ parse_arguments() {
         DEST_DIR="$2"
         shift 2
         ;;
-      -e|--exclude)
+      -e | --exclude)
         if [[ -z "${2:-}" ]]; then
           echo "Error: --exclude requires a pattern" >&2
           exit 1
@@ -311,7 +311,7 @@ validate_paths() {
       existing_paths+=("$relative_path")
       local color_code="${PATH_COLORS[$path_idx]}"
       echo -e "  ✓ Found: \033[${color_code}m$full_path\033[0m"
-      path_idx=$(( (path_idx + 1) % ${#PATH_COLORS[@]} ))
+      path_idx=$(((path_idx + 1) % ${#PATH_COLORS[@]}))
     else
       missing_paths+=("$relative_path")
       echo -e "  ⊘ Skipping: \033[90m$full_path\033[0m \033[33m(not found)\033[0m"
@@ -349,34 +349,37 @@ start_progress_count_only() {
   local progress_file="$1"
   local start_time="$2"
 
-  set +m  # Disable job control messages
+  set +m # Disable job control messages
   (
     local spinner_idx=0
     while [[ -f "$progress_file" ]]; do
       if [[ -r "$progress_file" ]]; then
-        local count=$(cat "$progress_file" 2>/dev/null || echo "0")
+        local count
+        count=$(cat "$progress_file" 2>/dev/null || echo "0")
 
         # Calculate elapsed time
-        local now=$(date +%s)
+        local now
+        now=$(date +%s)
         local elapsed=$((now - start_time))
-        local time_str=$(printf "%02d:%02d" $((elapsed/60)) $((elapsed%60)))
+        local time_str
+        time_str=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
 
         # Rainbow color based on count
-        local color_idx=$(( (count / COLOR_CYCLE_FILES) % ${#COLORS[@]} ))
+        local color_idx=$(((count / COLOR_CYCLE_FILES) % ${#COLORS[@]}))
         local color_code="${COLORS[$color_idx]}"
 
         local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
         # Count and time display
         printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m    " \
           "$spinner_char" "$time_str" "$count"
-        spinner_idx=$(( (spinner_idx + 1) % ${#SPINNER_CHARS} ))
+        spinner_idx=$(((spinner_idx + 1) % ${#SPINNER_CHARS}))
       fi
       sleep "$ARCHIVE_SPINNER_SLEEP"
     done
   ) &
   ARCHIVE_SPINNER_PID=$!
-  disown 2>/dev/null || true  # Prevent job control messages (allow to fail silently)
-  set -m  # Re-enable job control
+  disown 2>/dev/null || true # Prevent job control messages (allow to fail silently)
+  set -m                     # Re-enable job control
 }
 
 # ============================================================================
@@ -430,7 +433,7 @@ create_archive() {
 
   # Initialize progress tracking
   PROGRESS_FILE="/tmp/backup_dirs_$$_progress"
-  echo "0" > "$PROGRESS_FILE"
+  echo "0" >"$PROGRESS_FILE"
 
   start_progress_count_only "$PROGRESS_FILE" "$ARCHIVE_START_TIME"
 
@@ -469,27 +472,29 @@ create_archive() {
   #   even when archive is successfully created. With pipefail, this would fail
   #   the entire script. We check archive validity after creation instead.
 
-  set +o pipefail  # Disable pipefail: tar warnings shouldn't fail the script
+  set +o pipefail # Disable pipefail: tar warnings shouldn't fail the script
 
   {
-    tar -cv "${exclude_args[@]}" "${tar_paths[@]}" | \
-      zstd -T0 -3 > "$backup_dest"
-  } 2>&1 | \
-  {
-    # Count loop: Read tar's verbose output (filenames) and update progress file
-    local processed=0
-    local last_update=$(date +%s%N)
-    while IFS= read -r _line; do
-      processed=$((processed + 1))
-      # Throttle updates to UPDATE_INTERVAL_NS (90ms) to avoid thrashing
-      local now=$(date +%s%N)
-      if [[ $((now - last_update)) -ge $UPDATE_INTERVAL_NS ]]; then
-        echo "$processed" > "$PROGRESS_FILE"  # Background spinner reads this
-        last_update=$now
-      fi
-    done
-    echo "$processed" > "$PROGRESS_FILE"  # Final count
-  }
+    tar -cv "${exclude_args[@]}" "${tar_paths[@]}" \
+      | zstd -T0 -3 >"$backup_dest"
+  } 2>&1 \
+    | {
+      # Count loop: Read tar's verbose output (filenames) and update progress file
+      local processed=0
+      local last_update
+      last_update=$(date +%s%N)
+      while IFS= read -r _line; do
+        processed=$((processed + 1))
+        # Throttle updates to UPDATE_INTERVAL_NS (90ms) to avoid thrashing
+        local now
+        now=$(date +%s%N)
+        if [[ $((now - last_update)) -ge $UPDATE_INTERVAL_NS ]]; then
+          echo "$processed" >"$PROGRESS_FILE" # Background spinner reads this
+          last_update=$now
+        fi
+      done
+      echo "$processed" >"$PROGRESS_FILE" # Final count
+    }
 
   # Re-enable pipefail now that archiving is complete
   set -o pipefail
@@ -501,17 +506,17 @@ create_archive() {
   # Read final file count BEFORE deleting the progress file
   # The count loop writes final value after tar completes, but there's a race condition
   # where we might read before the final write. Brief sleep ensures we get accurate count.
-  sleep 0.1  # Let final echo "$processed" > "$PROGRESS_FILE" complete
+  sleep 0.1 # Let final echo "$processed" > "$PROGRESS_FILE" complete
   PROCESSED_FILES=$(cat "$PROGRESS_FILE" 2>/dev/null || echo "0")
 
   # Stop the background spinner process
-  rm -f "$PROGRESS_FILE"  # Spinner checks for this file, removing it stops the loop
+  rm -f "$PROGRESS_FILE" # Spinner checks for this file, removing it stops the loop
 
   # Wait for spinner to exit cleanly
   # CRITICAL GOTCHA: wait returns non-zero if process already exited or doesn't exist!
   # With 'set -e', this would cause function to return 1 despite successful archive.
   # The '|| true' ensures wait failure doesn't fail the function.
-  wait "$ARCHIVE_SPINNER_PID" 2>/dev/null || true  # Don't fail if already exited
+  wait "$ARCHIVE_SPINNER_PID" 2>/dev/null || true # Don't fail if already exited
 
   # Clear the progress line (cosmetic cleanup)
   printf "\r\033[K"
@@ -521,10 +526,10 @@ create_archive() {
   # "file changed while reading" even when archive is valid and complete.
   # Instead, verify the file exists and has content (not 0 bytes).
   if [[ ! -f "$backup_dest" ]] || [[ ! -s "$backup_dest" ]]; then
-    return 1  # Archive creation failed
+    return 1 # Archive creation failed
   fi
 
-  return 0  # Success!
+  return 0 # Success!
 }
 
 # ============================================================================
@@ -537,14 +542,18 @@ display_statistics() {
   local num_missing="$3"
 
   # Calculate timing
-  local end_time=$(date +%s)
+  local end_time
+  end_time=$(date +%s)
   local total_elapsed=$((end_time - OVERALL_START_TIME))
-  local total_time_str=$(printf "%02d:%02d" $((total_elapsed / 60)) $((total_elapsed % 60)))
+  local total_time_str
+  total_time_str=$(printf "%02d:%02d" $((total_elapsed / 60)) $((total_elapsed % 60)))
 
   # Get compressed archive size (using wc -c for cross-platform reliability)
   # tr -d ' ' removes any leading spaces that wc might output on some platforms
-  local compressed_size=$(wc -c < "$backup_dest" 2>/dev/null | tr -d ' ' || echo 0)
-  local compressed_size_hr=$(numfmt --to=iec-i --suffix=B "$compressed_size" 2>/dev/null || echo "$((compressed_size / 1048576))M")
+  local compressed_size
+  compressed_size=$(wc -c <"$backup_dest" 2>/dev/null | tr -d ' ' || echo 0)
+  local compressed_size_hr
+  compressed_size_hr=$(numfmt --to=iec-i --suffix=B "$compressed_size" 2>/dev/null || echo "$((compressed_size / 1048576))M")
 
   # Display statistics
   echo ""
@@ -591,7 +600,8 @@ main() {
   validate_paths
 
   # Create backup filename (always zstd)
-  local date_stamp=$(date '+%Y-%m-%d_%H%M%S')
+  local date_stamp
+  date_stamp=$(date '+%Y-%m-%d_%H%M%S')
   local backup_name="${BACKUP_NAME}_${date_stamp}.tar.zst"
   local backup_dest="$DEST_DIR/$backup_name"
 

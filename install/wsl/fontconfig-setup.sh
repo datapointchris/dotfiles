@@ -37,7 +37,7 @@ fi
 
 mkdir -p "$FONTCONFIG_DIR"
 
-cat > "$FONTCONFIG_FILE" << EOF
+cat >"$FONTCONFIG_FILE" <<EOF
 <?xml version="1.0"?>
 <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
 <fontconfig>

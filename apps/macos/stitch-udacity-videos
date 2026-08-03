@@ -112,11 +112,11 @@ for dir in */; do
     echo "    Creating file list..."
     rm -f "$FILE_LIST"
 
-    find "$(pwd)" -maxdepth 1 -type f -name "*.${VIDEO_EXTENSION}" 2>/dev/null |
-      sort -V |
-      awk '{print "file \x27"$0"\x27"}' > "$FILE_LIST"
+    find "$(pwd)" -maxdepth 1 -type f -name "*.${VIDEO_EXTENSION}" 2>/dev/null \
+      | sort -V \
+      | awk '{print "file \x27"$0"\x27"}' >"$FILE_LIST"
 
-    video_count=$(wc -l < "$FILE_LIST" | tr -d ' ')
+    video_count=$(wc -l <"$FILE_LIST" | tr -d ' ')
 
     if [[ $video_count -eq 0 ]]; then
       echo "      No .${VIDEO_EXTENSION} files found, skipping"
@@ -165,11 +165,11 @@ final_filelist="final_${FILE_LIST}"
 
 rm -f "$final_filelist"
 
-find . -maxdepth 2 -type f -name "FULL VIDEO - *.${VIDEO_EXTENSION}" 2>/dev/null |
-  sort -V |
-  awk '{print "file \x27"$0"\x27"}' > "$final_filelist"
+find . -maxdepth 2 -type f -name "FULL VIDEO - *.${VIDEO_EXTENSION}" 2>/dev/null \
+  | sort -V \
+  | awk '{print "file \x27"$0"\x27"}' >"$final_filelist"
 
-final_video_count=$(wc -l < "$final_filelist" | tr -d ' ')
+final_video_count=$(wc -l <"$final_filelist" | tr -d ' ')
 
 if [[ $final_video_count -gt 0 ]]; then
   echo "  Found ${final_video_count} stitched video(s) to combine"

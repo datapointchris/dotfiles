@@ -69,8 +69,8 @@ strip_ansi() {
 # in the section. These tests pin that no call site ever needs to know a width.
 
 screen() {
-  bash -c "source \"$DOTFILES_DIR/configs/common/.local/shell/formatting.sh\"; $1" |
-    sed 's/\x1b\[[0-9;]*m//g'
+  bash -c "source \"$DOTFILES_DIR/configs/common/.local/shell/formatting.sh\"; $1" \
+    | sed 's/\x1b\[[0-9;]*m//g'
 }
 
 @test "help_row sizes the column from the longest row in its section" {

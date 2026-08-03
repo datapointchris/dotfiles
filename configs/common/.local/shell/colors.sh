@@ -29,7 +29,7 @@ export COLOR_BRIGHT_CYAN='\033[0;96m'
 export COLOR_BRIGHT_WHITE='\033[0;97m'
 
 # Extended colors (256-color palette)
-export COLOR_ORANGE='\033[38;5;208m'  # Orange (256-color)
+export COLOR_ORANGE='\033[38;5;208m' # Orange (256-color)
 
 # Reset
 export COLOR_RESET='\033[0m'

@@ -31,8 +31,8 @@ source "$DOTFILES_DIR/install/platform-detection.sh"
 PLATFORM=$(detect_platform)
 
 if [[ "$PLATFORM" == "unknown" ]]; then
-    echo "ERROR: Unsupported platform: $OSTYPE"
-    exit 1
+  echo "ERROR: Unsupported platform: $OSTYPE"
+  exit 1
 fi
 
 # ================================================================

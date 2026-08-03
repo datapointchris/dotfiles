@@ -16,8 +16,10 @@ load "$HOME/.local/lib/bats-assert/load.bash"
 
 # Setup runs once before all tests
 setup_file() {
-  export SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
-  export DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+  export SCRIPT_DIR
+  SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
+  export DOTFILES_DIR
+  DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
   export BATS_INSTALLER="$DOTFILES_DIR/install/common/custom-installers/bats.sh"
 
   # Verify installer exists
@@ -28,7 +30,8 @@ setup_file() {
 
   # Setup test environment with isolated installation directory
   # Use mktemp for cross-platform compatibility
-  export TEST_INSTALL_PREFIX="$(mktemp -d)/test-local"
+  export TEST_INSTALL_PREFIX
+  TEST_INSTALL_PREFIX="$(mktemp -d)/test-local"
   export HOME_BACKUP="$HOME"
 
   # Create test installation directories
@@ -259,7 +262,7 @@ teardown_file() {
 
 @test "installer script is reasonably sized" {
   local line_count
-  line_count=$(wc -l < "$BATS_INSTALLER")
+  line_count=$(wc -l <"$BATS_INSTALLER")
 
   # Should be comprehensive but not overly complex
   assert [ "$line_count" -ge 100 ]

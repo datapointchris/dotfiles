@@ -23,7 +23,7 @@ REGISTER_ID=review-diff
 FALLBACK_WINDOW='7 days'
 
 usage() {
-  cat << 'EOF'
+  cat <<'EOF'
 Usage: review-diff [range]
        review-diff <command>
 
@@ -44,8 +44,8 @@ die() {
 }
 
 require_repo() {
-  git rev-parse --show-toplevel > /dev/null 2>&1 || die "not inside a git repository"
-  git rev-parse HEAD > /dev/null 2>&1 || die "this repository has no commits yet"
+  git rev-parse --show-toplevel >/dev/null 2>&1 || die "not inside a git repository"
+  git rev-parse HEAD >/dev/null 2>&1 || die "this repository has no commits yet"
 }
 
 require_tmux() {
@@ -65,10 +65,10 @@ socket_path() {
 # caller treats as "fall back to the fixed window" rather than as an error —
 # menu is a convenience here, not the source of the commits themselves.
 last_review_date() {
-  command -v menu > /dev/null 2>&1 || return 0
-  command -v jq > /dev/null 2>&1 || return 0
+  command -v menu >/dev/null 2>&1 || return 0
+  command -v jq >/dev/null 2>&1 || return 0
 
-  menu review list --json 2> /dev/null \
+  menu review list --json 2>/dev/null \
     | jq -r --arg id "$REGISTER_ID" '.[] | select(.id == $id) | .last // empty' \
     || true
 }
@@ -81,12 +81,12 @@ resolve_range() {
   local origin=""
 
   if [[ -n $since ]]; then
-    base="$(git rev-list -1 --before="$since" HEAD 2> /dev/null || true)"
+    base="$(git rev-list -1 --before="$since" HEAD 2>/dev/null || true)"
     origin="everything since your last review on $since"
   fi
 
   if [[ -z $base ]]; then
-    base="$(git rev-list -1 --before="$FALLBACK_WINDOW ago" HEAD 2> /dev/null || true)"
+    base="$(git rev-list -1 --before="$FALLBACK_WINDOW ago" HEAD 2>/dev/null || true)"
     origin="the last $FALLBACK_WINDOW — no review recorded yet"
   fi
 
@@ -167,8 +167,8 @@ main() {
     *)
       require_repo
       require_tmux
-      git rev-parse --verify --quiet "$1" > /dev/null \
-        || git rev-parse --verify --quiet "${1%%..*}" > /dev/null \
+      git rev-parse --verify --quiet "$1" >/dev/null \
+        || git rev-parse --verify --quiet "${1%%..*}" >/dev/null \
         || die "'$1' is not a revision or range in this repository"
       open_review "$1" "$1"
       ;;

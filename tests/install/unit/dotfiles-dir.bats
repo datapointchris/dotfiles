@@ -36,8 +36,9 @@ setup_file() {
 
 @test "dotfiles_dir: BASH_SOURCE fallback works when run via bash" {
   # Create a test script that uses the BASH_SOURCE[0]:-$0 pattern
-  local test_script=$(mktemp)
-  cat > "$test_script" << 'EOF'
+  local test_script
+  test_script=$(mktemp)
+  cat >"$test_script" <<'EOF'
 #!/usr/bin/env bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 echo "$SCRIPT_DIR"

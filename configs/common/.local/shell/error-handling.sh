@@ -32,6 +32,7 @@ if [[ -f "$SHELL_DIR/logging.sh" ]]; then
   source "$SHELL_DIR/logging.sh"
 else
   # Fallback to repo location
+  # shellcheck source=logging.sh
   source "$HOME/dotfiles/configs/common/.local/shell/logging.sh"
 fi
 
@@ -232,7 +233,7 @@ exit_error() {
 # Enable debug mode
 enable_debug() {
   export DOTFILES_DEBUG=true
-  set -x  # Print commands as they execute
+  set -x # Print commands as they execute
 }
 
 # Disable debug mode

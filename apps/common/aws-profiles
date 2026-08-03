@@ -14,71 +14,72 @@
 
 # Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=../../configs/common/.local/shell/formatting.sh
 source "$SHELL_DIR/formatting.sh"
 
 CREDENTIALS_FILE="$HOME/.aws/credentials"
 
 function list_aws_profiles() {
-    COUNT=0
-    AWS_PROFILES=$(grep '\[*\]' "$CREDENTIALS_FILE" | cut -d "[" -f2 | cut -d "]" -f1)
+  COUNT=0
+  AWS_PROFILES=$(grep '\[*\]' "$CREDENTIALS_FILE" | cut -d "[" -f2 | cut -d "]" -f1)
 
-    print_section "AWS Profile Selection" "cyan"
-    echo ""
-    echo -e "0) $(print_yellow "Clear") current profile"
-    echo "$AWS_PROFILES" | while read -r line; do
-        ((COUNT++))
-        echo "${COUNT}) $line"
-    done
+  print_section "AWS Profile Selection" "cyan"
+  echo ""
+  echo -e "0) $(print_yellow "Clear") current profile"
+  echo "$AWS_PROFILES" | while read -r line; do
+    ((COUNT++))
+    echo "${COUNT}) $line"
+  done
 }
 
 function set_aws_profile() {
-    export AWS_PROFILE=$1
+  export AWS_PROFILE=$1
 
-    # Try to get the default region for this profile from AWS config
-    local region=""
-    if [[ -f "$HOME/.aws/config" ]]; then
-        # Look for region in the profile section
-        region=$(awk -v profile="$AWS_PROFILE" '
+  # Try to get the default region for this profile from AWS config
+  local region=""
+  if [[ -f "$HOME/.aws/config" ]]; then
+    # Look for region in the profile section
+    region=$(awk -v profile="$AWS_PROFILE" '
             /^\[profile / { current_profile = gensub(/^\[profile ([^\]]+)\]/, "\\1", 1) }
             /^\[default\]/ { current_profile = "default" }
             /^region = / && current_profile == profile { print gensub(/^region = (.*)/, "\\1", 1); exit }
         ' "$HOME/.aws/config")
 
-        # If not found and profile is not default, try default section
-        if [[ -z "$region" && "$AWS_PROFILE" != "default" ]]; then
-            region=$(awk '/^\[default\]/{found=1} found && /^region = /{print gensub(/^region = (.*)/, "\\1", 1); exit}' "$HOME/.aws/config")
-        fi
+    # If not found and profile is not default, try default section
+    if [[ -z "$region" && "$AWS_PROFILE" != "default" ]]; then
+      region=$(awk '/^\[default\]/{found=1} found && /^region = /{print gensub(/^region = (.*)/, "\\1", 1); exit}' "$HOME/.aws/config")
     fi
+  fi
 
-    # Set the region if found
-    if [[ -n "$region" ]]; then
-        export AWS_REGION="$region"
-        echo -e "The AWS profile $(print_green "$AWS_PROFILE") and region $(print_blue "$region") have been set."
-    else
-        echo -e "The AWS profile $(print_green "$AWS_PROFILE") has been set."
-    fi
+  # Set the region if found
+  if [[ -n "$region" ]]; then
+    export AWS_REGION="$region"
+    echo -e "The AWS profile $(print_green "$AWS_PROFILE") and region $(print_blue "$region") have been set."
+  else
+    echo -e "The AWS profile $(print_green "$AWS_PROFILE") has been set."
+  fi
 }
 
 function clear_aws_profile() {
-    unset AWS_PROFILE
-    unset AWS_REGION
-    unset AWS_DEFAULT_REGION
-    echo -e "The AWS profile has been $(print_yellow "cleared.")"
+  unset AWS_PROFILE
+  unset AWS_REGION
+  unset AWS_DEFAULT_REGION
+  echo -e "The AWS profile has been $(print_yellow "cleared.")"
 }
 
 function select_option() {
-    echo -e "\nSelect option number and press [ENTER]: "
-    read -r n
+  echo -e "\nSelect option number and press [ENTER]: "
+  read -r n
 
-    case $n in
+  case $n in
     [1-9]*)
-        SELECTED_AWS_PROFILE=$(echo "$AWS_PROFILES" | awk "NR==$n{print}")
-        set_aws_profile "$SELECTED_AWS_PROFILE"
-        ;;
+      SELECTED_AWS_PROFILE=$(echo "$AWS_PROFILES" | awk "NR==$n{print}")
+      set_aws_profile "$SELECTED_AWS_PROFILE"
+      ;;
     0)
-        clear_aws_profile
-        ;;
-    esac
+      clear_aws_profile
+      ;;
+  esac
 }
 
 list_aws_profiles

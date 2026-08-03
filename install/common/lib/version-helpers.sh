@@ -118,8 +118,8 @@ fetch_github_latest_version_prefixed() {
 
   # Releases come back newest-first, so the first prefix match is the latest.
   local version
-  version=$(curl "${curl_opts[@]}" "https://api.github.com/repos/${repo}/releases?per_page=100" 2>/dev/null |
-    jq -r --arg p "$prefix" 'map(select(.draft | not) | select(.tag_name | startswith($p))) | .[0].tag_name // empty')
+  version=$(curl "${curl_opts[@]}" "https://api.github.com/repos/${repo}/releases?per_page=100" 2>/dev/null \
+    | jq -r --arg p "$prefix" 'map(select(.draft | not) | select(.tag_name | startswith($p))) | .[0].tag_name // empty')
 
   if [[ -z "$version" || "$version" == "null" ]]; then
     return 1

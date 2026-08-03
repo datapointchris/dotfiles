@@ -51,7 +51,7 @@ fi
 
 # Idempotency: skip if already installed, unless forcing or updating to latest.
 if [[ "$UPDATE_MODE" != "true" ]] && [[ "${FORCE_INSTALL:-false}" != "true" ]] \
-   && [[ -f "$TARGET_BIN" ]] && command -v mount-s3 >/dev/null 2>&1; then
+  && [[ -f "$TARGET_BIN" ]] && command -v mount-s3 >/dev/null 2>&1; then
   log_success "mount-s3 already installed: $(mount-s3 --version 2>/dev/null | head -1)"
   exit 0
 fi
@@ -108,7 +108,7 @@ if command -v gpg >/dev/null 2>&1; then
     imported_fingerprints=$(gpg --list-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {print $10}')
     key_is_trusted=false
     for pinned in "${PINNED_FINGERPRINTS[@]}"; do
-      grep -qx "$pinned" <<< "$imported_fingerprints" && key_is_trusted=true
+      grep -qx "$pinned" <<<"$imported_fingerprints" && key_is_trusted=true
     done
 
     if [[ "$key_is_trusted" != "true" ]]; then

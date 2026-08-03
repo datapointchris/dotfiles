@@ -35,6 +35,7 @@ source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 # ~/.env carries MACHINE, which selects the manifest. install.sh does the same.
 if [[ -f "$HOME/.env" ]]; then
   set -a
+  # shellcheck source=/dev/null
   source "$HOME/.env"
   set +a
 fi
@@ -93,60 +94,60 @@ report_snapshot_changes() {
 
 update_system_packages() {
   case "$(detect_platform)" in
-  macos)
-    print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")"
-    if brew update && brew upgrade && brew upgrade --cask --greedy; then
-      log_success "Homebrew update completed"
-    else
-      log_warning "Homebrew packages update failed"
-    fi
-
-    print_section "Updating Mac App Store apps via $(print_green "mas upgrade")"
-    if mas upgrade; then
-      log_success "Mac App Store update completed"
-    else
-      log_warning "Mac App Store apps update failed"
-    fi
-    ;;
-
-  archlinux)
-    print_section "Updating system packages via $(print_green "pacman -Syu")"
-    if sudo pacman -Syu --noconfirm; then
-      log_success "system package update completed"
-    else
-      log_warning "system packages update failed"
-    fi
-
-    print_section "Updating AUR packages via $(print_green "yay -Syu")"
-    if yay -Syu --noconfirm; then
-      log_success "AUR update completed"
-    else
-      log_warning "AUR packages update failed"
-    fi
-
-    if command -v flatpak &>/dev/null; then
-      print_section "Updating Flatpak apps via $(print_green "flatpak update")"
-      if flatpak update -y; then
-        log_success "Flatpak update completed"
+    macos)
+      print_section "Updating Homebrew packages via $(print_green "brew update && brew upgrade")"
+      if brew update && brew upgrade && brew upgrade --cask --greedy; then
+        log_success "Homebrew update completed"
       else
-        log_warning "Flatpak apps update failed"
+        log_warning "Homebrew packages update failed"
       fi
-    fi
-    ;;
 
-  wsl | linux)
-    print_section "Updating system packages via $(print_green "apt update && apt upgrade")"
-    if sudo apt update && sudo apt upgrade -y; then
-      log_success "system package update completed"
-    else
-      log_warning "system packages update failed"
-    fi
-    ;;
+      print_section "Updating Mac App Store apps via $(print_green "mas upgrade")"
+      if mas upgrade; then
+        log_success "Mac App Store update completed"
+      else
+        log_warning "Mac App Store apps update failed"
+      fi
+      ;;
 
-  *)
-    log_error "Unknown platform: $(detect_platform)"
-    return 1
-    ;;
+    archlinux)
+      print_section "Updating system packages via $(print_green "pacman -Syu")"
+      if sudo pacman -Syu --noconfirm; then
+        log_success "system package update completed"
+      else
+        log_warning "system packages update failed"
+      fi
+
+      print_section "Updating AUR packages via $(print_green "yay -Syu")"
+      if yay -Syu --noconfirm; then
+        log_success "AUR update completed"
+      else
+        log_warning "AUR packages update failed"
+      fi
+
+      if command -v flatpak &>/dev/null; then
+        print_section "Updating Flatpak apps via $(print_green "flatpak update")"
+        if flatpak update -y; then
+          log_success "Flatpak update completed"
+        else
+          log_warning "Flatpak apps update failed"
+        fi
+      fi
+      ;;
+
+    wsl | linux)
+      print_section "Updating system packages via $(print_green "apt update && apt upgrade")"
+      if sudo apt update && sudo apt upgrade -y; then
+        log_success "system package update completed"
+      else
+        log_warning "system packages update failed"
+      fi
+      ;;
+
+    *)
+      log_error "Unknown platform: $(detect_platform)"
+      return 1
+      ;;
   esac
 }
 
@@ -185,7 +186,6 @@ update_go_tools() {
     log_warning "Go tools update failed"
   fi
 }
-
 
 update_cargo_packages() {
   print_section "Updating Rust packages via $(print_green "cargo binstall")"
@@ -244,7 +244,6 @@ update_cargo_packages() {
     log_warning "$cargo_failures Rust package(s) failed to update"
   fi
 }
-
 
 upgrade_uv_tool() {
   local tool="$1"
@@ -320,8 +319,8 @@ upgrade_released_uv_tool() {
     esac
   fi
 
-  install_output=$(uv tool install --force --quiet "$(uv_git_tool_requirement "$tool" "$repo" "$latest")" 2>&1) ||
-    install_status=$?
+  install_output=$(uv tool install --force --quiet "$(uv_git_tool_requirement "$tool" "$repo" "$latest")" 2>&1) \
+    || install_status=$?
   [[ "${DEBUG:-}" == "true" ]] && echo "$install_output"
 
   if [[ $install_status -ne 0 ]]; then
@@ -370,7 +369,6 @@ update_uv_tools() {
   return 0
 }
 
-
 update_npm_globals() {
   print_section "Updating npm global packages via $(print_green "npm update -g")"
 
@@ -415,7 +413,6 @@ update_github_releases() {
   return 0
 }
 
-
 update_custom_installers() {
   print_section "Updating Custom Distribution Tools"
   local custom_installers="$DOTFILES_DIR/install/common/custom-installers"
@@ -433,7 +430,6 @@ update_custom_installers() {
   [[ $count -eq 0 ]] && log_info "no custom distribution tools selected"
   return 0
 }
-
 
 update_shell_plugins() {
   print_section "Updating Shell plugins via $(print_green "git pull")"
@@ -463,7 +459,6 @@ update_shell_plugins() {
     fi
   done < <(parse_packages --type=shell-plugins --format=names)
 }
-
 
 update_tmux_plugins() {
   print_section "Updating tmux plugins via $(print_green "tpm/bin/update_plugins")"
@@ -553,14 +548,14 @@ parse_args() {
       continue
     fi
     case $1 in
-    --help | -h)
-      usage
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      echo "Run with --help for usage information"
-      exit 1
-      ;;
+      --help | -h)
+        usage
+        ;;
+      *)
+        log_error "Unknown option: $1"
+        echo "Run with --help for usage information"
+        exit 1
+        ;;
     esac
   done
 

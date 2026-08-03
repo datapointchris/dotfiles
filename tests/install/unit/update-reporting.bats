@@ -26,7 +26,7 @@ setup_file() {
   # guard would run a full system update per test.
   BATS_FILE_TMPDIR="${BATS_FILE_TMPDIR:-$(mktemp -d)}"
   export REPORT="$BATS_FILE_TMPDIR/report.sh"
-  cat > "$REPORT" << SCRIPT
+  cat >"$REPORT" <<SCRIPT
 #!/usr/bin/env bash
 if ! grep -q 'BASH_SOURCE\[0\]}" == "\${0}' "$DOTFILES_DIR/update.sh"; then
   echo "refusing to source update.sh: it has no execute-only guard" >&2
@@ -48,7 +48,7 @@ SCRIPT
 make_checkout() {
   local checkout_dir="$1" content="$2"
   mkdir -p "$checkout_dir"
-  echo "$content" > "$checkout_dir/file"
+  echo "$content" >"$checkout_dir/file"
   (
     unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_OBJECT_DIRECTORY \
       GIT_ALTERNATE_OBJECT_DIRECTORIES
@@ -69,7 +69,7 @@ make_uv_tool() {
   mkdir -p "$dist_info"
   if [[ -n "$commit" ]]; then
     echo "{\"url\":\"https://example.com/$tool\",\"vcs_info\":{\"vcs\":\"git\",\"commit_id\":\"$commit\"}}" \
-      > "$dist_info/direct_url.json"
+      >"$dist_info/direct_url.json"
   fi
 }
 
@@ -77,7 +77,7 @@ make_uv_tool() {
 make_uv_receipt() {
   local uv_dir="$1" tool="$2" git_url="$3"
   mkdir -p "$uv_dir/$tool"
-  cat > "$uv_dir/$tool/uv-receipt.toml" << RECEIPT
+  cat >"$uv_dir/$tool/uv-receipt.toml" <<RECEIPT
 [tool]
 requirements = [{ name = "$tool", git = "$git_url" }]
 entrypoints = [
@@ -91,7 +91,7 @@ make_stub() {
   local name="$1" body="$2"
   local stub_dir="$BATS_TEST_TMPDIR/stubs"
   mkdir -p "$stub_dir"
-  printf '#!/usr/bin/env bash\n%s\n' "$body" > "$stub_dir/$name"
+  printf '#!/usr/bin/env bash\n%s\n' "$body" >"$stub_dir/$name"
   chmod +x "$stub_dir/$name"
   echo "$stub_dir"
 }

@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_MODE=true
       shift
       ;;
-    -h|--help)
+    -h | --help)
       echo "Usage: $(basename "$0") [--clean]"
       echo ""
       echo "Diagnose duplicate installations across package managers"
@@ -271,9 +271,9 @@ check_language_manager() {
 check_tool() {
   local tool_name=$1
   local expected_location=$2
-  local cmd_name=${3:-$tool_name}  # Command name might differ from tool name
+  local cmd_name=${3:-$tool_name} # Command name might differ from tool name
   shift 3
-  local package_names=("$@")  # Alternative package names to check
+  local package_names=("$@") # Alternative package names to check
 
   local found_locations=()
   local found_methods=()
@@ -309,7 +309,7 @@ check_tool() {
           found_methods+=("$pm")
           seen_methods[$pm]=1
         fi
-      done <<< "$pkg_managers"
+      done <<<"$pkg_managers"
     fi
   done
 
@@ -322,7 +322,7 @@ check_tool() {
         found_methods+=("$lm")
         seen_methods[$lm]=1
       fi
-    done <<< "$lang_managers"
+    done <<<"$lang_managers"
   fi
 
   # Determine if there are duplicates
@@ -337,20 +337,20 @@ check_tool() {
   guess_install_method() {
     local path=$1
     case "$path" in
-      /usr/local/bin/*|/opt/homebrew/bin/*)
+      /usr/local/bin/* | /opt/homebrew/bin/*)
         echo "installed via brew"
         ;;
-      ~/.cargo/bin/*|$HOME/.cargo/bin/*)
+      ~/.cargo/bin/* | $HOME/.cargo/bin/*)
         echo "installed via cargo"
         ;;
-      ~/go/bin/*|$HOME/go/bin/*)
+      ~/go/bin/* | $HOME/go/bin/*)
         echo "installed via go"
         ;;
       /usr/bin/*)
         echo "system package"
         ;;
-      ~/.local/bin/*|$HOME/.local/bin/*)
-        echo ""  # This is usually our expected location
+      ~/.local/bin/* | $HOME/.local/bin/*)
+        echo "" # This is usually our expected location
         ;;
       *)
         echo ""
@@ -378,7 +378,8 @@ check_tool() {
     # Then show duplicates
     for loc in "${found_locations[@]}"; do
       if [[ "$loc" != "$expected_location" ]]; then
-        local method_hint=$(guess_install_method "$loc")
+        local method_hint
+        method_hint=$(guess_install_method "$loc")
         if [[ -n "$method_hint" ]]; then
           log_error "$loc ($method_hint)"
         else

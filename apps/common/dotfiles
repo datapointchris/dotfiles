@@ -92,15 +92,15 @@ cmd_windows() {
   shift
   local setup="$DOTFILES_DIR/install/wsl/setup-windows.sh"
   case "$verb" in
-  setup) bash "$setup" ;;
-  bundle) bash "$setup" --bundle "$@" ;;
-  offline) bash "$setup" --offline "$@" ;;
-  sync) bash "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh" ;;
-  *)
-    log_error "Unknown windows verb: $verb"
-    print_info "Valid verbs: setup, bundle, offline, sync"
-    exit 1
-    ;;
+    setup) bash "$setup" ;;
+    bundle) bash "$setup" --bundle "$@" ;;
+    offline) bash "$setup" --offline "$@" ;;
+    sync) bash "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh" ;;
+    *)
+      log_error "Unknown windows verb: $verb"
+      print_info "Valid verbs: setup, bundle, offline, sync"
+      exit 1
+      ;;
   esac
 }
 
@@ -138,53 +138,53 @@ main() {
   [[ $# -gt 0 ]] && shift
 
   case "$command" in
-  "" | help | -h | --help)
-    usage 0
-    ;;
-  update)
-    bash "$DOTFILES_DIR/update.sh" "$@"
-    ;;
-  install)
-    bash "$DOTFILES_DIR/install.sh" "$@"
-    ;;
-  doctor)
-    bash "$OPS_DIR/doctor.sh"
-    ;;
-  link | relink)
-    bash "$OPS_DIR/symlinks.sh" "$command"
-    ;;
-  symlinks)
-    bash "$OPS_DIR/symlinks.sh" "$@"
-    ;;
-  test)
-    bash "$OPS_DIR/test.sh" "$@"
-    ;;
-  docs)
-    bash "$OPS_DIR/docs.sh" "$@"
-    ;;
-  windows)
-    cmd_windows "$@"
-    ;;
-  pull)
-    cmd_pull
-    ;;
-  status)
-    cmd_status
-    ;;
-  path)
-    echo "$DOTFILES_DIR"
-    ;;
-  edit)
-    "${EDITOR:-nvim}" "$DOTFILES_DIR"
-    ;;
-  __commands)
-    command_names
-    ;;
-  *)
-    log_error "Unknown command: $command"
-    print_info "Run 'dotfiles' for usage information"
-    exit 1
-    ;;
+    "" | help | -h | --help)
+      usage 0
+      ;;
+    update)
+      bash "$DOTFILES_DIR/update.sh" "$@"
+      ;;
+    install)
+      bash "$DOTFILES_DIR/install.sh" "$@"
+      ;;
+    doctor)
+      bash "$OPS_DIR/doctor.sh"
+      ;;
+    link | relink)
+      bash "$OPS_DIR/symlinks.sh" "$command"
+      ;;
+    symlinks)
+      bash "$OPS_DIR/symlinks.sh" "$@"
+      ;;
+    test)
+      bash "$OPS_DIR/test.sh" "$@"
+      ;;
+    docs)
+      bash "$OPS_DIR/docs.sh" "$@"
+      ;;
+    windows)
+      cmd_windows "$@"
+      ;;
+    pull)
+      cmd_pull
+      ;;
+    status)
+      cmd_status
+      ;;
+    path)
+      echo "$DOTFILES_DIR"
+      ;;
+    edit)
+      "${EDITOR:-nvim}" "$DOTFILES_DIR"
+      ;;
+    __commands)
+      command_names
+      ;;
+    *)
+      log_error "Unknown command: $command"
+      print_info "Run 'dotfiles' for usage information"
+      exit 1
+      ;;
   esac
 }
 

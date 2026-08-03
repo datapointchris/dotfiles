@@ -87,7 +87,7 @@ fi
 
 log_info "Extracting..."
 mkdir -p "$HOME/.local/bin"
-gunzip -c "$GZ_PATH" > "$TARGET_BIN"
+gunzip -c "$GZ_PATH" >"$TARGET_BIN"
 chmod +x "$TARGET_BIN"
 rm -f "$GZ_PATH"
 

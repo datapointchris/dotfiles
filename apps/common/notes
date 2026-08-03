@@ -10,6 +10,7 @@ set -euo pipefail
 
 # Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=../../configs/common/.local/shell/formatting.sh
 source "$SHELL_DIR/formatting.sh"
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"
@@ -51,7 +52,7 @@ show_help() {
 
 # Check if user wants help (before dependency validation)
 case "${1:-}" in
-  help|--help|-h|"")
+  help | --help | -h | "")
     show_help
     exit 0
     ;;
@@ -76,20 +77,21 @@ cmd_search() {
   local selected
   selected=$(
     FZF_DEFAULT_COMMAND="find -L '$NOTES_DIR' -type f -name '*.md' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
-    fzf --layout=reverse \
-        --disabled \
-        --bind "change:reload:rg --files-with-matches --no-messages --ignore-case {q} '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}' || true" \
-        --bind "start:reload:rg --files-with-matches --no-messages --ignore-case '' '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
-        --delimiter '\t' \
-        --with-nth 1 \
-        --preview 'rg --color=always --context=5 --ignore-case --pretty -- {q} ~/notes/{2} 2>/dev/null | fold -s -w $(tput cols) || bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
-        --preview-window=right:60% \
-        --prompt 'Search: ' \
-        --header 'Type to search note content | Enter to open'
+      fzf --layout=reverse \
+      --disabled \
+      --bind "change:reload:rg --files-with-matches --no-messages --ignore-case {q} '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}' || true" \
+      --bind "start:reload:rg --files-with-matches --no-messages --ignore-case '' '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
+      --delimiter '\t' \
+      --with-nth 1 \
+      --preview 'rg --color=always --context=5 --ignore-case --pretty -- {q} ~/notes/{2} 2>/dev/null | fold -s -w $(tput cols) || bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
+      --preview-window=right:60% \
+      --prompt 'Search: ' \
+      --header 'Type to search note content | Enter to open'
   )
 
   if [[ -n "$selected" ]]; then
-    local notepath=$(echo "$selected" | cut -f2)
+    local notepath
+    notepath=$(echo "$selected" | cut -f2)
     ${EDITOR:-nvim} ~/notes/"$notepath"
   fi
 }
@@ -152,15 +154,16 @@ cmd_new() {
 # Browse recent notes
 cmd_recent() {
   local selected
-  selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" --sort modified- --limit 50 | \
-    fzf --layout=reverse \
-        --delimiter '\t' \
-        --with-nth 1 \
-        --preview "bat -p --color always --wrap never ~/notes/{2} | fold -s -w \$(tput cols)" \
-        --preview-window=right:60%)
+  selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" --sort modified- --limit 50 \
+    | fzf --layout=reverse \
+      --delimiter '\t' \
+      --with-nth 1 \
+      --preview "bat -p --color always --wrap never ~/notes/{2} | fold -s -w \$(tput cols)" \
+      --preview-window=right:60%)
 
   if [[ -n "$selected" ]]; then
-    local notepath=$(echo "$selected" | cut -f2)
+    local notepath
+    notepath=$(echo "$selected" | cut -f2)
     ${EDITOR:-nvim} ~/notes/"$notepath"
   fi
 }
@@ -184,15 +187,16 @@ cmd_browse() {
 
   # Browse notes in selected section
   local selected
-  selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" "$section" | \
-    fzf --layout=reverse \
-        --delimiter '\t' \
-        --with-nth 1 \
-        --preview 'bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
-        --preview-window=right:60%)
+  selected=$(zk list --quiet --format "{{filename-stem}}\t{{path}}" "$section" \
+    | fzf --layout=reverse \
+      --delimiter '\t' \
+      --with-nth 1 \
+      --preview 'bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
+      --preview-window=right:60%)
 
   if [[ -n "$selected" ]]; then
-    local notepath=$(echo "$selected" | cut -f2)
+    local notepath
+    notepath=$(echo "$selected" | cut -f2)
     ${EDITOR:-nvim} ~/notes/"$notepath"
   fi
 }

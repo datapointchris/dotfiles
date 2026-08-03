@@ -5,6 +5,7 @@
 THEME_FILE="$HOME/.config/borders/themes/current"
 
 if [[ -f "$THEME_FILE" ]]; then
+  # shellcheck source=/dev/null
   source "$THEME_FILE"
 else
   # Fallback colors if no theme applied

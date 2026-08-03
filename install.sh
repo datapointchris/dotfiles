@@ -19,6 +19,7 @@ source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
 if [[ -f "$HOME/.env" ]]; then
   set -a
+  # shellcheck source=/dev/null
   source "$HOME/.env"
   set +a
 fi
@@ -56,8 +57,8 @@ manifest_enabled() {
 manifest_system_tier() {
   local tier
   tier=$(manifest_field "system_packages" 2>/dev/null) || tier=""
-  [[ "$tier" == "false" ]] && tier=""       # explicit disable
-  [[ "$tier" == "true" ]] && tier="workstation"  # legacy boolean = full set
+  [[ "$tier" == "false" ]] && tier=""           # explicit disable
+  [[ "$tier" == "true" ]] && tier="workstation" # legacy boolean = full set
   echo "$tier"
 }
 
@@ -80,58 +81,58 @@ install_system_packages() {
   sys_tier=$(manifest_system_tier)
 
   case "$PLATFORM" in
-  macos)
-    local macos="$DOTFILES_DIR/install/macos"
+    macos)
+      local macos="$DOTFILES_DIR/install/macos"
 
-    print_header "System Tools (Homebrew)"
-    bash "$macos/homebrew.sh"
-    SYSTEM_PACKAGE_TIER="${sys_tier:-workstation}" bash "$macos/system-packages.sh"
-    bash "$macos/casks.sh"
-    bash "$macos/configure-docker.sh"
-    bash "$macos/mas-apps.sh"
-    bash "$macos/xcode.sh"
+      print_header "System Tools (Homebrew)"
+      bash "$macos/homebrew.sh"
+      SYSTEM_PACKAGE_TIER="${sys_tier:-workstation}" bash "$macos/system-packages.sh"
+      bash "$macos/casks.sh"
+      bash "$macos/configure-docker.sh"
+      bash "$macos/mas-apps.sh"
+      bash "$macos/xcode.sh"
 
-    print_header "System Preferences"
-    bash "$macos/preferences.sh"
-    ;;
-  wsl)
-    if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
-      log_warning "Warning: This script is designed for WSL Ubuntu"
-      log_warning "Continuing anyway..."
-    fi
+      print_header "System Preferences"
+      bash "$macos/preferences.sh"
+      ;;
+    wsl)
+      if ! grep -q "Microsoft" /proc/version 2>/dev/null && ! grep -q "WSL" /proc/version 2>/dev/null; then
+        log_warning "Warning: This script is designed for WSL Ubuntu"
+        log_warning "Continuing anyway..."
+      fi
 
-    if [[ -n "$sys_tier" ]]; then
-      print_header "System Packages (apt)"
-      SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/wsl/system-packages.sh"
-    fi
+      if [[ -n "$sys_tier" ]]; then
+        print_header "System Packages (apt)"
+        SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/wsl/system-packages.sh"
+      fi
 
-    print_section "WSL fontconfig setup"
-    bash "$DOTFILES_DIR/install/wsl/fontconfig-setup.sh"
-    ;;
-  archlinux)
-    if [[ -n "$sys_tier" ]]; then
-      print_header "System Packages (pacman)"
-      SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/archlinux/system-packages.sh"
-    fi
-    if manifest_enabled "flatpak"; then
-      bash "$DOTFILES_DIR/install/archlinux/flatpak.sh"
-    fi
+      print_section "WSL fontconfig setup"
+      bash "$DOTFILES_DIR/install/wsl/fontconfig-setup.sh"
+      ;;
+    archlinux)
+      if [[ -n "$sys_tier" ]]; then
+        print_header "System Packages (pacman)"
+        SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/archlinux/system-packages.sh"
+      fi
+      if manifest_enabled "flatpak"; then
+        bash "$DOTFILES_DIR/install/archlinux/flatpak.sh"
+      fi
 
-    print_header "System Configuration"
-    bash "$DOTFILES_DIR/install/archlinux/system-config.sh"
-    ;;
-  linux)
-    # Generic Debian/Ubuntu Linux — the minimal LXC/small-box target. No GUI,
-    # flatpak, or OS-preference steps; the manifest's tier (typically "core")
-    # keeps the apt payload lean.
-    if [[ -n "$sys_tier" ]]; then
-      print_header "System Packages (apt)"
-      SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/linux/system-packages.sh"
-    fi
-    ;;
-  *)
-    die "Unsupported platform: $PLATFORM"
-    ;;
+      print_header "System Configuration"
+      bash "$DOTFILES_DIR/install/archlinux/system-config.sh"
+      ;;
+    linux)
+      # Generic Debian/Ubuntu Linux — the minimal LXC/small-box target. No GUI,
+      # flatpak, or OS-preference steps; the manifest's tier (typically "core")
+      # keeps the apt payload lean.
+      if [[ -n "$sys_tier" ]]; then
+        print_header "System Packages (apt)"
+        SYSTEM_PACKAGE_TIER="$sys_tier" bash "$DOTFILES_DIR/install/linux/system-packages.sh"
+      fi
+      ;;
+    *)
+      die "Unsupported platform: $PLATFORM"
+      ;;
   esac
 }
 
@@ -396,30 +397,30 @@ parse_args() {
       continue
     fi
     case $1 in
-    --machine)
-      machine_from_flag="$2"
-      shift 2
-      ;;
-    --force | -f)
-      FORCE_INSTALL=true
-      shift
-      ;;
-    --offline)
-      OFFLINE_MODE=true
-      shift
-      ;;
-    --create-offline-bundle)
-      shift
-      exec bash "$DOTFILES_DIR/install/offline/create-bundle.sh" "$@"
-      ;;
-    --help | -h)
-      usage
-      ;;
-    *)
-      echo "Unknown option: $1"
-      echo "Run with --help for usage information"
-      exit 1
-      ;;
+      --machine)
+        machine_from_flag="$2"
+        shift 2
+        ;;
+      --force | -f)
+        FORCE_INSTALL=true
+        shift
+        ;;
+      --offline)
+        OFFLINE_MODE=true
+        shift
+        ;;
+      --create-offline-bundle)
+        shift
+        exec bash "$DOTFILES_DIR/install/offline/create-bundle.sh" "$@"
+        ;;
+      --help | -h)
+        usage
+        ;;
+      *)
+        echo "Unknown option: $1"
+        echo "Run with --help for usage information"
+        exit 1
+        ;;
     esac
   done
 

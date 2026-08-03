@@ -20,8 +20,9 @@ test_library_flags() {
   local library="$1"
 
   # Create a test script that checks flags before and after sourcing
-  local test_script=$(mktemp)
-  cat > "$test_script" << 'TESTEOF'
+  local test_script
+  test_script=$(mktemp)
+  cat >"$test_script" <<'TESTEOF'
 #!/usr/bin/env bash
 set -u
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

@@ -38,11 +38,11 @@ REUSE_CONTAINER=""
 REUSE_LATEST=false
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -r|--reuse)
+    -r | --reuse)
       REUSE_LATEST=true
       shift
       ;;
-    -c|--container)
+    -c | --container)
       REUSE_CONTAINER="${2:-}"
       if [[ -z "$REUSE_CONTAINER" ]]; then
         echo "Error: --container requires a container name"
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
       fi
       shift 2
       ;;
-    -k|--keep)
+    -k | --keep)
       KEEP_CONTAINER=true
       shift
       ;;
@@ -69,11 +69,11 @@ LOG_FILE="${DOTFILES_DIR}/test-archlinux-docker.log"
 # Use provided container name or generate new one
 if [[ "$REUSE_LATEST" == "true" ]]; then
   # Find most recent container
-  CONTAINER_NAME=$(docker ps -a --format '{{.CreatedAt}}\t{{.Names}}' | \
-                   grep dotfiles-archlinux-test | \
-                   sort -r | \
-                   head -1 | \
-                   cut -f2)
+  CONTAINER_NAME=$(docker ps -a --format '{{.CreatedAt}}\t{{.Names}}' \
+    | grep dotfiles-archlinux-test \
+    | sort -r \
+    | head -1 \
+    | cut -f2)
 
   if [[ -z "$CONTAINER_NAME" ]]; then
     echo "Error: No existing dotfiles-archlinux-test containers found"
@@ -119,7 +119,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Overwrite log file (not append)
-: > "$LOG_FILE"
+: >"$LOG_FILE"
 
 log_info "Testing Arch Linux installation with Docker"
 log_info "Docker image: ${DOCKER_IMAGE}"
@@ -135,99 +135,99 @@ OVERALL_START=$(date +%s)
 # ================================================================
 if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
 
-# ================================================================
-# STEP 1: Ensure Docker image is available
-# ================================================================
-STEP_START=$(date +%s)
-{
-  log_section "STEP 1/8: Preparing Arch Linux Docker Image"
+  # ================================================================
+  # STEP 1: Ensure Docker image is available
+  # ================================================================
+  STEP_START=$(date +%s)
+  {
+    log_section "STEP 1/8: Preparing Arch Linux Docker Image"
 
-  check_docker
+    check_docker
 
-  # Pull latest official Arch image
-  if docker_image_exists "$DOCKER_IMAGE"; then
-    log_success "Docker image exists: $DOCKER_IMAGE"
-    echo "Pulling latest updates..."
-    docker pull "$DOCKER_IMAGE" >/dev/null 2>&1
-    log_success "Updated to latest image"
-  else
-    echo "Pulling official Arch Linux image..."
-    docker pull "$DOCKER_IMAGE"
-    log_success "Pulled Docker image: $DOCKER_IMAGE"
-  fi
-} 2>&1 | tee -a "$LOG_FILE"
-STEP_END=$(date +%s)
-STEP_ELAPSED=$((STEP_END - STEP_START))
-STEP_NAMES+=("Prepare Docker image")
-STEP_TIMES+=("$STEP_ELAPSED")
-{
-  log_timing "Step 1: Prepare Docker image" "$STEP_ELAPSED"
-} 2>&1 | tee -a "$LOG_FILE"
+    # Pull latest official Arch image
+    if docker_image_exists "$DOCKER_IMAGE"; then
+      log_success "Docker image exists: $DOCKER_IMAGE"
+      echo "Pulling latest updates..."
+      docker pull "$DOCKER_IMAGE" >/dev/null 2>&1
+      log_success "Updated to latest image"
+    else
+      echo "Pulling official Arch Linux image..."
+      docker pull "$DOCKER_IMAGE"
+      log_success "Pulled Docker image: $DOCKER_IMAGE"
+    fi
+  } 2>&1 | tee -a "$LOG_FILE"
+  STEP_END=$(date +%s)
+  STEP_ELAPSED=$((STEP_END - STEP_START))
+  STEP_NAMES+=("Prepare Docker image")
+  STEP_TIMES+=("$STEP_ELAPSED")
+  {
+    log_timing "Step 1: Prepare Docker image" "$STEP_ELAPSED"
+  } 2>&1 | tee -a "$LOG_FILE"
 
-# ================================================================
-# STEP 2: Start container with dotfiles mounted
-# ================================================================
-STEP_START=$(date +%s)
-{
-  log_section "STEP 2/8: Starting Docker Container"
-  echo "Starting container with dotfiles mounted..."
+  # ================================================================
+  # STEP 2: Start container with dotfiles mounted
+  # ================================================================
+  STEP_START=$(date +%s)
+  {
+    log_section "STEP 2/8: Starting Docker Container"
+    echo "Starting container with dotfiles mounted..."
 
-  # Start container in background with dotfiles mounted
-  # Run as root (standard for Arch) but will create non-root user for realistic testing
-  docker run -d \
-    --name "$CONTAINER_NAME" \
-    --env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    --env HOME=/root \
-    --env DOTFILES_DOCKER_TEST=true \
-    ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
-    --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
-    "$DOCKER_IMAGE" \
-    /usr/bin/sleep infinity
+    # Start container in background with dotfiles mounted
+    # Run as root (standard for Arch) but will create non-root user for realistic testing
+    docker run -d \
+      --name "$CONTAINER_NAME" \
+      --env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+      --env HOME=/root \
+      --env DOTFILES_DOCKER_TEST=true \
+      ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
+      --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
+      "$DOCKER_IMAGE" \
+      /usr/bin/sleep infinity
 
-  log_success "Container started: $CONTAINER_NAME"
-  echo "Dotfiles mounted at: /dotfiles (read-only)"
-} 2>&1 | tee -a "$LOG_FILE"
-STEP_END=$(date +%s)
-STEP_ELAPSED=$((STEP_END - STEP_START))
-STEP_NAMES+=("Start container")
-STEP_TIMES+=("$STEP_ELAPSED")
-{
-  log_timing "Step 2: Start container" "$STEP_ELAPSED"
-} 2>&1 | tee -a "$LOG_FILE"
+    log_success "Container started: $CONTAINER_NAME"
+    echo "Dotfiles mounted at: /dotfiles (read-only)"
+  } 2>&1 | tee -a "$LOG_FILE"
+  STEP_END=$(date +%s)
+  STEP_ELAPSED=$((STEP_END - STEP_START))
+  STEP_NAMES+=("Start container")
+  STEP_TIMES+=("$STEP_ELAPSED")
+  {
+    log_timing "Step 2: Start container" "$STEP_ELAPSED"
+  } 2>&1 | tee -a "$LOG_FILE"
 
-# ================================================================
-# STEP 3: Prepare container environment
-# ================================================================
-STEP_START=$(date +%s)
-{
-  log_section "STEP 3/8: Preparing Container Environment"
+  # ================================================================
+  # STEP 3: Prepare container environment
+  # ================================================================
+  STEP_START=$(date +%s)
+  {
+    log_section "STEP 3/8: Preparing Container Environment"
 
-  # Update package database and install bootstrap packages (required for fresh Arch containers)
-  # python + python-yaml are needed by install.sh to parse machine manifests before system packages are installed
-  echo "Updating package database and installing bootstrap packages..."
-  docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo git python python-yaml
+    # Update package database and install bootstrap packages (required for fresh Arch containers)
+    # python + python-yaml are needed by install.sh to parse machine manifests before system packages are installed
+    echo "Updating package database and installing bootstrap packages..."
+    docker exec "$CONTAINER_NAME" pacman -Sy --noconfirm sudo git python python-yaml
 
-  # Create non-root user for realistic Arch testing
-  echo "Creating test user 'archlinuxuser' for realistic testing..."
-  docker exec "$CONTAINER_NAME" bash -c "
+    # Create non-root user for realistic Arch testing
+    echo "Creating test user 'archlinuxuser' for realistic testing..."
+    docker exec "$CONTAINER_NAME" bash -c "
     useradd -m -G wheel -s /bin/bash archlinuxuser
     echo 'archlinuxuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
   "
 
-  # Set container home directory for archlinuxuser
-  CONTAINER_HOME="/home/archlinuxuser"
+    # Set container home directory for archlinuxuser
+    CONTAINER_HOME="/home/archlinuxuser"
 
-  # Create ~/.env for testing
-  echo "Creating ~/.env..."
-  docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
+    # Create ~/.env for testing
+    echo "Creating ~/.env..."
+    docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
 PLATFORM=archlinux
 NVIM_AI_ENABLED=false
 DOTFILES_DOCKER_TEST=true
 EOF"
 
-  # Copy dotfiles to writable location (install script modifies files)
-  echo "Copying dotfiles to writable location..."
-  docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "
+    # Copy dotfiles to writable location (install script modifies files)
+    echo "Copying dotfiles to writable location..."
+    docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "
     shopt -s dotglob
     for item in /dotfiles/*; do
       [[ \$(basename \"\$item\") == '.git' ]] && continue
@@ -237,17 +237,17 @@ EOF"
     cd ${CONTAINER_HOME}/dotfiles && git init -q
   "
 
-  log_success "Container environment ready"
-} 2>&1 | tee -a "$LOG_FILE"
-STEP_END=$(date +%s)
-STEP_ELAPSED=$((STEP_END - STEP_START))
-STEP_NAMES+=("Prepare environment")
-STEP_TIMES+=("$STEP_ELAPSED")
-{
-  log_timing "Step 3: Prepare environment" "$STEP_ELAPSED"
-} 2>&1 | tee -a "$LOG_FILE"
+    log_success "Container environment ready"
+  } 2>&1 | tee -a "$LOG_FILE"
+  STEP_END=$(date +%s)
+  STEP_ELAPSED=$((STEP_END - STEP_START))
+  STEP_NAMES+=("Prepare environment")
+  STEP_TIMES+=("$STEP_ELAPSED")
+  {
+    log_timing "Step 3: Prepare environment" "$STEP_ELAPSED"
+  } 2>&1 | tee -a "$LOG_FILE"
 
-fi  # End of skip-if-reusing block
+fi # End of skip-if-reusing block
 
 # ================================================================
 # STEP 4: Run installation script

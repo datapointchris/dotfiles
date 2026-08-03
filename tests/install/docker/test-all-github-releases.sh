@@ -68,7 +68,7 @@ log_info "Base image: dotfiles-test-base:ubuntu-24.04"
 START_TIME=$(date +%s)
 
 for entry in "${INSTALLERS[@]}"; do
-  IFS=':' read -r installer binary <<< "$entry"
+  IFS=':' read -r installer binary <<<"$entry"
 
   echo ""
   echo "────────────────────────────────────────────────────────────────"

@@ -18,7 +18,10 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 BINARY_NAME="terraform-ls"
 REPO=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
   --custom-installer "$BINARY_NAME" --field repo) \
-  || { log_error "Could not read $BINARY_NAME.repo from packages.yml"; exit 1; }
+  || {
+    log_error "Could not read $BINARY_NAME.repo from packages.yml"
+    exit 1
+  }
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
 # Released from releases.hashicorp.com, so create-bundle.sh never caches it and

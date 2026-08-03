@@ -13,7 +13,8 @@ DOCKER_CONTAINER_PREFIX="bats-test"
 # Start a test container and return its ID
 # Usage: container_id=$(start_test_container)
 start_test_container() {
-  local container_name="${DOCKER_CONTAINER_PREFIX}-$(date +%s)-$$"
+  local container_name
+  container_name="${DOCKER_CONTAINER_PREFIX}-$(date +%s)-$$"
 
   docker run -d \
     --name "$container_name" \

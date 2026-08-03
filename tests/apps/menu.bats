@@ -24,7 +24,7 @@ setup() {
   TEST_DIR=$(mktemp -d)
   export XDG_DATA_HOME="$TEST_DIR/data"
   mkdir -p "$XDG_DATA_HOME/workflows"
-  cat > "$XDG_DATA_HOME/workflows/tmux-commands.md" << 'EOF'
+  cat >"$XDG_DATA_HOME/workflows/tmux-commands.md" <<'EOF'
 ---
 tags: [tmux]
 ---

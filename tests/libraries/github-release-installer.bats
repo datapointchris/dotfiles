@@ -110,7 +110,7 @@ setup() {
   #   .../releases/download//tool__macOS-64bit.tar.gz
   local test_script
   test_script=$(mktemp)
-  cat > "$test_script" << SCRIPT
+  cat >"$test_script" <<SCRIPT
 #!/usr/bin/env bash
 set -uo pipefail
 DOTFILES_DIR="$DOTFILES_DIR"
@@ -180,7 +180,7 @@ parse_download_url() {
 
 @test "checksum lookup: matches an asset whose recorded name differs only by case" {
   local checksums="$BATS_TEST_TMPDIR/checksums.txt"
-  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" > "$checksums"
+  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" >"$checksums"
 
   run checksum_for_asset "$checksums" "lazygit_0.63.1_Linux_x86_64.tar.gz"
   assert_success
@@ -189,7 +189,7 @@ parse_download_url() {
 
 @test "checksum lookup: still finds nothing for an asset that is absent" {
   local checksums="$BATS_TEST_TMPDIR/checksums.txt"
-  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" > "$checksums"
+  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" >"$checksums"
 
   run checksum_for_asset "$checksums" "someothertool.tar.gz"
   assert_output ""
@@ -207,8 +207,8 @@ setup_bundle() {
 
   ASSET="tool-1.2.3-linux-amd64.tar.gz"
   CACHED_FILE="$BUNDLE_DIR/binaries/$ASSET"
-  echo "payload bytes" > "$CACHED_FILE"
-  printf '%s  %s\n' "$(compute_sha256 "$CACHED_FILE")" "$ASSET" > "$OFFLINE_CHECKSUMS_FILE"
+  echo "payload bytes" >"$CACHED_FILE"
+  printf '%s  %s\n' "$(compute_sha256 "$CACHED_FILE")" "$ASSET" >"$OFFLINE_CHECKSUMS_FILE"
 }
 
 @test "offline bundle: cached file matching the recorded digest verifies" {
@@ -221,7 +221,7 @@ setup_bundle() {
 
 @test "offline bundle: tampered cached file is rejected and deleted" {
   setup_bundle
-  echo "tampered" > "$CACHED_FILE"
+  echo "tampered" >"$CACHED_FILE"
 
   USED_OFFLINE_CACHE=true run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
   assert_failure
@@ -238,7 +238,7 @@ setup_bundle() {
 @test "offline bundle: an asset the bundle never recorded falls through" {
   setup_bundle
   local other="$BUNDLE_DIR/binaries/other.tar.gz"
-  echo "payload" > "$other"
+  echo "payload" >"$other"
 
   USED_OFFLINE_CACHE=true run verify_release_checksum "$other" "other.tar.gz" "" ""
   [[ "$status" -eq 2 ]]

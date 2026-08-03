@@ -40,7 +40,8 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 # {tag} = raw release tag (e.g. v0.26.1, 15.2.0); {ver} = tag with any
 # leading non-digits stripped (e.g. 0.26.1). A .exe pattern is a direct
 # download; a .zip pattern is extracted and the exe located inside it.
-WINDOWS_TOOL_SPECS=$(cat <<'EOF'
+WINDOWS_TOOL_SPECS=$(
+  cat <<'EOF'
 zoxide|ajeetdsouza/zoxide|zoxide-{ver}-x86_64-pc-windows-msvc.zip|zoxide.exe
 eza|eza-community/eza|eza.exe_x86_64-pc-windows-gnu.zip|eza.exe
 fzf|junegunn/fzf|fzf-{ver}-windows_amd64.zip|fzf.exe
@@ -108,7 +109,7 @@ build_bundle() {
   local out_archive="$1"
   # Normalize to a .tar.gz path so the output is always a single archive.
   case "$out_archive" in
-    *.tar.gz|*.tgz) ;;
+    *.tar.gz | *.tgz) ;;
     *) out_archive="${out_archive}.tar.gz" ;;
   esac
   local out_parent
@@ -124,7 +125,7 @@ build_bundle() {
   echo ""
 
   local versions_file="$work_dir/versions.txt"
-  : > "$versions_file"
+  : >"$versions_file"
 
   local tool repo pattern exe tag ver asset url
   while IFS='|' read -r tool repo pattern exe; do
@@ -161,8 +162,8 @@ build_bundle() {
       cp "$found" "$work_dir/$exe"
       rm -rf "$tmp"
     fi
-    echo "$tool $tag" >> "$versions_file"
-  done <<< "$WINDOWS_TOOL_SPECS"
+    echo "$tool $tag" >>"$versions_file"
+  done <<<"$WINDOWS_TOOL_SPECS"
 
   tar -czf "$out_archive" -C "$work_dir" .
 
@@ -203,7 +204,7 @@ install_from_bundle() {
   fi
 
   mkdir -p "$dest"
-  echo "Installing $(( ${#exes[@]} )) binaries to $dest"
+  echo "Installing $((${#exes[@]})) binaries to $dest"
   local exe
   for exe in "${exes[@]}"; do
     cp "$exe" "$dest/"
@@ -231,7 +232,7 @@ install_via_winget() {
   )
 
   # Run from Windows home to avoid UNC path warnings
-  pushd "$win_home" > /dev/null
+  pushd "$win_home" >/dev/null
   local tool
   for tool in "${winget_tools[@]}"; do
     echo "  Installing/upgrading: $tool"
@@ -239,7 +240,7 @@ install_via_winget() {
     # Real failures are caught by copy_winget_binary when binaries are missing.
     cmd.exe /c "winget install --accept-package-agreements --accept-source-agreements $tool" || :
   done
-  popd > /dev/null
+  popd >/dev/null
   echo ""
 
   echo "Copying binaries to $dest..."
@@ -297,9 +298,13 @@ case "${1:-}" in
   --offline)
     MODE="offline"
     BUNDLE_DIR="${2:-}"
-    [[ -z "$BUNDLE_DIR" ]] && { echo "ERROR: --offline requires a bundle directory"; usage; exit 1; }
+    [[ -z "$BUNDLE_DIR" ]] && {
+      echo "ERROR: --offline requires a bundle directory"
+      usage
+      exit 1
+    }
     ;;
-  -h|--help)
+  -h | --help)
     usage
     exit 0
     ;;

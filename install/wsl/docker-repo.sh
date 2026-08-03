@@ -43,8 +43,8 @@ sudo apt-get install -y ca-certificates curl gnupg
 # Add Docker's official GPG key
 log_info "Adding Docker's GPG key..."
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL "https://download.docker.com/linux/$DISTRO/gpg" | \
-  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL "https://download.docker.com/linux/$DISTRO/gpg" \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
 # Add Docker repository
@@ -52,8 +52,8 @@ log_info "Adding Docker repository..."
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
   https://download.docker.com/linux/${DISTRO} \
-  $(lsb_release -cs) stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  $(lsb_release -cs) stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 
 # Update apt cache
 log_info "Updating package cache..."

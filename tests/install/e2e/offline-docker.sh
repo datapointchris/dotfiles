@@ -63,11 +63,27 @@ usage() {
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -k|--keep)         KEEP_CONTAINER=true; shift ;;
-    -s|--skip-bundle)  SKIP_BUNDLE=true; shift ;;
-    -r|--reuse-bundle) REUSE_BUNDLE=true; shift ;;
-    -h|--help)         usage; exit 0 ;;
-    *)                 echo "Unknown option: $1"; usage; exit 1 ;;
+    -k | --keep)
+      KEEP_CONTAINER=true
+      shift
+      ;;
+    -s | --skip-bundle)
+      SKIP_BUNDLE=true
+      shift
+      ;;
+    -r | --reuse-bundle)
+      REUSE_BUNDLE=true
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      exit 1
+      ;;
   esac
 done
 
@@ -105,7 +121,7 @@ declare -a STEP_TIMES
 OVERALL_START=$(date +%s)
 
 # Initialize log
-: > "$LOG_FILE"
+: >"$LOG_FILE"
 
 log_info "Offline Bundle Installation Test"
 log_info "Docker image: $DOCKER_IMAGE"
@@ -270,7 +286,7 @@ STEP_START=$(date +%s)
   # still reach GitHub tells you nothing about the machine that cannot.
   for host in "${BLOCKED_HOSTS[@]}"; do
     if docker exec "$CONTAINER_NAME" curl -fsS --connect-timeout 5 \
-      "https://${host}/" > /dev/null 2>&1; then
+      "https://${host}/" >/dev/null 2>&1; then
       die "$host is reachable — the test would prove nothing"
     fi
   done
@@ -362,7 +378,7 @@ STEP_START=$(date +%s)
   fi
 
   # Save FAILED count to temp file to avoid subshell issue with tee
-  echo "$FAILED" > /tmp/offline-test-failed-count
+  echo "$FAILED" >/tmp/offline-test-failed-count
 
 } 2>&1 | tee -a "$LOG_FILE"
 

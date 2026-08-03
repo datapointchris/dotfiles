@@ -20,9 +20,11 @@
 if [[ -n "${SHELL_DIR:-}" ]] && [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
 elif [[ -f "$HOME/.local/shell/colors.sh" ]]; then
+  # shellcheck source=colors.sh
   source "$HOME/.local/shell/colors.sh"
 else
   # Fallback to repo location
+  # shellcheck source=colors.sh
   source "$HOME/dotfiles/configs/common/.local/shell/colors.sh"
 fi
 
@@ -58,7 +60,7 @@ _separator() {
   local width="${2:-50}"
   # Use printf loop instead of tr for proper Unicode support
   local separator=""
-  for ((i=0; i<width; i++)); do
+  for ((i = 0; i < width; i++)); do
     separator+="$char"
   done
   printf '%s\n' "$separator"
@@ -70,7 +72,7 @@ _center_text() {
   local text="$1"
   local width="${2:-50}"
   local text_length=${#text}
-  local padding=$(( (width - text_length) / 2 ))
+  local padding=$(((width - text_length) / 2))
   printf "%*s%s%*s\n" "$padding" "" "$text" "$padding" ""
 }
 
@@ -80,17 +82,20 @@ center_text() {
 }
 
 section_separator() {
-  local underline=$(tput smul)
-  local normal=$(tput sgr0)
+  local underline
+  underline=$(tput smul)
+  local normal
+  normal=$(tput sgr0)
   printf "${underline}%0$(tput cols)d${normal}\n\n" 0 | tr '0' " "
 }
 
 terminal_width_separator() {
   local char="${1:-_}"
-  local width=$(tput cols 2>/dev/null || echo 80)
+  local width
+  width=$(tput cols 2>/dev/null || echo 80)
   # Use printf loop instead of tr for proper Unicode support
   local separator=""
-  for ((i=0; i<width; i++)); do
+  for ((i = 0; i < width; i++)); do
     separator+="$char"
   done
   printf '%s\n' "$separator"
@@ -107,30 +112,30 @@ _get_color() {
   color_name=$(echo "${1:-blue}" | tr '[:upper:]' '[:lower:]')
   case "$color_name" in
     # Standard colors
-    red)     echo "$COLOR_RED" ;;
-    green)   echo "$COLOR_GREEN" ;;
-    yellow)  echo "$COLOR_YELLOW" ;;
-    blue)    echo "$COLOR_BLUE" ;;
-    cyan)    echo "$COLOR_CYAN" ;;
-    magenta|purple) echo "$COLOR_MAGENTA" ;;
-    black)   echo "$COLOR_BLACK" ;;
-    white)   echo "$COLOR_WHITE" ;;
+    red) echo "$COLOR_RED" ;;
+    green) echo "$COLOR_GREEN" ;;
+    yellow) echo "$COLOR_YELLOW" ;;
+    blue) echo "$COLOR_BLUE" ;;
+    cyan) echo "$COLOR_CYAN" ;;
+    magenta | purple) echo "$COLOR_MAGENTA" ;;
+    black) echo "$COLOR_BLACK" ;;
+    white) echo "$COLOR_WHITE" ;;
 
     # Bright colors (no underscores)
-    brightred)       echo "$COLOR_BRIGHT_RED" ;;
-    brightgreen)     echo "$COLOR_BRIGHT_GREEN" ;;
-    brightyellow)    echo "$COLOR_BRIGHT_YELLOW" ;;
-    brightblue)      echo "$COLOR_BRIGHT_BLUE" ;;
-    brightcyan)      echo "$COLOR_BRIGHT_CYAN" ;;
-    brightmagenta|brightpurple) echo "$COLOR_BRIGHT_MAGENTA" ;;
-    brightblack|gray|grey) echo "$COLOR_BRIGHT_BLACK" ;;
-    brightwhite)     echo "$COLOR_BRIGHT_WHITE" ;;
+    brightred) echo "$COLOR_BRIGHT_RED" ;;
+    brightgreen) echo "$COLOR_BRIGHT_GREEN" ;;
+    brightyellow) echo "$COLOR_BRIGHT_YELLOW" ;;
+    brightblue) echo "$COLOR_BRIGHT_BLUE" ;;
+    brightcyan) echo "$COLOR_BRIGHT_CYAN" ;;
+    brightmagenta | brightpurple) echo "$COLOR_BRIGHT_MAGENTA" ;;
+    brightblack | gray | grey) echo "$COLOR_BRIGHT_BLACK" ;;
+    brightwhite) echo "$COLOR_BRIGHT_WHITE" ;;
 
     # Extended colors
-    orange)  echo "$COLOR_ORANGE" ;;
+    orange) echo "$COLOR_ORANGE" ;;
 
     # Default
-    *)       echo "$COLOR_BLUE" ;;
+    *) echo "$COLOR_BLUE" ;;
   esac
 }
 
@@ -162,7 +167,7 @@ print_cyan() { print_color "$COLOR_CYAN" "$1"; }
 # Priority: inline color parameter > HEADER_COLOR env var > no color
 print_header() {
   local text="$1"
-  local color="${2:-}"  # Optional color parameter
+  local color="${2:-}" # Optional color parameter
   local color_code=""
 
   if [[ -n "$color" ]]; then
@@ -230,7 +235,7 @@ print_header_info() {
 SECTION_UNDERLINE_PADDING=15
 print_section() {
   local text="$1"
-  local color="${2:-}"  # Optional color parameter
+  local color="${2:-}" # Optional color parameter
   local color_code=""
   local underline_length=$((${#text} + SECTION_UNDERLINE_PADDING))
   if [[ -n "$color" ]]; then
@@ -298,7 +303,7 @@ print_section_info() {
 # Priority: inline color parameter > TITLE_COLOR env var > no color
 print_title() {
   local text="$1"
-  local color="${2:-}"  # Optional color parameter
+  local color="${2:-}" # Optional color parameter
   local color_code=""
 
   if [[ -n "$color" ]]; then
@@ -307,8 +312,9 @@ print_title() {
     color_code=$(_get_color "$TITLE_COLOR")
   fi
 
-  local term_width=$(tput cols 2>/dev/null || echo 80)
-  local content_width=$((term_width - 10))  # 5 spaces on each side
+  local term_width
+  term_width=$(tput cols 2>/dev/null || echo 80)
+  local content_width=$((term_width - 10)) # 5 spaces on each side
   local padding="     "
 
   echo ""
@@ -327,7 +333,8 @@ print_title() {
 # Centered success title (green + emoji)
 print_title_success() {
   local text="$1"
-  local term_width=$(tput cols 2>/dev/null || echo 80)
+  local term_width
+  term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -340,7 +347,8 @@ print_title_success() {
 # Centered error title (red + emoji)
 print_title_error() {
   local text="$1"
-  local term_width=$(tput cols 2>/dev/null || echo 80)
+  local term_width
+  term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -353,7 +361,8 @@ print_title_error() {
 # Centered warning title (yellow + emoji)
 print_title_warning() {
   local text="$1"
-  local term_width=$(tput cols 2>/dev/null || echo 80)
+  local term_width
+  term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -366,7 +375,8 @@ print_title_warning() {
 # Centered info title (cyan + emoji)
 print_title_info() {
   local text="$1"
-  local term_width=$(tput cols 2>/dev/null || echo 80)
+  local term_width
+  term_width=$(tput cols 2>/dev/null || echo 80)
   local content_width=$((term_width - 10))
   local padding="     "
   echo ""
@@ -382,7 +392,7 @@ print_title_info() {
 # Priority: inline color parameter > BANNER_COLOR env var > no color
 print_banner() {
   local text="$1"
-  local color="${2:-}"  # Optional color parameter
+  local color="${2:-}" # Optional color parameter
   local color_code=""
 
   if [[ -n "$color" ]]; then
@@ -541,16 +551,16 @@ _help_section_color() {
   local title index="${2:-0}"
   title=$(echo "${1:-}" | tr '[:upper:]' '[:lower:]')
   case "$title" in
-  commands | verbs | suites | groups | phases) echo "brightcyan" ;;
-  options | flags | arguments | "environment variables") echo "brightmagenta" ;;
-  examples) echo "brightyellow" ;;
-  *)
-    case $((index % 3)) in
-    0) echo "brightgreen" ;;
-    1) echo "brightblue" ;;
-    *) echo "brightwhite" ;;
-    esac
-    ;;
+    commands | verbs | suites | groups | phases) echo "brightcyan" ;;
+    options | flags | arguments | "environment variables") echo "brightmagenta" ;;
+    examples) echo "brightyellow" ;;
+    *)
+      case $((index % 3)) in
+        0) echo "brightgreen" ;;
+        1) echo "brightblue" ;;
+        *) echo "brightwhite" ;;
+      esac
+      ;;
   esac
 }
 
@@ -656,7 +666,7 @@ help_end() {
 # Usage: if has_command git; then ... fi
 # Note: For multiple commands with fatal error, use error-handling.sh's require_commands()
 has_command() {
-  if ! command -v "$1" &> /dev/null; then
+  if ! command -v "$1" &>/dev/null; then
     return 1
   fi
   return 0
@@ -718,21 +728,24 @@ formatting_demo() {
 
     # All standard colors
     for color in "${standard_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_title \"$color_cap\" \"$color\""
       print_title "$color_cap" "$color"
     done
 
     # All bright colors
     for color in "${bright_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_title \"$color_cap\" \"$color\""
       print_title "$color_cap" "$color"
     done
 
     # Variants
     for variant in "${variants[@]}"; do
-      local variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local variant_cap
+      variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_title_$variant \"$variant_cap\""
       # shellcheck disable=SC2086
       print_title_$variant "$variant_cap"
@@ -749,21 +762,24 @@ formatting_demo() {
 
     # All standard colors
     for color in "${standard_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_header \"$color_cap\" \"$color\""
       print_header "$color_cap" "$color"
     done
 
     # All bright colors
     for color in "${bright_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_header \"$color_cap\" \"$color\""
       print_header "$color_cap" "$color"
     done
 
     # Variants
     for variant in "${variants[@]}"; do
-      local variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local variant_cap
+      variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_header_$variant \"$variant_cap\""
       # shellcheck disable=SC2086
       print_header_$variant "$variant_cap"
@@ -780,21 +796,24 @@ formatting_demo() {
 
     # All standard colors
     for color in "${standard_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_banner \"$color_cap\" \"$color\""
       print_banner "$color_cap" "$color"
     done
 
     # All bright colors
     for color in "${bright_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_banner \"$color_cap\" \"$color\""
       print_banner "$color_cap" "$color"
     done
 
     # Variants
     for variant in "${variants[@]}"; do
-      local variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local variant_cap
+      variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_banner_$variant \"$variant_cap\""
       # shellcheck disable=SC2086
       print_banner_$variant "$variant_cap"
@@ -811,21 +830,24 @@ formatting_demo() {
 
     # All standard colors
     for color in "${standard_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_section \"$color_cap\" \"$color\""
       print_section "$color_cap" "$color"
     done
 
     # All bright colors
     for color in "${bright_colors[@]}"; do
-      local color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local color_cap
+      color_cap="$(echo "$color" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_section \"$color_cap\" \"$color\""
       print_section "$color_cap" "$color"
     done
 
     # Variants
     for variant in "${variants[@]}"; do
-      local variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      local variant_cap
+      variant_cap="$(echo "$variant" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
       _show_command "print_section_$variant \"$variant_cap\""
       # shellcheck disable=SC2086
       print_section_$variant "$variant_cap"

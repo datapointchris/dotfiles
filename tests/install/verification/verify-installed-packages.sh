@@ -156,7 +156,7 @@ check_command "tmux"
 check_command_at_path "bat" "$HOME/.cargo/bin/bat"
 check_command_at_path "fd" "$HOME/.cargo/bin/fd"
 check_command_at_path "fzf" "$HOME/.local/bin/fzf" "--version"
-check_command "rg"  # ripgrep can be from system package manager
+check_command "rg" # ripgrep can be from system package manager
 check_command_at_path "zoxide" "$HOME/.cargo/bin/zoxide"
 check_command_at_path "eza" "$HOME/.cargo/bin/eza"
 
@@ -173,15 +173,15 @@ print_section "System Utilities (Universal)"
 check_command "tree"
 check_command "htop" "--version"
 check_command "jq"
-check_command "glow"  # Markdown renderer
-check_command "duf"   # Better df
+check_command "glow" # Markdown renderer
+check_command "duf"  # Better df
 
 # ================================================================
 # macOS-Specific Tools
 # ================================================================
 if [[ "$DETECTED_PLATFORM" == "macos" ]]; then
   print_section "macOS-Specific Tools"
-  check_command "duti" "SKIP_VERSION"  # File association manager
+  check_command "duti" "SKIP_VERSION" # File association manager
 fi
 
 # ================================================================
@@ -198,7 +198,7 @@ else
 fi
 
 check_command "pdftoppm" "-v"
-check_command "convert" "-version"  # imagemagick
+check_command "convert" "-version" # imagemagick
 check_command "chafa"
 
 # ================================================================
@@ -326,10 +326,10 @@ fi
 # ================================================================
 print_section "npm Global Packages - Language Servers (Universal)"
 check_command "typescript-language-server"
-check_command "tsc" "--version"  # typescript compiler
+check_command "tsc" "--version" # typescript compiler
 check_command "bash-language-server"
 check_command "yaml-language-server"
-check_command "vscode-html-language-server" "--version"  # from vscode-langservers-extracted
+check_command "vscode-html-language-server" "--version" # from vscode-langservers-extracted
 check_command "gh-actions-language-server"
 
 print_section "npm Global Packages - Linters/Formatters (Universal)"

@@ -160,17 +160,17 @@ function gzipsize() {
 function extract() {
   if [[ -f $1 ]]; then
     case $1 in
-    *.tar.bz2) tar -xjf "$1" ;;
-    *.tar.gz) tar -xzf "$1" ;;
-    *.tar.zsr) tar --use-compress-program=unzstd -xvf "$1" ;;
-    *.rar) unrar -e "$1" ;;
-    *.gz) gunzip "$1" ;;
-    *.tar) tar -xf "$1" ;;
-    *.tbz2) tar -xjf "$1" ;;
-    *.tgz) tar -xzf "$1" ;;
-    *.zip) unzip "$1" ;;
-    *.Z) uncompress "$1" ;;
-    *) echo "'$1' cannot be extracted via ´ex´" ;;
+      *.tar.bz2) tar -xjf "$1" ;;
+      *.tar.gz) tar -xzf "$1" ;;
+      *.tar.zsr) tar --use-compress-program=unzstd -xvf "$1" ;;
+      *.rar) unrar -e "$1" ;;
+      *.gz) gunzip "$1" ;;
+      *.tar) tar -xf "$1" ;;
+      *.tbz2) tar -xjf "$1" ;;
+      *.tgz) tar -xzf "$1" ;;
+      *.zip) unzip "$1" ;;
+      *.Z) uncompress "$1" ;;
+      *) echo "'$1' cannot be extracted via ´ex´" ;;
     esac
   else
     echo "'$1' is not a valid file"
@@ -194,79 +194,78 @@ function server() {
 #@f
 #--> Pick a command's path/file args with fzf, e.g. f vim (choose files) or f cd (choose dir)
 f() {
-    # Run command/application and choose paths/files with fzf.
-    # Always return control of the terminal to user (e.g. when opening GUIs).
-    # The full command that was used will appear in your history just like any
-    # other (N.B. to achieve this I write the shell's active history to
-    # ~/.bash_history)
-    #
-    # Usage:
-    # f cd [OPTION]... (hit enter, choose path)
-    # f cat [OPTION]... (hit enter, choose files)
-    # f vim [OPTION]... (hit enter, choose files)
-    # f vlc [OPTION]... (hit enter, choose files)
+  # Run command/application and choose paths/files with fzf.
+  # Always return control of the terminal to user (e.g. when opening GUIs).
+  # The full command that was used will appear in your history just like any
+  # other (N.B. to achieve this I write the shell's active history to
+  # ~/.bash_history)
+  #
+  # Usage:
+  # f cd [OPTION]... (hit enter, choose path)
+  # f cat [OPTION]... (hit enter, choose files)
+  # f vim [OPTION]... (hit enter, choose files)
+  # f vlc [OPTION]... (hit enter, choose files)
 
-    # Store the program
-    program="$1"
+  # Store the program
+  program="$1"
 
-    # Remove first argument off the list
-    shift
+  # Remove first argument off the list
+  shift
 
-    # Store option flags with separating spaces, or just set as single space
-    options="$@"
-    if [ -z "${options}" ]; then
-        options=" "
-    else
-        options=" $options "
-    fi
+  # Store option flags with separating spaces, or just set as single space
+  options="$@"
+  if [ -z "${options}" ]; then
+    options=" "
+  else
+    options=" $options "
+  fi
 
-    # Store the arguments from fzf
-    arguments="$(fzf --multi)"
+  # Store the arguments from fzf
+  arguments="$(fzf --multi)"
 
-    # If no arguments passed (e.g. if Esc pressed), return to terminal
-    if [ -z "${arguments}" ]; then
-        return 1
-    fi
+  # If no arguments passed (e.g. if Esc pressed), return to terminal
+  if [ -z "${arguments}" ]; then
+    return 1
+  fi
 
-    # We want the command to show up in our bash history, so write the shell's
-    # active history to ~/.bash_history. Then we'll also add the command from
-    # fzf, then we'll load it all back into the shell's active history
-    history -w
+  # We want the command to show up in our bash history, so write the shell's
+  # active history to ~/.bash_history. Then we'll also add the command from
+  # fzf, then we'll load it all back into the shell's active history
+  history -w
 
-    # ADD A REPEATABLE COMMAND TO THE BASH HISTORY ############################
-    # Store the arguments in a temporary file for sanitising before being
-    # entered into bash history
-    : > /tmp/fzf_tmp
-    for file in "${arguments[@]}"; do
-        echo "$file" >> /tmp/fzf_tmp
-    done
+  # ADD A REPEATABLE COMMAND TO THE BASH HISTORY ############################
+  # Store the arguments in a temporary file for sanitising before being
+  # entered into bash history
+  : >/tmp/fzf_tmp
+  for file in "${arguments[@]}"; do
+    echo "$file" >>/tmp/fzf_tmp
+  done
 
-    # Put all input arguments on one line and sanitise the command by putting
-    # single quotes around each argument, also first put an extra single quote
-    # next to any pre-existing single quotes in the raw argument
-    sed -i "s/'/''/g; s/.*/'&'/g; s/\n//g" /tmp/fzf_tmp
+  # Put all input arguments on one line and sanitise the command by putting
+  # single quotes around each argument, also first put an extra single quote
+  # next to any pre-existing single quotes in the raw argument
+  sed -i "s/'/''/g; s/.*/'&'/g; s/\n//g" /tmp/fzf_tmp
 
-    # If the program is on the GUI list, add a '&' to the command history
-    if [[ "$program" =~ ^(nautilus|zathura|evince|vlc|eog|kolourpaint)$ ]]; then
-        sed -i '${s/$/ \&/}' /tmp/fzf_tmp
-    fi
+  # If the program is on the GUI list, add a '&' to the command history
+  if [[ "$program" =~ ^(nautilus|zathura|evince|vlc|eog|kolourpaint)$ ]]; then
+    sed -i '${s/$/ \&/}' /tmp/fzf_tmp
+  fi
 
-    # Grab the sanitised arguments
-    arguments="$(cat /tmp/fzf_tmp)"
+  # Grab the sanitised arguments
+  arguments="$(cat /tmp/fzf_tmp)"
 
-    # Add the command with the sanitised arguments to our .bash_history
-    echo $program$options$arguments >> ~/.bash_history
+  # Add the command with the sanitised arguments to our .bash_history
+  echo $program$options$arguments >>~/.bash_history
 
-    # Reload the ~/.bash_history into the shell's active history
-    history -r
+  # Reload the ~/.bash_history into the shell's active history
+  history -r
 
-    # EXECUTE THE LAST COMMAND IN ~/.bash_history #############################
-    fc -s -1
+  # EXECUTE THE LAST COMMAND IN ~/.bash_history #############################
+  fc -s -1
 
-    # Clean up temporary variables
-    rm /tmp/fzf_tmp
+  # Clean up temporary variables
+  rm /tmp/fzf_tmp
 }
-
 
 # alternative using ripgrep-all (rga) combined with fzf-tmux preview
 # This requires ripgrep-all (rga) installed: https://github.com/phiresky/ripgrep-all
@@ -276,14 +275,17 @@ f() {
 #@fif
 #--> Find in file contents with ripgrep-all + fzf, then open the match. Usage: fif <term>
 fif() {
-    if [ ! "$#" -gt 0 ]; then echo "Need a string to search for!"; return 1; fi
-    local file
-    file="$(rga --max-count=1 --ignore-case --files-with-matches --no-messages "$*" | fzf-tmux +m --preview="rga --ignore-case --pretty --context 10 '"$*"' {}")" && echo "opening $file" && open "$file" || return 1;
+  if [ ! "$#" -gt 0 ]; then
+    echo "Need a string to search for!"
+    return 1
+  fi
+  local file
+  file="$(rga --max-count=1 --ignore-case --files-with-matches --no-messages "$*" | fzf-tmux +m --preview="rga --ignore-case --pretty --context 10 '"$*"' {}")" && echo "opening $file" && open "$file" || return 1
 }
 
 # fgst - pick files from `git status -s`
 is_in_git_repo() {
-  git rev-parse HEAD > /dev/null 2>&1
+  git rev-parse HEAD >/dev/null 2>&1
 }
 
 #@fgst
@@ -304,11 +306,11 @@ fgst() {
 #@gh-watch
 #--> Pick an in-progress GitHub Actions run on this branch and watch it live
 gh-watch() {
-    gh run list \
-      --branch $(git rev-parse --abbrev-ref HEAD) \
-      --json status,name,databaseId |
-      jq -r '.[] | select(.status != "completed") | (.databaseId | tostring) + "\t" + (.name)' |
-      fzf -1 -0 | awk '{print $1}' | xargs gh run watch
+  gh run list \
+    --branch $(git rev-parse --abbrev-ref HEAD) \
+    --json status,name,databaseId \
+    | jq -r '.[] | select(.status != "completed") | (.databaseId | tostring) + "\t" + (.name)' \
+    | fzf -1 -0 | awk '{print $1}' | xargs gh run watch
 }
 
 # tm - create new tmux session, or switch to existing one. Works from within tmux too. (@bag-man)
@@ -320,9 +322,10 @@ gh-watch() {
 tm() {
   [[ -n "$TMUX" ]] && change="switch-client" || change="attach-session"
   if [ $1 ]; then
-    tmux $change -t "$1" 2>/dev/null || (tmux new-session -d -s $1 && tmux $change -t "$1"); return
+    tmux $change -t "$1" 2>/dev/null || (tmux new-session -d -s $1 && tmux $change -t "$1")
+    return
   fi
-  session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) &&  tmux $change -t "$session" || echo "No sessions found."
+  session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) && tmux $change -t "$session" || echo "No sessions found."
 }
 
 # sesh wrapper: warm up tmux + run resurrect restore synchronously before the
@@ -342,7 +345,8 @@ sesh() {
       # Predict the default socket path and inject it. When restore.sh calls
       # new-session and no server exists yet, tmux auto-starts the server and loads
       # tmux.conf — so explicit start-server + source-file are not needed.
-      local uid; uid=$(id -u)
+      local uid
+      uid=$(id -u)
       # Stderr suppressed: no-client errors from resurrect's spinner and switch-client
       # are cosmetic; session/window/pane creation works headlessly.
       TMUX="${TMUX_TMPDIR:-/tmp}/tmux-${uid}/default,0,0" "$restore" 2>/dev/null
@@ -374,22 +378,21 @@ tmux-reload() {
     else
       echo "  $(color_red "✗") Failed to reload session: $session" >&2
     fi
-  done <<< "$sessions"
+  done <<<"$sessions"
 }
-
 
 #@fzf-man-widget
 #--> Fuzzy man-page browser (Ctrl-H); alt-c for cheat.sh, alt-t for tldr in the preview
 fzf-man-widget() {
   manpage="echo {} | sed 's/\([[:alnum:][:punct:]]*\) (\([[:alnum:]]*\)).*/\2 \1/'"
   batman="${manpage} | xargs -r man | col -bx | bat --language=man --plain --color always --theme=\"Monokai Extended\""
-   man -k . | sort \
-   | awk -v cyan=$(tput setaf 6) -v blue=$(tput setaf 4) -v res=$(tput sgr0) -v bld=$(tput bold) '{ $1=cyan bld $1; $2=res blue $2; } 1' \
-   | fzf  \
+  man -k . | sort \
+    | awk -v cyan=$(tput setaf 6) -v blue=$(tput setaf 4) -v res=$(tput sgr0) -v bld=$(tput bold) '{ $1=cyan bld $1; $2=res blue $2; } 1' \
+    | fzf \
       -q "$1" \
       --ansi \
       --tiebreak=begin \
-      --prompt=' Man > '  \
+      --prompt=' Man > ' \
       --preview-window '50%,rounded,<50(up,85%,border-bottom)' \
       --preview "${batman}" \
       --bind "enter:execute(${manpage} | xargs -r man)" \
@@ -775,9 +778,12 @@ function doshell() {
   # your NEXT prompt ready to run (Enter) or edit — nothing executes on its own.
   # This needs no clipboard, so it works even where copy/paste is flaky. Also
   # copy it to the system clipboard when a clipboard command is available.
-  if command -v pbcopy >/dev/null 2>&1; then printf '%s' "$cmd" | pbcopy
-  elif command -v wl-copy >/dev/null 2>&1; then printf '%s' "$cmd" | wl-copy
-  elif command -v xclip >/dev/null 2>&1; then printf '%s' "$cmd" | xclip -selection clipboard
+  if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$cmd" | pbcopy
+  elif command -v wl-copy >/dev/null 2>&1; then
+    printf '%s' "$cmd" | wl-copy
+  elif command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$cmd" | xclip -selection clipboard
   fi
   if [[ -n "$ZSH_VERSION" ]]; then
     print -z "$cmd"
@@ -792,12 +798,30 @@ function find-commit() {
   local dir="." depth=3 limit=300 mode="all" query=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -d) dir="$2"; shift 2 ;;
-      -n) limit="$2"; shift 2 ;;
-      -L) depth="$2"; shift 2 ;;
-      --msg) mode="msg"; shift ;;
-      --code) mode="code"; shift ;;
-      --all) mode="all"; shift ;;
+      -d)
+        dir="$2"
+        shift 2
+        ;;
+      -n)
+        limit="$2"
+        shift 2
+        ;;
+      -L)
+        depth="$2"
+        shift 2
+        ;;
+      --msg)
+        mode="msg"
+        shift
+        ;;
+      --code)
+        mode="code"
+        shift
+        ;;
+      --all)
+        mode="all"
+        shift
+        ;;
       -h | --help)
         echo "Usage: find-commit [-d DIR] [-n N] [-L N] [--msg|--code|--all] <query>"
         echo "  Search commit messages (--msg, git log --grep) and/or diff content"
@@ -805,10 +829,16 @@ function find-commit() {
         echo "  first. Enter opens the commit in nvim (Diffview); Ctrl-Y yanks the sha."
         return 0
         ;;
-      *) query="${query:+$query }$1"; shift ;;
+      *)
+        query="${query:+$query }$1"
+        shift
+        ;;
     esac
   done
-  [[ -n "$query" ]] || { echo "Usage: find-commit [-d DIR] [--msg|--code] <query>" >&2; return 1; }
+  [[ -n "$query" ]] || {
+    echo "Usage: find-commit [-d DIR] [--msg|--code] <query>" >&2
+    return 1
+  }
 
   # One match line per commit: "repo sha date subject" (shown) + hidden repo-path
   # and sha fields. Messages and diffs are searched separately (git has no single
@@ -822,10 +852,13 @@ function find-commit() {
         [[ "$mode" == msg || "$mode" == all ]] && git -C "$repo" log -n "$limit" --date=short --pretty="$fmt" --grep="$query" -i 2>/dev/null
         [[ "$mode" == code || "$mode" == all ]] && git -C "$repo" log -n "$limit" --date=short --pretty="$fmt" -G"$query" 2>/dev/null
       } | awk -F'\t' -v repo="${repo##*/}" -v path="$repo" \
-            'NF && !seen[$1]++ {printf "%s\t%s\t%s\t%s\t%s\n", repo, substr($1,1,9), $2, $3, path}'
+        'NF && !seen[$1]++ {printf "%s\t%s\t%s\t%s\t%s\n", repo, substr($1,1,9), $2, $3, path}'
     done | sort -t$'\t' -k3,3r | awk -F'\t' '{printf "%-16s %-10s %s  %s\t%s\t%s\n", $1, $2, $3, $4, $5, $2}'
   )
-  [[ -n "$index" ]] || { echo "find-commit: no commits matched '$query' under $dir (mode: $mode)" >&2; return 1; }
+  [[ -n "$index" ]] || {
+    echo "find-commit: no commits matched '$query' under $dir (mode: $mode)" >&2
+    return 1
+  }
 
   local selected
   selected=$(printf '%s\n' "$index" | fzf --delimiter='\t' --with-nth=1 \

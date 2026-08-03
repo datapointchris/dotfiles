@@ -16,8 +16,10 @@ load "$HOME/.local/lib/bats-assert/load.bash"
 
 # Setup runs once before all tests
 setup_file() {
-  export SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
-  export DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+  export SCRIPT_DIR
+  SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
+  export DOTFILES_DIR
+  DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
   # Source libraries
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
@@ -30,7 +32,7 @@ setup_file() {
 
   # Create mock GitHub release installer
   export MOCK_INSTALLER="/tmp/mock-github-release.sh"
-  cat > "$MOCK_INSTALLER" << 'EOF'
+  cat >"$MOCK_INSTALLER" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -81,7 +83,7 @@ EOF
         failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
       fi
 
-      cat >> "$FAILURES_LOG" << LOGEOF
+      cat >>"$FAILURES_LOG" <<LOGEOF
 $failure_tool - Installation Failed
 Installer: $(basename "$script")
 ${failure_reason:+Error: $failure_reason}

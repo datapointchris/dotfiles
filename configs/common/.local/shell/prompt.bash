@@ -82,9 +82,9 @@ _prompt_user_info() {
   context=$(prompt_user_context)
 
   case "$context" in
-    root|root-ssh) printf '%s' "${RC_RED}${USER}@${HOSTNAME%%.*}${RC_RESET}:" ;;
-    ssh)           printf '%s' "${RC_CYAN}${USER}@${HOSTNAME%%.*}${RC_RESET}:" ;;
-    *)             ;; # Hide user@host for local sessions
+    root | root-ssh) printf '%s' "${RC_RED}${USER}@${HOSTNAME%%.*}${RC_RESET}:" ;;
+    ssh) printf '%s' "${RC_CYAN}${USER}@${HOSTNAME%%.*}${RC_RESET}:" ;;
+    *) ;; # Hide user@host for local sessions
   esac
 }
 
@@ -133,7 +133,7 @@ _prompt_git_info_full() {
     [[ "$PROMPT_GIT_FLAGS" == *unmerged* ]] && git_status+="${RC_RED}${PROMPT_ICON_UNMERGED}${RC_RESET} "
   fi
 
-  (( PROMPT_GIT_STASH > 0 )) && git_status+="${RC_BLUE}${PROMPT_ICON_STASH}${RC_RESET} "
+  ((PROMPT_GIT_STASH > 0)) && git_status+="${RC_BLUE}${PROMPT_ICON_STASH}${RC_RESET} "
 
   printf '%s' "${RC_GREEN}${PROMPT_ICON_BRANCH} ${PROMPT_GIT_BRANCH}${RC_RESET} ${git_status}"
 }
@@ -153,8 +153,8 @@ _prompt_git_remote_status() {
   [[ -n "$PROMPT_GIT_REPO" ]] || return
 
   local remote_status=""
-  (( PROMPT_GIT_AHEAD != 0 )) && remote_status+="${RC_GREEN}${PROMPT_ICON_UP}${PROMPT_GIT_AHEAD}${RC_RESET} "
-  (( PROMPT_GIT_BEHIND != 0 )) && remote_status+="${RC_RED}${PROMPT_ICON_DOWN}${PROMPT_GIT_BEHIND}${RC_RESET} "
+  ((PROMPT_GIT_AHEAD != 0)) && remote_status+="${RC_GREEN}${PROMPT_ICON_UP}${PROMPT_GIT_AHEAD}${RC_RESET} "
+  ((PROMPT_GIT_BEHIND != 0)) && remote_status+="${RC_RED}${PROMPT_ICON_DOWN}${PROMPT_GIT_BEHIND}${RC_RESET} "
 
   printf '%s' "$remote_status"
 }

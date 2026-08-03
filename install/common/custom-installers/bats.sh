@@ -24,11 +24,20 @@ read_custom_field() {
 }
 
 BATS_CORE_SLUG=$(read_custom_field repo) \
-  || { log_error "Could not read bats.repo from packages.yml"; exit 1; }
+  || {
+    log_error "Could not read bats.repo from packages.yml"
+    exit 1
+  }
 BATS_SUPPORT_SLUG=$(read_custom_field support_repo) \
-  || { log_error "Could not read bats.support_repo from packages.yml"; exit 1; }
+  || {
+    log_error "Could not read bats.support_repo from packages.yml"
+    exit 1
+  }
 BATS_ASSERT_SLUG=$(read_custom_field assert_repo) \
-  || { log_error "Could not read bats.assert_repo from packages.yml"; exit 1; }
+  || {
+    log_error "Could not read bats.assert_repo from packages.yml"
+    exit 1
+  }
 
 BATS_CORE_REPO="https://github.com/${BATS_CORE_SLUG}.git"
 BATS_SUPPORT_REPO="https://github.com/${BATS_SUPPORT_SLUG}.git"

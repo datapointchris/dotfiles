@@ -17,6 +17,7 @@
 set -euo pipefail
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=../../configs/common/.local/shell/formatting.sh
 source "$SHELL_DIR/formatting.sh"
 
 # ================================================================
@@ -180,7 +181,7 @@ manifest_changed() {
 }
 
 save_manifest_hash() {
-  md5sum "$(pwd)/$CONFIG_DIR/west.yml" 2>/dev/null | cut -d' ' -f1 > "$ZMK_WORKSPACE/.last_manifest_hash"
+  md5sum "$(pwd)/$CONFIG_DIR/west.yml" 2>/dev/null | cut -d' ' -f1 >"$ZMK_WORKSPACE/.last_manifest_hash"
 }
 
 # Initialize or update the shared workspace
@@ -290,7 +291,7 @@ main() {
         clean_all=true
         shift
         ;;
-      --pristine|-p)
+      --pristine | -p)
         pristine=true
         shift
         ;;
@@ -298,7 +299,7 @@ main() {
         force_update=true
         shift
         ;;
-      --help|-h)
+      --help | -h)
         show_help
         exit 0
         ;;
@@ -357,7 +358,7 @@ main() {
     exit 1
   fi
 
-  if (( total > 1 )); then
+  if ((total > 1)); then
     print_info "Building $total targets in parallel"
   else
     print_info "Building $total target"
@@ -385,7 +386,7 @@ main() {
     log_file=$(mktemp "/tmp/zmk-build-${output_name}-XXXX.log")
     log_files+=("$log_file")
 
-    build_target "$board" "$shield" "$output_name" "$snippet" "$cmake_args" "$pristine" > "$log_file" 2>&1 &
+    build_target "$board" "$shield" "$output_name" "$snippet" "$cmake_args" "$pristine" >"$log_file" 2>&1 &
     pids+=($!)
   done
 

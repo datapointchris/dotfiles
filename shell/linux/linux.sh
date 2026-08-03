@@ -29,11 +29,11 @@ largest_packages() {
 }
 
 # apt shortcuts
-alias apti='sudo apt install'         # Install packages
-alias aptr='sudo apt remove'          # Remove packages
-alias aptu='sudo apt update && sudo apt upgrade' # Update system
-alias apts='apt search'               # Search repos
-alias aptshow='apt show'              # Show package details
+alias apti='sudo apt install'                          # Install packages
+alias aptr='sudo apt remove'                           # Remove packages
+alias aptu='sudo apt update && sudo apt upgrade'       # Update system
+alias apts='apt search'                                # Search repos
+alias aptshow='apt show'                               # Show package details
 alias aptclean='sudo apt autoremove && sudo apt clean' # Prune deps and cache
 
 # System information

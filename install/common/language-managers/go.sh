@@ -85,7 +85,8 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
   if [[ -z "$GO_BIN" ]]; then
     log_info "Go not installed, installing..."
   else
-    CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}'); CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
+    CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}')
+    CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
     LATEST_VERSION=${GO_VERSION#go}
     log_info "Current version: $CURRENT_VERSION"
 
@@ -99,7 +100,8 @@ if [[ "$UPDATE_MODE" == "true" ]]; then
 else
   # Install mode - skip if already installed (unless FORCE_INSTALL)
   if [[ "${FORCE_INSTALL:-false}" != "true" ]] && [[ -n "$GO_BIN" ]]; then
-    CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}'); CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
+    CURRENT_VERSION_RAW=$($GO_BIN version | awk '{print $3}')
+    CURRENT_VERSION=${CURRENT_VERSION_RAW#go}
     log_success "Go $CURRENT_VERSION already installed: /usr/local/go/bin/go"
     exit 0
   fi

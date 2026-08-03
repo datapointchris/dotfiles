@@ -3,6 +3,7 @@
 # SC2154 = Variables referenced but not assigned (from sourced files)
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=../../configs/common/.local/shell/colors.sh
 source "$SHELL_DIR/colors.sh"
 
 #@update-tldr
@@ -116,16 +117,16 @@ aws-login() {
   local okta_script="$win_home/.local/bin/okta-awscli.exe"
 
   case $environment in
-  dev)
-    profile=AWS-DataScienceLower-Dev-DataScientist
-    ;;
-  prod)
-    profile=AWS-DataScienceProd-ReadOnly
-    ;;
-  *)
-    echo "Unknown environment, use 'dev' or 'prod'"
-    return
-    ;;
+    dev)
+      profile=AWS-DataScienceLower-Dev-DataScientist
+      ;;
+    prod)
+      profile=AWS-DataScienceProd-ReadOnly
+      ;;
+    *)
+      echo "Unknown environment, use 'dev' or 'prod'"
+      return
+      ;;
   esac
 
   "$okta_script" --profile "$profile" --okta-profile "$profile" --force --verbose

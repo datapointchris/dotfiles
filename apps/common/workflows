@@ -10,6 +10,7 @@ set -euo pipefail
 
 # Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=../../configs/common/.local/shell/formatting.sh
 source "$SHELL_DIR/formatting.sh"
 
 WORKFLOWS_DIR="${WORKFLOWS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/workflows}"
@@ -81,11 +82,11 @@ cmd_search() {
 
   local selected
   selected=$(
-    find -L "$WORKFLOWS_DIR" -type f -name "*.md" | \
-    sed 's|^'"$WORKFLOWS_DIR"'/||' | \
-    sed 's/\.md$//' | \
-    sort | \
-    fzf "${fzf_opts[@]}"
+    find -L "$WORKFLOWS_DIR" -type f -name "*.md" \
+      | sed 's|^'"$WORKFLOWS_DIR"'/||' \
+      | sed 's/\.md$//' \
+      | sort \
+      | fzf "${fzf_opts[@]}"
   )
 
   if [[ -n "$selected" ]]; then
@@ -96,11 +97,11 @@ cmd_search() {
 # List all workflows
 cmd_list() {
   print_section "Available Workflows" "brightcyan"
-  find -L "$WORKFLOWS_DIR" -type f -name "*.md" | \
-    sed 's|^'"$WORKFLOWS_DIR"'/||' | \
-    sed 's/\.md$//' | \
-    sort | \
-    while read -r workflow; do
+  find -L "$WORKFLOWS_DIR" -type f -name "*.md" \
+    | sed 's|^'"$WORKFLOWS_DIR"'/||' \
+    | sed 's/\.md$//' \
+    | sort \
+    | while read -r workflow; do
       echo "  • $(print_green "$workflow")"
     done
 }
@@ -162,7 +163,7 @@ cmd_new() {
     exit 1
   fi
 
-  cat > "$filepath" <<EOF
+  cat >"$filepath" <<EOF
 # $name
 
 EOF
@@ -227,7 +228,7 @@ case "${1:-}" in
     cmd_search "$@"
     ;;
 
-  list|ls)
+  list | ls)
     cmd_list
     ;;
 
@@ -235,11 +236,11 @@ case "${1:-}" in
     cmd_learn
     ;;
 
-  random|rand)
+  random | rand)
     cmd_random
     ;;
 
-  show|view)
+  show | view)
     cmd_show "${2:-}"
     ;;
 
@@ -247,7 +248,7 @@ case "${1:-}" in
     cmd_new "${2:-}"
     ;;
 
-  help|--help|-h)
+  help | --help | -h)
     show_help
     ;;
 

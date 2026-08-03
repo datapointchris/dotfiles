@@ -35,21 +35,21 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 # Parse arguments
-UBUNTU_VERSION="24.04"  # Default to 24.04 (current WSL version)
+UBUNTU_VERSION="24.04" # Default to 24.04 (current WSL version)
 KEEP_CONTAINER=false
 REUSE_CONTAINER=""
 REUSE_LATEST=false
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -v|--version)
+    -v | --version)
       UBUNTU_VERSION="${2:-24.04}"
       shift 2
       ;;
-    -r|--reuse)
+    -r | --reuse)
       REUSE_LATEST=true
       shift
       ;;
-    -c|--container)
+    -c | --container)
       REUSE_CONTAINER="${2:-}"
       if [[ -z "$REUSE_CONTAINER" ]]; then
         echo "Error: --container requires a container name"
@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
       fi
       shift 2
       ;;
-    -k|--keep)
+    -k | --keep)
       KEEP_CONTAINER=true
       shift
       ;;
@@ -76,11 +76,11 @@ LOG_FILE="${DOTFILES_DIR}/test-wsl-docker.log"
 # Use provided container name or generate new one
 if [[ "$REUSE_LATEST" == "true" ]]; then
   # Find most recent container
-  CONTAINER_NAME=$(docker ps -a --format '{{.CreatedAt}}\t{{.Names}}' | \
-                   grep dotfiles-wsl-test | \
-                   sort -r | \
-                   head -1 | \
-                   cut -f2)
+  CONTAINER_NAME=$(docker ps -a --format '{{.CreatedAt}}\t{{.Names}}' \
+    | grep dotfiles-wsl-test \
+    | sort -r \
+    | head -1 \
+    | cut -f2)
 
   if [[ -z "$CONTAINER_NAME" ]]; then
     echo "Error: No existing dotfiles-wsl-test containers found"
@@ -164,7 +164,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Overwrite log file (not append)
-: > "$LOG_FILE"
+: >"$LOG_FILE"
 
 log_info "Testing WSL installation with Docker"
 log_info "Ubuntu version: ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
@@ -181,141 +181,141 @@ OVERALL_START=$(date +%s)
 # ================================================================
 if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
 
-# ================================================================
-# STEP 1: Ensure WSL rootfs is available and Docker image exists
-# ================================================================
-STEP_START=$(date +%s)
-{
-  log_section "STEP 1/8: Preparing WSL Ubuntu Docker Image"
+  # ================================================================
+  # STEP 1: Ensure WSL rootfs is available and Docker image exists
+  # ================================================================
+  STEP_START=$(date +%s)
+  {
+    log_section "STEP 1/8: Preparing WSL Ubuntu Docker Image"
 
-  # Check if Docker is running
-  if ! docker info >/dev/null 2>&1; then
-    die "Docker is not running. Please start Docker Desktop and try again."
-  fi
+    # Check if Docker is running
+    if ! docker info >/dev/null 2>&1; then
+      die "Docker is not running. Please start Docker Desktop and try again."
+    fi
 
-  # Check if Docker image already exists
-  if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
-    log_success "Docker image already exists: $DOCKER_IMAGE"
-  else
-    echo "Docker image not found, will create from WSL rootfs..."
-    echo ""
-
-    # Create cache directory
-    mkdir -p "$WSL_CACHE_DIR"
-
-    # Download rootfs if not cached
-    if [[ -f "$ROOTFS_FILE" ]]; then
-      log_success "Using cached WSL rootfs: $ROOTFS_FILE"
+    # Check if Docker image already exists
+    if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
+      log_success "Docker image already exists: $DOCKER_IMAGE"
     else
-      echo "Downloading WSL Ubuntu ${UBUNTU_VERSION} rootfs..."
-      echo "URL: $ROOTFS_URL"
-      echo "This is a one-time download (~340MB)..."
+      echo "Docker image not found, will create from WSL rootfs..."
       echo ""
-      curl -L --progress-bar "$ROOTFS_URL" -o "$ROOTFS_FILE"
-      log_success "Downloaded WSL rootfs to cache"
-    fi
 
-    # Import rootfs into Docker
-    echo ""
-    echo "Importing WSL rootfs into Docker..."
-    if [[ "$ROOTFS_FILE" == *.wsl ]]; then
-      # .wsl files are already tar format, no need to gunzip
-      docker import - "$DOCKER_IMAGE" < "$ROOTFS_FILE"
+      # Create cache directory
+      mkdir -p "$WSL_CACHE_DIR"
+
+      # Download rootfs if not cached
+      if [[ -f "$ROOTFS_FILE" ]]; then
+        log_success "Using cached WSL rootfs: $ROOTFS_FILE"
+      else
+        echo "Downloading WSL Ubuntu ${UBUNTU_VERSION} rootfs..."
+        echo "URL: $ROOTFS_URL"
+        echo "This is a one-time download (~340MB)..."
+        echo ""
+        curl -L --progress-bar "$ROOTFS_URL" -o "$ROOTFS_FILE"
+        log_success "Downloaded WSL rootfs to cache"
+      fi
+
+      # Import rootfs into Docker
+      echo ""
+      echo "Importing WSL rootfs into Docker..."
+      if [[ "$ROOTFS_FILE" == *.wsl ]]; then
+        # .wsl files are already tar format, no need to gunzip
+        docker import - "$DOCKER_IMAGE" <"$ROOTFS_FILE"
+      else
+        # .tar.gz files need gunzip
+        gunzip -c "$ROOTFS_FILE" | docker import - "$DOCKER_IMAGE"
+      fi
+      log_success "Created Docker image: $DOCKER_IMAGE"
+
+      # Create non-root user for realistic WSL testing
+      echo ""
+      echo "Creating non-root user in Docker image..."
+      docker run --rm "$DOCKER_IMAGE" /bin/bash -c "useradd -m -s /bin/bash -G sudo ubuntu && echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers" 2>/dev/null || {
+        echo "Note: Image already has ubuntu user or user creation not needed"
+      }
+    fi
+  } 2>&1 | tee -a "$LOG_FILE"
+  STEP_END=$(date +%s)
+  STEP_ELAPSED=$((STEP_END - STEP_START))
+  STEP_NAMES+=("Prepare Docker image")
+  STEP_TIMES+=("$STEP_ELAPSED")
+  {
+    log_timing "Step 1: Prepare Docker image" "$STEP_ELAPSED"
+  } 2>&1 | tee -a "$LOG_FILE"
+
+  # ================================================================
+  # STEP 2: Start container with dotfiles mounted
+  # ================================================================
+  STEP_START=$(date +%s)
+  {
+    log_section "STEP 2/8: Starting Docker Container"
+    echo "Starting container with dotfiles mounted..."
+
+    # Start container in background with dotfiles mounted
+    # The imported WSL rootfs needs full paths and proper environment
+    # Try to run as ubuntu user (realistic WSL), fall back to root if needed
+    if docker run --rm "$DOCKER_IMAGE" id ubuntu &>/dev/null; then
+      USER_FLAG="--user ubuntu"
+      HOME_DIR="/home/ubuntu"
     else
-      # .tar.gz files need gunzip
-      gunzip -c "$ROOTFS_FILE" | docker import - "$DOCKER_IMAGE"
+      echo "Warning: Running as root (ubuntu user not found in image)"
+      USER_FLAG=""
+      HOME_DIR="/root"
     fi
-    log_success "Created Docker image: $DOCKER_IMAGE"
 
-    # Create non-root user for realistic WSL testing
-    echo ""
-    echo "Creating non-root user in Docker image..."
-    docker run --rm "$DOCKER_IMAGE" /bin/bash -c "useradd -m -s /bin/bash -G sudo ubuntu && echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers" 2>/dev/null || {
-      echo "Note: Image already has ubuntu user or user creation not needed"
-    }
-  fi
-} 2>&1 | tee -a "$LOG_FILE"
-STEP_END=$(date +%s)
-STEP_ELAPSED=$((STEP_END - STEP_START))
-STEP_NAMES+=("Prepare Docker image")
-STEP_TIMES+=("$STEP_ELAPSED")
-{
-  log_timing "Step 1: Prepare Docker image" "$STEP_ELAPSED"
-} 2>&1 | tee -a "$LOG_FILE"
+    # shellcheck disable=SC2086  # USER_FLAG intentionally unquoted (empty or flag)
+    docker run -d \
+      --name "$CONTAINER_NAME" \
+      $USER_FLAG \
+      --env PATH="$HOME_DIR/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+      --env HOME="$HOME_DIR" \
+      --env DOTFILES_DOCKER_TEST=true \
+      ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
+      --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
+      "$DOCKER_IMAGE" \
+      /usr/bin/sleep infinity
 
-# ================================================================
-# STEP 2: Start container with dotfiles mounted
-# ================================================================
-STEP_START=$(date +%s)
-{
-  log_section "STEP 2/8: Starting Docker Container"
-  echo "Starting container with dotfiles mounted..."
+    log_success "Container started: $CONTAINER_NAME"
+    echo "Dotfiles mounted at: /dotfiles (read-only)"
+  } 2>&1 | tee -a "$LOG_FILE"
+  STEP_END=$(date +%s)
+  STEP_ELAPSED=$((STEP_END - STEP_START))
+  STEP_NAMES+=("Start container")
+  STEP_TIMES+=("$STEP_ELAPSED")
+  {
+    log_timing "Step 2: Start container" "$STEP_ELAPSED"
+  } 2>&1 | tee -a "$LOG_FILE"
 
-  # Start container in background with dotfiles mounted
-  # The imported WSL rootfs needs full paths and proper environment
-  # Try to run as ubuntu user (realistic WSL), fall back to root if needed
-  if docker run --rm "$DOCKER_IMAGE" id ubuntu &>/dev/null; then
-    USER_FLAG="--user ubuntu"
-    HOME_DIR="/home/ubuntu"
-  else
-    echo "Warning: Running as root (ubuntu user not found in image)"
-    USER_FLAG=""
-    HOME_DIR="/root"
-  fi
+  # ================================================================
+  # STEP 3: Prepare container environment
+  # ================================================================
+  STEP_START=$(date +%s)
+  {
+    log_section "STEP 3/8: Preparing Container Environment"
 
-  # shellcheck disable=SC2086  # USER_FLAG intentionally unquoted (empty or flag)
-  docker run -d \
-    --name "$CONTAINER_NAME" \
-    $USER_FLAG \
-    --env PATH="$HOME_DIR/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    --env HOME="$HOME_DIR" \
-    --env DOTFILES_DOCKER_TEST=true \
-    ${GH_TOKEN_FOR_CONTAINER:+--env "GITHUB_TOKEN=$GH_TOKEN_FOR_CONTAINER"} \
-    --mount type=bind,source="$DOTFILES_DIR",target=/dotfiles,readonly \
-    "$DOCKER_IMAGE" \
-    /usr/bin/sleep infinity
+    # Detect home directory
+    CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
 
-  log_success "Container started: $CONTAINER_NAME"
-  echo "Dotfiles mounted at: /dotfiles (read-only)"
-} 2>&1 | tee -a "$LOG_FILE"
-STEP_END=$(date +%s)
-STEP_ELAPSED=$((STEP_END - STEP_START))
-STEP_NAMES+=("Start container")
-STEP_TIMES+=("$STEP_ELAPSED")
-{
-  log_timing "Step 2: Start container" "$STEP_ELAPSED"
-} 2>&1 | tee -a "$LOG_FILE"
-
-# ================================================================
-# STEP 3: Prepare container environment
-# ================================================================
-STEP_START=$(date +%s)
-{
-  log_section "STEP 3/8: Preparing Container Environment"
-
-  # Detect home directory
-  CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
-
-  # Create ~/.env for testing
-  echo "Creating ~/.env..."
-  docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
+    # Create ~/.env for testing
+    echo "Creating ~/.env..."
+    docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
 PLATFORM=wsl
 NVIM_AI_ENABLED=false
 EOF'
 
-  # Copy dotfiles to writable location (install script modifies files)
-  echo "Copying dotfiles to writable location..."
-  docker exec "$CONTAINER_NAME" bash -c "cp -r /dotfiles ${CONTAINER_HOME}/dotfiles && cd ${CONTAINER_HOME}/dotfiles && git init -q"
+    # Copy dotfiles to writable location (install script modifies files)
+    echo "Copying dotfiles to writable location..."
+    docker exec "$CONTAINER_NAME" bash -c "cp -r /dotfiles ${CONTAINER_HOME}/dotfiles && cd ${CONTAINER_HOME}/dotfiles && git init -q"
 
-  log_success "Container environment ready"
-} 2>&1 | tee -a "$LOG_FILE"
-STEP_END=$(date +%s)
-STEP_ELAPSED=$((STEP_END - STEP_START))
-STEP_NAMES+=("Prepare environment")
-STEP_TIMES+=("$STEP_ELAPSED")
-{
-  log_timing "Step 3: Prepare environment" "$STEP_ELAPSED"
-} 2>&1 | tee -a "$LOG_FILE"
+    log_success "Container environment ready"
+  } 2>&1 | tee -a "$LOG_FILE"
+  STEP_END=$(date +%s)
+  STEP_ELAPSED=$((STEP_END - STEP_START))
+  STEP_NAMES+=("Prepare environment")
+  STEP_TIMES+=("$STEP_ELAPSED")
+  {
+    log_timing "Step 3: Prepare environment" "$STEP_ELAPSED"
+  } 2>&1 | tee -a "$LOG_FILE"
 
 else
   # ================================================================

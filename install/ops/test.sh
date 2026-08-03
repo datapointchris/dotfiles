@@ -46,29 +46,29 @@ main() {
   [[ "$suite" == "help" || "$suite" == "-h" || "$suite" == "--help" ]] && usage 0
 
   case "$suite" in
-  all)
-    bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
-    ;;
-  unit)
-    skip_on_wsl unit
-    bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}"
-    ;;
-  integration)
-    skip_on_wsl integration
-    bats "${INTEGRATION_TESTS[@]}"
-    ;;
-  watch)
-    if ! command -v entr >/dev/null 2>&1; then
-      log_error "entr is not installed"
-      print_info "Install with: brew install entr (macOS) or pacman -S entr (Arch)"
-      exit 1
-    fi
-    find tests -name '*.bats' | entr -c bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
-    ;;
-  *)
-    log_error "Unknown suite: $suite"
-    usage 1
-    ;;
+    all)
+      bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
+      ;;
+    unit)
+      skip_on_wsl unit
+      bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}"
+      ;;
+    integration)
+      skip_on_wsl integration
+      bats "${INTEGRATION_TESTS[@]}"
+      ;;
+    watch)
+      if ! command -v entr >/dev/null 2>&1; then
+        log_error "entr is not installed"
+        print_info "Install with: brew install entr (macOS) or pacman -S entr (Arch)"
+        exit 1
+      fi
+      find tests -name '*.bats' | entr -c bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
+      ;;
+    *)
+      log_error "Unknown suite: $suite"
+      usage 1
+      ;;
   esac
 }
 

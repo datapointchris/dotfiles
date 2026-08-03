@@ -44,4 +44,4 @@ Or install manually:
       log_warning "Failed to install $name (see summary)"
     fi
   fi
-done <<< "$PLUGINS"
+done <<<"$PLUGINS"

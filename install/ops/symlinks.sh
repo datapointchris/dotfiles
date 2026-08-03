@@ -43,33 +43,33 @@ main() {
   cd "$DOTFILES_DIR" || exit 1
 
   case "$verb" in
-  link)
-    print_section "Creating symlinks" "brightcyan"
-    uv run symlinks link common
-    uv run symlinks link "$PLATFORM"
-    sync_windows_shell_on_wsl
-    ;;
-  relink)
-    print_section "Relinking symlinks" "brightcyan"
-    uv run symlinks relink "$PLATFORM"
-    sync_windows_shell_on_wsl
-    ;;
-  unlink)
-    print_section "Removing symlinks" "brightcyan"
-    # Platform is an overlay on top of common, so it comes off first.
-    uv run symlinks unlink "$PLATFORM"
-    uv run symlinks unlink common
-    ;;
-  check)
-    uv run symlinks check
-    ;;
-  show)
-    uv run symlinks show
-    ;;
-  *)
-    log_error "Unknown verb: $verb"
-    usage 1
-    ;;
+    link)
+      print_section "Creating symlinks" "brightcyan"
+      uv run symlinks link common
+      uv run symlinks link "$PLATFORM"
+      sync_windows_shell_on_wsl
+      ;;
+    relink)
+      print_section "Relinking symlinks" "brightcyan"
+      uv run symlinks relink "$PLATFORM"
+      sync_windows_shell_on_wsl
+      ;;
+    unlink)
+      print_section "Removing symlinks" "brightcyan"
+      # Platform is an overlay on top of common, so it comes off first.
+      uv run symlinks unlink "$PLATFORM"
+      uv run symlinks unlink common
+      ;;
+    check)
+      uv run symlinks check
+      ;;
+    show)
+      uv run symlinks show
+      ;;
+    *)
+      log_error "Unknown verb: $verb"
+      usage 1
+      ;;
   esac
 }
 

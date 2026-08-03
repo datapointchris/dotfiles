@@ -27,51 +27,51 @@ failed=0
 results=()
 
 test_url() {
-    local name="$1"
-    local url="$2"
-    local method="${3:-HEAD}"
+  local name="$1"
+  local url="$2"
+  local method="${3:-HEAD}"
 
-    # Use HEAD request by default (faster, no download)
-    # Some servers don't support HEAD, fall back to GET with range
-    if [[ "$method" == "HEAD" ]]; then
-        if curl -fsSL --head --connect-timeout "$TIMEOUT" "$url" >/dev/null 2>&1; then
-            echo -e "${GREEN}✓${NC} $name"
-            results+=("YES | $name | $url")
-            ((passed++))
-            return 0
-        fi
+  # Use HEAD request by default (faster, no download)
+  # Some servers don't support HEAD, fall back to GET with range
+  if [[ "$method" == "HEAD" ]]; then
+    if curl -fsSL --head --connect-timeout "$TIMEOUT" "$url" >/dev/null 2>&1; then
+      echo -e "${GREEN}✓${NC} $name"
+      results+=("YES | $name | $url")
+      ((passed++))
+      return 0
     fi
+  fi
 
-    # Try GET with range header (downloads only first byte)
-    if curl -fsSL --connect-timeout "$TIMEOUT" -r 0-0 "$url" >/dev/null 2>&1; then
-        echo -e "${GREEN}✓${NC} $name"
-        results+=("YES | $name | $url")
-        ((passed++))
-        return 0
-    fi
+  # Try GET with range header (downloads only first byte)
+  if curl -fsSL --connect-timeout "$TIMEOUT" -r 0-0 "$url" >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} $name"
+    results+=("YES | $name | $url")
+    ((passed++))
+    return 0
+  fi
 
-    echo -e "${RED}✗${NC} $name"
-    results+=("NO  | $name | $url")
-    ((failed++))
-    return 1
+  echo -e "${RED}✗${NC} $name"
+  results+=("NO  | $name | $url")
+  ((failed++))
+  return 1
 }
 
 test_git_clone() {
-    local name="$1"
-    local repo="$2"
+  local name="$1"
+  local repo="$2"
 
-    # Test git ls-remote (checks connectivity without cloning)
-    if git ls-remote --quiet "$repo" HEAD >/dev/null 2>&1; then
-        echo -e "${GREEN}✓${NC} $name"
-        results+=("YES | $name | $repo")
-        ((passed++))
-        return 0
-    fi
+  # Test git ls-remote (checks connectivity without cloning)
+  if git ls-remote --quiet "$repo" HEAD >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} $name"
+    results+=("YES | $name | $repo")
+    ((passed++))
+    return 0
+  fi
 
-    echo -e "${RED}✗${NC} $name"
-    results+=("NO  | $name | $repo")
-    ((failed++))
-    return 1
+  echo -e "${RED}✗${NC} $name"
+  results+=("NO  | $name | $repo")
+  ((failed++))
+  return 1
 }
 
 echo "======================================"
@@ -161,22 +161,22 @@ echo ""
 
 # --- Write results to file ---
 {
-    echo "======================================"
-    echo "Dotfiles Connectivity Test Results"
-    echo "======================================"
-    echo "Host: $(hostname)"
-    echo "Date: $(date)"
-    echo "User: $(whoami)"
-    echo ""
-    echo "Summary: $passed passed, $failed failed"
-    echo ""
-    echo "Results:"
-    echo "--------------------------------------"
-    printf '%s\n' "${results[@]}"
-    echo "--------------------------------------"
-    echo ""
-    echo "Legend: YES = accessible, NO = blocked/failed"
-} > "$OUTPUT_FILE"
+  echo "======================================"
+  echo "Dotfiles Connectivity Test Results"
+  echo "======================================"
+  echo "Host: $(hostname)"
+  echo "Date: $(date)"
+  echo "User: $(whoami)"
+  echo ""
+  echo "Summary: $passed passed, $failed failed"
+  echo ""
+  echo "Results:"
+  echo "--------------------------------------"
+  printf '%s\n' "${results[@]}"
+  echo "--------------------------------------"
+  echo ""
+  echo "Legend: YES = accessible, NO = blocked/failed"
+} >"$OUTPUT_FILE"
 
 echo ""
 echo "======================================"

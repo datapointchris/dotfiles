@@ -111,11 +111,11 @@ parse_arguments() {
 
   while [[ $# -gt 0 ]]; do
     case $1 in
-      -h|--help)
+      -h | --help)
         usage
         exit 0
         ;;
-      -n|--name)
+      -n | --name)
         if [[ -z "${2:-}" ]]; then
           color_red "Error: --name requires a name"
           exit 1
@@ -123,7 +123,7 @@ parse_arguments() {
         BACKUP_NAME="$2"
         shift 2
         ;;
-      -d|--dest)
+      -d | --dest)
         if [[ -z "${2:-}" ]]; then
           color_red "Error: --dest requires a directory path"
           exit 1
@@ -147,7 +147,7 @@ parse_arguments() {
         NETWORK_DEST="$2"
         shift 2
         ;;
-      -v|--verbose)
+      -v | --verbose)
         VERBOSE=true
         shift
         ;;
@@ -192,8 +192,10 @@ parse_arguments() {
 }
 
 create_incremental_backup() {
-  local start_time=$(date +%s)
-  local date_stamp=$(date '+%Y-%m-%d_%H%M%S')
+  local start_time
+  start_time=$(date +%s)
+  local date_stamp
+  date_stamp=$(date '+%Y-%m-%d_%H%M%S')
 
   # Determine backup destination
   local dest_base
@@ -215,7 +217,7 @@ create_incremental_backup() {
   echo "  Destination: $(color_bright_blue "$new_backup")"
   if [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
     echo "  Excludes:    $(color_bright_yellow "${EXCLUDE_PATTERNS[0]}")"
-    for ((i=1; i<${#EXCLUDE_PATTERNS[@]}; i++)); do
+    for ((i = 1; i < ${#EXCLUDE_PATTERNS[@]}; i++)); do
       echo "               $(color_bright_yellow "${EXCLUDE_PATTERNS[$i]}")"
     done
   fi
@@ -223,10 +225,10 @@ create_incremental_backup() {
 
   # Build rsync command
   local rsync_opts=(
-    -a                    # Archive mode (recursive, preserves permissions, times, etc.)
-    --delete              # Delete files in dest that don't exist in source
-    --human-readable      # Human-readable numbers
-    --stats               # Show transfer statistics
+    -a               # Archive mode (recursive, preserves permissions, times, etc.)
+    --delete         # Delete files in dest that don't exist in source
+    --human-readable # Human-readable numbers
+    --stats          # Show transfer statistics
   )
 
   # Add verbose flag if requested
@@ -263,9 +265,11 @@ create_incremental_backup() {
     fi
 
     # Calculate elapsed time
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local elapsed=$((end_time - start_time))
-    local time_str=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
+    local time_str
+    time_str=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
 
     # Get backup size
     echo ""
@@ -274,12 +278,14 @@ create_incremental_backup() {
 
     if [[ -n "$NETWORK_DEST" ]]; then
       local host="${NETWORK_DEST%%:*}"
+      local size_kb
       # shellcheck disable=SC2029
-      local size_kb=$(ssh "$host" "du -sk \"$new_backup\" | cut -f1")
+      size_kb=$(ssh "$host" "du -sk \"$new_backup\" | cut -f1")
       local size_mb=$((size_kb / 1024))
       echo "  Backup size: $(color_bright_green "${size_mb} MB")"
     else
-      local backup_size=$(du -sh "$new_backup" | cut -f1)
+      local backup_size
+      backup_size=$(du -sh "$new_backup" | cut -f1)
       echo "  Backup size: $(color_bright_green "$backup_size")"
     fi
 

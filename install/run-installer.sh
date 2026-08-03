@@ -87,7 +87,7 @@ run_installer() {
         echo "$failure_manual"
         echo ""
       fi
-    } >> "$FAILURES_LOG"
+    } >>"$FAILURES_LOG"
     return 1
   fi
 }
