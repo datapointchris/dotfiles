@@ -245,6 +245,29 @@ tools:
     tags: [vcs, github, development]
     docs_url: "https://cli.github.com/"
 
+  jira:
+    category: version-control
+    description: "Jira issues, sprints, and transitions from the terminal"
+    installed_via: go
+    usage: "jira issue VERB [KEY] [OPTIONS]"
+    why_use: "The issue half of the work loop that bbkt drives the pull request half of — an interactive table by default, so browsing a sprint does not mean loading the web UI"
+    examples:
+      - cmd: "jira init"
+        desc: "One-time setup — choose Cloud, then site URL, email, and API token"
+      - cmd: "jira issue list -a$(jira me) -sopen"
+        desc: "Your open issues, in the interactive table"
+      - cmd: "jira sprint list --current -a$(jira me)"
+        desc: "What is assigned to you in the sprint running now"
+      - cmd: "jira issue view PROJ-123"
+        desc: "Full issue with description, comments, and linked development work"
+      - cmd: "jira issue move PROJ-123 'In Progress'"
+        desc: "Transition an issue without opening a browser"
+      - cmd: "jira issue list --plain --no-headers"
+        desc: "Plain output for piping — the table is interactive by default"
+    see_also: [bbkt, gh]
+    tags: [jira, issue-tracking, work, go, cli]
+    docs_url: "https://github.com/ankitpokhrel/jira-cli"
+
   lazygit:
     category: version-control
     description: "Terminal UI for git with intuitive keybindings"

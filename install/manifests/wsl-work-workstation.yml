@@ -19,6 +19,7 @@ go_tools:
   - toolbox
   - todoui
   - bbkt
+  - jira
   - ifiles
   - gowall
   - ascii-image-converter

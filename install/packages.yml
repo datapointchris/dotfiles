@@ -1323,6 +1323,12 @@ go_tools:
     binary_pattern: "bbkt_{version_num}_{os}_{go_arch}.tar.gz"
     description: Bitbucket Data Center pull request lifecycle from the terminal
 
+  - name: jira
+    package: github.com/ankitpokhrel/jira-cli/cmd/jira
+    github_repo: ankitpokhrel/jira-cli
+    binary_pattern: "jira_{version_num}_{os_mac}_{arch}.tar.gz"
+    description: Jira issues, sprints, and transitions from the terminal
+
   - name: ifiles
     package: github.com/datapointchris/ifiles
     github_repo: datapointchris/ifiles
