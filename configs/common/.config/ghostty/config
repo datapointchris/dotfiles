@@ -21,6 +21,10 @@ window-padding-x = 16
 window-padding-y = 4,4
 window-padding-balance = false
 
+# Trails the cursor on jumps longer than a couple of cells, so word and line
+# motions read as movement while ordinary typing stays still.
+custom-shader = shaders/cursor-smear.glsl
+
 # Font rendering preferences
 font-style = Regular
 adjust-cell-height = 3
