@@ -29,25 +29,10 @@ if [[ -f "$TPM_DIR/bin/install_plugins" ]]; then
   done
 
   if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-    manual_steps="Run TPM installation manually:
-   $TPM_DIR/bin/install_plugins
-
-Or install plugins from within tmux:
-   Press prefix + I (capital i) in tmux
-
-Verify TPM is installed:
-   ls -la $TPM_DIR"
-
-    output_failure_data "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM plugin installation failed"
+    output_failure_data "tmux-plugins" "unknown" "latest" "TPM plugin installation failed"
     log_warning "Tmux plugin installation failed (see summary)"
   fi
 else
-  manual_steps="TPM install script not found. Install TPM first:
-   bash $DOTFILES_DIR/install/common/plugins/tpm.sh
-
-Then run plugin installation:
-   $TPM_DIR/bin/install_plugins"
-
-  output_failure_data "tmux-plugins" "unknown" "latest" "$manual_steps" "TPM not found"
+  output_failure_data "tmux-plugins" "unknown" "latest" "TPM not found"
   log_error "TPM install script not found at $TPM_DIR/bin/install_plugins"
 fi

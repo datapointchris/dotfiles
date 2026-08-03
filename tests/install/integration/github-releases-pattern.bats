@@ -8,27 +8,22 @@
 # 2. Return proper exit codes (0 for success, 1 for failure)
 # 3. Work with run_installer wrapper
 # 4. Generate properly formatted failure logs
+#
+# run_installer is sourced from install/run-installer.sh rather than copied in.
+# The copy that used to live here parsed FAILURE_* fields with a flat grep over
+# the whole stderr, so it passed while the real wrapper spliced two tools'
+# fields into one nonsense entry.
 # ================================================================
 
 # Load BATS helpers (from ~/.local installation)
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
 
-# Setup runs once before all tests
 setup_file() {
   export SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
   export DOTFILES_DIR
   DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
-  # Source libraries
-  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-  source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-
-  # Setup test environment
-  export FAILURES_LOG="/tmp/test-github-releases-bats-$$.log"
-  rm -f "$FAILURES_LOG"
 
   # Create mock GitHub release installer
   export MOCK_INSTALLER="/tmp/mock-github-release.sh"
@@ -44,66 +39,27 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 TOOL_NAME="mock-tool"
 DOWNLOAD_URL="https://github.com/mock/tool/releases/download/v1.0/tool.tar.gz"
 VERSION="v1.0"
-MANUAL_STEPS="1. Download from browser: $DOWNLOAD_URL
-2. Extract: tar -xzf tool.tar.gz
-3. Install: mv tool ~/.local/bin/"
 
 # Simulate download failure
 log_error "Failed to download from $DOWNLOAD_URL"
 
 # Output structured failure data
-output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "$MANUAL_STEPS" "Download failed - network timeout"
+output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed - network timeout" \
+  "curl: (60) SSL certificate problem: unable to get local issuer certificate"
 
 exit 1
 EOF
   chmod +x "$MOCK_INSTALLER"
-
-  # Define run_installer wrapper (from install.sh)
-  # shellcheck disable=SC2329
-  run_installer() {
-    local script="$1"
-    local tool_name="$2"
-
-    local output
-    local exit_code
-
-    output=$(bash "$script" 2>&1)
-    exit_code=$?
-
-    if [[ $exit_code -eq 0 ]]; then
-      return 0
-    else
-      local failure_tool failure_url failure_version failure_reason failure_manual
-      failure_tool=$(echo "$output" | grep "^FAILURE_TOOL=" | cut -d"'" -f2 || echo "$tool_name")
-      failure_url=$(echo "$output" | grep "^FAILURE_URL=" | cut -d"'" -f2 || echo "")
-      failure_version=$(echo "$output" | grep "^FAILURE_VERSION=" | cut -d"'" -f2 || echo "")
-      failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
-
-      if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
-        failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
-      fi
-
-      cat >>"$FAILURES_LOG" <<LOGEOF
-$failure_tool - Installation Failed
-Installer: $(basename "$script")
-${failure_reason:+Error: $failure_reason}
-${failure_url:+Download URL: $failure_url}
-${failure_version:+Version: $failure_version}
-
-${failure_manual:+How to Install Manually:
-$failure_manual
-}
-LOGEOF
-      return 1
-    fi
-  }
-
-  export -f run_installer
 }
 
-# Cleanup after all tests
+setup() {
+  export FAILURES_LOG="$BATS_TEST_TMPDIR/failures.log"
+  rm -f "$FAILURES_LOG"
+  source "$DOTFILES_DIR/install/run-installer.sh"
+}
+
 teardown_file() {
-  rm -f "$MOCK_INSTALLER" "$FAILURES_LOG"
+  rm -f "$MOCK_INSTALLER"
 }
 
 # ================================================================
@@ -134,52 +90,52 @@ teardown_file() {
   assert_output --partial "FAILURE_REASON='Download failed"
 }
 
-@test "github-releases: installer outputs FAILURE_MANUAL section" {
+@test "github-releases: installer outputs FAILURE_DETAIL section" {
   run bash "$MOCK_INSTALLER"
   assert_failure
-  assert_output --partial "FAILURE_MANUAL_START"
-  assert_output --partial "FAILURE_MANUAL_END"
+  assert_output --partial "FAILURE_DETAIL_START"
+  assert_output --partial "FAILURE_DETAIL_END"
 }
 
 @test "github-releases: wrapper creates failures log" {
-  rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   [[ -f "$FAILURES_LOG" ]]
 }
 
 @test "github-releases: log contains tool name" {
-  rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Installation Failed"
 }
 
 @test "github-releases: log contains parsed URL" {
-  rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Download URL: https://github.com/mock/tool"
 }
 
 @test "github-releases: log contains parsed version" {
-  rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Version: v1.0"
 }
 
 @test "github-releases: log contains parsed reason" {
-  rm -f "$FAILURES_LOG"
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
   assert_output --partial "Error: Download failed"
 }
 
-@test "github-releases: log contains manual steps" {
-  rm -f "$FAILURES_LOG"
+@test "github-releases: log contains the failing command's error output" {
   run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
   run cat "$FAILURES_LOG"
-  assert_output --partial "How to Install Manually:"
+  assert_output --partial "curl: (60) SSL certificate problem"
+}
+
+@test "github-releases: log has no manual-instruction section" {
+  run_installer "$MOCK_INSTALLER" "mock-tool" >/dev/null 2>&1 || true
+  run cat "$FAILURES_LOG"
+  refute_output --partial "How to Install Manually"
 }
 
 @test "github-releases: installer returns exit code 1 on failure" {

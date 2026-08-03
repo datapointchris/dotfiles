@@ -85,14 +85,7 @@ fi
 
 # Check for required commands
 if ! command -v git >/dev/null 2>&1; then
-  manual_steps="Git is required to install BATS.
-
-Install git first:
-  macOS: brew install git
-  Ubuntu: sudo apt-get install git
-  Arch: sudo pacman -S git"
-
-  output_failure_data "bats" "$BATS_CORE_REPO" "$BATS_VERSION" "$manual_steps" "Git not found"
+  output_failure_data "bats" "$BATS_CORE_REPO" "$BATS_VERSION" "Git not found"
   log_error "Git is required but not found"
   exit 1
 fi
@@ -108,17 +101,9 @@ log_info "Installing BATS $BATS_VERSION to $INSTALL_PREFIX"
 
 # Clone bats-core
 log_info "Cloning bats-core..."
-if ! git clone --quiet --depth 1 --branch "$BATS_VERSION" "$BATS_CORE_REPO" "$TMP_DIR/bats-core" 2>&1; then
-  manual_steps="Failed to clone bats-core repository.
-
-Try manually:
-  1. Clone repository: git clone $BATS_CORE_REPO
-  2. Checkout version: cd bats-core && git checkout $BATS_VERSION
-  3. Run installer: ./install.sh $INSTALL_PREFIX
-
-Check network connection and GitHub access."
-
-  output_failure_data "bats-core" "$BATS_CORE_REPO" "$BATS_VERSION" "$manual_steps" "Git clone failed"
+CLONE_OUTPUT=""
+if ! CLONE_OUTPUT=$(git clone --quiet --depth 1 --branch "$BATS_VERSION" "$BATS_CORE_REPO" "$TMP_DIR/bats-core" 2>&1); then
+  output_failure_data "bats-core" "$BATS_CORE_REPO" "$BATS_VERSION" "Git clone failed" "$CLONE_OUTPUT"
   log_error "Failed to clone bats-core"
   exit 1
 fi
@@ -127,18 +112,9 @@ fi
 log_info "Running bats-core installer..."
 cd "$TMP_DIR/bats-core" || exit 1
 
-if ! ./install.sh "$INSTALL_PREFIX" >/dev/null 2>&1; then
-  manual_steps="Failed to run bats-core install.sh script.
-
-Try manually:
-  1. Clone repository: git clone $BATS_CORE_REPO
-  2. Checkout version: cd bats-core && git checkout $BATS_VERSION
-  3. Run installer: ./install.sh $INSTALL_PREFIX
-  4. Check permissions: ls -la $INSTALL_PREFIX/bin/
-
-Check that $INSTALL_PREFIX is writable."
-
-  output_failure_data "bats-core" "$BATS_CORE_REPO" "$BATS_VERSION" "$manual_steps" "install.sh failed"
+INSTALL_OUTPUT=""
+if ! INSTALL_OUTPUT=$(./install.sh "$INSTALL_PREFIX" 2>&1); then
+  output_failure_data "bats-core" "$BATS_CORE_REPO" "$BATS_VERSION" "install.sh failed" "$INSTALL_OUTPUT"
   log_error "Failed to run install.sh"
   exit 1
 fi
@@ -169,22 +145,7 @@ fi
 log_info "Verifying installation..."
 
 if ! command -v bats >/dev/null 2>&1; then
-  manual_steps="BATS installed but not found in PATH.
-
-Check installation:
-  ls -la $INSTALL_PREFIX/bin/bats
-  which bats
-
-Ensure $INSTALL_PREFIX/bin is in PATH:
-  export PATH=\"$INSTALL_PREFIX/bin:\$PATH\"
-
-Add to your shell rc file (~/.zshrc, ~/.bashrc):
-  export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Try closing and reopening your terminal, then verify:
-  bats --version"
-
-  output_failure_data "bats" "unknown" "$BATS_VERSION" "$manual_steps" "Installation verification failed"
+  output_failure_data "bats" "unknown" "$BATS_VERSION" "Installation verification failed"
   log_error "BATS not found in PATH after installation"
   exit 1
 fi

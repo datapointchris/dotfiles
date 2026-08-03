@@ -15,13 +15,7 @@ fi
 log_info "Installing Rust..."
 
 if ! curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path; then
-  manual_steps="1. Visit: https://rustup.rs/
-2. Run installer: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-3. Follow prompts (use default options)
-4. Source environment: source \$HOME/.cargo/env
-5. Verify: rustc --version"
-
-  output_failure_data "rust" "https://sh.rustup.rs" "latest" "$manual_steps" "rustup install script failed"
+  output_failure_data "rust" "https://sh.rustup.rs" "latest" "rustup install script failed"
   log_error "Rust installation failed"
   exit 1
 fi
@@ -34,19 +28,7 @@ source "$HOME/.cargo/env"
 if command -v cargo >/dev/null 2>&1 && command -v rustc >/dev/null 2>&1; then
   log_success "Rust installed: $(rustc --version)"
 else
-  manual_steps="Binary installed but not in PATH.
-
-Source environment:
-   source \$HOME/.cargo/env
-
-Add to shell config (~/.zshrc or ~/.bashrc):
-   source \$HOME/.cargo/env
-
-Verify:
-   rustc --version
-   cargo --version"
-
-  output_failure_data "rust" "https://sh.rustup.rs" "latest" "$manual_steps" "Not found in PATH after installation"
+  output_failure_data "rust" "https://sh.rustup.rs" "latest" "Not found in PATH after installation"
   log_error "Rust not found in PATH"
   exit 1
 fi

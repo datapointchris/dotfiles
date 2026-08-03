@@ -84,6 +84,7 @@ while IFS='|' read -r binary_name tool; do
 
   # Check offline cache before go install
   install_status=0
+  go_install_output=""
   cached_binary="$HOME/installers/go-binaries/$binary_name"
   if [[ -f "$cached_binary" ]] && [[ "$UPDATE_MODE" != "true" ]]; then
     log_info "Using cached binary: $cached_binary"
@@ -96,10 +97,18 @@ while IFS='|' read -r binary_name tool; do
     # The exit status must be captured separately: an update leaves the previous
     # binary in place, so its existence alone would report a failed install as
     # "already at latest".
+    # Kept in a variable rather than only echoed: the console output is lost to
+    # anyone reading the failure report later, and behind the work firewall the
+    # TLS error `go install` prints here is the entire diagnosis.
     go_output=$(mktemp)
     go install "$tool@latest" >"$go_output" 2>&1 || install_status=$?
-    grep -v "go: downloading" "$go_output" || true
+    go_install_output=$(grep -v "go: downloading" "$go_output" || true)
     rm -f "$go_output"
+    # An `[[ ]] && echo` here would be the last command in the else branch, so
+    # empty output would make the whole `if` return 1 and `set -e` kill the run.
+    if [[ -n "$go_install_output" ]]; then
+      echo "$go_install_output"
+    fi
   fi
 
   if [[ -f "$binary_path" ]] && [[ $install_status -eq 0 ]]; then
@@ -130,18 +139,12 @@ while IFS='|' read -r binary_name tool; do
     fi
     INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
   else
-    manual_steps="Install manually with go:
-   go install $tool@latest
-
-Tool will be installed to:
-   $GOBIN"
-
     reason="Failed to install via go install"
     if [[ -f "$binary_path" ]]; then
       reason="go install failed; $binary_name left at the previously installed version"
     fi
 
-    output_failure_data "$tool" "https://pkg.go.dev/$tool" "latest" "$manual_steps" "$reason"
+    output_failure_data "$tool" "https://pkg.go.dev/$tool" "latest" "$reason" "$go_install_output"
     log_warning "Failed to install $binary_name (see summary)"
     FAILURE_COUNT=$((FAILURE_COUNT + 1))
   fi

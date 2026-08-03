@@ -72,14 +72,7 @@ if [[ ! -f "$GZ_PATH" ]]; then
   log_info "Download URL: $DOWNLOAD_URL"
   log_info "Downloading $BINARY_NAME..."
   if ! curl -fsSL "$DOWNLOAD_URL" -o "$GZ_PATH"; then
-    manual_steps="1. Download in your browser (bypasses firewall):
-   $DOWNLOAD_URL
-
-2. Save to: $OFFLINE_CACHE_DIR/$URL_FILENAME
-
-3. Re-run this installer"
-
-    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed"
     log_error "Failed to download $BINARY_NAME"
     exit 1
   fi
@@ -94,15 +87,7 @@ rm -f "$GZ_PATH"
 if command -v "$BINARY_NAME" >/dev/null 2>&1; then
   log_success "$BINARY_NAME installed to: $TARGET_BIN"
 else
-  manual_steps="Binary installed but not found in PATH.
-
-Check that ~/.local/bin is in your PATH:
-   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify the binary exists:
-   ls -la ~/.local/bin/${BINARY_NAME}"
-
-  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
+  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Binary not found in PATH after installation"
   log_error "$BINARY_NAME not found in PATH after installation"
   exit 1
 fi

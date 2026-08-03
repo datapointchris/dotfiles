@@ -71,15 +71,7 @@ run_theme_install() {
 if run_theme_install; then
   log_success "theme installed: $(command -v theme 2>/dev/null || echo "$HOME/.local/bin/theme")"
 else
-  manual_steps="1. Download theme install script in your browser:
-   $THEME_INSTALL_URL
-
-2. Save to: $CACHED_SCRIPT
-
-3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/custom-installers/theme.sh"
-
-  output_failure_data "theme" "$THEME_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
+  output_failure_data "theme" "$THEME_INSTALL_URL" "latest" "Failed to download install script"
   log_error "theme installation failed"
   exit 1
 fi

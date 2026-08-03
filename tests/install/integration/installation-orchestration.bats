@@ -19,28 +19,6 @@ load "$HOME/.local/lib/bats-assert/load.bash"
 setup_file() {
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
 
-  # Source libraries
-  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-  source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-
-  # Source REAL run_installer wrapper and export it
-  source "$DOTFILES_DIR/install/run-installer.sh"
-  export -f run_installer
-
-  # Define REAL show_failures_summary (from install.sh) and export it
-  # shellcheck disable=SC2329
-  show_failures_summary() {
-    if [[ ! -f "$FAILURES_LOG" ]] || [[ ! -s "$FAILURES_LOG" ]]; then
-      return 0
-    fi
-
-    echo "Installation Failures"
-    cat "$FAILURES_LOG"
-    echo "Full report saved to: $FAILURES_LOG"
-  }
-  export -f show_failures_summary
-
   # Setup test environment
   export FAILURES_LOG="/tmp/test-orchestration-$$.log"
   export TEMP_DIR="/tmp/test-installers-$$"
@@ -63,11 +41,9 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 TOOL_NAME="${MOCK_TOOL_NAME:-mock-tool}"
 DOWNLOAD_URL="https://example.com/${TOOL_NAME}.tar.gz"
 VERSION="v1.0.0"
-MANUAL_STEPS="1. Download from: https://example.com/${TOOL_NAME}.tar.gz
-2. Extract: tar -xzf ${TOOL_NAME}.tar.gz
-3. Install: mv ${TOOL_NAME} ~/.local/bin/"
 
-output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "$MANUAL_STEPS" "Download failed - test error"
+output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed - test error" \
+  "curl: (60) SSL certificate problem: unable to get local issuer certificate"
 exit 1
 EOF
   chmod +x "$TEMP_DIR/failure.sh"
@@ -80,6 +56,11 @@ teardown_file() {
 setup() {
   # Clean log before each test
   rm -f "$FAILURES_LOG"
+
+  # Sourced per test rather than exported from setup_file: run_installer calls
+  # helpers that `export -f run_installer` alone does not carry across, so an
+  # exported copy silently wrote nothing.
+  source "$DOTFILES_DIR/install/run-installer.sh"
 }
 
 # ================================================================
@@ -115,7 +96,7 @@ setup() {
   assert_output --partial "Download URL: https://example.com/mock-tool.tar.gz"
   assert_output --partial "Version: v1.0.0"
   assert_output --partial "Error: Download failed - test error"
-  assert_output --partial "How to Install Manually:"
+  assert_output --partial "curl: (60) SSL certificate problem"
 }
 
 # ================================================================
@@ -211,15 +192,14 @@ setup() {
 }
 
 # ================================================================
-# Test: Failure without manual steps (regression test)
+# Test: Minimal and unstructured failures (regression tests)
 # ================================================================
 
-@test "orchestration: failure without manual steps does not cause unbound variable" {
-  # Create a simple failing installer WITHOUT FAILURE_MANUAL_START block
+@test "orchestration: failure with only the required fields does not cause unbound variable" {
   cat >"$TEMP_DIR/simple-failure.sh" <<'EOF'
 #!/usr/bin/env bash
 echo "FAILURE_TOOL='simple-tool'" >&2
-echo "FAILURE_REASON='Simple failure without manual steps'" >&2
+echo "FAILURE_REASON='Simple failure with no detail block'" >&2
 exit 1
 EOF
   chmod +x "$TEMP_DIR/simple-failure.sh"
@@ -231,7 +211,52 @@ EOF
   # Log should exist and contain the error
   [[ -f "$FAILURES_LOG" ]]
   run cat "$FAILURES_LOG"
-  assert_output --partial "Simple failure without manual steps"
-  # Should NOT contain "How to Install Manually" section
-  refute_output --partial "How to Install Manually:"
+  assert_output --partial "Simple failure with no detail block"
+}
+
+@test "orchestration: installer emitting no markers still reports its stderr" {
+  # The common case for a third-party installer that just dies: no structured
+  # output at all. Its stderr is the only diagnosis available, so it becomes the
+  # error detail rather than being dropped for a bare "Installation failed".
+  cat >"$TEMP_DIR/unstructured-failure.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "tar: Unexpected EOF in archive" >&2
+exit 2
+EOF
+  chmod +x "$TEMP_DIR/unstructured-failure.sh"
+
+  run run_installer "$TEMP_DIR/unstructured-failure.sh" "mystery-tool"
+  assert_failure
+
+  run cat "$FAILURES_LOG"
+  assert_output --partial "mystery-tool - Installation Failed"
+  assert_output --partial "tar: Unexpected EOF in archive"
+}
+
+@test "orchestration: each failed tool in one run gets its own entry" {
+  # go-tools.sh loops over every Go package, so one script can report several
+  # failures. Parsing the fields with a flat grep spliced them into a single
+  # entry naming the first tool with the last tool's URL.
+  cat >"$TEMP_DIR/multi-failure.sh" <<'EOF'
+#!/usr/bin/env bash
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
+output_failure_data "first-tool" "https://example.com/first" "v1" "Failed" "first tool error"
+output_failure_data "second-tool" "https://example.com/second" "v2" "Failed" "second tool error"
+exit 1
+EOF
+  chmod +x "$TEMP_DIR/multi-failure.sh"
+
+  run run_installer "$TEMP_DIR/multi-failure.sh" "go-tools"
+  assert_failure
+
+  run cat "$FAILURES_LOG"
+  assert_output --partial "first-tool - Installation Failed"
+  assert_output --partial "second-tool - Installation Failed"
+  assert_output --partial "first tool error"
+  assert_output --partial "second tool error"
+
+  # Each entry keeps its own URL rather than borrowing the other's
+  entry_count=$(grep -c "Installation Failed" "$FAILURES_LOG")
+  assert_equal "$entry_count" 2
 }

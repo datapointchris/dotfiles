@@ -110,17 +110,7 @@ install_fzf_tmux() {
   # Network blocked and no cache — surface a structured failure so the
   # user knows the popup binding (prefix+s) won't work until they either
   # rebuild the offline bundle or place fzf-tmux at the cache path.
-  local manual_steps="1. Download in your browser (bypasses firewall):
-   $url
-
-2. Save to: $OFFLINE_CACHE_DIR/fzf-tmux
-
-3. Or rebuild the offline bundle on a connected machine, which will
-   include fzf-tmux automatically:
-   ./install/offline/create-bundle.sh --manifest <your-manifest>
-
-4. Then re-run this installer."
-  output_failure_data "fzf-tmux" "$url" "$VERSION" "$manual_steps" "Download failed and no cache present"
+  output_failure_data "fzf-tmux" "$url" "$VERSION" "Download failed and no cache present"
   log_error "Failed to install fzf-tmux: download blocked and no cache at $cached"
   return 1
 }

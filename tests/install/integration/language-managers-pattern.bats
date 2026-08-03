@@ -8,27 +8,22 @@
 # 2. Return proper exit codes (0 for success, 1 for failure)
 # 3. Work with run_installer wrapper
 # 4. Generate properly formatted failure logs
+#
+# run_installer is sourced from install/run-installer.sh rather than copied in.
+# The copy that used to live here wrote a "Script:/Exit Code:/Timestamp:" report
+# the real wrapper has never produced, so every assertion below the wrapper
+# boundary was checking a format that did not exist.
 # ================================================================
 
 # Load BATS helpers (from ~/.local installation)
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
 
-# Setup runs once before all tests
 setup_file() {
   export SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
   export DOTFILES_DIR
   DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
-  # Source libraries
-  source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-  source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-
-  # Setup test environment
-  export FAILURES_LOG="/tmp/test-language-managers-bats-$$.log"
-  rm -f "$FAILURES_LOG"
 
   # Create mock language manager installer
   export MOCK_INSTALLER="/tmp/mock-language-manager.sh"
@@ -44,71 +39,27 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 TOOL_NAME="mock-lang-manager"
 DOWNLOAD_URL="https://example.com/install.sh"
 VERSION="v1.0"
-MANUAL_STEPS="1. Download from: $DOWNLOAD_URL
-2. Run: bash install.sh
-3. Verify: mock-lang-manager --version"
 
 # Simulate download failure
 log_error "Failed to download installer from $DOWNLOAD_URL"
 
 # Output structured failure data
-output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "$MANUAL_STEPS" "Download failed - network timeout"
+output_failure_data "$TOOL_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed - network timeout" \
+  "curl: (35) OpenSSL SSL_connect: Connection reset by peer"
 
 exit 1
 EOF
   chmod +x "$MOCK_INSTALLER"
-
-  # Define run_installer wrapper
-  # shellcheck disable=SC2329
-  run_installer() {
-    local script="$1"
-    local tool_name="$2"
-
-    local output
-    local exit_code
-
-    output=$(bash "$script" 2>&1)
-    exit_code=$?
-
-    if [[ $exit_code -eq 0 ]]; then
-      return 0
-    else
-      local failure_tool failure_url failure_version failure_reason failure_manual
-      failure_tool=$(echo "$output" | grep "^FAILURE_TOOL=" | cut -d"'" -f2 || echo "$tool_name")
-      failure_url=$(echo "$output" | grep "^FAILURE_URL=" | cut -d"'" -f2 || echo "")
-      failure_version=$(echo "$output" | grep "^FAILURE_VERSION=" | cut -d"'" -f2 || echo "")
-      failure_reason=$(echo "$output" | grep "^FAILURE_REASON=" | cut -d"'" -f2 || echo "")
-
-      if echo "$output" | grep -q "^FAILURE_MANUAL_START"; then
-        failure_manual=$(echo "$output" | sed -n '/^FAILURE_MANUAL_START$/,/^FAILURE_MANUAL_END$/p' | sed '1d;$d')
-      fi
-
-      cat >>"$FAILURES_LOG" <<EOF_LOG
-========================================
-$failure_tool - Installation Failed
-========================================
-Script: $script
-Exit Code: $exit_code
-Timestamp: $(date -Iseconds)
-${failure_url:+Download URL: $failure_url}
-${failure_version:+Version: $failure_version}
-${failure_reason:+Reason: $failure_reason}
-
-${failure_manual:+Manual Installation Steps:
-$failure_manual
-}
----
-
-EOF_LOG
-      return 1
-    fi
-  }
-  export -f run_installer
 }
 
-# Teardown runs once after all tests
+setup() {
+  export FAILURES_LOG="$BATS_TEST_TMPDIR/failures.log"
+  rm -f "$FAILURES_LOG"
+  source "$DOTFILES_DIR/install/run-installer.sh"
+}
+
 teardown_file() {
-  rm -f "$MOCK_INSTALLER" "$FAILURES_LOG"
+  rm -f "$MOCK_INSTALLER"
 }
 
 # ================================================================
@@ -144,16 +95,12 @@ teardown_file() {
   assert_output --partial "FAILURE_REASON='Download failed"
 }
 
-@test "installer outputs FAILURE_MANUAL_START marker" {
+@test "installer outputs FAILURE_DETAIL markers around the error output" {
   run bash "$MOCK_INSTALLER"
   assert_failure
-  assert_output --partial "FAILURE_MANUAL_START"
-}
-
-@test "installer outputs FAILURE_MANUAL_END marker" {
-  run bash "$MOCK_INSTALLER"
-  assert_failure
-  assert_output --partial "FAILURE_MANUAL_END"
+  assert_output --partial "FAILURE_DETAIL_START"
+  assert_output --partial "curl: (35) OpenSSL SSL_connect"
+  assert_output --partial "FAILURE_DETAIL_END"
 }
 
 # ================================================================
@@ -161,20 +108,17 @@ teardown_file() {
 # ================================================================
 
 @test "wrapper returns failure status when installer fails" {
-  rm -f "$FAILURES_LOG"
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 }
 
 @test "wrapper creates failures log file" {
-  rm -f "$FAILURES_LOG"
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
   assert [ -f "$FAILURES_LOG" ]
 }
 
 @test "failure log contains tool name header" {
-  rm -f "$FAILURES_LOG"
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 
@@ -183,7 +127,6 @@ teardown_file() {
 }
 
 @test "failure log contains download URL" {
-  rm -f "$FAILURES_LOG"
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 
@@ -192,7 +135,6 @@ teardown_file() {
 }
 
 @test "failure log contains version" {
-  rm -f "$FAILURES_LOG"
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 
@@ -201,46 +143,25 @@ teardown_file() {
 }
 
 @test "failure log contains reason" {
-  rm -f "$FAILURES_LOG"
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 
   run cat "$FAILURES_LOG"
-  assert_output --partial "Reason: Download failed"
+  assert_output --partial "Error: Download failed"
 }
 
-@test "failure log contains manual installation steps" {
-  rm -f "$FAILURES_LOG"
+@test "failure log contains the failing command's error output" {
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 
   run cat "$FAILURES_LOG"
-  assert_output --partial "Manual Installation Steps:"
+  assert_output --partial "curl: (35) OpenSSL SSL_connect"
 }
 
-@test "failure log includes script path" {
-  rm -f "$FAILURES_LOG"
+@test "failure log names the installer script" {
   run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
   assert_failure
 
   run cat "$FAILURES_LOG"
-  assert_output --partial "Script: $MOCK_INSTALLER"
-}
-
-@test "failure log includes exit code" {
-  rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
-  run cat "$FAILURES_LOG"
-  assert_output --partial "Exit Code: 1"
-}
-
-@test "failure log includes timestamp" {
-  rm -f "$FAILURES_LOG"
-  run run_installer "$MOCK_INSTALLER" "mock-lang-manager"
-  assert_failure
-
-  run cat "$FAILURES_LOG"
-  assert_output --partial "Timestamp:"
+  assert_output --partial "Installer: $(basename "$MOCK_INSTALLER")"
 }

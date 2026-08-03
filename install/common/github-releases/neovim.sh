@@ -55,15 +55,7 @@ NVIM_BIN_LINK="$HOME/.local/bin/nvim"
 
 NVIM_VERSION=$(fetch_github_latest_version "$REPO" 2>/dev/null || true)
 if [[ -z "$NVIM_VERSION" ]]; then
-  manual_steps="Failed to fetch latest version from GitHub API.
-
-Manual installation:
-1. Visit: https://github.com/${REPO}/releases/latest
-2. Download: ${NVIM_BINARY}.tar.gz
-3. Extract: tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
-4. Link: ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
-5. Verify: nvim --version"
-  output_failure_data "neovim" "https://github.com/${REPO}/releases/latest" "latest" "$manual_steps" "Failed to fetch version from GitHub API"
+  output_failure_data "neovim" "https://github.com/${REPO}/releases/latest" "latest" "Failed to fetch version from GitHub API"
   log_error "Neovim installation failed"
   exit 1
 fi
@@ -113,16 +105,7 @@ else
 fi
 
 if [[ ! -f "$NVIM_TARBALL" ]] && ! curl -fsSL "$NVIM_URL" -o "$NVIM_TARBALL"; then
-  manual_steps="1. Download in your browser (bypasses firewall):
-   $NVIM_URL
-
-2. After downloading, extract and install:
-   tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
-   ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
-
-3. Verify installation:
-   nvim --version"
-  output_failure_data "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Download failed"
+  output_failure_data "neovim" "$NVIM_URL" "$NVIM_VERSION" "Download failed"
   log_error "Neovim installation failed"
   exit 1
 fi
@@ -131,19 +114,7 @@ fi
 if ! file "$NVIM_TARBALL" | grep -q "gzip compressed"; then
   log_error "Not a valid gzip archive: $(file "$NVIM_TARBALL")"
   log_info "URL: $NVIM_URL"
-  manual_steps="Downloaded file is not a valid gzip archive.
-
-1. Download in your browser:
-   $NVIM_URL
-
-2. Verify the download is complete
-3. Extract and install:
-   tar -C ~/.local -xzf ~/Downloads/${NVIM_BINARY}.tar.gz
-   ln -sf ~/.local/${NVIM_BINARY}/bin/nvim ~/.local/bin/nvim
-
-4. Verify:
-   nvim --version"
-  output_failure_data "neovim" "$NVIM_URL" "$NVIM_VERSION" "$manual_steps" "Invalid gzip archive"
+  output_failure_data "neovim" "$NVIM_URL" "$NVIM_VERSION" "Invalid gzip archive"
   log_error "Neovim installation failed"
   exit 1
 fi

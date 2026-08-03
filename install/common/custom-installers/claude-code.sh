@@ -80,18 +80,7 @@ elif echo "$INSTALLER_OUTPUT" | grep -qi "another process is currently installin
   log_success "Skipping (non-blocking)"
   exit 0
 else
-  manual_steps="The Claude Code installer failed.
-
-Try manually:
-   1. Download installer: curl -fsSL $CLAUDE_CODE_INSTALL_URL -o /tmp/claude-install.sh
-   2. Review script: less /tmp/claude-install.sh
-   3. Run installer: bash /tmp/claude-install.sh
-
-If Claude is running, close it first and try again.
-
-Official docs: https://docs.claude.ai/docs/claude-code"
-
-  output_failure_data "claude-code" "$CLAUDE_CODE_INSTALL_URL" "latest" "$manual_steps" "Installer failed"
+  output_failure_data "claude-code" "$CLAUDE_CODE_INSTALL_URL" "latest" "Installer failed" "$INSTALLER_OUTPUT"
   log_warning "Claude Code installation failed (see summary)"
   exit 1
 fi
@@ -100,19 +89,7 @@ if command -v claude >/dev/null 2>&1; then
   INSTALLED_VERSION=$(claude --version 2>&1 | head -n1 || echo "installed")
   log_success "Verified: $INSTALLED_VERSION"
 else
-  manual_steps="Claude Code installed but not found in PATH.
-
-Check installation:
-   ls -la ~/.local/bin/claude
-   which claude
-
-Ensure ~/.local/bin is in PATH:
-   export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Try closing and reopening your terminal, then verify:
-   claude --version"
-
-  output_failure_data "claude-code" "unknown" "latest" "$manual_steps" "Installation verification failed"
+  output_failure_data "claude-code" "unknown" "latest" "Installation verification failed" "$INSTALLER_OUTPUT"
   log_warning "Claude Code installation verification failed (see summary)"
   exit 1
 fi

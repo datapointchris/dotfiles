@@ -89,17 +89,7 @@ if [[ "$SKIP_TENV_INSTALL" == "false" ]]; then
     log_info "Download URL: $DOWNLOAD_URL"
     log_info "Downloading tenv..."
     if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_TARBALL"; then
-      manual_steps="1. Download in your browser (bypasses firewall):
-   $DOWNLOAD_URL
-
-2. After downloading, extract and install:
-   tar -xzf ~/Downloads/tenv_${VERSION}_${PLATFORM}_${RAW_ARCH}.tar.gz
-   mv tenv terraform tofu terragrunt terramate atmos tf ~/.local/bin/ 2>/dev/null || true
-   chmod +x ~/.local/bin/{tenv,terraform,tofu,terragrunt,terramate,atmos,tf} 2>/dev/null || true
-
-3. Verify installation:
-   tenv --version"
-      output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+      output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed"
       log_error "tenv installation failed"
       exit 1
     fi
@@ -123,17 +113,7 @@ if [[ "$SKIP_TENV_INSTALL" == "false" ]]; then
   if command -v tenv >/dev/null 2>&1; then
     log_success "tenv and proxy binaries installed successfully"
   else
-    manual_steps="tenv installed but not found in PATH.
-
-Check installation:
-   ls -la ~/.local/bin/tenv
-
-Ensure ~/.local/bin is in PATH:
-   export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify:
-   tenv --version"
-    output_failure_data "$BINARY_NAME" "unknown" "$VERSION" "$manual_steps" "Installation verification failed"
+    output_failure_data "$BINARY_NAME" "unknown" "$VERSION" "Installation verification failed"
     log_error "tenv installation verification failed"
     exit 1
   fi
@@ -175,14 +155,7 @@ fi
 if [[ "$TERRAFORM_INSTALLED" == "false" ]]; then
   log_info "Installing Terraform ${TERRAFORM_VERSION}..."
   if ! tenv tf install "${TERRAFORM_VERSION}" >/dev/null; then
-    manual_steps="Install Terraform manually with tenv:
-   tenv tf install ${TERRAFORM_VERSION}
-   tenv tf use ${TERRAFORM_VERSION}
-
-Verify:
-   terraform --version"
-
-    output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf install failed"
+    output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "tenv tf install failed"
     log_error "Failed to install Terraform"
     exit 1
   fi
@@ -192,13 +165,7 @@ fi
 if [[ "$TERRAFORM_IS_DEFAULT" == "false" ]]; then
   log_info "Setting Terraform ${TERRAFORM_VERSION} as default..."
   if ! tenv tf use "${TERRAFORM_VERSION}" >/dev/null; then
-    manual_steps="Set Terraform version manually:
-   tenv tf use ${TERRAFORM_VERSION}
-
-Verify:
-   terraform --version"
-
-    output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "$manual_steps" "tenv tf use failed"
+    output_failure_data "terraform" "https://www.terraform.io/downloads" "$TERRAFORM_VERSION" "tenv tf use failed"
     log_error "Failed to set Terraform version"
     exit 1
   fi

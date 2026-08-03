@@ -82,17 +82,7 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 
 log_info "Downloading mount-s3 ($AWS_ARCH)..."
 if ! curl -fsSL "$TARBALL_URL" -o "$WORK_DIR/mount-s3.tar.gz"; then
-  manual_steps="1. Download in your browser (bypasses firewall):
-   $TARBALL_URL
-
-2. Extract and install:
-   tar -xzf mount-s3.tar.gz && mv bin/mount-s3 ~/.local/bin/mount-s3
-   chmod +x ~/.local/bin/mount-s3
-
-3. Verify:
-   mount-s3 --version"
-
-  output_failure_data "mount-s3" "$TARBALL_URL" "latest" "$manual_steps" "Download failed"
+  output_failure_data "mount-s3" "$TARBALL_URL" "latest" "Download failed"
   log_error "Failed to download mount-s3 from $TARBALL_URL"
   exit 1
 fi
@@ -151,15 +141,7 @@ fi
 if command -v mount-s3 >/dev/null 2>&1; then
   log_success "mount-s3 installed: $(mount-s3 --version 2>/dev/null | head -1)"
 else
-  manual_steps="Binary installed but not found in PATH.
-
-Ensure ~/.local/bin is in PATH:
-   export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify the binary exists:
-   ls -la ~/.local/bin/mount-s3"
-
-  output_failure_data "mount-s3" "$TARBALL_URL" "latest" "$manual_steps" "Binary not found in PATH after installation"
+  output_failure_data "mount-s3" "$TARBALL_URL" "latest" "Binary not found in PATH after installation"
   log_error "mount-s3 not found in PATH after installation"
   exit 1
 fi

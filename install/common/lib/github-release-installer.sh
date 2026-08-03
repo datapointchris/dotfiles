@@ -297,11 +297,10 @@ verify_download_or_fail() {
       return 0
       ;;
     2)
+      # A project that genuinely publishes no checksums sets CHECKSUM_REQUIRED=false
+      # in its own installer, with a comment saying why.
       if [[ "${CHECKSUM_REQUIRED:-true}" == "true" ]]; then
-        output_failure_data "$binary_name" "$download_url" "$version" \
-          "This release publishes no checksum file. If that is expected for this
-project, set CHECKSUM_REQUIRED=false in its installer with a comment saying
-why." "No checksum published"
+        output_failure_data "$binary_name" "$download_url" "$version" "No checksum published"
         log_error "$binary_name release publishes no checksum file"
         rm -f "$file"
         return 1
@@ -310,10 +309,7 @@ why." "No checksum published"
       return 0
       ;;
     *)
-      output_failure_data "$binary_name" "$download_url" "$version" \
-        "The downloaded file did not match the published checksum. Re-run to
-download again; if it fails repeatedly the release asset or the network path
-between you and it is not trustworthy." "Checksum verification failed"
+      output_failure_data "$binary_name" "$download_url" "$version" "Checksum verification failed"
       return 1
       ;;
   esac
@@ -502,14 +498,7 @@ install_from_tarball() {
     fi
 
     if ! download_release_asset "$asset_repo" "$asset_tag" "$url_filename" "$tarball_path" "$download_url"; then
-      local manual_steps="1. Download in your browser (bypasses firewall):
-   $download_url
-
-2. Save to: $OFFLINE_CACHE_DIR/$url_filename
-
-3. Re-run this installer"
-
-      output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+      output_failure_data "$binary_name" "$download_url" "$version" "Download failed"
       log_error "Failed to download from $download_url"
       return 1
     fi
@@ -546,15 +535,7 @@ install_from_tarball() {
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed to: $target_bin"
   else
-    local manual_steps="Binary installed but not found in PATH.
-
-Check that ~/.local/bin is in your PATH:
-   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify the binary exists:
-   ls -la ~/.local/bin/${binary_name}"
-
-    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
+    output_failure_data "$binary_name" "$download_url" "$version" "Binary not found in PATH after installation"
     log_error "$binary_name not found in PATH after installation"
     return 1
   fi
@@ -595,14 +576,7 @@ install_from_zip() {
     log_info "Download URL: $download_url"
     log_info "Downloading $binary_name..."
     if ! curl -fsSL "$download_url" -o "$zip_path"; then
-      local manual_steps="1. Download in your browser (bypasses firewall):
-   $download_url
-
-2. Save to: $OFFLINE_CACHE_DIR/$url_filename
-
-3. Re-run this installer"
-
-      output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Download failed"
+      output_failure_data "$binary_name" "$download_url" "$version" "Download failed"
       log_error "Failed to download from $download_url"
       return 1
     fi
@@ -632,15 +606,7 @@ install_from_zip() {
   if command -v "$binary_name" >/dev/null 2>&1; then
     log_success "$binary_name installed to: $target_bin"
   else
-    local manual_steps="Binary installed but not found in PATH.
-
-Check that ~/.local/bin is in your PATH:
-   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify the binary exists:
-   ls -la ~/.local/bin/${binary_name}"
-
-    output_failure_data "$binary_name" "$download_url" "$version" "$manual_steps" "Binary not found in PATH after installation"
+    output_failure_data "$binary_name" "$download_url" "$version" "Binary not found in PATH after installation"
     log_error "$binary_name not found in PATH after installation"
     return 1
   fi

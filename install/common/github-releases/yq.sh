@@ -66,17 +66,7 @@ if [[ ! -f "$TARGET_BIN" ]] || [[ ! -s "$TARGET_BIN" ]]; then
   log_info "Downloading yq..."
   mkdir -p "$HOME/.local/bin"
   if ! curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"; then
-    manual_steps="1. Download in your browser (bypasses firewall):
-   $DOWNLOAD_URL
-
-2. After downloading, install:
-   mv ~/Downloads/yq_* ~/.local/bin/yq
-   chmod +x ~/.local/bin/yq
-
-3. Verify installation:
-   yq --version"
-
-    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed"
     log_error "Failed to download from $DOWNLOAD_URL"
     exit 1
   fi
@@ -87,15 +77,7 @@ chmod +x "$TARGET_BIN"
 if command -v yq >/dev/null 2>&1; then
   log_success "yq installed to: $TARGET_BIN"
 else
-  manual_steps="Binary installed but not found in PATH.
-
-Check that ~/.local/bin is in your PATH:
-   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify the binary exists:
-   ls -la ~/.local/bin/yq"
-
-  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
+  output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Binary not found in PATH after installation"
   log_error "yq not found in PATH after installation"
   exit 1
 fi

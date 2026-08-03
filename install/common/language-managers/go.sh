@@ -65,15 +65,7 @@ esac
 log_info "Fetching latest version..."
 if ! GO_VERSION=$(curl -sf https://go.dev/VERSION?m=text | head -n1); then
   log_error "Failed to fetch Go version from go.dev"
-  manual_steps="Failed to fetch latest version.
-
-Manual installation:
-1. Visit: https://go.dev/dl/
-2. Download: go*.${GO_OS}-${GO_ARCH}.tar.gz
-3. Install: sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ~/Downloads/go*.tar.gz
-4. Add to PATH: export PATH=\$PATH:/usr/local/go/bin
-5. Verify: go version"
-  output_failure_data "go" "https://go.dev/dl/" "latest" "$manual_steps" "Failed to fetch version"
+  output_failure_data "go" "https://go.dev/dl/" "latest" "Failed to fetch version"
   log_error "Go installation failed"
   exit 1
 fi
@@ -124,14 +116,7 @@ if ! curl -fsSL "$GO_URL" -o "$GO_TARBALL"; then
     log_info "Found in home directory: $HOME_FILE"
     cp "$HOME_FILE" "$GO_TARBALL"
   else
-    manual_steps="1. Download in your browser (bypasses firewall):
-   $GO_URL
-
-2. Save to home directory (~/)
-
-3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/language-managers/go.sh"
-    output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Download failed"
+    output_failure_data "go" "$GO_URL" "$GO_VERSION" "Download failed"
     log_error "Go installation failed"
     exit 1
   fi
@@ -148,17 +133,7 @@ if /usr/local/go/bin/go version >/dev/null 2>&1; then
   INSTALLED_VERSION=$(/usr/local/go/bin/go version)
   log_success "$INSTALLED_VERSION installed: /usr/local/go/bin/go"
 else
-  manual_steps="Binary installed but not working.
-
-Verify installation:
-   /usr/local/go/bin/go version
-
-Add to PATH:
-   export PATH=\$PATH:/usr/local/go/bin
-
-Verify in PATH:
-   go version"
-  output_failure_data "go" "$GO_URL" "$GO_VERSION" "$manual_steps" "Installation verification failed"
+  output_failure_data "go" "$GO_URL" "$GO_VERSION" "Installation verification failed"
   log_error "Installation verification failed"
   exit 1
 fi

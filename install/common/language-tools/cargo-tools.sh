@@ -112,13 +112,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     elif cargo binstall -y "$package"; then
       log_success "$package installed: $HOME/.cargo/bin/$binary_name"
     else
-      manual_steps="Install manually with cargo:
-   cargo install $package
-
-Or download pre-built binary and place in:
-   $OFFLINE_CACHE_DIR/${package}-*.tar.gz"
-
-      output_failure_data "$package" "https://crates.io/crates/$package" "latest" "$manual_steps" "Failed to install via cargo-binstall"
+      output_failure_data "$package" "https://crates.io/crates/$package" "latest" "Failed to install via cargo-binstall"
       log_warning "$package installation failed (see summary)"
       FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi

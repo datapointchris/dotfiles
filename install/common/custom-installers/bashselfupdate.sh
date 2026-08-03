@@ -72,18 +72,7 @@ log_info "Installing bashselfupdate via official installer..."
 if run_bashselfupdate_install; then
   log_success "bashselfupdate installed: $INSTALL_DIR"
 else
-  manual_steps="1. Download the bashselfupdate install script in your browser:
-   $BASHSELFUPDATE_INSTALL_URL
-
-2. Save to: $CACHED_SCRIPT
-
-3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/custom-installers/bashselfupdate.sh
-
-Or clone it directly, which is all the script does:
-   git clone https://github.com/datapointchris/bashselfupdate.git $INSTALL_DIR"
-
-  output_failure_data "bashselfupdate" "$BASHSELFUPDATE_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
+  output_failure_data "bashselfupdate" "$BASHSELFUPDATE_INSTALL_URL" "latest" "Failed to download install script"
   log_error "bashselfupdate installation failed"
   exit 1
 fi

@@ -52,15 +52,7 @@ run_uv_install() {
 }
 
 if ! run_uv_install; then
-  manual_steps="1. Download uv install script in your browser:
-   $UV_INSTALL_URL
-
-2. Save to: $CACHED_SCRIPT
-
-3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/language-managers/uv.sh"
-
-  output_failure_data "uv" "$UV_INSTALL_URL" "latest" "$manual_steps" "curl install script failed"
+  output_failure_data "uv" "$UV_INSTALL_URL" "latest" "curl install script failed"
   log_error "uv installation failed"
   exit 1
 fi
@@ -72,15 +64,7 @@ export PATH="$HOME/.local/bin:$PATH"
 if command -v uv >/dev/null 2>&1; then
   log_success "uv installed: $(uv --version)"
 else
-  manual_steps="Binary installed but not in PATH.
-
-Add to PATH:
-   export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify:
-   uv --version"
-
-  output_failure_data "uv" "https://astral.sh/uv/install.sh" "latest" "$manual_steps" "Not found in PATH after installation"
+  output_failure_data "uv" "https://astral.sh/uv/install.sh" "latest" "Not found in PATH after installation"
   log_error "uv not found in PATH"
   exit 1
 fi

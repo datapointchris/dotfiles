@@ -84,18 +84,7 @@ if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
     log_info "Download URL: $DOWNLOAD_URL"
     log_info "Downloading yazi..."
     if ! curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_ZIP"; then
-      manual_steps="1. Download in your browser (bypasses firewall):
-   $DOWNLOAD_URL
-
-2. After downloading, extract and install:
-   unzip ~/Downloads/yazi.zip
-   mv yazi-${YAZI_TARGET}/yazi ~/.local/bin/
-   mv yazi-${YAZI_TARGET}/ya ~/.local/bin/
-   chmod +x ~/.local/bin/yazi ~/.local/bin/ya
-
-3. Verify installation:
-   yazi --version"
-      output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Download failed"
+      output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Download failed"
       log_error "Failed to download from $DOWNLOAD_URL"
       exit 1
     fi
@@ -114,14 +103,7 @@ if [[ "$SKIP_BINARY_INSTALL" == "false" ]]; then
   if command -v yazi >/dev/null 2>&1; then
     log_success "yazi and ya installed successfully"
   else
-    manual_steps="Binary installed but not found in PATH.
-
-Check that ~/.local/bin is in your PATH:
-   echo \$PATH | grep -q \"\$HOME/.local/bin\" || export PATH=\"\$HOME/.local/bin:\$PATH\"
-
-Verify the binary exists:
-   ls -la ~/.local/bin/yazi"
-    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "$manual_steps" "Binary not found in PATH after installation"
+    output_failure_data "$BINARY_NAME" "$DOWNLOAD_URL" "$VERSION" "Binary not found in PATH after installation"
     log_error "yazi not found in PATH after installation"
     exit 1
   fi

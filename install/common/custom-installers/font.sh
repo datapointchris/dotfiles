@@ -71,15 +71,7 @@ run_font_install() {
 if run_font_install; then
   log_success "font installed: $(command -v font 2>/dev/null || echo "$HOME/.local/bin/font")"
 else
-  manual_steps="1. Download font install script in your browser:
-   $FONT_INSTALL_URL
-
-2. Save to: $CACHED_SCRIPT
-
-3. Re-run this installer:
-   bash $DOTFILES_DIR/install/common/custom-installers/font.sh"
-
-  output_failure_data "font" "$FONT_INSTALL_URL" "latest" "$manual_steps" "Failed to download install script"
+  output_failure_data "font" "$FONT_INSTALL_URL" "latest" "Failed to download install script"
   log_error "font installation failed"
   exit 1
 fi

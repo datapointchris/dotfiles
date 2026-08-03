@@ -41,13 +41,7 @@ for package in $NPM_PACKAGES; do
     if npm install -g "$package"; then
       log_success "$package installed"
     else
-      manual_steps="Install manually with npm:
-   npm install -g $package
-
-View package on npm:
-   https://www.npmjs.com/package/$package"
-
-      output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" "$manual_steps" "Failed to install via npm"
+      output_failure_data "$package" "https://www.npmjs.com/package/$package" "latest" "Failed to install via npm"
       log_warning "$package installation failed (see summary)"
       FAILURE_COUNT=$((FAILURE_COUNT + 1))
     fi

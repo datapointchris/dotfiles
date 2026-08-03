@@ -161,8 +161,10 @@ teardown_file() {
   assert [ "$failure_count" -ge 3 ]
 }
 
-@test "installer provides manual installation steps on failure" {
-  run grep -c "manual_steps=" "$BATS_INSTALLER"
+@test "installer passes the failing command's output to the failure report" {
+  # The reason string names the step, never the cause; without the captured
+  # output a report read on another machine says only "Git clone failed".
+  run grep -c 'output_failure_data.*"\$[A-Za-z_]*OUTPUT"' "$BATS_INSTALLER"
   assert_success
 }
 

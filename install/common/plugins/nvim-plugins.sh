@@ -22,18 +22,7 @@ if nvim --headless "+Lazy! sync" +qa &>"$nvim_output"; then
   fi
   rm -f "$nvim_output"
 else
-  manual_steps="Install plugins manually from within Neovim:
-   nvim
-   :Lazy sync
-
-Or run headless again:
-   nvim --headless \"+Lazy! sync\" +qa
-
-Check Neovim config:
-   nvim --version
-   ls -la ~/.config/nvim"
-
-  output_failure_data "neovim-plugins" "unknown" "latest" "$manual_steps" "Lazy.nvim plugin sync failed"
+  output_failure_data "neovim-plugins" "unknown" "latest" "Lazy.nvim plugin sync failed"
   log_warning "Neovim plugin installation failed (see summary)"
   log_warning "Full output:"
   cat "$nvim_output"
