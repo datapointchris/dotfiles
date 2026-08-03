@@ -1353,13 +1353,14 @@ go_tools:
     binary_pattern: "gowall-{go_arch}-{os}.tar.gz"
     description: Recolor images to a theme palette (used for theme wallpaper backgrounds)
 
-  # No binary_pattern: upstream names its assets _macOS_/_Linux_ with a _64bit
-  # suffix, which {os}/{Os} cannot produce ({Os} gives Darwin). Without it the
-  # offline bundler skips this tool rather than building a URL that 404s; the
-  # normal `go install` path is unaffected.
+  # {Os_mac} exists for this asset naming: upstream capitalizes the kernel name
+  # but ships macOS rather than Darwin. Without a binary_pattern the offline
+  # bundler skips the tool, and the work box then falls through to `go install`
+  # — which its firewall intercepts.
   - name: ascii-image-converter
     package: github.com/TheZoraiz/ascii-image-converter
     github_repo: TheZoraiz/ascii-image-converter
+    binary_pattern: "ascii-image-converter_{Os_mac}_{go_arch}_64bit.tar.gz"
     description: Convert images to ASCII art (used by theme tool)
 
 # ================================================================

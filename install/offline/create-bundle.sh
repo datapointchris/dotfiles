@@ -198,7 +198,7 @@ download_go_binaries() {
   log_info "Downloading Go tool binaries..."
 
   # Platform mappings
-  local os arch go_arch Os Arch os_mac
+  local os arch go_arch Os Arch os_mac Os_mac
   os="$OS"
   arch="$ARCH"
   [[ "$arch" == "x86_64" ]] && go_arch="amd64" || go_arch="arm64"
@@ -207,6 +207,8 @@ download_go_binaries() {
   Arch="$arch"
   # Projects that ship the product name rather than the kernel name (jira-cli)
   [[ "$os" == "linux" ]] && os_mac="linux" || os_mac="macOS"
+  # Capitalized kernel name but the product name for Apple (ascii-image-converter)
+  [[ "$os" == "linux" ]] && Os_mac="Linux" || Os_mac="macOS"
 
   local binary_name repo pattern version version_num asset_url filename
   while IFS='|' read -r binary_name repo pattern; do
@@ -228,6 +230,7 @@ download_go_binaries() {
     expanded="${expanded//\{Os\}/$Os}"
     expanded="${expanded//\{Arch\}/$Arch}"
     expanded="${expanded//\{os_mac\}/$os_mac}"
+    expanded="${expanded//\{Os_mac\}/$Os_mac}"
 
     asset_url="https://github.com/${repo}/releases/download/${version}/${expanded}"
 

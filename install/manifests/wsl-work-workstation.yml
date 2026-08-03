@@ -87,6 +87,7 @@ uv_tools:
 
 git_uv_tools:
   - refcheck
+  - syncer
   - indy
   - dectl
 
