@@ -740,6 +740,23 @@ function yt-transcript() {
   rm -rf "$tmp"
 }
 
+# Shared by doshell and the doshell-ask ZLE widget bound in .zshrc. Passes the OS
+# so Claude returns GNU-vs-BSD-correct commands (both are in play), and names the
+# installed tools because otherwise it reaches for find/grep and the suggestion
+# comes back as something the prefer-fast-tools hook refuses to run.
+doshell_suggest_command() {
+  # Strip any stray ``` fence lines defensively so the result lands clean on the
+  # prompt line even when the model ignores the no-fences instruction.
+  claude -p "You are a shell expert on $(uname -s) with GNU coreutils, fd, rg, eza, jq and yq installed. Prefer fd over find, rg over grep and eza over ls. Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d'
+}
+
+# Backs the doshell-explain widget. Kept terse on purpose: the answer is painted
+# below the prompt by `zle -M`, so anything longer than a few lines shoves the
+# prompt off the screen.
+doshell_explain_command() {
+  claude -p "Explain concisely what this shell command does, on $(uname -s): $*. Answer in at most four short lines of plain text — no markdown, no fences, no preamble. Name what each flag or stage contributes. If the command is destructive or would lose data, say so first."
+}
+
 #@doshell
 #--> doshell <task> — ask Claude for a shell command and preload it at your next prompt to edit or run
 function doshell() {
@@ -748,11 +765,8 @@ function doshell() {
     echo "Loads a suggested command at your next prompt — review it, then Enter to run (or edit first)."
     return 1
   fi
-  # Pass the OS so Claude returns GNU-vs-BSD-correct commands (you run both macOS
-  # and Arch). Ask for only the command so it lands clean on the prompt line;
-  # strip any stray ``` fence lines defensively.
   local cmd
-  cmd=$(claude -p "You are a shell expert on $(uname -s) with GNU coreutils, fd, rg, eza, jq and yq installed. Prefer fd over find, rg over grep and eza over ls. Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d')
+  cmd=$(doshell_suggest_command "$@")
   if [[ -z "$cmd" ]]; then
     echo "doshell: no command returned" >&2
     return 1

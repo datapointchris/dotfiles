@@ -99,6 +99,12 @@ zvm_after_init() {
   # so re-applying fzf alone handed Ctrl-R back to it and the atuin binding set
   # during startup never survived into the shell the user actually typed in.
   cache_eval atuin atuin init zsh --disable-up-arrow
+  # Claude widgets, defined in the SHELL CONFIG section. Ctrl-X chords rather
+  # than Meta: ^[ is vi-cmd-mode, so every Alt binding costs a KEYTIMEOUT wait
+  # before Escape takes effect. ^X^A and ^X^E are the free ones — the rest of
+  # the ^X space belongs to zsh's completion-debug bindings.
+  bindkey "^X^A" doshell-ask-widget
+  bindkey "^X^E" doshell-explain-widget
 }
 
 # Create history directory if needed
@@ -349,6 +355,41 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 [[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh" || log_error "Load" "$SHELL_DIR/aliases.sh"
 [[ -f "$SHELL_DIR/$PLATFORM.sh" ]] && source "$SHELL_DIR/$PLATFORM.sh" && log "Load" "$SHELL_DIR/$PLATFORM.sh" || log_error "Load" "$SHELL_DIR/$PLATFORM.sh"
 
+# Claude on the prompt line. doshell(1) makes you decide to ask before you start
+# typing; these catch you mid-line instead, which is when you actually get stuck.
+# Both are deliberately explicit keypresses rather than anything ambient — a
+# round trip is seconds, not milliseconds, so nothing may fire per keystroke.
+# Defined here (functions.sh is loaded above) but bound in zvm_after_init,
+# because vi-mode wipes the keymap after this file finishes.
+
+# Replace the English on the line with the command that does it.
+doshell-ask-widget() {
+  [[ -z "$BUFFER" ]] && return
+  local request="$BUFFER" suggestion
+  # zle paints nothing while a widget blocks, so without this the prompt just
+  # freezes for several seconds and reads as a hang.
+  zle -R "⋯ asking claude"
+  suggestion=$(doshell_suggest_command "$request")
+  if [[ -n "$suggestion" ]]; then
+    BUFFER="$suggestion"
+    CURSOR=${#BUFFER}
+  else
+    zle -M "doshell: no command returned"
+  fi
+  zle -R
+}
+zle -N doshell-ask-widget
+
+# The other direction: keep the line, print what it would do underneath.
+doshell-explain-widget() {
+  [[ -z "$BUFFER" ]] && return
+  local explanation
+  zle -R "⋯ asking claude"
+  explanation=$(doshell_explain_command "$BUFFER")
+  zle -M "${explanation:-doshell: no explanation returned}"
+}
+zle -N doshell-explain-widget
+
 # ------------------------------------------------------------------ #
 # PATH SETUP
 # ------------------------------------------------------------------ #
@@ -436,6 +477,10 @@ fi
 # (--disable-up-arrow) rather than atuin's launch-a-TUI-every-press. To revert
 # Ctrl-R to fzf, add --disable-ctrl-r; to also hand up-arrow to atuin, drop the
 # flag.
+# What atuin emits here depends on ~/.config/atuin/config.toml — [ai].enabled
+# decides whether it also claims `?`. cache_eval only ages the cache against the
+# binary's mtime, so editing that config changes nothing until the cache entry is
+# removed: rm ~/.cache/zsh/completions/atuin.zsh
 cache_eval atuin atuin init zsh --disable-up-arrow
 
 cache_eval uv uv generate-shell-completion zsh
@@ -478,6 +523,7 @@ git_open_file="$ZSH_PLUGINS_DIR/git-open/git-open"
 zsh_vi_mode_file="$ZSH_PLUGINS_DIR/zsh-vi-mode/zsh-vi-mode.plugin.zsh"
 forgit_file="$ZSH_PLUGINS_DIR/forgit/forgit.plugin.zsh"
 forgit_completions="$ZSH_PLUGINS_DIR/forgit/completions"
+autosuggestions_file="$ZSH_PLUGINS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 syntax_highlighting_file="$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # git-open
@@ -528,6 +574,21 @@ if [[ -f "$forgit_file" ]]; then
   log "Load" "$forgit_completions"
 else
   log_error "Load" "$forgit_file"
+fi
+
+# zsh-autosuggestions — inline ghost text ahead of the cursor. Distinct from
+# atuin, which owns Ctrl-R: atuin is a deliberate search, this is the passive
+# offer. `completion` backs `history` up so a command you have never run still
+# suggests, at the cost of a completion call per keystroke.
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+# Above this many characters the per-keystroke history scan is felt rather than
+# free; 20 is upstream's recommendation and keeps large pastes instant.
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+if [[ -f "$autosuggestions_file" ]]; then
+  source "$autosuggestions_file"
+  log "Load" "$autosuggestions_file"
+else
+  log_error "Load" "$autosuggestions_file"
 fi
 
 # zsh-syntax-highlighting (MUST load last)

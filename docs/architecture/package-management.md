@@ -139,12 +139,14 @@ filtering, so there is still one list, not two. See
 
 **Method**: Git clone from upstream repositories
 
-**Plugins** (defined in `install/packages.yml`):
+**Plugins**: the `shell_plugins` section of `install/packages.yml` is the list, each entry carrying
+its own description. Read it with `parse_packages --type=shell-plugins --format=names` rather than
+copying the names here, where they only go stale.
 
-- `git-open` - Open repo in browser from terminal
-- `zsh-vi-mode` - Better vi-mode for ZSH
-- `forgit` - Interactive git commands with fzf
-- `zsh-syntax-highlighting` - Fish-like syntax highlighting for ZSH
+Load order is not arbitrary and lives in `.zshrc`, not in the manifest: `zsh-syntax-highlighting`
+must be sourced last so it can wrap every widget the other plugins define, and `zsh-vi-mode`
+overwrites the whole keymap when it initializes, which is why every other keybinding is re-applied
+from `zvm_after_init`.
 
 **Advantages**:
 

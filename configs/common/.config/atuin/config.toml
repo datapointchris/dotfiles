@@ -15,3 +15,11 @@ auto_sync = false
 # We pin atuin's version through the dotfiles cargo_packages manifest, so its own
 # startup update check is just noise + a network round-trip.
 update_check = false
+
+# Atuin's own natural-language mode binds `?`, so typing it as the first character
+# of a line opened an "Atuin AI is not yet configured" menu instead of inserting a
+# question mark. Configuring it means either an Atuin Hub account or self-hosting
+# atuin-ai-server; the Ctrl-X Ctrl-A / Ctrl-X Ctrl-E widgets in .zshrc cover the
+# same ground through the Claude subscription already in use.
+[ai]
+enabled = false
