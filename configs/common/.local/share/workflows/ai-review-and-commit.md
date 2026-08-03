@@ -57,5 +57,7 @@ gst → git diff → ga → git commit → gp
 #   bad commit is a local fix, not a force-push cleanup.
 ```
 
-Related: `forgit-git` (the `ga`/`gd`/`glo` picker family), `git-conventional-commits`
+Related: `review-diff` (the comprehension pass over what already landed — this card
+verifies before committing, that one is how you still understand the repo a month
+later), `forgit-git` (the `ga`/`gd`/`glo` picker family), `git-conventional-commits`
 (the message format), `git-diff-viewing` (delta ranges/word-diff).

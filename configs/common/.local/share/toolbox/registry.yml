@@ -342,6 +342,22 @@ tools:
     tags: [vcs, git, interactive, fzf]
     docs_url: "https://github.com/wfxr/forgit"
 
+  review-diff:
+    category: version-control
+    description: "Two-pane review of recent commits: Diffview left, Claude right"
+    installed_via: dotfiles
+    usage: "review-diff [range | working | here]"
+    why_use: "Closes the comprehension loop on agent-written code — understand what landed rather than hunt for bugs in it"
+    examples:
+      - cmd: "review-diff"
+        desc: "Everything committed since your last `menu review done review-diff`"
+      - cmd: "review-diff working"
+        desc: "Review uncommitted changes before they land"
+      - cmd: "review-diff here"
+        desc: "file:line under the cursor in the review nvim, for the Claude pane"
+    see_also: [git-delta, lazygit, menu, git-forgit-diff]
+    tags: [git, diff, review, claude, ai, learning, tmux, nvim]
+
   git-forgit-show:
     category: version-control
     description: "Interactive git show commit viewer with fzf (alias: gso)"

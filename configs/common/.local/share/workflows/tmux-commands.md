@@ -86,6 +86,7 @@ with four single-modifier keys available there is no need for one.
 | prefix + m | universal menu |
 | prefix + t | this reference |
 | prefix + a | Claude popup   |
+| prefix + r | review diff    |
 | prefix + F | tmux-fzf menu  |
 
 ## General

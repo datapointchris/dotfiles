@@ -34,6 +34,11 @@ items:
     command: menu labs
     show: menu labs --due
 
+  review-diff:
+    description: Read the code Claude wrote — walk recent commits and name what changed
+    cadence: 1w
+    command: review-diff
+
   audit-flow:
     description: Analyze how you work in the terminal; codify the better ways
     cadence: 1mo

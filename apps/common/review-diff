@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# Two-pane diff review: the change in Diffview on the left, Claude on the right.
+#
+# The range defaults to everything committed since the last `menu review done
+# review-diff`, so the cadence register doubles as the review watermark and
+# there is no second store to keep in step with it. The watermark is fleet-wide,
+# not per-machine — ~/.local/state/menu is the `menu-state` Syncthing folder
+# (see ~/homelab/containers/syncthing-lxc/folders-manifest.yml).
+#
+# menu records a date while commits carry a timestamp, and DiffviewOpen wants a
+# rev range rather than either. Resolving the date to the newest commit that
+# preceded it means anything committed later on that same day is shown again on
+# the next run. Repeating a few commits is the right direction to be wrong in;
+# the alternative rounds the other way and drops them unread.
+#
+# nvim listens on a socket so `review-diff here` can ask it what the cursor is
+# sitting on. That is what lets the Claude pane answer "explain what I'm looking
+# at" without anything being pasted between the two panes.
+
+set -euo pipefail
+
+REGISTER_ID=review-diff
+FALLBACK_WINDOW='7 days'
+
+usage() {
+  cat << 'EOF'
+Usage: review-diff [range]
+       review-diff <command>
+
+Opens a review window: the diff in Diffview on the left, Claude on the right.
+With no range, reviews everything committed since your last
+`menu review done review-diff`.
+
+Commands:
+  working           Review uncommitted changes instead of a commit range
+  range             Print the range that would be reviewed, then exit
+  here              Print file:line under the cursor in the review nvim
+EOF
+}
+
+die() {
+  echo "review-diff: $1" >&2
+  exit 1
+}
+
+require_repo() {
+  git rev-parse --show-toplevel > /dev/null 2>&1 || die "not inside a git repository"
+  git rev-parse HEAD > /dev/null 2>&1 || die "this repository has no commits yet"
+}
+
+require_tmux() {
+  [[ -n ${TMUX:-} ]] || die "not inside tmux — this opens a two-pane window"
+}
+
+# Keyed on the repo, since a review is scoped to one, and two repos under review
+# at once must not collide on the socket.
+socket_path() {
+  local root
+  root="$(git rev-parse --show-toplevel)"
+  local tmpdir="${TMPDIR:-/tmp}"
+  echo "${tmpdir%/}/review-diff-$(basename "$root").sock"
+}
+
+# Empty when menu is absent or the item has never been marked done, which the
+# caller treats as "fall back to the fixed window" rather than as an error —
+# menu is a convenience here, not the source of the commits themselves.
+last_review_date() {
+  command -v menu > /dev/null 2>&1 || return 0
+  command -v jq > /dev/null 2>&1 || return 0
+
+  menu review list --json 2> /dev/null \
+    | jq -r --arg id "$REGISTER_ID" '.[] | select(.id == $id) | .last // empty' \
+    || true
+}
+
+resolve_range() {
+  local since
+  since="$(last_review_date)"
+
+  local base=""
+  local origin=""
+
+  if [[ -n $since ]]; then
+    base="$(git rev-list -1 --before="$since" HEAD 2> /dev/null || true)"
+    origin="everything since your last review on $since"
+  fi
+
+  if [[ -z $base ]]; then
+    base="$(git rev-list -1 --before="$FALLBACK_WINDOW ago" HEAD 2> /dev/null || true)"
+    origin="the last $FALLBACK_WINDOW — no review recorded yet"
+  fi
+
+  # Nothing precedes the window, so there is no base commit to exclude. The root
+  # commit itself falls outside a two-dot range; a repo this young is better
+  # read from its README than from a diff.
+  if [[ -z $base ]]; then
+    base="$(git rev-list --max-parents=0 HEAD | tail -1)"
+    origin="the whole history bar the root commit — this repo is younger than the window"
+  fi
+
+  echo "review-diff: reviewing $origin" >&2
+  echo "$base..HEAD"
+}
+
+# The window is the unit: a review is a task in flight, which is what a window
+# means in this tmux setup, and both panes closing takes the window with them.
+open_review() {
+  local range="$1"
+  local prompt="$2"
+
+  local root
+  root="$(git rev-parse --show-toplevel)"
+  local sock
+  sock="$(socket_path)"
+
+  # A socket left behind by a killed nvim makes `here` fail with a connection
+  # error rather than the readable "no review running" message.
+  rm -f "$sock"
+
+  # Track the pane by id, not by "window.0" — pane-base-index is 1 here, so an
+  # index literal picks the wrong pane or none at all.
+  local pane
+  pane="$(tmux new-window -P -F '#{pane_id}' -n review -c "$root" \
+    "nvim --listen '$sock' -c 'DiffviewOpen $range'")"
+
+  tmux split-window -h -l 45% -t "$pane" -c "$root" "claude '/review-diff $prompt'"
+  tmux select-pane -t "$pane"
+}
+
+print_here() {
+  local sock
+  sock="$(socket_path)"
+
+  [[ -S $sock ]] || die "no review nvim listening at $sock — start one with 'review-diff'"
+
+  # Diffview's older-revision buffers answer with a diffview:// URI rather than a
+  # real path. Normalising it here would need the git-dir layout; the caller has
+  # the repo root and resolves the tail itself.
+  nvim --server "$sock" --remote-expr 'expand("%:p") . ":" . line(".")'
+}
+
+main() {
+  case "${1:-}" in
+    --help | -h)
+      usage
+      ;;
+    here)
+      require_repo
+      print_here
+      ;;
+    range)
+      require_repo
+      resolve_range
+      ;;
+    working)
+      require_repo
+      require_tmux
+      open_review "" working
+      ;;
+    "")
+      require_repo
+      require_tmux
+      local range
+      range="$(resolve_range)"
+      open_review "$range" "$range"
+      ;;
+    *)
+      require_repo
+      require_tmux
+      git rev-parse --verify --quiet "$1" > /dev/null \
+        || git rev-parse --verify --quiet "${1%%..*}" > /dev/null \
+        || die "'$1' is not a revision or range in this repository"
+      open_review "$1" "$1"
+      ;;
+  esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
