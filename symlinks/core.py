@@ -395,6 +395,14 @@ def relink(
         if has_platform_config:
             create_symlinks(platform_dir, platform, verbose=verbose, target_dir=_target_dir)
 
+    def link_shell_files() -> None:
+        link_if_exists(shell_dir / 'common', 'shell-common', target_shell)
+        link_if_exists(shell_dir / platform, f'shell-{platform}', target_shell)
+
+    def link_apps() -> None:
+        link_if_exists(_dotfiles_dir / 'apps' / 'common', 'apps-common', target_bin)
+        link_if_exists(_dotfiles_dir / 'apps' / platform, f'apps-{platform}', target_bin)
+
     print(f'[bold cyan]Complete relink for {platform}[/]')
     print()
 
@@ -405,20 +413,8 @@ def relink(
         ('Checking for broken symlinks', lambda: check_and_clean(_target_dir, _dotfiles_dir)),
         ('Creating common base layer', lambda: create_symlinks(common_dir, 'common', verbose=verbose, target_dir=_target_dir)),
         ('Creating platform overlay', create_platform_config),
-        (
-            'Linking shell files',
-            lambda: (
-                link_if_exists(shell_dir / 'common', 'shell-common', target_shell),
-                link_if_exists(shell_dir / platform, f'shell-{platform}', target_shell),
-            ),
-        ),
-        (
-            'Linking apps',
-            lambda: (
-                link_if_exists(_dotfiles_dir / 'apps' / 'common', 'apps-common', target_bin),
-                link_if_exists(_dotfiles_dir / 'apps' / platform, f'apps-{platform}', target_bin),
-            ),
-        ),
+        ('Linking shell files', link_shell_files),
+        ('Linking apps', link_apps),
     ]
 
     for i, (desc, fn) in enumerate(steps, 1):

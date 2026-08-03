@@ -24,6 +24,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 _loader = importlib.machinery.SourceFileLoader('menu_labs', str(SCRIPT))
 _spec = importlib.util.spec_from_loader('menu_labs', _loader)
+assert _spec is not None  # spec_from_loader only returns None for a loader without exec_module
 menu_labs = importlib.util.module_from_spec(_spec)
 _loader.exec_module(menu_labs)
 

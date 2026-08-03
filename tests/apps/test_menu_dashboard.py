@@ -24,6 +24,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 _loader = importlib.machinery.SourceFileLoader('menu_dashboard', str(SCRIPT))
 _spec = importlib.util.spec_from_loader('menu_dashboard', _loader)
+assert _spec is not None  # spec_from_loader only returns None for a loader without exec_module
 menu_dashboard = importlib.util.module_from_spec(_spec)
 _loader.exec_module(menu_dashboard)
 
@@ -34,7 +35,7 @@ def fixture(name: str):
     return json.loads((FIXTURE_DIR / name).read_text())
 
 
-def ok(name: str) -> menu_dashboard.JsonResult:
+def ok(name: str):
     return menu_dashboard.JsonResult(payload=fixture(name), exit_code=0)
 
 
