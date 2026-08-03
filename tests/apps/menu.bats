@@ -15,6 +15,18 @@ setup_file() {
   DOTFILES_DIR="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
   export DOTFILES_DIR
   export MENU="$DOTFILES_DIR/apps/common/menu"
+
+  # menu reads ~/.local/shell for two unrelated things — the formatting library
+  # it sources, and the functions.sh/aliases.sh it indexes — and those come from
+  # two different repo directories that only become one after symlinking. So no
+  # in-repo path can serve as SHELL_DIR; build the merged view the deploy would
+  # produce. Without it the test passes only on a machine that has already run
+  # `dotfiles link`, which is why CI saw menu abort where a workstation did not.
+  SHELL_FIXTURE="$BATS_FILE_TMPDIR/shell"
+  mkdir -p "$SHELL_FIXTURE"
+  ln -sf "$DOTFILES_DIR/configs/common/.local/shell"/*.sh "$SHELL_FIXTURE/"
+  ln -sf "$DOTFILES_DIR/shell/common"/*.sh "$SHELL_FIXTURE/"
+  export SHELL_DIR="$SHELL_FIXTURE"
   # Redirecting XDG_DATA_HOME moves the toolbox registry too, which the tools
   # lens needs; point it back at the repo source so only the card is a fixture.
   export TOOLBOX_REGISTRY="$DOTFILES_DIR/configs/common/.local/share/toolbox/registry.yml"

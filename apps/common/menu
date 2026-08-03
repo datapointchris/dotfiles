@@ -179,24 +179,28 @@ index_skills() {
 # discovery convention toolbox parses). Emit those pairs; unannotated functions
 # are internal helpers and stay hidden — the annotation IS the opt-in.
 index_functions() {
-  awk '
+  # Every lens swallows its own source being absent. Under pipefail a missing
+  # file makes awk exit 2 and git exit 1, and either one aborted the entire
+  # index — so a machine with no git aliases, or a checkout that has not been
+  # symlinked into ~/.local/shell, got no menu at all rather than a shorter one.
+  { awk '
     FNR==1 { name="" }
     /^#@/ { name=substr($0,3); next }
     /^#-->/ && name != "" { desc=substr($0,6); sub(/^[[:space:]]+/,"",desc); print name "\t" desc "\t"; name=""; next }
     /^[^#]/ { name="" }
-  ' "${FUNCTION_FILES[@]}" 2>/dev/null | build_rows func
+  ' "${FUNCTION_FILES[@]}" 2>/dev/null || true; } | build_rows func
 }
 
 # Aliases: the `alias name=...` definition, with the immediately-preceding comment
 # as the description when there is one.
 index_aliases() {
-  awk '
+  { awk '
     FNR==1 { desc="" }
     /^#/ { desc=$0; sub(/^#[[:space:]]*/,"",desc); next }
     /^alias / { name=$0; sub(/^alias /,"",name); sub(/=.*/,"",name); print name "\t" desc "\t"; next }
     /^[[:space:]]*$/ { next }
     { desc="" }
-  ' "${ALIAS_FILES[@]}" 2>/dev/null | build_rows alias
+  ' "${ALIAS_FILES[@]}" 2>/dev/null || true; } | build_rows alias
 }
 
 # Git aliases (git co, git st, ...) — a whole shortcut vocabulary that lives in
@@ -204,7 +208,7 @@ index_aliases() {
 # the description. Invoke them as `git <name>`.
 index_git_aliases() {
   command -v git >/dev/null 2>&1 || return 0
-  git config --get-regexp '^alias\.' 2>/dev/null | while read -r key val; do
+  { git config --get-regexp '^alias\.' 2>/dev/null || true; } | while read -r key val; do
     printf '%s\t%s\t%s\n' "${key#alias.}" "$val" ""
   done | build_rows git
 }
