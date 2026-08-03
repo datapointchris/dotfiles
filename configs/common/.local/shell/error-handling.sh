@@ -28,12 +28,12 @@
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 export TERM=${TERM:-xterm}
 
+# Self-relative rather than a guessed install path — see formatting.sh.
 if [[ -f "$SHELL_DIR/logging.sh" ]]; then
   source "$SHELL_DIR/logging.sh"
 else
-  # Fallback to repo location
   # shellcheck source=logging.sh
-  source "$HOME/dotfiles/configs/common/.local/shell/logging.sh"
+  source "$(dirname "${BASH_SOURCE[0]}")/logging.sh"
 fi
 
 # ================================================================

@@ -16,16 +16,16 @@
 #   print_error "Something failed"
 # ================================================================
 
-# Source colors from bash library directory
+# These libraries always ship in one directory together, but which directory
+# depends on how the tree is reached: ~/.local/shell on a workstation, the repo
+# itself on a CI runner. Resolving the sibling from this file covers both. The
+# fallback this replaced hardcoded $HOME/dotfiles and failed anywhere the repo
+# is not checked out there, printing a source error onto every caller's stdout.
 if [[ -n "${SHELL_DIR:-}" ]] && [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
-elif [[ -f "$HOME/.local/shell/colors.sh" ]]; then
-  # shellcheck source=colors.sh
-  source "$HOME/.local/shell/colors.sh"
 else
-  # Fallback to repo location
   # shellcheck source=colors.sh
-  source "$HOME/dotfiles/configs/common/.local/shell/colors.sh"
+  source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
 fi
 
 # ================================================================

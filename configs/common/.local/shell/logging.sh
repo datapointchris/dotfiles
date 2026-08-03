@@ -33,13 +33,12 @@
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 
-# Source colors
+# Self-relative rather than a guessed install path — see formatting.sh.
 if [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
 else
-  # Fallback to repo location
   # shellcheck source=colors.sh
-  source "$HOME/dotfiles/configs/common/.local/shell/colors.sh"
+  source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
 fi
 
 # Define Unicode icons (from formatting.sh but redeclared for independence)
