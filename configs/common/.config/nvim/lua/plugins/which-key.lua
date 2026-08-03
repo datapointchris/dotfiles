@@ -44,6 +44,7 @@ return {
       -- Git
       { '<leader>g', group = 'Git' },
       { '<leader>gt', group = 'Git Toggles' },
+      { '<leader>gB', group = 'DiffBandit' },
 
       -- Buffers / windows / sessions
       { '<leader>b', group = 'Buffers' },
