@@ -752,7 +752,7 @@ function doshell() {
   # and Arch). Ask for only the command so it lands clean on the prompt line;
   # strip any stray ``` fence lines defensively.
   local cmd
-  cmd=$(claude -p "You are a shell expert on $(uname -s). Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d')
+  cmd=$(claude -p "You are a shell expert on $(uname -s) with GNU coreutils, fd, rg, eza, jq and yq installed. Prefer fd over find, rg over grep and eza over ls. Give a single shell command or short pipeline that accomplishes: $*. Output ONLY the command — no markdown fences, no explanation, no leading prompt." | sed '/^```/d')
   if [[ -z "$cmd" ]]; then
     echo "doshell: no command returned" >&2
     return 1
