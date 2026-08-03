@@ -59,7 +59,27 @@ lazygit     # or <leader>gg in neovim; delta is its pager too
 | `<leader>gx` | Diffview: close |
 | `<leader>gp` | gitsigns: preview hunk under cursor |
 | `<leader>gb` | gitsigns: blame current line |
-| `]c` / `[c` | jump to next / previous changed hunk |
+| `]h` / `[h` | gitsigns: next / previous hunk, in any buffer |
+| `]c` / `[c` | next / previous change, inside a diff view only |
+
+## diffbandit — on trial next to diffview
+
+Both diff plugins are installed while deciding between them. Diffview pads both
+buffers with filler lines so matching lines sit level (native vim diff mode);
+diffbandit leaves both files in their real formatting and draws the matches in a
+connector gutter, so use `]s` to snap the other pane to the cursor.
+
+| Key | Action |
+| --- | --- |
+| `<leader>gBd` | changed files in the repo |
+| `<leader>gBf` | current file's diff |
+| `<leader>gBl` | commit log |
+| `<leader>gBc` | commit panel — stage with `<Space>`, commit without leaving |
+| `<leader>gBm` | git workflow menu |
+
+Ad-hoc diffs diffview has no equivalent for: `:DiffBandit left right`,
+`:DiffBanditBuffers 3 7`, `:DiffBanditFolderDiff a b`,
+`:DiffBanditGitCompare main feature`. Reference: `:h diffbandit`.
 
 ## Which to reach for
 
@@ -68,4 +88,6 @@ quick look at what changed   -> git diff (delta)  or  gd
 hunt through history/commits  -> glo / gso  or  <leader>gh
 stage while reviewing         -> lazygit  (<leader>gg)
 structured side-by-side review-> <leader>gd  (diffview)
+same review, no filler lines  -> <leader>gBd (diffbandit)
+diff two arbitrary paths      -> :DiffBandit a b
 ```
