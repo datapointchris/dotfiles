@@ -893,7 +893,7 @@ def do_backup(config, config_path, warnings, args):
             present.append(path)
         rsync_paths(present, dest_base, excludes, args.dry_run, max_size_mb)
         label = yellow('would copy') if args.dry_run else green('copied')
-        print(f'  {label} {bold(str(len(present)))} paths')
+        print(f'  {label} {bold(plural(len(present), "path"))}')
 
     repos, ignored_patterns = repo_entries(config)
     if repos:
@@ -912,7 +912,7 @@ def do_backup(config, config_path, warnings, args):
             copyable = [f for f in filtered if snapshot_rel(f) not in {s['path'].lstrip('/') for s in survey['skipped_large']}]
             rsync_untracked(copyable, dest_base, args.dry_run)
             label = yellow('would copy') if args.dry_run else green('copied')
-            print(f'  {label} {bold(str(survey["files"]))} untracked files from {cyan(str(repo_path))}')
+            print(f'  {label} {bold(plural(survey["files"], "untracked file"))} from {cyan(str(repo_path))}')
 
     if ignored_patterns and repos:
         print(f'\n{bold("git_ignored:")}')
@@ -931,7 +931,7 @@ def do_backup(config, config_path, warnings, args):
             copyable = [f for f in filtered if snapshot_rel(f) not in {s['path'].lstrip('/') for s in survey['skipped_large']}]
             rsync_untracked(copyable, dest_base, args.dry_run)
             label = yellow('would copy') if args.dry_run else green('copied')
-            print(f'  {label} {bold(str(survey["files"]))} ignored files from {cyan(str(repo_path))}')
+            print(f'  {label} {bold(plural(survey["files"], "ignored file"))} from {cyan(str(repo_path))}')
 
     total_files = sum(g['files'] for g in manifest['groups'])
     total_bytes = sum(g['bytes'] for g in manifest['groups'])
