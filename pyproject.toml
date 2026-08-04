@@ -157,6 +157,9 @@ managed = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
+    # Tests only. tomllib reads TOML but cannot write it, and the alternative was a
+    # hand-rolled serializer in the test file; safekeep itself stays stdlib-only.
+    "tomli-w>=1.0.0",
 ]
 
 [tool.uv.build-backend]

@@ -10,7 +10,7 @@ machine.
 Primary use case: backing up scattered config files, local scripts, and git-untracked
 WIP to a network drive that cannot represent Unix modes.
 
-Config: ~/.config/safekeep/<name>.json
+Config: ~/.config/safekeep/<name>.toml (the manifest stays JSON -- machines write it)
 Usage:  safekeep backup [--dry-run]
         safekeep snapshots
         safekeep restore --to PATH [--from DATE] [--all|--group G|--tag T]
@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 from datetime import datetime
 from fnmatch import fnmatch
 from pathlib import Path
@@ -57,8 +58,7 @@ def bold(text):
 
 
 # Keys are phrases that state what safekeep will do, so the file reads as a description of the
-# backup rather than a dump of this program's variables. JSON has no comments, which makes the
-# names the only place an explanation can live -- see ~/dev/standards/configuration.md.
+# backup rather than a dump of this program's variables -- see ~/dev/standards/configuration.md.
 REQUIRED_KEYS = {'back_up_to'}
 VALID_KEYS = {'back_up_to', 'back_up_paths', 'git', 'skip_names_matching', 'skip_files_over_mb'}
 # 'repos' names the subject of this block; every other key states what happens to it.
@@ -76,13 +76,13 @@ RETIRED_KEYS = {
 # until a restore needs the files that are not there.
 RENAMED_KEYS = {
     'dest': 'now "back_up_to"',
-    'paths': 'now "back_up_paths"',
+    'paths': 'now one [[back_up_paths]] block per path',
     'exclude': 'now "skip_names_matching"',
     'max_file_size_mb': 'now "skip_files_over_mb"',
-    'repos': 'now "git": {"repos": [...], "back_up_ignored_files_matching": [...]}',
-    'git_repos': 'now "git", and its "at" is now "repos"',
-    'git_untracked': 'now "git": {"repos": [...]}',
-    'git_ignored': 'now "git": {"back_up_ignored_files_matching": [...]}',
+    'repos': 'now a [git] table with one [[git.repos]] block per repo',
+    'git_repos': 'now [git], and its "at" is now one [[git.repos]] block per repo',
+    'git_untracked': 'now one [[git.repos]] block per repo, under [git]',
+    'git_ignored': 'now "back_up_ignored_files_matching" under [git]',
 }
 
 DEFAULT_SKIP_NAMES = [
@@ -111,46 +111,110 @@ MANIFEST_VERSION = 1
 DEFAULT_FILE_MODE = 0o644
 DEFAULT_DIR_MODE = 0o755
 
-EXAMPLE_CONFIG = {
-    'back_up_to': '~/backups/safekeep',
-    'back_up_paths': [
-        '~/.ssh/config',
-        {'path': '~/Documents/notes', 'tags': ['notes']},
-    ],
-    'git': {
-        'repos': [
-            '~/code/my-project',
-        ],
-        'back_up_untracked_files': True,
-        'back_up_ignored_files_matching': [
-            'CLAUDE.md',
-        ],
-    },
-}
+# Written verbatim by `init`. tomllib reads but does not write, and that is the better
+# half of the trade: a serialized dict cannot carry comments, and the comments are the
+# point -- this file is meant to be read as a description of the backup.
+CONFIG_TEMPLATE = """\
+# safekeep configuration. Every key states what safekeep will do with it.
+# Full reference: safekeep --help
+
+back_up_to = "/mnt/h/backups"
+
+# Patterns no backup ever copies, matched against any single path component.
+# Delete this key entirely to accept the defaults (.venv, node_modules, the usual
+# caches, *.pyc, .DS_Store, build, dist, .terraform).
+skip_names_matching = [".venv", "node_modules", "*.pyc", "*.iso"]
+
+# Files larger than this are skipped, and each one is named in the snapshot
+# manifest so a short backup is never silently short.
+skip_files_over_mb = 50
+
+# One [[back_up_paths]] block per path, each copied whole. Tags are free-form
+# labels: `safekeep restore --tag secrets` restores just those groups, so tag by
+# the scenario you would restore in, not by what the files are.
+
+[[back_up_paths]]
+path = "~/.ssh"
+tags = ["secrets", "rebuild"]
+
+[[back_up_paths]]
+path = "~/.config/gnupg"
+tags = ["secrets", "rebuild"]
+
+# A single file is as valid as a directory.
+[[back_up_paths]]
+path = "~/.gitconfig"
+tags = ["rebuild"]
+
+[[back_up_paths]]
+path = "~/notes"
+tags = ["notes"]
+
+# Anything reachable on this machine, not just $HOME. On WSL that includes the
+# Windows side, which is why the tag exists -- it will not apply on a rebuild
+# onto Linux, so it is worth being able to leave behind.
+[[back_up_paths]]
+path = "/mnt/c/Users/me/Documents/work-notes"
+tags = ["windows"]
+
+# Everything under [git] applies to every repo listed below it. These two keys
+# must come before the first [[git.repos]] block: TOML closes a table as soon as
+# a subtable opens, so anything after the blocks would be read as part of one.
+[git]
+
+# Untracked files are the point of listing a repo at all -- a clone brings back
+# everything else. Set false to take only the ignored patterns below.
+back_up_untracked_files = true
+
+# Gitignored files worth keeping anyway, matched in every repo below. A pattern
+# matches a whole repo-relative path or any single component of it, so
+# ".planning" catches everything beneath a .planning/ directory at any depth,
+# and "*.env" catches a stray secret wherever it sits.
+back_up_ignored_files_matching = ["CLAUDE.md", ".planning", "*.env"]
+
+[[git.repos]]
+path = "~/dotfiles"
+tags = ["rebuild"]
+
+[[git.repos]]
+path = "~/code/side-project"
+tags = ["wip"]
+
+[[git.repos]]
+path = "~/work/client-api"
+tags = ["wip", "work"]
+"""
 
 CONFIG_FORMAT_HELP = """\
 config format:
-  Files live in ~/.config/safekeep/<name>.json
+  Files live in ~/.config/safekeep/<name>.toml
 
   Every key states what safekeep will do, so the file reads top to bottom as a
   description of the backup:
 
-    "back_up_to":          "/mnt/h/backups"
-    "back_up_paths":       ["~/notes"]
-    "git":                 {"repos": ["~/code/project"],
-                            "back_up_untracked_files": true,
-                            "back_up_ignored_files_matching": ["CLAUDE.md"]}
-    "skip_names_matching": [".venv", "node_modules"]
-    "skip_files_over_mb":  50
+    back_up_to = "/mnt/h/backups"
+    skip_names_matching = [".venv", "node_modules"]
+    skip_files_over_mb = 50
+
+    [[back_up_paths]]
+    path = "~/notes"
+
+    [git]
+    back_up_untracked_files = true
+    back_up_ignored_files_matching = ["CLAUDE.md"]
+
+    [[git.repos]]
+    path = "~/code/project"
 
   required keys:
     back_up_to        Backup destination directory (~ is expanded)
 
   optional keys:
-    back_up_paths     Absolute paths to copy whole (~ is expanded)
+    back_up_paths     One [[back_up_paths]] block per path, copied whole
     git               'repos' names the repos; every other key under 'git' states
                       what is taken from them:
-                        repos                           Absolute paths to git repos
+                        repos                           One [[git.repos]] block per
+                                                        repo
                         back_up_untracked_files         Copy each repo's untracked
                                                         files (default true)
                         back_up_ignored_files_matching  Glob patterns matched against
@@ -161,12 +225,13 @@ config format:
     skip_files_over_mb   Skip files larger than this many MB
 
   tagging:
-    Entries in 'back_up_paths' and 'git.repos' may be a plain string or an object
-    with 'path' and 'tags'. Tags are free-form labels carried into the snapshot
-    manifest; safekeep never interprets them, it only lets you select on them at
-    restore time.
+    Every [[back_up_paths]] and [[git.repos]] block takes a 'path' and optional
+    'tags'. Tags are free-form labels carried into the snapshot manifest; safekeep
+    never interprets them, it only lets you select on them at restore time.
 
-      "back_up_paths": ["~/notes", {"path": "/mnt/c/docs", "tags": ["windows"]}]
+      [[back_up_paths]]
+      path = "/mnt/c/docs"
+      tags = ["windows"]
 
   unrecognized keys warn rather than error, so a config can be edited ahead of the tool.
 
@@ -176,7 +241,7 @@ config format:
     Snapshots are never pruned — managing how many you keep is not safekeep's job.
 
   examples:
-    safekeep init                       Create ~/.config/safekeep/default.json
+    safekeep init                       Create ~/.config/safekeep/default.toml
     safekeep config                     Display the resolved config and exit
     safekeep backup                     Copy the configured paths into today's snapshot
     safekeep snapshots                  List snapshots at dest
@@ -198,17 +263,29 @@ def human_size(num_bytes):
     return f'{num_bytes} B'
 
 
+def warn_about_json_configs():
+    """Name the leftover JSON configs, since 'no configs found' is a bewildering way to
+    report a format change to someone whose config file is sitting right there."""
+    leftovers = sorted(CONFIG_DIR.glob('*.json')) if CONFIG_DIR.exists() else []
+    if not leftovers:
+        return
+    print(f'  {yellow("configs are TOML now")}, and these are still JSON:', file=sys.stderr)
+    for path in leftovers:
+        print(f'    {path.name} -> {path.stem}.toml', file=sys.stderr)
+
+
 def resolve_config(name):
     """Resolve config by name, absolute path, or auto-detect single config."""
     if name:
         path = Path(name)
         if path.is_absolute() and path.exists():
             return path
-        config_path = CONFIG_DIR / f'{name}.json'
+        config_path = CONFIG_DIR / f'{name}.toml'
         if config_path.exists():
             return config_path
         print(f'{red("safekeep:")} config not found: {yellow(name)}', file=sys.stderr)
         print(f'  looked in: {cyan(str(config_path))}', file=sys.stderr)
+        warn_about_json_configs()
         print(f'  generate it: {cyan(f"safekeep init {name}")}', file=sys.stderr)
         sys.exit(1)
 
@@ -217,9 +294,10 @@ def resolve_config(name):
         print(f'  generate a starter config: {cyan("safekeep init")}', file=sys.stderr)
         sys.exit(1)
 
-    configs = sorted(CONFIG_DIR.glob('*.json'))
+    configs = sorted(CONFIG_DIR.glob('*.toml'))
     if not configs:
         print(f'{red("safekeep:")} no configs found in {cyan(str(CONFIG_DIR))}', file=sys.stderr)
+        warn_about_json_configs()
         print(f'  generate a starter config: {cyan("safekeep init")}', file=sys.stderr)
         sys.exit(1)
     if len(configs) == 1:
@@ -237,8 +315,12 @@ def load_config(config_path):
     Missing required keys are fatal. Unrecognized keys warn and are ignored, so the
     config can be edited ahead of the tool without breaking a backup run.
     """
-    with open(config_path) as f:
-        config = json.load(f)
+    try:
+        with open(config_path, 'rb') as f:
+            config = tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        print(f'{red("safekeep:")} {cyan(str(config_path))} is not valid TOML — {e}', file=sys.stderr)
+        sys.exit(1)
 
     # Renames are reported before missing keys: an old config is missing the required key
     # *because* it was renamed, and "back_up_to is missing" is the least useful way to say so.
@@ -264,7 +346,7 @@ def load_config(config_path):
 
     repos = config.get('git', {})
     if not isinstance(repos, dict):
-        print(f'{red("safekeep:")} {yellow("git")} must be an object whose "repos" lists the repos', file=sys.stderr)
+        print(f'{red("safekeep:")} {yellow("git")} must be a [git] table whose [[git.repos]] blocks list the repos', file=sys.stderr)
         sys.exit(1)
     for key in sorted(set(repos.keys()) - VALID_REPO_KEYS):
         warnings.append(f'git.{key}: unrecognized key, ignored')
@@ -287,17 +369,16 @@ def repo_entries(config):
 
 
 def normalize_entries(entries):
-    """Normalize a paths/repos.paths list into [(expanded_path, tags)].
+    """Normalize a list of [[back_up_paths]]/[[git.repos]] blocks into [(expanded_path, tags)].
 
-    Accepts plain strings and {"path": ..., "tags": [...]} objects.
+    Every entry is a table with 'path' and optional 'tags'. Under JSON an entry could also
+    be a bare string, which meant two shapes to write and two to parse; an array of tables
+    is uniform and gives every entry a line of its own to be commented on.
     """
     normalized = []
     for entry in entries:
-        if isinstance(entry, str):
-            normalized.append((Path(entry).expanduser(), []))
-            continue
         if not isinstance(entry, dict) or 'path' not in entry:
-            print(f'{red("safekeep:")} entry must be a string or an object with "path": {yellow(repr(entry))}', file=sys.stderr)
+            print(f'{red("safekeep:")} every entry needs a "path" key: {yellow(repr(entry))}', file=sys.stderr)
             sys.exit(1)
         tags = entry.get('tags', [])
         normalized.append((Path(entry['path']).expanduser(), list(tags)))
@@ -992,14 +1073,14 @@ def do_backup(config, config_path, warnings, args):
 def init_config(name):
     """Generate an example config file."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    config_path = CONFIG_DIR / f'{name}.json'
+    config_path = CONFIG_DIR / f'{name}.toml'
 
     if config_path.exists():
         print(f'{yellow("safekeep:")} config already exists: {cyan(str(config_path))}', file=sys.stderr)
         print(f'  use {cyan("safekeep config")} to view it, or edit directly', file=sys.stderr)
         sys.exit(1)
 
-    config_path.write_text(json.dumps(EXAMPLE_CONFIG, indent=2) + '\n')
+    config_path.write_text(CONFIG_TEMPLATE)
 
     print(f'{green("safekeep:")} created {cyan(str(config_path))}')
     print()

@@ -12,7 +12,7 @@ Primary use case: backing up scattered config files, local scripts, and git-untr
 
 ```bash
 safekeep                    # Usage. Nothing writes without an explicit verb
-safekeep init               # Generate starter config at ~/.config/safekeep/default.json
+safekeep init               # Generate starter config at ~/.config/safekeep/default.toml
 safekeep config             # Display the resolved config
 safekeep backup --dry-run   # Preview what would be copied
 safekeep backup             # Copy the configured paths into today's snapshot
@@ -29,27 +29,43 @@ wrote.
 
 ## Config
 
-Config files live at `~/.config/safekeep/<name>.json`. If only one config exists, it auto-loads. With multiple configs, specify which one with `--config`, which is global and goes before the command: `safekeep --config work backup`.
+Config files live at `~/.config/safekeep/<name>.toml`. If only one config exists, it auto-loads. With multiple configs, specify which one with `--config`, which is global and goes before the command: `safekeep --config work backup`.
 
-```json
-{
-  "back_up_to": "/mnt/h/backups",
-  "back_up_paths": [
-    "~/notes",
-    { "path": "~/.ssh", "tags": ["secrets"] },
-    { "path": "/mnt/c/Users/chris/Documents/work-notes", "tags": ["windows"] }
-  ],
-  "git": {
-    "repos": [{ "path": "~/code/project", "tags": ["wip"] }],
-    "back_up_untracked_files": true,
-    "back_up_ignored_files_matching": ["CLAUDE.md", ".planning"]
-  },
-  "skip_names_matching": [".venv", "node_modules"],
-  "skip_files_over_mb": 50
-}
+`safekeep init` writes a complete annotated starter config; the shape it produces is:
+
+```toml
+back_up_to = "/mnt/h/backups"
+skip_names_matching = [".venv", "node_modules", "*.pyc"]
+skip_files_over_mb = 50
+
+[[back_up_paths]]
+path = "~/.ssh"
+tags = ["secrets", "rebuild"]
+
+[[back_up_paths]]
+path = "~/notes"
+tags = ["notes"]
+
+[git]
+back_up_untracked_files = true
+back_up_ignored_files_matching = ["CLAUDE.md", ".planning"]
+
+[[git.repos]]
+path = "~/dotfiles"
+tags = ["rebuild"]
+
+[[git.repos]]
+path = "~/code/side-project"
+tags = ["wip"]
 ```
 
-**Every key states what safekeep will do, so the file reads as a description of the backup rather than a list of this program's variables.** That is the standard in `~/dev/standards/configuration.md`, and safekeep is its worked example — the keys are deliberately longer than they need to be to parse, because JSON has no comments and the names are therefore the only surface an explanation can live on.
+**Every key states what safekeep will do, so the file reads as a description of the backup rather than a list of this program's variables.** That is the standard in `~/dev/standards/configuration.md`, and safekeep is its worked example.
+
+**TOML, not JSON, and the reason is `tomllib`.** safekeep takes no dependencies on the backup path because it has to run on a locked-down work machine where installing a package is a fight, and `tomllib` has been in the standard library since 3.11 while YAML has never had a stdlib parser and never will. Comments come free with that choice, and they are what turns the file into its own manual. YAML would additionally have been the wrong fit for a config full of glob patterns: an unquoted `*.pyc` is alias syntax rather than a string, and bare `~` is null.
+
+`tomllib` reads but cannot write, so `init` emits a hand-authored template rather than serializing a dict — which is the better half of the trade, since a serialized dict cannot carry comments. `CONFIG_TEMPLATE` in the script is that file, and two tests assert it parses without warnings and demonstrates repetition rather than one of each key.
+
+**The `[git]` keys must precede the first `[[git.repos]]` block.** TOML closes a table as soon as a subtable opens, so a `back_up_untracked_files` written after the repo blocks is read as part of the last repo. This fails loudly rather than silently, but it is the one ordering constraint the format imposes here.
 
 **Keys:**
 
@@ -62,7 +78,7 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
 - `skip_names_matching` — patterns no backup ever copies (optional, has sensible defaults)
 - `skip_files_over_mb` — skip files larger than this many MB (optional)
 
-Entries in `back_up_paths` and `git.repos` are either a plain string or an object with `path` and `tags`.
+Every `[[back_up_paths]]` and `[[git.repos]]` block takes a `path` and optional `tags`. Under JSON an entry could also be a bare path string, so there were two shapes to write and two to parse; an array of tables is uniform, and gives every entry a line of its own to be commented on.
 
 **The repo options are nested because they only mean something relative to the repos beside them.** They were once two sibling keys, `git_untracked` and `git_ignored`, which read as two independent lists of things to back up — nothing in the config said the second was a filter scoped to the first, and the answer was only findable in the source. Structure carries that relationship where a name could not, which is why the parent key is a scope and the leaves are statements about it.
 
@@ -82,7 +98,9 @@ A generic warning is adequate for a typo but not for a key that used to mean som
 
 Renamed keys are fatal rather than warned, and are listed separately in `RENAMED_KEYS`. The distinction is whether ignoring the key shrinks the backup: dropping a retired `keep` changes nothing about what gets copied, while ignoring an old `git_untracked` would skip every repo in the config. A run that fails loudly is fixed immediately; a backup that quietly gets smaller is not noticed until a restore needs the files that are not in it.
 
-The config is hand-written and there are few of them, so it has no version field. The manifest is machine-written and outlives tool versions, so it does.
+The config is hand-written and there are few of them, so it has no version field. The manifest is machine-written and outlives tool versions, so it does — and that same split is why the config moved to TOML while the manifest stayed JSON.
+
+A config left behind as `.json` is named rather than reported as absent: `no configs found` is a bewildering thing to read when the file is sitting in the directory. `resolve_config` lists every leftover with the name it should have.
 
 ## Destination Structure
 
