@@ -40,8 +40,10 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
     { "path": "~/.ssh", "tags": ["secrets"] },
     { "path": "/mnt/c/Users/chris/Documents/work-notes", "tags": ["windows"] }
   ],
-  "git_untracked": [{ "path": "~/code/project", "tags": ["wip"] }],
-  "git_ignored": ["CLAUDE.md", ".planning"]
+  "repos": {
+    "paths": [{ "path": "~/code/project", "tags": ["wip"] }],
+    "include_ignored": ["CLAUDE.md", ".planning"]
+  }
 }
 ```
 
@@ -51,10 +53,15 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
 - `exclude` — exclusion patterns applied to all rsync calls (optional, has sensible defaults)
 - `max_file_size_mb` — skip files larger than this (optional)
 - `paths` — absolute paths to back up, `~` is expanded (optional)
-- `git_untracked` — git repos to collect untracked files from (optional)
-- `git_ignored` — glob patterns of gitignored files to capture from those repos (optional)
+- `repos` — git repos to collect files from (optional)
+  - `repos.paths` — the repos; the untracked files in each are backed up
+  - `repos.include_ignored` — glob patterns matched against the *gitignored* files in those same repos, so `CLAUDE.md` and `.planning` survive a rebuild
 
-Entries in `paths` and `git_untracked` are either a plain string or an object with `path` and `tags`.
+Entries in `paths` and `repos.paths` are either a plain string or an object with `path` and `tags`.
+
+**The repo block is nested because the patterns only mean something relative to the repos beside them.** They were once two sibling keys, `git_untracked` and `git_ignored`, which read as two independent lists of things to back up — nothing in the config said the second was a filter scoped to the first, and the answer was only findable in the source. Structure carries that relationship where a name could not. A pattern list with no repos beside it now warns that it matches nothing, rather than silently doing nothing.
+
+A repo's ignored files are found by set subtraction: `git ls-files --others` (untracked plus ignored) minus `git ls-files --others --exclude-standard` (untracked only), since git has no single flag that lists ignored files without the untracked ones. A pattern matches either the whole repo-relative path or any single component of it, which is why `.planning` catches everything beneath a `.planning/` directory at any depth.
 
 **Tags are labels, not policy.** safekeep never interprets what a tag means — it displays them in the picker and accepts `--tag NAME` as a selector. That keeps scenario knowledge (which paths matter on a rebuild) in the config where it was written, rather than in the tool.
 
@@ -62,7 +69,9 @@ Entries in `paths` and `git_untracked` are either a plain string or an object wi
 
 Unrecognized keys warn and are ignored rather than erroring, so a config can be edited ahead of the tool. A missing required key is still fatal.
 
-A generic warning is adequate for a typo but not for a key that used to mean something — a rename would otherwise silently shrink the backup. Retired keys therefore carry their own message, listed in `RETIRED_KEYS` in the script. Unrecognized keys are also recorded in the snapshot manifest as `config_warnings`, so a snapshot carries evidence that its config was partly ignored when it was taken.
+A generic warning is adequate for a typo but not for a key that used to mean something. Retired keys therefore carry their own message, listed in `RETIRED_KEYS` in the script. Unrecognized keys are also recorded in the snapshot manifest as `config_warnings`, so a snapshot carries evidence that its config was partly ignored when it was taken.
+
+Renamed keys are fatal rather than warned, and are listed separately in `RENAMED_KEYS`. The distinction is whether ignoring the key shrinks the backup: dropping a retired `keep` changes nothing about what gets copied, while ignoring an old `git_untracked` would skip every repo in the config. A run that fails loudly is fixed immediately; a backup that quietly gets smaller is not noticed until a restore needs the files that are not in it.
 
 The config is hand-written and there are few of them, so it has no version field. The manifest is machine-written and outlives tool versions, so it does.
 
@@ -77,7 +86,7 @@ A dated subdirectory is created for each day's backup. Full directory structure 
     home/chris/
       notes/meeting.md
       .ssh/config
-      code/project/scratch.py          (from git_untracked)
+      code/project/scratch.py          (untracked, from repos.paths)
     mnt/c/Users/chris/
       Documents/work-notes/report.docx
   2026-08-01/

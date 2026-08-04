@@ -130,6 +130,32 @@ def test_retired_key_carries_its_own_message(tmp_path):
     assert any(w.startswith('keep:') and 'retention was removed' in w for w in warnings)
 
 
+def test_renamed_key_is_fatal_rather_than_warned(tmp_path):
+    """A warning would let the run continue and quietly back up no repos at all."""
+    config_path = write_config(tmp_path, tmp_path / 'dest', git_untracked=['~/code/thing'])
+    with pytest.raises(SystemExit) as exc:
+        safekeep.load_config(config_path)
+    assert exc.value.code == 1
+
+
+def test_include_ignored_without_repos_warns_that_it_matches_nothing(tmp_path):
+    config_path = write_config(tmp_path, tmp_path / 'dest', repos={'include_ignored': ['CLAUDE.md']})
+    _, warnings = safekeep.load_config(config_path)
+    assert any('include_ignored' in w and 'matches nothing' in w for w in warnings)
+
+
+def test_unknown_repo_subkey_warns(tmp_path):
+    config_path = write_config(tmp_path, tmp_path / 'dest', repos={'paths': [], 'pathz': []})
+    _, warnings = safekeep.load_config(config_path)
+    assert any('repos.pathz' in w and 'unrecognized' in w for w in warnings)
+
+
+def test_repo_entries_reads_paths_and_patterns_together():
+    repos, patterns = safekeep.repo_entries({'repos': {'paths': ['/a'], 'include_ignored': ['CLAUDE.md']}})
+    assert repos == [(Path('/a'), [])]
+    assert patterns == ['CLAUDE.md']
+
+
 def test_normalize_entries_accepts_strings_and_tagged_objects():
     entries = safekeep.normalize_entries(['/a', {'path': '/b', 'tags': ['windows']}])
     assert entries[0] == (Path('/a'), [])
@@ -239,7 +265,7 @@ def test_git_untracked_becomes_its_own_group(tmp_path):
     (repo / 'wip.txt').write_text('wip\n')
 
     dest = tmp_path / 'dest'
-    config_path = write_config(tmp_path, dest, git_untracked=[{'path': str(repo), 'tags': ['wip']}])
+    config_path = write_config(tmp_path, dest, repos={'paths': [{'path': str(repo), 'tags': ['wip']}]})
     result = run_safekeep('--config', str(config_path), 'backup')
     assert result.returncode == 0, result.stderr
 
@@ -477,7 +503,7 @@ def test_group_selection_returns_none_when_nothing_specified():
 
 
 def test_repo_groups_sharing_a_subtree_are_restored_once(tmp_path):
-    """git_untracked and git_ignored name the same repo, so the subtree copies once."""
+    """The untracked and ignored groups come from the same repo, so the subtree copies once."""
     repo = tmp_path / 'repo'
     repo.mkdir()
     subprocess.run(['git', 'init', '-q'], cwd=repo, check=True)
@@ -489,7 +515,7 @@ def test_repo_groups_sharing_a_subtree_are_restored_once(tmp_path):
 
     dest = tmp_path / 'dest'
     target = tmp_path / 'target'
-    config_path = write_config(tmp_path, dest, git_untracked=[str(repo)], git_ignored=['secrets.env'])
+    config_path = write_config(tmp_path, dest, repos={'paths': [str(repo)], 'include_ignored': ['secrets.env']})
     run_safekeep('--config', str(config_path), 'backup')
 
     snapshot = next(d for d in dest.iterdir() if d.is_dir())
