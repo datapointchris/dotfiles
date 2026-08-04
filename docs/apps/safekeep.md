@@ -33,33 +33,40 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
 
 ```json
 {
-  "dest": "/mnt/h/backups",
-  "max_file_size_mb": 50,
-  "paths": [
+  "back_up_to": "/mnt/h/backups",
+  "back_up_paths": [
     "~/notes",
     { "path": "~/.ssh", "tags": ["secrets"] },
     { "path": "/mnt/c/Users/chris/Documents/work-notes", "tags": ["windows"] }
   ],
-  "repos": {
-    "paths": [{ "path": "~/code/project", "tags": ["wip"] }],
-    "include_ignored": ["CLAUDE.md", ".planning"]
-  }
+  "git_repos": {
+    "at": [{ "path": "~/code/project", "tags": ["wip"] }],
+    "back_up_untracked_files": true,
+    "back_up_ignored_files_matching": ["CLAUDE.md", ".planning"]
+  },
+  "skip_names_matching": [".venv", "node_modules"],
+  "skip_files_over_mb": 50
 }
 ```
 
+**Every key states what safekeep will do, so the file reads as a description of the backup rather than a list of this program's variables.** That is the standard in `~/dev/standards/configuration.md`, and safekeep is its worked example — the keys are deliberately longer than they need to be to parse, because JSON has no comments and the names are therefore the only surface an explanation can live on.
+
 **Keys:**
 
-- `dest` — base destination path (required, and the only required key)
-- `exclude` — exclusion patterns applied to all rsync calls (optional, has sensible defaults)
-- `max_file_size_mb` — skip files larger than this (optional)
-- `paths` — absolute paths to back up, `~` is expanded (optional)
-- `repos` — git repos to collect files from (optional)
-  - `repos.paths` — the repos; the untracked files in each are backed up
-  - `repos.include_ignored` — glob patterns matched against the *gitignored* files in those same repos, so `CLAUDE.md` and `.planning` survive a rebuild
+- `back_up_to` — base destination path (required, and the only required key)
+- `back_up_paths` — absolute paths to copy whole, `~` is expanded (optional)
+- `git_repos` — a scope, not a thing: everything inside applies to the repos it names (optional)
+  - `at` — the repos
+  - `back_up_untracked_files` — copy each repo's untracked files (default `true`)
+  - `back_up_ignored_files_matching` — glob patterns matched against the *gitignored* files in those same repos, so `CLAUDE.md` and `.planning` survive a rebuild
+- `skip_names_matching` — patterns no backup ever copies (optional, has sensible defaults)
+- `skip_files_over_mb` — skip files larger than this many MB (optional)
 
-Entries in `paths` and `repos.paths` are either a plain string or an object with `path` and `tags`.
+Entries in `back_up_paths` and `git_repos.at` are either a plain string or an object with `path` and `tags`.
 
-**The repo block is nested because the patterns only mean something relative to the repos beside them.** They were once two sibling keys, `git_untracked` and `git_ignored`, which read as two independent lists of things to back up — nothing in the config said the second was a filter scoped to the first, and the answer was only findable in the source. Structure carries that relationship where a name could not. A pattern list with no repos beside it now warns that it matches nothing, rather than silently doing nothing.
+**The repo options are nested because they only mean something relative to the repos beside them.** They were once two sibling keys, `git_untracked` and `git_ignored`, which read as two independent lists of things to back up — nothing in the config said the second was a filter scoped to the first, and the answer was only findable in the source. Structure carries that relationship where a name could not, which is why the parent key is a scope and the leaves are statements about it.
+
+**`back_up_untracked_files` exists even though nothing else can set it to `false`.** Copying untracked files is what the repo block did unconditionally before, and a config that leaves an outcome-shaping default unstated reads as though the tool does nothing but what is written. A key whose value never changes still earns its place when it is the only thing telling the reader what will be copied.
 
 A repo's ignored files are found by set subtraction: `git ls-files --others` (untracked plus ignored) minus `git ls-files --others --exclude-standard` (untracked only), since git has no single flag that lists ignored files without the untracked ones. A pattern matches either the whole repo-relative path or any single component of it, which is why `.planning` catches everything beneath a `.planning/` directory at any depth.
 
@@ -86,14 +93,14 @@ A dated subdirectory is created for each day's backup. Full directory structure 
     home/chris/
       notes/meeting.md
       .ssh/config
-      code/project/scratch.py          (untracked, from repos.paths)
+      code/project/scratch.py          (untracked, from git_repos.at)
     mnt/c/Users/chris/
       Documents/work-notes/report.docx
   2026-08-01/
     ...
 ```
 
-Path construction: `dest / YYYY-MM-DD / absolute-path-from-root`
+Path construction: `back_up_to / YYYY-MM-DD / absolute-path-from-root`
 
 **Snapshots are never pruned.** Deciding how many backups to keep is not safekeep's job.
 
@@ -128,7 +135,7 @@ If the snapshot's home differs from the restoring machine's, paths under it are 
 
 **Fail fast**: If the destination doesn't exist or isn't writable, exit immediately.
 
-**Smart exclusions**: Default exclude list (`.venv`, `node_modules`, caches) applied to all rsync calls. Override in config.
+**Smart exclusions**: Default `skip_names_matching` list (`.venv`, `node_modules`, caches) applied to all rsync calls. Override in config.
 
 **Sized from the source**: Totals come from the walk that builds the manifest, not from re-reading the destination, so the backup never stats the whole snapshot back over the network.
 
