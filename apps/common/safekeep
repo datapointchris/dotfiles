@@ -1032,8 +1032,10 @@ def main():
     args = parser.parse_args()
 
     if args.command is None:
+        # Exit 2, matching every Typer tool on the fleet (no_args_is_help) and the usage-error
+        # code in cli-design.md. An explicit `--help` is a satisfied request and still exits 0.
         parser.print_help()
-        sys.exit(0)
+        sys.exit(2)
 
     if args.command == 'init':
         init_config(args.config or args.name)

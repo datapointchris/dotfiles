@@ -78,9 +78,14 @@ def test_bare_invocation_shows_help_and_writes_nothing(tmp_path, source_tree):
     dest = tmp_path / 'dest'
     config_path = write_config(tmp_path, dest, paths=[str(source_tree / 'notes')])
     result = run_safekeep('--config', str(config_path))
-    assert result.returncode == 0
+    assert result.returncode == 2  # usage error, matching every Typer tool's no_args_is_help
     assert 'usage: safekeep' in result.stdout
     assert not dest.exists()
+
+
+def test_explicit_help_is_a_satisfied_request(tmp_path):
+    """`--help` asked and got an answer; a bare invocation is an incomplete command line."""
+    assert run_safekeep('--help').returncode == 0
 
 
 def test_help_lists_every_public_command(tmp_path):
