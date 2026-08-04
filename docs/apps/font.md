@@ -8,7 +8,7 @@ Font testing and management with data-driven rankings — every apply, like, dis
 
 ## In this system
 
-- **Install** — custom installer (`install/common/custom-installers/font.sh`): git clone to `~/.local/share/font`, symlink into `~/.local/bin`. Update with `font upgrade`.
+- **Install** — custom installer (`install/common/custom-installers/font.sh`): git clone to `~/.local/share/font`, symlink into `~/.local/bin`. Update with `font update`.
 - **Applies to dotfiles-managed apps** — `font apply` sets the font for Ghostty and Neovim (the configs this repo deploys) in one step and auto-logs the change.
 - **Data** — per-platform history in `~/.config/font/` (`history-<platform>.jsonl` plus rejection files); cross-machine sync via GitHub Gist. Each platform writes only its own files, so there are no merge conflicts.
 

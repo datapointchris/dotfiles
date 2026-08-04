@@ -33,7 +33,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 3. **Personal CLI Tools** (theme, font): Git clone + symlink
    - Custom installers in `install/common/custom-installers/`
    - Clone to `~/.local/share/{tool}/`, symlink bin → `~/.local/bin/`
-   - Development in `~/tools/{app}/`, push to GitHub, run `{tool} upgrade`
+   - Development in `~/tools/{app}/`, push to GitHub, run `{tool} update`
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 

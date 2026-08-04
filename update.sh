@@ -48,7 +48,7 @@ source "$DOTFILES_DIR/install/phases.sh"
 # ================================================================
 
 # Reports what moved between two sorted "<name> <version>" snapshots, for the
-# phases whose upgrade command updates many things at once and says nothing
+# phases whose update command updates many things at once and says nothing
 # useful about which. Prints up_to_date_message when nothing moved.
 #
 # Additions and removals are reported as such rather than folded into "updated":
@@ -87,7 +87,7 @@ report_snapshot_changes() {
 #
 # No phase installs a tool it finds missing. Three of them used to, purely
 # because `go install @latest`, `cargo binstall`, and the release installers are
-# install-or-upgrade commands while `uv tool upgrade` and `<tool> upgrade` are
+# install-or-upgrade commands while `uv tool upgrade` and `<tool> update` are
 # not — so whether update created a tool came down to which section of
 # packages.yml it had been added to. Missing tools are recorded and reported at
 # the end instead.

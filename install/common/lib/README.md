@@ -96,12 +96,12 @@ Version comparison and GitHub API lookups shared by the release installers.
 Queries for what is currently installed, one per distribution mechanism. Sourced by `update.sh` and
 `go-tools.sh`, which diff a before/after snapshot to decide what to report.
 
-These exist only for upgrade commands that exit 0 whether or not anything changed and print nothing
+These exist only for update commands that exit 0 whether or not anything changed and print nothing
 distinguishing — `uv tool upgrade`, `cargo binstall`, `npm update -g`, tpm's `update_plugins`,
-`:Lazy update`. For those, observed state is the only thing that separates "upgraded" from "nothing
+`:Lazy update`. For those, observed state is the only thing that separates "updated" from "nothing
 to do".
 
-Deliberately **not** used for brew/pacman/apt, rustup, `uv self update`, the `theme`/`font` upgrade
+Deliberately **not** used for brew/pacman/apt, rustup, `uv self update`, the `theme`/`font` update
 commands, or the GitHub release installers. Those already report their own outcome accurately (the
 release installers by comparing the installed version against the release tag before downloading),
 and re-deriving a result they already state is duplicated logic that can only drift.

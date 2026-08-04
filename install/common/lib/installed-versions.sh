@@ -9,13 +9,13 @@
 #   uv tool upgrade indy
 #   after=$(uv_tool_installed_ref indy) || after=""
 #
-# These exist for the upgrade commands that exit 0 whether or not anything
+# These exist for the update commands that exit 0 whether or not anything
 # changed and print nothing distinguishing — `uv tool upgrade`, `cargo binstall`,
 # `npm update -g`, tpm's `update_plugins`, `:Lazy update`. For those, observed
-# state is the only thing that separates "upgraded" from "nothing to do".
+# state is the only thing that separates "updated" from "nothing to do".
 #
 # Not everything needs one. brew/pacman/apt, rustup, `uv self update`, and the
-# `theme`/`font` upgrade commands all report their own outcome accurately, and
+# `theme`/`font` update commands all report their own outcome accurately, and
 # the GitHub release installers compare the installed version against the release
 # tag before downloading. Re-deriving a result those already state is duplicated
 # logic that can only drift away from the truth.

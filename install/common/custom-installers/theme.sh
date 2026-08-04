@@ -16,9 +16,9 @@ if [[ "${1:-}" == "--print-url" ]]; then
   exit 0
 fi
 
-# `theme upgrade` already reports the outcome accurately and exits non-zero on
+# `theme update` already reports the outcome accurately and exits non-zero on
 # failure, so this delegates rather than re-deriving it. Capturing its output to
-# infer a result printed "theme upgraded" on every run, and the unconditional
+# infer a result printed "theme updated" on every run, and the unconditional
 # `exit 0` hid genuine failures from run-installer.sh.
 if [[ "${1:-}" == "--update" ]]; then
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
@@ -26,7 +26,7 @@ if [[ "${1:-}" == "--update" ]]; then
   if ! command -v theme >/dev/null 2>&1; then
     skip_update_for_absent_tool "theme"
   fi
-  theme upgrade
+  theme update
   exit $?
 fi
 

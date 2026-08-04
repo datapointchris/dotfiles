@@ -108,7 +108,7 @@ theme list                  # List available themes
 theme apply rose-pine       # Apply theme
 theme preview               # Interactive fzf preview
 theme current               # Show current theme
-theme upgrade               # Update to latest version
+theme update                # Update to latest version
 ```
 
 **Locations**:

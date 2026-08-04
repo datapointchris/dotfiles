@@ -42,13 +42,13 @@ Inspired by [sesh](https://github.com/joshmedeski/sesh) - integration happens at
 
 - Unified theme generation from theme.yml source files
 - Applies themes across ghostty, tmux, btop, and Neovim
-- Commands: `current`, `apply`, `list`, `preview`, `random`, `like`, `dislike`, `upgrade`
+- Commands: `current`, `apply`, `list`, `preview`, `random`, `like`, `dislike`, `update`
 - Development: `~/tools/theme/`
 
 **font** - Bash tool (installed via git clone to `~/.local/share/`)
 
 - Font management and tracking
-- Commands: `current`, `change`, `apply`, `like`, `dislike`, `rank`, `upgrade`
+- Commands: `current`, `change`, `apply`, `like`, `dislike`, `rank`, `update`
 - Development: `~/tools/font/`
 
 **notes** (`apps/common/notes`) - Bash wrapper

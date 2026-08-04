@@ -106,7 +106,7 @@ The phase registry is also the seam the unit tests use: sourcing either script e
 `update` reconciles what is on the machine; `install` creates. That line used to be
 drawn by accident rather than intent: `go install @latest`, `cargo binstall`, and the
 release installers all create as a side effect of upgrading, while `uv tool upgrade` and
-`<tool> upgrade` cannot. Whether `dotfiles update` installed a newly declared tool came
+`<tool> update` cannot. Whether `dotfiles update` installed a newly declared tool came
 down to which section of `packages.yml` it had been added to.
 
 Every phase now skips a tool it finds missing, records it through
@@ -133,10 +133,10 @@ update completed`, not `Homebrew packages updated` — because a system package 
 offers no cheap way to tell a no-op from real work.
 
 Where a tool already reports its own outcome accurately, the installer delegates instead
-of re-deriving one. `theme.sh --update` and `font.sh --update` run `theme upgrade` /
-`font upgrade`, let their output through, and propagate the exit code. The earlier
+of re-deriving one. `theme.sh --update` and `font.sh --update` run `theme update` /
+`font update`, let their output through, and propagate the exit code. The earlier
 version matched a sentinel string against their output and always missed, printing
-`theme upgraded` on every run; it also ended in an unconditional `exit 0`, so a genuine
+`theme updated` on every run; it also ended in an unconditional `exit 0`, so a genuine
 failure never reached the report.
 
 ## Why there is a CLI now

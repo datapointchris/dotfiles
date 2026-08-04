@@ -49,9 +49,9 @@ git clone https://github.com/datapointchris/theme.git ~/.local/share/theme
 ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 ```
 
-**Development**: Source code in `~/tools/theme/` and `~/tools/font/`. Changes tested locally, pushed to GitHub. Run `theme upgrade` or `font upgrade` to pull updates to installed version.
+**Development**: Source code in `~/tools/theme/` and `~/tools/font/`. Changes tested locally, pushed to GitHub. Run `theme update` or `font update` to pull updates to installed version.
 
-**Upgrade**: Built-in `upgrade` command runs `git pull` on the installed version.
+**Update**: Built-in `update` command runs `git pull` on the installed version.
 
 ### 4. Python Tools (Remote Install via `uv tool install`)
 
