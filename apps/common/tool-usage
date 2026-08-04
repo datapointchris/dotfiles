@@ -10,9 +10,8 @@ source "$SHELL_DIR/formatting.sh"
 
 HISTORY="${HISTFILE:-$HOME/.local/state/zsh/history}"
 
-# Canonical registry location, matching toolbox's own resolution (TOOLBOX_REGISTRY
-# env var, else ~/dev/tools.yml — Syncthing-synced, so this works on every machine)
-REGISTRY="${TOOLBOX_REGISTRY:-$HOME/dev/tools.yml}"
+# Matches toolbox's own resolution in registry.go: TOOLBOX_REGISTRY, else the XDG data dir
+REGISTRY="${TOOLBOX_REGISTRY:-${XDG_DATA_HOME:-$HOME/.local/share}/toolbox/registry.yml}"
 
 if [[ ! -f "$HISTORY" ]]; then
   print_error "History file not found: $HISTORY"
