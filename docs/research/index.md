@@ -4,34 +4,24 @@ icon: material/flask
 
 # Research
 
-Comprehensive research documentation for AI-assisted development, tools, and workflows.
+Research that informed decisions here **and** names something in this repo. A survey that names
+nothing here lives on the hub instead, where nothing in this repo can invalidate it.
 
 ## Research Areas
 
 <div class="grid cards" markdown>
 
-- :material-robot: __[AI Research](ai/overview.md)__
+- :material-monitor: **[Understanding Hyprland](hyprland/understanding-hyprland.md)**
 
-    Research on AI-assisted development, Claude Code integration, context engineering, and automated workflows
-
-- :material-docker: __[Development Environments](development-environments.md)__
-
-    Comprehensive comparison of development environments: devcontainers, WSL2, VMs, Docker, remote development, and Nix-based approaches with dotfiles integration patterns
-
-- :material-school: __[Tool Mastery & Rediscovery](tool-mastery/index.md)__
-
-    Solving the "tools I forget I have" problem — discovery, usage recording and analysis, and active review/retention for custom and daily CLI tools, with a consolidation architecture
+    The Wayland display model, how Hyprland compares to AeroSpace, and what a migration would mean for the config and theme tool in this repo
 
 </div>
 
-## About Research Documentation
+## On the hub
 
-This directory captures research conducted for tooling decisions in the dotfiles project. Each research area includes:
-
-- Research findings and key insights
-- Source materials with links and dates
-- How findings relate to other research
-- Implementation in the project
-- Future directions and opportunities
-
-Research documents serve as a reference for understanding design decisions and exploring advanced topics beyond immediate project needs.
+- [Development Environments](https://docs.ichrisbirch.com/dev-environments/) — devcontainers, WSL2, VMs, Codespaces, Nix, and the dotfiles integration patterns for each
+- [AI Research](https://docs.ichrisbirch.com/ai/overview/) — context engineering, agent architecture, prompt engineering, token optimization
+- [Go](https://docs.ichrisbirch.com/go/go-development/) — standards, quick reference, Bubbletea, TUI and CLI architecture surveys
+- [Claude Code](https://docs.ichrisbirch.com/claude-code/) — workflows, hooks, transcripts
+- [Fonts](https://docs.ichrisbirch.com/fonts/nerd-fonts-explained/) — Nerd Fonts, weights, terminal font comparison
+- [Bash Testing Frameworks](https://docs.ichrisbirch.com/terminal/bash-testing-frameworks/) — framework comparison and the BATS evaluation reversal

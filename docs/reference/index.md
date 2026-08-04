@@ -32,19 +32,19 @@ Quick lookup for platform differences, fonts, tools, and support.
 
 <div class="grid cards" markdown>
 
-- :material-format-font: __[Nerd Fonts Explained](fonts/nerd-fonts-explained.md)__
+- :material-format-font: __[Nerd Fonts Explained](https://docs.ichrisbirch.com/fonts/nerd-fonts-explained/)__
 
     Understanding Nerd Fonts and their features
 
-- :material-format-text: __[Font Weights and Variants](fonts/font-weights-and-variants.md)__
+- :material-format-text: __[Font Weights and Variants](https://docs.ichrisbirch.com/fonts/font-weights-and-variants/)__
 
     Font weight selection and style variants
 
-- :material-console: __[Terminal Fonts Guide](fonts/terminal-fonts-guide.md)__
+- :material-console: __[Terminal Fonts Guide](https://docs.ichrisbirch.com/fonts/terminal-fonts-guide/)__
 
     Choosing and configuring terminal fonts
 
-- :material-table: __[Font Comparison](fonts/font-comparison.md)__
+- :material-table: __[Font Comparison](https://docs.ichrisbirch.com/fonts/font-comparison/)__
 
     Side-by-side comparison of popular fonts
 
@@ -68,11 +68,11 @@ Quick lookup for platform differences, fonts, tools, and support.
 
 <div class="grid cards" markdown>
 
-- :material-book-open: __[Working with Claude Code](../claude-code/working-with-claude.md)__
+- :material-book-open: __[Working with Claude Code](https://docs.ichrisbirch.com/claude-code/working-with-claude/)__
 
     Comprehensive guide to using Claude Code with dotfiles
 
-- :material-flash: __[Quick Reference](../claude-code/quick-reference.md)__
+- :material-flash: __[Quick Reference](https://docs.ichrisbirch.com/claude-code/quick-reference/)__
 
     Fast lookup for common Claude Code commands
 
@@ -84,11 +84,11 @@ Quick lookup for platform differences, fonts, tools, and support.
 
     Event-triggered automation for Claude Code
 
-- :material-information: __[Legacy Monitoring Guide](../claude-code/usage-guide.md)__
+- :material-information: __[Legacy Monitoring Guide](https://docs.ichrisbirch.com/claude-code/usage-guide/)__
 
     Historical usage patterns
 
-- :material-monitor: __[Log Monitoring Research](../claude-code/log-monitoring-research.md)__
+- :material-monitor: __[Log Monitoring Research](https://docs.ichrisbirch.com/claude-code/log-monitoring-research/)__
 
     Research on log monitoring approaches
 

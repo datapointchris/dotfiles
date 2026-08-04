@@ -118,7 +118,5 @@ bash .claude/lib/log-commit-metrics.sh 1 15000 7 0 0 0 true true 0 8
 - Scripts need proper error handling
 - Changes require file updates, not just prompt tweaks
 
-## Related
-
-- `docs/architecture/commit-agent-metrics.md` - Full metrics system design
-- `.claude/lib/log-commit-metrics.sh` - Reference implementation
+The commit-metrics scripts that originally illustrated this pattern have since been removed; the
+pattern is what survives.

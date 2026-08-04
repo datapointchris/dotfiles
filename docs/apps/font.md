@@ -14,7 +14,7 @@ Font testing and management with data-driven rankings — every apply, like, dis
 
 ## See Also
 
-- [Nerd Fonts Explained](../reference/fonts/nerd-fonts-explained.md) — what Nerd Fonts are and why they matter
-- [Font Weights and Variants](../reference/fonts/font-weights-and-variants.md) — understanding Bold/Italic/Light variants
-- [Terminal Fonts Guide](../reference/fonts/terminal-fonts-guide.md) — why monospace matters for terminals
-- [Font Comparison](../reference/fonts/font-comparison.md) — detailed comparison of font families
+- [Nerd Fonts Explained](https://docs.ichrisbirch.com/fonts/nerd-fonts-explained/) — what Nerd Fonts are and why they matter
+- [Font Weights and Variants](https://docs.ichrisbirch.com/fonts/font-weights-and-variants/) — understanding Bold/Italic/Light variants
+- [Terminal Fonts Guide](https://docs.ichrisbirch.com/fonts/terminal-fonts-guide/) — why monospace matters for terminals
+- [Font Comparison](https://docs.ichrisbirch.com/fonts/font-comparison/) — detailed comparison of font families

@@ -251,7 +251,9 @@ mv lazygit ~/.local/bin/lazygit  # Direct move works!
 
 ## Version Comparison
 
-See [Package Version Analysis](../learnings/package-version-analysis.md) for version comparisons and the rationale for each tool's installation method.
+The install method chosen for each tool is declared in `install/packages.yml` — that file is the
+source of truth, not a list here. The rule behind the choices: a distro package that trails
+upstream by a major version goes to GitHub releases or `cargo-binstall` instead.
 
 ## Implementation
 
@@ -386,6 +388,5 @@ sudo apt update && sudo apt upgrade
 ## Related Documents
 
 - [PATH Ordering Strategy](path-ordering-strategy.md) - How tool resolution works
-- [Package Version Analysis](../learnings/package-version-analysis.md) - Detailed version comparisons
 - [App Installation Patterns](../learnings/app-installation-patterns.md) - Go apps vs shell scripts
 - [Idempotent Installation Patterns](../learnings/idempotent-installation-patterns.md) - Re-runnable scripts

@@ -17,7 +17,7 @@ Tool discovery and documentation system for exploring CLI tools. Provides search
 - Show detailed tool information with examples
 - Interactive category browser
 
-See [Toolbox Reference](../../apps/toolbox.md) for usage details.
+See [Toolbox Reference](../apps/toolbox.md) for usage details.
 
 ## Development Workflow
 
@@ -51,9 +51,9 @@ Standard Go layout with `main.go` at root (or `cmd/` entry point for multi-binar
 
 Follow the coding standards and patterns documented in:
 
-- [Go Development Standards](go-development.md) - Coding conventions, error handling, testing
-- [Go Quick Reference](go-quick-reference.md) - Common Go patterns and idioms
-- [Bubbletea Quick Reference](bubbletea-quick-reference.md) - TUI development with Bubbletea
+- [Go Development Standards](https://docs.ichrisbirch.com/go/go-development/) - Coding conventions, error handling, testing
+- [Go Quick Reference](https://docs.ichrisbirch.com/go/go-quick-reference/) - Common Go patterns and idioms
+- [Bubbletea Quick Reference](https://docs.ichrisbirch.com/go/bubbletea-quick-reference/) - TUI development with Bubbletea
 
 ## Adding New Go Applications
 

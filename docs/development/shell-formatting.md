@@ -277,5 +277,5 @@ fi
 
 ## See Also
 
-- [Development Standards](go-apps/go-development.md) - Related development standards for Go apps
+- [Development Standards](https://docs.ichrisbirch.com/go/go-development/) - Related development standards for Go apps
 - [Testing Guide](testing.md) - Testing shell scripts in VMs

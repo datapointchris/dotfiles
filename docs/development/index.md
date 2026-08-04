@@ -20,19 +20,19 @@ Contributing to and testing dotfiles.
 
 <div class="grid cards" markdown>
 
-- :material-language-go: __[Overview](go-apps/overview.md)__
+- :material-language-go: __[Overview](go-apps.md)__
 
     Go applications architecture
 
-- :material-code-braces: __[Standards](go-apps/go-development.md)__
+- :material-code-braces: __[Standards](https://docs.ichrisbirch.com/go/go-development/)__
 
     Development standards and practices
 
-- :material-book: __[Go Quick Reference](go-apps/go-quick-reference.md)__
+- :material-book: __[Go Quick Reference](https://docs.ichrisbirch.com/go/go-quick-reference/)__
 
     Go language essentials
 
-- :material-widgets: __[Bubbletea Reference](go-apps/bubbletea-quick-reference.md)__
+- :material-widgets: __[Bubbletea Reference](https://docs.ichrisbirch.com/go/bubbletea-quick-reference/)__
 
     TUI framework guide
 

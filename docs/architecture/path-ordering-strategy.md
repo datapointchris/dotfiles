@@ -157,5 +157,4 @@ When adding new PATH directories:
 ## Related Documents
 
 - [Package Management Philosophy](package-management.md)
-- [Package Version Analysis](../learnings/package-version-analysis.md)
 - [App Installation Patterns](../learnings/app-installation-patterns.md)

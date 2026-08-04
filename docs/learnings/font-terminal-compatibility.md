@@ -144,5 +144,5 @@ EOF
 
 ## Related
 
-- [Terminal Fonts Guide](../reference/fonts/terminal-fonts-guide.md)
-- [Font Pruning Rules](../reference/fonts/font-pruning-rules.md)
+- [Terminal Fonts Guide](https://docs.ichrisbirch.com/fonts/terminal-fonts-guide/)
+- [Font Pruning Rules](https://docs.ichrisbirch.com/fonts/font-pruning-rules/)

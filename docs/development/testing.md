@@ -76,7 +76,7 @@ load "$HOME/.local/lib/bats-assert/load.bash"
 }
 ```
 
-See [bash-testing-frameworks-guide.md](../learnings/bash-testing-frameworks-guide.md) for detailed BATS usage.
+See [Bash Testing Frameworks](https://docs.ichrisbirch.com/terminal/bash-testing-frameworks/) for detailed BATS usage.
 
 ## Installation Testing
 
