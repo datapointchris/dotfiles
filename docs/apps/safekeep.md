@@ -11,19 +11,25 @@ Primary use case: backing up scattered config files, local scripts, and git-untr
 ## Quick Start
 
 ```bash
-safekeep --init             # Generate starter config at ~/.config/safekeep/default.json
-safekeep --dry-run          # Preview what would be copied
-safekeep                    # Auto-detect config, run backup
-safekeep --show-config      # Display the resolved config
+safekeep                    # Usage. Nothing writes without an explicit verb
+safekeep init               # Generate starter config at ~/.config/safekeep/default.json
+safekeep config             # Display the resolved config
+safekeep backup --dry-run   # Preview what would be copied
+safekeep backup             # Copy the configured paths into today's snapshot
 
-safekeep --snapshots                        # What is at the destination
-safekeep --restore --to /tmp/restore-test   # Rehearse: pick a snapshot and groups
-safekeep --restore --to / --tag wip         # Restore everything tagged 'wip'
+safekeep snapshots                        # What is at the destination
+safekeep restore --to /tmp/restore-test   # Rehearse: pick a snapshot and groups
+safekeep restore --to / --tag wip         # Restore everything tagged 'wip'
 ```
+
+Bare `safekeep` prints usage rather than picking an action, per the no-args-shows-help rule in
+`~/dev/standards/cli-design.md`. A tool that did work bare could not gain a second command without
+silently changing what the bare invocation means — and here that bare invocation was the one that
+wrote.
 
 ## Config
 
-Config files live at `~/.config/safekeep/<name>.json`. If only one config exists, it auto-loads. With multiple configs, specify which one with `--config`.
+Config files live at `~/.config/safekeep/<name>.json`. If only one config exists, it auto-loads. With multiple configs, specify which one with `--config`, which is global and goes before the command: `safekeep --config work backup`.
 
 ```json
 {
@@ -95,8 +101,8 @@ A snapshot with no manifest cannot be restored by safekeep — it says so and po
 ## Restore
 
 ```bash
-safekeep --restore --to PATH [--from DATE] [--all | --group PATH | --tag NAME]
-                             [--dry-run] [--on-conflict POLICY] [--skip-symlinked]
+safekeep restore --to PATH [--from DATE] [--all | --group PATH | --tag NAME]
+                           [--dry-run] [--on-conflict POLICY] [--skip-symlinked]
 ```
 
 `--to` is required. `--to /` is a real restore; `--to /tmp/restore-test` stages one somewhere harmless, which is how the restore gets rehearsed before it is needed.

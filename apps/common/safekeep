@@ -11,9 +11,11 @@ Primary use case: backing up scattered config files, local scripts, and git-untr
 WIP to a network drive that cannot represent Unix modes.
 
 Config: ~/.config/safekeep/<name>.json
-Usage:  safekeep [--config NAME] [--dry-run]
-        safekeep --snapshots
-        safekeep --restore --to PATH [--from DATE] [--all|--group G|--tag T]
+Usage:  safekeep backup [--dry-run]
+        safekeep snapshots
+        safekeep restore --to PATH [--from DATE] [--all|--group G|--tag T]
+
+Bare `safekeep` prints usage. Nothing writes without an explicit verb.
 """
 
 import argparse
@@ -131,11 +133,12 @@ config format:
     Snapshots are never pruned — managing how many you keep is not safekeep's job.
 
   examples:
-    safekeep --init                     Create ~/.config/safekeep/default.json
-    safekeep --show-config              Display the resolved config and exit
-    safekeep --snapshots                List snapshots at dest
-    safekeep --restore --to /           Pick a snapshot and groups, restore them
-    safekeep --restore --to /tmp/test --all --dry-run"""
+    safekeep init                       Create ~/.config/safekeep/default.json
+    safekeep config                     Display the resolved config and exit
+    safekeep backup                     Copy the configured paths into today's snapshot
+    safekeep snapshots                  List snapshots at dest
+    safekeep restore --to /             Pick a snapshot and groups, restore them
+    safekeep restore --to /tmp/test --all --dry-run"""
 
 
 def plural(count, noun):
@@ -163,18 +166,18 @@ def resolve_config(name):
             return config_path
         print(f'{red("safekeep:")} config not found: {yellow(name)}', file=sys.stderr)
         print(f'  looked in: {cyan(str(config_path))}', file=sys.stderr)
-        print(f'  generate it: {cyan(f"safekeep --init {name}")}', file=sys.stderr)
+        print(f'  generate it: {cyan(f"safekeep init {name}")}', file=sys.stderr)
         sys.exit(1)
 
     if not CONFIG_DIR.exists():
         print(f'{red("safekeep:")} no config directory at {cyan(str(CONFIG_DIR))}', file=sys.stderr)
-        print(f'  generate a starter config: {cyan("safekeep --init")}', file=sys.stderr)
+        print(f'  generate a starter config: {cyan("safekeep init")}', file=sys.stderr)
         sys.exit(1)
 
     configs = sorted(CONFIG_DIR.glob('*.json'))
     if not configs:
         print(f'{red("safekeep:")} no configs found in {cyan(str(CONFIG_DIR))}', file=sys.stderr)
-        print(f'  generate a starter config: {cyan("safekeep --init")}', file=sys.stderr)
+        print(f'  generate a starter config: {cyan("safekeep init")}', file=sys.stderr)
         sys.exit(1)
     if len(configs) == 1:
         return configs[0]
@@ -539,7 +542,7 @@ def pick_snapshot(dest, config_name):
         sys.exit(1)
 
     script = Path(__file__).resolve()
-    preview_cmd = f'{sys.executable} {script} --config {config_name} --preview-snapshot {{1}}'
+    preview_cmd = f'{sys.executable} {script} --config {config_name} preview-snapshot {{1}}'
 
     lines = []
     for snapshot_dir, manifest in snapshots:
@@ -921,7 +924,7 @@ def init_config(name):
 
     if config_path.exists():
         print(f'{yellow("safekeep:")} config already exists: {cyan(str(config_path))}', file=sys.stderr)
-        print(f'  use {cyan("--show-config")} to view it, or edit directly', file=sys.stderr)
+        print(f'  use {cyan("safekeep config")} to view it, or edit directly', file=sys.stderr)
         sys.exit(1)
 
     config_path.write_text(json.dumps(EXAMPLE_CONFIG, indent=2) + '\n')
@@ -929,7 +932,7 @@ def init_config(name):
     print(f'{green("safekeep:")} created {cyan(str(config_path))}')
     print()
     print('  Edit the file to match your backup needs, then preview with:')
-    print(f'    {cyan(f"safekeep --config {name} --dry-run")}')
+    print(f'    {cyan(f"safekeep --config {name} backup --dry-run")}')
     print()
     print('  Config format reference:')
     print(f'    {cyan("safekeep --help")}')
@@ -975,7 +978,7 @@ def show_config(config_path, config, warnings):
             print(f'  {yellow("config warning:")} {warning}')
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(
         prog='safekeep',
         description='Config-driven file preservation with self-describing dated snapshots',
@@ -983,59 +986,72 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('-c', '--config', help='Config name or absolute path (default: auto-detect)')
-    parser.add_argument('-n', '--dry-run', action='store_true', help='Show what would happen without doing it')
-    parser.add_argument('--init', nargs='?', const='default', metavar='NAME', help="Generate starter config (default name: 'default')")
-    parser.add_argument('--show-config', action='store_true', help='Display the resolved config and exit')
-    parser.add_argument('--snapshots', action='store_true', help='List snapshots at the configured destination')
-    parser.add_argument('--restore', action='store_true', help='Restore groups from a snapshot')
-    parser.add_argument('--to', metavar='PATH', help='Restore target root (required with --restore; use / for a real restore)')
-    parser.add_argument(
-        '--from', dest='from_date', metavar='DATE', help='Snapshot to restore from (default: pick interactively, else newest)'
+    commands = parser.add_subparsers(dest='command', metavar='COMMAND')
+
+    backup = commands.add_parser('backup', help='Copy the configured paths into a new dated snapshot')
+    backup.add_argument('-n', '--dry-run', action='store_true', help='Show what would be copied without doing it')
+
+    commands.add_parser('snapshots', help='List snapshots at the configured destination')
+
+    restore = commands.add_parser(
+        'restore',
+        help='Restore groups from a snapshot',
+        description='Restore groups from a snapshot. Selection is always explicit.',
+        epilog='Rehearse first: safekeep restore --to /tmp/restore-test --all',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('--all', action='store_true', help='Restore every group in the snapshot')
-    parser.add_argument(
-        '--group', action='append', default=[], metavar='PATH', help='Restore groups whose source contains PATH (repeatable)'
-    )
-    parser.add_argument('--tag', action='append', default=[], metavar='NAME', help='Restore groups carrying NAME (repeatable)')
-    parser.add_argument(
+    restore.add_argument('--to', metavar='PATH', required=True, help='Restore target root (use / for a real restore)')
+    restore.add_argument('--from', dest='from_date', metavar='DATE', help='Snapshot to restore from (default: pick it, else newest)')
+    restore.add_argument('--all', action='store_true', help='Restore every group in the snapshot')
+    restore.add_argument('--group', action='append', default=[], metavar='PATH', help='Groups whose source contains PATH (repeatable)')
+    restore.add_argument('--tag', action='append', default=[], metavar='NAME', help='Groups carrying NAME (repeatable)')
+    restore.add_argument(
         '--on-conflict',
         choices=['backup', 'skip', 'overwrite', 'newer'],
         default='backup',
         help='What to do when a target file already exists (default: backup)',
     )
-    parser.add_argument('--skip-symlinked', action='store_true', help='Skip paths that were symlinks when backed up')
-    parser.add_argument('--preview-snapshot', metavar='DATE', help=argparse.SUPPRESS)
+    restore.add_argument('--skip-symlinked', action='store_true', help='Skip paths that were symlinks when backed up')
+    restore.add_argument('-n', '--dry-run', action='store_true', help='Show what would be restored without doing it')
+
+    commands.add_parser('config', help='Display the resolved config and exit')
+
+    init = commands.add_parser('init', help='Generate a starter config')
+    init.add_argument('name', nargs='?', default='default', help="Config name (default: 'default')")
+
+    # No help=, which is what keeps a subparser out of the command listing; add_parser
+    # renders argparse.SUPPRESS literally rather than honouring it.
+    preview = commands.add_parser('preview-snapshot')
+    preview.add_argument('date', metavar='DATE')
+
+    return parser
+
+
+def main():
+    parser = build_parser()
     args = parser.parse_args()
 
-    if args.init is not None:
-        init_config(args.config or args.init)
+    if args.command is None:
+        parser.print_help()
+        sys.exit(0)
+
+    if args.command == 'init':
+        init_config(args.config or args.name)
         sys.exit(0)
 
     config_path = resolve_config(args.config)
     config, warnings = load_config(config_path)
 
-    if args.preview_snapshot:
-        preview_snapshot(Path(config['dest']).expanduser(), args.preview_snapshot)
-        sys.exit(0)
-
-    if args.show_config:
+    if args.command == 'preview-snapshot':
+        preview_snapshot(Path(config['dest']).expanduser(), args.date)
+    elif args.command == 'config':
         show_config(config_path, config, warnings)
-        sys.exit(0)
-
-    if args.snapshots:
+    elif args.command == 'snapshots':
         show_snapshots(Path(config['dest']).expanduser())
-        sys.exit(0)
-
-    if args.restore:
-        if not args.to:
-            print(f'{red("safekeep:")} --restore requires {cyan("--to PATH")}', file=sys.stderr)
-            print(f'  stage a rehearsal: {cyan("--to /tmp/restore-test")}', file=sys.stderr)
-            print(f'  restore for real:  {cyan("--to /")}', file=sys.stderr)
-            sys.exit(1)
+    elif args.command == 'restore':
         do_restore(config, config_path, args)
-        sys.exit(0)
-
-    do_backup(config, config_path, warnings, args)
+    elif args.command == 'backup':
+        do_backup(config, config_path, warnings, args)
 
 
 if __name__ == '__main__':
