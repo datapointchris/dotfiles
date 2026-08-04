@@ -665,7 +665,7 @@ def preview_snapshot(dest, date):
     skipped = manifest.get('skipped_large', [])
     if skipped:
         print()
-        print(f'  {len(skipped)} files skipped for exceeding max_file_size_mb')
+        print(f'  {len(skipped)} files skipped for exceeding skip_files_over_mb')
     warnings = manifest.get('config_warnings', [])
     if warnings:
         print()
