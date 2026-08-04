@@ -12,8 +12,9 @@ Primary use case: backing up scattered config files, local scripts, and git-untr
 
 ```bash
 safekeep                    # Usage. Nothing writes without an explicit verb
-safekeep init               # Generate starter config at ~/.config/safekeep/default.toml
-safekeep config             # Display the resolved config
+safekeep config example     # Read the annotated example without writing anything
+safekeep config init        # Write a starter config to ~/.config/safekeep/default.toml
+safekeep config show        # Display the resolved config
 safekeep backup --dry-run   # Preview what would be copied
 safekeep backup             # Copy the configured paths into today's snapshot
 
@@ -25,13 +26,21 @@ safekeep restore --to / --tag wip         # Restore everything tagged 'wip'
 Bare `safekeep` prints usage rather than picking an action, per the no-args-shows-help rule in
 `~/dev/standards/cli-design.md`. A tool that did work bare could not gain a second command without
 silently changing what the bare invocation means — and here that bare invocation was the one that
-wrote.
+wrote. Bare `safekeep config` does the same thing one level down: it names a resource without
+selecting a verb, so it prints the namespace's own help and exits 2 rather than guessing `show`.
+
+**`config` is a namespace even though it started with one command.** It was previously a root-level
+`init` plus a bare `config` that printed — which meant `config` occupied the noun slot while doing a
+verb's job, leaving nowhere for `config init` to go. The rules are in `cli-design.md`: a resource
+that could ever grow a second command is a namespace today, and `init` belongs to whatever it
+initializes. `git init` creates the tool's entire subject; a config file is one artifact among
+several, which is why it nests here and in `go mod init`.
 
 ## Config
 
 Config files live at `~/.config/safekeep/<name>.toml`. If only one config exists, it auto-loads. With multiple configs, specify which one with `--config`, which is global and goes before the command: `safekeep --config work backup`.
 
-`safekeep init` writes a complete annotated starter config; the shape it produces is:
+`safekeep config init` writes a complete annotated starter config, and `safekeep config example` prints the same content to stdout without touching the filesystem — which is what you want when the question is "what does that key look like" rather than "set me up". The shape it produces:
 
 ```toml
 back_up_to = "/mnt/h/backups"

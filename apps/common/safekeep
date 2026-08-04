@@ -241,8 +241,9 @@ config format:
     Snapshots are never pruned — managing how many you keep is not safekeep's job.
 
   examples:
-    safekeep init                       Create ~/.config/safekeep/default.toml
-    safekeep config                     Display the resolved config and exit
+    safekeep config init                Create ~/.config/safekeep/default.toml
+    safekeep config example             Print the annotated example without writing it
+    safekeep config show                Display the resolved config and exit
     safekeep backup                     Copy the configured paths into today's snapshot
     safekeep snapshots                  List snapshots at dest
     safekeep restore --to /             Pick a snapshot and groups, restore them
@@ -286,19 +287,19 @@ def resolve_config(name):
         print(f'{red("safekeep:")} config not found: {yellow(name)}', file=sys.stderr)
         print(f'  looked in: {cyan(str(config_path))}', file=sys.stderr)
         warn_about_json_configs()
-        print(f'  generate it: {cyan(f"safekeep init {name}")}', file=sys.stderr)
+        print(f'  generate it: {cyan(f"safekeep config init {name}")}', file=sys.stderr)
         sys.exit(1)
 
     if not CONFIG_DIR.exists():
         print(f'{red("safekeep:")} no config directory at {cyan(str(CONFIG_DIR))}', file=sys.stderr)
-        print(f'  generate a starter config: {cyan("safekeep init")}', file=sys.stderr)
+        print(f'  generate a starter config: {cyan("safekeep config init")}', file=sys.stderr)
         sys.exit(1)
 
     configs = sorted(CONFIG_DIR.glob('*.toml'))
     if not configs:
         print(f'{red("safekeep:")} no configs found in {cyan(str(CONFIG_DIR))}', file=sys.stderr)
         warn_about_json_configs()
-        print(f'  generate a starter config: {cyan("safekeep init")}', file=sys.stderr)
+        print(f'  generate a starter config: {cyan("safekeep config init")}', file=sys.stderr)
         sys.exit(1)
     if len(configs) == 1:
         return configs[0]
@@ -1077,7 +1078,7 @@ def init_config(name):
 
     if config_path.exists():
         print(f'{yellow("safekeep:")} config already exists: {cyan(str(config_path))}', file=sys.stderr)
-        print(f'  use {cyan("safekeep config")} to view it, or edit directly', file=sys.stderr)
+        print(f'  use {cyan("safekeep config show")} to view it, or edit directly', file=sys.stderr)
         sys.exit(1)
 
     config_path.write_text(CONFIG_TEMPLATE)
@@ -1167,10 +1168,19 @@ def build_parser():
     restore.add_argument('--skip-symlinked', action='store_true', help='Skip paths that were symlinks when backed up')
     restore.add_argument('-n', '--dry-run', action='store_true', help='Show what would be restored without doing it')
 
-    commands.add_parser('config', help='Display the resolved config and exit')
-
-    init = commands.add_parser('init', help='Generate a starter config')
-    init.add_argument('name', nargs='?', default='default', help="Config name (default: 'default')")
+    # 'config' is a namespace, not a command. A bare `config` that printed would occupy the
+    # noun slot with a verb's job, leaving nowhere for `config init` to go -- see
+    # ~/dev/standards/cli-design.md, "A resource that could ever grow a second command is a
+    # namespace today".
+    config = commands.add_parser('config', help='Inspect and create config files')
+    # Carrying the subparser itself lets a bare `config` print its own help rather than the
+    # root's, which is what the reader who typed it needs to see.
+    config.set_defaults(config_parser=config)
+    config_commands = config.add_subparsers(dest='config_command', metavar='COMMAND')
+    config_commands.add_parser('show', help='Display the resolved config and exit')
+    config_init = config_commands.add_parser('init', help='Write a starter config')
+    config_init.add_argument('name', nargs='?', default='default', help="Config name (default: 'default')")
+    config_commands.add_parser('example', help='Print the annotated example config without writing it')
 
     # No help=, which is what keeps a subparser out of the command listing; add_parser
     # renders argparse.SUPPRESS literally rather than honouring it.
@@ -1190,9 +1200,18 @@ def main():
         parser.print_help()
         sys.exit(2)
 
-    if args.command == 'init':
-        init_config(args.config or args.name)
-        sys.exit(0)
+    if args.command == 'config':
+        # A bare `safekeep config` selects nothing, so it shows help and exits 2 like a bare
+        # invocation does, rather than guessing that 'show' was meant.
+        if args.config_command is None:
+            args.config_parser.print_help()
+            sys.exit(2)
+        if args.config_command == 'init':
+            init_config(args.config or args.name)
+            sys.exit(0)
+        if args.config_command == 'example':
+            print(CONFIG_TEMPLATE, end='')
+            sys.exit(0)
 
     config_path = resolve_config(args.config)
     config, warnings = load_config(config_path)

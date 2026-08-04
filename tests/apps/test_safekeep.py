@@ -98,8 +98,25 @@ def test_explicit_help_is_a_satisfied_request(tmp_path):
 
 def test_help_lists_every_public_command(tmp_path):
     result = run_safekeep('--help')
-    for command in ('backup', 'snapshots', 'restore', 'config', 'init'):
+    for command in ('backup', 'snapshots', 'restore', 'config'):
         assert command in result.stdout
+
+
+def test_config_is_a_namespace_and_a_bare_one_shows_its_own_help(tmp_path):
+    """`config` names a resource; selecting nothing under it is an incomplete command line."""
+    result = run_safekeep('config')
+    assert result.returncode == 2
+    for command in ('show', 'init', 'example'):
+        assert command in result.stdout
+
+
+def test_config_example_prints_the_template_without_needing_a_config(tmp_path, monkeypatch):
+    """Reading the annotated example is what you do *before* you have a config."""
+    monkeypatch.setenv('HOME', str(tmp_path))
+    result = subprocess.run([sys.executable, str(SCRIPT), 'config', 'example'], capture_output=True, text=True, env=os.environ)
+    assert result.returncode == 0
+    assert result.stdout == safekeep.CONFIG_TEMPLATE
+    assert not (tmp_path / '.config' / 'safekeep').exists()
 
 
 def test_unknown_command_is_a_usage_error(tmp_path):
