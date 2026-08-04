@@ -21,24 +21,6 @@ def plain(captured: str) -> str:
     return ANSI.sub('', captured).rstrip('\n')
 
 
-def test_clip_leaves_text_that_fits(monkeypatch):
-    monkeypatch.setenv('COLUMNS', '80')
-    assert render.clip('short', 10) == 'short'
-
-
-def test_clip_shortens_to_the_room_that_is_left(monkeypatch):
-    monkeypatch.setenv('COLUMNS', '40')
-    clipped = render.clip('x' * 100, 10)
-    assert len(clipped) == 30
-    assert clipped.endswith('…')
-
-
-def test_clip_gives_up_rather_than_emit_a_bare_ellipsis(monkeypatch):
-    """With no room to say anything, truncating to '…' loses more than it saves."""
-    monkeypatch.setenv('COLUMNS', '10')
-    assert render.clip('hello', 9) == 'hello'
-
-
 def test_nudge_width_sizes_from_the_longest_name():
     assert render.nudge_width(['a', 'abc', 'ab']) == 5, 'longest name plus a two-column gutter'
     assert render.nudge_width([]) == 2, 'an empty roster is the gutter alone, not a max() error'

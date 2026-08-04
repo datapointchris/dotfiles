@@ -87,7 +87,7 @@ def test_bare_invocation_shows_help_and_writes_nothing(tmp_path, source_tree):
     config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
     result = run_safekeep('--config', str(config_path))
     assert result.returncode == 2  # usage error, matching every Typer tool's no_args_is_help
-    assert 'usage: safekeep' in result.stdout
+    assert 'Usage: safekeep' in result.stdout
     assert not dest.exists()
 
 
@@ -100,6 +100,29 @@ def test_help_lists_every_public_command(tmp_path):
     result = run_safekeep('--help')
     for command in ('backup', 'snapshots', 'restore', 'config'):
         assert command in result.stdout
+
+
+def test_restore_help_works_without_the_option_it_documents(tmp_path):
+    """--to cannot be argparse-required, or asking how to use restore fails on the very
+    argument the answer explains. See the --to argument in build_parser."""
+    result = run_safekeep('restore', '--help')
+    assert result.returncode == 0
+    assert '--to' in result.stdout
+    for selection in ('--all', '--group', '--tag'):
+        assert selection in result.stdout
+
+
+def test_restore_without_a_target_says_which_option_is_missing(tmp_path):
+    result = run_safekeep('restore', '--all')
+    assert result.returncode == 2
+    assert '--to' in result.stderr
+    assert 'restore-test' in result.stderr, 'the error points at rehearsing, not just at the flag'
+
+
+def test_restore_help_is_its_own_screen_not_the_root(tmp_path):
+    result = run_safekeep('restore', '--help')
+    assert 'safekeep restore' in result.stdout
+    assert 'safekeep backup' not in result.stdout, 'a drill-down screen describes what was asked about'
 
 
 def test_config_is_a_namespace_and_a_bare_one_shows_its_own_help(tmp_path):

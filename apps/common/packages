@@ -23,15 +23,15 @@ from typing import Any
 import yaml
 
 # packages is symlinked onto PATH; resolve the real path so the repo-root
-# menucore package is importable for the shared help grammar. parents[2] is the
+# appcore package is importable for the shared help grammar. parents[2] is the
 # repo root: apps/common/packages → apps/common → apps → <repo>.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from menucore import help_end
-from menucore import help_header
-from menucore import help_row
-from menucore import help_section
-from menucore import help_text
-from menucore import help_usage
+from appcore import help_end
+from appcore import help_header
+from appcore import help_row
+from appcore import help_section
+from appcore import help_text
+from appcore import help_usage
 
 VERSION = "1.0.0"
 

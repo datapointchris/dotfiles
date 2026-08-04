@@ -107,8 +107,11 @@ No call site passes a width or a colour, and none should:
 Two rules follow from the buffer: close a screen with `help_end`, and use `help_text` rather than a
 bare `echo` for prose between rows, so pending rows flush ahead of it.
 
-`menucore/render.py` mirrors all six functions for the Python apps (`packages`, `menu-labs`,
-`menu-review`); the two languages render byte-identical screens.
+`appcore/formatting.py` mirrors all six functions for the Python apps (`safekeep`, `packages`,
+`menu-labs`, `menu-review`); the two languages render byte-identical screens. That mirroring is the
+whole reason the Python side is a repo-local package rather than a published one — its value is
+matching this file, so it has nothing to offer a CLI outside these apps. The packaged Python CLIs on
+the fleet use Typer and get their help from Rich instead.
 
 The underlying `print_help_row(width, name, [description], [color])` and
 `print_example_row(width, command, [comment])` remain available for a one-off row outside a help
@@ -381,7 +384,7 @@ Each has color variants and `_success/_error/_warning/_info` variants with emoji
 | `help_end` | Close the screen |
 
 Low-level rows, for use outside a help screen: `print_help_row`, `print_example_row`.
-Mirrored for Python in `menucore/render.py`.
+Mirrored for Python in `appcore/formatting.py`.
 
 ### Error Handling
 

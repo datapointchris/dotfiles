@@ -31,28 +31,28 @@ from pathlib import Path
 import yaml
 
 # menu-labs is symlinked onto PATH; resolve the real path so the repo-root
-# menucore package (shared with menu-review) is importable. parents[2] is the
-# repo root: apps/common/menu-labs → apps/common → apps → <repo>.
+# appcore and menucore packages are importable. parents[2] is the repo root:
+# apps/common/menu-labs → apps/common → apps → <repo>.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from menucore import CYAN
-from menucore import GREEN
-from menucore import RESET
-from menucore import YELLOW
-from menucore import clip
-from menucore import header
-from menucore import help_end
-from menucore import help_header
-from menucore import help_row
-from menucore import help_section
-from menucore import help_usage
+from appcore import CYAN
+from appcore import GREEN
+from appcore import RESET
+from appcore import YELLOW
+from appcore import clip
+from appcore import header
+from appcore import help_end
+from appcore import help_header
+from appcore import help_row
+from appcore import help_section
+from appcore import help_usage
+from appcore import xdg_data_home
+from appcore import xdg_state_home
 from menucore import is_due
 from menucore import load_state
 from menucore import overdue_days
 from menucore import parse_cadence
 from menucore import save_state
 from menucore import status_label
-from menucore import xdg_data_home
-from menucore import xdg_state_home
 
 # Runtime reads go through the installed dir (symlinks resolve to repo content).
 LABS_DIR = Path(os.environ.get("MENU_LABS_DIR") or xdg_data_home() / "menu-labs")

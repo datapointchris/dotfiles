@@ -11,11 +11,9 @@ Primary use case: backing up scattered config files, local scripts, and git-untr
 WIP to a network drive that cannot represent Unix modes.
 
 Config: ~/.config/safekeep/<name>.toml (the manifest stays JSON -- machines write it)
-Usage:  safekeep backup [--dry-run]
-        safekeep snapshots
-        safekeep restore --to PATH [--from DATE] [--all|--group G|--tag T]
 
-Bare `safekeep` prints usage. Nothing writes without an explicit verb.
+Bare `safekeep` prints usage. Nothing writes without an explicit verb. The command
+surface is not repeated here -- `safekeep --help` is the one copy of it.
 """
 
 import argparse
@@ -31,31 +29,22 @@ from datetime import datetime
 from fnmatch import fnmatch
 from pathlib import Path
 
+# safekeep is symlinked onto PATH; resolve the real path so the repo-root appcore
+# package is importable for the house palette and help grammar. parents[2] is the
+# repo root: apps/common/safekeep → apps/common → apps → <repo>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-# ANSI color helpers — no dependencies needed, every modern terminal supports these
-def _color(code, text):
-    return f'\033[{code}m{text}\033[0m'
-
-
-def cyan(text):
-    return _color('36', text)
-
-
-def green(text):
-    return _color('32', text)
-
-
-def yellow(text):
-    return _color('33', text)
-
-
-def red(text):
-    return _color('31', text)
-
-
-def bold(text):
-    return _color('1', text)
-
+from appcore import bold
+from appcore import cyan
+from appcore import green
+from appcore import help_end
+from appcore import help_header
+from appcore import help_row
+from appcore import help_section
+from appcore import help_text
+from appcore import help_usage
+from appcore import red
+from appcore import yellow
 
 # Keys are phrases that state what safekeep will do, so the file reads as a description of the
 # backup rather than a dump of this program's variables -- see ~/dev/standards/configuration.md.
@@ -116,7 +105,7 @@ DEFAULT_DIR_MODE = 0o755
 # point -- this file is meant to be read as a description of the backup.
 CONFIG_TEMPLATE = """\
 # safekeep configuration. Every key states what safekeep will do with it.
-# Full reference: safekeep --help
+# This file is the reference -- the comments below explain every key.
 
 back_up_to = "/mnt/h/backups"
 
@@ -184,70 +173,6 @@ tags = ["wip"]
 path = "~/work/client-api"
 tags = ["wip", "work"]
 """
-
-CONFIG_FORMAT_HELP = """\
-config format:
-  Files live in ~/.config/safekeep/<name>.toml
-
-  Every key states what safekeep will do, so the file reads top to bottom as a
-  description of the backup:
-
-    back_up_to = "/mnt/h/backups"
-    skip_names_matching = [".venv", "node_modules"]
-    skip_files_over_mb = 50
-
-    [[back_up_paths]]
-    path = "~/notes"
-
-    [git]
-    back_up_untracked_files = true
-    back_up_ignored_files_matching = ["CLAUDE.md"]
-
-    [[git.repos]]
-    path = "~/code/project"
-
-  required keys:
-    back_up_to        Backup destination directory (~ is expanded)
-
-  optional keys:
-    back_up_paths     One [[back_up_paths]] block per path, copied whole
-    git               'repos' names the repos; every other key under 'git' states
-                      what is taken from them:
-                        repos                           One [[git.repos]] block per
-                                                        repo
-                        back_up_untracked_files         Copy each repo's untracked
-                                                        files (default true)
-                        back_up_ignored_files_matching  Glob patterns matched against
-                                                        the gitignored files in those
-                                                        same repos, so ["CLAUDE.md",
-                                                        ".planning"] keeps those too
-    skip_names_matching  Glob patterns no backup ever copies (defaults if omitted)
-    skip_files_over_mb   Skip files larger than this many MB
-
-  tagging:
-    Every [[back_up_paths]] and [[git.repos]] block takes a 'path' and optional
-    'tags'. Tags are free-form labels carried into the snapshot manifest; safekeep
-    never interprets them, it only lets you select on them at restore time.
-
-      [[back_up_paths]]
-      path = "/mnt/c/docs"
-      tags = ["windows"]
-
-  unrecognized keys warn rather than error, so a config can be edited ahead of the tool.
-
-  destination structure:
-    back_up_to/YYYY-MM-DD/  A dated subdirectory is created for each day's backup.
-                      Full directory structure is preserved from filesystem root.
-    Snapshots are never pruned — managing how many you keep is not safekeep's job.
-
-  examples:
-    safekeep config init                Create ~/.config/safekeep/default.toml
-    safekeep config example             Print the annotated example without writing it
-    safekeep config show                Display the resolved config and exit
-    safekeep backup                     Copy the configured paths into today's snapshot
-    safekeep snapshots                  List snapshots at dest
-    safekeep restore --to /             Pick a snapshot and groups, restore them
-    safekeep restore --to /tmp/test --all --dry-run"""
 
 
 def plural(count, noun):
@@ -1132,79 +1057,184 @@ def show_config(config_path, config, warnings):
             print(f'  {yellow("config warning:")} {warning}')
 
 
-def build_parser():
-    parser = argparse.ArgumentParser(
-        prog='safekeep',
-        description='Config-driven file preservation with self-describing dated snapshots',
-        epilog=CONFIG_FORMAT_HELP,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+def show_help():
+    help_header('safekeep', 'Dated snapshots of the files no package manager will put back.')
+    help_usage('safekeep <command> [OPTIONS]')
+
+    help_section('Commands')
+    help_row('safekeep backup', '', "Copy the configured paths into today's snapshot")
+    help_row('safekeep snapshots', '', 'List the snapshots at the destination')
+    help_row('safekeep restore', '--to <path>', 'Restore groups from a snapshot')
+    help_row('safekeep config', '<verb>', 'Inspect and create config files')
+
+    help_section('Options')
+    help_row('-c, --config', '<name|path>', 'Config to use (default: auto-detect)')
+    help_row('-h, --help', '', 'Show this help')
+    help_text(
+        '  Both go before the command: safekeep -c work backup',
+        '  -n, --dry-run goes after it, on backup and restore: safekeep backup -n',
     )
-    parser.add_argument('-c', '--config', help='Config name or absolute path (default: auto-detect)')
+
+    help_section('Config')
+    help_text(
+        '  Files live in ~/.config/safekeep/<name>.toml, one per backup destination.',
+        '  `safekeep config example` prints an annotated config explaining every key.',
+    )
+
+    help_section('Restoring')
+    help_text(
+        '  Selection is always explicit — a restore never guesses at --all.',
+        '  Rehearse into a scratch directory before restoring over anything real:',
+        '      safekeep restore --to /tmp/restore-test --all',
+    )
+
+    help_section('Examples')
+    help_row('safekeep config init', '', 'Write ~/.config/safekeep/default.toml')
+    help_row('safekeep backup -n', '', 'See what a backup would copy')
+    help_row('safekeep snapshots', '', 'What is on the destination already')
+    help_row('safekeep restore --to / --tag secrets', '', 'Restore one tag for real')
+
+    help_end()
+
+
+def show_restore_help():
+    help_header('safekeep restore', 'Restore groups from a snapshot.')
+    help_usage('safekeep restore --to <path> <selection> [OPTIONS]')
+
+    help_section('Selection')
+    help_text('  Required, and never inferred. Pass at least one:')
+    help_row('--all', '', 'Every group in the snapshot')
+    help_row('--group', '<path>', 'Groups whose source contains PATH (repeatable)')
+    help_row('--tag', '<name>', 'Groups carrying NAME (repeatable)')
+
+    help_section('Options')
+    help_row('--to', '<path>', 'Restore target root (/ for a real restore)')
+    help_row('--from', '<date>', 'Snapshot to restore from (default: pick, else newest)')
+    help_row('--on-conflict', '<mode>', 'backup (default), skip, overwrite, newer')
+    help_row('--skip-symlinked', '', 'Skip paths that were symlinks when backed up')
+    help_row('-n, --dry-run', '', 'Show what would be restored, change nothing')
+    help_row('-h, --help', '', 'Show this help')
+
+    help_section('Examples')
+    help_row('safekeep restore --to /tmp/rehearsal --all', '', 'Rehearse first — always')
+    help_row('safekeep restore --to / --tag secrets', '', 'Restore one tag for real')
+    help_row('safekeep restore --to / --from 2026-07-01 --all', '', 'Restore an older snapshot')
+
+    help_end()
+
+
+def show_config_help():
+    help_header('safekeep config', 'Inspect and create config files.')
+    help_usage('safekeep config <verb>')
+
+    help_section('Commands')
+    help_row('safekeep config show', '', 'Display the resolved config and exit')
+    help_row('safekeep config init', '[name]', "Write a starter config (default: 'default')")
+    help_row('safekeep config example', '', 'Print the annotated example without writing it')
+
+    help_section('Files')
+    help_text(
+        f'  {CONFIG_DIR}/<name>.toml',
+        '  The annotated example is the key reference — it explains every key inline.',
+    )
+
+    help_end()
+
+
+def build_parser():
+    """Parsing only. Every screen's text lives in the show_*_help functions above, so
+    argparse carries no help= strings that would be a second copy able to drift."""
+    parser = argparse.ArgumentParser(prog='safekeep', add_help=False)
+    parser.add_argument('-h', '--help', action='store_true', dest='show_help')
+    parser.add_argument('-c', '--config')
     commands = parser.add_subparsers(dest='command', metavar='COMMAND')
 
-    backup = commands.add_parser('backup', help='Copy the configured paths into a new dated snapshot')
-    backup.add_argument('-n', '--dry-run', action='store_true', help='Show what would be copied without doing it')
+    backup = commands.add_parser('backup', add_help=False)
+    backup.add_argument('-h', '--help', action='store_true', dest='show_help')
+    backup.add_argument('-n', '--dry-run', action='store_true')
 
-    commands.add_parser('snapshots', help='List snapshots at the configured destination')
+    snapshots = commands.add_parser('snapshots', add_help=False)
+    snapshots.add_argument('-h', '--help', action='store_true', dest='show_help')
 
-    restore = commands.add_parser(
-        'restore',
-        help='Restore groups from a snapshot',
-        description='Restore groups from a snapshot. Selection is always explicit.',
-        epilog='Rehearse first: safekeep restore --to /tmp/restore-test --all',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    restore.add_argument('--to', metavar='PATH', required=True, help='Restore target root (use / for a real restore)')
-    restore.add_argument('--from', dest='from_date', metavar='DATE', help='Snapshot to restore from (default: pick it, else newest)')
-    restore.add_argument('--all', action='store_true', help='Restore every group in the snapshot')
-    restore.add_argument('--group', action='append', default=[], metavar='PATH', help='Groups whose source contains PATH (repeatable)')
-    restore.add_argument('--tag', action='append', default=[], metavar='NAME', help='Groups carrying NAME (repeatable)')
-    restore.add_argument(
-        '--on-conflict',
-        choices=['backup', 'skip', 'overwrite', 'newer'],
-        default='backup',
-        help='What to do when a target file already exists (default: backup)',
-    )
-    restore.add_argument('--skip-symlinked', action='store_true', help='Skip paths that were symlinks when backed up')
-    restore.add_argument('-n', '--dry-run', action='store_true', help='Show what would be restored without doing it')
+    restore = commands.add_parser('restore', add_help=False)
+    restore.add_argument('-h', '--help', action='store_true', dest='show_help')
+    # Not required=True: argparse would reject `safekeep restore --help` for the missing
+    # --to before there was any chance to show the screen that explains it. main() checks
+    # for it after help routing instead.
+    restore.add_argument('--to', metavar='PATH')
+    restore.add_argument('--from', dest='from_date', metavar='DATE')
+    restore.add_argument('--all', action='store_true')
+    restore.add_argument('--group', action='append', default=[], metavar='PATH')
+    restore.add_argument('--tag', action='append', default=[], metavar='NAME')
+    restore.add_argument('--on-conflict', choices=['backup', 'skip', 'overwrite', 'newer'], default='backup')
+    restore.add_argument('--skip-symlinked', action='store_true')
+    restore.add_argument('-n', '--dry-run', action='store_true')
 
     # 'config' is a namespace, not a command. A bare `config` that printed would occupy the
     # noun slot with a verb's job, leaving nowhere for `config init` to go -- see
     # ~/dev/standards/cli-design.md, "A resource that could ever grow a second command is a
     # namespace today".
-    config = commands.add_parser('config', help='Inspect and create config files')
-    # Carrying the subparser itself lets a bare `config` print its own help rather than the
-    # root's, which is what the reader who typed it needs to see.
-    config.set_defaults(config_parser=config)
+    config = commands.add_parser('config', add_help=False)
+    config.add_argument('-h', '--help', action='store_true', dest='show_help')
     config_commands = config.add_subparsers(dest='config_command', metavar='COMMAND')
-    config_commands.add_parser('show', help='Display the resolved config and exit')
-    config_init = config_commands.add_parser('init', help='Write a starter config')
-    config_init.add_argument('name', nargs='?', default='default', help="Config name (default: 'default')")
-    config_commands.add_parser('example', help='Print the annotated example config without writing it')
+    config_show = config_commands.add_parser('show', add_help=False)
+    config_show.add_argument('-h', '--help', action='store_true', dest='show_help')
+    config_init = config_commands.add_parser('init', add_help=False)
+    config_init.add_argument('-h', '--help', action='store_true', dest='show_help')
+    config_init.add_argument('name', nargs='?', default='default')
+    config_example = config_commands.add_parser('example', add_help=False)
+    config_example.add_argument('-h', '--help', action='store_true', dest='show_help')
 
-    # No help=, which is what keeps a subparser out of the command listing; add_parser
-    # renders argparse.SUPPRESS literally rather than honouring it.
-    preview = commands.add_parser('preview-snapshot')
+    # Undocumented on purpose: this renders a snapshot's manifest for the picker, so it is
+    # machine plumbing rather than a verb anyone types.
+    preview = commands.add_parser('preview-snapshot', add_help=False)
     preview.add_argument('date', metavar='DATE')
 
     return parser
+
+
+def screen_for(args):
+    """The help screen covering whatever the reader has typed so far.
+
+    Only the commands with a surface worth its own screen get one. `backup` and
+    `snapshots` fall back to the root, which already documents them in full — a
+    screen per flag would be a page you have to read to learn there was nothing on it.
+    """
+    if args.command == 'restore':
+        return show_restore_help
+    if args.command == 'config':
+        return show_config_help
+    return show_help
 
 
 def main():
     parser = build_parser()
     args = parser.parse_args()
 
+    if getattr(args, 'show_help', False):
+        # An explicit --help is a satisfied request, so it exits 0 where a bare or
+        # incomplete invocation exits 2.
+        screen_for(args)()
+        sys.exit(0)
+
     if args.command is None:
         # Exit 2, matching every Typer tool on the fleet (no_args_is_help) and the usage-error
-        # code in cli-design.md. An explicit `--help` is a satisfied request and still exits 0.
-        parser.print_help()
+        # code in cli-design.md.
+        show_help()
+        sys.exit(2)
+
+    if args.command == 'restore' and not args.to:
+        # Checked here rather than by argparse so that `restore --help` reaches its screen;
+        # see the --to argument in build_parser.
+        print(f'\n  {red("restore needs --to")}: the root to restore into, or / for a real restore', file=sys.stderr)
+        print(f'  Rehearse first: {cyan("safekeep restore --to /tmp/restore-test --all")}\n', file=sys.stderr)
         sys.exit(2)
 
     if args.command == 'config':
         # A bare `safekeep config` selects nothing, so it shows help and exits 2 like a bare
         # invocation does, rather than guessing that 'show' was meant.
         if args.config_command is None:
-            args.config_parser.print_help()
+            show_config_help()
             sys.exit(2)
         if args.config_command == 'init':
             init_config(args.config or args.name)

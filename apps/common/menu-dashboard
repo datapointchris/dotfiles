@@ -42,14 +42,14 @@ from enum import StrEnum
 from pathlib import Path
 
 # menu-dashboard is symlinked onto PATH; resolve the real path so the repo-root
-# menucore package (shared with menu-review and menu-labs) is importable.
+# appcore package (the house palette, shared by every app) is importable.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from menucore import BLUE
-from menucore import CYAN
-from menucore import GREEN
-from menucore import RED
-from menucore import RESET
-from menucore import YELLOW
+from appcore import BLUE
+from appcore import CYAN
+from appcore import GREEN
+from appcore import RED
+from appcore import RESET
+from appcore import YELLOW
 
 # One call per backend, run concurrently. `icb overview` and `learning overview`
 # are composites on their side precisely so this stays one call each.
