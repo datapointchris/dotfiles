@@ -2017,20 +2017,24 @@ tools:
 
   safekeep:
     category: custom-tools
-    description: "Config-driven file preservation with dated snapshots and retention - rsync-based with automatic pruning"
+    description: "Config-driven file preservation with self-describing dated snapshots - rsync-based backup and restore"
     installed_via: dotfiles
-    usage: "safekeep [--config NAME] [--dry-run]"
-    why_use: "Back up scattered config files, scripts, and git-untracked WIP to a network drive with dated snapshots and automatic retention"
+    usage: "safekeep [--config NAME] [--dry-run] | --snapshots | --restore --to PATH"
+    why_use: "Back up scattered config files, scripts, and git-untracked WIP to a network drive, and restore them onto a rebuilt machine with file modes intact"
     examples:
       - cmd: "safekeep"
         desc: "Run backup using auto-detected config"
-      - cmd: "safekeep --config work"
-        desc: "Use specific config profile"
       - cmd: "safekeep --dry-run"
         desc: "Preview what would be copied"
-    see_also: [backmeup, backup-incremental, rsync]
-    tags: [backup, rsync, config-driven, snapshots, retention, network]
-    notes: "Zero dependencies (Python stdlib only). Config at ~/.config/safekeep/<name>.json. Supports static paths and dynamic git-untracked file collection."
+      - cmd: "safekeep --snapshots"
+        desc: "List snapshots at the destination"
+      - cmd: "safekeep --restore --to /tmp/restore-test"
+        desc: "Rehearse a restore, picking snapshot and groups with fzf"
+      - cmd: "safekeep --restore --to / --tag wip"
+        desc: "Restore every group tagged 'wip'"
+    see_also: [backmeup, backup-incremental, rsync, fzf]
+    tags: [backup, restore, rsync, config-driven, snapshots, network]
+    notes: "Backup is Python stdlib only; restore shells out to fzf for interactive selection. Config at ~/.config/safekeep/<name>.json. Each snapshot carries a manifest recording groups, tags, and file modes, so it restores without the config that made it. Snapshots are never pruned."
     docs_url: "docs/apps/safekeep.md"
 
   refcheck:

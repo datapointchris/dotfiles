@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""safekeep - Config-driven file preservation with dated snapshots and retention.
+"""safekeep - Config-driven file preservation with self-describing dated snapshots.
 
-Rsync-copies files and directories to a destination with dated snapshots and
-automatic retention pruning. Primary use case: backing up scattered config files,
-local scripts, and git-untracked WIP to a network drive for crash protection.
+Rsync-copies files and directories to a destination as dated snapshots, and writes a
+manifest into each one recording what was collected, the source file modes, and which
+sources were symlinks. That manifest is what makes a snapshot restorable without the
+config that produced it -- the disaster-recovery case, where the config died with the
+machine.
+
+Primary use case: backing up scattered config files, local scripts, and git-untracked
+WIP to a network drive that cannot represent Unix modes.
 
 Config: ~/.config/safekeep/<name>.json
-Usage: safekeep [--config NAME] [--dry-run] [--init [NAME]] [--show-config]
+Usage:  safekeep [--config NAME] [--dry-run]
+        safekeep --snapshots
+        safekeep --restore --to PATH [--from DATE] [--all|--group G|--tag T]
 """
 
 import argparse
@@ -47,7 +54,15 @@ def bold(text):
     return _color('1', text)
 
 
-VALID_KEYS = {'dest', 'keep', 'exclude', 'paths', 'git_untracked', 'git_ignored', 'max_file_size_mb'}
+REQUIRED_KEYS = {'dest'}
+VALID_KEYS = {'dest', 'exclude', 'paths', 'git_untracked', 'git_ignored', 'max_file_size_mb'}
+
+# Keys that once meant something. A generic "unknown key" warning is fine for a typo but
+# useless for a key whose removal silently shrinks the backup, so retired keys carry their
+# own message. Entries are deleted once every config has aged past them.
+RETIRED_KEYS = {
+    'keep': 'retention was removed — snapshots are no longer pruned; delete this key',
+}
 
 DEFAULT_EXCLUDES = [
     '.venv',
@@ -65,13 +80,21 @@ DEFAULT_EXCLUDES = [
 
 CONFIG_DIR = Path.home() / '.config' / 'safekeep'
 
+MANIFEST_NAME = '.safekeep-manifest.json'
+MANIFEST_VERSION = 1
+
+# Destination is typically SMB/DrvFs, which cannot store Unix modes, so the backup is
+# written with --no-perms and every file arrives with the same mode. Restore reapplies
+# these defaults and then the recorded deviations, which is why the manifest only needs
+# to carry the interesting entries (0600 secrets, +x scripts) rather than every file.
+DEFAULT_FILE_MODE = 0o644
+DEFAULT_DIR_MODE = 0o755
+
 EXAMPLE_CONFIG = {
     'dest': '~/backups/safekeep',
-    'keep': 7,
     'paths': [
         '~/.ssh/config',
-        '~/.gnupg/pubring.kbx',
-        '~/Documents/notes',
+        {'path': '~/Documents/notes', 'tags': ['notes']},
     ],
     'git_untracked': [
         '~/code/my-project',
@@ -84,7 +107,6 @@ config format:
 
   required keys:
     dest              Backup destination directory (~ is expanded)
-    keep              Number of dated snapshots to retain
 
   optional keys:
     exclude           List of glob patterns to skip (sensible defaults if omitted)
@@ -94,15 +116,40 @@ config format:
     git_ignored       List of glob patterns to capture from git_untracked repos
                       (e.g. ["CLAUDE.md", ".planning"] to back up gitignored files)
 
+  tagging:
+    Entries in 'paths' and 'git_untracked' may be a plain string or an object with
+    'path' and 'tags'. Tags are free-form labels carried into the snapshot manifest;
+    safekeep never interprets them, it only lets you select on them at restore time.
+
+      "paths": ["~/notes", {"path": "/mnt/c/Users/me/docs", "tags": ["windows"]}]
+
+  unrecognized keys warn rather than error, so a config can be edited ahead of the tool.
+
   destination structure:
     dest/YYYY-MM-DD/  A dated subdirectory is created for each day's backup.
                       Full directory structure is preserved from filesystem root.
-    Dated directories beyond the 'keep' count are pruned automatically.
+    Snapshots are never pruned — managing how many you keep is not safekeep's job.
 
   examples:
-    safekeep --init                Create starter config (~/.config/safekeep/default.json)
-    safekeep --init work           Create starter config (~/.config/safekeep/work.json)
-    safekeep --show-config         Display the resolved config and exit"""
+    safekeep --init                     Create ~/.config/safekeep/default.json
+    safekeep --show-config              Display the resolved config and exit
+    safekeep --snapshots                List snapshots at dest
+    safekeep --restore --to /           Pick a snapshot and groups, restore them
+    safekeep --restore --to /tmp/test --all --dry-run"""
+
+
+def plural(count, noun):
+    return f'{count} {noun}' if count == 1 else f'{count} {noun}s'
+
+
+def human_size(num_bytes):
+    if num_bytes >= 1024**3:
+        return f'{num_bytes / 1024**3:.2f} GB'
+    if num_bytes >= 1024**2:
+        return f'{num_bytes / 1024**2:.1f} MB'
+    if num_bytes >= 1024:
+        return f'{num_bytes / 1024:.1f} KB'
+    return f'{num_bytes} B'
 
 
 def resolve_config(name):
@@ -119,7 +166,6 @@ def resolve_config(name):
         print(f'  generate it: {cyan(f"safekeep --init {name}")}', file=sys.stderr)
         sys.exit(1)
 
-    # Auto-detect: list configs in CONFIG_DIR
     if not CONFIG_DIR.exists():
         print(f'{red("safekeep:")} no config directory at {cyan(str(CONFIG_DIR))}', file=sys.stderr)
         print(f'  generate a starter config: {cyan("safekeep --init")}', file=sys.stderr)
@@ -140,22 +186,46 @@ def resolve_config(name):
 
 
 def load_config(config_path):
-    """Load and validate config file."""
+    """Load a config, returning (config, warnings).
+
+    Missing required keys are fatal. Unrecognized keys warn and are ignored, so the
+    config can be edited ahead of the tool without breaking a backup run.
+    """
     with open(config_path) as f:
         config = json.load(f)
 
-    for key in ('dest', 'keep'):
-        if key not in config:
+    missing = REQUIRED_KEYS - set(config.keys())
+    if missing:
+        for key in sorted(missing):
             print(f'{red("safekeep:")} config missing required key {yellow(repr(key))}: {cyan(str(config_path))}', file=sys.stderr)
-            sys.exit(1)
-
-    unknown = set(config.keys()) - VALID_KEYS
-    if unknown:
-        print(f'{red("safekeep:")} unknown config keys: {yellow(", ".join(sorted(unknown)))}', file=sys.stderr)
-        print(f'  valid keys: {cyan(", ".join(sorted(VALID_KEYS)))}', file=sys.stderr)
         sys.exit(1)
 
-    return config
+    warnings = []
+    for key in sorted(set(config.keys()) - VALID_KEYS):
+        if key in RETIRED_KEYS:
+            warnings.append(f'{key}: {RETIRED_KEYS[key]}')
+        else:
+            warnings.append(f'{key}: unrecognized key, ignored')
+
+    return config, warnings
+
+
+def normalize_entries(entries):
+    """Normalize a paths/git_untracked list into [(expanded_path, tags)].
+
+    Accepts plain strings and {"path": ..., "tags": [...]} objects.
+    """
+    normalized = []
+    for entry in entries:
+        if isinstance(entry, str):
+            normalized.append((Path(entry).expanduser(), []))
+            continue
+        if not isinstance(entry, dict) or 'path' not in entry:
+            print(f'{red("safekeep:")} entry must be a string or an object with "path": {yellow(repr(entry))}', file=sys.stderr)
+            sys.exit(1)
+        tags = entry.get('tags', [])
+        normalized.append((Path(entry['path']).expanduser(), list(tags)))
+    return normalized
 
 
 def git_ls_untracked(repo_path):
@@ -225,22 +295,107 @@ def matches_exclude(rel_path, excludes):
     return False
 
 
+def snapshot_rel(path):
+    """Map an absolute source path to its location inside a snapshot."""
+    return str(path).lstrip('/')
+
+
+def record_file(path, survey, max_size_mb):
+    """Stat one file into the survey, returning True if it will be copied."""
+    try:
+        stat = path.stat()
+    except OSError:
+        return False
+
+    if max_size_mb is not None and stat.st_size > max_size_mb * 1024 * 1024:
+        survey['skipped_large'].append({'path': str(path), 'mb': round(stat.st_size / (1024 * 1024), 1)})
+        return False
+
+    survey['files'] += 1
+    survey['bytes'] += stat.st_size
+    mode = stat.st_mode & 0o777
+    if mode != DEFAULT_FILE_MODE:
+        survey['modes'][snapshot_rel(path)] = f'{mode:04o}'
+    return True
+
+
+def survey_tree(root, excludes, max_size_mb):
+    """Walk a source path recording sizes, modes, and symlink origins.
+
+    Follows symlinked directories because the backup dereferences them (rsync -L), and
+    tracks resolved directories to keep a symlink cycle from hanging the walk.
+    """
+    survey = {'files': 0, 'bytes': 0, 'modes': {}, 'symlinks': {}, 'skipped_large': []}
+
+    if root.is_symlink():
+        survey['symlinks'][snapshot_rel(root)] = os.readlink(root)
+
+    if not root.exists():
+        return survey
+
+    if root.is_file():
+        record_file(root, survey, max_size_mb)
+        return survey
+
+    seen_dirs = set()
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
+        current = Path(dirpath)
+        resolved = current.resolve()
+        if resolved in seen_dirs:
+            dirnames[:] = []
+            continue
+        seen_dirs.add(resolved)
+
+        dirnames[:] = [d for d in dirnames if not matches_exclude(d, excludes)]
+
+        try:
+            dir_mode = current.stat().st_mode & 0o777
+        except OSError:
+            dir_mode = DEFAULT_DIR_MODE
+        if dir_mode != DEFAULT_DIR_MODE and current != root:
+            survey['modes'][snapshot_rel(current)] = f'{dir_mode:04o}'
+
+        for name in dirnames:
+            child = current / name
+            if child.is_symlink():
+                survey['symlinks'][snapshot_rel(child)] = os.readlink(child)
+
+        for name in filenames:
+            if matches_exclude(name, excludes):
+                continue
+            child = current / name
+            if child.is_symlink():
+                survey['symlinks'][snapshot_rel(child)] = os.readlink(child)
+            record_file(child, survey, max_size_mb)
+
+    return survey
+
+
+def survey_files(files, max_size_mb):
+    """Stat an explicit file list (git-derived) into a survey."""
+    survey = {'files': 0, 'bytes': 0, 'modes': {}, 'symlinks': {}, 'skipped_large': []}
+    for path in files:
+        if path.is_symlink():
+            survey['symlinks'][snapshot_rel(path)] = os.readlink(path)
+        record_file(path, survey, max_size_mb)
+    return survey
+
+
+def merge_survey(manifest, survey):
+    manifest['modes'].update(survey['modes'])
+    manifest['symlinks'].update(survey['symlinks'])
+    manifest['skipped_large'].extend(survey['skipped_large'])
+
+
 def rsync_paths(paths, dest_base, excludes, dry_run=False, max_size_mb=None):
     """Rsync absolute paths into dest_base, preserving full directory structure.
 
     Uses rsync --relative with absolute paths so that '/home/chris/.ssh/config'
     becomes dest_base/home/chris/.ssh/config.
     """
-    valid = []
-    for p in paths:
-        expanded = Path(p).expanduser()
-        if expanded.exists():
-            valid.append(str(expanded))
-        else:
-            print(f'  {yellow("skip:")} {expanded} {yellow("(not found)")}')
-
+    valid = [str(p) for p in paths if p.exists()]
     if not valid:
-        return 0
+        return
 
     if not dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
@@ -255,32 +410,18 @@ def rsync_paths(paths, dest_base, excludes, dry_run=False, max_size_mb=None):
     cmd.extend(valid)
     cmd.append(str(dest_base) + '/')
 
-    result = subprocess.run(cmd)
-    if result.returncode not in (0, 23, 24):
-        raise subprocess.CalledProcessError(result.returncode, cmd)
-    if result.returncode in (23, 24):
-        print(f'  {yellow("warning:")} rsync completed with partial transfer (some files skipped)')
-    return len(valid)
+    run_rsync(cmd)
 
 
-def rsync_untracked(files, dest_base, dry_run=False, max_size_mb=None):
+def rsync_untracked(files, dest_base, dry_run=False):
     """Rsync individual untracked files preserving full path structure.
 
     Uses --files-from with / as the base for efficiency when copying many
     small files. Paths are stored relative to filesystem root in the destination.
     """
-    if max_size_mb is not None:
-        limit = max_size_mb * 1024 * 1024
-        skipped = [f for f in files if f.is_file() and f.stat().st_size > limit]
-        files = [f for f in files if not (f.is_file() and f.stat().st_size > limit)]
-        for f in skipped:
-            size_mb = f.stat().st_size / (1024 * 1024)
-            print(f'  {yellow("skip:")} {f} {yellow(f"({size_mb:.1f} MB > {max_size_mb} MB limit)")}')
-
-    rel_paths = [str(f).lstrip('/') for f in files]
-
+    rel_paths = [snapshot_rel(f) for f in files]
     if not rel_paths:
-        return 0
+        return
 
     if not dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
@@ -293,27 +434,484 @@ def rsync_untracked(files, dest_base, dry_run=False, max_size_mb=None):
         cmd = ['rsync', '-av', '--no-perms', '--files-from', tmp_path, '/', str(dest_base) + '/']
         if dry_run:
             cmd.append('-n')
-        result = subprocess.run(cmd)
-        if result.returncode not in (0, 23, 24):
-            raise subprocess.CalledProcessError(result.returncode, cmd)
-        if result.returncode in (23, 24):
-            print(f'  {yellow("warning:")} rsync completed with partial transfer (some files skipped)')
+        run_rsync(cmd)
     finally:
         os.unlink(tmp_path)
 
-    return len(rel_paths)
+
+def run_rsync(cmd):
+    """Run rsync, tolerating the partial-transfer exit codes."""
+    result = subprocess.run(cmd)
+    if result.returncode not in (0, 23, 24):
+        raise subprocess.CalledProcessError(result.returncode, cmd)
+    if result.returncode in (23, 24):
+        print(f'  {yellow("warning:")} rsync completed with partial transfer (some files skipped)')
 
 
-def prune_old_backups(dest, keep):
-    """Remove dated backup directories beyond the keep count."""
-    dated = sorted(
-        [d for d in dest.iterdir() if d.is_dir() and not d.is_symlink() and len(d.name) == 10 and d.name[4] == '-' and d.name[7] == '-'],
-        reverse=True,
+def read_manifest(snapshot_dir):
+    """Read a snapshot's manifest, or None if it has none."""
+    manifest_path = Path(snapshot_dir) / MANIFEST_NAME
+    if not manifest_path.exists():
+        return None
+    try:
+        with open(manifest_path) as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def list_snapshots(dest):
+    """List dated snapshot directories at dest, newest first, paired with manifests."""
+    if not dest.exists():
+        return []
+    dated = [d for d in dest.iterdir() if d.is_dir() and len(d.name) == 10 and d.name[4] == '-' and d.name[7] == '-']
+    return [(d, read_manifest(d)) for d in sorted(dated, key=lambda d: d.name, reverse=True)]
+
+
+def group_id(group):
+    return f'{group["kind"]}:{group["source"]}'
+
+
+def show_snapshots(dest):
+    snapshots = list_snapshots(dest)
+    if not snapshots:
+        print(f'{yellow("safekeep:")} no snapshots at {cyan(str(dest))}')
+        return
+
+    print(f'{bold("safekeep:")} {len(snapshots)} snapshots at {cyan(str(dest))}')
+    print()
+    for snapshot_dir, manifest in snapshots:
+        if manifest is None:
+            print(f'  {bold(snapshot_dir.name)}  {yellow("no manifest — not restorable by safekeep")}')
+            continue
+        groups = manifest.get('groups', [])
+        total_bytes = sum(g.get('bytes', 0) for g in groups)
+        total_files = sum(g.get('files', 0) for g in groups)
+        host = manifest.get('hostname', '?')
+        print(f'  {bold(snapshot_dir.name)}  {human_size(total_bytes):>9}  {total_files:>6} files  {len(groups):>2} groups  {cyan(host)}')
+
+
+def preview_snapshot(dest, date):
+    """Render a snapshot summary for the fzf preview pane."""
+    manifest = read_manifest(dest / date)
+    if manifest is None:
+        print('no manifest — not restorable by safekeep')
+        return
+    print(f'{date}   {manifest.get("hostname", "?")}   {manifest.get("created", "?")}')
+    print(f'config: {manifest.get("config_name", "?")}   home: {manifest.get("home", "?")}')
+    print()
+    for group in manifest.get('groups', []):
+        tags = ' '.join(group.get('tags', []))
+        print(f'  {group["kind"]:<14} {group["source"]}')
+        print(f'  {"":<14} {plural(group.get("files", 0), "file")}, {human_size(group.get("bytes", 0))}  {tags}')
+    skipped = manifest.get('skipped_large', [])
+    if skipped:
+        print()
+        print(f'  {len(skipped)} files skipped for exceeding max_file_size_mb')
+    warnings = manifest.get('config_warnings', [])
+    if warnings:
+        print()
+        for warning in warnings:
+            print(f'  config warning: {warning}')
+
+
+def require_fzf():
+    if shutil.which('fzf'):
+        return
+    print(f'{red("safekeep:")} fzf is required for interactive selection', file=sys.stderr)
+    print(f'  select non-interactively instead: {cyan("--all")}, {cyan("--group PATH")}, or {cyan("--tag NAME")}', file=sys.stderr)
+    sys.exit(1)
+
+
+def fzf(lines, args):
+    """Run fzf over lines, returning the selected ones."""
+    result = subprocess.run(['fzf', *args], input='\n'.join(lines), capture_output=True, text=True)
+    if result.returncode != 0:
+        return []
+    return [line for line in result.stdout.splitlines() if line]
+
+
+def pick_snapshot(dest, config_name):
+    """Interactively choose a snapshot, previewing each one's manifest."""
+    snapshots = [(d, m) for d, m in list_snapshots(dest) if m is not None]
+    if not snapshots:
+        print(f'{red("safekeep:")} no restorable snapshots at {cyan(str(dest))}', file=sys.stderr)
+        sys.exit(1)
+
+    script = Path(__file__).resolve()
+    preview_cmd = f'{sys.executable} {script} --config {config_name} --preview-snapshot {{1}}'
+
+    lines = []
+    for snapshot_dir, manifest in snapshots:
+        groups = manifest.get('groups', [])
+        total_bytes = sum(g.get('bytes', 0) for g in groups)
+        lines.append(f'{snapshot_dir.name}\t{human_size(total_bytes)}\t{plural(len(groups), "group")}')
+
+    selected = fzf(
+        lines,
+        [
+            '--delimiter=\t',
+            '--with-nth=1,2,3',
+            '--header=select a snapshot',
+            '--preview',
+            preview_cmd,
+            '--preview-window=right:60%',
+        ],
     )
-    removed = dated[keep:]
-    for d in removed:
-        shutil.rmtree(d)
-    return removed
+    if not selected:
+        return None
+    return selected[0].split('\t')[0]
+
+
+def pick_groups(snapshot_dir, manifest):
+    """Interactively choose groups, previewing each one's subtree in the snapshot."""
+    groups = manifest.get('groups', [])
+    if not groups:
+        return []
+
+    lines = []
+    for group in groups:
+        tags = ','.join(group.get('tags', [])) or '-'
+        lines.append(
+            f'{group["kind"]}\t{group["source"]}\t{plural(group.get("files", 0), "file")}\t{human_size(group.get("bytes", 0))}\t{tags}'
+        )
+
+    selected = fzf(
+        lines,
+        [
+            '--multi',
+            '--delimiter=\t',
+            '--with-nth=1,2,3,4,5',
+            '--header=tab to select, enter to restore',
+            '--preview',
+            f'ls -la {snapshot_dir}{{2}} 2>/dev/null | head -60',
+            '--preview-window=right:60%',
+        ],
+    )
+
+    chosen = {(line.split('\t')[0], line.split('\t')[1]) for line in selected}
+    return [g for g in groups if (g['kind'], g['source']) in chosen]
+
+
+def select_groups(manifest, args):
+    """Resolve which groups to restore from flags, or None if selection is interactive."""
+    groups = manifest.get('groups', [])
+    if args.all:
+        return groups
+
+    if not args.group and not args.tag:
+        return None
+
+    selected = []
+    for group in groups:
+        matched_group = any(needle in group['source'] for needle in args.group)
+        matched_tag = any(tag in group.get('tags', []) for tag in args.tag)
+        if matched_group or matched_tag:
+            selected.append(group)
+    return selected
+
+
+def remap_home(source, manifest_home, target_home):
+    """Rewrite a source path recorded under the backup machine's home into this one's."""
+    if manifest_home in (None, target_home):
+        return source
+    if source == manifest_home:
+        return target_home
+    if source.startswith(manifest_home + '/'):
+        return target_home + source[len(manifest_home) :]
+    return source
+
+
+def paths_under(source, candidates):
+    """Absolute paths from candidates that are the source itself or live beneath it."""
+    prefix = str(source).rstrip('/') + '/'
+    return [p for p in candidates if p == str(source) or p.startswith(prefix)]
+
+
+def paths_under_any(sources, candidates):
+    """Absolute paths from candidates covered by any of the sources, deduplicated."""
+    return sorted({p for source in sources for p in paths_under(source, candidates)})
+
+
+def restore_group(snapshot_dir, source, target_root, manifest_home, target_home, on_conflict, skip_symlinked, symlinks, dry_run):
+    """Rsync one group's subtree out of the snapshot and into target_root."""
+    stored = snapshot_dir / snapshot_rel(source)
+    if not stored.exists():
+        print(f'  {yellow("skip:")} {source} {yellow("(not present in snapshot)")}')
+        return False
+
+    symlinked = paths_under(source, ['/' + rel for rel in symlinks])
+    if skip_symlinked and str(source) in symlinked:
+        print(f'  {yellow("skip:")} {source} {yellow("(was a symlink)")}')
+        return False
+
+    target = Path(target_root) / snapshot_rel(remap_home(source, manifest_home, target_home))
+
+    cmd = ['rsync', '-a']
+    if on_conflict == 'skip':
+        cmd.append('--ignore-existing')
+    elif on_conflict == 'newer':
+        cmd.append('--update')
+    elif on_conflict == 'backup':
+        cmd.extend(['--backup', '--suffix=.pre-restore'])
+
+    if skip_symlinked and stored.is_dir():
+        for abs_path in symlinked:
+            cmd.extend(['--exclude', '/' + os.path.relpath(abs_path, str(source))])
+
+    if dry_run:
+        cmd.append('-n')
+
+    if stored.is_dir():
+        cmd.append(str(stored) + '/')
+        cmd.append(str(target) + '/')
+    else:
+        cmd.append(str(stored))
+        cmd.append(str(target))
+
+    if not dry_run:
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+    run_rsync(cmd)
+    return True
+
+
+def apply_modes(manifest, sources, target_root, dry_run):
+    """Reapply source file modes lost to the destination filesystem.
+
+    Walks each restored subtree applying the recorded defaults, then overrides with the
+    manifest's deviations. Without this every restored file carries whatever mode the
+    SMB round-trip gave it, and ssh and gpg refuse to use their own config files.
+    """
+    manifest_home = manifest.get('home')
+    target_home = str(Path.home())
+    modes = manifest.get('modes', {})
+    changed = 0
+
+    if dry_run:
+        # Nothing has been written, so there is no tree to walk. Report the recorded
+        # deviations that would be reapplied rather than a count of zero.
+        return len(paths_under_any(sources, ['/' + rel for rel in modes]))
+
+    for source in sources:
+        target = Path(target_root) / snapshot_rel(remap_home(source, manifest_home, target_home))
+        if not target.exists():
+            continue
+
+        # Modes are keyed by the path as it existed on the backup machine, so each
+        # restored path is walked back through the target root and the home remap.
+        paths = [target] if target.is_file() else [target, *target.rglob('*')]
+        for path in paths:
+            origin = Path(source) if path == target else Path(source) / path.relative_to(target)
+            recorded = modes.get(snapshot_rel(origin))
+            wanted = int(recorded, 8) if recorded else (DEFAULT_DIR_MODE if path.is_dir() else DEFAULT_FILE_MODE)
+            if not dry_run:
+                try:
+                    path.chmod(wanted)
+                except OSError:
+                    continue
+            changed += 1
+
+    return changed
+
+
+def do_restore(config, config_path, args):
+    dest = Path(config['dest']).expanduser()
+
+    if args.from_date:
+        date = args.from_date
+    elif sys.stdin.isatty() and not (args.all or args.group or args.tag):
+        require_fzf()
+        date = pick_snapshot(dest, config_path.stem)
+        if date is None:
+            print(f'{yellow("safekeep:")} nothing selected, nothing restored')
+            return
+    else:
+        restorable = [d for d, m in list_snapshots(dest) if m is not None]
+        if not restorable:
+            print(f'{red("safekeep:")} no restorable snapshots at {cyan(str(dest))}', file=sys.stderr)
+            sys.exit(1)
+        date = restorable[0].name
+
+    snapshot_dir = dest / date
+    if not snapshot_dir.exists():
+        print(f'{red("safekeep:")} no snapshot {yellow(date)} at {cyan(str(dest))}', file=sys.stderr)
+        sys.exit(1)
+
+    manifest = read_manifest(snapshot_dir)
+    if manifest is None:
+        print(f'{red("safekeep:")} snapshot {yellow(date)} has no manifest — safekeep cannot restore it', file=sys.stderr)
+        print(f'  copy it out with rsync directly: {cyan(f"rsync -av {snapshot_dir}/ /")}', file=sys.stderr)
+        sys.exit(1)
+
+    groups = select_groups(manifest, args)
+    if groups is None:
+        if not sys.stdin.isatty():
+            print(f'{red("safekeep:")} no groups selected — pass {cyan("--all")}, {cyan("--group")}, or {cyan("--tag")}', file=sys.stderr)
+            for group in manifest.get('groups', []):
+                print(f'  {group["kind"]:<14} {group["source"]}', file=sys.stderr)
+            sys.exit(1)
+        require_fzf()
+        groups = pick_groups(snapshot_dir, manifest)
+
+    if not groups:
+        print(f'{yellow("safekeep:")} nothing selected, nothing restored')
+        return
+
+    # git_untracked and git_ignored groups share a repo subtree, so restoring both would
+    # rsync the same directory twice.
+    sources = list(dict.fromkeys(g['source'] for g in groups))
+    manifest_home = manifest.get('home')
+    target_home = str(Path.home())
+    symlinks = manifest.get('symlinks', {})
+
+    label = yellow('would restore') if args.dry_run else green('restoring')
+    print(f'{bold("safekeep:")} {label} {bold(plural(len(groups), "group"))} from {cyan(date)} to {cyan(args.to)}')
+    if manifest_home and manifest_home != target_home:
+        print(f'  remapping {cyan(manifest_home)} -> {cyan(target_home)}')
+    print()
+
+    restored = []
+    for source in sources:
+        if restore_group(
+            snapshot_dir, source, args.to, manifest_home, target_home, args.on_conflict, args.skip_symlinked, symlinks, args.dry_run
+        ):
+            restored.append(source)
+
+    if restored:
+        count = apply_modes(manifest, restored, args.to, args.dry_run)
+        if args.dry_run:
+            print(f'\n  {yellow("would reapply")} {bold(str(count))} recorded modes')
+        else:
+            print(f'\n  {green("reapplied")} modes to {bold(str(count))} paths')
+
+    restored_symlinks = paths_under_any(restored, ['/' + rel for rel in symlinks])
+    if restored_symlinks and not args.skip_symlinked:
+        print(f'\n{yellow("note:")} {len(restored_symlinks)} restored paths were symlinks when backed up, and are now real files:')
+        for abs_path in restored_symlinks[:10]:
+            print(f'  {abs_path} -> {symlinks[abs_path.lstrip("/")]}')
+        if len(restored_symlinks) > 10:
+            print(f'  ... and {len(restored_symlinks) - 10} more')
+        print(f'  remove them and run {cyan("dotfiles link")} to restore the symlinks, or use {cyan("--skip-symlinked")} next time')
+
+    label = yellow('would restore') if args.dry_run else green('restored')
+    print(f'\n{bold("safekeep:")} {label} {bold(plural(len(restored), "group"))} to {cyan(args.to)}')
+
+
+def do_backup(config, config_path, warnings, args):
+    print(f'{bold("safekeep:")} using config {cyan(config_path.name)}', flush=True)
+
+    start_time = time.monotonic()
+    dest = Path(config['dest']).expanduser()
+    excludes = config.get('exclude', DEFAULT_EXCLUDES)
+    max_size_mb = config.get('max_file_size_mb')
+
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f'{red("safekeep:")} cannot create destination {yellow(str(dest))} — {e}', file=sys.stderr)
+        sys.exit(1)
+    if not os.access(dest, os.W_OK):
+        print(f'{red("safekeep:")} destination {yellow(str(dest))} is not writable', file=sys.stderr)
+        sys.exit(1)
+
+    date_dir = datetime.now().strftime('%Y-%m-%d')
+    dest_base = dest / date_dir
+
+    manifest = {
+        'version': MANIFEST_VERSION,
+        'created': datetime.now().isoformat(timespec='seconds'),
+        'hostname': os.uname().nodename,
+        'home': str(Path.home()),
+        'config_name': config_path.stem,
+        'excludes': excludes,
+        'max_file_size_mb': max_size_mb,
+        'default_file_mode': f'{DEFAULT_FILE_MODE:04o}',
+        'default_dir_mode': f'{DEFAULT_DIR_MODE:04o}',
+        'config_warnings': warnings,
+        'groups': [],
+        'modes': {},
+        'symlinks': {},
+        'skipped_large': [],
+    }
+
+    entries = normalize_entries(config.get('paths', []))
+    if entries:
+        print(f'\n{bold("paths:")}')
+        present = []
+        for path, tags in entries:
+            if not path.exists():
+                print(f'  {yellow("skip:")} {path} {yellow("(not found)")}')
+                continue
+            survey = survey_tree(path, excludes, max_size_mb)
+            merge_survey(manifest, survey)
+            manifest['groups'].append(
+                {'kind': 'path', 'source': str(path), 'tags': tags, 'files': survey['files'], 'bytes': survey['bytes']}
+            )
+            present.append(path)
+        rsync_paths(present, dest_base, excludes, args.dry_run, max_size_mb)
+        label = yellow('would copy') if args.dry_run else green('copied')
+        print(f'  {label} {bold(str(len(present)))} paths')
+
+    repos = normalize_entries(config.get('git_untracked', []))
+    if repos:
+        print(f'\n{bold("git_untracked:")}')
+        for repo_path, tags in repos:
+            if not repo_path.exists():
+                print(f'  {yellow("skip:")} {yellow(str(repo_path))} (not found)')
+                continue
+            untracked = git_ls_untracked(repo_path)
+            filtered = [f for f in untracked if not matches_exclude(str(f), excludes)]
+            survey = survey_files(filtered, max_size_mb)
+            merge_survey(manifest, survey)
+            manifest['groups'].append(
+                {'kind': 'git_untracked', 'source': str(repo_path), 'tags': tags, 'files': survey['files'], 'bytes': survey['bytes']}
+            )
+            copyable = [f for f in filtered if snapshot_rel(f) not in {s['path'].lstrip('/') for s in survey['skipped_large']}]
+            rsync_untracked(copyable, dest_base, args.dry_run)
+            label = yellow('would copy') if args.dry_run else green('copied')
+            print(f'  {label} {bold(str(survey["files"]))} untracked files from {cyan(str(repo_path))}')
+
+    ignored_patterns = config.get('git_ignored', [])
+    if ignored_patterns and repos:
+        print(f'\n{bold("git_ignored:")}')
+        for repo_path, tags in repos:
+            if not repo_path.exists():
+                continue
+            ignored = git_ls_ignored(repo_path, ignored_patterns)
+            filtered = [f for f in ignored if not matches_exclude(str(f), excludes)]
+            if not filtered:
+                continue
+            survey = survey_files(filtered, max_size_mb)
+            merge_survey(manifest, survey)
+            manifest['groups'].append(
+                {'kind': 'git_ignored', 'source': str(repo_path), 'tags': tags, 'files': survey['files'], 'bytes': survey['bytes']}
+            )
+            copyable = [f for f in filtered if snapshot_rel(f) not in {s['path'].lstrip('/') for s in survey['skipped_large']}]
+            rsync_untracked(copyable, dest_base, args.dry_run)
+            label = yellow('would copy') if args.dry_run else green('copied')
+            print(f'  {label} {bold(str(survey["files"]))} ignored files from {cyan(str(repo_path))}')
+
+    total_files = sum(g['files'] for g in manifest['groups'])
+    total_bytes = sum(g['bytes'] for g in manifest['groups'])
+
+    if not args.dry_run:
+        dest_base.mkdir(parents=True, exist_ok=True)
+        (dest_base / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + '\n')
+
+    if manifest['skipped_large']:
+        print(f'\n{yellow("skipped")} {bold(str(len(manifest["skipped_large"])))} files over {max_size_mb} MB')
+
+    if warnings:
+        print()
+        for warning in warnings:
+            print(f'{yellow("config warning:")} {warning}')
+
+    elapsed = time.monotonic() - start_time
+    elapsed_str = f'{elapsed:.0f}s' if elapsed < 60 else f'{elapsed / 60:.1f}m'
+    label = yellow('would back up') if args.dry_run else green('backed up')
+    summary = f'{bold(plural(total_files, "file"))} ({bold(human_size(total_bytes))})'
+    print(f'\n{bold("safekeep:")} {label} {summary} to {cyan(str(dest_base))} in {bold(elapsed_str)}')
 
 
 def init_config(name):
@@ -337,172 +935,107 @@ def init_config(name):
     print(f'    {cyan("safekeep --help")}')
 
 
-def show_config(config_path, config):
+def show_config(config_path, config, warnings):
     """Display the resolved config with readable formatting."""
     print(f'{bold("safekeep:")} {cyan(str(config_path))}')
     print()
     print(f'  {bold("dest:")}    {cyan(config["dest"])}')
-    print(f'  {bold("keep:")}    {config["keep"]} snapshots')
     excludes = config.get('exclude', DEFAULT_EXCLUDES)
     print(f'  {bold("exclude:")} {", ".join(excludes)}')
     max_size_mb = config.get('max_file_size_mb')
     if max_size_mb is not None:
         print(f'  {bold("max_file_size_mb:")} {max_size_mb} MB')
 
-    paths = config.get('paths', [])
-    repos = config.get('git_untracked', [])
+    entries = normalize_entries(config.get('paths', []))
+    repos = normalize_entries(config.get('git_untracked', []))
 
-    if paths:
-        print(f'\n  {bold("paths")} ({len(paths)}):')
-        for p in paths:
-            print(f'    {p}')
+    if entries:
+        print(f'\n  {bold("paths")} ({len(entries)}):')
+        for path, tags in entries:
+            suffix = f'  [{", ".join(tags)}]' if tags else ''
+            print(f'    {path}{suffix}')
 
     if repos:
         print(f'\n  {bold("git_untracked")} ({len(repos)}):')
-        for r in repos:
-            print(f'    {r}')
+        for path, tags in repos:
+            suffix = f'  [{", ".join(tags)}]' if tags else ''
+            print(f'    {path}{suffix}')
 
     ignored_patterns = config.get('git_ignored', [])
     if ignored_patterns:
         print(f'\n  {bold("git_ignored")} patterns: {", ".join(ignored_patterns)}')
         print(f'    applied to {len(repos)} git_untracked repos')
 
-    if not paths and not repos:
+    if not entries and not repos:
         print(f'\n  {yellow("no paths or git_untracked defined")}')
+
+    if warnings:
+        print()
+        for warning in warnings:
+            print(f'  {yellow("config warning:")} {warning}')
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog='safekeep',
-        description='Config-driven file preservation with dated snapshots and retention',
+        description='Config-driven file preservation with self-describing dated snapshots',
         epilog=CONFIG_FORMAT_HELP,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument('-c', '--config', help='Config name or absolute path (default: auto-detect)')
+    parser.add_argument('-n', '--dry-run', action='store_true', help='Show what would happen without doing it')
+    parser.add_argument('--init', nargs='?', const='default', metavar='NAME', help="Generate starter config (default name: 'default')")
+    parser.add_argument('--show-config', action='store_true', help='Display the resolved config and exit')
+    parser.add_argument('--snapshots', action='store_true', help='List snapshots at the configured destination')
+    parser.add_argument('--restore', action='store_true', help='Restore groups from a snapshot')
+    parser.add_argument('--to', metavar='PATH', help='Restore target root (required with --restore; use / for a real restore)')
     parser.add_argument(
-        '-c',
-        '--config',
-        help='Config name or absolute path (default: auto-detect)',
+        '--from', dest='from_date', metavar='DATE', help='Snapshot to restore from (default: pick interactively, else newest)'
     )
+    parser.add_argument('--all', action='store_true', help='Restore every group in the snapshot')
     parser.add_argument(
-        '-n',
-        '--dry-run',
-        action='store_true',
-        help='Show what would be copied without doing it',
+        '--group', action='append', default=[], metavar='PATH', help='Restore groups whose source contains PATH (repeatable)'
     )
+    parser.add_argument('--tag', action='append', default=[], metavar='NAME', help='Restore groups carrying NAME (repeatable)')
     parser.add_argument(
-        '--init',
-        nargs='?',
-        const='default',
-        metavar='NAME',
-        help="Generate starter config (default name: 'default')",
+        '--on-conflict',
+        choices=['backup', 'skip', 'overwrite', 'newer'],
+        default='backup',
+        help='What to do when a target file already exists (default: backup)',
     )
-    parser.add_argument(
-        '--show-config',
-        action='store_true',
-        help='Display the resolved config and exit',
-    )
+    parser.add_argument('--skip-symlinked', action='store_true', help='Skip paths that were symlinks when backed up')
+    parser.add_argument('--preview-snapshot', metavar='DATE', help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if args.init is not None:
-        name = args.config or args.init
-        init_config(name)
+        init_config(args.config or args.init)
         sys.exit(0)
 
-    # Resolve and load config
     config_path = resolve_config(args.config)
-    config = load_config(config_path)
+    config, warnings = load_config(config_path)
+
+    if args.preview_snapshot:
+        preview_snapshot(Path(config['dest']).expanduser(), args.preview_snapshot)
+        sys.exit(0)
 
     if args.show_config:
-        show_config(config_path, config)
+        show_config(config_path, config, warnings)
         sys.exit(0)
 
-    print(f'{bold("safekeep:")} using config {cyan(config_path.name)}', flush=True)
+    if args.snapshots:
+        show_snapshots(Path(config['dest']).expanduser())
+        sys.exit(0)
 
-    start_time = time.monotonic()
-    dest = Path(config['dest']).expanduser()
-    keep = config['keep']
-    excludes = config.get('exclude', DEFAULT_EXCLUDES)
-    max_size_mb = config.get('max_file_size_mb')
+    if args.restore:
+        if not args.to:
+            print(f'{red("safekeep:")} --restore requires {cyan("--to PATH")}', file=sys.stderr)
+            print(f'  stage a rehearsal: {cyan("--to /tmp/restore-test")}', file=sys.stderr)
+            print(f'  restore for real:  {cyan("--to /")}', file=sys.stderr)
+            sys.exit(1)
+        do_restore(config, config_path, args)
+        sys.exit(0)
 
-    # Create destination if it doesn't exist, fail if parent is unreachable
-    try:
-        dest.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        print(f'{red("safekeep:")} cannot create destination {yellow(str(dest))} — {e}', file=sys.stderr)
-        sys.exit(1)
-    if not os.access(dest, os.W_OK):
-        print(f'{red("safekeep:")} destination {yellow(str(dest))} is not writable', file=sys.stderr)
-        sys.exit(1)
-
-    date_dir = datetime.now().strftime('%Y-%m-%d')
-    dest_base = dest / date_dir
-    total = 0
-
-    # Static paths
-    paths = config.get('paths', [])
-    if paths:
-        print(f'\n{bold("paths:")}')
-        count = rsync_paths(paths, dest_base, excludes, args.dry_run, max_size_mb)
-        label = yellow('would copy') if args.dry_run else green('copied')
-        print(f'  {label} {bold(str(count))} paths')
-        total += count
-
-    # Git untracked
-    repos = config.get('git_untracked', [])
-    if repos:
-        print(f'\n{bold("git_untracked:")}')
-        for repo in repos:
-            repo_path = Path(repo).expanduser()
-            if not repo_path.exists():
-                print(f'  {yellow("skip:")} {yellow(str(repo_path))} (not found)')
-                continue
-            untracked = git_ls_untracked(repo_path)
-            filtered = [f for f in untracked if not matches_exclude(str(f), excludes)]
-            count = rsync_untracked(filtered, dest_base, args.dry_run, max_size_mb)
-            label = yellow('would copy') if args.dry_run else green('copied')
-            print(f'  {label} {bold(str(count))} untracked files from {cyan(str(repo_path))}')
-            total += count
-
-    # Git ignored files matching patterns
-    ignored_patterns = config.get('git_ignored', [])
-    if ignored_patterns and repos:
-        print(f'\n{bold("git_ignored:")}')
-        for repo in repos:
-            repo_path = Path(repo).expanduser()
-            if not repo_path.exists():
-                continue
-            ignored = git_ls_ignored(repo_path, ignored_patterns)
-            filtered = [f for f in ignored if not matches_exclude(str(f), excludes)]
-            if not filtered:
-                continue
-            count = rsync_untracked(filtered, dest_base, args.dry_run, max_size_mb)
-            label = yellow('would copy') if args.dry_run else green('copied')
-            print(f'  {label} {bold(str(count))} ignored files from {cyan(str(repo_path))}')
-            total += count
-
-    if not args.dry_run:
-        # Prune old backups
-        removed = prune_old_backups(dest, keep)
-        if removed:
-            print(f'{yellow("pruned")} {bold(str(len(removed)))} old backups: {", ".join(d.name for d in removed)}')
-
-    elapsed = time.monotonic() - start_time
-    elapsed_str = f'{elapsed:.0f}s' if elapsed < 60 else f'{elapsed / 60:.1f}m'
-
-    if not args.dry_run and dest_base.exists():
-        total_bytes = sum(f.stat().st_size for f in dest_base.rglob('*') if f.is_file())
-        if total_bytes >= 1024**3:
-            size_str = f'{total_bytes / 1024**3:.2f} GB'
-        elif total_bytes >= 1024**2:
-            size_str = f'{total_bytes / 1024**2:.1f} MB'
-        else:
-            size_str = f'{total_bytes / 1024:.1f} KB'
-        size_part = f', {bold(size_str)} written'
-    else:
-        size_part = ''
-
-    label = yellow('would back up') if args.dry_run else green('backed up')
-    print(f'\n{bold("safekeep:")} {label} {bold(str(total))} items to {cyan(str(dest / date_dir))} in {bold(elapsed_str)}{size_part}')
+    do_backup(config, config_path, warnings, args)
 
 
 if __name__ == '__main__':
