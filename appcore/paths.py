@@ -1,6 +1,6 @@
-"""XDG base-directory resolution, shared so every menu tool agrees on where
-authored data and mutable state live — and so those locations are defined here
-once instead of hardcoded across scripts.
+"""XDG base-directory resolution, shared so every app agrees on where authored
+data and mutable state live — and so those locations are defined here once
+instead of hardcoded across scripts.
 
 Authored, versioned content (registers, decks) belongs under the data dir; it is
 owned by dotfiles and symlinked into place. Mutable state the tools write belongs
