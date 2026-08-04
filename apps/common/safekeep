@@ -60,8 +60,9 @@ def bold(text):
 # backup rather than a dump of this program's variables. JSON has no comments, which makes the
 # names the only place an explanation can live -- see ~/dev/standards/configuration.md.
 REQUIRED_KEYS = {'back_up_to'}
-VALID_KEYS = {'back_up_to', 'back_up_paths', 'git_repos', 'skip_names_matching', 'skip_files_over_mb'}
-VALID_REPO_KEYS = {'at', 'back_up_untracked_files', 'back_up_ignored_files_matching'}
+VALID_KEYS = {'back_up_to', 'back_up_paths', 'git', 'skip_names_matching', 'skip_files_over_mb'}
+# 'repos' names the subject of this block; every other key states what happens to it.
+VALID_REPO_KEYS = {'repos', 'back_up_untracked_files', 'back_up_ignored_files_matching'}
 
 # Keys that once meant something. A generic "unknown key" warning is fine for a typo but
 # useless for a key whose removal silently shrinks the backup, so retired keys carry their
@@ -78,9 +79,10 @@ RENAMED_KEYS = {
     'paths': 'now "back_up_paths"',
     'exclude': 'now "skip_names_matching"',
     'max_file_size_mb': 'now "skip_files_over_mb"',
-    'repos': 'now "git_repos": {"at": [...], "back_up_ignored_files_matching": [...]}',
-    'git_untracked': 'now "git_repos": {"at": [...]}',
-    'git_ignored': 'now "git_repos": {"back_up_ignored_files_matching": [...]}',
+    'repos': 'now "git": {"repos": [...], "back_up_ignored_files_matching": [...]}',
+    'git_repos': 'now "git", and its "at" is now "repos"',
+    'git_untracked': 'now "git": {"repos": [...]}',
+    'git_ignored': 'now "git": {"back_up_ignored_files_matching": [...]}',
 }
 
 DEFAULT_SKIP_NAMES = [
@@ -115,8 +117,8 @@ EXAMPLE_CONFIG = {
         '~/.ssh/config',
         {'path': '~/Documents/notes', 'tags': ['notes']},
     ],
-    'git_repos': {
-        'at': [
+    'git': {
+        'repos': [
             '~/code/my-project',
         ],
         'back_up_untracked_files': True,
@@ -135,7 +137,7 @@ config format:
 
     "back_up_to":          "/mnt/h/backups"
     "back_up_paths":       ["~/notes"]
-    "git_repos":           {"at": ["~/code/project"],
+    "git":                 {"repos": ["~/code/project"],
                             "back_up_untracked_files": true,
                             "back_up_ignored_files_matching": ["CLAUDE.md"]}
     "skip_names_matching": [".venv", "node_modules"]
@@ -146,8 +148,9 @@ config format:
 
   optional keys:
     back_up_paths     Absolute paths to copy whole (~ is expanded)
-    git_repos         Everything under this key is scoped to the repos it names:
-                        at                              Absolute paths to git repos
+    git               'repos' names the repos; every other key under 'git' states
+                      what is taken from them:
+                        repos                           Absolute paths to git repos
                         back_up_untracked_files         Copy each repo's untracked
                                                         files (default true)
                         back_up_ignored_files_matching  Glob patterns matched against
@@ -158,7 +161,7 @@ config format:
     skip_files_over_mb   Skip files larger than this many MB
 
   tagging:
-    Entries in 'back_up_paths' and 'git_repos.at' may be a plain string or an object
+    Entries in 'back_up_paths' and 'git.repos' may be a plain string or an object
     with 'path' and 'tags'. Tags are free-form labels carried into the snapshot
     manifest; safekeep never interprets them, it only lets you select on them at
     restore time.
@@ -259,25 +262,25 @@ def load_config(config_path):
         else:
             warnings.append(f'{key}: unrecognized key, ignored')
 
-    repos = config.get('git_repos', {})
+    repos = config.get('git', {})
     if not isinstance(repos, dict):
-        print(f'{red("safekeep:")} {yellow("git_repos")} must be an object whose "at" lists the repos', file=sys.stderr)
+        print(f'{red("safekeep:")} {yellow("git")} must be an object whose "repos" lists the repos', file=sys.stderr)
         sys.exit(1)
     for key in sorted(set(repos.keys()) - VALID_REPO_KEYS):
-        warnings.append(f'git_repos.{key}: unrecognized key, ignored')
-    if not repos.get('at'):
+        warnings.append(f'git.{key}: unrecognized key, ignored')
+    if not repos.get('repos'):
         for key in ('back_up_untracked_files', 'back_up_ignored_files_matching'):
             if repos.get(key):
-                warnings.append(f'git_repos.{key}: no repos listed in git_repos.at, so it does nothing')
+                warnings.append(f'git.{key}: no repos listed in git.repos, so it does nothing')
 
     return config, warnings
 
 
 def repo_entries(config):
     """Return the repos and what to take from each, as ([(path, tags)], untracked, patterns)."""
-    repos = config.get('git_repos', {})
+    repos = config.get('git', {})
     return (
-        normalize_entries(repos.get('at', [])),
+        normalize_entries(repos.get('repos', [])),
         repos.get('back_up_untracked_files', True),
         repos.get('back_up_ignored_files_matching', []),
     )
@@ -1033,7 +1036,7 @@ def show_config(config_path, config, warnings):
             print(f'    {green("back up")} ignored files matching {", ".join(ignored_patterns)}')
 
     if not entries and not repos:
-        print(f'\n  {yellow("nothing to back up: no back_up_paths, no git_repos.at")}')
+        print(f'\n  {yellow("nothing to back up: no back_up_paths, no git.repos")}')
 
     excludes = config.get('skip_names_matching', DEFAULT_SKIP_NAMES)
     print(f'\n  {bold("skip names matching:")} {", ".join(excludes)}')

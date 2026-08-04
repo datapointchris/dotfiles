@@ -39,8 +39,8 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
     { "path": "~/.ssh", "tags": ["secrets"] },
     { "path": "/mnt/c/Users/chris/Documents/work-notes", "tags": ["windows"] }
   ],
-  "git_repos": {
-    "at": [{ "path": "~/code/project", "tags": ["wip"] }],
+  "git": {
+    "repos": [{ "path": "~/code/project", "tags": ["wip"] }],
     "back_up_untracked_files": true,
     "back_up_ignored_files_matching": ["CLAUDE.md", ".planning"]
   },
@@ -55,16 +55,18 @@ Config files live at `~/.config/safekeep/<name>.json`. If only one config exists
 
 - `back_up_to` — base destination path (required, and the only required key)
 - `back_up_paths` — absolute paths to copy whole, `~` is expanded (optional)
-- `git_repos` — a scope, not a thing: everything inside applies to the repos it names (optional)
-  - `at` — the repos
+- `git` — `repos` names the subject; every other key states what is taken from them (optional)
+  - `repos` — the git repos themselves
   - `back_up_untracked_files` — copy each repo's untracked files (default `true`)
   - `back_up_ignored_files_matching` — glob patterns matched against the *gitignored* files in those same repos, so `CLAUDE.md` and `.planning` survive a rebuild
 - `skip_names_matching` — patterns no backup ever copies (optional, has sensible defaults)
 - `skip_files_over_mb` — skip files larger than this many MB (optional)
 
-Entries in `back_up_paths` and `git_repos.at` are either a plain string or an object with `path` and `tags`.
+Entries in `back_up_paths` and `git.repos` are either a plain string or an object with `path` and `tags`.
 
 **The repo options are nested because they only mean something relative to the repos beside them.** They were once two sibling keys, `git_untracked` and `git_ignored`, which read as two independent lists of things to back up — nothing in the config said the second was a filter scoped to the first, and the answer was only findable in the source. Structure carries that relationship where a name could not, which is why the parent key is a scope and the leaves are statements about it.
+
+**Inside a scope, one key names the subject and the rest state what happens to it.** `repos` is that subject key. An earlier attempt called it `at`, on the theory that a preposition would let the key complete its parent's phrase — "git repos *at* `~/code/project`". It reads only while the parent is adjacent, and is opaque in every error message, doc reference, and line of code that names the leaf alone. A subject is a noun and resists being made to state an action; the rest of the block does that work.
 
 **`back_up_untracked_files` exists even though nothing else can set it to `false`.** Copying untracked files is what the repo block did unconditionally before, and a config that leaves an outcome-shaping default unstated reads as though the tool does nothing but what is written. A key whose value never changes still earns its place when it is the only thing telling the reader what will be copied.
 
@@ -93,7 +95,7 @@ A dated subdirectory is created for each day's backup. Full directory structure 
     home/chris/
       notes/meeting.md
       .ssh/config
-      code/project/scratch.py          (untracked, from git_repos.at)
+      code/project/scratch.py          (untracked, from git.repos)
     mnt/c/Users/chris/
       Documents/work-notes/report.docx
   2026-08-01/

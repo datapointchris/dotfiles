@@ -150,19 +150,19 @@ def test_a_wholly_old_config_reports_the_renames_not_the_missing_key(tmp_path, c
 
 
 def test_repo_options_without_repos_warn_that_they_do_nothing(tmp_path):
-    config_path = write_config(tmp_path, tmp_path / 'dest', git_repos={'back_up_ignored_files_matching': ['CLAUDE.md']})
+    config_path = write_config(tmp_path, tmp_path / 'dest', git={'back_up_ignored_files_matching': ['CLAUDE.md']})
     _, warnings = safekeep.load_config(config_path)
     assert any('back_up_ignored_files_matching' in w and 'does nothing' in w for w in warnings)
 
 
 def test_unknown_repo_subkey_warns(tmp_path):
-    config_path = write_config(tmp_path, tmp_path / 'dest', git_repos={'at': [], 'pathz': []})
+    config_path = write_config(tmp_path, tmp_path / 'dest', git={'repos': [], 'pathz': []})
     _, warnings = safekeep.load_config(config_path)
-    assert any('git_repos.pathz' in w and 'unrecognized' in w for w in warnings)
+    assert any('git.pathz' in w and 'unrecognized' in w for w in warnings)
 
 
 def test_repo_entries_reads_the_repos_and_what_to_take_from_them():
-    repos, untracked, patterns = safekeep.repo_entries({'git_repos': {'at': ['/a'], 'back_up_ignored_files_matching': ['CLAUDE.md']}})
+    repos, untracked, patterns = safekeep.repo_entries({'git': {'repos': ['/a'], 'back_up_ignored_files_matching': ['CLAUDE.md']}})
     assert repos == [(Path('/a'), [])]
     assert untracked is True  # copying untracked files is the default the key documents
     assert patterns == ['CLAUDE.md']
@@ -172,7 +172,7 @@ def test_untracked_files_can_be_turned_off_leaving_only_the_ignored_patterns(tmp
     config_path = write_config(
         tmp_path,
         tmp_path / 'dest',
-        git_repos={'at': ['/a'], 'back_up_untracked_files': False, 'back_up_ignored_files_matching': ['CLAUDE.md']},
+        git={'repos': ['/a'], 'back_up_untracked_files': False, 'back_up_ignored_files_matching': ['CLAUDE.md']},
     )
     config, _ = safekeep.load_config(config_path)
     _, untracked, patterns = safekeep.repo_entries(config)
@@ -289,7 +289,7 @@ def test_git_untracked_becomes_its_own_group(tmp_path):
     (repo / 'wip.txt').write_text('wip\n')
 
     dest = tmp_path / 'dest'
-    config_path = write_config(tmp_path, dest, git_repos={'at': [{'path': str(repo), 'tags': ['wip']}]})
+    config_path = write_config(tmp_path, dest, git={'repos': [{'path': str(repo), 'tags': ['wip']}]})
     result = run_safekeep('--config', str(config_path), 'backup')
     assert result.returncode == 0, result.stderr
 
@@ -541,7 +541,7 @@ def test_repo_groups_sharing_a_subtree_are_restored_once(tmp_path):
 
     dest = tmp_path / 'dest'
     target = tmp_path / 'target'
-    config_path = write_config(tmp_path, dest, git_repos={'at': [str(repo)], 'back_up_ignored_files_matching': ['secrets.env']})
+    config_path = write_config(tmp_path, dest, git={'repos': [str(repo)], 'back_up_ignored_files_matching': ['secrets.env']})
     run_safekeep('--config', str(config_path), 'backup')
 
     snapshot = next(d for d in dest.iterdir() if d.is_dir())
