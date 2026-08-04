@@ -376,7 +376,7 @@ oil.nvim dddddddddddd" "blink.cmp aaaaaaaaaaaa" "already at latest"
 # theme/font --update delegation
 # ================================================================
 # The installers must not re-derive a result. Matching on the tool's output was
-# how `theme upgraded` came to be printed on every run, and swallowing the exit
+# how `theme updated` came to be printed on every run, and swallowing the exit
 # code hid genuine failures from run-installer.sh entirely.
 
 @test "theme.sh --update: passes the tool's own no-op report through" {
@@ -386,16 +386,27 @@ oil.nvim dddddddddddd" "blink.cmp aaaaaaaaaaaa" "already at latest"
   run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
   assert_success
   assert_output --partial "already at latest: v4.10.0"
-  refute_output --partial "theme upgraded"
+  refute_output --partial "theme updated"
 }
 
-@test "theme.sh --update: propagates a failing upgrade" {
+@test "theme.sh --update: propagates a failing update" {
   local stub_dir
-  stub_dir=$(make_stub theme 'echo "✗ theme upgrade failed: could not fetch from remote" >&2; exit 1')
+  stub_dir=$(make_stub theme 'echo "✗ theme update failed: could not fetch from remote" >&2; exit 1')
 
   run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
   assert_failure
   assert_output --partial "could not fetch from remote"
+}
+
+# theme dropped `upgrade` when the fleet settled on one self-update verb, so an
+# installer calling the old name fails only at runtime, on a machine, mid-update.
+@test "theme.sh --update: calls theme by the verb it still answers to" {
+  local stub_dir
+  stub_dir=$(make_stub theme 'echo "called with: $*"')
+
+  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
+  assert_success
+  assert_output --partial "called with: update"
 }
 
 @test "theme.sh --update: skips cleanly when theme is not installed" {
@@ -411,14 +422,23 @@ oil.nvim dddddddddddd" "blink.cmp aaaaaaaaaaaa" "already at latest"
   run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/font.sh" --update
   assert_success
   assert_output --partial "already at latest: v3.1.0"
-  refute_output --partial "font upgraded"
+  refute_output --partial "font updated"
 }
 
-@test "font.sh --update: propagates a failing upgrade" {
+@test "font.sh --update: propagates a failing update" {
   local stub_dir
-  stub_dir=$(make_stub font 'echo "✗ font upgrade failed: no releases found" >&2; exit 1')
+  stub_dir=$(make_stub font 'echo "✗ font update failed: no releases found" >&2; exit 1')
 
   run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/font.sh" --update
   assert_failure
   assert_output --partial "no releases found"
+}
+
+@test "font.sh --update: calls font by the verb it still answers to" {
+  local stub_dir
+  stub_dir=$(make_stub font 'echo "called with: $*"')
+
+  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/font.sh" --update
+  assert_success
+  assert_output --partial "called with: update"
 }
