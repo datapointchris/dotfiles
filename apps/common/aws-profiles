@@ -11,49 +11,220 @@
 #   . aws-profiles
 #
 # DO NOT run as: ./aws-profiles (environment variables won't persist)
+#
+#   source aws-profiles --refresh   re-resolve every account before listing
+#
+# Name an account by adding `account_label = <name>` to any profile in
+# ~/.aws/config; every profile in that account picks the label up. AWS account
+# aliases are not used because reading one needs iam:ListAccountAliases, which a
+# least-privilege user does not have.
 
 # Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 # shellcheck source=../../configs/common/.local/shell/formatting.sh
 source "$SHELL_DIR/formatting.sh"
 
-CREDENTIALS_FILE="$HOME/.aws/credentials"
+AWS_CONFIG="${AWS_CONFIG_FILE:-$HOME/.aws/config}"
+AWS_CREDENTIALS="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
+AWS_IDENTITY_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/aws-profiles/identities.tsv"
+
+# Emits: profile <TAB> region <TAB> role_arn <TAB> source_profile <TAB> label
+# One awk pass rather than `aws configure get`, which costs a ~250ms interpreter
+# start per key and would put seconds in front of the menu.
+function read_aws_config() {
+  [[ -f "$AWS_CONFIG" ]] || return 0
+  awk '
+    function flush() {
+      if (current != "")
+        printf "%s\t%s\t%s\t%s\t%s\n", current, region, role_arn, source_profile, label
+    }
+    /^[[:space:]]*\[/ {
+      flush()
+      current = $0
+      sub(/^[[:space:]]*\[[[:space:]]*/, "", current)
+      sub(/[[:space:]]*\][[:space:]]*$/, "", current)
+      sub(/^profile[[:space:]]+/, "", current)
+      region = ""; role_arn = ""; source_profile = ""; label = ""
+      next
+    }
+    /=/ {
+      key = $0; value = $0
+      sub(/=.*/, "", key)
+      sub(/^[^=]*=/, "", value)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      if (key == "region") region = value
+      else if (key == "role_arn") role_arn = value
+      else if (key == "source_profile") source_profile = value
+      else if (key == "account_label") label = value
+    }
+    END { flush() }
+  ' "$AWS_CONFIG"
+}
+
+# Config profiles first, then credentials-only ones. Role profiles live only in
+# ~/.aws/config, so reading just the credentials file hides them.
+function list_profile_names() {
+  {
+    printf '%s\n' "$AWS_CONFIG_MAP" | awk -F'\t' 'NF { print $1 }'
+    [[ -f "$AWS_CREDENTIALS" ]] && awk '
+      /^[[:space:]]*\[/ {
+        name = $0
+        sub(/^[[:space:]]*\[[[:space:]]*/, "", name)
+        sub(/[[:space:]]*\][[:space:]]*$/, "", name)
+        print name
+      }' "$AWS_CREDENTIALS"
+  } | awk 'NF && !seen[$0]++'
+}
+
+# Field $2 of the config map: 2=region 3=role_arn 4=source_profile 5=label
+function config_field() {
+  printf '%s\n' "$AWS_CONFIG_MAP" \
+    | awk -F'\t' -v profile="$1" -v field="$2" '$1 == profile { print $field; exit }'
+}
+
+# AWS does not inherit region from [default] for a named profile, so a role
+# profile without its own region leaves every command failing on a missing
+# region. Fall back through the profile the role is assumed via, then [default].
+function region_for_profile() {
+  local profile="$1" region source_profile
+  region=$(config_field "$profile" 2)
+  if [[ -z "$region" ]]; then
+    source_profile=$(config_field "$profile" 4)
+    [[ -n "$source_profile" ]] && region=$(config_field "$source_profile" 2)
+  fi
+  [[ -z "$region" ]] && region=$(config_field "default" 2)
+  printf '%s' "$region"
+}
+
+# arn:aws:iam::123:user/chris.birch         -> user/chris.birch
+# arn:aws:sts::123:assumed-role/Admin/sess  -> role/Admin
+function short_identity() {
+  local trailing="${1##*:}"
+  case "$trailing" in
+    assumed-role/*)
+      trailing="${trailing#assumed-role/}"
+      printf 'role/%s' "${trailing%%/*}"
+      ;;
+    *) printf '%s' "$trailing" ;;
+  esac
+}
+
+function resolve_identity() {
+  local profile="$1" response
+  if response=$(aws sts get-caller-identity --profile "$profile" --output json 2>/dev/null); then
+    printf '%s\t%s\t%s\n' "$profile" \
+      "$(printf '%s' "$response" | jq -r '.Account')" \
+      "$(short_identity "$(printf '%s' "$response" | jq -r '.Arn')")"
+  else
+    printf '%s\t%s\t%s\n' "$profile" "?" "unreachable"
+  fi
+}
+
+function refresh_identity_cache() {
+  local scratch profile index=0
+  mkdir -p "$(dirname "$AWS_IDENTITY_CACHE")"
+  scratch=$(mktemp -d) || return 1
+  # Backgrounded inside a subshell so job-control chatter stays out of the
+  # interactive shell this file is sourced into.
+  (
+    while IFS= read -r profile; do
+      index=$((index + 1))
+      resolve_identity "$profile" >"$scratch/$index" &
+    done <<<"$AWS_PROFILES"
+    wait
+  )
+  cat "$scratch"/* >"$AWS_IDENTITY_CACHE" 2>/dev/null
+  rm -rf "$scratch"
+}
+
+# Field $2 of the identity cache: 2=account 3=identity
+function cached_field() {
+  [[ -f "$AWS_IDENTITY_CACHE" ]] || return 1
+  awk -F'\t' -v profile="$1" -v field="$2" '
+    $1 == profile { print $field; found = 1; exit }
+    END { exit !found }
+  ' "$AWS_IDENTITY_CACHE"
+}
+
+function label_for_account() {
+  local account="$1" profile
+  [[ "$account" == "?" ]] && return 1
+  while IFS= read -r profile; do
+    [[ -n "$(config_field "$profile" 5)" ]] || continue
+    if [[ "$(cached_field "$profile" 2)" == "$account" ]]; then
+      config_field "$profile" 5
+      return 0
+    fi
+  done <<<"$AWS_PROFILES"
+  return 1
+}
+
+function every_profile_is_cached() {
+  local profile
+  while IFS= read -r profile; do
+    cached_field "$profile" 2 >/dev/null || return 1
+  done <<<"$AWS_PROFILES"
+  return 0
+}
 
 function list_aws_profiles() {
-  COUNT=0
-  AWS_PROFILES=$(grep '\[*\]' "$CREDENTIALS_FILE" | cut -d "[" -f2 | cut -d "]" -f1)
+  local profile account identity label region source_profile
+  local number=0 width_profile=7 width_account=7 width_identity=8 width_label=0
+  local rows="" marker line header
+
+  while IFS= read -r profile; do
+    number=$((number + 1))
+    account=$(cached_field "$profile" 2) || account="?"
+    identity=$(cached_field "$profile" 3) || identity="unknown"
+    label=$(label_for_account "$account") || label=""
+    region=$(region_for_profile "$profile")
+    source_profile=$(config_field "$profile" 4)
+
+    ((${#profile} > width_profile)) && width_profile=${#profile}
+    ((${#account} > width_account)) && width_account=${#account}
+    ((${#identity} > width_identity)) && width_identity=${#identity}
+    ((${#label} > width_label)) && width_label=${#label}
+
+    # \037 rather than tab: tab is IFS whitespace, so `read` collapses a run of
+    # them and an empty LABEL shifts every later column one place left.
+    rows+="${number}"$'\037'"${profile}"$'\037'"${account}"$'\037'"${label}"$'\037'"${identity}"$'\037'"${region}"$'\037'"${source_profile}"$'\n'
+  done <<<"$AWS_PROFILES"
 
   print_section "AWS Profile Selection" "cyan"
   echo ""
   echo -e "0) $(print_yellow "Clear") current profile"
-  echo "$AWS_PROFILES" | while read -r line; do
-    ((COUNT++))
-    echo "${COUNT}) $line"
-  done
+  echo ""
+
+  header=$(printf '    %-*s  %-*s  ' "$width_profile" "PROFILE" "$width_account" "ACCOUNT")
+  ((width_label > 0)) && header+=$(printf '%-*s  ' "$width_label" "LABEL")
+  header+=$(printf '%-*s  %s' "$width_identity" "IDENTITY" "REGION")
+  print_blue "$header"
+
+  while IFS=$'\037' read -r number profile account label identity region source_profile; do
+    [[ -n "$number" ]] || continue
+    marker=" "
+    [[ "${AWS_PROFILE:-}" == "$profile" ]] && marker="*"
+    line=$(printf '%s%s) %-*s  %-*s  ' "$marker" "$number" "$width_profile" "$profile" "$width_account" "$account")
+    ((width_label > 0)) && line+=$(printf '%-*s  ' "$width_label" "$label")
+    line+=$(printf '%-*s  ' "$width_identity" "$identity")
+    if [[ -n "$source_profile" ]]; then
+      line+=$(printf '%-9s  ← assumed via %s' "$region" "$source_profile")
+    else
+      line+="$region"
+    fi
+    echo "$line"
+  done <<<"$rows"
 }
 
 function set_aws_profile() {
-  export AWS_PROFILE=$1
+  export AWS_PROFILE="$1"
 
-  # Try to get the default region for this profile from AWS config
-  local region=""
-  if [[ -f "$HOME/.aws/config" ]]; then
-    # Look for region in the profile section
-    region=$(awk -v profile="$AWS_PROFILE" '
-            /^\[profile / { current_profile = gensub(/^\[profile ([^\]]+)\]/, "\\1", 1) }
-            /^\[default\]/ { current_profile = "default" }
-            /^region = / && current_profile == profile { print gensub(/^region = (.*)/, "\\1", 1); exit }
-        ' "$HOME/.aws/config")
-
-    # If not found and profile is not default, try default section
-    if [[ -z "$region" && "$AWS_PROFILE" != "default" ]]; then
-      region=$(awk '/^\[default\]/{found=1} found && /^region = /{print gensub(/^region = (.*)/, "\\1", 1); exit}' "$HOME/.aws/config")
-    fi
-  fi
-
-  # Set the region if found
+  local region
+  region=$(region_for_profile "$AWS_PROFILE")
   if [[ -n "$region" ]]; then
     export AWS_REGION="$region"
+    export AWS_DEFAULT_REGION="$region"
     echo -e "The AWS profile $(print_green "$AWS_PROFILE") and region $(print_blue "$region") have been set."
   else
     echo -e "The AWS profile $(print_green "$AWS_PROFILE") has been set."
@@ -68,23 +239,59 @@ function clear_aws_profile() {
 }
 
 function select_option() {
-  echo -e "\nSelect option number and press [ENTER]: "
-  read -r n
+  echo ""
+  echo -e "Select option number and press [ENTER]: "
+  read -r choice
 
-  case $n in
+  case $choice in
+    0) clear_aws_profile ;;
     [1-9]*)
-      SELECTED_AWS_PROFILE=$(echo "$AWS_PROFILES" | awk "NR==$n{print}")
-      set_aws_profile "$SELECTED_AWS_PROFILE"
+      local selected
+      selected=$(printf '%s\n' "$AWS_PROFILES" | awk -v n="$choice" 'NR == n { print }')
+      if [[ -z "$selected" ]]; then
+        print_red "No profile at option $choice."
+        return 1
+      fi
+      set_aws_profile "$selected"
       ;;
-    0)
-      clear_aws_profile
-      ;;
+    *) return 1 ;;
   esac
 }
 
-list_aws_profiles
-select_option
+# Rewrite the selected profile's cache line from the live check, so a rotated
+# key shows as unreachable next time instead of keeping a stale row.
+function record_selected_identity() {
+  local account="$1" arn="$2" updated
+  [[ -f "$AWS_IDENTITY_CACHE" ]] || return 0
+  updated="${AWS_IDENTITY_CACHE}.new"
+  awk -F'\t' -v profile="$AWS_PROFILE" '$1 != profile' "$AWS_IDENTITY_CACHE" >"$updated" || return 1
+  printf '%s\t%s\t%s\n' "$AWS_PROFILE" "$account" "$(short_identity "$arn")" >>"$updated"
+  mv "$updated" "$AWS_IDENTITY_CACHE"
+}
 
-# check that the profile is logged in and can make AWS CLI calls
-echo "Checking with $(print_blue "AWS CLI...")"
-print_green "$(aws sts get-caller-identity | jq -r '.Arn' | cut -d "/" -f2)"
+AWS_CONFIG_MAP=$(read_aws_config)
+AWS_PROFILES=$(list_profile_names)
+
+if [[ "${1:-}" == "--refresh" ]] || ! every_profile_is_cached; then
+  echo "Resolving AWS accounts..."
+  refresh_identity_cache
+fi
+
+list_aws_profiles
+if select_option && [[ -n "${AWS_PROFILE:-}" ]]; then
+  if aws_identity=$(aws sts get-caller-identity --output json 2>&1); then
+    aws_account=$(printf '%s' "$aws_identity" | jq -r '.Account')
+    aws_arn=$(printf '%s' "$aws_identity" | jq -r '.Arn')
+    print_green "account $aws_account  $aws_arn"
+    record_selected_identity "$aws_account" "$aws_arn"
+  else
+    print_red "$aws_identity"
+  fi
+fi
+
+unset AWS_CONFIG AWS_CREDENTIALS AWS_CONFIG_MAP AWS_PROFILES
+unset aws_identity aws_account aws_arn
+unset -f read_aws_config list_profile_names config_field region_for_profile \
+  short_identity resolve_identity refresh_identity_cache cached_field \
+  label_for_account every_profile_is_cached list_aws_profiles set_aws_profile \
+  clear_aws_profile select_option record_selected_identity 2>/dev/null
