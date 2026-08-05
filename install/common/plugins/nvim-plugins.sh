@@ -9,13 +9,18 @@ source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 
 log_info "Installing Neovim plugins via Lazy.nvim..."
 
-# Run nvim headless to install all plugins
-# --headless: run without UI
-# +Lazy! sync: sync all plugins (! suppresses the UI)
-# +qa: quit all windows
-# Output is captured and only shown on failure or in DEBUG mode
+# Lazy's headless output is every plugin's raw git and build spew, which is far
+# too much to watch — but sending all of it to a file left a fresh install
+# cloning fifty repos with nothing on screen for minutes. The full log still
+# goes to the file the failure path reports; the terminal gets the one line
+# Lazy prints as each plugin task starts, which is the progress signal.
+#
+# Lazy colors its own prefix whatever headless.colors says, so the filter has to
+# strip escape codes before it can see the ` | ` separating prefix from message.
 nvim_output=$(mktemp)
-if nvim --headless "+Lazy! sync" +qa &>"$nvim_output"; then
+if nvim --headless -c "Lazy! sync" -c "qa" 2>&1 \
+  | tee "$nvim_output" \
+  | awk '{ gsub(/\033\[[0-9;]*m/, ""); if (sub(/ \| Running task .*/, "")) print "  " $0 }'; then
   log_success "Neovim plugins synced"
   if [[ "${DEBUG:-}" == "true" ]]; then
     cat "$nvim_output"
