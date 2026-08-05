@@ -9,8 +9,7 @@
 # tool silently never reaches ~/.cargo/bin on the target machine.
 # ================================================================
 
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 setup_file() {
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."

@@ -8,8 +8,7 @@
 # every binding with nothing to show it had. These tests pin the card's format.
 # ================================================================
 
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 setup_file() {
   DOTFILES_DIR="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"

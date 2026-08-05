@@ -12,8 +12,7 @@
 # whole round trip runs with no network and no GitHub rate limit.
 # ================================================================
 
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 setup_file() {
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."

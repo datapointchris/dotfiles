@@ -4,8 +4,7 @@
 # Proof of concept for Phase 3: Testing with real network calls
 
 setup_file() {
-  load "$HOME/.local/lib/bats-support/load.bash"
-  load "$HOME/.local/lib/bats-assert/load.bash"
+  load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
   source "${BATS_TEST_DIRNAME}/docker-helpers.sh"
@@ -18,8 +17,7 @@ setup_file() {
 }
 
 setup() {
-  load "$HOME/.local/lib/bats-support/load.bash"
-  load "$HOME/.local/lib/bats-assert/load.bash"
+  load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."
   source "${BATS_TEST_DIRNAME}/docker-helpers.sh"

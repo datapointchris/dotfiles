@@ -12,8 +12,7 @@
 # --dry-run test below is deliberate and stands alone.
 # ================================================================
 
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 setup_file() {
   DOTFILES_DIR="$(cd "${BATS_TEST_DIRNAME}/../../.." && pwd)"

@@ -19,6 +19,19 @@ LIBRARY_TESTS=(tests/libraries/*.bats)
 UNIT_TESTS=(tests/install/unit/*.bats tests/apps/*.bats)
 INTEGRATION_TESTS=(tests/install/integration/*.bats)
 
+# Each test is its own process, so the suite is dominated by process startup and
+# scales almost linearly across cores. bats needs GNU parallel for --jobs and
+# fails outright without it, so a machine that lacks it runs serially instead.
+BATS_ARGS=()
+if command -v parallel >/dev/null 2>&1; then
+  cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+  BATS_ARGS=(--jobs "$cores")
+fi
+
+run_bats() {
+  bats "${BATS_ARGS[@]}" "$@"
+}
+
 usage() {
   help_header "test"
   help_usage "test.sh [all|unit|integration|watch]"
@@ -47,15 +60,15 @@ main() {
 
   case "$suite" in
     all)
-      bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
+      run_bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
       ;;
     unit)
       skip_on_wsl unit
-      bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}"
+      run_bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}"
       ;;
     integration)
       skip_on_wsl integration
-      bats "${INTEGRATION_TESTS[@]}"
+      run_bats "${INTEGRATION_TESTS[@]}"
       ;;
     watch)
       if ! command -v entr >/dev/null 2>&1; then
@@ -63,7 +76,7 @@ main() {
         print_info "Install with: brew install entr (macOS) or pacman -S entr (Arch)"
         exit 1
       fi
-      find tests -name '*.bats' | entr -c bats "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
+      find tests -name '*.bats' | entr -c bats "${BATS_ARGS[@]}" "${LIBRARY_TESTS[@]}" "${UNIT_TESTS[@]}" "${INTEGRATION_TESTS[@]}"
       ;;
     *)
       log_error "Unknown suite: $suite"

@@ -10,8 +10,7 @@
 # what decide whether the receipt comes out pinned.
 
 setup() {
-  load "$HOME/.local/lib/bats-support/load.bash"
-  load "$HOME/.local/lib/bats-assert/load.bash"
+  load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
   source "$DOTFILES_DIR/install/common/lib/uv-git-tools.sh"

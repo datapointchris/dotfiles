@@ -8,8 +8,7 @@
 # in create-bundle.sh, so install_from_cache never sees a fat zip.
 # ================================================================
 
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 setup_file() {
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../../.."

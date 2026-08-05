@@ -5,8 +5,7 @@
 # Tests structured failure output format used by run-installer.sh wrapper
 
 setup() {
-  load "$HOME/.local/lib/bats-support/load.bash"
-  load "$HOME/.local/lib/bats-assert/load.bash"
+  load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
   source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"

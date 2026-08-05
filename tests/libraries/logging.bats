@@ -6,8 +6,7 @@
 # and behave as expected (stderr routing, exit codes, debug mode)
 
 setup() {
-  load "$HOME/.local/lib/bats-support/load.bash"
-  load "$HOME/.local/lib/bats-assert/load.bash"
+  load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"

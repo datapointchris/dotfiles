@@ -61,20 +61,31 @@ apps/common/packages verify
 
 ### Writing Tests
 
-Tests use BATS with assertion helpers:
+Tests use BATS with assertion helpers, loaded through `tests/helpers/bats-libs`:
 
 ```bash
 #!/usr/bin/env bats
 
-# Load helpers
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 @test "installer checks for dependencies" {
   run bash "$INSTALLER_SCRIPT"
   assert_output --partial "Checking dependencies"
 }
 ```
+
+Load the helper, never bats-support and bats-assert directly. Their own loaders
+resolve each of their fifteen source paths with a `$(dirname)` subprocess, and
+bats runs every `@test` in a fresh process, so that cost is paid per test — it
+was more than half the suite's wall time. The helper sources the same files
+using parameter expansion, and exports `DOTFILES_DIR` from the same expansion.
+
+The expansion is depth-independent, so the line is identical in every test file
+regardless of where it sits under `tests/`.
+
+Each test being its own process also means the suite scales across cores:
+`install/ops/test.sh` passes `--jobs` when GNU parallel is available, which is
+what `dotfiles test` and `task test:*` both run.
 
 See [Bash Testing Frameworks](https://docs.ichrisbirch.com/terminal/bash-testing-frameworks/) for detailed BATS usage.
 

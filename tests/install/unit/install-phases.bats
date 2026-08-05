@@ -8,8 +8,7 @@
 # call selected_phase_names, which runs nothing.
 # ================================================================
 
-load "$HOME/.local/lib/bats-support/load.bash"
-load "$HOME/.local/lib/bats-assert/load.bash"
+load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
 setup_file() {
   DOTFILES_DIR="$(cd "${BATS_TEST_DIRNAME}/../../.." && pwd)"

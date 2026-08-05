@@ -7,8 +7,7 @@
 # palette is resolved once at source time and that is the behaviour under test.
 
 setup() {
-  load "$HOME/.local/lib/bats-support/load.bash"
-  load "$HOME/.local/lib/bats-assert/load.bash"
+  load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
   export COLORS_SH="$DOTFILES_DIR/configs/common/.local/shell/colors.sh"
