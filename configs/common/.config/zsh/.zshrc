@@ -355,6 +355,11 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 [[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh" || log_error "Load" "$SHELL_DIR/aliases.sh"
 [[ -f "$SHELL_DIR/$PLATFORM.sh" ]] && source "$SHELL_DIR/$PLATFORM.sh" && log "Load" "$SHELL_DIR/$PLATFORM.sh" || log_error "Load" "$SHELL_DIR/$PLATFORM.sh"
 
+# Hand-written completions for the apps that generate none. Here rather than in
+# the completion section above because compdef must already exist, which it does
+# only after compinit has run.
+[[ -f "$SHELL_DIR/completions.zsh" ]] && source "$SHELL_DIR/completions.zsh" && log "Load" "$SHELL_DIR/completions.zsh"
+
 # Claude on the prompt line. doshell(1) makes you decide to ask before you start
 # typing; these catch you mid-line instead, which is when you actually get stuck.
 # Both are deliberately explicit keypresses rather than anything ambient — a

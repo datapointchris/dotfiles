@@ -102,6 +102,15 @@ show_help() {
   help_row "menu dashboard --lane" "<name>" "One lane, in more depth"
   help_row "menu dashboard --json" "" "The lane model as JSON"
 
+  help_section "Next (what to do now)"
+  help_row "menu next" "" "Draw what to do now from your weighted pursuits"
+  help_row "menu next --explain" "" "The same draw with every number behind it"
+  help_row "menu log" "<pursuit> [note]" "Record having done it (writes through where it can)"
+  help_row "menu next skip" "<pursuit>" "Pass on one — suppressed, weight untouched"
+  help_row "menu next list" "" "Every pursuit, its weight and implied share"
+  help_row "menu next drift" "" "Stated weight against what you actually did"
+  help_row "menu next edit" "" "Edit the pursuits file in \$EDITOR"
+
   help_section "Review (what's due to revisit)"
   help_row "menu review" "" "What's due now, most overdue first"
   help_row "menu review list" "" "Every registered item and its status"
@@ -410,6 +419,7 @@ cmd_show() {
 # shows that tool's help or status).
 launcher_rows() {
   {
+    printf 'next\tWhat to do now, drawn from your weighted pursuits\n'
     printf 'dashboard\tEverything outstanding across your apps, in lanes\n'
     printf 'find\tSearch across tools, workflows, skills, funcs, aliases, git\n'
     printf 'review\tWhat is due to revisit (cadence register)\n'
@@ -426,6 +436,9 @@ cmd_launch_preview() {
     # selection change and the dashboard queries the network.
     dashboard) printf 'Everything outstanding across your apps, in independent lanes:\ntasks, habits, learning, reading, maintenance, project items,\nupcoming. Read-only, one batched call per backend.\n\nInvoke directly: menu dashboard [--lane <name>] [--json]\n' ;;
     find) printf 'Federated search across every collection you own — tools,\nworkflows, skills, shell functions, aliases, git aliases, forgit,\ntmux keys. Enter opens the full composite view.\n\nInvoke directly: menu find <term>\n' ;;
+    # Also a static description: a live run would draw (and cache, and count as
+    # an offer) on every arrow-key move through the launcher.
+    next) printf 'What to do now, drawn rather than ranked: each pursuit you\nweighted gets a chance proportional to that weight against how\nlong since you last did it. Anything with a hard cadence and\noverdue is pinned above the draw. Cached 15 minutes.\n\nInvoke directly: menu next [--explain] [--reroll]\n' ;;
     review) menu-review list 2>/dev/null || echo "What's due to revisit." ;;
     labs) menu-labs list 2>/dev/null || echo "Hands-on practice that's due." ;;
     *) toolbox show "$1" 2>/dev/null || printf 'No registry entry for %s.\n' "$1" ;;
@@ -434,6 +447,7 @@ cmd_launch_preview() {
 
 launcher_run() {
   case "$1" in
+    next) exec menu-next ;;
     dashboard) exec menu-dashboard ;;
     find) cmd_find "" ;;
     review) exec menu-review ;;
@@ -492,6 +506,19 @@ case "${1:-}" in
     # subprocess fan-out and JSON composition are cleaner in Python than in bash.
     shift
     exec menu-dashboard "$@"
+    ;;
+  next)
+    # The weighted half: menu-review asks what is due, menu-next asks what
+    # deserves the attention. Same reason it is Python — dates, state, and now
+    # sampling math.
+    shift
+    exec menu-next "$@"
+    ;;
+  log)
+    # `menu log <pursuit>` is the fast path and has to stay two words. It is
+    # menu-next's log verb under a shorter name, not a separate tool.
+    shift
+    exec menu-next log "$@"
     ;;
   review)
     # The temporal half (cadence register) lives in the menu-review helper —

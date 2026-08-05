@@ -26,7 +26,7 @@ Bare `menu` opens the **launcher** (see below). Passing a term goes straight to 
 ## The launcher
 
 Bare `menu` — no arguments — opens a picker of **your own areas and tools**, so "what can I even run
-here" is one keystroke away. It lists menu's four areas (`dashboard`, `find`, `review`, `labs`)
+here" is one keystroke away. It lists menu's areas (`next`, `dashboard`, `find`, `review`, `labs`)
 followed by every tool in the registry's `custom-tools` category, each previewed with its `toolbox`
 entry. Selecting an area enters it; selecting a tool prints its command so you can run it in your own
 shell. menu runs in

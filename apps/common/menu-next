@@ -1,0 +1,978 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pyyaml"]
+# ///
+"""menu-next - what to do now, drawn from what you said matters. Invoked as `menu next`.
+
+The one place in the system that holds an opinion, and the opinion is yours. Every
+other view is a renderer: `menu dashboard` shows independent lanes and deliberately
+refuses to rank across them, because an ordering it invented over unlike things
+would be meaningless. This tool ranks across everything — legitimately, because it
+is not inventing the ordering. You declare it, as a weight per pursuit.
+
+A *pursuit* is a named strand of life you want to spend attention on:
+study-computer-science at 35, read-library at 30, visit-new-places at 70 for a
+year. Weights are relative magnitudes, never normalized — the implied share is
+displayed so a number that dominates more than you meant is visible.
+
+Three files, kept apart like the review register:
+  - pursuits.yml    declarative config you hand-edit; only ever read here. Under
+                    the XDG config dir, not this repo — a life's intentions are
+                    personal stewarded data and this repo is public.
+  - next-log-*.jsonl  the append-only journal, one file per machine, merged on
+                    read. See menucore.journal for why per-machine.
+  - next-offers-*.json  how many times each pursuit has been offered, so `drift`
+                    can tell "never comes up" apart from "comes up and is ignored".
+
+The draw is fresh every run, not a queue — but cached for 15 minutes, because
+running it three times while deciding must not reshuffle the list underneath you.
+That cache also carries which concrete item each pursuit resolved to, which is what
+lets `menu log` write through to the CLI that owns it.
+
+What a pursuit resolves to is never this tool's business. It shells out to whoever
+owns that domain — `icb books` knows which book, `icb tasks` knows which chore —
+exactly as the dashboard delegates its lanes.
+"""
+
+import argparse
+import json
+import math
+import os
+import random
+import shlex
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date
+from datetime import datetime
+from datetime import timedelta
+from pathlib import Path
+
+import yaml
+
+# menu-next is symlinked onto PATH; resolve the real path so the repo-root appcore
+# and menucore packages are importable. parents[2] is the repo root:
+# apps/common/menu-next → apps/common → apps → <repo>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from appcore import BOLD
+from appcore import COMMAND
+from appcore import CYAN
+from appcore import GREEN
+from appcore import MAGENTA
+from appcore import RESET
+from appcore import WHITE
+from appcore import YELLOW
+from appcore import clip
+from appcore import header
+from appcore import help_end
+from appcore import help_header
+from appcore import help_row
+from appcore import help_section
+from appcore import help_text
+from appcore import help_usage
+from appcore.paths import machine_name
+from appcore.paths import xdg_cache_home
+from appcore.paths import xdg_config_home
+from appcore.paths import xdg_state_home
+from menucore import DEFAULT_ALPHA
+from menucore import FALLBACK_LOGS_PER_DAY
+from menucore import bump_counts
+from menucore import counts_path
+from menucore import days_since
+from menucore import draw
+from menucore import effective_weights
+from menucore import first_draw_probabilities
+from menucore import implied_intervals
+from menucore import implied_shares
+from menucore import journal
+from menucore import journal_path
+from menucore import latest_occurrence
+from menucore import load_counts
+from menucore import new_id
+from menucore import overdue_days
+from menucore import parse_cadence
+from menucore import rate_per_day
+from menucore import status_label
+
+REGISTER = Path(os.environ.get('MENU_NEXT_REGISTER') or xdg_config_home() / 'menu' / 'pursuits.yml')
+JOURNAL_DIR = Path(os.environ.get('MENU_NEXT_JOURNAL_DIR') or xdg_state_home() / 'menu')
+CACHE_DIR = Path(os.environ.get('MENU_NEXT_CACHE_DIR') or xdg_cache_home() / 'menu')
+DRAW_CACHE = CACHE_DIR / 'next-draw.json'
+NAMES_CACHE = CACHE_DIR / 'next-names.txt'
+
+# Long enough to survive deciding what to do, short enough that coming back after
+# a task gives a fresh draw. Re-running inside the window is the common case —
+# glance, get interrupted, glance again — and a reshuffle there reads as the tool
+# having changed its mind.
+CACHE_MINUTES = int(os.environ.get('MENU_NEXT_CACHE_MINUTES') or 15)
+
+DRAW_SIZE = 5
+
+# Width of the "weight · when" column, sized for the longest status cadence.py
+# produces ("never done") so the resolved item starts at one column on every row.
+STATUS_COLUMN = 18
+
+# A resolver is one network call to a product CLI. They run concurrently and only
+# for what was actually drawn, so this is the whole wait, not a per-pursuit one.
+RESOLVE_TIMEOUT_SECONDS = 5.0
+
+# Fields a pursuit may declare. Anything else is a typo, and a typo in a weight
+# file is silent damage — it would allocate attention by a number nobody wrote.
+KNOWN_FIELDS = {
+    'description',
+    'weight',
+    'cadence',
+    'until',
+    'paused',
+    'alpha',
+    'resolve',
+    'items',
+    'label',
+    'id',
+    'on_log',
+}
+
+TEMPLATE = """\
+# Weighted pursuits, read by `menu next`. Hand-edit freely — this tool only reads.
+#
+# A pursuit is a strand of life you want to spend attention on. Weights are
+# relative magnitudes, not percentages: 35/30/70 is fine and nothing has to add
+# up. `menu next list` shows the share each weight actually implies.
+#
+#   weight       required; how much attention this deserves relative to the rest
+#   description  what it means, shown when there is nothing resolved to show
+#   cadence      optional hard schedule (2w / 1mo); overdue pins it above the draw
+#   until        optional end date; after it the pursuit pauses and says so
+#   paused       optional; keeps it in the file but out of the draw
+#   resolve      optional command answering "specifically what?" — see below
+#   on_log       optional command run after logging, e.g. completing the task
+#
+# resolve prints either plain lines (first line wins) or JSON. For JSON, name the
+# fields to read: `label` for what to show, `id` for what on_log substitutes into,
+# and `items` when the list is nested inside the document.
+
+pursuits:
+  chores:
+    description: The maintenance list nobody else is going to do
+    weight: 25
+    cadence: 1w
+    resolve: icb tasks todo --limit 3 --json
+    label: name
+    id: id
+    on_log: icb tasks complete {id}
+
+  read-library:
+    description: Read what is already on the shelf
+    weight: 30
+    resolve: icb books list --progress reading --json
+    label: title
+
+  study-computer-science:
+    description: Work the CS track rather than reading about working it
+    weight: 35
+    resolve: learning overview --json
+    items: in_progress_resources
+    label: title
+"""
+
+
+class RegisterError(Exception):
+    """A pursuits file that cannot be trusted to allocate attention correctly."""
+
+
+def load_pursuits(path: Path = REGISTER) -> dict:
+    """The register, validated. Raises rather than guessing at a malformed entry.
+
+    Every failure here is silent misallocation if it were tolerated: a missing
+    weight would default to something nobody chose, a misspelled field would be
+    ignored, and either way the tool would confidently offer the wrong things for
+    months. A weight file has to be right or refuse to run.
+    """
+    if not path.exists():
+        return {}
+    document = yaml.safe_load(path.read_text()) or {}
+    pursuits = document.get('pursuits') or {}
+    if not isinstance(pursuits, dict):
+        raise RegisterError(f'{path}: `pursuits` must be a mapping of name to settings')
+
+    for name, config in pursuits.items():
+        if not isinstance(config, dict):
+            raise RegisterError(f'{name}: must be a mapping of settings, not {type(config).__name__}')
+        unknown = set(config) - KNOWN_FIELDS
+        if unknown:
+            raise RegisterError(f'{name}: unknown field(s) {", ".join(sorted(unknown))}')
+        weight = config.get('weight')
+        if not isinstance(weight, int | float) or isinstance(weight, bool) or weight < 0:
+            raise RegisterError(f'{name}: weight must be a non-negative number')
+        if config.get('cadence') and parse_cadence(config['cadence']) <= 0:
+            raise RegisterError(f'{name}: cadence must look like 10d / 2w / 1mo / 1y')
+        if config.get('until') and not isinstance(config['until'], date):
+            raise RegisterError(f'{name}: until must be a date (YYYY-MM-DD)')
+        if config.get('on_log') and not config.get('resolve'):
+            raise RegisterError(f'{name}: on_log needs resolve — there is no item to act on without it')
+    return pursuits
+
+
+def term_ended(config: dict, today: date) -> bool:
+    """Whether a time-boxed pursuit is past its `until` date."""
+    until = config.get('until')
+    return bool(until) and until < today
+
+
+def is_active(config: dict, today: date) -> bool:
+    """Paused, term-ended, and zero-weight pursuits stay in the file but out of the draw."""
+    return not config.get('paused') and not term_ended(config, today) and config.get('weight', 0) > 0
+
+
+def build_state(pursuits: dict, now: datetime) -> dict:
+    """Everything the draw and every view need: rates, intervals, urgency, weights.
+
+    Assembled in one place and passed around, because the same numbers are what
+    gets drawn on, what gets displayed by `--explain`, and what gets recorded into
+    the journal as the state at the moment of a log. Recomputing them per view is
+    how those three drift apart.
+    """
+    today = now.date()
+    active = {name: config for name, config in pursuits.items() if is_active(config, today)}
+    weights = {name: float(config['weight']) for name, config in active.items()}
+
+    records = journal.read_all(JOURNAL_DIR) if JOURNAL_DIR.exists() else []
+    measured_rate = rate_per_day(records, now)
+    logs_per_day = measured_rate if measured_rate is not None else FALLBACK_LOGS_PER_DAY
+
+    shares = implied_shares(weights)
+    intervals = implied_intervals(weights, logs_per_day)
+    # An explicit cadence is a statement about the world, not about relative
+    # attention, so it wins over the interval the weight implies.
+    for name, config in active.items():
+        if config.get('cadence'):
+            intervals[name] = float(parse_cadence(config['cadence']))
+
+    last_done = latest_occurrence(records, 'done')
+    last_skip = latest_occurrence(records, 'skip')
+    elapsed = days_since(last_done, list(active), now)
+    elapsed_skip = days_since(last_skip, list(active), now)
+
+    alphas = {name: float(config.get('alpha', DEFAULT_ALPHA)) for name, config in active.items()}
+    effective = {}
+    for name in active:
+        one = effective_weights(
+            {name: weights[name]},
+            {name: intervals[name]},
+            {name: elapsed[name]},
+            {name: elapsed_skip[name]},
+            alphas[name],
+        )
+        effective.update(one)
+
+    return {
+        'now': now,
+        'today': today,
+        'pursuits': pursuits,
+        'active': active,
+        'weights': weights,
+        'shares': shares,
+        'intervals': intervals,
+        'days_since': elapsed,
+        'days_since_skip': elapsed_skip,
+        'effective': effective,
+        'probability': first_draw_probabilities(effective),
+        'logs_per_day': logs_per_day,
+        'measured_rate': measured_rate,
+        'last_done': {name: when.isoformat() for name, when in last_done.items()},
+        'records': records,
+    }
+
+
+def pinned(state: dict) -> list[str]:
+    """Pursuits with a hard cadence that are past due, most overdue first.
+
+    Pinned rather than sampled on purpose. A weighted draw makes an overdue thing
+    likely, and likely is not good enough for the case this tool exists for — the
+    chore that has been at the top of the task list for a year does not need better
+    odds, it needs to stop being optional.
+    """
+    overdue = []
+    for name, config in state['active'].items():
+        if not config.get('cadence'):
+            continue
+        last = state['last_done'].get(name)
+        days = overdue_days(last[:10] if last else None, config['cadence'], state['today'])
+        if days is None or days >= 0:
+            overdue.append((name, days))
+    overdue.sort(key=lambda row: (row[1] is not None, -(row[1] or 0)))
+    return [name for name, _ in overdue]
+
+
+def compute_draw(state: dict, seed: int | None = None) -> dict:
+    """Draw the pins plus enough sampled pursuits to fill the screen."""
+    pins = pinned(state)
+    candidates = {name: weight for name, weight in state['effective'].items() if name not in pins}
+    rng = random.Random(seed) if seed is not None else random.Random()
+    drawn = draw(candidates, max(DRAW_SIZE - len(pins), 0), rng)
+    return {
+        'draw_id': new_id(state['now']),
+        'created_at': state['now'].isoformat(),
+        'pinned': pins,
+        'drawn': drawn,
+    }
+
+
+def load_cached_draw(now: datetime) -> dict | None:
+    """The draw from the last few minutes, or None once it has aged out."""
+    if not DRAW_CACHE.exists():
+        return None
+    try:
+        cached = json.loads(DRAW_CACHE.read_text())
+    except json.JSONDecodeError:
+        return None
+    created = journal.parse_time(cached.get('created_at'))
+    if created is None or now - created > timedelta(minutes=CACHE_MINUTES):
+        return None
+    return cached
+
+
+def save_cached_draw(payload: dict) -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    DRAW_CACHE.write_text(json.dumps(payload, indent=2) + '\n')
+
+
+def write_names_cache(pursuits: dict) -> None:
+    """Rewrite the name<TAB>description file the shell completion reads.
+
+    Completion has to be instant, and this script cannot be: a `uv run --script`
+    start is ~100ms, which is exactly long enough to feel like a hang mid-command.
+    So every run leaves behind a flat file the completion function can read with no
+    subprocess at all.
+    """
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    lines = [f'{name}\t{config.get("description", "")}' for name, config in sorted(pursuits.items())]
+    NAMES_CACHE.write_text('\n'.join(lines) + '\n' if lines else '')
+
+
+def dig(document, path: str):
+    """Follow a dotted path into a JSON document, returning None if it dead-ends."""
+    current = document
+    for key in path.split('.'):
+        if not isinstance(current, dict) or key not in current:
+            return None
+        current = current[key]
+    return current
+
+
+def resolve_one(name: str, config: dict) -> dict | None:
+    """Ask the owning CLI what this pursuit means right now.
+
+    Never `shell=True`: the command comes from a config file, and while that file
+    is yours, a tool that hands config text to a shell has a class of bug you
+    cannot audit away later.
+    """
+    command = config.get('resolve')
+    if not command:
+        return None
+    try:
+        result = subprocess.run(
+            shlex.split(command),
+            capture_output=True,
+            text=True,
+            timeout=RESOLVE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return {'pursuit': name, 'error': str(error), 'backend': shlex.split(command)[0]}
+    if result.returncode != 0:
+        # A backend can fail with nothing on either stream (`false`, a bare
+        # non-zero exit), so the status is the message of last resort — the row
+        # still has to say something rather than render an empty value.
+        said = (result.stderr or result.stdout).strip().splitlines()
+        return {
+            'pursuit': name,
+            'error': said[0] if said else f'exited {result.returncode}',
+            'backend': shlex.split(command)[0],
+        }
+
+    label_field = config.get('label')
+    if not label_field:
+        first = next((line for line in result.stdout.splitlines() if line.strip()), '')
+        return {'pursuit': name, 'label': first.strip()} if first else None
+
+    try:
+        document = json.loads(result.stdout or 'null')
+    except json.JSONDecodeError:
+        return {'pursuit': name, 'error': 'resolve did not return JSON but names a label field'}
+    rows = dig(document, config['items']) if config.get('items') else document
+    if not isinstance(rows, list) or not rows:
+        return None
+    row = rows[0]
+    if not isinstance(row, dict):
+        return {'pursuit': name, 'label': str(row)}
+    identifier = row.get(config['id']) if config.get('id') else None
+    return {
+        'pursuit': name,
+        'label': str(row.get(label_field, '')).strip(),
+        'id': None if identifier is None else str(identifier),
+        'backend': shlex.split(config['resolve'])[0],
+        'raw': row,
+    }
+
+
+def resolve_all(names: list[str], pursuits: dict) -> dict[str, dict]:
+    """Resolve only what was drawn, concurrently. The rest is never asked."""
+    wanted = [name for name in names if pursuits.get(name, {}).get('resolve')]
+    if not wanted:
+        return {}
+    with ThreadPoolExecutor(max_workers=len(wanted)) as pool:
+        results = pool.map(lambda name: resolve_one(name, pursuits[name]), wanted)
+    return {name: result for name, result in zip(wanted, results, strict=True) if result}
+
+
+def todays_context() -> list[str]:
+    """Today's events and imminent countdowns — context, never candidates.
+
+    An event is something happening, not something to choose, so it renders as a
+    banner and takes no part in the draw.
+    """
+    try:
+        result = subprocess.run(
+            ['icb', 'overview', '--json'],
+            capture_output=True,
+            text=True,
+            timeout=RESOLVE_TIMEOUT_SECONDS,
+            check=False,
+        )
+        payload = json.loads(result.stdout or '{}')
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return []
+
+    today = date.today()
+    lines = []
+    for event in (payload.get('events') or {}).get('items') or []:
+        when = journal.parse_time(event.get('date'))
+        if when and when.date() == today:
+            lines.append(f'{event.get("name", "")} · {event.get("venue") or "today"}')
+    for countdown in (payload.get('countdowns') or {}).get('items') or []:
+        due = countdown.get('due_date')
+        if not due:
+            continue
+        days = (date.fromisoformat(due) - today).days
+        if 0 <= days <= 14:
+            lines.append(f'{countdown.get("name", "")} in {days}d')
+    return lines
+
+
+def format_elapsed(days: float | None) -> str:
+    if days is None:
+        return 'never'
+    if days < 1:
+        return 'today'
+    if days < 14:
+        return f'{int(days)}d ago'
+    if days < 90:
+        return f'{int(days / 7)}w ago'
+    return f'{int(days / 30)}mo ago'
+
+
+def render_row(index: int, name: str, state: dict, resolved: dict, pin: bool, width: int) -> None:
+    config = state['active'].get(name, {})
+    marker = f'{YELLOW}!{RESET}' if pin else f'{CYAN}{index}{RESET}'
+    weight = int(state['weights'].get(name, 0))
+    if pin:
+        last = state['last_done'].get(name)
+        days = overdue_days(last[:10] if last else None, config.get('cadence', '0d'), state['today'])
+        when = status_label(days)
+    else:
+        when = format_elapsed(state['days_since'].get(name))
+
+    detail = resolved.get(name) or {}
+    text = detail.get('label') or config.get('description') or ''
+    if detail.get('error'):
+        text = f'({detail.get("backend") or "resolve"} unavailable)'
+
+    # Widths are measured on the uncolored text and the color applied after, or an
+    # f-string field width counts the escape bytes and shifts every row right.
+    status = f'{weight:>3} · {when}'.ljust(STATUS_COLUMN)
+    left = f'  {marker} {WHITE}{name.ljust(width)}{RESET}  {status}'
+    if not text:
+        print(left.rstrip())
+        return
+    print(f'{left}  {GREEN}{clip(text, width + STATUS_COLUMN + 8)}{RESET}')
+
+
+def cmd_next(explain: bool, as_json: bool, reroll: bool) -> int:
+    pursuits = load_pursuits()
+    if not pursuits:
+        print(f'No pursuits yet. Start one:  {COMMAND}menu next edit{RESET}')
+        return 1
+    write_names_cache(pursuits)
+
+    now = datetime.now().astimezone()
+    state = build_state(pursuits, now)
+    if not state['active']:
+        print('Every pursuit is paused or past its term.')
+        return 1
+
+    cached = None if reroll else load_cached_draw(now)
+    if cached is None:
+        selection = compute_draw(state)
+        names = selection['pinned'] + selection['drawn']
+        selection['resolved'] = resolve_all(names, pursuits)
+        save_cached_draw(selection)
+        bump_counts(counts_path(JOURNAL_DIR, machine_name()), names)
+    else:
+        selection = cached
+        names = selection['pinned'] + selection['drawn']
+
+    if as_json:
+        print(json.dumps({**selection, 'state': explain_payload(state)}, indent=2, default=str))
+        return 0
+
+    if explain:
+        return render_explain(state, selection)
+
+    header('What now')
+    context = todays_context()
+    if context:
+        print(f'{MAGENTA}Today{RESET}  ' + f' {MAGENTA}·{RESET} '.join(context))
+        print()
+
+    resolved = selection.get('resolved') or {}
+    width = max((len(name) for name in names), default=10)
+    if selection['pinned']:
+        print(f'{YELLOW}Overdue{RESET}')
+        for name in selection['pinned']:
+            render_row(0, name, state, resolved, True, width)
+        print()
+    if selection['drawn']:
+        print(f'{CYAN}Drawn{RESET}')
+        for index, name in enumerate(selection['drawn'], start=1):
+            render_row(index, name, state, resolved, False, width)
+    print(f'\nLog:  {COMMAND}menu log <pursuit> [note]{RESET}   Pass:  {COMMAND}menu next skip <pursuit>{RESET}')
+    return 0
+
+
+def explain_payload(state: dict) -> dict:
+    """The full numeric state, the same shape recorded into every journal entry."""
+    return {
+        'logs_per_day': round(state['logs_per_day'], 3),
+        'measured_rate': None if state['measured_rate'] is None else round(state['measured_rate'], 3),
+        'weights': state['weights'],
+        'shares': {name: round(value, 4) for name, value in state['shares'].items()},
+        'intervals': {name: round(value, 2) for name, value in state['intervals'].items() if not math.isinf(value)},
+        'days_since': {name: None if value is None else round(value, 2) for name, value in state['days_since'].items()},
+        'effective': {name: round(value, 3) for name, value in state['effective'].items()},
+        'probability': {name: round(value, 4) for name, value in state['probability'].items()},
+        'paused': [name for name, config in state['pursuits'].items() if config.get('paused')],
+        'term_ended': [name for name, config in state['pursuits'].items() if term_ended(config, state['today'])],
+    }
+
+
+def render_explain(state: dict, selection: dict) -> int:
+    header('Why these')
+    rate = 'assumed' if state['measured_rate'] is None else 'measured'
+    print(f'{state["logs_per_day"]:.2f} logs/day ({rate}) · draw {selection["draw_id"][:8]}\n')
+    width = max((len(name) for name in state['active']), default=10)
+    print(f'  {"pursuit".ljust(width)}  {"wt":>4} {"share":>6} {"every":>7} {"last":>8} {"urgency":>8} {"pick":>6}')
+    rows = sorted(state['active'], key=lambda name: -state['effective'][name])
+    for name in rows:
+        interval = state['intervals'][name]
+        every = '—' if math.isinf(interval) else f'{interval:.1f}d'
+        elapsed = state['days_since'][name]
+        urgency_value = state['effective'][name] / state['weights'][name] if state['weights'][name] else 0
+        chosen = name in selection['pinned'] or name in selection['drawn']
+        mark = f'{GREEN}●{RESET}' if chosen else ' '
+        print(
+            f'{mark} {name.ljust(width)}  {int(state["weights"][name]):>4} '
+            f'{state["shares"][name] * 100:>5.1f}% {every:>7} {format_elapsed(elapsed):>8} '
+            f'{urgency_value:>8.2f} {state["probability"][name] * 100:>5.1f}%'
+        )
+    print(f'\n  pick is the chance of being drawn {BOLD}first{RESET}; the draw takes {DRAW_SIZE} without replacement.')
+    return 0
+
+
+def match_pursuit(needle: str, pursuits: dict) -> str | None:
+    """Exact name, else an unambiguous prefix. Typing three letters is the point."""
+    if needle in pursuits:
+        return needle
+    matches = [name for name in pursuits if name.startswith(needle)]
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        print(f'Ambiguous: {needle} matches {", ".join(sorted(matches))}')
+        return None
+    return None
+
+
+def parse_ago(token: str) -> timedelta | None:
+    """'3h' → 3 hours, '2d' → 2 days, '90m' → 90 minutes. None if unparseable."""
+    units = {'m': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
+    number = ''.join(character for character in token if character.isdigit())
+    unit = ''.join(character for character in token if character.isalpha()) or 'h'
+    if not number or unit not in units:
+        return None
+    return timedelta(**{units[unit]: int(number)})
+
+
+def run_on_log(config: dict, item: dict, note: str, minutes: int | None, assume_yes: bool) -> dict | None:
+    """Run the pursuit's write-through command against the item that was offered.
+
+    Prompts unless told not to, and never fires unattended: the draw it takes the
+    id from can be up to fifteen minutes old, and completing the wrong task is
+    expensive to notice. A prompt is one keystroke; a wrong completion is a
+    silent lie in another app's data.
+    """
+    template = config.get('on_log')
+    if not template or not item:
+        return None
+    if '{id}' in template and not item.get('id'):
+        return None
+    command = template.format(
+        id=item.get('id', ''),
+        label=item.get('label', ''),
+        note=note or '',
+        minutes='' if minutes is None else minutes,
+        pursuit=item.get('pursuit', ''),
+    )
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            return None
+        answer = input(f'  {COMMAND}{command}{RESET}  run it? [y/N] ').strip().lower()
+        if answer not in ('y', 'yes'):
+            return {'command': command, 'ran': False, 'exit_code': None}
+    result = subprocess.run(shlex.split(command), capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        print(f'  {YELLOW}{command} exited {result.returncode}{RESET}: {(result.stderr or "").strip()}')
+    return {'command': command, 'ran': True, 'exit_code': result.returncode}
+
+
+def record_event(event: str, name: str, state: dict, extra: dict) -> dict:
+    """Append one journal entry carrying the full state that produced it.
+
+    The state vector is written into every record on purpose. Weights change, and
+    once they do there is no way to reconstruct what the numbers were when a thing
+    was logged — which is exactly what `drift` needs to be honest about a past
+    week. Cheap to write now, impossible to backfill later.
+    """
+    now = state['now']
+    record = {
+        'id': new_id(now),
+        'pursuit': name,
+        'event': event,
+        'logged_at': now.isoformat(),
+        'occurred_at': extra.pop('occurred_at', now.isoformat()),
+        'tz': str(now.tzinfo),
+        'machine': machine_name(),
+        **extra,
+        'state_at_log': explain_payload(state),
+    }
+    return journal.append(journal_path(JOURNAL_DIR, machine_name()), record)
+
+
+def cmd_log(name: str, words: list[str], ago: str | None, minutes: int | None, assume_yes: bool, no_write: bool) -> int:
+    pursuits = load_pursuits()
+    matched = match_pursuit(name, pursuits)
+    if not matched:
+        print(f'No pursuit named {name}. See:  {COMMAND}menu next list{RESET}')
+        return 1
+
+    now = datetime.now().astimezone()
+    state = build_state(pursuits, now)
+    occurred = now
+    if ago:
+        delta = parse_ago(ago)
+        if delta is None:
+            print('--ago takes 90m / 3h / 2d / 1w')
+            return 1
+        occurred = now - delta
+
+    # The cached draw is what was on screen, so it already knows which concrete
+    # item this pursuit meant — no second resolve, and no chance of acting on
+    # something different from what was offered.
+    cached = load_cached_draw(now) or {}
+    item = (cached.get('resolved') or {}).get(matched) or {}
+    if not item and pursuits[matched].get('resolve'):
+        item = resolve_one(matched, pursuits[matched]) or {}
+
+    downstream = None
+    if not no_write:
+        downstream = run_on_log(pursuits[matched], item, ' '.join(words), minutes, assume_yes)
+
+    record_event(
+        'done',
+        matched,
+        state,
+        {
+            'occurred_at': occurred.isoformat(),
+            'note': ' '.join(words) or None,
+            'duration_minutes': minutes,
+            'item': item or None,
+            'downstream': downstream,
+            'draw_id': cached.get('draw_id'),
+            'was_offered': matched in (cached.get('pinned', []) + cached.get('drawn', [])),
+            'rank_in_draw': (cached.get('drawn', []).index(matched) + 1) if matched in cached.get('drawn', []) else None,
+        },
+    )
+
+    interval = state['intervals'].get(matched)
+    when = '' if interval is None or math.isinf(interval) else f' · due again in ~{interval:.0f}d'
+    label = f' — {item["label"]}' if item.get('label') else ''
+    print(f'{GREEN}Logged{RESET} {matched}{label}{when}')
+    if (downstream or {}).get('ran'):
+        print(f'{GREEN}Ran{RESET} {downstream["command"]}')
+    return 0
+
+
+def cmd_skip(name: str) -> int:
+    pursuits = load_pursuits()
+    matched = match_pursuit(name, pursuits)
+    if not matched:
+        print(f'No pursuit named {name}.')
+        return 1
+    now = datetime.now().astimezone()
+    state = build_state(pursuits, now)
+    cached = load_cached_draw(now) or {}
+    record_event('skip', matched, state, {'draw_id': cached.get('draw_id')})
+    # The pass only means something against a new draw, and the suppression it
+    # applies is already in the journal, so the stale cache goes.
+    DRAW_CACHE.unlink(missing_ok=True)
+    print(f'{YELLOW}Passed{RESET} {matched} — suppressed for about one interval, weight untouched.')
+    return 0
+
+
+def cmd_list(as_json: bool) -> int:
+    pursuits = load_pursuits()
+    if not pursuits:
+        print(f'No pursuits yet:  {COMMAND}menu next edit{RESET}')
+        return 1
+    write_names_cache(pursuits)
+    state = build_state(pursuits, datetime.now().astimezone())
+
+    if as_json:
+        print(json.dumps({'pursuits': pursuits, 'state': explain_payload(state)}, indent=2, default=str))
+        return 0
+
+    header('Pursuits')
+    width = max(len(name) for name in pursuits)
+    for name, config in sorted(pursuits.items(), key=lambda row: -row[1].get('weight', 0)):
+        share = state['shares'].get(name)
+        note = ''
+        if config.get('paused'):
+            note = f'  {YELLOW}paused{RESET}'
+        elif term_ended(config, state['today']):
+            note = f'  {YELLOW}term ended {config["until"]}{RESET}'
+        share_text = f'{share * 100:>5.1f}%' if share else '    —'
+        cadence = f' · {config["cadence"]}' if config.get('cadence') else ''
+        last = format_elapsed(state['days_since'].get(name))
+        print(f'  {WHITE}{name.ljust(width)}{RESET}  {int(config.get("weight", 0)):>3} {share_text}{cadence}  {last}{note}')
+    print(f'\n  share is what each weight implies against the rest · {COMMAND}menu next edit{RESET}')
+    return 0
+
+
+def cmd_drift(days: int, as_json: bool) -> int:
+    """Stated weight against what actually happened.
+
+    The report the whole thing is for. It never adjusts a weight — revealed and
+    stated preference are different signals and blending them would destroy the
+    only honest comparison available. Offered counts sit next to realized share
+    because they separate the two failures that look identical from the outside: a
+    pursuit that never comes up, and one that comes up and gets ignored.
+    """
+    pursuits = load_pursuits()
+    if not pursuits:
+        return 1
+    now = datetime.now().astimezone()
+    state = build_state(pursuits, now)
+    cutoff = now - timedelta(days=days)
+
+    done = [
+        record
+        for record in state['records']
+        if record.get('event') == 'done' and (journal.parse_time(record.get('occurred_at')) or now) >= cutoff
+    ]
+    skipped = [
+        record
+        for record in state['records']
+        if record.get('event') == 'skip' and (journal.parse_time(record.get('occurred_at')) or now) >= cutoff
+    ]
+    counts = load_counts(JOURNAL_DIR)
+
+    total_logs = len(done)
+    total_minutes = sum(record.get('duration_minutes') or 0 for record in done)
+    by_count: dict[str, int] = {}
+    by_minutes: dict[str, int] = {}
+    skips: dict[str, int] = {}
+    for record in done:
+        name = record.get('pursuit')
+        by_count[name] = by_count.get(name, 0) + 1
+        by_minutes[name] = by_minutes.get(name, 0) + (record.get('duration_minutes') or 0)
+    for record in skipped:
+        name = record.get('pursuit')
+        skips[name] = skips.get(name, 0) + 1
+
+    rows = []
+    for name in sorted(pursuits, key=lambda key: -pursuits[key].get('weight', 0)):
+        stated = state['shares'].get(name, 0.0) * 100
+        realized = (by_count.get(name, 0) / total_logs * 100) if total_logs else 0.0
+        time_share = (by_minutes.get(name, 0) / total_minutes * 100) if total_minutes else None
+        rows.append(
+            {
+                'pursuit': name,
+                'stated_share': round(stated, 1),
+                'realized_share': round(realized, 1),
+                'time_share': None if time_share is None else round(time_share, 1),
+                'logs': by_count.get(name, 0),
+                'minutes': by_minutes.get(name, 0),
+                'offered': counts.get(name, 0),
+                'skips': skips.get(name, 0),
+            }
+        )
+
+    if as_json:
+        print(json.dumps({'window_days': days, 'total_logs': total_logs, 'rows': rows}, indent=2))
+        return 0
+
+    header(f'Drift · last {days} days')
+    if not total_logs:
+        print('Nothing logged in the window yet — drift needs history before it can say anything.\n')
+        return 0
+    width = max(len(name) for name in pursuits)
+    print(f'  {"pursuit".ljust(width)}  {"said":>6} {"did":>6} {"time":>6} {"logs":>5} {"offered":>8} {"passed":>7}')
+    for row in rows:
+        gap = row['realized_share'] - row['stated_share']
+        color = GREEN if abs(gap) < 10 else YELLOW
+        time_text = '—' if row['time_share'] is None else f'{row["time_share"]:.0f}%'
+        print(
+            f'  {row["pursuit"].ljust(width)}  {row["stated_share"]:>5.0f}% {color}{row["realized_share"]:>5.0f}%{RESET} '
+            f'{time_text:>6} {row["logs"]:>5} {row["offered"]:>8} {row["skips"]:>7}'
+        )
+    plural = '' if total_logs == 1 else 's'
+    print(f'\n  {total_logs} log{plural} · {total_minutes} recorded minutes · weights are never auto-adjusted\n')
+    return 0
+
+
+def cmd_dormant() -> int:
+    """Pursuits gone quiet for far longer than their own weight implies."""
+    pursuits = load_pursuits()
+    state = build_state(pursuits, datetime.now().astimezone())
+    stale = []
+    for name in state['active']:
+        elapsed = state['days_since'][name]
+        interval = state['intervals'][name]
+        if math.isinf(interval):
+            continue
+        if elapsed is None or elapsed > interval * 3:
+            stale.append((name, elapsed, interval))
+    header('Dormant')
+    if not stale:
+        print('Nothing is running cold.\n')
+        return 0
+    for name, elapsed, interval in sorted(stale, key=lambda row: -(row[1] or 1e9)):
+        print(f'  {WHITE}{name}{RESET}  {format_elapsed(elapsed)} · implies every {interval:.0f}d')
+    print('\n  A pursuit this far past its own interval is a weight that is not true.\n')
+    return 0
+
+
+def cmd_edit() -> int:
+    if not REGISTER.exists():
+        REGISTER.parent.mkdir(parents=True, exist_ok=True)
+        REGISTER.write_text(TEMPLATE)
+    subprocess.run([os.environ.get('EDITOR', 'vi'), str(REGISTER)], check=False)
+    try:
+        write_names_cache(load_pursuits())
+    except RegisterError as error:
+        print(f'{YELLOW}Register not loadable:{RESET} {error}')
+        return 1
+    return 0
+
+
+def cmd_names() -> int:
+    """Emit name<TAB>description for the shell completion, refreshing its cache."""
+    pursuits = load_pursuits()
+    write_names_cache(pursuits)
+    for name, config in sorted(pursuits.items()):
+        print(f'{name}\t{config.get("description", "")}')
+    return 0
+
+
+def show_help() -> int:
+    help_header('menu next', 'What to do now, drawn from what you said matters.')
+    help_usage('menu next [<verb>] [ARGS]')
+
+    help_section('Commands')
+    help_row('menu next', '', 'Draw what to do now (cached 15m)')
+    help_row('menu next', '--explain', 'The same draw with every number behind it')
+    help_row('menu next', '--reroll', 'Force a fresh draw before the cache expires')
+    help_row('menu log', '<pursuit> [note]', 'Record having done it (also: menu next log)')
+    help_row('menu next skip', '<pursuit>', 'Pass on one — suppressed, weight untouched')
+    help_row('menu next list', '', 'Every pursuit, its weight and implied share')
+    help_row('menu next drift', '[--days N]', 'Stated weight against what you actually did')
+    help_row('menu next dormant', '', 'Pursuits gone colder than their weight implies')
+    help_row('menu next edit', '', 'Edit the pursuits file in $EDITOR')
+
+    help_section('Options')
+    help_row('--ago', '<3h|2d>', 'Log something you did earlier')
+    help_row('--minutes', '<n>', 'How long it took, so drift can weigh time not count')
+    help_row('-y', '', 'Run the pursuit\'s on_log command without asking')
+    help_row('--no-write', '', 'Log only; never touch the owning app')
+    help_row('--json', '', 'Machine-readable output')
+
+    help_text('', 'Weights are relative magnitudes — nothing has to add up to 100.')
+    help_end()
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('verb', nargs='?')
+    parser.add_argument('words', nargs='*')
+    parser.add_argument('--ago')
+    parser.add_argument('--minutes', type=int)
+    parser.add_argument('--days', type=int, default=90)
+    parser.add_argument('--json', action='store_true')
+    parser.add_argument('--explain', action='store_true')
+    parser.add_argument('--reroll', action='store_true')
+    parser.add_argument('-y', '--yes', action='store_true')
+    parser.add_argument('--no-write', action='store_true')
+    parser.add_argument('-h', '--help', action='store_true')
+    args = parser.parse_args()
+
+    if args.help:
+        return show_help()
+
+    try:
+        verb = args.verb
+        if verb in (None, 'draw'):
+            return cmd_next(args.explain, args.json, args.reroll)
+        if verb == 'help':
+            return show_help()
+        if verb == 'log':
+            if not args.words:
+                print('Usage: menu log <pursuit> [note]')
+                return 1
+            return cmd_log(args.words[0], args.words[1:], args.ago, args.minutes, args.yes, args.no_write)
+        if verb in ('skip', 'pass'):
+            if not args.words:
+                print('Usage: menu next skip <pursuit>')
+                return 1
+            return cmd_skip(args.words[0])
+        if verb == 'list':
+            return cmd_list(args.json)
+        if verb == 'drift':
+            return cmd_drift(args.days, args.json)
+        if verb == 'dormant':
+            return cmd_dormant()
+        if verb == 'edit':
+            return cmd_edit()
+        if verb == 'names':
+            return cmd_names()
+    except RegisterError as error:
+        print(f'{YELLOW}pursuits.yml:{RESET} {error}')
+        return 1
+
+    print(f'Unknown: menu next {args.verb}')
+    print('Try: menu next · menu log <pursuit> · menu next list · menu next drift')
+    return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

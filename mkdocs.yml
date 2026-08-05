@@ -114,6 +114,7 @@ nav:
       - Notes: apps/notes.md
       - Patterns: apps/patterns.md
       - Menu: apps/menu.md
+      - Menu Next: apps/menu-next.md
       - Toolbox: apps/toolbox.md
       - Refcheck: apps/refcheck.md
       - Backmeup: apps/backmeup.md

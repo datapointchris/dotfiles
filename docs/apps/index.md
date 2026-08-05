@@ -28,6 +28,10 @@ Personal CLI tools for enhanced workflows.
 
     Launcher and federated search across your tools
 
+- :material-dice-multiple: __[Menu Next](menu-next.md)__
+
+    What to do now, drawn from weighted pursuits
+
 - :material-toolbox: __[Toolbox](toolbox.md)__
 
     Tool discovery CLI

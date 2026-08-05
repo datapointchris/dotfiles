@@ -14,6 +14,11 @@ and you pick one by time and energy — there is no cross-source ranking, no
 scoring, and no metrics, because a single ordering over unlike things would be
 invented rather than meaningful.
 
+`menu next` is the sibling that does rank across everything, and it is allowed to
+because it is not inventing the ordering — it draws on a weight you declared per
+pursuit. Nothing here should grow toward that: this is the read of what is
+outstanding, that is the decision about the next hour.
+
 Every row names a thing you could act on. A lane that can only report structure
 (a track's current unit, a maintenance entry's slug) states it as context or
 resolves it to the underlying resource instead of spending a row on it.
