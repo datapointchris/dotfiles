@@ -311,6 +311,19 @@ def normalize_entries(entries):
     return normalized
 
 
+def git_env():
+    """The environment with every GIT_* variable removed.
+
+    `cwd` alone does not decide which repository git reads. An inherited GIT_DIR
+    or GIT_INDEX_FILE overrides it, and git exports both to every hook it runs —
+    so a backup triggered from a hook, a `git rebase --exec`, or a pre-commit run
+    would list another repository's files while appearing to succeed. For a backup
+    tool that is the worst failure mode available: the wrong file set, silently,
+    with a zero exit code.
+    """
+    return {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+
+
 def git_ls_untracked(repo_path):
     """Get list of untracked files from a git repository."""
     try:
@@ -320,6 +333,7 @@ def git_ls_untracked(repo_path):
             capture_output=True,
             text=True,
             check=True,
+            env=git_env(),
         )
         return [repo_path / line for line in result.stdout.strip().splitlines() if line]
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -341,6 +355,7 @@ def git_ls_ignored(repo_path, patterns):
             capture_output=True,
             text=True,
             check=True,
+            env=git_env(),
         )
         untracked_result = subprocess.run(
             ['git', 'ls-files', '--others', '--exclude-standard'],
@@ -348,6 +363,7 @@ def git_ls_ignored(repo_path, patterns):
             capture_output=True,
             text=True,
             check=True,
+            env=git_env(),
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         print(f'  {yellow("warning:")} could not list ignored files in {cyan(str(repo_path))}')

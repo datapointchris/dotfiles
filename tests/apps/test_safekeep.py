@@ -381,13 +381,30 @@ def test_backup_does_not_prune_old_snapshots(tmp_path, source_tree):
     assert (dest / '2020-01-03').exists()
 
 
+def git(*args: str, cwd: Path) -> None:
+    """Run git in a throwaway repo with the ambient git environment scrubbed.
+
+    Inheriting it makes these tests pass standalone and fail from inside a hook:
+    pre-commit exports GIT_INDEX_FILE, so a subprocess here writes to the *outer*
+    repo's index and then cannot build a tree, because the objects that index
+    names do not exist in the temp repo.
+    """
+    env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+    subprocess.run(['git', *args], cwd=cwd, check=True, env=env)
+
+
+def git_commit_all(cwd: Path, *files: str) -> None:
+    """Stage the named files and make the initial commit, identity supplied."""
+    git('init', '-q', cwd=cwd)
+    git('add', *files, cwd=cwd)
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init', cwd=cwd)
+
+
 def test_git_untracked_becomes_its_own_group(tmp_path):
     repo = tmp_path / 'repo'
     repo.mkdir()
-    subprocess.run(['git', 'init', '-q'], cwd=repo, check=True)
     (repo / 'tracked.txt').write_text('tracked\n')
-    subprocess.run(['git', 'add', 'tracked.txt'], cwd=repo, check=True)
-    subprocess.run(['git', '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init'], cwd=repo, check=True)
+    git_commit_all(repo, 'tracked.txt')
     (repo / 'wip.txt').write_text('wip\n')
 
     dest = tmp_path / 'dest'
@@ -634,10 +651,8 @@ def test_repo_groups_sharing_a_subtree_are_restored_once(tmp_path):
     """The untracked and ignored groups come from the same repo, so the subtree copies once."""
     repo = tmp_path / 'repo'
     repo.mkdir()
-    subprocess.run(['git', 'init', '-q'], cwd=repo, check=True)
     (repo / '.gitignore').write_text('secrets.env\n')
-    subprocess.run(['git', 'add', '.gitignore'], cwd=repo, check=True)
-    subprocess.run(['git', '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init'], cwd=repo, check=True)
+    git_commit_all(repo, '.gitignore')
     (repo / 'wip.txt').write_text('wip\n')
     (repo / 'secrets.env').write_text('KEY=1\n')
 
