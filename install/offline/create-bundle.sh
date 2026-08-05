@@ -43,8 +43,9 @@ TOTAL_DOWNLOADS=0
 # ============================================================================
 
 get_cargo_target() {
-  local os="$1" arch="$2" linux_override="${3:-}"
+  local os="$1" arch="$2" linux_override="${3:-}" darwin_override="${4:-}"
   if [[ "$os" == "darwin" ]]; then
+    [[ -n "$darwin_override" ]] && echo "$darwin_override" && return
     [[ "$arch" == "arm64" ]] && echo "aarch64-apple-darwin" || echo "x86_64-apple-darwin"
   else
     [[ -n "$linux_override" ]] && echo "$linux_override" || echo "x86_64-unknown-linux-gnu"
@@ -323,6 +324,39 @@ download_install_scripts() {
 # Cargo Binaries (from packages.yml - data-driven)
 # ============================================================================
 
+# Re-package a release zip as a standard single-platform tarball, so
+# install_from_cache on the target machine needs no zip handling at all.
+#
+# Two layouts occur: fat zips (broot) hold every platform in target-named
+# subdirs, and single-platform zips (fnm) hold the bare binary, so the subdir
+# lookup falls back to searching the whole extraction.
+#
+# Prints the tarball's filename; the zip is consumed.
+repackage_zip_as_tarball() {
+  local zip_path="$1" tool="$2" target="$3" version_num="$4"
+
+  local dest_dir extract_dir repackaged binary_in_zip
+  dest_dir=$(dirname "$zip_path")
+  repackaged="${tool}_${version_num}_${target}.tar.gz"
+  extract_dir=$(mktemp -d)
+
+  unzip -q "$zip_path" -d "$extract_dir"
+  # `|| true` because a flat zip has no target subdir at all: find exits
+  # non-zero, and under set -e an assignment carrying that status ends the run
+  # before the fallback search is ever reached.
+  binary_in_zip=$(find "$extract_dir/$target" -maxdepth 1 -type f -name "$tool" 2>/dev/null | head -1) || true
+  [[ -z "$binary_in_zip" ]] && binary_in_zip=$(find "$extract_dir" -type f -name "$tool" 2>/dev/null | head -1)
+  if [[ -z "$binary_in_zip" ]]; then
+    rm -rf "$extract_dir"
+    log_error "Could not find $tool in $(basename "$zip_path")"
+    return 1
+  fi
+
+  (cd "$(dirname "$binary_in_zip")" && tar -czf "$dest_dir/$repackaged" "$(basename "$binary_in_zip")")
+  rm -rf "$extract_dir" "$zip_path"
+  echo "$repackaged"
+}
+
 download_cargo_binaries() {
   log_info "Downloading Cargo tool binaries..."
 
@@ -335,8 +369,8 @@ download_cargo_binaries() {
   fi
   [[ "$ARCH" == "arm64" ]] && arch_name="aarch64" || arch_name="$ARCH"
 
-  local tool repo pattern linux_target version target filename url
-  while IFS='|' read -r tool repo pattern linux_target; do
+  local tool repo pattern linux_target darwin_target version target filename url
+  while IFS='|' read -r tool repo pattern linux_target darwin_target; do
     [[ -z "$tool" ]] && continue
 
     if ! version=$(fetch_github_latest_version "$repo"); then
@@ -344,7 +378,7 @@ download_cargo_binaries() {
       exit 1
     fi
 
-    target=$(get_cargo_target "$OS" "$ARCH" "$linux_target")
+    target=$(get_cargo_target "$OS" "$ARCH" "$linux_target" "$darwin_target")
     filename=$(expand_pattern "$pattern" "$version" "$target")
     filename="${filename//\{platform\}/$platform}"
     filename="${filename//\{arch\}/$arch_name}"
@@ -353,23 +387,10 @@ download_cargo_binaries() {
     log_info "  $tool ($version)..."
     download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
 
-    # Fat zips (e.g. broot) bundle all platforms in target-named subdirs.
-    # Pre-extract the target binary and re-package as a standard single-platform
-    # tarball so install_from_cache needs no special zip handling.
     if [[ "$filename" == *.zip ]]; then
-      local version_num extract_dir repackaged binary_in_zip
-      version_num="${version#v}"
-      repackaged="${tool}_${version_num}_${target}.tar.gz"
-      extract_dir=$(mktemp -d)
-      unzip -q "$CACHE_DIR/binaries/$filename" -d "$extract_dir"
-      binary_in_zip=$(find "$extract_dir/$target" -maxdepth 1 -type f -name "$tool" 2>/dev/null | head -1)
-      if [[ -z "$binary_in_zip" ]]; then
-        log_error "Could not find $target/$tool in $filename"
+      if ! filename=$(repackage_zip_as_tarball "$CACHE_DIR/binaries/$filename" "$tool" "$target" "${version#v}"); then
         exit 1
       fi
-      (cd "$(dirname "$binary_in_zip")" && tar -czf "$CACHE_DIR/binaries/$repackaged" "$(basename "$binary_in_zip")")
-      rm -rf "$extract_dir" "$CACHE_DIR/binaries/$filename"
-      filename="$repackaged"
     fi
 
     echo "cargo|$tool|$version|$filename" >>"$MANIFEST_FILE"
@@ -548,4 +569,9 @@ main() {
   create_tarball
 }
 
-main "$@"
+# Execute only when run, never when sourced — the unit tests source this file to
+# call repackage_zip_as_tarball and get_cargo_target directly, and a bundle build
+# on `source` would download every binary in the manifest.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

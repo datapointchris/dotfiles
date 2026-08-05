@@ -18,10 +18,7 @@ export MISSING_LOG
 export INSTALLER_ACTION
 export TERM=${TERM:-xterm}
 
-# /usr/local/go/bin is the Go toolchain deploy dir — it's only added to PATH in
-# .zshrc (interactive), so this non-interactive script must add it explicitly or
-# `command -v go` fails in go-tools.sh (matches install.sh's go-tools invocation).
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/go/bin:/usr/local/bin:$PATH"
+source "$DOTFILES_DIR/install/tool-path.sh"
 
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"

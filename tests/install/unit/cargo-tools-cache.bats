@@ -90,6 +90,19 @@ create_single_tarball() {
   [[ -x "$FAKE_HOME/.cargo/bin/bat" ]]
 }
 
+@test "cache/tarball: finds an archive named by OS word rather than target triple" {
+  # What create-bundle.sh produces for fnm, whose release assets are named
+  # fnm-linux.zip / fnm-macos.zip: the repackaged tarball carries the OS word,
+  # so none of the target-triple patterns match and only the fallback can find it.
+  create_single_tarball "fnm" "$CACHE_DIR/fnm_1.39.0_linux.tar.gz"
+
+  run bash "$HELPER_SCRIPT" install_from_cache fnm fnm
+  assert_success
+
+  run cat "$FAKE_HOME/.cargo/bin/fnm"
+  assert_output "SINGLE-PLATFORM-BINARY"
+}
+
 @test "cache/tarball: finds archive by binary name when package name differs" {
   create_single_tarball "fd" "$CACHE_DIR/fd-find_v10.2.0_x86_64-unknown-linux-gnu.tar.gz"
 

@@ -166,6 +166,20 @@ def filter_custom_installers_by_manifest(data, manifest, filter_field=None):
     return [i['name'] for i in candidates]
 
 
+def cargo_binary_info_rows(packages):
+    """Rows the offline bundler downloads from: command|repo|pattern|linux_target|darwin_target.
+
+    The two target fields override the Rust target triple {target} expands to, for tools
+    whose release assets are not named after it (fnm ships fnm-linux.zip, fnm-macos.zip).
+    """
+    rows = []
+    for pkg in packages:
+        if 'github_repo' in pkg and 'binary_pattern' in pkg:
+            cmd = pkg.get('command', pkg['name'])
+            rows.append(f'{cmd}|{pkg["github_repo"]}|{pkg["binary_pattern"]}|{pkg.get("linux_target", "")}|{pkg.get("darwin_target", "")}')
+    return rows
+
+
 def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     """Filter cargo packages to only those named in the manifest."""
     manifest_pkgs = manifest.get('cargo_packages', [])
@@ -180,15 +194,7 @@ def filter_cargo_packages_by_manifest(data, manifest, output_format='names'):
     elif output_format == 'github_repos':
         return [f'{pkg.get("command", pkg["name"])}|{pkg["github_repo"]}' for pkg in filtered if 'github_repo' in pkg]
     elif output_format == 'binary_info':
-        results = []
-        for pkg in filtered:
-            if 'github_repo' in pkg and 'binary_pattern' in pkg:
-                cmd = pkg.get('command', pkg['name'])
-                repo = pkg['github_repo']
-                pattern = pkg['binary_pattern']
-                linux_target = pkg.get('linux_target', '')
-                results.append(f'{cmd}|{repo}|{pattern}|{linux_target}')
-        return results
+        return cargo_binary_info_rows(filtered)
     else:
         return [pkg['name'] for pkg in filtered]
 
@@ -240,7 +246,7 @@ def get_cargo_packages(data, output_format='names'):
         output_format: 'names' returns just names,
                       'name_command' returns 'name|command' pairs,
                       'github_repos' returns 'command|github_repo' for offline bundling,
-                      'binary_info' returns 'command|repo|pattern|linux_target' for offline bundling
+                      'binary_info' returns the offline bundling row (see cargo_binary_info_rows)
     """
     if 'cargo_packages' not in data:
         return []
@@ -250,15 +256,7 @@ def get_cargo_packages(data, output_format='names'):
     elif output_format == 'github_repos':
         return [f'{pkg.get("command", pkg["name"])}|{pkg["github_repo"]}' for pkg in data['cargo_packages'] if 'github_repo' in pkg]
     elif output_format == 'binary_info':
-        results = []
-        for pkg in data['cargo_packages']:
-            if 'github_repo' in pkg and 'binary_pattern' in pkg:
-                cmd = pkg.get('command', pkg['name'])
-                repo = pkg['github_repo']
-                pattern = pkg['binary_pattern']
-                linux_target = pkg.get('linux_target', '')
-                results.append(f'{cmd}|{repo}|{pattern}|{linux_target}')
-        return results
+        return cargo_binary_info_rows(data['cargo_packages'])
     else:
         return [pkg['name'] for pkg in data['cargo_packages']]
 

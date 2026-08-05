@@ -249,6 +249,30 @@ def test_broot_uses_version_pattern_not_target(real_packages_data):
     assert '{version_num}' in pattern or '{version}' in pattern, f'broot binary_pattern must use a version placeholder. Got: {pattern!r}'
 
 
+def test_fnm_overrides_both_target_triples(real_packages_data):
+    """fnm names its assets after the OS word (fnm-linux.zip, fnm-macos.zip), so the
+    bare {target} triple 404s on every bundle build. Both overrides must be present:
+    a linux-only override leaves the macOS bundle broken and vice versa."""
+    cargo_packages = real_packages_data.get('cargo_packages', [])
+    fnm = next((p for p in cargo_packages if p.get('name') == 'fnm'), None)
+
+    assert fnm is not None, 'fnm must be present in cargo_packages'
+    assert fnm.get('linux_target') == 'linux', f'fnm must override linux_target to the OS word. Got: {fnm.get("linux_target")!r}'
+    assert fnm.get('darwin_target') == 'macos', f'fnm must override darwin_target to the OS word. Got: {fnm.get("darwin_target")!r}'
+
+
+def test_manifests_installing_npm_globals_also_install_fnm():
+    """The node phase runs whenever a manifest has npm globals, and it aborts if fnm
+    is missing — which is how a WSL offline install died with `fnm not found`. Read
+    from disk rather than a list so a new manifest is covered the day it is added."""
+    for manifest_path in sorted(MANIFESTS_DIR.glob('*.yml')):
+        manifest = yaml.safe_load(manifest_path.read_text())
+        if not manifest.get('npm_globals'):
+            continue
+        cargo = manifest.get('cargo_packages')
+        assert cargo is True or 'fnm' in cargo, f'{manifest_path.name} installs npm globals but no fnm; the node phase will abort'
+
+
 def test_cargo_packages_with_binary_pattern_have_github_repo(real_packages_data):
     """Any cargo package with a binary_pattern must also have a github_repo,
     since the pattern is only used to construct a GitHub release download URL."""
@@ -359,16 +383,18 @@ def test_filter_custom_installers_by_manifest(custom_installers_sample, case_id,
 @pytest.mark.parametrize(
     'manifest_name, must_include, must_exclude',
     [
-        # WSL work: the manifest that triggered the bug.
-        ('wsl-work-workstation', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
+        # WSL work: the manifest that triggered the bug. fnm is required on every
+        # manifest with npm_globals — the node phase aborts without it.
+        ('wsl-work-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
         # macOS personal: same cargo set as WSL, also no webviewrs.
-        ('macos-personal-workstation', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
+        ('macos-personal-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot'], ['webviewrs']),
         # Arch personal: the only machine that actually installs webviewrs.
         # Proves the filter is data-driven, not a hardcoded skip.
-        ('archlinux-personal-workstation', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot', 'webviewrs'], []),
-        # Minimal LXC server: lean cargo set — no broot, no webviewrs. Catches
-        # mutations that hardcode-include workstation cargo tools for all Linux.
-        ('linux-lxc-server', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker'], ['broot', 'webviewrs']),
+        ('archlinux-personal-workstation', ['fnm', 'bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker', 'broot', 'webviewrs'], []),
+        # Minimal LXC server: lean cargo set — no broot, no webviewrs, and no fnm
+        # since it installs no npm globals. Catches mutations that hardcode-include
+        # workstation cargo tools for all Linux.
+        ('linux-lxc-server', ['bat', 'fd', 'eza', 'zoxide', 'delta', 'oxker'], ['broot', 'webviewrs', 'fnm']),
     ],
 )
 def test_cargo_bundle_composition_by_manifest(real_packages_data, manifest_name, must_include, must_exclude):

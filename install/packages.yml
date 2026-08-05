@@ -1002,11 +1002,17 @@ cargo_packages:
   # The install script pins a default version and links it; .zshenv puts that
   # alias on PATH ahead of the system node so scripts, hooks and agents get the
   # fleet version, and .zshrc adds --use-on-cd for per-directory switching.
+  #
+  # fnm names its release assets after the OS word rather than the Rust target
+  # triple, so both targets are overridden: {target} would otherwise expand to
+  # x86_64-unknown-linux-gnu and the bundle would 404 on every download.
   - name: fnm
     command: fnm
     description: Node version manager (reads .nvmrc; binary, not a shell function)
     github_repo: Schniz/fnm
     binary_pattern: "fnm-{target}.zip"
+    linux_target: linux
+    darwin_target: macos
     tags: [cli, development]
 
   - name: ripgrep

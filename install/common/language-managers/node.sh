@@ -28,7 +28,7 @@ NODE_DEFAULT_VERSION="24"
 
 if ! command -v fnm >/dev/null 2>&1; then
   output_failure_data "node" "fnm" "$NODE_DEFAULT_VERSION" "fnm not installed (cargo_packages)"
-  log_error "fnm not found — install cargo_packages first"
+  log_error "fnm not found — the cargo phase installs it, check cargo_packages in this machine's manifest"
   exit 1
 fi
 

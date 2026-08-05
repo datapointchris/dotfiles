@@ -8,8 +8,8 @@ FAILURES_LOG="/tmp/dotfiles-install-failures-$(date +%Y%m%d-%H%M%S).txt"
 export DOTFILES_DIR
 export FAILURES_LOG
 export TERM=${TERM:-xterm}
-export PATH="$HOME/.local/bin:$PATH"
 
+source "$DOTFILES_DIR/install/tool-path.sh"
 source "$DOTFILES_DIR/install/platform-detection.sh"
 source "$DOTFILES_DIR/install/run-installer.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
@@ -160,7 +160,7 @@ install_uv() {
 install_go_tools() {
   packages_present --type=go || return 0
   print_header "Go Tools"
-  PATH="/usr/local/go/bin:$PATH" run_installer "$INSTALL_COMMON/language-tools/go-tools.sh" "go-tools"
+  run_installer "$INSTALL_COMMON/language-tools/go-tools.sh" "go-tools"
 }
 
 # The github-release and custom-installer phases are a directory of per-tool

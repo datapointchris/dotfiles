@@ -8,8 +8,13 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 source "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
 source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
-# shellcheck source=/dev/null
-source "$HOME/.cargo/env"
+# Guarded: rustup needs the network, so an offline install has no cargo env at
+# all. Sourcing unconditionally aborted the whole phase under set -e, taking
+# the cached-binary path — the one path that does work offline — down with it.
+if [[ -f "$HOME/.cargo/env" ]]; then
+  # shellcheck source=/dev/null
+  source "$HOME/.cargo/env"
+fi
 
 # Offline cache directory for pre-built binaries; override via env for testing
 OFFLINE_CACHE_DIR="${OFFLINE_CACHE_DIR:-${HOME}/installers/binaries}"
