@@ -25,20 +25,61 @@ color. Close a screen with ``help_end``, and use ``help_text`` rather than
 
 There is deliberately no ``dim`` — see ~/dev/standards/cli-design.md, which rules
 it out for being unreadable against half the terminal themes in use.
+
+The palette resolves to empty strings when nothing will render them, so
+``theme --help > notes.txt`` writes text rather than escape sequences. Every
+constant is consumed by direct f-string interpolation across ``apps/`` —
+``print(f'{CYAN}{title}{RESET}')`` — so blanking the constants is the only fix
+that reaches those call sites without rewriting all of them. It also means the
+padding arithmetic is unaffected either way: widths are measured on the
+uncolored text already.
 """
 
+import os
 import shutil
+import sys
 
-CYAN = '\033[0;96m'
-YELLOW = '\033[0;93m'
-GREEN = '\033[0;92m'
-RED = '\033[0;91m'
-BLUE = '\033[0;94m'
-MAGENTA = '\033[0;95m'
-WHITE = '\033[0;97m'
-COMMAND = '\033[0;36m'
-BOLD = '\033[1m'
-RESET = '\033[0m'
+
+def color_enabled(stream=None) -> bool:
+    """Whether escape sequences will be seen by anything that can render them.
+
+    ``NO_COLOR`` is the user saying they do not want colour (no-color.org) and
+    wins outright. ``FORCE_COLOR`` answers a different question — "is this a
+    terminal" — for a caller that knows the detection is wrong: a CI log that
+    renders escapes, a pager invoked with ``-R``, a test that needs the codes in
+    order to assert on them. Preference beats detection, so NO_COLOR is checked
+    first.
+    """
+    if os.environ.get('NO_COLOR'):
+        return False
+    if os.environ.get('FORCE_COLOR'):
+        return True
+    if os.environ.get('TERM') == 'dumb':
+        return False
+    stream = sys.stdout if stream is None else stream
+    try:
+        return stream.isatty()
+    except (AttributeError, ValueError):  # not a stream, or already closed
+        return False
+
+
+COLOR = color_enabled()
+
+
+def _code(sequence: str) -> str:
+    return sequence if COLOR else ''
+
+
+CYAN = _code('\033[0;96m')
+YELLOW = _code('\033[0;93m')
+GREEN = _code('\033[0;92m')
+RED = _code('\033[0;91m')
+BLUE = _code('\033[0;94m')
+MAGENTA = _code('\033[0;95m')
+WHITE = _code('\033[0;97m')
+COMMAND = _code('\033[0;36m')
+BOLD = _code('\033[1m')
+RESET = _code('\033[0m')
 # Matches the default width of formatting.sh's _separator, so a Python screen and
 # a bash screen draw the same rule.
 BAR = '━' * 50

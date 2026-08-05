@@ -7,6 +7,8 @@ on screen: one colored row shoves its description eight columns right of the
 others. The same hazard governs `clip`, which must never cut inside an escape.
 """
 
+import importlib
+import io
 import re
 import sys
 from pathlib import Path
@@ -141,3 +143,98 @@ def test_help_end_resets_state_for_the_next_screen(capsys):
 
     row = [line for line in capsys.readouterr().out.splitlines() if 'b' in line][0]
     assert row.startswith(formatting.CYAN), 'the previous screen must not leak its section color'
+
+
+class Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def no_color_env(monkeypatch) -> None:
+    for name in ('NO_COLOR', 'FORCE_COLOR', 'TERM'):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_color_is_on_for_a_terminal(monkeypatch):
+    no_color_env(monkeypatch)
+    assert formatting.color_enabled(Terminal())
+
+
+def test_color_is_off_for_a_pipe(monkeypatch):
+    """`theme --help > notes.txt` should write text, not escape sequences."""
+    no_color_env(monkeypatch)
+    assert not formatting.color_enabled(io.StringIO())
+
+
+def test_no_color_outranks_force_color(monkeypatch):
+    """NO_COLOR says the user does not want color; FORCE_COLOR only says the
+    terminal detection is wrong. A preference beats a detection override."""
+    no_color_env(monkeypatch)
+    monkeypatch.setenv('FORCE_COLOR', '1')
+    monkeypatch.setenv('NO_COLOR', '1')
+    assert not formatting.color_enabled(Terminal())
+
+
+def test_force_color_beats_a_non_terminal(monkeypatch):
+    no_color_env(monkeypatch)
+    monkeypatch.setenv('FORCE_COLOR', '1')
+    assert formatting.color_enabled(io.StringIO())
+
+
+def test_dumb_terminal_gets_no_color(monkeypatch):
+    no_color_env(monkeypatch)
+    monkeypatch.setenv('TERM', 'dumb')
+    assert not formatting.color_enabled(Terminal())
+
+
+def test_a_closed_stream_is_not_a_terminal(monkeypatch):
+    """isatty raises on a closed stream, and a crash in the palette would take
+    down a tool that was only trying to print."""
+    no_color_env(monkeypatch)
+    stream = io.StringIO()
+    stream.close()
+    assert not formatting.color_enabled(stream)
+
+
+def reloaded_without_color(monkeypatch):
+    """appcore resolves the palette at import, so the disabled palette only
+    exists after a reload. Callers must reload again on the way out."""
+    no_color_env(monkeypatch)
+    monkeypatch.setenv('NO_COLOR', '1')
+    return importlib.reload(formatting)
+
+
+def restore_color(monkeypatch):
+    monkeypatch.undo()
+    importlib.reload(formatting)
+
+
+def test_the_palette_itself_blanks_out(monkeypatch):
+    """Every app in apps/ interpolates these constants directly —
+    print(f'{CYAN}{title}{RESET}') — so the gate only reaches those call sites
+    if it reaches the constants."""
+    plain_module = reloaded_without_color(monkeypatch)
+    try:
+        assert plain_module.CYAN == ''
+        assert plain_module.RESET == ''
+        assert plain_module.BAR, 'the rule is content, not color, and must survive'
+    finally:
+        restore_color(monkeypatch)
+
+
+def test_rows_still_align_when_color_is_off(monkeypatch, capsys):
+    """The padding is measured on uncolored text, so removing color must not
+    move a single column."""
+    plain_module = reloaded_without_color(monkeypatch)
+    try:
+        plain_module.help_section('Commands')
+        plain_module.help_row('short', '', 'first')
+        plain_module.help_row('much-longer-name', '', 'second')
+        plain_module.help_end()
+
+        out = capsys.readouterr().out
+        rows = [line for line in out.splitlines() if 'first' in line or 'second' in line]
+        assert '\033' not in out
+        assert rows[0].index('first') == rows[1].index('second')
+    finally:
+        restore_color(monkeypatch)

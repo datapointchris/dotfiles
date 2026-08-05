@@ -14,6 +14,7 @@ dependency block can still import it.
 from appcore.formatting import BAR
 from appcore.formatting import BLUE
 from appcore.formatting import BOLD
+from appcore.formatting import COLOR
 from appcore.formatting import COMMAND
 from appcore.formatting import CYAN
 from appcore.formatting import GREEN
@@ -25,6 +26,7 @@ from appcore.formatting import YELLOW
 from appcore.formatting import blue
 from appcore.formatting import bold
 from appcore.formatting import clip
+from appcore.formatting import color_enabled
 from appcore.formatting import cyan
 from appcore.formatting import green
 from appcore.formatting import header
@@ -53,6 +55,8 @@ __all__ = [
     'BOLD',
     'RESET',
     'BAR',
+    'COLOR',
+    'color_enabled',
     'paint',
     'cyan',
     'green',

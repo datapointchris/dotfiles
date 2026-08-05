@@ -11,6 +11,11 @@ setup() {
   load "$HOME/.local/lib/bats-assert/load.bash"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
+  # colors.sh resolves the palette when it is sourced, and bats captures stdout,
+  # so without this every constant would be empty and the colour assertions here
+  # would compare two identical plain strings. Exported so the `run bash -c`
+  # subshells inherit it. The gate itself is tested in colors.bats.
+  export FORCE_COLOR=1
   source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 }
 
