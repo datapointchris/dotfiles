@@ -659,6 +659,16 @@ Extract to home directory, then run installer in offline mode:
 
 The installer will find cached files in ~/installers/
 
+On a machine that is already built, extracting a newer bundle refreshes
+~/installers, but install.sh skips every tool that is already present. Move
+them with an update instead:
+
+  cd dotfiles && ./update.sh go-tools
+
+Go tools take the bundled binary when proxy.golang.org is unreachable, so
+that is how a firewalled machine moves off the version it was built with.
+The other tool phases still need the network.
+
 Directory Structure:
   installers/
   ├── manifest.txt    # List of included files with versions
