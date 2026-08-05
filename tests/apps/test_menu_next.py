@@ -269,6 +269,17 @@ def test_resolve_one_digs_into_a_nested_list(tmp_path):
     assert menu_next.resolve_one('cs', config)['label'] == 'Chapter 6'
 
 
+def test_resolve_one_accepts_a_single_object_where_a_list_would_do(tmp_path):
+    # icb overview hands back the next project item as an object, having already
+    # picked it. The register should not need a wrapper command to unwrap that.
+    payload = tmp_path / 'overview.json'
+    payload.write_text(json.dumps({'projects': {'items': {'next': {'title': 'Ship the CLI', 'id': 'abc'}}}}))
+    config = {'resolve': f'cat {payload}', 'items': 'projects.items.next', 'label': 'title', 'id': 'id'}
+    resolved = menu_next.resolve_one('build', config)
+    assert resolved['label'] == 'Ship the CLI'
+    assert resolved['id'] == 'abc'
+
+
 def test_resolve_one_reports_a_failing_backend_rather_than_dying():
     # `false` fails with nothing on either stream, so the status has to stand in —
     # a row that renders an empty value looks like a resolver that returned nothing.

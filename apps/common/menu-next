@@ -402,6 +402,11 @@ def resolve_one(name: str, config: dict) -> dict | None:
     except json.JSONDecodeError:
         return {'pursuit': name, 'error': 'resolve did not return JSON but names a label field'}
     rows = dig(document, config['items']) if config.get('items') else document
+    # A backend that already picked the one thing returns an object, not a list of
+    # one — `icb overview` does exactly this for the next project item. Treating it
+    # as a single row keeps the register from needing a wrapper command.
+    if isinstance(rows, dict):
+        rows = [rows]
     if not isinstance(rows, list) or not rows:
         return None
     row = rows[0]

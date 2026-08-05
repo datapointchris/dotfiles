@@ -64,7 +64,7 @@ pursuits:
 | `paused` | Keeps it in the file and out of the draw |
 | `alpha` | Per-pursuit override for how sharply urgency climbs |
 | `resolve` | Command answering "specifically what?" |
-| `items` / `label` / `id` | Which fields of the resolver's JSON to read |
+| `items` / `label` / `id` | Which fields of the resolver's JSON to read; `items` is a dotted path, and an object there counts as a single row |
 | `on_log` | Command run after logging — the write-through |
 
 Weights stay relative because that is how the decision actually gets made: travel matters more than
