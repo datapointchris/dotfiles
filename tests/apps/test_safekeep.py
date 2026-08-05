@@ -994,6 +994,25 @@ def test_restore_newer_conflict_replaces_a_target_file_that_is_older(tmp_path, s
     assert as_file.read_text() == 'solo\n'
 
 
+def test_restore_counts_and_sizes_each_group_as_it_reaches_it(tmp_path, source_tree):
+    """A restore compares by checksum and then reapplies a mode per restored path, which on a
+    real tree is minutes with nothing on screen. Each source names itself, its position, and the
+    size the manifest recorded before rsync is called on it, so a wait belongs to a named group
+    rather than to the tool as a whole."""
+    restore, _ = backup_and_restore(tmp_path, source_tree, '--all')
+    out = plain(restore.stdout)
+    for position, name in enumerate(['notes', 'solo.conf', 'linked.conf'], start=1):
+        assert re.search(rf'\[{position}/3\] \S*{re.escape(name)}\s+\d+ files?\s+\d+ B', out), f'{name} is not counted and sized'
+
+
+def test_restore_writes_no_redraw_sequences_when_redirected(tmp_path, source_tree):
+    """The live lines redraw with a carriage return, which collapses a captured log into one
+    unreadable line — and a restore is exactly the thing run under tee. Off a terminal the
+    per-group lines carry the whole report on their own."""
+    restore, _ = backup_and_restore(tmp_path, source_tree, '--all')
+    assert '\r' not in restore.stdout
+
+
 def test_restore_skips_a_group_missing_from_the_snapshot(tmp_path, source_tree):
     """A manifest can name a group whose files are not there — a snapshot copied in part, or a
     manifest merged from a run whose files were later removed by hand."""

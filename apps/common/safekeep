@@ -28,6 +28,7 @@ import time
 import tomllib
 from datetime import datetime
 from fnmatch import fnmatch
+from functools import cache
 from pathlib import Path
 
 # safekeep is symlinked onto PATH; resolve the real path so the repo-root appcore
@@ -36,6 +37,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from appcore import bold
+from appcore import clip
 from appcore import cyan
 from appcore import green
 from appcore import help_end
@@ -190,6 +192,25 @@ def human_size(num_bytes):
     if num_bytes >= 1024:
         return f'{num_bytes / 1024:.1f} KB'
     return f'{num_bytes} B'
+
+
+def status(message):
+    """Overwrite the current line with a live status, on a terminal only.
+
+    A carriage return in a redirected log collapses the whole run into one unreadable line,
+    and a restore is exactly the thing run under tee. Every phase that can print one of these
+    also prints an ordinary line when it finishes, so a log loses the motion and keeps the report.
+
+    Clipped to the terminal, because a message that wraps is two lines and the carriage return
+    only returns to the start of the second — leaving the first behind on every redraw.
+    """
+    if sys.stdout.isatty():
+        print(f'\r\033[K  {clip(message, 2)}', end='', flush=True)
+
+
+def clear_status():
+    if sys.stdout.isatty():
+        print('\r\033[K', end='', flush=True)
 
 
 def warn_about_json_configs():
@@ -546,6 +567,23 @@ def rsync_untracked(files, dest_base, dry_run=False):
         run_rsync(cmd)
     finally:
         os.unlink(tmp_path)
+
+
+@cache
+def rsync_progress_flag():
+    """The flag that makes rsync report as it works, or None where it would only make a mess.
+
+    --info=progress2 is one self-overwriting line covering the whole transfer; --progress is a
+    block per file, which on a real restore is thousands of lines of scroll. rsync grew --info
+    in 3.1, and a restore does not get to assume the good rsync: macOS ships openrsync as
+    /usr/bin/rsync, and a disaster recovery is precisely the moment the Homebrew rsync this repo
+    declares has not been installed yet. Both flags redraw their own line, so a non-terminal gets
+    neither and reads the per-group lines instead.
+    """
+    if not sys.stdout.isatty():
+        return None
+    probe = subprocess.run(['rsync', '--info=help'], capture_output=True)
+    return '--info=progress2' if probe.returncode == 0 else '--progress'
 
 
 def run_rsync(cmd):
@@ -931,12 +969,12 @@ def restore_group(snapshot_dir, source, target_root, manifest_home, target_home,
     """Rsync one group's subtree out of the snapshot and into target_root."""
     stored = snapshot_dir / snapshot_rel(source)
     if not stored.exists():
-        print(f'  {yellow("skip:")} {source} {yellow("(not present in snapshot)")}')
+        print(f'    {yellow("skip: not present in snapshot")}')
         return False
 
     symlinked = paths_under(source, ['/' + rel for rel in symlinks])
     if skip_symlinked and str(source) in symlinked:
-        print(f'  {yellow("skip:")} {source} {yellow("(was a symlink)")}')
+        print(f'    {yellow("skip: was a symlink")}')
         return False
 
     target = Path(target_root) / snapshot_rel(remap_home(source, manifest_home, target_home))
@@ -963,6 +1001,10 @@ def restore_group(snapshot_dir, source, target_root, manifest_home, target_home,
 
     if dry_run:
         cmd.append('-n')
+
+    progress = rsync_progress_flag()
+    if progress and not dry_run:
+        cmd.append(progress)
 
     if stored.is_dir():
         cmd.append(str(stored) + '/')
@@ -1007,6 +1049,7 @@ def apply_modes(manifest, sources, target_root, dry_run):
         if not target.exists():
             continue
 
+        status(f'scanning {tilde(source)}')
         # Modes are keyed by the path as it existed on the backup machine, so each
         # restored path is walked back through the target root and the home remap.
         paths = [target] if target.is_file() else [target, *target.rglob('*')]
@@ -1014,13 +1057,17 @@ def apply_modes(manifest, sources, target_root, dry_run):
             origin = Path(source) if path == target else Path(source) / path.relative_to(target)
             recorded = modes.get(snapshot_rel(origin))
             wanted = int(recorded, 8) if recorded else (DEFAULT_DIR_MODE if path.is_dir() else DEFAULT_FILE_MODE)
-            if not dry_run:
-                try:
-                    path.chmod(wanted)
-                except OSError:
-                    continue
+            try:
+                path.chmod(wanted)
+            except OSError:
+                continue
             changed += 1
+            # One syscall per path, and over SMB that is minutes of silence on a large group.
+            # The interval is a redraw budget rather than a reporting granularity.
+            if changed % 200 == 0:
+                status(f'reapplying modes … {plural(changed, "path")}')
 
+    clear_status()
     return changed
 
 
@@ -1044,6 +1091,21 @@ def explain_empty_selection(manifest, date, args):
             print(f'    {tilde(group["source"])}', file=sys.stderr)
     if args.all and not groups:
         print(f'  {cyan(date)} records no groups at all', file=sys.stderr)
+
+
+def source_totals(groups):
+    """Each source once, in selection order, with the files and bytes its groups sum to.
+
+    git_untracked and git_ignored groups share a repo subtree, so restoring per group would
+    rsync the same directory twice; they are also disjoint file sets, so summing them gives
+    the size the one rsync will actually move.
+    """
+    totals = {}
+    for group in groups:
+        entry = totals.setdefault(group['source'], {'files': 0, 'bytes': 0})
+        entry['files'] += group.get('files', 0)
+        entry['bytes'] += group.get('bytes', 0)
+    return totals
 
 
 def do_restore(config, config_path, args):
@@ -1095,9 +1157,7 @@ def do_restore(config, config_path, args):
         print(f'{yellow("safekeep:")} nothing selected, nothing restored')
         return
 
-    # git_untracked and git_ignored groups share a repo subtree, so restoring both would
-    # rsync the same directory twice.
-    sources = list(dict.fromkeys(g['source'] for g in groups))
+    totals = source_totals(groups)
     manifest_home = manifest.get('home')
     target_home = str(Path.home())
     symlinks = manifest.get('symlinks', {})
@@ -1106,10 +1166,19 @@ def do_restore(config, config_path, args):
     print(f'{bold("safekeep:")} {label} {bold(plural(len(groups), "group"))} from {cyan(date)} to {cyan(args.to)}')
     if manifest_home and manifest_home != target_home:
         print(f'  remapping {cyan(manifest_home)} -> {cyan(target_home)}')
+    if args.on_conflict in ('backup', 'overwrite') and not args.dry_run:
+        # Named because it is the whole reason a restore takes as long as it does, and an
+        # unexplained wait reads as a hang. The other two modes skip on mtime and are quick.
+        print(f'  comparing by {cyan("checksum")}, which reads every file on both sides')
     print()
 
     restored = []
-    for source in sources:
+    width = max(len(tilde(source)) for source in totals)
+    for position, source in enumerate(totals, start=1):
+        # Printed before the work rather than after it: this line is what says which group
+        # the wait belongs to, and after the fact it says nothing that was not already known.
+        counter = cyan(f'[{position}/{len(totals)}]')
+        print(f'  {counter} {tilde(source):<{width}}  {size_cell(totals[source]["files"], totals[source]["bytes"])}', flush=True)
         if restore_group(
             snapshot_dir, source, args.to, manifest_home, target_home, args.on_conflict, args.skip_symlinked, symlinks, args.dry_run
         ):
@@ -1118,7 +1187,7 @@ def do_restore(config, config_path, args):
     if restored:
         count = apply_modes(manifest, restored, args.to, args.dry_run)
         if args.dry_run:
-            print(f'\n  {yellow("would reapply")} {bold(str(count))} recorded modes')
+            print(f'\n  {yellow("would reapply")} {bold(plural(count, "recorded mode"))}')
         else:
             print(f'\n  {green("reapplied")} modes to {bold(plural(count, "path"))}')
 
