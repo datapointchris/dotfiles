@@ -34,15 +34,20 @@ log() {
 }
 log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
+# Exported before the libraries load, not with the other exports further down:
+# formatting.sh resolves colors.sh through SHELL_DIR and falls back to a
+# $(dirname) fork per shell startup when it is unset.
+export SHELL_DIR="$HOME/.local/shell"
+
 # Log environment
-colors_file="$HOME/.local/shell/colors.sh"
-formatting_file="$HOME/.local/shell/formatting.sh"
+colors_file="$SHELL_DIR/colors.sh"
+formatting_file="$SHELL_DIR/formatting.sh"
 [[ -f $env_file ]] && log "Load" "$env_file" || log_error "Load" "$env_file"
 [[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
 [[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
 
 # Shared prompt utilities (used by prompt.zsh)
-prompt_lib_file="$HOME/.local/shell/prompt-lib.sh"
+prompt_lib_file="$SHELL_DIR/prompt-lib.sh"
 [[ -f $prompt_lib_file ]] && source $prompt_lib_file && log "Load" "$prompt_lib_file" || log_error "Load" "$prompt_lib_file"
 
 # Validate required environment variables
@@ -138,9 +143,6 @@ export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 export XDG_BIN_HOME="$HOME/.local/bin"
-
-# Shell library location
-export SHELL_DIR="$HOME/.local/shell"
 
 # Config locations
 export BASH_COMPLETION_USER_FILE="$XDG_CONFIG_HOME/bash-completion/bash_completion"

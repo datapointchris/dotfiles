@@ -21,11 +21,16 @@
 # itself on a CI runner. Resolving the sibling from this file covers both. The
 # fallback this replaced hardcoded $HOME/dotfiles and failed anywhere the repo
 # is not checked out there, printing a source error onto every caller's stdout.
+#
+# zsh leaves BASH_SOURCE unset and indexes arrays from 1, so ${BASH_SOURCE[0]}
+# is empty under zsh and dirname resolved to the caller's cwd -- ./colors.sh,
+# which printed a source error on every zsh startup. $0 is the sourced file's
+# own path in zsh, and in bash it only matters when BASH_SOURCE is populated.
 if [[ -n "${SHELL_DIR:-}" ]] && [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
 else
   # shellcheck source=colors.sh
-  source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
+  source "$(dirname "${BASH_SOURCE[0]:-$0}")/colors.sh"
 fi
 
 # ================================================================
