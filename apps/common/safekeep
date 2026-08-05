@@ -19,6 +19,7 @@ surface is not repeated here -- `safekeep --help` is the one copy of it.
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -89,6 +90,8 @@ DEFAULT_SKIP_NAMES = [
 ]
 
 CONFIG_DIR = Path.home() / '.config' / 'safekeep'
+
+SINGLE_TAG_EXAMPLE = 'tags = ["wsl"]'
 
 MANIFEST_NAME = '.safekeep-manifest.json'
 MANIFEST_VERSION = 1
@@ -307,6 +310,13 @@ def normalize_entries(entries):
             print(f'{red("safekeep:")} every entry needs a "path" key: {yellow(repr(entry))}', file=sys.stderr)
             sys.exit(1)
         tags = entry.get('tags', [])
+        # Fatal rather than coerced: a bare tags = "wsl" is a list of characters to Python, so
+        # the entry ends up tagged w, s and l, and the only symptom is `restore --tag wsl`
+        # selecting nothing from a snapshot whose config plainly carries the tag.
+        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+            print(f'{red("safekeep:")} "tags" must be a list of strings: {yellow(repr(entry))}', file=sys.stderr)
+            print(f'  a single tag is still a list: {cyan(SINGLE_TAG_EXAMPLE)}', file=sys.stderr)
+            sys.exit(1)
         normalized.append((Path(entry['path']).expanduser(), list(tags)))
     return normalized
 
@@ -614,6 +624,179 @@ def preview_snapshot(dest, date):
             print(f'  config warning: {warning}')
 
 
+def config_entries(config):
+    """Every config entry as (kind, path, tags) — the paths first, then the git repos."""
+    entries = [('path', path, tags) for path, tags in normalize_entries(config.get('back_up_paths', []))]
+    repos, _, _ = repo_entries(config)
+    return entries + [('git repo', path, tags) for path, tags in repos]
+
+
+def snapshot_to_size_against(dest, date):
+    """The snapshot a tag listing reports against: the one named, or the newest restorable one."""
+    snapshots = [(d, m) for d, m in list_snapshots(dest) if m is not None]
+    if date is None:
+        return snapshots[0] if snapshots else (None, None)
+    for snapshot_dir, manifest in snapshots:
+        if snapshot_dir.name == date:
+            return snapshot_dir, manifest
+    print(f'{red("safekeep:")} no restorable snapshot {yellow(date)} at {cyan(str(dest))}', file=sys.stderr)
+    sys.exit(1)
+
+
+def snapshot_sources(manifest):
+    """{source: {kind, tags, files, bytes}} for a manifest, keyed as the paths are on this machine.
+
+    A repo contributes an untracked group and an ignored group over disjoint file sets, so the
+    two sum into one source rather than competing for the key. Sources are remapped through this
+    machine's home so a snapshot from the machine being replaced lines up with the config on the
+    machine replacing it.
+    """
+    if manifest is None:
+        return {}
+    manifest_home = manifest.get('home')
+    target_home = str(Path.home())
+    sources = {}
+    for group in manifest.get('groups', []):
+        source = remap_home(group['source'], manifest_home, target_home)
+        kind = 'path' if group['kind'] == 'path' else 'git repo'
+        stored = sources.setdefault(source, {'kind': kind, 'tags': [], 'files': 0, 'bytes': 0})
+        stored['tags'] += [tag for tag in group.get('tags', []) if tag not in stored['tags']]
+        stored['files'] += group.get('files', 0)
+        stored['bytes'] += group.get('bytes', 0)
+    return sources
+
+
+def tag_index(config, sources):
+    """{tag: [row]} over the config and a snapshot together.
+
+    Either side alone hides one of the two ways a tagged restore comes back empty: a tag added
+    since the snapshot was taken selects nothing in it, and a tag renamed in the config is still
+    the only name the snapshots taken before the rename answer to. A row's 'files' is None when
+    the source is not in the snapshot at all, which is the first case.
+    """
+    index = {}
+    entries = {str(path): (kind, tags) for kind, path, tags in config_entries(config)}
+
+    for source in sorted(set(entries) | set(sources)):
+        kind, config_tags = entries.get(source, (None, []))
+        stored = sources.get(source)
+        for tag in dict.fromkeys(config_tags + (stored['tags'] if stored else [])):
+            if source not in entries:
+                note = 'not in the config'
+            elif tag not in config_tags:
+                note = 'tagged in the snapshot only'
+            else:
+                note = ''
+            index.setdefault(tag, []).append(
+                {
+                    'kind': kind or stored['kind'],
+                    'source': source,
+                    'files': stored['files'] if stored else None,
+                    'bytes': stored['bytes'] if stored else None,
+                    'note': note,
+                }
+            )
+    return index
+
+
+def sized_total(rows):
+    """The files and bytes rows account for in the snapshot, ignoring those not in it."""
+    sized = [row for row in rows if row['files'] is not None]
+    if not sized:
+        return None
+    return size_cell(sum(row['files'] for row in sized), sum(row['bytes'] for row in sized))
+
+
+def size_cell(files, num_bytes):
+    return f'{plural(files, "file"):>12}  {human_size(num_bytes):>9}'
+
+
+def tilde(source):
+    """A source with this machine's home abbreviated, since that prefix is on nearly every row."""
+    home = str(Path.home())
+    if source == home or source.startswith(home + '/'):
+        return '~' + source[len(home) :]
+    return source
+
+
+def print_tag_sources(config_path, dest, snapshot_dir):
+    """Name the two sides a tag listing is read from, since a tag can be on either alone."""
+    if snapshot_dir is None:
+        print(f'  in {cyan(config_path.name)} — {yellow("no snapshots")} at {cyan(str(dest))} to restore by tag yet')
+    else:
+        print(f'  in {cyan(config_path.name)}, sized against snapshot {cyan(snapshot_dir.name)}')
+
+
+def show_tags(config, config_path, args):
+    """List the tags a restore can select on, and what each would bring back."""
+    dest = Path(config['back_up_to']).expanduser()
+    snapshot_dir, manifest = snapshot_to_size_against(dest, args.from_date)
+    index = tag_index(config, snapshot_sources(manifest))
+
+    if args.name:
+        show_tag(args.name, index, config_path, dest, snapshot_dir, args.from_date)
+        return
+
+    print(f'{bold("safekeep:")} {plural(len(index), "tag")}')
+    print_tag_sources(config_path, dest, snapshot_dir)
+
+    if not index:
+        print(f'\n  Tag the entries and a restore can select them: {cyan("safekeep config edit")}')
+        return
+
+    print()
+    width = max(len(tag) for tag in index)
+    for tag in sorted(index):
+        rows = index[tag]
+        # A tag half of whose sources are missing still shows a size, and the size is the part
+        # that reads as reassuring -- so the shortfall is named on the same row rather than left
+        # to be noticed by drilling in. With no snapshot at all the header has said so already.
+        missing = [row for row in rows if row['files'] is None]
+        if snapshot_dir is None:
+            sizes = ''
+        elif len(missing) == len(rows):
+            sizes = yellow('not in this snapshot')
+        else:
+            shortfall = f'  {yellow(f"{len(missing)} not in this snapshot")}' if missing else ''
+            sizes = f'{sized_total(rows)}{shortfall}'
+        print(f'  {green(f"{tag:<{width}}")}  {plural(len(rows), "source"):<12}{sizes}'.rstrip())
+
+    untagged = [path for _, path, tags in config_entries(config) if not tags]
+    if untagged:
+        print(f'\n  untagged: {plural(len(untagged), "source")} — only {cyan("--all")} or {cyan("--group")} reaches them')
+    print(f'\n  {cyan(f"safekeep tags {sorted(index)[0]}")}  what one tag covers')
+
+
+def show_tag(name, index, config_path, dest, snapshot_dir, date):
+    """Show the sources one tag covers, and the restore that would bring them back."""
+    rows = index.get(name)
+    if not rows:
+        print(f'{red("safekeep:")} no tag {yellow(name)} in {cyan(config_path.name)}', file=sys.stderr)
+        if index:
+            print(f'  tags: {green(", ".join(sorted(index)))}', file=sys.stderr)
+        sys.exit(2)
+
+    print(f'{bold("safekeep:")} tag {green(name)} covers {bold(plural(len(rows), "source"))}')
+    print_tag_sources(config_path, dest, snapshot_dir)
+    print()
+
+    width = max(len(tilde(row['source'])) for row in rows)
+    for row in rows:
+        if snapshot_dir is None:
+            sizes = ''
+        else:
+            sizes = size_cell(row['files'], row['bytes']) if row['files'] is not None else yellow('not in this snapshot')
+        note = f'  {yellow(row["note"])}' if row['note'] else ''
+        print(f'  {row["kind"]:<9} {tilde(row["source"]):<{width}}  {sizes}{note}'.rstrip())
+
+    # A total under a single row is the same number twice.
+    if len([row for row in rows if row['files'] is not None]) > 1:
+        print(f'  {"":<9} {"":<{width}}  {bold(sized_total(rows))}')
+
+    from_flag = f' --from {date}' if date else ''
+    print(f'\n  restore it: {cyan(f"safekeep restore --to /tmp/rehearsal{from_flag} --tag {name}")}')
+
+
 def require_fzf():
     if shutil.which('fzf'):
         return
@@ -814,6 +997,28 @@ def apply_modes(manifest, sources, target_root, dry_run):
     return changed
 
 
+def explain_empty_selection(manifest, date, args):
+    """Say why an explicit selection matched nothing in this snapshot.
+
+    Tags live in the manifest, not in the config -- each one is a copy of what the config said
+    on the day the snapshot was taken. Tagging an entry today does not retag the snapshots that
+    already exist, and that is the whole of why a restore comes back empty while the config
+    plainly carries the tag. Nothing in "nothing selected" said so.
+    """
+    groups = manifest.get('groups', [])
+    if args.tag:
+        available = sorted({tag for group in groups for tag in group.get('tags', [])})
+        print(f'  no group in {cyan(date)} carries {yellow(", ".join(args.tag))}', file=sys.stderr)
+        print(f'  tags in this snapshot: {green(", ".join(available)) if available else yellow("none")}', file=sys.stderr)
+        print(f'  a snapshot carries the tags its config had that day — {cyan("safekeep tags")} compares the two', file=sys.stderr)
+    if args.group:
+        print(f'  no source in {cyan(date)} contains {yellow(", ".join(args.group))}:', file=sys.stderr)
+        for group in groups:
+            print(f'    {tilde(group["source"])}', file=sys.stderr)
+    if args.all and not groups:
+        print(f'  {cyan(date)} records no groups at all', file=sys.stderr)
+
+
 def do_restore(config, config_path, args):
     dest = Path(config['back_up_to']).expanduser()
 
@@ -854,6 +1059,12 @@ def do_restore(config, config_path, args):
         groups = pick_groups(snapshot_dir, manifest)
 
     if not groups:
+        # An explicit selection that matched nothing is a failed request, not a cancelled one:
+        # exit non-zero so a caller cannot read it as a restore that happened to be empty.
+        if args.all or args.group or args.tag:
+            print(f'{red("safekeep:")} nothing selected, nothing restored', file=sys.stderr)
+            explain_empty_selection(manifest, date, args)
+            sys.exit(1)
         print(f'{yellow("safekeep:")} nothing selected, nothing restored')
         return
 
@@ -1033,6 +1244,40 @@ def init_config(name):
     print(f'    {cyan("safekeep --help")}')
 
 
+def edit_config(config_path):
+    """Open a config in $VISUAL or $EDITOR, then read it back.
+
+    Reading it back is the point. load_config is fatal on a rename or a parse error, so the edit
+    that introduced one is reported while the file is still in hand rather than at the start of
+    the next backup. A terminal editor blocks until it closes; a GUI editor returns immediately
+    and the check then describes the file as it was, unless it is configured to wait
+    (EDITOR="code --wait").
+    """
+    editor = os.environ.get('VISUAL') or os.environ.get('EDITOR')
+    if not editor:
+        print(f'{red("safekeep:")} no editor set — set {yellow("$VISUAL")} or {yellow("$EDITOR")}', file=sys.stderr)
+        print(f'  the file is at {cyan(str(config_path))}', file=sys.stderr)
+        sys.exit(1)
+
+    # An editor may carry arguments ("code --wait", "emacsclient -nw"), so it is split rather
+    # than run as one word, and the binary resolved to a full path.
+    parts = shlex.split(editor)
+    binary = shutil.which(parts[0])
+    if binary is None:
+        print(f'{red("safekeep:")} editor not found: {yellow(parts[0])}', file=sys.stderr)
+        sys.exit(1)
+
+    subprocess.run([binary, *parts[1:], str(config_path)], check=False)
+
+    config, warnings = load_config(config_path)
+    entries = normalize_entries(config.get('back_up_paths', []))
+    repos, _, _ = repo_entries(config)
+    summary = f'{plural(len(entries), "path")}, {plural(len(repos), "git repo")}'
+    print(f'{green("safekeep:")} {cyan(str(config_path))} — {summary}')
+    for warning in warnings:
+        print(f'  {yellow("config warning:")} {warning}')
+
+
 def show_config(config_path, config, warnings):
     """Display the resolved config with readable formatting."""
     print(f'{bold("safekeep:")} {cyan(str(config_path))}')
@@ -1080,6 +1325,7 @@ def show_help():
     help_section('Commands')
     help_row('safekeep backup', '', "Copy the configured paths into today's snapshot")
     help_row('safekeep snapshots', '', 'List the snapshots at the destination')
+    help_row('safekeep tags', '[name]', 'What each tag covers, and what it would restore')
     help_row('safekeep restore', '--to <path>', 'Restore groups from a snapshot')
     help_row('safekeep config', '<verb>', 'Inspect and create config files')
 
@@ -1102,12 +1348,15 @@ def show_help():
         '  Selection is always explicit — a restore never guesses at --all.',
         '  Rehearse into a scratch directory before restoring over anything real:',
         '      safekeep restore --to /tmp/restore-test --all',
+        '  A snapshot carries the tags its config had that day, so `safekeep tags`',
+        '  is what says whether --tag will select anything in it.',
     )
 
     help_section('Examples')
     help_row('safekeep config init', '', 'Write ~/.config/safekeep/default.toml')
     help_row('safekeep backup -n', '', 'See what a backup would copy')
     help_row('safekeep snapshots', '', 'What is on the destination already')
+    help_row('safekeep tags secrets', '', 'What that tag would bring back')
     help_row('safekeep restore --to / --tag secrets', '', 'Restore one tag for real')
 
     help_end()
@@ -1122,6 +1371,10 @@ def show_restore_help():
     help_row('--all', '', 'Every group in the snapshot')
     help_row('--group', '<path>', 'Groups whose source contains PATH (repeatable)')
     help_row('--tag', '<name>', 'Groups carrying NAME (repeatable)')
+    help_text(
+        '  A tag selects on the snapshot, which carries the tags its config had that day.',
+        '  `safekeep tags <name>` is what says whether this one selects anything.',
+    )
 
     help_section('Options')
     help_row('--to', '<path>', 'Restore target root (/ for a real restore)')
@@ -1145,6 +1398,7 @@ def show_config_help():
 
     help_section('Commands')
     help_row('safekeep config show', '', 'Display the resolved config and exit')
+    help_row('safekeep config edit', '', 'Open the config in $VISUAL or $EDITOR, then check it')
     help_row('safekeep config init', '[name]', "Write a starter config (default: 'default')")
     help_row('safekeep config example', '', 'Print the annotated example without writing it')
 
@@ -1171,6 +1425,11 @@ def build_parser():
 
     snapshots = commands.add_parser('snapshots', add_help=False)
     snapshots.add_argument('-h', '--help', action='store_true', dest='show_help')
+
+    tags = commands.add_parser('tags', add_help=False)
+    tags.add_argument('-h', '--help', action='store_true', dest='show_help')
+    tags.add_argument('name', nargs='?', metavar='NAME')
+    tags.add_argument('--from', dest='from_date', metavar='DATE')
 
     restore = commands.add_parser('restore', add_help=False)
     restore.add_argument('-h', '--help', action='store_true', dest='show_help')
@@ -1200,11 +1459,17 @@ def build_parser():
     config_init.add_argument('name', nargs='?', default='default')
     config_example = config_commands.add_parser('example', add_help=False)
     config_example.add_argument('-h', '--help', action='store_true', dest='show_help')
+    config_edit = config_commands.add_parser('edit', add_help=False)
+    config_edit.add_argument('-h', '--help', action='store_true', dest='show_help')
 
     # Undocumented on purpose: this renders a snapshot's manifest for the picker, so it is
     # machine plumbing rather than a verb anyone types.
     preview = commands.add_parser('preview-snapshot', add_help=False)
     preview.add_argument('date', metavar='DATE')
+
+    # Kept so main() can tell a command typed alone from one that stated its intent and omitted
+    # an option -- the first shows help, the second gets an error naming what is missing.
+    parser.subcommands = commands.choices
 
     return parser
 
@@ -1223,6 +1488,16 @@ def screen_for(args):
     return show_help
 
 
+def typed_alone(parser, args):
+    """True when the command was typed with nothing after it.
+
+    Compared against what the subparser produces from an empty command line rather than
+    against a list of its options, which would fall out of date the first time one was added.
+    """
+    defaults = vars(parser.subcommands[args.command].parse_args([]))
+    return all(getattr(args, dest, None) == value for dest, value in defaults.items())
+
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -1237,6 +1512,13 @@ def main():
         # Exit 2, matching every Typer tool on the fleet (no_args_is_help) and the usage-error
         # code in cli-design.md.
         show_help()
+        sys.exit(2)
+
+    if args.command == 'restore' and typed_alone(parser, args):
+        # No args shows help, always -- an incomplete command line is answered with the screen
+        # that completes it, never with an error. `restore --all` with --to forgotten is the
+        # other case: intent was stated, so the error below names the one thing missing.
+        show_restore_help()
         sys.exit(2)
 
     if args.command == 'restore' and not args.to:
@@ -1258,6 +1540,11 @@ def main():
         if args.config_command == 'example':
             print(CONFIG_TEMPLATE, end='')
             sys.exit(0)
+        if args.config_command == 'edit':
+            # Resolved but deliberately not loaded: a config that no longer loads is the main
+            # reason to open one, and load_config exits before the editor could fix it.
+            edit_config(resolve_config(args.config))
+            sys.exit(0)
 
     config_path = resolve_config(args.config)
     config, warnings = load_config(config_path)
@@ -1268,6 +1555,8 @@ def main():
         show_config(config_path, config, warnings)
     elif args.command == 'snapshots':
         show_snapshots(Path(config['back_up_to']).expanduser())
+    elif args.command == 'tags':
+        show_tags(config, config_path, args)
     elif args.command == 'restore':
         do_restore(config, config_path, args)
     elif args.command == 'backup':

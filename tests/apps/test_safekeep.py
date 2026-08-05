@@ -49,9 +49,16 @@ def paths(*entries):
 ANSI = re.compile(r'\x1b\[[0-9;]*m')
 
 
-def run_safekeep(*args):
+def run_safekeep(*args, env=None):
     """Invoke the script as a subprocess, the way a user does."""
-    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True)
+    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, env=env)
+
+
+def editor_writing(tmp_path, content):
+    """A stand-in $EDITOR: a script that replaces the file it is handed with `content`."""
+    script = tmp_path / 'fake-editor.py'
+    script.write_text(f'import pathlib\nimport sys\n\npathlib.Path(sys.argv[1]).write_text({content!r})\n')
+    return {**os.environ, 'EDITOR': f'{sys.executable} {script}'}
 
 
 def plain(text):
@@ -98,7 +105,7 @@ def test_explicit_help_is_a_satisfied_request(tmp_path):
 
 def test_help_lists_every_public_command(tmp_path):
     result = run_safekeep('--help')
-    for command in ('backup', 'snapshots', 'restore', 'config'):
+    for command in ('backup', 'snapshots', 'tags', 'restore', 'config'):
         assert command in result.stdout
 
 
@@ -129,7 +136,7 @@ def test_config_is_a_namespace_and_a_bare_one_shows_its_own_help(tmp_path):
     """`config` names a resource; selecting nothing under it is an incomplete command line."""
     result = run_safekeep('config')
     assert result.returncode == 2
-    for command in ('show', 'init', 'example'):
+    for command in ('show', 'edit', 'init', 'example'):
         assert command in result.stdout
 
 
@@ -140,6 +147,15 @@ def test_config_example_prints_the_template_without_needing_a_config(tmp_path, m
     assert result.returncode == 0
     assert result.stdout == safekeep.CONFIG_TEMPLATE
     assert not (tmp_path / '.config' / 'safekeep').exists()
+
+
+def test_bare_restore_shows_help_rather_than_an_error(tmp_path):
+    """No args shows help, always — an incomplete command line gets the screen that completes
+    it. `restore --all` with --to forgotten is the other case, tested below."""
+    result = run_safekeep('restore')
+    assert result.returncode == 2
+    assert 'safekeep restore' in result.stdout
+    assert result.stderr == ''
 
 
 def test_unknown_command_is_a_usage_error(tmp_path):
@@ -441,6 +457,158 @@ def test_snapshots_flags_manifestless_directories(tmp_path):
     assert 'no manifest' in result.stdout
 
 
+# --- tags -----------------------------------------------------------------------------
+
+
+def tagged(tmp_path, dest, *entries):
+    """A config of (path, tags) entries, rewritten in place so a test can retag between runs."""
+    config_path = tmp_path / 'test.toml'
+    config = {'back_up_to': str(dest), 'back_up_paths': [{'path': str(path), 'tags': tags} for path, tags in entries]}
+    config_path.write_text(tomli_w.dumps(config))
+    return config_path
+
+
+def test_tags_lists_each_tag_with_what_it_would_restore(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs', 'rebuild']))
+    run_safekeep('--config', str(config_path), 'backup')
+
+    result = run_safekeep('--config', str(config_path), 'tags')
+    assert result.returncode == 0
+    out = plain(result.stdout)
+    assert '2 tags' in out
+    assert 'docs' in out and 'rebuild' in out
+    assert '3 files' in out, 'a tag is sized from the snapshot it would be restored from'
+
+
+def test_tags_flags_a_tag_the_snapshot_predates(tmp_path, source_tree):
+    """The failure this command exists for. Tagging an entry does not retag the snapshots that
+    already exist, so `restore --tag` comes back empty while the config plainly carries the tag."""
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+    run_safekeep('--config', str(config_path), 'backup')
+
+    tagged(tmp_path, dest, (source_tree / 'notes', ['docs']), (source_tree / 'real.conf', ['wsl']))
+    out = plain(run_safekeep('--config', str(config_path), 'tags').stdout)
+    assert 'wsl' in out
+    assert 'not in this snapshot' in out
+
+
+def test_tags_keeps_listing_a_tag_the_config_dropped(tmp_path, source_tree):
+    """--tag selects on the snapshot, so a tag removed from the config is still the only name
+    the snapshots taken before the removal answer to."""
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+    run_safekeep('--config', str(config_path), 'backup')
+
+    tagged(tmp_path, dest, (source_tree / 'notes', ['rebuild']))
+    assert 'docs' in plain(run_safekeep('--config', str(config_path), 'tags').stdout)
+    detail = plain(run_safekeep('--config', str(config_path), 'tags', 'docs').stdout)
+    assert 'tagged in the snapshot only' in detail
+
+
+def test_tags_names_the_restore_that_would_bring_one_back(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+    run_safekeep('--config', str(config_path), 'backup')
+
+    out = plain(run_safekeep('--config', str(config_path), 'tags', 'docs').stdout)
+    assert '--tag docs' in out
+    assert str(source_tree / 'notes') in out
+
+
+def test_tags_from_sizes_against_the_snapshot_named(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+    run_safekeep('--config', str(config_path), 'backup')
+    date = next(d.name for d, _ in safekeep.list_snapshots(dest))
+
+    out = plain(run_safekeep('--config', str(config_path), 'tags', 'docs', '--from', date).stdout)
+    assert f'--from {date}' in out, 'the restore it prints has to reach the snapshot it just sized'
+    assert run_safekeep('--config', str(config_path), 'tags', '--from', '2020-01-01').returncode == 1
+
+
+def test_unknown_tag_lists_the_ones_that_exist(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+    result = run_safekeep('--config', str(config_path), 'tags', 'nope')
+    assert result.returncode == 2  # usage error: a name that was never valid
+    assert 'docs' in result.stderr
+
+
+def test_tags_counts_the_sources_no_tag_reaches(tmp_path, source_tree):
+    """An untagged source is restorable only with --all or --group, which is worth knowing
+    before a rebuild rather than during one."""
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']), (source_tree / 'real.conf', []))
+    out = plain(run_safekeep('--config', str(config_path), 'tags').stdout)
+    assert 'untagged: 1 source' in out
+
+
+def test_tags_works_before_the_first_backup(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+    result = run_safekeep('--config', str(config_path), 'tags')
+    assert result.returncode == 0
+    assert 'no snapshots' in plain(result.stdout)
+
+
+def test_a_bare_string_tag_is_fatal(tmp_path, source_tree):
+    """tags = "wsl" is a list of characters to Python, and the only symptom would be a restore
+    selecting nothing from a snapshot whose config plainly carries the tag."""
+    dest = tmp_path / 'dest'
+    config_path = write_config(tmp_path, dest, back_up_paths=[{'path': str(source_tree / 'notes'), 'tags': 'wsl'}])
+    result = run_safekeep('--config', str(config_path), 'tags')
+    assert result.returncode == 1
+    assert 'list of strings' in result.stderr
+
+
+# --- config edit ----------------------------------------------------------------------
+
+
+def test_config_edit_reports_what_the_edit_introduced(tmp_path, source_tree):
+    """The moment to learn a key is retired is while the editor is still in hand."""
+    dest = tmp_path / 'dest'
+    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
+    env = editor_writing(tmp_path, f'back_up_to = "{dest}"\nkeep = 5\n')
+
+    result = run_safekeep('--config', str(config_path), 'config', 'edit', env=env)
+    assert result.returncode == 0
+    assert 'retention was removed' in plain(result.stdout)
+
+
+def test_config_edit_opens_a_config_that_no_longer_loads(tmp_path):
+    """A config that fails to load is the main reason to open one, so edit resolves the path
+    without loading it — loading first would exit before the editor could fix anything."""
+    config_path = tmp_path / 'test.toml'
+    config_path.write_text('back_up_to =\n')
+    fixed = 'back_up_to = "/tmp/somewhere"\n'
+
+    result = run_safekeep('--config', str(config_path), 'config', 'edit', env=editor_writing(tmp_path, fixed))
+    assert result.returncode == 0, result.stderr
+    assert config_path.read_text() == fixed
+
+
+def test_config_edit_reports_an_edit_that_broke_the_file(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
+
+    result = run_safekeep('--config', str(config_path), 'config', 'edit', env=editor_writing(tmp_path, 'back_up_to =\n'))
+    assert result.returncode == 1
+    assert 'not valid TOML' in result.stderr
+
+
+def test_config_edit_without_an_editor_names_the_variables_and_the_file(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
+    env = {key: value for key, value in os.environ.items() if key not in ('EDITOR', 'VISUAL')}
+
+    result = run_safekeep('--config', str(config_path), 'config', 'edit', env=env)
+    assert result.returncode == 1
+    assert '$EDITOR' in result.stderr
+    assert str(config_path) in plain(result.stderr), 'the fallback is editing it by hand'
+
+
 # --- restore --------------------------------------------------------------------------
 
 
@@ -524,9 +692,14 @@ def test_restore_by_tag_selects_the_group(tmp_path, source_tree):
     assert (target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md').exists()
 
 
-def test_restore_by_unknown_tag_restores_nothing(tmp_path, source_tree):
+def test_restore_by_unknown_tag_says_which_tags_the_snapshot_has(tmp_path, source_tree):
+    """An explicit selection that matched nothing is a failed request, not a cancelled one — so
+    it exits non-zero and names the tags the snapshot actually carries. 'nothing selected' alone
+    left no way to tell a typo from a tag added to the config after the snapshot was taken."""
     restore, target = backup_and_restore(tmp_path, source_tree, '--tag', 'nope')
-    assert 'nothing selected' in restore.stdout
+    assert restore.returncode == 1
+    assert 'nothing selected' in restore.stderr
+    assert 'tags in this snapshot: docs' in plain(restore.stderr)
     assert not target.exists()
 
 

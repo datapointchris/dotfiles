@@ -15,10 +15,13 @@ safekeep                    # Usage. Nothing writes without an explicit verb
 safekeep config example     # Read the annotated example without writing anything
 safekeep config init        # Write a starter config to ~/.config/safekeep/default.toml
 safekeep config show        # Display the resolved config
+safekeep config edit        # Open it in $VISUAL/$EDITOR, then report what the edit did
 safekeep backup --dry-run   # Preview what would be copied
 safekeep backup             # Copy the configured paths into today's snapshot
 
 safekeep snapshots                        # What is at the destination
+safekeep tags                             # Which tags exist, and what each would restore
+safekeep tags wip                         # The sources one tag covers
 safekeep restore --to /tmp/restore-test   # Rehearse: pick a snapshot and groups
 safekeep restore --to / --tag wip         # Restore everything tagged 'wip'
 ```
@@ -97,7 +100,11 @@ Every `[[back_up_paths]]` and `[[git.repos]]` block takes a `path` and optional 
 
 A repo's ignored files are found by set subtraction: `git ls-files --others` (untracked plus ignored) minus `git ls-files --others --exclude-standard` (untracked only), since git has no single flag that lists ignored files without the untracked ones. A pattern matches either the whole repo-relative path or any single component of it, which is why `.planning` catches everything beneath a `.planning/` directory at any depth.
 
-**Tags are labels, not policy.** safekeep never interprets what a tag means — it displays them in the picker and accepts `--tag NAME` as a selector. That keeps scenario knowledge (which paths matter on a rebuild) in the config where it was written, rather than in the tool.
+**Tags are labels, not policy.** safekeep never interprets what a tag means — it displays them in the picker and accepts `--tag NAME` as a selector. That keeps scenario knowledge (which paths matter on a rebuild) in the config where it was written, rather than in the tool. The [Tags](#tags) section below covers where a tag lives once a snapshot has been taken.
+
+`tags` must be a list, and a bare `tags = "wsl"` is fatal rather than coerced. Python reads a string as a sequence of characters, so that entry would come out tagged `w`, `s` and `l` — and the only symptom is `restore --tag wsl` selecting nothing from a snapshot whose config plainly carries the tag.
+
+`safekeep config edit` opens the resolved config in `$VISUAL` or `$EDITOR` and reads it back when the editor exits, reporting the warnings and parse errors the edit introduced. It resolves the path without loading it first, because a config that no longer loads is the main reason to open one — loading first would exit before the editor could fix anything. A terminal editor blocks until it closes; a GUI editor returns immediately and the check describes the file as it was, unless it is configured to wait (`EDITOR="code --wait"`).
 
 ## Schema Changes
 
@@ -143,6 +150,20 @@ Path construction: `back_up_to / YYYY-MM-DD / absolute-path-from-root`
 
 A snapshot with no manifest cannot be restored by safekeep — it says so and points at rsync.
 
+## Tags
+
+```bash
+safekeep tags               # every tag, the sources it covers, what it would restore
+safekeep tags secrets       # one tag, source by source, and the restore that brings it back
+safekeep tags --from DATE   # size against an older snapshot instead of the newest
+```
+
+**A tag lives in two places, and reading either one alone is misleading.** The config says which entries carry it; the manifest inside each snapshot carries a copy of what the config said *on the day that snapshot was taken*. `restore --tag` selects on the manifest, so tagging an entry today does nothing for the snapshots that already exist. `safekeep tags` reads both sides and marks the disagreements: a tag whose sources are not in the snapshot yet shows `not in this snapshot`, and a tag the config has since dropped or renamed is still listed, because it remains the only name the older snapshots answer to.
+
+That disagreement is the whole reason the command exists. Without it, `restore --to / --tag wsl` reporting `nothing selected` looks like a bug in the tool rather than a snapshot taken before the tag was written.
+
+Sizes come from the snapshot being reported against — the newest restorable one unless `--from` names another — so a tag's row is what a restore would actually bring back rather than what the source paths hold now. Sources carrying no tag at all are counted at the bottom: those are reachable only with `--all` or `--group`, which is worth knowing before a rebuild rather than during one.
+
 ## Restore
 
 ```bash
@@ -153,6 +174,10 @@ safekeep restore --to PATH [--from DATE] [--all | --group PATH | --tag NAME]
 `--to` is required. `--to /` is a real restore; `--to /tmp/restore-test` stages one somewhere harmless, which is how the restore gets rehearsed before it is needed.
 
 **Selection is always explicit.** With `--all`, `--group`, or `--tag`, restore runs non-interactively. With none of them on a terminal, fzf opens: first a snapshot picker previewing each manifest, then a multi-select group picker previewing each group's subtree. With none of them and no terminal, it exits non-zero listing the available groups rather than guessing.
+
+**A selection that matched nothing exits 1 and says why.** Cancelling out of the fzf picker is a restore you decided against, and exits 0; `--tag wsl` matching no group in the snapshot is a request that failed, and a caller has to be able to tell the two apart. The error names the tags that snapshot does carry, which is the fact that distinguishes a typo from a tag added to the config after the snapshot was taken.
+
+Bare `safekeep restore` prints the restore help rather than an error — no args shows help, always. Naming a selection and forgetting `--to` is the other case: intent was stated, so that one is an error naming the single missing option.
 
 `--on-conflict` chooses what happens when a target file already exists: `backup` (default, renames the existing file with a `.pre-restore` suffix), `skip`, `overwrite`, or `newer`.
 
