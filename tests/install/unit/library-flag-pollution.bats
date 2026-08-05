@@ -49,44 +49,24 @@ TESTEOF
 }
 
 # ================================================================
-# Test: Common shell libraries
+# Every library, one test
 # ================================================================
+# The list is the point: a new library is one line here, not a copy of the whole
+# @test. This was seven identical tests differing only in the path.
 
-@test "library_flags: logging.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-  assert_success
-}
+@test "library_flags: no library adds -e to its caller" {
+  local library
+  for library in \
+    configs/common/.local/shell/logging.sh \
+    configs/common/.local/shell/formatting.sh \
+    configs/common/.local/shell/error-handling.sh \
+    install/common/lib/failure-logging.sh \
+    install/common/lib/github-release-installer.sh \
+    install/common/lib/version-helpers.sh \
+    install/common/lib/platform-detection.sh; do
 
-@test "library_flags: formatting.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-  assert_success
-}
-
-@test "library_flags: error-handling.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/configs/common/.local/shell/error-handling.sh"
-  assert_success
-}
-
-# ================================================================
-# Test: Management libraries
-# ================================================================
-
-@test "library_flags: failure-logging.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-  assert_success
-}
-
-@test "library_flags: github-release-installer.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
-  assert_success
-}
-
-@test "library_flags: version-helpers.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
-  assert_success
-}
-
-@test "library_flags: platform-detection.sh does not add -e flag" {
-  run test_library_flags "$DOTFILES_DIR/install/platform-detection.sh"
-  assert_success
+    run test_library_flags "$DOTFILES_DIR/$library"
+    # The path is in the failure message because the loop hides which one broke.
+    assert_success "$library added -e"
+  done
 }

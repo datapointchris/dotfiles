@@ -20,52 +20,55 @@ setup() {
 
 # get_platform_arch tests
 
-@test "get_platform_arch returns correct platform string for macOS" {
+@test "get_platform_arch picks the darwin triple, whatever the case of the names" {
   skip_if_not_macos
 
   run get_platform_arch "Darwin_x86_64" "Darwin_arm64" "Linux_x86_64"
   assert_success
   assert_output --regexp "Darwin_(x86_64|arm64)"
-}
-
-@test "get_platform_arch handles lowercase platform names" {
-  skip_if_not_macos
 
   run get_platform_arch "darwin_x86_64" "darwin_arm64" "linux_x86_64"
   assert_success
   assert_output --regexp "darwin_(x86_64|arm64)"
 }
 
-@test "get_platform_arch returns different values for different architectures" {
-  skip_if_not_macos
-
-  darwin_x86="x86_result"
-  darwin_arm="arm_result"
-  linux_x86="linux_result"
-
-  result=$(get_platform_arch "$darwin_x86" "$darwin_arm" "$linux_x86")
-
-  # Result should be one of the two darwin options
-  [[ "$result" == "x86_result" || "$result" == "arm_result" ]]
-}
-
 # get_latest_version tests
+#
+# These stub the fetch rather than calling GitHub. The wrapper's whole job is to
+# turn a failed fetch into a logged non-zero exit, and asserting that against the
+# live API tested GitHub's uptime, cost a network round trip per commit, and
+# failed outright behind the work firewall.
 
-@test "get_latest_version fetches real version from GitHub" {
-  run get_latest_version "jesseduffield/lazygit"
-  assert_success
-  assert_output --regexp '^v[0-9]+\.[0-9]+\.[0-9]+$'
+# Answers the releases API with a fixed body, the way uv-git-tools.bats does.
+# Stubbing curl rather than the fetch function keeps the jq parse and the
+# empty/null handling inside version-helpers.sh under test.
+stub_releases_api() {
+  local body="$1"
+  local stub_dir="$BATS_TEST_TMPDIR/stubs"
+  mkdir -p "$stub_dir"
+  printf '#!/usr/bin/env bash\nprintf %%s %s\n' "'$body'" >"$stub_dir/curl"
+  chmod +x "$stub_dir/curl"
+  PATH="$stub_dir:$PATH"
 }
 
-@test "get_latest_version handles different repos" {
-  run get_latest_version "neovim/neovim"
+@test "get_latest_version passes a fetched version through" {
+  stub_releases_api '{"tag_name": "v1.2.3"}'
+
+  run get_latest_version "owner/repo"
   assert_success
-  assert_output --regexp '^v[0-9]+\.[0-9]+\.[0-9]+$'
+  assert_output "v1.2.3"
 }
 
-@test "get_latest_version fails on invalid repo" {
-  run get_latest_version "invalid/nonexistent-repo-12345-test"
+@test "get_latest_version fails rather than echoing an empty version" {
+  # The bug this guards: a caller doing VERSION=$(get_latest_version ...) with no
+  # exit guard built ".../releases/download//tool_.tar.gz" and downloaded nothing.
+  stub_releases_api '{}'
+
+  run get_latest_version "owner/repo"
   assert_failure
+  # It logs the failure, so the assertion is that no version came out with it.
+  assert_output --partial "Failed to fetch latest version"
+  refute_output --regexp 'v[0-9]'
 }
 
 # should_skip_install tests
@@ -101,94 +104,41 @@ setup() {
   [[ "$output" =~ "already at latest"|"update available"|"Could not determine" ]]
 }
 
-# version fetch failure tests
-
-@test "installer exits on version fetch failure instead of continuing with empty version" {
-  # This test catches the bug where scripts continued with VERSION="" after
-  # get_latest_version failed, producing malformed download URLs like:
-  #   .../releases/download//tool__macOS-64bit.tar.gz
-  local test_script
-  test_script=$(mktemp)
-  cat >"$test_script" <<SCRIPT
-#!/usr/bin/env bash
-set -uo pipefail
-DOTFILES_DIR="$DOTFILES_DIR"
-source "\$DOTFILES_DIR/install/common/lib/version-helpers.sh"
-source "\$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
-source "\$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "\$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "\$DOTFILES_DIR/configs/common/.local/shell/error-handling.sh"
-source "\$DOTFILES_DIR/install/common/lib/failure-logging.sh"
-
-# Override to simulate GitHub API failure
-fetch_github_latest_version() { return 1; }
-
-REPO="fake/repo"
-VERSION=\$(get_latest_version "\$REPO") || exit 1
-echo "SHOULD_NOT_REACH version=\$VERSION"
-SCRIPT
-
-  run bash "$test_script"
-  rm -f "$test_script"
-  assert_failure
-  refute_output --partial "SHOULD_NOT_REACH"
-}
-
-@test "installer with empty version produces malformed URL without exit guard" {
-  # Demonstrates what happens WITHOUT the || exit 1 guard:
-  # an empty VERSION creates a broken download URL
-  local version=""
-  local url="https://github.com/org/tool/releases/download/${version}/tool_${version#v}_macOS.tar.gz"
-  # The URL contains double slash and empty version components
-  [[ "$url" == *"/download//tool_"* ]]
-}
-
 # Release-asset URL parsing
 #
 # install_from_tarball derives repo and tag from the download URL so that every
 # existing caller gains private-repo support without a signature change. A
 # nested module's tag contains a slash (cli/v1.2.0), which is the case most
-# likely to be parsed wrong — the tag is everything between /releases/download/
+# likely to be parsed wrong -- the tag is everything between /releases/download/
 # and the final filename segment, not the single segment after it.
+#
+# This calls the library's parser. The version it replaced defined its own copy
+# of the regex in the test file, so the two could drift apart and the test would
+# still pass.
 
-parse_download_url() {
-  local url="$1"
-  if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$ ]]; then
-    echo "${BASH_REMATCH[1]}|${BASH_REMATCH[2]}|${BASH_REMATCH[3]}"
-  else
-    return 1
-  fi
-}
-
-@test "download url parsing: extracts repo and plain tag" {
-  run parse_download_url "https://github.com/owner/repo/releases/download/v1.2.0/tool_1.2.0_linux_amd64.tar.gz"
+@test "release url parsing: repo and tag, including a tag with slashes in it" {
+  run parse_github_release_url "https://github.com/owner/repo/releases/download/v1.2.0/tool_1.2.0_linux_amd64.tar.gz"
   assert_success
-  assert_output "owner/repo|v1.2.0|tool_1.2.0_linux_amd64.tar.gz"
-}
+  assert_output "owner/repo|v1.2.0"
 
-@test "download url parsing: keeps slashes inside a prefixed tag" {
-  run parse_download_url "https://github.com/datapointchris/nomad/releases/download/cli/v0.1.0/nomad_0.1.0_darwin_amd64.tar.gz"
+  run parse_github_release_url "https://github.com/datapointchris/nomad/releases/download/cli/v0.1.0/nomad_0.1.0_darwin_amd64.tar.gz"
   assert_success
-  assert_output "datapointchris/nomad|cli/v0.1.0|nomad_0.1.0_darwin_amd64.tar.gz"
+  assert_output "datapointchris/nomad|cli/v0.1.0"
+
+  # A non-GitHub source echoes nothing, which is how callers tell it apart.
+  run parse_github_release_url "https://example.com/some/file.tar.gz"
+  assert_output ""
 }
 
-@test "download url parsing: rejects a non-release URL" {
-  run parse_download_url "https://example.com/some/file.tar.gz"
-  assert_failure
-}
-
-@test "checksum lookup: matches an asset whose recorded name differs only by case" {
+@test "checksum lookup: case-insensitive on the asset name, empty when absent" {
   local checksums="$BATS_TEST_TMPDIR/checksums.txt"
-  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" >"$checksums"
+  local digest
+  digest=$(printf 'a%.0s' {1..64})
+  printf '%s  %s\n' "$digest" "lazygit_0.63.1_linux_x86_64.tar.gz" >"$checksums"
 
   run checksum_for_asset "$checksums" "lazygit_0.63.1_Linux_x86_64.tar.gz"
   assert_success
-  assert_output "$(printf 'a%.0s' {1..64})"
-}
-
-@test "checksum lookup: still finds nothing for an asset that is absent" {
-  local checksums="$BATS_TEST_TMPDIR/checksums.txt"
-  printf '%s  %s\n' "$(printf 'a%.0s' {1..64})" "lazygit_0.63.1_linux_x86_64.tar.gz" >"$checksums"
+  assert_output "$digest"
 
   run checksum_for_asset "$checksums" "someothertool.tar.gz"
   assert_output ""
@@ -210,37 +160,27 @@ setup_bundle() {
   printf '%s  %s\n' "$(compute_sha256 "$CACHED_FILE")" "$ASSET" >"$OFFLINE_CHECKSUMS_FILE"
 }
 
-@test "offline bundle: cached file matching the recorded digest verifies" {
+@test "offline bundle: verifies, rejects a tamper, and defers when it should" {
   setup_bundle
 
   USED_OFFLINE_CACHE=true run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
   assert_success
   assert_output --partial "verified from offline bundle"
-}
 
-@test "offline bundle: tampered cached file is rejected and deleted" {
-  setup_bundle
-  echo "tampered" >"$CACHED_FILE"
-
-  USED_OFFLINE_CACHE=true run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
-  assert_failure
-  [[ ! -f "$CACHED_FILE" ]]
-}
-
-@test "offline bundle: a freshly downloaded file ignores the bundle digests" {
-  setup_bundle
-
+  # A fresh download is not the bundle's business: status 2 means "not mine".
   USED_OFFLINE_CACHE=false run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
-  [[ "$status" -eq 2 ]]
-}
+  assert_equal "$status" 2
 
-@test "offline bundle: an asset the bundle never recorded falls through" {
-  setup_bundle
   local other="$BUNDLE_DIR/binaries/other.tar.gz"
   echo "payload" >"$other"
-
   USED_OFFLINE_CACHE=true run verify_release_checksum "$other" "other.tar.gz" "" ""
-  [[ "$status" -eq 2 ]]
+  assert_equal "$status" 2
+
+  # Tampering is checked last: it deletes the cached file on the way out.
+  echo "tampered" >"$CACHED_FILE"
+  USED_OFFLINE_CACHE=true run verify_release_checksum "$CACHED_FILE" "$ASSET" "" ""
+  assert_failure
+  assert [ ! -f "$CACHED_FILE" ]
 }
 
 # Helper functions

@@ -467,6 +467,11 @@ system_packages:
     brew: mpv
     description: Media player (used by Yazi for video playback)
 
+  - name: mpv-mpris
+    apt: mpv-mpris
+    pacman: mpv-mpris
+    description: Puts mpv on D-Bus so waybar's mpris module shows what ypl play is playing
+
   - name: graphviz
     apt: graphviz
     pacman: graphviz

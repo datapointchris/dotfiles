@@ -108,49 +108,29 @@ LIST'
 # uv_tool_installed_ref
 # ================================================================
 
-@test "uv_tool_installed_ref: a git-installed tool reports version and commit" {
+@test "uv_tool_installed_ref: version alone, or version and commit for a git install" {
   local uv_dir="$BATS_TEST_TMPDIR/uv"
-  make_uv_tool "$uv_dir" indy 0.1.0 852933d3fbaa0ac3aa1f1024c701ccf5e28e2b25
 
+  make_uv_tool "$uv_dir" indy 0.1.0 852933d3fbaa0ac3aa1f1024c701ccf5e28e2b25
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref indy"
   assert_success
   assert_output "0.1.0 (852933d3fbaa)"
-}
 
-@test "uv_tool_installed_ref: the commit distinguishes builds sharing a version" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
-  make_uv_tool "$uv_dir" indy 0.1.0 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref indy"
-  local before="$output"
-
+  # The commit is what distinguishes two builds of the same version -- without it
+  # a rebuilt git tool reads as unchanged.
   rm -rf "${uv_dir:?}/indy"
   make_uv_tool "$uv_dir" indy 0.1.0 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref indy"
+  refute_output "0.1.0 (852933d3fbaa)"
 
-  refute_output "$before"
-}
-
-@test "uv_tool_installed_ref: an index-installed tool reports the version alone" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
   make_uv_tool "$uv_dir" codespell 2.4.3
-
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref codespell"
-  assert_success
   assert_output "2.4.3"
-}
 
-@test "uv_tool_installed_ref: a hyphenated name matches its normalized dist-info" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
+  # uv normalizes - and . to _ in the dist-info directory name.
   make_uv_tool "$uv_dir" keymap-align 0.1.0 3e42d3960257000000000000000000000000000f
-
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref keymap-align"
-  assert_success
   assert_output "0.1.0 (3e42d3960257)"
-}
-
-@test "uv_tool_installed_ref: an uninstalled tool fails rather than echoing empty" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
-  mkdir -p "$uv_dir"
 
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_installed_ref nonexistent"
   assert_failure
@@ -164,36 +144,24 @@ LIST'
 # a git-installed tool at all — a pinned tag re-resolves to the same commit and
 # exits 0, which is how syncer was reported current eight releases behind.
 
-@test "uv_tool_pinned_rev: a pinned install reports its tag" {
+@test "uv_tool_pinned_rev: the tag from the receipt, wherever rev sits in the URL" {
   local uv_dir="$BATS_TEST_TMPDIR/uv"
-  make_uv_receipt "$uv_dir" syncer "https://github.com/datapointchris/syncer.git?rev=v6.0.0"
 
+  make_uv_receipt "$uv_dir" syncer "https://github.com/datapointchris/syncer.git?rev=v6.0.0"
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev syncer"
   assert_success
   assert_output "v6.0.0"
-}
 
-@test "uv_tool_pinned_rev: a branch install succeeds with no tag" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
+  # rev is not always the first query parameter.
+  make_uv_receipt "$uv_dir" syncer "https://github.com/datapointchris/syncer.git?subdirectory=cli&rev=v6.0.0"
+  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev syncer"
+  assert_output "v6.0.0"
+
+  # A branch install is unpinned: a success with no tag, not a failure.
   make_uv_receipt "$uv_dir" relate "https://github.com/datapointchris/relate.git"
-
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev relate"
   assert_success
   assert_output ""
-}
-
-@test "uv_tool_pinned_rev: a rev after another query parameter is still found" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
-  make_uv_receipt "$uv_dir" syncer "https://github.com/datapointchris/syncer.git?subdirectory=cli&rev=v6.0.0"
-
-  run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev syncer"
-  assert_success
-  assert_output "v6.0.0"
-}
-
-@test "uv_tool_pinned_rev: a tool with no receipt fails" {
-  local uv_dir="$BATS_TEST_TMPDIR/uv"
-  mkdir -p "$uv_dir"
 
   run env UV_TOOL_DIR="$uv_dir" bash -c "source '$LIB'; uv_tool_pinned_rev nonexistent"
   assert_failure
@@ -204,26 +172,17 @@ LIST'
 # cargo_installed_version
 # ================================================================
 
-@test "cargo_installed_version: reports the version of an installed crate" {
+@test "cargo_installed_version: matches the crate name, never a binary name" {
   local stub_dir
   stub_dir=$(make_stub cargo "$CARGO_LIST_STUB")
 
   run env PATH="$stub_dir:$PATH" bash -c "source '$LIB'; cargo_installed_version fd-find"
   assert_success
   assert_output "v10.4.2"
-}
 
-@test "cargo_installed_version: a crate name is not matched by a binary name" {
-  local stub_dir
-  stub_dir=$(make_stub cargo "$CARGO_LIST_STUB")
-
+  # `fd` is the binary fd-find installs; matching on it reports the wrong crate.
   run env PATH="$stub_dir:$PATH" bash -c "source '$LIB'; cargo_installed_version fd"
   assert_failure
-}
-
-@test "cargo_installed_version: an uninstalled crate fails" {
-  local stub_dir
-  stub_dir=$(make_stub cargo "$CARGO_LIST_STUB")
 
   run env PATH="$stub_dir:$PATH" bash -c "source '$LIB'; cargo_installed_version nonexistent-crate"
   assert_failure
@@ -255,7 +214,7 @@ LIST'
 
 GO_BUILDINFO_STUB='printf "toolbox: go1.26.5\n\tpath\tgithub.com/datapointchris/toolbox\n\tmod\tgithub.com/datapointchris/toolbox\tv1.7.1\th1:abc=\n\tdep\tgithub.com/spf13/cobra\tv1.10.2\th1:def=\n"'
 
-@test "go_binary_module_version: reports the module version, not the toolchain or a dep" {
+@test "go_binary_module_version: the module version, and nothing at all on failure" {
   local stub_dir
   stub_dir=$(make_stub go "$GO_BUILDINFO_STUB")
   touch "$BATS_TEST_TMPDIR/toolbox"
@@ -264,25 +223,19 @@ GO_BUILDINFO_STUB='printf "toolbox: go1.26.5\n\tpath\tgithub.com/datapointchris/
     "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/toolbox'"
   assert_success
   assert_output "v1.7.1"
-}
 
-@test "go_binary_module_version: a binary with no build info fails" {
-  local stub_dir
-  stub_dir=$(make_stub go 'echo "could not read Go build info" >&2; exit 1')
-  touch "$BATS_TEST_TMPDIR/notgo"
-
-  run env PATH="$stub_dir:$PATH" bash -c \
-    "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/notgo'"
-  assert_failure
-  assert_output ""
-}
-
-@test "go_binary_module_version: a missing binary fails without invoking go" {
-  local stub_dir
+  # A missing binary must not reach go at all, and a binary go cannot read must
+  # not leak go's error text as if it were a version.
   stub_dir=$(make_stub go 'echo "go should not have run" >&2; exit 1')
-
   run env PATH="$stub_dir:$PATH" bash -c \
     "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/absent'"
+  assert_failure
+  assert_output ""
+
+  touch "$BATS_TEST_TMPDIR/notgo"
+  stub_dir=$(make_stub go 'echo "could not read Go build info" >&2; exit 1')
+  run env PATH="$stub_dir:$PATH" bash -c \
+    "source '$LIB'; go_binary_module_version '$BATS_TEST_TMPDIR/notgo'"
   assert_failure
   assert_output ""
 }
@@ -291,18 +244,15 @@ GO_BUILDINFO_STUB='printf "toolbox: go1.26.5\n\tpath\tgithub.com/datapointchris/
 # git_checkout_commit / git_checkouts_snapshot
 # ================================================================
 
-@test "git_checkout_commit: reports the short HEAD of a checkout" {
+@test "git_checkout_commit: the short HEAD, and failure for anything else" {
   local commit
   commit=$(make_checkout "$BATS_TEST_TMPDIR/plugin" one)
 
   run bash -c "source '$LIB'; git_checkout_commit '$BATS_TEST_TMPDIR/plugin'"
   assert_success
   assert_output "$commit"
-}
 
-@test "git_checkout_commit: a directory that is not a checkout fails" {
   mkdir -p "$BATS_TEST_TMPDIR/plain"
-
   run bash -c "source '$LIB'; git_checkout_commit '$BATS_TEST_TMPDIR/plain'"
   assert_failure
   assert_output ""
@@ -320,9 +270,7 @@ GO_BUILDINFO_STUB='printf "toolbox: go1.26.5\n\tpath\tgithub.com/datapointchris/
   assert_line --index 0 "tmux-resurrect $resurrect_commit"
   assert_line --index 1 "tmux-yank $yank_commit"
   refute_output --partial "not-a-checkout"
-}
 
-@test "git_checkouts_snapshot: a missing parent directory fails" {
   run bash -c "source '$LIB'; git_checkouts_snapshot '$BATS_TEST_TMPDIR/absent'"
   assert_failure
 }
@@ -331,42 +279,31 @@ GO_BUILDINFO_STUB='printf "toolbox: go1.26.5\n\tpath\tgithub.com/datapointchris/
 # report_snapshot_changes
 # ================================================================
 
-@test "report_snapshot_changes: identical snapshots report the up-to-date message" {
+@test "report_snapshot_changes: tells a move, an install, and a removal apart" {
   local snapshot="blink.cmp aaaaaaaaaaaa
 telescope.nvim bbbbbbbbbbbb"
 
+  # Unchanged is the case that used to print a success line off an exit code.
   run "$REPORT" "$snapshot" "$snapshot" "Neovim plugins already at latest"
   assert_success
   assert_output --partial "Neovim plugins already at latest"
   refute_output --partial "updated"
-}
 
-@test "report_snapshot_changes: a moved commit reports both sides" {
   run "$REPORT" "blink.cmp aaaaaaaaaaaa" "blink.cmp cccccccccccc" "already at latest"
-  assert_success
   assert_output --partial "blink.cmp updated: aaaaaaaaaaaa → cccccccccccc"
   refute_output --partial "already at latest"
-}
 
-@test "report_snapshot_changes: an added entry is not reported as an update" {
   run "$REPORT" "blink.cmp aaaaaaaaaaaa" "blink.cmp aaaaaaaaaaaa
 oil.nvim dddddddddddd" "already at latest"
-  assert_success
   assert_output --partial "oil.nvim installed (dddddddddddd)"
   refute_output --partial "updated"
-}
 
-@test "report_snapshot_changes: a removed entry is reported as removed" {
   run "$REPORT" "blink.cmp aaaaaaaaaaaa
 oil.nvim dddddddddddd" "blink.cmp aaaaaaaaaaaa" "already at latest"
-  assert_success
   assert_output --partial "oil.nvim removed"
-  refute_output --partial "already at latest"
-}
 
-@test "report_snapshot_changes: an empty before snapshot reports installs, not updates" {
+  # An empty before-snapshot is a first install, not an update of everything.
   run "$REPORT" "" "blink.cmp aaaaaaaaaaaa" "already at latest"
-  assert_success
   assert_output --partial "blink.cmp installed (aaaaaaaaaaaa)"
   refute_output --partial "removed"
 }
@@ -378,66 +315,34 @@ oil.nvim dddddddddddd" "blink.cmp aaaaaaaaaaaa" "already at latest"
 # how `theme updated` came to be printed on every run, and swallowing the exit
 # code hid genuine failures from run-installer.sh entirely.
 
-@test "theme.sh --update: passes the tool's own no-op report through" {
-  local stub_dir
-  stub_dir=$(make_stub theme 'echo "✓ theme already at latest: v4.10.0"')
+@test "theme.sh and font.sh --update: delegate, and never re-derive the result" {
+  local tool stub_dir installer
+  for tool in theme font; do
+    installer="$DOTFILES_DIR/install/common/custom-installers/$tool.sh"
 
-  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
-  assert_success
-  assert_output --partial "already at latest: v4.10.0"
-  refute_output --partial "theme updated"
-}
+    # The tool's own report goes through untouched. Re-deriving it from the exit
+    # code is how "$tool updated" came to be printed on every run.
+    stub_dir=$(make_stub "$tool" "echo '✓ already at latest: v4.10.0'")
+    run env PATH="$stub_dir:$PATH" bash "$installer" --update
+    assert_success
+    assert_output --partial "already at latest: v4.10.0"
+    refute_output --partial "$tool updated"
 
-@test "theme.sh --update: propagates a failing update" {
-  local stub_dir
-  stub_dir=$(make_stub theme 'echo "✗ theme update failed: could not fetch from remote" >&2; exit 1')
+    # A failure propagates rather than being swallowed into a success line.
+    stub_dir=$(make_stub "$tool" "echo '✗ update failed: could not fetch' >&2; exit 1")
+    run env PATH="$stub_dir:$PATH" bash "$installer" --update
+    assert_failure
+    assert_output --partial "could not fetch"
 
-  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
-  assert_failure
-  assert_output --partial "could not fetch from remote"
-}
+    # Both dropped `upgrade` when the fleet settled on one self-update verb, so
+    # calling the old name fails only at runtime, on a machine, mid-update.
+    stub_dir=$(make_stub "$tool" 'echo "called with: $*"')
+    run env PATH="$stub_dir:$PATH" bash "$installer" --update
+    assert_success
+    assert_output --partial "called with: update"
 
-# theme dropped `upgrade` when the fleet settled on one self-update verb, so an
-# installer calling the old name fails only at runtime, on a machine, mid-update.
-@test "theme.sh --update: calls theme by the verb it still answers to" {
-  local stub_dir
-  stub_dir=$(make_stub theme 'echo "called with: $*"')
-
-  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
-  assert_success
-  assert_output --partial "called with: update"
-}
-
-@test "theme.sh --update: skips cleanly when theme is not installed" {
-  run env PATH="/usr/bin:/bin" bash "$DOTFILES_DIR/install/common/custom-installers/theme.sh" --update
-  assert_success
-  assert_output --partial "not installed"
-}
-
-@test "font.sh --update: passes the tool's own no-op report through" {
-  local stub_dir
-  stub_dir=$(make_stub font 'echo "✓ font already at latest: v3.1.0"')
-
-  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/font.sh" --update
-  assert_success
-  assert_output --partial "already at latest: v3.1.0"
-  refute_output --partial "font updated"
-}
-
-@test "font.sh --update: propagates a failing update" {
-  local stub_dir
-  stub_dir=$(make_stub font 'echo "✗ font update failed: no releases found" >&2; exit 1')
-
-  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/font.sh" --update
-  assert_failure
-  assert_output --partial "no releases found"
-}
-
-@test "font.sh --update: calls font by the verb it still answers to" {
-  local stub_dir
-  stub_dir=$(make_stub font 'echo "called with: $*"')
-
-  run env PATH="$stub_dir:$PATH" bash "$DOTFILES_DIR/install/common/custom-installers/font.sh" --update
-  assert_success
-  assert_output --partial "called with: update"
+    run env PATH="/usr/bin:/bin" bash "$installer" --update
+    assert_success
+    assert_output --partial "not installed"
+  done
 }

@@ -67,93 +67,52 @@ create_single_tarball() {
 }
 
 # ================================================================
-# Tests: single-platform tarball (standard Rust tool format)
+# install_from_cache
 # ================================================================
+# Grouped by outcome rather than by archive name: what matters is that the
+# lookup finds the cached archive under each naming scheme create-bundle.sh
+# produces, and refuses to install anything when it does not.
 
-@test "cache/tarball: installs binary from standard tarball" {
+@test "cache/hit: finds the archive under every naming scheme, executable" {
   create_single_tarball "bat" "$CACHE_DIR/bat_v0.25.0_x86_64-unknown-linux-gnu.tar.gz"
-
   run bash "$HELPER_SCRIPT" install_from_cache bat bat
   assert_success
+  assert_equal "$(cat "$FAKE_HOME/.cargo/bin/bat")" "SINGLE-PLATFORM-BINARY"
+  assert [ -x "$FAKE_HOME/.cargo/bin/bat" ]
 
-  run cat "$FAKE_HOME/.cargo/bin/bat"
-  assert_output "SINGLE-PLATFORM-BINARY"
-}
-
-@test "cache/tarball: installed binary is executable" {
-  create_single_tarball "bat" "$CACHE_DIR/bat_v0.25.0_x86_64-unknown-linux-gnu.tar.gz"
-
-  run bash "$HELPER_SCRIPT" install_from_cache bat bat
-  assert_success
-
-  [[ -x "$FAKE_HOME/.cargo/bin/bat" ]]
-}
-
-@test "cache/tarball: finds an archive named by OS word rather than target triple" {
-  # What create-bundle.sh produces for fnm, whose release assets are named
-  # fnm-linux.zip / fnm-macos.zip: the repackaged tarball carries the OS word,
-  # so none of the target-triple patterns match and only the fallback can find it.
+  # fnm's release assets are fnm-linux.zip / fnm-macos.zip, so the repackaged
+  # tarball carries the OS word and no target-triple pattern matches it.
   create_single_tarball "fnm" "$CACHE_DIR/fnm_1.39.0_linux.tar.gz"
-
   run bash "$HELPER_SCRIPT" install_from_cache fnm fnm
   assert_success
+  assert_equal "$(cat "$FAKE_HOME/.cargo/bin/fnm")" "SINGLE-PLATFORM-BINARY"
 
-  run cat "$FAKE_HOME/.cargo/bin/fnm"
-  assert_output "SINGLE-PLATFORM-BINARY"
-}
-
-@test "cache/tarball: finds archive by binary name when package name differs" {
+  # The crate and the binary it installs are not always the same name.
   create_single_tarball "fd" "$CACHE_DIR/fd-find_v10.2.0_x86_64-unknown-linux-gnu.tar.gz"
-
   run bash "$HELPER_SCRIPT" install_from_cache fd-find fd
   assert_success
-
-  run cat "$FAKE_HOME/.cargo/bin/fd"
-  assert_output "SINGLE-PLATFORM-BINARY"
+  assert_equal "$(cat "$FAKE_HOME/.cargo/bin/fd")" "SINGLE-PLATFORM-BINARY"
 }
 
-# ================================================================
-# Tests: cache miss
-# ================================================================
-
-@test "cache/miss: returns 1 when OFFLINE_CACHE_DIR does not exist" {
-  rm -rf "$CACHE_DIR"
-
+@test "cache/miss: fails rather than installing when nothing matches" {
   run bash "$HELPER_SCRIPT" install_from_cache broot broot
   assert_failure
-}
 
-@test "cache/miss: returns 1 when cache dir exists but has no matching file" {
-  run bash "$HELPER_SCRIPT" install_from_cache broot broot
-  assert_failure
-}
-
-@test "cache/miss: returns 1 when package name does not match any cached file" {
   create_single_tarball "bat" "$CACHE_DIR/bat_v0.25.0_x86_64-unknown-linux-gnu.tar.gz"
-
   run bash "$HELPER_SCRIPT" install_from_cache completely-different-tool ctdtool
   assert_failure
+
+  rm -rf "$CACHE_DIR"
+  run bash "$HELPER_SCRIPT" install_from_cache broot broot
+  assert_failure
 }
 
-# ================================================================
-# Tests: get_target_string
-# ================================================================
-
-@test "get_target_string: returns non-empty string" {
+@test "get_target_string: a triple carrying this machine's architecture" {
   run bash "$HELPER_SCRIPT" get_target_string
   assert_success
-  [[ -n "$output" ]]
-}
+  assert_output --regexp '(x86_64|aarch64)'
 
-@test "get_target_string: output contains architecture" {
-  run bash "$HELPER_SCRIPT" get_target_string
-  assert_success
-  [[ "$output" == *"x86_64"* || "$output" == *"aarch64"* ]]
-}
-
-@test "get_target_string: output matches uname -m on linux" {
-  [[ "$(uname -s)" == "Linux" ]] || skip "Linux-only assertion"
-  arch=$(uname -m)
-  run bash "$HELPER_SCRIPT" get_target_string
-  assert_output --partial "$arch"
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    assert_output --partial "$(uname -m)"
+  fi
 }

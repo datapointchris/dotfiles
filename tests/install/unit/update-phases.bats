@@ -42,101 +42,75 @@ SCRIPT
 }
 
 # ================================================================
-# Group selection
+# Group and phase selection
 # ================================================================
+# One @test per class of selection rather than per argument spelling: each case
+# below is another `bash "$SELECT"`, but bats spawns a process per @test on top
+# of that, and these were 23 processes to test one argument parser.
 
-@test "update: no arguments selects every group" {
+@test "update: groups select, combine, and skip" {
   run bash "$SELECT"
   assert_success
   assert_line "system-packages"
   assert_line "go-toolchain"
   assert_line "github-releases"
   assert_line "nvim-plugins"
-}
 
-@test "update: a positional group narrows to that group" {
   run bash "$SELECT" tools
   assert_success
   assert_line "github-releases"
   refute_line "system-packages"
   refute_line "nvim-plugins"
   refute_line "go-toolchain"
-}
 
-@test "update: multiple positional groups select each of them" {
   run bash "$SELECT" tools plugins
-  assert_success
   assert_line "github-releases"
   assert_line "nvim-plugins"
   refute_line "system-packages"
-}
 
-@test "update: --skip removes only that group" {
   run bash "$SELECT" --skip plugins
-  assert_success
   assert_line "system-packages"
   assert_line "github-releases"
   refute_line "nvim-plugins"
   refute_line "shell-plugins"
-}
 
-@test "update: --skip is repeatable" {
   run bash "$SELECT" --skip plugins --skip system
-  assert_success
   assert_line "github-releases"
   refute_line "nvim-plugins"
   refute_line "system-packages"
-}
 
-@test "update: --no-system is equivalent to --skip system" {
+  # --no-system is a spelling of --skip system, so it must resolve identically.
   run bash "$SELECT" --no-system
   local with_alias="$output"
   run bash "$SELECT" --skip system
   assert_output "$with_alias"
 }
 
-# ================================================================
-# Phase selection
-# ================================================================
-
-@test "update: a positional phase narrows to that phase alone" {
+@test "update: phase names select alongside groups, install-only ones do not" {
   run bash "$SELECT" go-tools
   assert_success
   assert_output "go-tools"
-}
 
-@test "update: phases and groups combine" {
   run bash "$SELECT" plugins go-tools
-  assert_success
   assert_line "go-tools"
   assert_line "nvim-plugins"
   refute_line "cargo"
-}
 
-@test "update: --skip takes a phase name too" {
   run bash "$SELECT" tools --skip cargo
-  assert_success
   assert_line "go-tools"
   refute_line "cargo"
-}
 
-@test "update: the install-only phases are not selectable" {
+  # symlinks runs at install time only, and config has no update phases at all.
   run bash "$SELECT" symlinks
   assert_failure
   assert_output --partial "Unknown group or phase"
-}
 
-@test "update: the config group is not offered, having no update phases" {
   run bash "$SELECT" config
   assert_failure
   refute_output --partial "Valid groups: system languages tools config"
 }
 
-# ================================================================
-# Owner filtering
-# ================================================================
-
-@test "update: --mine keeps only owner-aware phases" {
+@test "update: --mine keeps the owner-aware phases and nothing else" {
   run bash "$SELECT" --mine
   assert_success
   assert_line "go-tools"
@@ -149,74 +123,51 @@ SCRIPT
   refute_line "system-packages"
   refute_line "shell-plugins"
   refute_line "go-toolchain"
-}
 
-@test "update: --mine combines with a group" {
+  # Intersecting with a group that owns none of them leaves nothing.
   run bash "$SELECT" --mine plugins
   assert_success
   assert_output ""
 }
 
-# ================================================================
-# Reporting flags
-# ================================================================
-
-@test "update: --list names every group" {
+@test "update: --list and --help document the groups and flags" {
   run bash "$UPDATE_SH" --list
   assert_success
   assert_output --partial "system"
   assert_output --partial "languages"
   assert_output --partial "tools"
   assert_output --partial "plugins"
-}
-
-@test "update: --list marks the owner-aware phases" {
-  run bash "$UPDATE_SH" --list
-  assert_success
   assert_output --partial "supports --mine"
-}
 
-@test "update: --help exits successfully and documents the flags" {
   run bash "$UPDATE_SH" --help
   assert_success
   assert_output --partial "--no-system"
   assert_output --partial "--mine"
 }
 
-# ================================================================
-# Argument validation
-# ================================================================
-
-@test "update: unknown positional group fails" {
+@test "update: every shape of bad argument fails" {
   run bash "$SELECT" notagroup
   assert_failure
   assert_output --partial "Unknown group"
-}
 
-@test "update: unknown --skip group fails" {
   run bash "$SELECT" --skip bogus
   assert_failure
   assert_output --partial "Unknown group"
-}
 
-@test "update: unknown option fails" {
   run bash "$SELECT" --nonsense
   assert_failure
   assert_output --partial "Unknown option"
-}
 
-@test "update: --skip without a value fails" {
   run bash "$SELECT" --skip
   assert_failure
 }
 
-@test "update: skipping every group selects nothing" {
+@test "update: selecting nothing is empty at parse time and fatal at run time" {
   run bash "$SELECT" --skip system --skip languages --skip tools --skip plugins
   assert_success
   assert_output ""
-}
 
-@test "update: a run with nothing selected fails rather than reporting success" {
+  # The run itself must not report success for having done nothing.
   run bash "$UPDATE_SH" --dry-run --skip system --skip languages --skip tools --skip plugins
   assert_failure
   assert_output --partial "No phases selected"

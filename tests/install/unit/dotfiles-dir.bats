@@ -14,27 +14,19 @@ setup_file() {
 }
 
 # ================================================================
-# Test: DOTFILES_DIR initialization
+# DOTFILES_DIR initialization
 # ================================================================
 
-@test "dotfiles_dir: DOTFILES_DIR is set and non-empty" {
-  [[ -n "$DOTFILES_DIR" ]]
+@test "dotfiles_dir: resolves to a repo checkout" {
+  assert [ -n "$DOTFILES_DIR" ]
+  assert [ -d "$DOTFILES_DIR" ]
+  assert [ -f "$DOTFILES_DIR/install.sh" ]
+  assert [ -d "$DOTFILES_DIR/install/common/github-releases" ]
 }
 
-@test "dotfiles_dir: DOTFILES_DIR points to valid directory" {
-  [[ -d "$DOTFILES_DIR" ]]
-}
-
-@test "dotfiles_dir: DOTFILES_DIR contains install.sh" {
-  [[ -f "$DOTFILES_DIR/install.sh" ]]
-}
-
-@test "dotfiles_dir: DOTFILES_DIR contains expected install structure" {
-  [[ -d "$DOTFILES_DIR/install/common/github-releases" ]]
-}
-
-@test "dotfiles_dir: BASH_SOURCE fallback works when run via bash" {
-  # Create a test script that uses the BASH_SOURCE[0]:-$0 pattern
+@test "dotfiles_dir: the BASH_SOURCE fallback resolves when run via bash" {
+  # Every installer opens with this pattern, and `bash /path/to/script` -- how
+  # docker exec invokes them -- is the case where BASH_SOURCE[0] is unset.
   local test_script
   test_script=$(mktemp)
   cat >"$test_script" <<'EOF'
@@ -44,13 +36,9 @@ echo "$SCRIPT_DIR"
 EOF
   chmod +x "$test_script"
 
-  # Run via 'bash /path/to/script' (like docker exec does)
   run bash "$test_script"
   assert_success
-
-  # Output should be the directory containing the temp script
-  expected_dir="$(dirname "$test_script")"
-  assert_output "$expected_dir"
+  assert_output "$(dirname "$test_script")"
 
   rm -f "$test_script"
 }

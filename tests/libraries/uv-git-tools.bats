@@ -27,75 +27,51 @@ stub_releases_api() {
   PATH="$stub_dir:$PATH"
 }
 
-# github_slug_from_url tests
-
-@test "github_slug_from_url: an https clone URL yields owner/name" {
+@test "github_slug_from_url: owner/name from any GitHub clone URL, and only GitHub" {
   run github_slug_from_url "https://github.com/datapointchris/syncer.git"
   assert_success
   assert_output "datapointchris/syncer"
-}
 
-@test "github_slug_from_url: a URL without the .git suffix yields owner/name" {
   run github_slug_from_url "https://github.com/datapointchris/relate"
-  assert_success
   assert_output "datapointchris/relate"
-}
 
-@test "github_slug_from_url: an ssh clone URL yields owner/name" {
   run github_slug_from_url "git@github.com:datapointchris/syncer.git"
-  assert_success
   assert_output "datapointchris/syncer"
-}
 
-@test "github_slug_from_url: a non-GitHub host fails rather than echoing a slug" {
+  # Another host must fail rather than echo a slug the caller would then query
+  # against GitHub.
   run github_slug_from_url "https://gitlab.com/datapointchris/syncer.git"
   assert_failure
   assert_output ""
-}
 
-@test "github_slug_from_url: a bare name with no owner fails" {
   run github_slug_from_url "https://github.com/syncer"
   assert_failure
 }
 
-# uv_git_tool_latest_ref tests
-
-@test "uv_git_tool_latest_ref: echoes the tag the releases API reports" {
+@test "uv_git_tool_latest_ref: the release tag, and nothing without one" {
   stub_releases_api '{"tag_name": "v6.0.0"}'
-
   run uv_git_tool_latest_ref "https://github.com/datapointchris/syncer.git"
   assert_success
   assert_output "v6.0.0"
-}
 
-@test "uv_git_tool_latest_ref: a repo with no release fails" {
   stub_releases_api '{}'
-
   run uv_git_tool_latest_ref "https://github.com/datapointchris/keymap-align.git"
   assert_failure
   assert_output ""
-}
 
-@test "uv_git_tool_latest_ref: a non-GitHub host fails without asking the API" {
   # The stub would answer with a tag, so success here would mean the host check
   # was skipped and some other repo's release used.
   stub_releases_api '{"tag_name": "v9.9.9"}'
-
   run uv_git_tool_latest_ref "https://gitlab.com/datapointchris/syncer.git"
   assert_failure
   assert_output ""
 }
 
-# uv_git_tool_requirement tests
-
 @test "uv_git_tool_requirement: names the tool ahead of the pinned URL" {
   run uv_git_tool_requirement syncer "https://github.com/datapointchris/syncer.git" v6.0.0
   assert_success
   assert_output "syncer @ git+https://github.com/datapointchris/syncer.git@v6.0.0"
-}
 
-@test "uv_git_tool_requirement: a hyphenated tool name is preserved" {
   run uv_git_tool_requirement keymap-align "https://github.com/datapointchris/keymap-align.git" v1.0.0
-  assert_success
   assert_output "keymap-align @ git+https://github.com/datapointchris/keymap-align.git@v1.0.0"
 }

@@ -9,100 +9,70 @@ setup() {
   load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
 
   export DOTFILES_DIR="${BATS_TEST_DIRNAME}/../.."
+  # Set here, not at file scope: top-level code runs before setup(), so a path
+  # built from DOTFILES_DIR up there resolves against an empty string and the
+  # exit-code assertions below pass on a 127 instead of the real exit.
+  export LOGGING="$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 }
 
-# log_info tests
-
-@test "log_info outputs [INFO] prefix" {
+@test "every level prints its own parseable prefix" {
+  # The prefixes are what logsift and the log aggregators match on, so each
+  # level has to keep its own.
   run log_info "test message"
   assert_success
   assert_output --partial "[INFO]"
   assert_output --partial "test message"
-}
 
-# log_success tests
-
-@test "log_success outputs [INFO] prefix with check mark" {
   run log_success "installation complete"
-  assert_success
   assert_output --partial "[INFO]"
   assert_output --partial "installation complete"
-}
 
-# log_warning tests
-
-@test "log_warning outputs [WARNING] prefix" {
   run log_warning "config not found"
-  assert_success
   assert_output --partial "[WARNING]"
   assert_output --partial "config not found"
-}
 
-# log_error tests
-
-@test "log_error outputs [ERROR] prefix" {
   run log_error "download failed"
-  assert_success
   assert_output --partial "[ERROR]"
   assert_output --partial "download failed"
 }
 
-@test "log_error outputs file and line when provided" {
+@test "a file and line are appended only when given" {
   run log_error "test error" "test.sh" "42"
   assert_success
-  assert_output --partial "[ERROR]"
-  assert_output --partial "test error"
   assert_output --partial "test.sh:42"
-}
 
-@test "log_error works without file and line" {
+  # No trailing "file:line" fragment when the caller passes neither.
   run log_error "test error"
-  assert_success
-  assert_output --partial "[ERROR]"
   assert_output --partial "test error"
   refute_output --partial ":"
 }
 
-# log_debug tests
-
-@test "log_debug outputs nothing when DEBUG not set" {
+@test "log_debug is silent unless DEBUG is set" {
   unset DEBUG
   run log_debug "debug message"
   assert_success
   assert_output ""
-}
 
-@test "log_debug outputs [DEBUG] prefix when DEBUG=true" {
   DEBUG=true run log_debug "debug message"
   assert_success
   assert_output --partial "[DEBUG]"
   assert_output --partial "debug message"
 }
 
-# log_fatal tests
-
-@test "log_fatal exits with code 1" {
-  run bash -c "source $DOTFILES_DIR/configs/common/.local/shell/logging.sh; log_fatal 'fatal error'"
+@test "log_fatal and die both exit 1" {
+  # These exit, so they run in their own shell rather than bats'.
+  run bash -c "source $LOGGING; log_fatal 'fatal error'"
   assert_failure
   assert_equal "$status" 1
   assert_output --partial "[FATAL]"
   assert_output --partial "fatal error"
-}
 
-@test "log_fatal outputs file and line when provided" {
-  run bash -c "source $DOTFILES_DIR/configs/common/.local/shell/logging.sh; log_fatal 'fatal error' 'script.sh' '99'"
+  run bash -c "source $LOGGING; log_fatal 'fatal error' 'script.sh' '99'"
   assert_failure
-  assert_equal "$status" 1
-  assert_output --partial "[FATAL]"
-  assert_output --partial "fatal error"
   assert_output --partial "script.sh:99"
-}
 
-# die function tests
-
-@test "die exits with code 1" {
-  run bash -c "source $DOTFILES_DIR/configs/common/.local/shell/logging.sh; die 'something went wrong'"
+  run bash -c "source $LOGGING; die 'something went wrong'"
   assert_failure
   assert_equal "$status" 1
   assert_output --partial "[ERROR]"
