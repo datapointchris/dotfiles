@@ -17,6 +17,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -67,7 +68,14 @@ def plain(text):
 
 @pytest.fixture
 def source_tree(tmp_path):
-    """A source tree exercising the cases the manifest exists to record."""
+    """A source tree carrying every shape the tool branches on.
+
+    Restore branches on directory vs single file, and again on whether the source itself was a
+    symlink; backup branches on the mode deviations worth recording and on what the excludes
+    drop. All three shapes are groups in `matrix_config` below, so the restore tests cross the
+    whole matrix instead of one corner of it — which is what a single-directory fixture gave
+    for a long time, leaving restore_group's file branch with no caller at all.
+    """
     src = tmp_path / 'src'
     (src / 'notes').mkdir(parents=True)
     (src / 'notes' / 'plain.md').write_text('plain\n')
@@ -80,9 +88,28 @@ def source_tree(tmp_path):
     (src / 'notes' / 'secret.txt').chmod(0o600)
     (src / 'notes' / 'run.sh').chmod(0o755)
 
+    # A single file as its own group: the shape the shipped config template leads with
+    # (`~/.gitconfig`), and the one that takes restore's non-directory branch.
+    (src / 'solo.conf').write_text('solo\n')
+    (src / 'solo.conf').chmod(0o600)
+
     (src / 'real.conf').write_text('real\n')
     (src / 'linked.conf').symlink_to(src / 'real.conf')
     return src
+
+
+def matrix_config(tmp_path, dest, source_tree, **extra):
+    """The config the restore tests share: one group of each shape restore branches on."""
+    return write_config(
+        tmp_path,
+        dest,
+        back_up_paths=[
+            {'path': str(source_tree / 'notes'), 'tags': ['docs']},
+            {'path': str(source_tree / 'solo.conf'), 'tags': ['docs', 'secrets']},
+            {'path': str(source_tree / 'linked.conf'), 'tags': ['docs']},
+        ],
+        **extra,
+    )
 
 
 # --- command surface ------------------------------------------------------------------
@@ -124,6 +151,13 @@ def test_restore_without_a_target_says_which_option_is_missing(tmp_path):
     assert result.returncode == 2
     assert '--to' in result.stderr
     assert 'restore-test' in result.stderr, 'the error points at rehearsing, not just at the flag'
+
+
+def test_backup_help_documents_narrowing_a_run(tmp_path):
+    result = run_safekeep('backup', '--help')
+    assert result.returncode == 0
+    assert '--tag' in result.stdout
+    assert 'merges' in result.stdout, 'a narrowed run rewrites a manifest, which needs saying'
 
 
 def test_restore_help_is_its_own_screen_not_the_root(tmp_path):
@@ -367,6 +401,143 @@ def test_backup_writes_manifest_with_groups_and_tags(tmp_path, source_tree):
     assert group['source'] == str(source_tree / 'notes')
     assert group['tags'] == ['docs']
     assert group['files'] == 3
+
+
+def test_backup_narrows_to_the_sources_a_tag_covers(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']), (source_tree / 'real.conf', ['conf']))
+
+    result = run_safekeep('--config', str(config_path), 'backup', '--tag', 'conf')
+    assert result.returncode == 0, result.stderr
+
+    snapshot = next(d for d in dest.iterdir() if d.is_dir())
+    manifest = json.loads((snapshot / safekeep.MANIFEST_NAME).read_text())
+    assert [group['source'] for group in manifest['groups']] == [str(source_tree / 'real.conf')]
+
+
+def test_a_narrowed_backup_keeps_the_groups_it_did_not_cover(tmp_path, source_tree):
+    """rsync never deletes, so the untouched files are still in the snapshot — dropping their
+    groups would leave them on disk and unrestorable, since the manifest is the only record."""
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']), (source_tree / 'real.conf', ['conf']))
+    run_safekeep('--config', str(config_path), 'backup')
+    run_safekeep('--config', str(config_path), 'backup', '--tag', 'conf')
+
+    snapshot = next(d for d in dest.iterdir() if d.is_dir())
+    manifest = json.loads((snapshot / safekeep.MANIFEST_NAME).read_text())
+    assert {group['source'] for group in manifest['groups']} == {str(source_tree / 'notes'), str(source_tree / 'real.conf')}
+    assert manifest['modes'], 'the modes recorded for the untouched group survive the merge too'
+
+    target = tmp_path / 'target'
+    restore = run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--tag', 'docs')
+    assert restore.returncode == 0, restore.stderr
+    assert (target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md').exists()
+
+
+def test_backup_by_unknown_tag_is_a_usage_error(tmp_path, source_tree):
+    """Backing up nothing reads exactly like backing up everything asked for, so a typo has to
+    fail rather than succeed at covering nothing."""
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+
+    result = run_safekeep('--config', str(config_path), 'backup', '--tag', 'nope')
+    assert result.returncode == 2
+    assert 'docs' in result.stderr
+    assert not dest.exists()
+
+
+def test_backup_by_unknown_group_lists_the_paths_there_are(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = tagged(tmp_path, dest, (source_tree / 'notes', ['docs']))
+
+    result = run_safekeep('--config', str(config_path), 'backup', '--group', 'zzz')
+    assert result.returncode == 2
+    assert str(source_tree / 'notes') in plain(result.stderr)
+
+
+def test_backup_skips_a_path_that_does_not_exist_here(tmp_path, source_tree):
+    """One config is shared across machines, so entries that exist on WSL and not on macOS are
+    the normal case rather than an error. The run continues, says which path it skipped, and
+    records no group for it — a group with no files would read as a backup that took nothing."""
+    dest = tmp_path / 'dest'
+    config_path = write_config(
+        tmp_path,
+        dest,
+        back_up_paths=[{'path': str(source_tree / 'notes')}, {'path': '/mnt/c/Users/nobody/Documents'}],
+    )
+    result = run_safekeep('--config', str(config_path), 'backup')
+    assert result.returncode == 0, result.stderr
+    assert 'not found' in plain(result.stdout)
+    assert '/mnt/c/Users/nobody/Documents' in plain(result.stdout)
+
+    snapshot = next(d for d in dest.iterdir() if d.is_dir())
+    manifest = json.loads((snapshot / safekeep.MANIFEST_NAME).read_text())
+    assert [group['source'] for group in manifest['groups']] == [str(source_tree / 'notes')]
+
+
+def test_backup_skips_a_git_repo_that_does_not_exist_here(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    config_path = write_config(
+        tmp_path,
+        dest,
+        back_up_paths=paths(source_tree / 'notes'),
+        git={'repos': [{'path': str(tmp_path / 'no-such-repo')}], 'back_up_ignored_files_matching': ['*.env']},
+    )
+    result = run_safekeep('--config', str(config_path), 'backup')
+    assert result.returncode == 0, result.stderr
+    assert 'not found' in plain(result.stdout)
+
+    snapshot = next(d for d in dest.iterdir() if d.is_dir())
+    manifest = json.loads((snapshot / safekeep.MANIFEST_NAME).read_text())
+    assert {group['kind'] for group in manifest['groups']} == {'path'}
+
+
+def test_backup_warns_when_a_listed_repo_is_not_a_git_repo(tmp_path, source_tree):
+    """A directory that exists but was never `git init`ed: git fails, and the run has to say so
+    rather than record an empty group that looks like a repo with nothing untracked."""
+    dest = tmp_path / 'dest'
+    not_a_repo = tmp_path / 'not-a-repo'
+    not_a_repo.mkdir()
+    (not_a_repo / 'file.txt').write_text('x\n')
+    config_path = write_config(tmp_path, dest, git={'repos': [{'path': str(not_a_repo)}]})
+
+    result = run_safekeep('--config', str(config_path), 'backup')
+    assert result.returncode == 0, result.stderr
+    assert 'could not list untracked files' in plain(result.stdout)
+
+
+def test_backup_names_every_file_it_skipped_for_size(tmp_path, source_tree):
+    """A short backup is never silently short: the oversized file stays out of the snapshot and
+    is named in the manifest, so a restore that comes up missing has a written reason."""
+    dest = tmp_path / 'dest'
+    big = source_tree / 'notes' / 'big.bin'
+    big.write_bytes(b'0' * (2 * 1024 * 1024))
+    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'), skip_files_over_mb=1)
+
+    result = run_safekeep('--config', str(config_path), 'backup')
+    assert result.returncode == 0, result.stderr
+    assert 'skipped 1 file over 1 MB' in plain(result.stdout)
+
+    snapshot = next(d for d in dest.iterdir() if d.is_dir())
+    manifest = json.loads((snapshot / safekeep.MANIFEST_NAME).read_text())
+    assert [entry['path'] for entry in manifest['skipped_large']] == [str(big)]
+    assert not (snapshot / safekeep.snapshot_rel(big)).exists()
+    assert (snapshot / safekeep.snapshot_rel(source_tree / 'notes' / 'plain.md')).exists()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason='root writes to a read-only directory anyway')
+def test_backup_fails_fast_on_an_unwritable_destination(tmp_path, source_tree):
+    dest = tmp_path / 'dest'
+    dest.mkdir()
+    dest.chmod(0o555)
+    try:
+        config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
+        result = run_safekeep('--config', str(config_path), 'backup')
+        assert result.returncode == 1
+        assert 'not writable' in result.stderr
+        assert str(dest) in plain(result.stderr)
+    finally:
+        dest.chmod(0o755)
 
 
 def test_backup_records_config_warnings_in_manifest(tmp_path, source_tree):
@@ -613,11 +784,11 @@ def test_config_edit_without_an_editor_names_the_variables_and_the_file(tmp_path
 
 
 def backup_and_restore(tmp_path, source_tree, *restore_args, config_extra=None):
+    """Back up all three group shapes, then restore. The target does not exist beforehand,
+    which is how a rehearsal is actually run and is half of what the file branch trips on."""
     dest = tmp_path / 'dest'
     target = tmp_path / 'target'
-    config_path = write_config(
-        tmp_path, dest, back_up_paths=[{'path': str(source_tree / 'notes'), 'tags': ['docs']}], **(config_extra or {})
-    )
+    config_path = matrix_config(tmp_path, dest, source_tree, **(config_extra or {}))
     backup = run_safekeep('--config', str(config_path), 'backup')
     assert backup.returncode == 0, backup.stderr
     restore = run_safekeep('--config', str(config_path), 'restore', '--to', str(target), *restore_args)
@@ -648,6 +819,14 @@ def test_restore_all_reproduces_content_and_modes(tmp_path, source_tree):
     assert stat.S_IMODE((restored / 'secret.txt').stat().st_mode) == 0o600
     assert stat.S_IMODE((restored / 'run.sh').stat().st_mode) == 0o755
     assert stat.S_IMODE((restored / 'plain.md').stat().st_mode) == 0o644
+
+    solo = target / safekeep.snapshot_rel(source_tree / 'solo.conf')
+    assert solo.read_text() == 'solo\n'
+    assert stat.S_IMODE(solo.stat().st_mode) == 0o600
+
+    linked = target / safekeep.snapshot_rel(source_tree / 'linked.conf')
+    assert linked.is_file() and not linked.is_symlink(), 'symlinks are dereferenced on backup'
+    assert linked.read_text() == 'real\n'
 
 
 def flatten_modes(snapshot):
@@ -682,14 +861,45 @@ def test_restore_repairs_modes_the_destination_could_not_store(tmp_path, source_
 
 
 def test_restore_dry_run_reports_recorded_modes_not_zero(tmp_path, source_tree):
+    """secret.txt at 0600, run.sh at 0755, solo.conf at 0600 — the three deviations from the
+    defaults the manifest records."""
     restore, _ = backup_and_restore(tmp_path, source_tree, '--all', '--dry-run')
-    assert 'would reapply 2 recorded modes' in plain(restore.stdout)
+    assert restore.returncode == 0, restore.stderr
+    assert 'would reapply 3 recorded modes' in plain(restore.stdout)
 
 
-def test_restore_by_tag_selects_the_group(tmp_path, source_tree):
+def test_restore_by_tag_selects_only_the_groups_carrying_it(tmp_path, source_tree):
+    """'secrets' is on solo.conf alone, so the other two groups must stay out of the target —
+    a tag on every group cannot show that the filter discriminates."""
+    restore, target = backup_and_restore(tmp_path, source_tree, '--tag', 'secrets')
+    assert restore.returncode == 0, restore.stderr
+    assert (target / safekeep.snapshot_rel(source_tree / 'solo.conf')).read_text() == 'solo\n'
+    assert not (target / safekeep.snapshot_rel(source_tree / 'notes')).exists()
+    assert not (target / safekeep.snapshot_rel(source_tree / 'linked.conf')).exists()
+
+
+def test_restore_by_tag_takes_every_group_carrying_it(tmp_path, source_tree):
     restore, target = backup_and_restore(tmp_path, source_tree, '--tag', 'docs')
     assert restore.returncode == 0, restore.stderr
     assert (target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md').exists()
+    assert (target / safekeep.snapshot_rel(source_tree / 'solo.conf')).exists()
+    assert (target / safekeep.snapshot_rel(source_tree / 'linked.conf')).exists()
+
+
+def test_restore_by_group_matches_the_source_path(tmp_path, source_tree):
+    """--group is a substring of the source, and it has to discriminate: select_groups was only
+    ever asserted against a hand-built manifest, never against one a backup wrote."""
+    restore, target = backup_and_restore(tmp_path, source_tree, '--group', 'solo.conf')
+    assert restore.returncode == 0, restore.stderr
+    assert (target / safekeep.snapshot_rel(source_tree / 'solo.conf')).exists()
+    assert not (target / safekeep.snapshot_rel(source_tree / 'notes')).exists()
+
+
+def test_restore_by_unknown_group_lists_the_sources_the_snapshot_has(tmp_path, source_tree):
+    restore, target = backup_and_restore(tmp_path, source_tree, '--group', 'nowhere')
+    assert restore.returncode == 1
+    assert str(source_tree / 'solo.conf') in plain(restore.stderr)
+    assert not target.exists()
 
 
 def test_restore_by_unknown_tag_says_which_tags_the_snapshot_has(tmp_path, source_tree):
@@ -704,57 +914,117 @@ def test_restore_by_unknown_tag_says_which_tags_the_snapshot_has(tmp_path, sourc
 
 
 def test_restore_dry_run_writes_nothing(tmp_path, source_tree):
+    """The rehearsal: every group shape, into a target that does not exist yet. The exit code
+    is half the assertion — an empty target is equally what a crash leaves behind, and a crash
+    is exactly what a single-file group used to produce here (rsync cannot be given a file
+    destination under a directory it is not allowed to create)."""
     restore, target = backup_and_restore(tmp_path, source_tree, '--all', '--dry-run')
     assert restore.returncode == 0, restore.stderr
+    assert 'would restore 3 groups' in plain(restore.stdout)
     assert not target.exists()
 
 
-def test_restore_backs_up_conflicting_files_by_default(tmp_path, source_tree):
+def conflicting(tmp_path, source_tree, policy, existing_text='mine\n', existing_age=None):
+    """Restore over a target that already holds `existing_text`, under one conflict policy.
+
+    Both shapes conflict: plain.md inside the directory group, and solo.conf as a group that is
+    itself a file. rsync is given a different destination form for each, so a policy verified on
+    one is not verified on the other.
+
+    `existing_age` offsets the pre-existing file's mtime from now, in seconds. A --update test
+    has to state which side is newer rather than inherit whatever ordering fell out of how long
+    the backup took — the file is written after the snapshot, so by default it is the newer one.
+    """
     dest = tmp_path / 'dest'
     target = tmp_path / 'target'
-    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
-    run_safekeep('--config', str(config_path), 'backup')
+    config_path = matrix_config(tmp_path, dest, source_tree)
+    backup = run_safekeep('--config', str(config_path), 'backup')
+    assert backup.returncode == 0, backup.stderr
 
-    existing = target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md'
-    existing.parent.mkdir(parents=True)
-    existing.write_text('mine\n')
+    in_dir = target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md'
+    as_file = target / safekeep.snapshot_rel(source_tree / 'solo.conf')
+    for path in (in_dir, as_file):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(existing_text)
+        if existing_age is not None:
+            when = time.time() + existing_age
+            os.utime(path, (when, when))
 
-    run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--all')
-    assert existing.read_text() == 'plain\n'
-    assert existing.with_name('plain.md.pre-restore').read_text() == 'mine\n'
+    result = run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--all', '--on-conflict', policy)
+    assert result.returncode == 0, result.stderr
+    return in_dir, as_file
+
+
+def test_restore_backs_up_conflicting_files_by_default(tmp_path, source_tree):
+    in_dir, as_file = conflicting(tmp_path, source_tree, 'backup')
+    assert in_dir.read_text() == 'plain\n'
+    assert in_dir.with_name('plain.md.pre-restore').read_text() == 'mine\n'
+    assert as_file.read_text() == 'solo\n'
+    assert as_file.with_name('solo.conf.pre-restore').read_text() == 'mine\n'
 
 
 def test_restore_skip_conflict_leaves_existing_alone(tmp_path, source_tree):
+    in_dir, as_file = conflicting(tmp_path, source_tree, 'skip')
+    assert in_dir.read_text() == 'mine\n'
+    assert as_file.read_text() == 'mine\n'
+
+
+def test_restore_overwrite_conflict_keeps_no_copy(tmp_path, source_tree):
+    """overwrite is the policy with nothing to fall back on, so the absence of a .pre-restore
+    file beside it is the assertion that matters."""
+    in_dir, as_file = conflicting(tmp_path, source_tree, 'overwrite')
+    assert in_dir.read_text() == 'plain\n'
+    assert as_file.read_text() == 'solo\n'
+    assert not in_dir.with_name('plain.md.pre-restore').exists()
+    assert not as_file.with_name('solo.conf.pre-restore').exists()
+
+
+def test_restore_newer_conflict_keeps_a_target_file_that_is_newer(tmp_path, source_tree):
+    in_dir, as_file = conflicting(tmp_path, source_tree, 'newer', existing_age=60)
+    assert in_dir.read_text() == 'mine\n'
+    assert as_file.read_text() == 'mine\n'
+
+
+def test_restore_newer_conflict_replaces_a_target_file_that_is_older(tmp_path, source_tree):
+    """The other half: --update holds a file back only when it is genuinely the newer one, so
+    the same policy over an older target has to write. Without this, 'newer' passes its test by
+    never restoring anything."""
+    in_dir, as_file = conflicting(tmp_path, source_tree, 'newer', existing_age=-3600)
+    assert in_dir.read_text() == 'plain\n'
+    assert as_file.read_text() == 'solo\n'
+
+
+def test_restore_skips_a_group_missing_from_the_snapshot(tmp_path, source_tree):
+    """A manifest can name a group whose files are not there — a snapshot copied in part, or a
+    manifest merged from a run whose files were later removed by hand."""
     dest = tmp_path / 'dest'
     target = tmp_path / 'target'
-    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'notes'))
+    config_path = matrix_config(tmp_path, dest, source_tree)
     run_safekeep('--config', str(config_path), 'backup')
 
-    existing = target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md'
-    existing.parent.mkdir(parents=True)
-    existing.write_text('mine\n')
+    snapshot = next(d for d in dest.iterdir() if d.is_dir())
+    (snapshot / safekeep.snapshot_rel(source_tree / 'solo.conf')).unlink()
 
-    run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--all', '--on-conflict', 'skip')
-    assert existing.read_text() == 'mine\n'
+    result = run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--all')
+    assert result.returncode == 0, result.stderr
+    assert 'not present in snapshot' in plain(result.stdout)
+    assert 'restored 2 groups' in plain(result.stdout)
+    assert (target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md').exists()
 
 
 def test_restore_reports_dereferenced_symlinks(tmp_path, source_tree):
-    dest = tmp_path / 'dest'
-    target = tmp_path / 'target'
-    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'linked.conf'))
-    run_safekeep('--config', str(config_path), 'backup')
-    result = run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--all')
-    assert 'were symlinks when backed up' in result.stdout
+    restore, target = backup_and_restore(tmp_path, source_tree, '--all')
+    assert 'were symlinks when backed up' in restore.stdout
     assert (target / safekeep.snapshot_rel(source_tree / 'linked.conf')).is_file()
 
 
-def test_restore_skip_symlinked_omits_them(tmp_path, source_tree):
-    dest = tmp_path / 'dest'
-    target = tmp_path / 'target'
-    config_path = write_config(tmp_path, dest, back_up_paths=paths(source_tree / 'linked.conf'))
-    run_safekeep('--config', str(config_path), 'backup')
-    run_safekeep('--config', str(config_path), 'restore', '--to', str(target), '--all', '--skip-symlinked')
+def test_restore_skip_symlinked_omits_only_the_symlinked_group(tmp_path, source_tree):
+    restore, target = backup_and_restore(tmp_path, source_tree, '--all', '--skip-symlinked')
+    assert restore.returncode == 0, restore.stderr
+    assert 'was a symlink' in plain(restore.stdout)
     assert not (target / safekeep.snapshot_rel(source_tree / 'linked.conf')).exists()
+    assert (target / safekeep.snapshot_rel(source_tree / 'solo.conf')).exists()
+    assert (target / safekeep.snapshot_rel(source_tree / 'notes') / 'plain.md').exists()
 
 
 def test_restore_refuses_a_snapshot_without_a_manifest(tmp_path):

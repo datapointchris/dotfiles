@@ -549,12 +549,20 @@ def rsync_untracked(files, dest_base, dry_run=False):
 
 
 def run_rsync(cmd):
-    """Run rsync, tolerating the partial-transfer exit codes."""
+    """Run rsync, tolerating the partial-transfer exit codes.
+
+    Any other failure exits rather than raising: a traceback names the Python frame that called
+    rsync, which is never the thing that went wrong, and it buries the command. Re-running that
+    command by hand is how an rsync failure gets diagnosed, so it is what the error prints.
+    """
     result = subprocess.run(cmd)
-    if result.returncode not in (0, 23, 24):
-        raise subprocess.CalledProcessError(result.returncode, cmd)
     if result.returncode in (23, 24):
         print(f'  {yellow("warning:")} rsync completed with partial transfer (some files skipped)')
+        return
+    if result.returncode != 0:
+        print(f'{red("safekeep:")} rsync exited {yellow(str(result.returncode))}', file=sys.stderr)
+        print(f'  {shlex.join(cmd)}', file=sys.stderr)
+        sys.exit(1)
 
 
 def read_manifest(snapshot_dir):
@@ -616,7 +624,7 @@ def preview_snapshot(dest, date):
     skipped = manifest.get('skipped_large', [])
     if skipped:
         print()
-        print(f'  {len(skipped)} files skipped for exceeding skip_files_over_mb')
+        print(f'  {plural(len(skipped), "file")} skipped for exceeding skip_files_over_mb')
     warnings = manifest.get('config_warnings', [])
     if warnings:
         print()
@@ -834,7 +842,8 @@ def pick_snapshot(dest, config_name):
         [
             '--delimiter=\t',
             '--with-nth=1,2,3',
-            '--header=select a snapshot',
+            '--header=select a snapshot   ↑↓ move · enter choose · esc cancel',
+            '--header-first',
             '--preview',
             preview_cmd,
             '--preview-window=right:60%',
@@ -864,7 +873,10 @@ def pick_groups(snapshot_dir, manifest):
             '--multi',
             '--delimiter=\t',
             '--with-nth=1,2,3,4,5',
-            '--header=tab to select, enter to restore',
+            # Named in full and pinned above the prompt: the multi-select keys are fzf's own, so
+            # the one place they can be recalled is the picker itself.
+            '--header=tab select · shift-tab deselect · enter restore · esc cancel',
+            '--header-first',
             '--preview',
             f'ls -la {snapshot_dir}{{2}} 2>/dev/null | head -60',
             '--preview-window=right:60%',
@@ -934,8 +946,16 @@ def restore_group(snapshot_dir, source, target_root, manifest_home, target_home,
         cmd.append('--ignore-existing')
     elif on_conflict == 'newer':
         cmd.append('--update')
-    elif on_conflict == 'backup':
-        cmd.extend(['--backup', '--suffix=.pre-restore'])
+    else:
+        # backup and overwrite both mean the snapshot wins, so the quick check has to go.
+        # rsync skips a file with the same size and mtime without ever reading it, which is
+        # right for a sync and wrong for a restore: a file corrupted in place keeps both its
+        # size and its timestamp, and that is precisely the file being restored over. Checksum
+        # rather than --ignore-times, so genuinely identical files are still skipped and no
+        # .pre-restore copy is manufactured for a file that never changed.
+        cmd.append('--checksum')
+        if on_conflict == 'backup':
+            cmd.extend(['--backup', '--suffix=.pre-restore'])
 
     if skip_symlinked and stored.is_dir():
         for abs_path in symlinked:
@@ -953,6 +973,13 @@ def restore_group(snapshot_dir, source, target_root, manifest_home, target_home,
 
     if not dry_run:
         target.parent.mkdir(parents=True, exist_ok=True)
+    elif not target.parent.exists():
+        # A rehearsal into a fresh directory, which is the documented way to use --dry-run. The
+        # parent cannot be created here without writing, and rsync will not accept a file
+        # destination whose directory is missing -- it exits 3 rather than reporting a transfer.
+        # Nothing exists to conflict with, so every file under the group would be created and
+        # there is no question left for rsync to answer.
+        return True
 
     run_rsync(cmd)
     return True
@@ -1093,7 +1120,7 @@ def do_restore(config, config_path, args):
         if args.dry_run:
             print(f'\n  {yellow("would reapply")} {bold(str(count))} recorded modes')
         else:
-            print(f'\n  {green("reapplied")} modes to {bold(str(count))} paths')
+            print(f'\n  {green("reapplied")} modes to {bold(plural(count, "path"))}')
 
     restored_symlinks = paths_under_any(restored, ['/' + rel for rel in symlinks])
     if restored_symlinks and not args.skip_symlinked:
@@ -1108,8 +1135,73 @@ def do_restore(config, config_path, args):
     print(f'\n{bold("safekeep:")} {label} {bold(plural(len(restored), "group"))} to {cyan(args.to)}')
 
 
+def select_sources(entries, args):
+    """The entries a backup run covers: every one, or those matching --tag/--group.
+
+    Bare `backup` already means everything, so these narrow rather than enable and there is no
+    --all to forget. That is the opposite of restore, where selection is required and never
+    inferred -- a backup that silently covered less than asked is the failure to design out,
+    and a restore that silently covered more.
+    """
+    if not args.tag and not args.group:
+        return entries
+    return [
+        (path, tags) for path, tags in entries if any(tag in tags for tag in args.tag) or any(needle in str(path) for needle in args.group)
+    ]
+
+
+def require_known_selection(config, config_path, args):
+    """Reject a --tag or --group that matches nothing in the config.
+
+    A run that covers nothing reads exactly like a run that covered everything it was asked to,
+    since the summary only reports what was copied. A typo has to fail rather than succeed at
+    backing up nothing.
+    """
+    entries = config_entries(config)
+    known = sorted({tag for _, _, tags in entries for tag in tags})
+    unknown = [tag for tag in args.tag if tag not in known]
+    if unknown:
+        print(f'{red("safekeep:")} no entry in {cyan(config_path.name)} carries {yellow(", ".join(unknown))}', file=sys.stderr)
+        print(f'  tags: {green(", ".join(known)) if known else yellow("none")}', file=sys.stderr)
+        sys.exit(2)
+    for needle in args.group:
+        if not any(needle in str(path) for _, path, _ in entries):
+            print(f'{red("safekeep:")} no path in the config contains {yellow(needle)}', file=sys.stderr)
+            for _, path, _ in entries:
+                print(f'    {tilde(str(path))}', file=sys.stderr)
+            sys.exit(2)
+
+
+def merge_manifest(existing, manifest):
+    """This run's manifest folded into the one already in the snapshot.
+
+    A run narrowed by --tag or --group still rewrites the manifest of a snapshot that may
+    already hold a full backup. rsync never deletes, so the files it did not touch are still
+    there -- dropping their groups would leave them on disk and unrestorable, which is the
+    exact failure the manifest exists to prevent.
+    """
+    if existing is None:
+        return manifest
+
+    replaced = {group_id(group) for group in manifest['groups']}
+    covered = [group['source'] for group in manifest['groups']]
+    merged = {**existing, **manifest}
+    merged['groups'] = [g for g in existing.get('groups', []) if group_id(g) not in replaced] + manifest['groups']
+    merged['modes'] = {**existing.get('modes', {}), **manifest['modes']}
+    merged['symlinks'] = {**existing.get('symlinks', {}), **manifest['symlinks']}
+    # This run's verdict on an oversized file replaces the old one, but only for the sources it
+    # actually walked.
+    merged['skipped_large'] = [
+        skipped for skipped in existing.get('skipped_large', []) if not paths_under_any(covered, [skipped['path']])
+    ] + manifest['skipped_large']
+    return merged
+
+
 def do_backup(config, config_path, warnings, args):
     print(f'{bold("safekeep:")} using config {cyan(config_path.name)}', flush=True)
+    if args.tag or args.group:
+        require_known_selection(config, config_path, args)
+        print(f'  {yellow("narrowed to")} sources matching {bold(", ".join(args.tag + args.group))}', flush=True)
 
     start_time = time.monotonic()
     dest = Path(config['back_up_to']).expanduser()
@@ -1145,7 +1237,7 @@ def do_backup(config, config_path, warnings, args):
         'skipped_large': [],
     }
 
-    entries = normalize_entries(config.get('back_up_paths', []))
+    entries = select_sources(normalize_entries(config.get('back_up_paths', [])), args)
     if entries:
         print(f'\n{bold("paths:")}')
         present = []
@@ -1164,6 +1256,7 @@ def do_backup(config, config_path, warnings, args):
         print(f'  {label} {bold(plural(len(present), "path"))}')
 
     repos, back_up_untracked, ignored_patterns = repo_entries(config)
+    repos = select_sources(repos, args)
     if repos and back_up_untracked:
         print(f'\n{bold("git_untracked:")}')
         for repo_path, tags in repos:
@@ -1206,10 +1299,11 @@ def do_backup(config, config_path, warnings, args):
 
     if not args.dry_run:
         dest_base.mkdir(parents=True, exist_ok=True)
-        (dest_base / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + '\n')
+        written = merge_manifest(read_manifest(dest_base), manifest)
+        (dest_base / MANIFEST_NAME).write_text(json.dumps(written, indent=2) + '\n')
 
     if manifest['skipped_large']:
-        print(f'\n{yellow("skipped")} {bold(str(len(manifest["skipped_large"])))} files over {max_size_mb} MB')
+        print(f'\n{yellow("skipped")} {bold(plural(len(manifest["skipped_large"]), "file"))} over {max_size_mb} MB')
 
     if warnings:
         print()
@@ -1323,7 +1417,7 @@ def show_help():
     help_usage('safekeep <command> [OPTIONS]')
 
     help_section('Commands')
-    help_row('safekeep backup', '', "Copy the configured paths into today's snapshot")
+    help_row('safekeep backup', '[--tag <name>]', "Copy the configured paths into today's snapshot")
     help_row('safekeep snapshots', '', 'List the snapshots at the destination')
     help_row('safekeep tags', '[name]', 'What each tag covers, and what it would restore')
     help_row('safekeep restore', '--to <path>', 'Restore groups from a snapshot')
@@ -1358,6 +1452,33 @@ def show_help():
     help_row('safekeep snapshots', '', 'What is on the destination already')
     help_row('safekeep tags secrets', '', 'What that tag would bring back')
     help_row('safekeep restore --to / --tag secrets', '', 'Restore one tag for real')
+
+    help_end()
+
+
+def show_backup_help():
+    help_header('safekeep backup', "Copy the configured paths into today's snapshot.")
+    help_usage('safekeep backup [OPTIONS]')
+
+    help_section('Selection')
+    help_text('  Everything the config lists, unless one of these narrows it:')
+    help_row('--tag', '<name>', 'Only entries carrying NAME (repeatable)')
+    help_row('--group', '<path>', 'Only entries whose path contains PATH (repeatable)')
+    help_text(
+        "  A narrowed run merges into the day's snapshot rather than replacing it, so the",
+        '  groups it did not cover stay recorded and restorable.',
+        '  safekeep tags is what says which names there are to narrow by.',
+    )
+
+    help_section('Options')
+    help_row('-n, --dry-run', '', 'Show what would be copied, write nothing')
+    help_row('-h, --help', '', 'Show this help')
+
+    help_section('Examples')
+    help_row('safekeep backup', '', 'Everything the config lists')
+    help_row('safekeep backup -n', '', 'What a backup would copy, before it copies it')
+    help_row('safekeep backup --tag secrets', '', 'Just the secrets, before doing something risky')
+    help_row('safekeep backup --group ~/notes', '', 'One path, without walking the rest')
 
     help_end()
 
@@ -1421,6 +1542,8 @@ def build_parser():
 
     backup = commands.add_parser('backup', add_help=False)
     backup.add_argument('-h', '--help', action='store_true', dest='show_help')
+    backup.add_argument('--tag', action='append', default=[], metavar='NAME')
+    backup.add_argument('--group', action='append', default=[], metavar='PATH')
     backup.add_argument('-n', '--dry-run', action='store_true')
 
     snapshots = commands.add_parser('snapshots', add_help=False)
@@ -1477,10 +1600,12 @@ def build_parser():
 def screen_for(args):
     """The help screen covering whatever the reader has typed so far.
 
-    Only the commands with a surface worth its own screen get one. `backup` and
-    `snapshots` fall back to the root, which already documents them in full — a
-    screen per flag would be a page you have to read to learn there was nothing on it.
+    Only the commands with a surface worth its own screen get one. `snapshots` and `tags` fall
+    back to the root, which already documents them in full — a screen per flag would be a page
+    you have to read to learn there was nothing on it.
     """
+    if args.command == 'backup':
+        return show_backup_help
     if args.command == 'restore':
         return show_restore_help
     if args.command == 'config':

@@ -18,6 +18,7 @@ safekeep config show        # Display the resolved config
 safekeep config edit        # Open it in $VISUAL/$EDITOR, then report what the edit did
 safekeep backup --dry-run   # Preview what would be copied
 safekeep backup             # Copy the configured paths into today's snapshot
+safekeep backup --tag wip   # Copy only the entries tagged 'wip'
 
 safekeep snapshots                        # What is at the destination
 safekeep tags                             # Which tags exist, and what each would restore
@@ -150,6 +151,20 @@ Path construction: `back_up_to / YYYY-MM-DD / absolute-path-from-root`
 
 A snapshot with no manifest cannot be restored by safekeep — it says so and points at rsync.
 
+## Backup
+
+```bash
+safekeep backup                     # everything the config lists
+safekeep backup --tag secrets       # only the entries carrying that tag
+safekeep backup --group ~/notes     # only the entries whose path contains that string
+```
+
+**Bare `backup` means everything, so `--tag` and `--group` narrow rather than enable.** There is no `--all` to forget, which is the opposite arrangement to restore, where selection is required and never inferred. The asymmetry is deliberate: the failure to design out of a backup is one that silently covers less than was asked for, and the failure to design out of a restore is one that silently covers more.
+
+A tag or path that matches nothing in the config is a usage error rather than a run that copies nothing, because a backup covering nothing reads exactly like one that covered everything it was asked to — the summary only reports what was copied.
+
+**A narrowed run merges into the day's snapshot instead of replacing it.** Running `backup --tag secrets` after a full backup on the same day rewrites `.safekeep-manifest.json`, and rsync never deletes, so the files from the earlier run are still sitting in the snapshot. Dropping their groups would leave them on disk and unrestorable, since the manifest is the only record of what a snapshot holds. The merge keeps every group the run did not cover, overlays the modes and symlinks it recorded, and replaces the oversized-file verdicts only for the sources it actually walked.
+
 ## Tags
 
 ```bash
@@ -175,11 +190,17 @@ safekeep restore --to PATH [--from DATE] [--all | --group PATH | --tag NAME]
 
 **Selection is always explicit.** With `--all`, `--group`, or `--tag`, restore runs non-interactively. With none of them on a terminal, fzf opens: first a snapshot picker previewing each manifest, then a multi-select group picker previewing each group's subtree. With none of them and no terminal, it exits non-zero listing the available groups rather than guessing.
 
+Both pickers pin their keys above the prompt — `tab` selects, `shift-tab` deselects, `ctrl-a` takes everything, `enter` restores. Multi-select is fzf's own binding rather than this tool's, so the picker is the only place it can be recalled at the moment it is needed.
+
 **A selection that matched nothing exits 1 and says why.** Cancelling out of the fzf picker is a restore you decided against, and exits 0; `--tag wsl` matching no group in the snapshot is a request that failed, and a caller has to be able to tell the two apart. The error names the tags that snapshot does carry, which is the fact that distinguishes a typo from a tag added to the config after the snapshot was taken.
 
 Bare `safekeep restore` prints the restore help rather than an error — no args shows help, always. Naming a selection and forgetting `--to` is the other case: intent was stated, so that one is an error naming the single missing option.
 
 `--on-conflict` chooses what happens when a target file already exists: `backup` (default, renames the existing file with a `.pre-restore` suffix), `skip`, `overwrite`, or `newer`.
+
+**`backup` and `overwrite` compare by checksum, not by size and timestamp.** rsync's quick check skips a file whose size and mtime match the source without ever reading it, which is right for a sync and wrong for a restore — a file corrupted in place keeps both its size and its timestamp, and that is exactly the file being restored over. Passing `--checksum` makes "the snapshot wins" true by content, and still skips genuinely identical files so no `.pre-restore` copy is manufactured for a file that never changed. `skip` and `newer` keep the metadata comparison, because not touching existing files is what they are for.
+
+A `--dry-run` restore into a target that does not exist yet reports what it would create without calling rsync for those groups. rsync will not accept a file destination whose parent directory is missing, and a dry run is not allowed to create one — so for a rehearsal into a fresh directory there is no question left to ask it, since everything under the group would be created.
 
 If the snapshot's home differs from the restoring machine's, paths under it are remapped automatically — a snapshot taken as `/home/chris` restores into whatever `$HOME` is now.
 
