@@ -201,6 +201,19 @@ docs/
 
 ## Learnings Directory
 
+**Search the learnings before diagnosing anything** (⚠️ MANDATORY):
+
+Before investigating a failing install, a tool that stopped working, or an error that makes no sense, search `docs/learnings/` — by the symptom, not only by the tool:
+
+```bash
+rg -i "no route to host" docs/learnings/
+rg -il "cifs|mount" docs/learnings/
+```
+
+The directory is browse-only in the mkdocs sidebar and nothing surfaces it at the moment something breaks, so it is consulted only if searching it is a deliberate first step. Skipping it cost a whole session re-diagnosing a WSL mount whose real cause was a package that had been installed by hand on the old distro and never declared anywhere.
+
+**Quote the error verbatim** in every learning. The literal string a tool prints is what gets searched at the only moment the document matters; a learning that paraphrases its error is unfindable.
+
 Document critical lessons in `docs/learnings/descriptive-name.md` (30-50 lines max). Add to `mkdocs.yml` navigation. Format: Problem → Solution → Key Learnings (actionable bullets).
 
 - todo.md is for creating future work items, not to be used for planning, moved to .planning, or changed in any way

@@ -8,6 +8,16 @@ Concise lessons learned from dotfiles development. Each learning captures a spec
 
 Browse learnings in the sidebar navigation. Each focuses on a single problem and solution.
 
+## Searching
+
+Reach for these before diagnosing a broken install, a tool that stopped working, or an error that makes no sense. Search by the symptom rather than by the tool — a learning quotes the error text verbatim wherever there is one, so the string on screen is the string to search for:
+
+```bash
+rg -i "no route to host" docs/learnings/
+```
+
+The site search above covers the same ground from a browser.
+
 ## Format
 
 Learnings follow a concise format (30-50 lines):
