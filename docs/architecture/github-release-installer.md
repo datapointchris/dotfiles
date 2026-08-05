@@ -202,6 +202,21 @@ The version returned by `--print-extras` should be pinned to the same release as
 
 The bundle also carries `installers/manifest.txt`, which is where an offline install reads each tool's version. `OFFLINE_MODE=true` makes both fetch helpers in `version-helpers.sh` resolve from it instead of the API — necessary because the asset filename is built from the version, so a version fetched live names a file the bundle does not contain the moment upstream ships a release. The short-circuit is keyed on `BINARY_NAME`, which every installer sets before resolving a version.
 
+## Bundle Download Cache
+
+Rebuilding a bundle used to re-download every asset even when most releases had not moved. `create-bundle.sh` now keeps what it fetches under `$XDG_CACHE_HOME/dotfiles/offline-bundle/`, at a path mirroring the asset URL so an entry can be read, inspected, and deleted per repo without a lookup table. This is the bundler's own cache on the machine building the bundle, distinct from `installers/` inside the bundle itself.
+
+The URL is the cache key, and that is the whole design. A release asset's URL names its version, so while upstream has not moved the same URL resolves to the same bytes; the moment a release ships, the URL changes and the entry misses on its own. There is no staleness heuristic, no TTL on correctness, and nothing to invalidate by hand.
+
+Install scripts are excluded deliberately. Every one of them is served from an unversioned URL — an installer endpoint or a `main`-branch raw file — so a URL-keyed hit would pin whatever was current the first time and never update. They are a few KB each, so there is nothing to win by caching them either.
+
+Each cached asset carries two sidecars:
+
+- `<asset>.sha256` — the digest of the bytes as they were cached, recomputed and compared on every hit. A corrupted or tampered entry is evicted and re-downloaded rather than shipped into a bundle.
+- `<asset>.checksum-status` — `verified` or `unpublished`, recording what asking upstream for a checksum returned. That question costs a release API call plus a download, and its answer cannot change for a published tag, so it caches as safely as the asset does.
+
+Entries age out on last use rather than on age (`CACHE_RETENTION_DAYS` in the script), so a tool that never changes survives precisely because the cache kept working for it, while superseded versions fall away. The sweep runs after the tarball is written, so housekeeping can never delay or fail a build. `--no-cache` bypasses the cache entirely for a build that must fetch everything fresh.
+
 ## Code Savings
 
 The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.
@@ -382,7 +397,10 @@ file records `linux_x86_64`, and rejecting that discards a checksum the project 
 discovering which asset holds a checksum costs a release API call, and the network a bundle exists
 for is the one that blocks it. `create-bundle.sh` records only digests it verified against upstream
 while building, so an asset whose release publishes nothing usable is absent from that file and
-falls through to the normal path rather than being reported as verified.
+falls through to the normal path rather than being reported as verified. On a rebuild that digest
+may be replayed from the [bundle download cache](#bundle-download-cache) instead of re-fetched — the
+bytes were checked against upstream when first cached, and are re-checked against that digest on
+every hit.
 
 **On failure.** A mismatch deletes the download and aborts — never negotiable, and deleting matters
 because `/tmp` is the offline cache path, so a retry would otherwise extract bytes that already

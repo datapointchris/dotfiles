@@ -8,6 +8,7 @@
 #   ./create-bundle.sh                                       # Default: wsl-work-workstation, linux-x86_64
 #   ./create-bundle.sh --platform linux-arm64                # Different platform
 #   ./create-bundle.sh --manifest archlinux-personal-workstation
+#   ./create-bundle.sh --no-cache                            # Re-download everything
 #
 # Output:
 #   dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
@@ -33,10 +34,19 @@ OS=""
 ARCH=""
 BUNDLE_NAME=""
 WORK_DIR=""
-CACHE_DIR=""
+STAGING_DIR=""
 MANIFEST_FILE=""
 CHECKSUMS_FILE=""
 TOTAL_DOWNLOADS=0
+CACHE_HITS=0
+
+# Assets already downloaded by an earlier build, kept between runs. Regenerable
+# from the network, so it belongs in the XDG cache rather than data or state.
+DOWNLOAD_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/offline-bundle"
+USE_DOWNLOAD_CACHE=true
+# Long enough that a tool untouched across a few months of rebuilds still hits,
+# short enough that superseded versions do not accumulate forever.
+CACHE_RETENTION_DAYS=90
 
 # ============================================================================
 # Helpers
@@ -84,6 +94,107 @@ download_file() {
   exit 1
 }
 
+# ============================================================================
+# Download cache
+# ============================================================================
+# Most rebuilds change only a handful of tools, and the rest re-download bytes
+# that are already on disk. A release asset's URL names its version, so the URL
+# is a content key: while upstream has not moved, the same URL resolves to the
+# same bytes and the cached copy is the right copy. The moment a release ships,
+# the version in the URL changes and the entry misses on its own — there is no
+# staleness check to get wrong.
+#
+# This is why install scripts are excluded. Every one of them is served from an
+# unversioned URL (astral.sh/uv/install.sh, the raw.githubusercontent main
+# branch), so a URL-keyed hit would pin whatever was current the first time and
+# never update. They are also a few KB each, so there is nothing to win.
+
+# Where an asset's bytes live, mirroring the URL path so a cache entry can be
+# read, inspected and pruned by repo without a lookup table.
+download_cache_path() {
+  local url="$1"
+
+  local key="${url#*://}"
+  # Anything outside the portable set becomes an underscore, and ".." collapses,
+  # so a hostile or merely odd URL cannot write outside the cache root.
+  key="${key//[^A-Za-z0-9._\/-]/_}"
+  key="${key//../__}"
+
+  printf '%s/%s\n' "$DOWNLOAD_CACHE_DIR" "$key"
+}
+
+# The digest of the bytes as they were cached, and — for GitHub releases — what
+# asking upstream for a checksum returned. Both are answers about one immutable
+# release asset, so caching them is as safe as caching the asset itself.
+cache_digest_file() { printf '%s.sha256\n' "$(download_cache_path "$1")"; }
+cache_checksum_status_file() { printf '%s.checksum-status\n' "$(download_cache_path "$1")"; }
+
+# Written only once the asset itself is cached, so a status can never outlive
+# the digest it refers to.
+remember_checksum_status() {
+  local url="$1" status="$2"
+
+  [[ "$USE_DOWNLOAD_CACHE" == "true" ]] || return 0
+  [[ -f "$(cache_digest_file "$url")" ]] || return 0
+
+  printf '%s\n' "$status" >"$(cache_checksum_status_file "$url")"
+}
+
+evict_cache_entry() {
+  local url="$1"
+  local cached
+  cached=$(download_cache_path "$url")
+  rm -f "$cached" "$cached.sha256" "$cached.checksum-status"
+}
+
+# download_file for an asset whose URL carries its version.
+download_versioned_file() {
+  local url="$1" output="$2" name="$3"
+
+  local cached digest_file
+  cached=$(download_cache_path "$url")
+  digest_file="$cached.sha256"
+
+  if [[ "$USE_DOWNLOAD_CACHE" == "true" && -f "$cached" && -f "$digest_file" ]]; then
+    if [[ "$(compute_sha256 "$cached")" == "$(cat "$digest_file")" ]]; then
+      cp "$cached" "$output"
+      # mtime is the clock the retention sweep reads, so a hit has to count as
+      # use — otherwise a tool that never changes ages out precisely because the
+      # cache kept working for it.
+      touch "$cached" "$digest_file"
+      [[ -f "$cached.checksum-status" ]] && touch "$cached.checksum-status"
+      CACHE_HITS=$((CACHE_HITS + 1))
+      return 0
+    fi
+    log_warning "    cached copy of $name is corrupt, re-downloading"
+    evict_cache_entry "$url"
+  fi
+
+  download_file "$url" "$output" "$name"
+
+  [[ "$USE_DOWNLOAD_CACHE" == "true" ]] || return 0
+
+  # Publish through a temp name: an interrupted build must not leave a truncated
+  # file that a later build reads as a complete one. A cache that cannot be
+  # written is a slow build, not a failed one, so this never aborts.
+  mkdir -p "$(dirname "$cached")"
+  if cp "$output" "$cached.partial.$$" && mv -f "$cached.partial.$$" "$cached"; then
+    compute_sha256 "$cached" >"$digest_file"
+  else
+    rm -f "$cached.partial.$$"
+    log_warning "    could not cache $name"
+  fi
+}
+
+# Entries age out on last use, not on age, so the sweep drops superseded
+# versions while leaving a still-current one that simply never changes.
+prune_download_cache() {
+  [[ -d "$DOWNLOAD_CACHE_DIR" ]] || return 0
+
+  find "$DOWNLOAD_CACHE_DIR" -type f -mtime "+$CACHE_RETENTION_DAYS" -delete
+  find "$DOWNLOAD_CACHE_DIR" -mindepth 1 -type d -empty -delete
+}
+
 # Verify a downloaded asset against the checksum its release published, then
 # record the digest for the installer to check the bundled copy against.
 #
@@ -112,9 +223,29 @@ record_bundle_checksum() {
   repo="${parsed%%|*}"
   tag="${parsed#*|}"
 
+  # What upstream publishes for a released tag does not change, so the answer
+  # from an earlier build still holds — and it is the expensive half, one API
+  # call to find the checksums asset plus one download to read it. On a hit the
+  # digest is the one recorded when the bytes were first verified against
+  # upstream, and download_versioned_file has just re-checked the cached file
+  # against it.
+  local status_file digest_file
+  status_file=$(cache_checksum_status_file "$url")
+  digest_file=$(cache_digest_file "$url")
+  if [[ "$USE_DOWNLOAD_CACHE" == "true" && -f "$status_file" ]]; then
+    case "$(cat "$status_file")" in
+      verified)
+        printf '%s  %s\n' "$(cat "$digest_file")" "$shipped_name" >>"$CHECKSUMS_FILE"
+        return 0
+        ;;
+      unpublished) return 0 ;;
+    esac
+  fi
+
   local checksum_asset
   if ! checksum_asset=$(resolve_checksum_asset "$repo" "$tag" "$asset_name"); then
     log_warning "    $repo publishes no checksums, none recorded"
+    remember_checksum_status "$url" unpublished
     return 0
   fi
 
@@ -132,6 +263,7 @@ record_bundle_checksum() {
     # algorithm), which the sha256sum parser cannot read. Its installer does not
     # verify either, so this is no worse than the online path.
     log_warning "    $checksum_asset has no readable entry for $asset_name, none recorded"
+    remember_checksum_status "$url" unpublished
     return 0
   fi
 
@@ -141,10 +273,13 @@ record_bundle_checksum() {
     log_error "Checksum mismatch while bundling $asset_name"
     log_error "  published:  $expected"
     log_error "  downloaded: $actual"
+    # Bytes that failed against upstream must not be served to the next build.
+    evict_cache_entry "$url"
     exit 1
   fi
 
   printf '%s  %s\n' "$actual" "$shipped_name" >>"$CHECKSUMS_FILE"
+  remember_checksum_status "$url" verified
 }
 
 # ============================================================================
@@ -170,8 +305,8 @@ download_github_releases() {
     fi
     filename=$(basename "$url")
     log_info "  $tool ($version)..."
-    download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
-    record_bundle_checksum "$CACHE_DIR/binaries/$filename" "$url"
+    download_versioned_file "$url" "$STAGING_DIR/binaries/$filename" "$tool"
+    record_bundle_checksum "$STAGING_DIR/binaries/$filename" "$url"
     echo "binary|$tool|$version|$filename" >>"$MANIFEST_FILE"
 
     # Companion files (e.g. fzf-tmux for fzf). Scripts opt in by handling
@@ -183,8 +318,8 @@ download_github_releases() {
         [[ -z "$extra_name" ]] && continue
         extra_filename=$(basename "$extra_url")
         log_info "    extra: $extra_name ($extra_version)..."
-        download_file "$extra_url" "$CACHE_DIR/binaries/$extra_filename" "$extra_name"
-        record_bundle_checksum "$CACHE_DIR/binaries/$extra_filename" "$extra_url"
+        download_versioned_file "$extra_url" "$STAGING_DIR/binaries/$extra_filename" "$extra_name"
+        record_bundle_checksum "$STAGING_DIR/binaries/$extra_filename" "$extra_url"
         echo "extra|$extra_name|$extra_version|$extra_filename" >>"$MANIFEST_FILE"
       done < <(bash "$script" --print-extras "$OS" "$ARCH")
     fi
@@ -237,13 +372,13 @@ download_go_binaries() {
 
     log_info "  $binary_name ($version)..."
 
-    local download_path="$CACHE_DIR/go-binaries/${expanded}"
-    download_file "$asset_url" "$download_path" "$binary_name"
+    local download_path="$STAGING_DIR/go-binaries/${expanded}"
+    download_versioned_file "$asset_url" "$download_path" "$binary_name"
 
     # Extract binary from archive and save as ready-to-use binary
     local extract_dir="/tmp/go-binary-extract-$$"
     mkdir -p "$extract_dir"
-    local final_binary="$CACHE_DIR/go-binaries/$binary_name"
+    local final_binary="$STAGING_DIR/go-binaries/$binary_name"
 
     if [[ "$expanded" == *.tar.gz ]] || [[ "$expanded" == *.tgz ]]; then
       tar -xf "$download_path" -C "$extract_dir"
@@ -298,7 +433,7 @@ download_install_scripts() {
     fi
     filename="${name}-install.sh"
     log_info "  $name..."
-    download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
+    download_file "$url" "$STAGING_DIR/scripts/$filename" "$name"
     echo "script|$name|$version|$filename" >>"$MANIFEST_FILE"
   done
 
@@ -315,7 +450,7 @@ download_install_scripts() {
     fi
     filename="${name}-install.sh"
     log_info "  $name..."
-    download_file "$url" "$CACHE_DIR/scripts/$filename" "$name"
+    download_file "$url" "$STAGING_DIR/scripts/$filename" "$name"
     echo "script|$name|$version|$filename" >>"$MANIFEST_FILE"
   done < <(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" --type=custom --filter=bundle_install_script --manifest="$MANIFEST")
 }
@@ -385,10 +520,10 @@ download_cargo_binaries() {
     url="https://github.com/${repo}/releases/download/${version}/${filename}"
 
     log_info "  $tool ($version)..."
-    download_file "$url" "$CACHE_DIR/binaries/$filename" "$tool"
+    download_versioned_file "$url" "$STAGING_DIR/binaries/$filename" "$tool"
 
     if [[ "$filename" == *.zip ]]; then
-      if ! filename=$(repackage_zip_as_tarball "$CACHE_DIR/binaries/$filename" "$tool" "$target" "${version#v}"); then
+      if ! filename=$(repackage_zip_as_tarball "$STAGING_DIR/binaries/$filename" "$tool" "$target" "${version#v}"); then
         exit 1
       fi
     fi
@@ -411,6 +546,7 @@ usage() {
   help_row "" "" "           darwin-x86_64, darwin-arm64"
   help_row "--manifest" "NAME" "Machine manifest filter (default: wsl-work-workstation)"
   help_row "" "" "Bundles only the packages that manifest installs."
+  help_row "--no-cache" "" "Re-download every asset, ignoring the download cache"
   help_row "--help" "" "Show this help message"
 
   help_end
@@ -427,6 +563,10 @@ parse_args() {
       --manifest)
         MANIFEST="$2"
         shift 2
+        ;;
+      --no-cache)
+        USE_DOWNLOAD_CACHE=false
+        shift
         ;;
       --help | -h) usage ;;
       *)
@@ -480,11 +620,12 @@ setup_directories() {
   BUNDLE_NAME="dotfiles-offline-v$(date +%Y%m%d)-${MANIFEST}-${OS}-${ARCH}"
   WORK_DIR=$(mktemp -d)
   trap 'rm -rf "${WORK_DIR:-}"' EXIT
-  CACHE_DIR="$WORK_DIR/installers"
-  MANIFEST_FILE="$CACHE_DIR/manifest.txt"
-  CHECKSUMS_FILE="$CACHE_DIR/checksums.txt"
+  STAGING_DIR="$WORK_DIR/installers"
+  MANIFEST_FILE="$STAGING_DIR/manifest.txt"
+  CHECKSUMS_FILE="$STAGING_DIR/checksums.txt"
 
-  mkdir -p "$CACHE_DIR/binaries" "$CACHE_DIR/scripts" "$CACHE_DIR/go-binaries"
+  mkdir -p "$STAGING_DIR/binaries" "$STAGING_DIR/scripts" "$STAGING_DIR/go-binaries"
+  [[ "$USE_DOWNLOAD_CACHE" == "true" ]] && mkdir -p "$DOWNLOAD_CACHE_DIR"
   : >"$CHECKSUMS_FILE"
 
   cat >"$MANIFEST_FILE" <<EOF
@@ -497,7 +638,7 @@ EOF
 }
 
 create_readme() {
-  cat >"$CACHE_DIR/README.txt" <<'EOF'
+  cat >"$STAGING_DIR/README.txt" <<'EOF'
 Dotfiles Offline Installers
 ============================
 
@@ -539,6 +680,9 @@ create_tarball() {
   echo "  File: $tarball_path"
   echo "  Size: $tarball_size"
   echo "  Downloads: $TOTAL_DOWNLOADS"
+  if [[ "$USE_DOWNLOAD_CACHE" == "true" ]]; then
+    echo "  From cache: $CACHE_HITS ($DOWNLOAD_CACHE_DIR)"
+  fi
   echo ""
   echo "To use this bundle:"
   echo "  1. Copy tarball to ~/ or ~/dotfiles/ on the target machine"
@@ -567,6 +711,13 @@ main() {
 
   create_readme
   create_tarball
+
+  # After the tarball, so a build is never delayed or failed by housekeeping.
+  # An `&&` one-liner here would return non-zero from main's last command with
+  # --no-cache, and set -e would fail a build that succeeded.
+  if [[ "$USE_DOWNLOAD_CACHE" == "true" ]]; then
+    prune_download_cache
+  fi
 }
 
 # Execute only when run, never when sourced — the unit tests source this file to
