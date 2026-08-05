@@ -1269,10 +1269,8 @@ git_uv_tools:
     repo: https://github.com/datapointchris/logsift.git
     description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
 
-  # The repo is named for what it was before the CLI existed; the tool, the
-  # distribution and the command are all `ypl`.
   - name: ypl
-    repo: https://github.com/datapointchris/youtube-playlists.git
+    repo: https://github.com/datapointchris/ypl.git
     description: Organize YouTube music playlists of long DJ mixes
 
   - name: dectl
