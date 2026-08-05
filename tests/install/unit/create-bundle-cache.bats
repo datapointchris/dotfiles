@@ -80,6 +80,21 @@ SCRIPT
   assert_line "PAYLOAD-V1"
 }
 
+@test "cache/reporting: the progress line says which builds came from cache" {
+  local url
+  url=$(publish_asset v1 "PAYLOAD-V1")
+
+  run run_scenario "
+    download_versioned_file '$url' \"\$TEST_DIR/first\" tool '  tool (v1)'
+    download_versioned_file '$url' \"\$TEST_DIR/second\" tool '  tool (v1)'
+  "
+  assert_success
+  # Exactly one of the two builds hit, so exactly one line carries the marker —
+  # a warm build that reads identically to a cold one is how a working cache
+  # gets reported as broken.
+  [[ "$(grep -c '\[cached\]' <<<"$output")" -eq 1 ]]
+}
+
 @test "cache/new-version: a released version changes the URL and misses" {
   local old new
   old=$(publish_asset v1 "PAYLOAD-V1")

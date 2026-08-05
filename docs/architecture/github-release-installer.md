@@ -217,6 +217,8 @@ Each cached asset carries two sidecars:
 
 Entries age out on last use rather than on age (`CACHE_RETENTION_DAYS` in the script), so a tool that never changes survives precisely because the cache kept working for it, while superseded versions fall away. The sweep runs after the tarball is written, so housekeeping can never delay or fail a build. `--no-cache` bypasses the cache entirely for a build that must fetch everything fresh.
 
+Each asset's progress line is emitted by the download helper rather than its caller, and marks a hit with `[cached]`, because only the helper knows which happened. This is not cosmetic: a warm build that reads identically to a cold one gives no way to tell a working cache from a broken one, and the first report against this feature was exactly that.
+
 ## Code Savings
 
 The library reduced per-script boilerplate by roughly half compared to the pre-library era, where each script duplicated platform detection, version fetching, download, and installation logic. The previous iteration (401 lines, 16 functions) was over-abstracted; the current library has 7 focused functions.

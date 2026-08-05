@@ -148,8 +148,19 @@ evict_cache_entry() {
 }
 
 # download_file for an asset whose URL carries its version.
+#
+# This prints the per-asset progress line rather than leaving it to the caller,
+# because whether the bytes came from the network or the cache is known only
+# here. A build that reads identically warm and cold makes a working cache look
+# broken, which is exactly how it was first reported.
+#
+# The line goes out before a download so it shows progress through a slow
+# transfer, and after a hit, which is instant and needs no progress at all.
 download_versioned_file() {
   local url="$1" output="$2" name="$3"
+  # Separate `local`: a default referring to $name cannot see it assigned in the
+  # same declaration.
+  local label="${4:-  $name}"
 
   local cached digest_file
   cached=$(download_cache_path "$url")
@@ -157,6 +168,7 @@ download_versioned_file() {
 
   if [[ "$USE_DOWNLOAD_CACHE" == "true" && -f "$cached" && -f "$digest_file" ]]; then
     if [[ "$(compute_sha256 "$cached")" == "$(cat "$digest_file")" ]]; then
+      log_info "$label [cached]"
       cp "$cached" "$output"
       # mtime is the clock the retention sweep reads, so a hit has to count as
       # use — otherwise a tool that never changes ages out precisely because the
@@ -170,6 +182,7 @@ download_versioned_file() {
     evict_cache_entry "$url"
   fi
 
+  log_info "$label"
   download_file "$url" "$output" "$name"
 
   [[ "$USE_DOWNLOAD_CACHE" == "true" ]] || return 0
@@ -304,8 +317,7 @@ download_github_releases() {
       exit 1
     fi
     filename=$(basename "$url")
-    log_info "  $tool ($version)..."
-    download_versioned_file "$url" "$STAGING_DIR/binaries/$filename" "$tool"
+    download_versioned_file "$url" "$STAGING_DIR/binaries/$filename" "$tool" "  $tool ($version)"
     record_bundle_checksum "$STAGING_DIR/binaries/$filename" "$url"
     echo "binary|$tool|$version|$filename" >>"$MANIFEST_FILE"
 
@@ -317,8 +329,8 @@ download_github_releases() {
       while IFS='|' read -r extra_name extra_version extra_url; do
         [[ -z "$extra_name" ]] && continue
         extra_filename=$(basename "$extra_url")
-        log_info "    extra: $extra_name ($extra_version)..."
-        download_versioned_file "$extra_url" "$STAGING_DIR/binaries/$extra_filename" "$extra_name"
+        download_versioned_file "$extra_url" "$STAGING_DIR/binaries/$extra_filename" "$extra_name" \
+          "    extra: $extra_name ($extra_version)"
         record_bundle_checksum "$STAGING_DIR/binaries/$extra_filename" "$extra_url"
         echo "extra|$extra_name|$extra_version|$extra_filename" >>"$MANIFEST_FILE"
       done < <(bash "$script" --print-extras "$OS" "$ARCH")
@@ -370,10 +382,8 @@ download_go_binaries() {
 
     asset_url="https://github.com/${repo}/releases/download/${version}/${expanded}"
 
-    log_info "  $binary_name ($version)..."
-
     local download_path="$STAGING_DIR/go-binaries/${expanded}"
-    download_versioned_file "$asset_url" "$download_path" "$binary_name"
+    download_versioned_file "$asset_url" "$download_path" "$binary_name" "  $binary_name ($version)"
 
     # Extract binary from archive and save as ready-to-use binary
     local extract_dir="/tmp/go-binary-extract-$$"
@@ -519,8 +529,7 @@ download_cargo_binaries() {
     filename="${filename//\{arch\}/$arch_name}"
     url="https://github.com/${repo}/releases/download/${version}/${filename}"
 
-    log_info "  $tool ($version)..."
-    download_versioned_file "$url" "$STAGING_DIR/binaries/$filename" "$tool"
+    download_versioned_file "$url" "$STAGING_DIR/binaries/$filename" "$tool" "  $tool ($version)"
 
     if [[ "$filename" == *.zip ]]; then
       if ! filename=$(repackage_zip_as_tarball "$STAGING_DIR/binaries/$filename" "$tool" "$target" "${version#v}"); then
