@@ -95,6 +95,7 @@ git_uv_tools:
   - relate
   - logsift
   - dectl
+  - ypl
 
 shell_plugins: true
 tmux_plugins: true

@@ -472,6 +472,12 @@ system_packages:
     pacman: mpv-mpris
     description: Puts mpv on D-Bus so waybar's mpris module shows what ypl play is playing
 
+  - name: yt-dlp
+    apt: yt-dlp
+    pacman: yt-dlp
+    brew: yt-dlp
+    description: Reads YouTube metadata for ypl — deliberately a binary, not a Python dependency
+
   - name: graphviz
     apt: graphviz
     pacman: graphviz
@@ -1262,6 +1268,12 @@ git_uv_tools:
   - name: logsift
     repo: https://github.com/datapointchris/logsift.git
     description: Intelligent log analysis and command monitoring tool for LLM-driven workflows
+
+  # The repo is named for what it was before the CLI existed; the tool, the
+  # distribution and the command are all `ypl`.
+  - name: ypl
+    repo: https://github.com/datapointchris/youtube-playlists.git
+    description: Organize YouTube music playlists of long DJ mixes
 
   - name: dectl
     repo: https://github.com/datapointchris/dectl.git
