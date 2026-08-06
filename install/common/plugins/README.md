@@ -90,7 +90,7 @@ fi
 # Method 2: Plugin manager install script
 tmux start-server
 tmux new-session -d
-~/.tmux/plugins/tpm/scripts/install_plugins.sh
+~/.config/tmux/plugins/tpm/bin/install_plugins
 tmux kill-server
 
 log_success "Plugins installed"
@@ -145,7 +145,7 @@ log_success "Shell plugins installed"
 
 2. **Find installation directory**:
    - Neovim: `~/.local/share/nvim/`
-   - Tmux: `~/.tmux/plugins/`
+   - Tmux: `~/.config/tmux/plugins/`
    - Zsh: `~/.local/share/zsh/plugins/`
 
 3. **Create new script** named `{tool}-plugins.sh`
@@ -212,14 +212,14 @@ fi
 ### Tmux plugins (tmux-plugins.sh)
 
 ```bash
-TPM_DIR="$HOME/.tmux/plugins/tpm"
+TPM_DIR="$HOME/.config/tmux/plugins/tpm"
 
 print_banner "Installing Tmux Plugin Manager"
 
 if [[ ! -d "$TPM_DIR" ]]; then
   log_info "Installing TPM..."
   if ! git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"; then
-    manual_steps="1. Clone TPM: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+    manual_steps="1. Clone TPM: git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
 2. Start tmux: tmux
 3. Press prefix + I to install plugins"
     output_failure_data "tpm" "https://github.com/tmux-plugins/tpm" "latest" "$manual_steps" "git clone failed"
