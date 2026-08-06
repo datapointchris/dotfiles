@@ -18,7 +18,7 @@
 set -euo pipefail
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=../../configs/common/.local/shell/formatting.sh
+# shellcheck source=/dev/null
 source "$SHELL_DIR/formatting.sh"
 
 OUTPUT="${WORK_MONITOR_OUTPUT:-HDMI-A-1}"
