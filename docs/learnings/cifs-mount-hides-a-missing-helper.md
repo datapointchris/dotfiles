@@ -3,7 +3,7 @@
 ## Problem
 
 A freshly installed WSL Ubuntu distro could not mount the work network drive.
-`mount-h` from `shell/wsl/wsl.sh` failed with:
+`mount-h` from `shell/roles/work.sh` failed with:
 
 ```text
 mount error(113): No route to host

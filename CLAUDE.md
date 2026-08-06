@@ -135,7 +135,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Cross-platform tools (menu, notes, backmeup, patterns, and more)
   - `macos/` - macOS-specific tools
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
-- `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)
+- `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/) plus `roles/` (work/personal/server — symlinked to ~/.local/shell/roles/)
 - `install/` - Repository management tools
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
@@ -149,8 +149,10 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Key Systems**:
 
-- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type
-- **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
+- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type, and the `platform` / `role` a machine declares
+- **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, archlinux/, wsl/) and `roles/`; symlinked to `~/.local/shell/` by `task symlinks:link`
+- **Platform vs Role** (⚠️ do not conflate) - `PLATFORM` answers *which OS* and is detectable from the machine; `MACHINE_ROLE` answers *what the machine is for* (work/personal/server) and can only come from `~/.env`. Employer infrastructure goes in `shell/roles/work.sh`, never in `shell/wsl/wsl.sh` — a personal WSL box would want none of it
+- **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a platform overlay under `configs/`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools

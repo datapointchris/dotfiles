@@ -77,63 +77,6 @@ update-tldr() {
   fi
 }
 
-#@mount-h
-#--> Mount user network h drive CIFS share at /mnt/h
-mount-h() {
-  sudo mkdir -p /mnt/h
-  mountpoint -q /mnt/h && sudo umount -f /mnt/h
-  sudo mount -t cifs //prodfs011/dfs_users/600002371 /mnt/h -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
-}
-
-#@mount-appserver
-#--> Mount work appserver CIFS share at /mnt/devdsapp001
-mount-appserver() {
-  sudo mkdir -p /mnt/devdsapp001
-  mountpoint -q /mnt/devdsapp001 && sudo umount -f /mnt/devdsapp001
-  sudo mount -t cifs //devdsapp001/E\$ /mnt/devdsapp001 -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
-}
-
-#@mount-dfsapp
-#--> Mount DFS app CIFS share at /mnt/dfs_app/Data_Science
-mount-dfsapp() {
-  sudo mkdir -p /mnt/dfs_app/Data_Science
-  mountpoint -q /mnt/dfs_app/Data_Science && sudo umount -f /mnt/dfs_app/Data_Science
-  sudo mount -t cifs //prodfs011/Data_Science /mnt/dfs_app/Data_Science -o "username=600002371,domain=MEDPRO,vers=3.0,uid=$(id -u),gid=$(id -g)"
-}
-
-#@aws-login
-#--> Login to AWS via Okta for dev or prod environment
-aws-login() {
-  local environment="${1:-dev}"
-  local profile
-  local win_home
-
-  # Use $HOME on Git Bash, $winchris on WSL
-  if [[ -n "$MSYSTEM" ]]; then
-    win_home="$HOME"
-  else
-    win_home="$winchris"
-  fi
-  local okta_script="$win_home/.local/bin/okta-awscli.exe"
-
-  case $environment in
-    dev)
-      profile=AWS-DataScienceLower-Dev-DataScientist
-      ;;
-    prod)
-      profile=AWS-DataScienceProd-ReadOnly
-      ;;
-    *)
-      echo "Unknown environment, use 'dev' or 'prod'"
-      return
-      ;;
-  esac
-
-  "$okta_script" --profile "$profile" --okta-profile "$profile" --force --verbose
-  export AWS_PROFILE=$profile
-  date
-}
-
 # ------------ Terminal ------------ #
 #
 # Copy the last command to the OS clipboard
@@ -141,11 +84,12 @@ aws-login() {
 # Do not set --crlf because it is most likely being copied back into shell
 alias copycommand='fc -ln -1 | win32yank.exe -i'
 
-alias slack='uv run --no-project --with=keyboard python ~/code/buzz.py'
-
 # ---------- Directory Navigation ---------- #
 
-export winchris="/mnt/c/Users/600002371"
+# The Windows-side home. WINDOWS_USER comes from ~/.env so the account name is
+# per-machine rather than checked in; the default preserves the existing work
+# box until its ~/.env carries one.
+export winchris="/mnt/c/Users/${WINDOWS_USER:-600002371}"
 
 # ---------- Operations ---------- #
 
@@ -161,6 +105,5 @@ export ZVM_CLIPBOARD_PASTE_CMD='win32yank.exe -o --lf'
 
 # ---------- Network ---------- #
 
-# Mount network shares moved to functions/platform-wsl.sh (need unmount logic for stale mounts)
-
-# ---------- Miscellaneous ---------- #
+# The CIFS share mounts live in shell/roles/work.sh — they are employer
+# infrastructure, not something WSL provides.

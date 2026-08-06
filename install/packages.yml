@@ -470,7 +470,7 @@ system_packages:
     description: Network scanner
 
   # apt-only: the mount-h/mount-appserver/mount-dfsapp functions in
-  # shell/wsl/wsl.sh are the only consumers and exist solely on the work WSL
+  # shell/roles/work.sh are the only consumers and exist solely on the work
   # box. Supplies mount.cifs and cifs.upcall — without the latter the kernel
   # cannot resolve a share's hostname and the mount fails as "no route to host"
   # rather than as a missing helper.

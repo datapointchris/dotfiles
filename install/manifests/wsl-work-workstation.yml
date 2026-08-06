@@ -1,5 +1,6 @@
 machine: wsl-work-workstation
 platform: wsl
+role: work
 
 # Installation
 system_packages: workstation

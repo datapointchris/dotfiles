@@ -43,8 +43,8 @@ a result lives:
 | Source | Collection | Where it comes from |
 | --- | --- | --- |
 | `[tool]` | tools registry | `$TOOLBOX_REGISTRY`, else the registry under the XDG data dir |
-| `[func]` | shell functions | `~/.local/shell/functions.sh` + `$PLATFORM.sh` (`#@name` / `#-->desc` annotations) |
-| `[alias]` | shell aliases | `~/.local/shell/aliases.sh` + `$PLATFORM.sh` |
+| `[func]` | shell functions | `~/.local/shell/functions.sh` + `$PLATFORM.sh` + `roles/$MACHINE_ROLE.sh` (`#@name` / `#-->desc` annotations) |
+| `[alias]` | shell aliases | `~/.local/shell/aliases.sh` + `$PLATFORM.sh` + `roles/$MACHINE_ROLE.sh` |
 | `[git]` | git aliases | `git config --get-regexp '^alias\.'` (invoke as `git <name>`) |
 | `[forgit]` | forgit fzf-git shortcuts | the forgit plugin (`ga`, `gd`, `glo`, …) — sourced after `aliases.sh`, so in no shell file menu reads |
 | `[tmux]` | tmux keybindings | the `tmux-commands` card (`~/.local/share/workflows/tmux-commands.md`), its key/description tables parsed into one row per binding |

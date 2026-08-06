@@ -1,5 +1,6 @@
 machine: linux-lxc-server
 platform: linux
+role: server
 
 # Minimal profile for a headless LXC or small Linux box (Debian/Ubuntu, apt).
 # The goal is a comfortable shell to SSH into and diagnose from — not a full

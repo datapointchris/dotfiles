@@ -16,14 +16,19 @@ REGISTRY="${TOOLBOX_REGISTRY:-${XDG_DATA_HOME:-$HOME/.local/share}/toolbox/regis
 WORKFLOWS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/workflows"
 SKILLS_DIR="$HOME/.claude/skills"
 # Function/alias sources: the shared files plus the platform file (macos.sh /
-# archlinux.sh / wsl.sh), which holds both. This matches what toolbox parses —
-# menu read only the shared files before, so platform-specific shortcuts were
-# searchable in `toolbox funcs` and the remind rotation but not in menu.
+# archlinux.sh / wsl.sh) and the role file (roles/work.sh), each of which holds
+# both. This matches what toolbox parses — menu read only the shared files
+# before, so platform-specific shortcuts were searchable in `toolbox funcs` and
+# the remind rotation but not in menu.
 FUNCTION_FILES=("$SHELL_DIR/functions.sh")
 ALIAS_FILES=("$SHELL_DIR/aliases.sh")
 if [[ -n "${PLATFORM:-}" && -f "$SHELL_DIR/$PLATFORM.sh" ]]; then
   FUNCTION_FILES+=("$SHELL_DIR/$PLATFORM.sh")
   ALIAS_FILES+=("$SHELL_DIR/$PLATFORM.sh")
+fi
+if [[ -n "${MACHINE_ROLE:-}" && -f "$SHELL_DIR/roles/$MACHINE_ROLE.sh" ]]; then
+  FUNCTION_FILES+=("$SHELL_DIR/roles/$MACHINE_ROLE.sh")
+  ALIAS_FILES+=("$SHELL_DIR/roles/$MACHINE_ROLE.sh")
 fi
 
 # Registry membership tests, used to decide which lenses fire for a subject.

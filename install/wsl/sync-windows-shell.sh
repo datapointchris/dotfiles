@@ -76,8 +76,29 @@ stage_shell_files() {
   rm -f "$dest/combined.sh"
 }
 
+# Every role, not just this machine's, so MACHINE_ROLE in the Windows-side
+# ~/.env can switch role without a re-sync. Kept in a roles/ subdirectory rather
+# than flattened with the rest, so a role named like a platform cannot collide.
+stage_role_files() {
+  local dest="$1/roles"
+  local src
+
+  rm -rf "$dest"
+  mkdir -p "$dest"
+
+  for src in "$DOTFILES_DIR"/shell/roles/*.sh; do
+    [[ -f "$src" ]] || continue
+    cp "$src" "$dest/"
+    echo "  Copied: roles/$(basename "$src")"
+  done
+}
+
 write_bashrc() {
   local win_home="$1"
+  # Baked in as the fallback only: the Windows ~/.env still wins, so a role
+  # change there does not need a re-sync. Captured from the syncing WSL box
+  # because Git Bash has no way to work out what the machine is for.
+  local synced_role="${MACHINE_ROLE:-personal}"
 
   {
     cat <<'BASHRC_HEAD'
@@ -107,6 +128,13 @@ export PATH="$HOME/.local/bin:$PATH"
 # to find the platform's own functions and aliases. Both precede the load below.
 export SHELL_DIR="$HOME/.local/shell"
 export PLATFORM="windows"
+BASHRC_HEAD
+
+    printf 'MACHINE_ROLE_DEFAULT=%s\n' "$synced_role"
+
+    cat <<'BASHRC_HEAD'
+export MACHINE_ROLE="${MACHINE_ROLE:-$MACHINE_ROLE_DEFAULT}"
+unset MACHINE_ROLE_DEFAULT
 
 # One source per file, in dependency order. These were concatenated into a
 # generated combined.sh until a syntax error partway through cost every alias
@@ -127,6 +155,9 @@ for shell_file in "${SHELL_FILES[@]}"; do
   source "$SHELL_DIR/$shell_file" || echo "shell: $shell_file failed to load" >&2
 done
 unset shell_file SHELL_FILES
+
+# Role overlay last, so it can build on what the platform files exported.
+[[ -r "$SHELL_DIR/roles/$MACHINE_ROLE.sh" ]] && source "$SHELL_DIR/roles/$MACHINE_ROLE.sh"
 
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
 command -v fzf >/dev/null 2>&1 && eval "$(fzf --bash)"
@@ -158,6 +189,7 @@ main() {
   mkdir -p "$win_home/.config/git"
 
   stage_shell_files "$win_shell_dir"
+  stage_role_files "$win_shell_dir"
 
   write_bashrc "$win_home"
   echo "  Wrote: .bashrc"
@@ -182,7 +214,7 @@ main() {
   echo "Windows shell sync complete."
 }
 
-# Sourced by tests/install/unit/windows-combined-shell.bats, which calls the two
+# Sourced by tests/install/unit/windows-shell-sync.bats, which calls the
 # generation functions directly rather than reimplementing the file list.
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   main "$@"

@@ -61,6 +61,11 @@ else
   log_error "Env" "PLATFORM not set in .env"
 fi
 
+# The OS cannot answer what a machine is *for*, so unlike PLATFORM this has no
+# detection fallback and defaults to the majority case rather than erroring.
+export MACHINE_ROLE="${MACHINE_ROLE:-personal}"
+log "Env" "$(color_cyan "MACHINE_ROLE")=$(color_green "$MACHINE_ROLE")"
+
 # ------------------------------------------------------------------ #
 # ZSH CONFIGURATION
 # ------------------------------------------------------------------ #
@@ -352,6 +357,14 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 [[ -f "$SHELL_DIR/functions.sh" ]] && source "$SHELL_DIR/functions.sh" && log "Load" "$SHELL_DIR/functions.sh" || log_error "Load" "$SHELL_DIR/functions.sh"
 [[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh" || log_error "Load" "$SHELL_DIR/aliases.sh"
 [[ -f "$SHELL_DIR/$PLATFORM.sh" ]] && source "$SHELL_DIR/$PLATFORM.sh" && log "Load" "$SHELL_DIR/$PLATFORM.sh" || log_error "Load" "$SHELL_DIR/$PLATFORM.sh"
+
+# Role overlay, after the platform one because a role can build on what the
+# platform exported (work's aws-login reads $winchris from wsl.sh). Every role
+# file is linked on every machine and MACHINE_ROLE picks one, so switching role
+# is a ~/.env edit rather than a relink. Optional, like a platform overlay:
+# `personal` and `server` have nothing to add yet.
+role_file="$SHELL_DIR/roles/$MACHINE_ROLE.sh"
+[[ -f "$role_file" ]] && source "$role_file" && log "Load" "$role_file"
 
 # Hand-written completions for the apps that generate none. Here rather than in
 # the completion section above because compdef must already exist, which it does

@@ -82,7 +82,12 @@ Shell functions and aliases live in `shell/` organized by platform, deployed via
 
 - **Cross-platform**: `shell/common/functions.sh` and `shell/common/aliases.sh` → `~/.local/shell/`
 - **Platform-specific**: `shell/{platform}/{platform}.sh` (macos, arch, wsl, linux, windows) → `~/.local/shell/{platform}.sh`
-- **`.zshrc` sources them explicitly** using the `$PLATFORM` env var: `source "$SHELL_DIR/$PLATFORM.sh"`
+- **Role-specific**: `shell/roles/{role}.sh` (work, personal, server) → `~/.local/shell/roles/{role}.sh`
+- **`.zshrc` sources them explicitly** using the `$PLATFORM` and `$MACHINE_ROLE` env vars: `source "$SHELL_DIR/$PLATFORM.sh"` then `source "$SHELL_DIR/roles/$MACHINE_ROLE.sh"`
+
+Platform answers *which OS*, role answers *what the machine is for*, and they are deliberately independent — the CIFS mounts and Okta login in `shell/roles/work.sh` are employer infrastructure that a personal WSL box would want none of. The role overlay loads second so it can build on what the platform exported.
+
+Unlike a platform overlay, **every** role file is linked on every machine and `MACHINE_ROLE` selects one at shell startup, so changing a machine's role is a `~/.env` edit rather than a relink. A role with nothing to add ships no file at all; the source is guarded, like an optional platform overlay.
 
 Windows Git Bash cannot follow symlinks across the WSL boundary, so `install/wsl/sync-windows-shell.sh` copies the files instead and writes the `.bashrc` that loads them. The load order is the `SHELL_FILES` array in that script, which is also its copy manifest. The generated `.bashrc` sources each file separately: a broken file then costs only itself and names itself on the way out. An earlier version concatenated everything into one `combined.sh` for startup speed, which measured at ~0.1ms of saved file opens against a ~60ms startup, and turned one syntax error into a shell with no aliases or functions at all.
 

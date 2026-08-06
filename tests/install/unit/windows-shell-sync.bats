@@ -23,7 +23,8 @@ setup() {
   source "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh"
 
   stage_shell_files "$STAGED" >/dev/null
-  write_bashrc "$TEST_DIR"
+  stage_role_files "$STAGED" >/dev/null
+  MACHINE_ROLE=work write_bashrc "$TEST_DIR"
 }
 
 teardown() {
@@ -118,6 +119,49 @@ PROBE
   assert_success
   assert_output --partial "survived"
   refute_output --partial "No such file"
+}
+
+@test "every role is staged and parses as bash" {
+  # Every role ships, not just the syncing machine's, so MACHINE_ROLE in the
+  # Windows-side ~/.env can switch role without a re-sync.
+  for src in "$DOTFILES_DIR"/shell/roles/*.sh; do
+    assert [ -f "$STAGED/roles/$(basename "$src")" ]
+    run bash -n "$STAGED/roles/$(basename "$src")"
+    assert_success
+  done
+}
+
+@test "the role overlay loads and its functions are defined" {
+  write_probe <<'PROBE'
+declare -F mount-h >/dev/null || exit 1
+echo role-loaded
+PROBE
+  run load_bashrc
+  assert_success
+  assert_output --partial "role-loaded"
+}
+
+@test "a role with no overlay file is skipped rather than fatal" {
+  MACHINE_ROLE=personal write_bashrc "$TEST_DIR"
+
+  write_probe <<'PROBE'
+echo survived
+PROBE
+  run load_bashrc
+  assert_success
+  assert_output --partial "survived"
+  refute_output --partial "No such file"
+}
+
+@test "the ambient MACHINE_ROLE wins over the synced default" {
+  # The baked-in role is a fallback: ~/.env on the Windows side still decides,
+  # so a role change there does not need a re-sync.
+  write_probe <<'PROBE'
+echo "role=$MACHINE_ROLE"
+PROBE
+  run env MACHINE_ROLE=server HOME="$TEST_DIR" bash --norc --noprofile "$TEST_DIR/probe.sh"
+  assert_success
+  assert_output --partial "role=server"
 }
 
 @test "staging clears a combined.sh left by the old generator" {

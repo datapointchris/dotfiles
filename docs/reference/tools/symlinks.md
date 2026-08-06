@@ -105,11 +105,12 @@ The symlinks manager maps `apps/` and `shell/` to specific target directories ra
 - Symlinked to `~/.local/bin/`
 - Examples: `menu`, `notes`, `patterns`, `aws-profiles`
 
-**Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`):
+**Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`, `shell/roles/{role}.sh`):
 
 - Symlinked to `~/.local/shell/`
 - Common: `functions.sh` + `aliases.sh` on all platforms
-- Platform-specific: `macos.sh`, `archlinux.sh`, `wsl.sh`, `linux.sh`
+- Platform-specific: `macos.sh`, `archlinux.sh`, `wsl.sh`, `linux.sh` — only the resolved platform's file is linked
+- Role-specific: `roles/work.sh` — **every** role is linked on every machine, and `MACHINE_ROLE` picks one at shell startup, so changing role is a `~/.env` edit rather than a relink. Roles ride along with the `common` target since they are not a platform
 - These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
 **Go apps** (toolbox, sesh):
