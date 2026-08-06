@@ -7,15 +7,23 @@
 # ------------------------------------------------------------------ #
 # BOOTSTRAP: Load environment and utilities
 # ------------------------------------------------------------------ #
-# Sourced before anything else because .env is where ZSHRC_DEBUG is set; the
-# entry is logged further down, once log() exists to report it.
+# Sourced before anything else because .env is where every feature flag is set;
+# the entry is logged further down, once log() exists to report it.
 env_file="$HOME/.env"
 [[ -f $env_file ]] && source $env_file
-ZSHRC_DEBUG="${ZSHRC_DEBUG:-0}"
+
+# Exported before the libraries load, not with the other exports further down:
+# formatting.sh resolves colors.sh through SHELL_DIR and falls back to a
+# $(dirname) fork per shell startup when it is unset.
+export SHELL_DIR="$HOME/.local/shell"
+
+# flags.sh next, because every gate below this point is a flag_enabled call.
+flags_file="$SHELL_DIR/flags.sh"
+[[ -f $flags_file ]] && source $flags_file
 
 CHECK_MARK="☑️"
 ERROR_MARK="❌"
-[[ "$ZSHRC_DEBUG" == "1" ]] && echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
+flag_enabled ZSHRC_DEBUG 0 && echo " 🟰🟰🟰🟰🟰 Loading ZSH Configuration 🟰🟰🟰🟰🟰🟰"
 
 # Columns are step and cumulative milliseconds. Timing lives inside log() rather
 # than at the call sites so every existing entry reports it for free, and a
@@ -25,7 +33,7 @@ typeset -g ZSHRC_START=$EPOCHREALTIME
 typeset -g ZSHRC_LAST=$EPOCHREALTIME
 
 log() {
-  [[ "$ZSHRC_DEBUG" == "1" ]] || return 0
+  flag_enabled ZSHRC_DEBUG 0 || return 0
   local now=$EPOCHREALTIME
   printf "  $CHECK_MARK %6.0fms %7.0fms  %-6s : %s\n" \
     $(( (now - ZSHRC_LAST) * 1000 )) $(( (now - ZSHRC_START) * 1000 )) "$1" "$2"
@@ -34,15 +42,11 @@ log() {
 }
 log_error() { printf "  $ERROR_MARK %-6s : %s\n" "$1" "$2" >&2 }
 
-# Exported before the libraries load, not with the other exports further down:
-# formatting.sh resolves colors.sh through SHELL_DIR and falls back to a
-# $(dirname) fork per shell startup when it is unset.
-export SHELL_DIR="$HOME/.local/shell"
-
 # Log environment
 colors_file="$SHELL_DIR/colors.sh"
 formatting_file="$SHELL_DIR/formatting.sh"
 [[ -f $env_file ]] && log "Load" "$env_file" || log_error "Load" "$env_file"
+[[ -f $flags_file ]] && log "Load" "$flags_file" || log_error "Load" "$flags_file"
 [[ -f $colors_file ]] && source $colors_file && log "Load" "$colors_file" || log_error "Load" "$colors_file"
 [[ -f $formatting_file ]] && source $formatting_file && log "Load" "$formatting_file" || log_error "Load" "$formatting_file"
 
@@ -55,12 +59,6 @@ if [[ -n "$PLATFORM" ]]; then
   log "Env" "$(color_cyan "PLATFORM")=$(color_green "$PLATFORM")"
 else
   log_error "Env" "PLATFORM not set in .env"
-fi
-
-if [[ -n "$NVIM_AI_ENABLED" ]]; then
-  log "Env" "$(color_cyan "NVIM_AI_ENABLED")=$(color_green "$NVIM_AI_ENABLED")"
-else
-  log_error "Env" "NVIM_AI_ENABLED not set in .env"
 fi
 
 # ------------------------------------------------------------------ #
@@ -616,7 +614,7 @@ else
   log_error "Load" "$syntax_highlighting_file"
 fi
 
-if [[ "$ZSHRC_DEBUG" == "1" ]]; then
+if flag_enabled ZSHRC_DEBUG 0; then
   printf " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded in %.0fms 🟰🟰🟰🟰🟰🟰\n" \
     $(( (EPOCHREALTIME - ZSHRC_START) * 1000 ))
 else

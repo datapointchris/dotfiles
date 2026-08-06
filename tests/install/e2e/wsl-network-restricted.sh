@@ -251,7 +251,6 @@ STEP_START=$(date +%s)
   echo "Creating ~/.env..."
   docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
 PLATFORM=wsl
-NVIM_AI_ENABLED=false
 EOF'
 
   # Copy dotfiles to writable location

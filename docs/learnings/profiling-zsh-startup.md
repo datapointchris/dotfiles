@@ -17,7 +17,7 @@ Timing belongs inside `log()`, not at the call sites. One change gives every exi
 
 ```zsh
 log() {
-  [[ "$ZSHRC_DEBUG" == "1" ]] || return 0
+  flag_enabled ZSHRC_DEBUG 0 || return 0
   local now=$EPOCHREALTIME
   printf "  $CHECK_MARK %6.0fms %7.0fms  %-6s : %s\n" \
     $(( (now - ZSHRC_LAST) * 1000 )) $(( (now - ZSHRC_START) * 1000 )) "$1" "$2"

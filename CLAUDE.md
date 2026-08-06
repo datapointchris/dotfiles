@@ -76,6 +76,7 @@ the registry, not just this one. Check `git status` across the portfolio afterwa
 
 | Scenario | Library | Functions |
 | --- | --- | --- |
+| Is this feature wanted here? | flags.sh | `flag_enabled`, `flag_classify` |
 | Logged/monitored scripts | logging.sh | `log_info/success/warning/error/fatal` |
 | Visual/interactive scripts | formatting.sh | `print_success/error/warning/info` |
 | Visual structure | formatting.sh | `print_header/section/banner/title` |

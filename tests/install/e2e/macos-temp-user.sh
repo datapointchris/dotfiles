@@ -145,7 +145,6 @@ STEP_START=$(date +%s)
   echo "Creating ~/.env..."
   sudo -u "$TEST_USER" bash -c "cat > /Users/${TEST_USER}/.env <<EOF
 PLATFORM=macos
-NVIM_AI_ENABLED=false
 EOF"
 
   log_success "Test environment ready"

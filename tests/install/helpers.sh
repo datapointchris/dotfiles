@@ -195,7 +195,6 @@ create_container_env() {
 
   docker exec "$container" bash -c "cat > ${home_dir}/.env <<EOF
 PLATFORM=${platform}
-NVIM_AI_ENABLED=false
 DOTFILES_DOCKER_TEST=true
 EOF"
 }

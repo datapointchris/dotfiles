@@ -1,0 +1,33 @@
+# ================================================================
+# Feature Flags
+# ================================================================
+# The declared list of every on/off switch in the fleet. install.sh renders
+# these into ~/.env, and shell code tests them with flag_enabled() from
+# configs/common/.local/shell/flags.sh.
+#
+# The model is load-everywhere, flag-decides: code ships to every machine and
+# ~/.env says what that machine actually wants running. That replaces gating a
+# feature on whether its binary happened to be installed, which could never
+# express "installed but off".
+#
+# Each flag declares:
+#   description  what the flag controls (shown in the generated ~/.env)
+#   default      the value written when a manifest does not override it
+#   consumers    where it is read, so a dead flag is visible at a glance
+#
+# A manifest overrides a default in its own `flags:` block. `dotfiles doctor`
+# reports flags declared here but absent from ~/.env, and values that are
+# neither truthy nor falsey.
+#
+# NOTE: a flag belongs here only when the code is present and cheap and the
+# only question is whether this machine wants it. Payload that is expensive to
+# install belongs in a manifest tool list; config a program discovers by path
+# and cannot branch on (hyprland, waybar, ghostty) belongs in a platform
+# overlay under configs/.
+
+flags:
+  - name: ZSHRC_DEBUG
+    description: Print per-step timings during zsh startup
+    default: false
+    consumers:
+      - configs/common/.config/zsh/.zshrc

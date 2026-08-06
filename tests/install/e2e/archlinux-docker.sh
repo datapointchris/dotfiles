@@ -221,7 +221,6 @@ if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
     echo "Creating ~/.env..."
     docker exec --user archlinuxuser --env HOME=${CONTAINER_HOME} "$CONTAINER_NAME" bash -c "cat > ${CONTAINER_HOME}/.env <<EOF
 PLATFORM=archlinux
-NVIM_AI_ENABLED=false
 DOTFILES_DOCKER_TEST=true
 EOF"
 

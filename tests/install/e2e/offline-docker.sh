@@ -244,7 +244,6 @@ STEP_START=$(date +%s)
   log_info "Creating .env file..."
   docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
 PLATFORM=wsl
-NVIM_AI_ENABLED=false
 EOF'
 
   log_success "Files copied to container"

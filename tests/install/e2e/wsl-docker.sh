@@ -300,7 +300,6 @@ if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
     echo "Creating ~/.env..."
     docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
 PLATFORM=wsl
-NVIM_AI_ENABLED=false
 EOF'
 
     # Copy dotfiles to writable location (install script modifies files)

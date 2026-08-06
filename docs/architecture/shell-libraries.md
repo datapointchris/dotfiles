@@ -142,6 +142,37 @@ done
 print_header_success "Backup Complete"
 ```
 
+### flags.sh - Feature Flag Tests
+
+**Location**: `~/.local/shell/flags.sh`
+**Purpose**: One truthy test for every on/off switch, so a flag reads the same from `.zshrc`, an installer, or an app
+**Dependencies**: None — deliberately, so it can load before colors and formatting do
+
+**When to use**:
+
+- Any code that asks whether a feature is wanted on this machine
+- Never for whether a tool is *installed* — that stays a `command -v` check
+
+**Core Functions**:
+
+- `flag_enabled(NAME, [default])` - True when `$NAME` is truthy. `default` applies when the variable is unset, empty, or holds an unrecognized value, and itself defaults to enabled
+- `flag_classify(value)` - Returns 0 on, 1 off, 2 unrecognized. Used by `dotfiles doctor` to report typos
+
+Truthy is `1`/`true`/`yes`/`on` and falsey is `0`/`false`/`no`/`off`, each case-insensitive.
+
+Unset means *enabled* because the model is load-everywhere-flag-decides: a machine whose `~/.env` predates a flag keeps the feature rather than silently losing it. Anything that should start life off passes an explicit `0`.
+
+**Example**:
+
+```bash
+source "$HOME/.local/shell/flags.sh"
+
+flag_enabled SHELL_NUDGE && [[ -x "$HOME/.local/bin/menu-review" ]] && menu-review nudge
+flag_enabled ZSHRC_DEBUG 0 && print_startup_timings
+```
+
+The flag list and its per-machine defaults live in `install/flags.yml`; this library only answers the question.
+
 ### error-handling.sh - Robust Error Management
 
 **Location**: `~/.local/shell/error-handling.sh`
@@ -388,6 +419,13 @@ Each has color variants and `_success/_error/_warning/_info` variants with emoji
 Low-level rows, for use outside a help screen: `print_help_row`, `print_example_row`.
 Mirrored for Python in the `pytermstyle` package.
 
+### Feature Flags
+
+| Function | Purpose |
+| --- | --- |
+| `flag_enabled` | True when a flag is on (unset means on unless a `0` default is passed) |
+| `flag_classify` | 0 on / 1 off / 2 unrecognized |
+
 ### Error Handling
 
 | Function | Purpose |
@@ -409,7 +447,7 @@ Mirrored for Python in the `pytermstyle` package.
 ### From Scripts in Repo (use DOTFILES_DIR)
 
 ```bash
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 ```
@@ -441,4 +479,5 @@ Functions are available directly in interactive shells - no need to source.
 ## See Also
 
 - `configs/common/.local/shell/colors.sh` - Color definitions
+- `install/flags.yml` - The declared flag list and per-machine defaults `flags.sh` tests
 - [Symlinks Manager](../reference/tools/symlinks.md) - Symlinks manager documentation
