@@ -35,5 +35,5 @@ See `tests/install/unit/library-flag-pollution.bats` — tests all 7 shell libra
 
 ## Related
 
-- [Error Handling Architecture](../architecture/error-handling.md)
-- [Script Refactoring Principles](script-refactoring-principles.md)
+- [Shell Libraries](../architecture/shell-libraries.md)
+- `~/dev/standards/shell.md` § "`set -euo pipefail` in every script and every sourced library"

@@ -36,6 +36,14 @@ Tests are organized under `tests/`:
 - `tests/install/unit/` — Unit tests for installer functions (no Docker, no network). Run with `task test:unit`.
 - `tests/install/integration/` — Integration tests. Requires Docker + the prebuilt base image `dotfiles-test-base:ubuntu-24.04`. If the image is missing, `tests/install/docker/build-base.sh` is invoked automatically before tests run — if the build itself fails, the test run fails loudly rather than silently skipping.
 
+### Counting files in an assertion
+
+Never compare a count from `fd` against a count from anything else. `fd`
+respects `.gitignore` and `tar` does not, so a backup test asserting the archive
+held as many files as the source directory compared 409 against 2929 and read as
+a broken backup. Pass `--no-ignore --hidden` when the count has to mean "every
+file on disk".
+
 ## pytest (Python Tests)
 
 Python-side coverage for `install/parse_packages.py` and `apps/common/packages` (including `packages verify`):

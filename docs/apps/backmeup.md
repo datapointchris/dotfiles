@@ -128,4 +128,4 @@ backmeup -n dotfiles -d /Volumes/External dotfiles code
 ## See Also
 
 - [Tool Composition](../architecture/tool-composition.md) - How backmeup fits into the toolchain
-- [Bash Script Testing](../learnings/bash-script-testing.md) - Development lessons
+- [Testing](../development/testing.md) - Including why an archive's file count must not be compared against `fd`
