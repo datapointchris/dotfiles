@@ -31,3 +31,39 @@ flags:
     default: false
     consumers:
       - configs/common/.config/zsh/.zshrc
+
+  - name: SHELL_NUDGE
+    description: Surface the review register's due items at shell startup
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
+  - name: SHELL_VI_MODE
+    description: zsh-vi-mode modal editing
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
+  - name: SHELL_AUTOSUGGESTIONS
+    description: Inline ghost-text suggestions ahead of the cursor
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
+  - name: SHELL_SYNTAX_HIGHLIGHTING
+    description: Colour the command line as it is typed
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
+  - name: SHELL_HISTORY_DB
+    description: atuin SQLite history capture, and its Ctrl-R search
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
+  - name: SHELL_FORGIT
+    description: forgit fzf-backed git shortcuts (ga, gd, glo, ...)
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc

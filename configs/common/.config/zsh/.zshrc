@@ -95,8 +95,12 @@ autoload -U down-line-or-beginning-search
 zle -N up-line-or-beginning-search
 zle -N down-line-or-beginning-search
 
-# zsh-vi-mode hook: re-apply bindings after vi-mode overwrites the keymap
-zvm_after_init() {
+# Every binding that has to be applied after the rest of the rc file has run.
+# A function rather than inline because it has two callers: zsh-vi-mode's hook
+# when SHELL_VI_MODE is on, and the tail of this file when it is off. Without
+# the second caller, turning vi-mode off would silently cost the arrow-key
+# history search and the Claude widgets, since nothing else binds them.
+apply_shell_keybindings() {
   bindkey "^[[A" up-line-or-beginning-search    # Up arrow
   bindkey "^[[B" down-line-or-beginning-search  # Down arrow
   # Re-apply fzf keybindings (Ctrl+R, Ctrl+T, Alt+C), which vi-mode has just
@@ -106,14 +110,18 @@ zvm_after_init() {
   # Ctrl-R and the last one loaded wins. vi-mode runs this after the whole rc file,
   # so re-applying fzf alone handed Ctrl-R back to it and the atuin binding set
   # during startup never survived into the shell the user actually typed in.
-  cache_eval atuin atuin init zsh --disable-up-arrow
+  flag_enabled SHELL_HISTORY_DB && cache_eval atuin atuin init zsh --disable-up-arrow
   # Claude widgets, defined in the SHELL CONFIG section. Ctrl-X chords rather
   # than Meta: ^[ is vi-cmd-mode, so every Alt binding costs a KEYTIMEOUT wait
   # before Escape takes effect. ^X^A and ^X^E are the free ones — the rest of
   # the ^X space belongs to zsh's completion-debug bindings.
   bindkey "^X^A" doshell-ask-widget
   bindkey "^X^E" doshell-explain-widget
+  return 0
 }
+
+# zsh-vi-mode hook: re-apply bindings after vi-mode overwrites the keymap
+zvm_after_init() { apply_shell_keybindings }
 
 # Create history directory if needed
 if [[ ! -d "$HOME/.local/state/zsh" ]]; then
@@ -509,7 +517,7 @@ fi
 # decides whether it also claims `?`. cache_eval only ages the cache against the
 # binary's mtime, so editing that config changes nothing until the cache entry is
 # removed: rm ~/.cache/zsh/completions/atuin.zsh
-cache_eval atuin atuin init zsh --disable-up-arrow
+flag_enabled SHELL_HISTORY_DB && cache_eval atuin atuin init zsh --disable-up-arrow
 
 cache_eval uv uv generate-shell-completion zsh
 
@@ -568,7 +576,11 @@ fi
 # system clipboard — those widgets read it regardless of this flag. On WSL the
 # platform file points zvm's paste command at win32yank. Set before sourcing.
 ZVM_SYSTEM_CLIPBOARD_ENABLED=false
-if [[ -f "$zsh_vi_mode_file" ]]; then
+# A flag that is off skips silently; a plugin that is wanted but missing is
+# still an error, because that is a broken install rather than a preference.
+if ! flag_enabled SHELL_VI_MODE; then
+  log "Skip" "zsh-vi-mode (SHELL_VI_MODE)"
+elif [[ -f "$zsh_vi_mode_file" ]]; then
   source "$zsh_vi_mode_file"
   log "Load" "$zsh_vi_mode_file"
 else
@@ -590,7 +602,9 @@ export FORGIT_PAGER='delta --paging=never --width=$([ -n "$FORGIT_IN_PREVIEW" ] 
 export FORGIT_FZF_DEFAULT_OPTS="--bind='ctrl-d:preview-half-page-down,ctrl-u:preview-half-page-up'"
 export FORGIT_DIFF_FZF_OPTS="--preview-window='right:70%'"
 
-if [[ -f "$forgit_file" ]]; then
+if ! flag_enabled SHELL_FORGIT; then
+  log "Skip" "forgit (SHELL_FORGIT)"
+elif [[ -f "$forgit_file" ]]; then
   source "$forgit_file"
   log "Load" "$forgit_file"
   fpath+=($forgit_completions)
@@ -612,7 +626,9 @@ ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 # Above this many characters the per-keystroke history scan is felt rather than
 # free; 20 is upstream's recommendation and keeps large pastes instant.
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
-if [[ -f "$autosuggestions_file" ]]; then
+if ! flag_enabled SHELL_AUTOSUGGESTIONS; then
+  log "Skip" "zsh-autosuggestions (SHELL_AUTOSUGGESTIONS)"
+elif [[ -f "$autosuggestions_file" ]]; then
   source "$autosuggestions_file"
   log "Load" "$autosuggestions_file"
 else
@@ -620,12 +636,19 @@ else
 fi
 
 # zsh-syntax-highlighting (MUST load last)
-if [[ -f "$syntax_highlighting_file" ]]; then
+if ! flag_enabled SHELL_SYNTAX_HIGHLIGHTING; then
+  log "Skip" "zsh-syntax-highlighting (SHELL_SYNTAX_HIGHLIGHTING)"
+elif [[ -f "$syntax_highlighting_file" ]]; then
   source "$syntax_highlighting_file"
   log "Load" "$syntax_highlighting_file"
 else
   log_error "Load" "$syntax_highlighting_file"
 fi
+
+# vi-mode calls apply_shell_keybindings from its own post-init hook. With the
+# flag off nothing would, so the arrow-key history search and the Claude widgets
+# have to be bound here instead — after the widgets above exist.
+flag_enabled SHELL_VI_MODE || apply_shell_keybindings
 
 if flag_enabled ZSHRC_DEBUG 0; then
   printf " 🟰🟰🟰🟰🟰 ZSH Configuration Loaded in %.0fms 🟰🟰🟰🟰🟰🟰\n" \
@@ -645,7 +668,7 @@ fi
 # live in the synced menu state dir, so the interval is shared across machines —
 # a rolling schedule (default 4h; set with `menu review nudge-every <dur>`), not
 # once per machine.
-if [[ -x "$HOME/.local/bin/menu-review" ]]; then
+if flag_enabled SHELL_NUDGE && [[ -x "$HOME/.local/bin/menu-review" ]]; then
   _mr_state="${XDG_STATE_HOME:-$HOME/.local/state}/menu"
   _mr_marker="$_mr_state/nudge"
   _mr_mins="$(cat "$_mr_state/nudge-interval-minutes" 2>/dev/null || echo 240)"

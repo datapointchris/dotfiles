@@ -2,6 +2,18 @@ machine: linux-lxc-server
 platform: linux
 role: server
 
+# Feature flags — overrides for install/flags.yml defaults. A box that exists to
+# be SSHed into for diagnosis wants a fast shell, not a personal one. The
+# plugins are still installed (shell_plugins below), so turning one back on for
+# a debugging session is a ~/.env edit rather than a reinstall — which is the
+# whole point of the flag layer sitting on top of the manifest.
+flags:
+  SHELL_NUDGE: false
+  SHELL_VI_MODE: false
+  SHELL_AUTOSUGGESTIONS: false
+  SHELL_SYNTAX_HIGHLIGHTING: false
+  SHELL_FORGIT: false
+
 # Minimal profile for a headless LXC or small Linux box (Debian/Ubuntu, apt).
 # The goal is a comfortable shell to SSH into and diagnose from — not a full
 # workstation. `system_packages: core` installs only the tier-tagged base from

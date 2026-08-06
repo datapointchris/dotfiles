@@ -6,6 +6,7 @@ regeneration never loses anything below the OVERRIDES marker. Most of these
 tests exist to pin that down.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -67,8 +68,36 @@ def test_manifest_flags_override_the_declared_default():
 def test_generated_lines_are_exported():
     # nvim reads vim.env.PLATFORM, so a bare assignment would not reach it.
     section = render_env.render_generated_section(MANIFEST, FLAGS)
-    assert 'export PLATFORM=macos' in section
-    assert 'export ALPHA_FLAG=true' in section
+    assert 'export PLATFORM=' in section
+    assert 'export ALPHA_FLAG=' in section
+
+
+def test_generated_lines_let_the_ambient_environment_win():
+    # `ZSHRC_DEBUG=1 zsh` is the documented way to debug startup, and ~/.env is
+    # sourced by .zshrc — a bare assignment would clobber the ambient value.
+    section = render_env.render_generated_section(MANIFEST, FLAGS)
+    assert 'export PLATFORM="${PLATFORM:-macos}"' in section
+    assert 'export ALPHA_FLAG="${ALPHA_FLAG:-true}"' in section
+
+
+def test_ambient_override_actually_wins_in_a_real_shell(tmp_path):
+    env_file = tmp_path / '.env'
+    render_env.sync(env_file, MANIFEST, FLAGS)
+    result = subprocess.run(
+        ['bash', '-c', f'source "{env_file}"; echo "$MACHINE_ROLE"'],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'MACHINE_ROLE': 'server'},
+        check=True,
+    )
+    assert result.stdout.strip() == 'server'
+
+
+def test_check_reads_through_the_self_referencing_default(tmp_path):
+    # The value the shell would land on is what matters, not the literal text.
+    env_file = tmp_path / '.env'
+    render_env.sync(env_file, MANIFEST, FLAGS)
+    assert render_env.check(env_file, MANIFEST, FLAGS) == 0
 
 
 def test_sync_preserves_a_hand_written_file_in_full(env_file):

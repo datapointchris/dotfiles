@@ -21,6 +21,7 @@ Usage:
 
 import argparse
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -33,6 +34,8 @@ MARKER = '# OVERRIDES - hand-edited; everything below is preserved on regenerate
 # Kept in step with flag_classify() in configs/common/.local/shell/flags.sh.
 TRUTHY = {'1', 'true', 'yes', 'on'}
 FALSEY = {'0', 'false', 'no', 'off'}
+
+SELF_DEFAULT = re.compile(r'\$\{(\w+):-(.*)\}')
 
 INSTALL_DIR = Path(__file__).resolve().parent
 
@@ -68,6 +71,11 @@ def resolve_flag_values(manifest, flags):
     ]
 
 
+def assignment(name, value):
+    """An export the ambient environment can still override for a single shell."""
+    return f'export {name}="${{{name}:-{value}}}"'
+
+
 def render_generated_section(manifest, flags):
     """Build the managed part of ~/.env, ending with the OVERRIDES marker."""
     machine = manifest.get('machine', '')
@@ -81,11 +89,15 @@ def render_generated_section(manifest, flags):
         '# Everything above the OVERRIDES marker is regenerated and will be',
         '# overwritten. Put secrets and machine-local values below it.',
         '',
+        '# Every value is written as ${NAME:-...} so the ambient environment still',
+        '# wins for one shell: `ZSHRC_DEBUG=1 zsh` and `PLATFORM=wsl ./install.sh`',
+        '# both have to keep working without editing this file.',
+        '',
         '# Identity. MACHINE selects the manifest and is read by install.sh before',
         '# anything else, so this file is also the install bootstrap.',
-        f'export MACHINE={machine}',
-        f'export PLATFORM={manifest.get("platform", "")}',
-        f'export MACHINE_ROLE={manifest.get("role", "personal")}',
+        assignment('MACHINE', machine),
+        assignment('PLATFORM', manifest.get('platform', '')),
+        assignment('MACHINE_ROLE', manifest.get('role', 'personal')),
         '',
         '# Features. Every declared flag is written explicitly, so a machine is never',
         '# silently running on a default it never saw.',
@@ -94,7 +106,7 @@ def render_generated_section(manifest, flags):
     for name, value, description in resolve_flag_values(manifest, flags):
         if description:
             lines.append(f'# {description}')
-        lines.append(f'export {name}={value}')
+        lines.append(assignment(name, value))
 
     lines += ['', MARKER, '']
     return '\n'.join(lines)
@@ -117,7 +129,13 @@ def split_existing(path):
 
 
 def parse_env_assignments(text):
-    """Extract NAME=VALUE pairs, tolerating `export` and inline comments."""
+    """Extract NAME=VALUE pairs, tolerating `export` and inline comments.
+
+    A generated line reads `export NAME="${NAME:-value}"` so the ambient
+    environment can still win, so the self-referencing default is unwrapped back
+    to the value it encodes. Only a default naming its own variable is unwrapped;
+    anything else is left alone.
+    """
     values = {}
     for raw in text.splitlines():
         line = raw.strip()
@@ -127,7 +145,12 @@ def parse_env_assignments(text):
         if '=' not in line:
             continue
         name, _, value = line.partition('=')
-        values[name.strip()] = value.strip().strip('\'"')
+        name = name.strip()
+        value = value.strip().strip('\'"')
+        match = SELF_DEFAULT.fullmatch(value)
+        if match and match.group(1) == name:
+            value = match.group(2)
+        values[name] = value
     return values
 
 

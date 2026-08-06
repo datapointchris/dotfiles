@@ -86,10 +86,36 @@ The bootstrap is genuinely circular — `~/.env` names the manifest, and the man
 generates `~/.env` — so a bare machine still has one line to type by hand. Only
 `MACHINE=` though; `install.sh --machine NAME` fills in the rest on first run.
 
+Every generated line is written as `export NAME="${NAME:-value}"`, so the ambient
+environment still wins for a single shell — `ZSHRC_DEBUG=1 zsh` and
+`PLATFORM=wsl ./install.sh` both keep working without editing the file.
+
 Flags are for behavior that is present and cheap, where the only question is whether this
 machine wants it. Payload that is expensive to install stays a manifest tool list, and
 config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays
 a platform overlay under `configs/`.
+
+### Which gates are flags
+
+A `command -v fzf` guard is not a flag and should not become one: fzf has no reason to be
+installed and unwanted. A gate earns a flag only when *installed but off* is a state
+worth having — which is the state the old existence-only gates could not express.
+
+The shell plugins qualify because they carry both a preference and a real startup cost;
+turning the four off measures at roughly 130ms saved. The manifests use that: the work box
+sets `SHELL_NUDGE: false` because the review register is personal, and `linux-lxc-server`
+turns off the whole interactive plugin set. The plugins are still *installed* there, so
+turning one back on mid-debugging is a `~/.env` edit rather than a reinstall.
+
+Two ordering hazards, both real and both now handled:
+
+- A plugin must be sourced at top level, never from inside a helper function. A function
+  scope changes what a plugin's own `typeset` calls do, so the load stays inline and
+  slightly repetitive rather than being factored into a `load_plugin` helper.
+- `zsh-vi-mode` overwrites the whole keymap, so the arrow-key history search and the
+  Claude widgets are bound from its post-init hook. With `SHELL_VI_MODE=false` nothing
+  would call that hook, so `apply_shell_keybindings` is a named function with two callers
+  — the hook, and the tail of `.zshrc` when the flag is off.
 
 ## Selective installs and updates
 
