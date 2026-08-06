@@ -7,28 +7,20 @@
 # (CIFS shares, Okta) rather than anything WSL provides, which is why it is not
 # in shell/wsl/wsl.sh: a personal WSL box would want none of it.
 #
-# The share account defaults to the Windows profile name: the machine is
-# domain-joined, so /mnt/c/Users/<name> and the CIFS username are one identity.
-# WORK_USER exists only for a machine where they genuinely differ, which is why
-# it is not in flags.yml's required list and WINDOWS_USER is.
-#
-# Values come from ~/.env below the OVERRIDES marker, never from this repo: an
-# employee ID and an employer domain do not belong in it, and a wrong default
-# would mount a share as the wrong user rather than failing.
+# WINDOWS_USER is the CIFS username as well as the /mnt/c/Users directory: the
+# machine is domain-joined, so they are one identity. WORK_DOMAIN is the domain
+# it authenticates against. Both come from ~/.env below the OVERRIDES marker,
+# never from this repo — an employee ID and an employer domain do not belong in
+# it, and a wrong default would mount a share as the wrong user rather than
+# failing.
 #
 # Checked here rather than at file scope: a `${VAR:?}` while sourcing aborts the
 # rest of this file, so an unset value would cost every function below it on
 # every new shell instead of failing the one command that needs it.
-# One definition of the share account, for both the credential and the path of
-# the personal home share.
-_work_user() { printf '%s' "${WORK_USER:-${WINDOWS_USER:-}}"; }
-
 _mount_work_share() {
   local remote="$1" mountpoint="$2"
-  local user
-  user="$(_work_user)"
 
-  if [[ -z "$user" || -z "${WORK_DOMAIN:-}" ]]; then
+  if [[ -z "${WINDOWS_USER:-}" || -z "${WORK_DOMAIN:-}" ]]; then
     echo "Set WINDOWS_USER and WORK_DOMAIN in ~/.env (below the OVERRIDES marker)" >&2
     return 1
   fi
@@ -36,13 +28,13 @@ _mount_work_share() {
   sudo mkdir -p "$mountpoint"
   mountpoint -q "$mountpoint" && sudo umount -f "$mountpoint"
   sudo mount -t cifs "$remote" "$mountpoint" \
-    -o "username=${user},domain=${WORK_DOMAIN},vers=3.0,uid=$(id -u),gid=$(id -g)"
+    -o "username=${WINDOWS_USER},domain=${WORK_DOMAIN},vers=3.0,uid=$(id -u),gid=$(id -g)"
 }
 
 #@mount-h
 #--> Mount user network h drive CIFS share at /mnt/h
 mount-h() {
-  _mount_work_share "//prodfs011/dfs_users/$(_work_user)" /mnt/h
+  _mount_work_share "//prodfs011/dfs_users/${WINDOWS_USER}" /mnt/h
 }
 
 #@mount-appserver
