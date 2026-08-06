@@ -13,7 +13,7 @@ Installation failed on fresh WSL during Phase 1 (system packages) with:
 sudo apt install -y python3-yaml  # Package doesn't exist
 
 # wsl.yml:46 - Script tries to run immediately after
-python3 parse-packages.py --type=system --manager=apt
+python3 parse_packages.py --type=system --manager=apt
 # ImportError: No module named 'yaml'
 ```
 
@@ -28,9 +28,9 @@ python3 parse-packages.py --type=system --manager=apt
 
 **Root Fix: Use System Python Explicitly**
 
-To ensure parse-packages.py works across all platforms regardless of which Python is in PATH:
+To ensure parse_packages.py works across all platforms regardless of which Python is in PATH:
 
-**1. Use system Python via shebang** (`install/parse-packages.py:1`):
+**1. Use system Python via shebang** (`install/parse_packages.py:1`):
 
 ```python
 #!/usr/bin/python3  # System Python, not #!/usr/bin/env python3
@@ -81,13 +81,13 @@ gunzip -c ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz | docker import - wsl-ubuntu:
 
 This provides **100% accurate testing** - if it fails in the test, it will fail in WSL. If it passes in the test, it will pass in WSL.
 
-**4. Verify the script works** (`install/verify-installation.sh:322`):
+**4. Verify the script works** (`tests/install/verification/verify-installed-packages.sh`):
 
 ```bash
-if python3 "$HOME/dotfiles/install/parse-packages.py" --type=system --manager=apt >/dev/null 2>&1; then
-  print_success "parse-packages.py: working (yaml module available)"
+if python3 "$HOME/dotfiles/install/parse_packages.py" --type=system --manager=apt >/dev/null 2>&1; then
+  print_success "parse_packages.py: working (yaml module available)"
 else
-  print_error "parse-packages.py: FAILED (yaml module missing)"
+  print_error "parse_packages.py: FAILED (yaml module missing)"
 fi
 ```
 
@@ -144,6 +144,6 @@ Best practice for testing system installations:
 - `install/wsl/docker-images.sh` - Manage WSL Docker images
 - `tests/install/README.md` - Full install-test suite (e2e, integration, unit)
 - `install/wsl/` - WSL installation scripts
-- `install/verify-installation.sh` - Installation verification
+- `tests/install/verification/verify-installed-packages.sh` - Installation verification
 - `install/parse_packages.py` - Package list parser
 - `docs/development/testing.md` - Testing documentation
