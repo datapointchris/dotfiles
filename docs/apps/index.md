@@ -13,10 +13,8 @@ of what is actually installed, and `toolbox list` is the searchable version.
 
 ## Finding and choosing
 
-- **[Menu](menu.md)** — federated search across tools, functions, aliases and keybindings
-- **[Menu Next](menu-next.md)** — what to do now, drawn from weighted pursuits
+- **[Doit](doit.md)** — moved to its own repo; the page records why, and what stayed behind here
 - **[Toolbox](toolbox.md)** — the installed-tool registry and its `--brief` nudge
-- **[Workflows](workflows.md)** — the reference/recipe card format, and when a card is worth writing
 
 ## Backup and integrity
 

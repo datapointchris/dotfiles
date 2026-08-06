@@ -242,17 +242,24 @@ ZSH_COMPLETION_CACHE="$XDG_CACHE_HOME/zsh/completions"
 [[ -d "$ZSH_COMPLETION_CACHE" ]] || mkdir -p "$ZSH_COMPLETION_CACHE"
 
 cache_eval() {
+  # `-b BIN` names the binary when it differs from the cache key, which is what
+  # a tool generating two blocks needs: one key per block, both aged against the
+  # one binary. doit does this — a completion and a startup nudge, loaded at
+  # different points because the nudge prints.
+  local bin_name=""
+  [[ "$1" == -b ]] && { bin_name="$2"; shift 2; }
   local name="$1"; shift
+  : "${bin_name:=$name}"
   local cache="$ZSH_COMPLETION_CACHE/$name.zsh" bin err ret
   # Its own statement: zsh expands every word of a `local` before assigning any
   # of them, so $cache on that line is still empty and this becomes ./.failed.
   local failed="$cache.failed"
 
-  # Staleness is measured against $name, not $1: a generator invoked as
+  # Staleness is measured against the binary, not $1: a generator invoked as
   # `env VAR=x tool` would otherwise stat env(1), whose mtime never moves, and
   # the cache would outlive every upgrade of the tool itself.
-  if ! bin="$(command -v "$name")"; then
-    log "Skip" "$name not installed"
+  if ! bin="$(command -v "$bin_name")"; then
+    log "Skip" "$bin_name not installed"
     return 0
   fi
 
@@ -324,6 +331,10 @@ cache_eval indy env _INDY_COMPLETE=source_zsh indy
 cache_eval relate env _RELATE_COMPLETE=source_zsh relate
 cache_eval syncer env _SYNCER_COMPLETE=source_zsh syncer
 
+# doit writes its own rather than using Typer's generator, so that completing a
+# pursuit name reads doit's flat name cache instead of spawning Python on Tab.
+cache_eval doit doit completion zsh
+
 # Third party, kept to what is typed at a prompt rather than run from a Taskfile
 # or a hook. task completes task names out of the Taskfile and sesh completes
 # session names, which is most of the value here.
@@ -373,11 +384,6 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 # `personal` and `server` have nothing to add yet.
 role_file="$SHELL_DIR/roles/$MACHINE_ROLE.sh"
 [[ -f "$role_file" ]] && source "$role_file" && log "Load" "$role_file"
-
-# Hand-written completions for the apps that generate none. Here rather than in
-# the completion section above because compdef must already exist, which it does
-# only after compinit has run.
-[[ -f "$SHELL_DIR/completions.zsh" ]] && source "$SHELL_DIR/completions.zsh" && log "Load" "$SHELL_DIR/completions.zsh"
 
 # Claude on the prompt line. doshell(1) makes you decide to ask before you start
 # typing; these catch you mid-line instead, which is when you actually get stuck.
@@ -658,24 +664,23 @@ else
 fi
 
 # ------------------------------------------------------------------ #
-# MENU REVIEW - What's Due to Revisit (Shell Startup)
+# DOIT REVIEW - What's Due to Revisit (Shell Startup)
 # ------------------------------------------------------------------ #
-# Surface the review register's due items on the first shell of each half-day
-# (morning / afternoon) — at most twice a day, and only when something is due.
-# The gate is a cheap marker-mtime check so the reviewer (a uv/python script)
-# only spawns once per interval, never on every shell. The nudge itself is silent
-# when nothing is due, so a clear day adds no startup noise. Marker and interval
-# live in the synced menu state dir, so the interval is shared across machines —
-# a rolling schedule (default 4h; set with `menu review nudge-every <dur>`), not
-# once per machine.
-if flag_enabled SHELL_NUDGE && [[ -x "$HOME/.local/bin/menu-review" ]]; then
-  _mr_state="${XDG_STATE_HOME:-$HOME/.local/state}/menu"
-  _mr_marker="$_mr_state/nudge"
-  _mr_mins="$(cat "$_mr_state/nudge-interval-minutes" 2>/dev/null || echo 240)"
-  if [[ ! -f "$_mr_marker" || -n "$(find "$_mr_marker" -mmin +"$_mr_mins" 2>/dev/null)" ]]; then
-    mkdir -p "$_mr_state"
-    : > "$_mr_marker"  # touch: mtime = now = last-nudged
-    menu-review nudge
-  fi
-  unset _mr_state _mr_marker _mr_mins
+# Surface the review register's due items on the first shell of each interval —
+# only when something is due, so a clear day adds no startup noise. The gate is
+# a marker-mtime check, so doit itself spawns once per interval rather than once
+# per shell. Marker and interval live in the synced doit state dir, making the
+# rolling schedule (default 4h; set with `doit review nudge-every <dur>`) shared
+# across machines rather than per machine.
+#
+# doit owns the block and this only caches it: the gate is generated with an
+# absolute state path resolved on the machine that generated it, so it must not
+# be committed here. Cached rather than eval'd for the reason every generator in
+# this file is — an eval would put a Python start in front of every shell.
+#
+# An `if` rather than `flag_enabled && cache_eval`: this is the last line of the
+# file, and the && form would leave .zshrc exiting non-zero whenever the flag is
+# off, which the prompt renders as a failed command on the first line.
+if flag_enabled SHELL_NUDGE; then
+  cache_eval -b doit doit-nudge doit shell-init zsh
 fi

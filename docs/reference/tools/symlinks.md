@@ -100,10 +100,10 @@ The symlinks tool uses a **layered architecture**: common base + platform overla
 
 The symlinks manager maps `apps/` and `shell/` to specific target directories rather than `$HOME`, using the same `create_symlinks` function with a custom `target_dir`.
 
-**Shell scripts** (`apps/common/menu`, `apps/common/notes`, etc.):
+**Shell scripts** (`apps/common/notes`, `apps/common/review-diff`, etc.):
 
 - Symlinked to `~/.local/bin/`
-- Examples: `menu`, `notes`, `patterns`, `aws-profiles`
+- Examples: `notes`, `patterns`, `aws-profiles`
 
 **Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`, `shell/roles/{role}.sh`):
 

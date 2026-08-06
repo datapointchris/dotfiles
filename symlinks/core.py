@@ -13,7 +13,7 @@ DOTFILES_DIR = Path(os.environ.get('DOTFILES', Path.home() / 'dotfiles')).resolv
 TARGET_DIR = Path.home().resolve()
 SEARCH_DEPTH = 5
 
-CLEANUP_DIRS = ['.config', '.local/shell', '.local/shell/roles', '.local/share/workflows', '.local/share/applications']
+CLEANUP_DIRS = ['.config', '.local/shell', '.local/shell/roles', '.local/share/applications']
 
 PROTECTED_DIRS = {
     '.local/state/claude',

@@ -10,5 +10,5 @@ CLI tool discovery for the installed toolchain — search tools, shell functions
 
 - **Install** — `packages.yml` under `go_tools`, via `go install github.com/datapointchris/toolbox@latest`. The binary lands in `~/go/bin`.
 - **Registry** — authored *data*, not config: owned by dotfiles and symlinked under the XDG data dir (override with `$TOOLBOX_REGISTRY`). Living in dotfiles means it is version-controlled and reaches every machine on `git pull`. Edit it to add or update tools; the entry schema is in the repo.
-- **Federated by `menu`** — `menu` searches the registry, shell functions, and aliases alongside workflows and skills, delegating display back to `toolbox show`. See [Menu](menu.md).
+- **Federated by `doit`** — `doit find` searches the registry, shell functions, and aliases alongside workflow cards and skills, delegating display back to `toolbox show`. See [doit](doit.md).
 - **Rediscovery** — `toolbox remind` surfaces a forgotten tool, function, alias, git alias, or forgit shortcut (neglect-weighted, 90-day recency). It runs on a cadence through `menu review`'s `revisit-a-tool` item (`show: toolbox remind --brief`), not on every shell. `--brief` bounds the card to a few clipped lines because it renders inside that nudge; run bare, it shows the full detail view, which is the actual refresher.

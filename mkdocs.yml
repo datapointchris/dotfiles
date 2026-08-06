@@ -112,13 +112,11 @@ nav:
       - Theme: apps/theme.md
       - Font: apps/font.md
       - Notes: apps/notes.md
-      - Menu: apps/menu.md
-      - Menu Next: apps/menu-next.md
+      - Doit: apps/doit.md
       - Toolbox: apps/toolbox.md
       - Refcheck: apps/refcheck.md
       - Backup: apps/backup.md
       - Safekeep: apps/safekeep.md
-      - Workflows: apps/workflows.md
       - Work Monitor: apps/work-monitor.md
   - Architecture:
       - architecture/index.md

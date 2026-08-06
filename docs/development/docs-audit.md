@@ -68,7 +68,8 @@ maintaining the 30 pages that turned out to be worth nothing — roughly a commi
 every two and a half days. That is the number to weigh against "it's only a
 small doc edit."
 
-The three highest-churn pages that *survived* — `apps/menu.md` (37 commits),
+The three highest-churn pages that *survived* — `apps/menu.md` (37 commits, and
+it left with the menu suite in August 2026, which is what that churn was telling us),
 `architecture/index.md` (34), `architecture/package-management.md` (32) — are
 the ones to watch. High churn on a page that keeps earning its place is fine;
 high churn on one that keeps being wrong is the signal.
@@ -172,7 +173,7 @@ reproducing it.
   without reading why")
 - `architecture/management-interface.md` — a decision reversed, with the original
   reasoning quoted and the two capabilities that turned out missing
-- `apps/menu-next.md`, `apps/work-monitor.md` — hardware and algorithm choices
+- `apps/work-monitor.md` — hardware and algorithm choices
   that cannot be derived from `--help`
 - `reference/rebuilding-a-machine.md` — documents what the automation *cannot* do,
   which is by definition not in the code
