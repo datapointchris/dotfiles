@@ -438,7 +438,7 @@ asset — that needs a signature verified against a key distributed out of band.
 
 ## Related Documentation
 
-- [Error Handling](error-handling.md)
+- [Shell Libraries](shell-libraries.md)
 - [Shell Libraries](shell-libraries.md)
 - Production-Grade Management Enhancements (planning doc)
 

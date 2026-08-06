@@ -167,25 +167,34 @@ from `zvm_after_init`.
 
 ## Installation Location Strategy
 
-```text
-PATH Priority (highest to lowest):
+Every install method writes to its own directory, and PATH order decides which
+copy wins. The principle is that user-installed tools outrank system ones, and
+each ecosystem keeps its own prefix.
 
-~/.cargo/bin/          # Tier 2: Rust tools (bat, fd, eza, zoxide, delta)
-~/.local/bin/          # Tier 1: GitHub releases (nvim, lazygit, fzf, yq, yazi)
-~/go/bin/              # Go-installed binaries (toolbox, sesh)
-/usr/local/go/bin/     # Go toolchain
-~/.local/share/npm/bin # npm global packages
-/usr/local/bin/        # Homebrew/system-wide installs
-/usr/bin/              # System packages (lowest priority)
+**PATH is built in two places, and they are not the same order.** `.zshenv` sets
+a base that every shell gets, including non-interactive ones:
+
+```bash
+PATH="$HOME/.local/share/fnm/aliases/default/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:/usr/local/bin:$PATH"
 ```
 
-**Why this order?**
+Interactive shells then run `.zshrc`, which rebuilds the front of PATH with
+`add_path`. **`add_path` prepends, so the last call wins** — the list there is
+written deliberately backwards, system directories first and user ones last. Add
+a new entry at the wrong end and it will be shadowed by everything below it.
 
-1. **User tools override system** - Your latest tools take precedence
-2. **Language ecosystems together** - Each package manager in its own directory
-3. **System packages last** - Stable but outdated, lowest priority
+Read the current answer rather than a copy of it:
 
-See [PATH Ordering Strategy](path-ordering-strategy.md) for complete details.
+```sh
+echo $PATH | tr ':' '\n'
+```
+
+**The `bat`/`batcat` split is a naming problem, not a version one.** Ubuntu's
+apt package installs the binary as `batcat`, and `fd` as `fdfind`, because both
+names collide with existing Debian packages. Nothing that calls `bat` finds it,
+so config and scripts would need per-platform branching. Installing both through
+`cargo binstall` sidesteps it entirely — one name on every platform, which is
+why they are `cargo_packages` and not `system_packages`.
 
 ## Special Case: Neovim Directory Structure
 
@@ -392,6 +401,6 @@ sudo apt update && sudo apt upgrade
 
 ## Related Documents
 
-- [PATH Ordering Strategy](path-ordering-strategy.md) - How tool resolution works
+- [Shell Libraries](shell-libraries.md) - The libraries installers source
 - [App Installation Patterns](../learnings/app-installation-patterns.md) - Go apps vs shell scripts
 - [Resilient Installation Patterns](../learnings/resilient-installation-patterns.md) - Failure isolation and re-runnability

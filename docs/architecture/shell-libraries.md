@@ -1,6 +1,25 @@
 # Shell Libraries Architecture
 
-The dotfiles repository provides three system-wide shell libraries for consistent, production-grade script development. Each library serves a distinct purpose and can be used independently or combined as needed.
+System-wide shell libraries in `configs/common/.local/shell/`, deployed to
+`~/.local/shell/`. Each serves a distinct purpose and can be used alone or
+combined. The roster is
+`rg '^[a-z_]+\(\)' configs/common/.local/shell/*.sh` — this page explains the
+ones with a design decision behind them rather than listing every function,
+because a hand-copied roster drifts and this one had.
+
+## Sourcing Rules
+
+A library loaded with `source` runs in the caller's shell, so any option it sets
+(`set -euo pipefail`, `shopt`) persists in the calling script. Libraries must
+therefore never touch shell options — only the script decides its own error
+handling. A library contains function definitions, variable assignments and
+conditional logic, and nothing else.
+
+`error-handling.sh` follows this by exposing `enable_error_traps` as an explicit
+opt-in rather than arming traps on load. Every library is checked for the
+violation by `tests/install/unit/library-flag-pollution.bats`; see
+[Library Flag Pollution](../learnings/library-flag-pollution.md) for the
+incident that produced the test.
 
 ## Library Overview
 
@@ -244,204 +263,6 @@ safe_move "$TMP_DIR/binary" "$HOME/.local/bin/binary" "Binary"
 exit_success
 ```
 
-## Decision Guide: log_*vs print_*
-
-### Use log_* functions when
-
-✅ Script output will be logged to files
-✅ Script runs unattended (cron, CI/CD, automated)
-✅ Output needs to be parseable by log aggregators
-✅ Script is part of installation/update process
-✅ You need [LEVEL] prefixes for filtering/monitoring
-
-**Examples**: install.sh, update.sh, package installers, CI scripts
-
-### Use print_* status functions when
-
-✅ Script is purely interactive (run by human at terminal)
-✅ Visual appeal is priority over parseability
-✅ Output will NEVER be piped to log files
-✅ Script is a menu system or interactive tool
-✅ Logging overhead not needed
-
-**Examples**: backmeup, interactive menus, demo scripts, dev tools
-
-### Use both when
-
-✅ Script has both logged sections (log_*) and visual structure (print_header/section)
-✅ Most management scripts fall into this category
-
-**Example**:
-
-```bash
-source "$HOME/.local/shell/logging.sh"
-source "$HOME/.local/shell/formatting.sh"
-
-print_header "System Update" "blue"
-
-print_section "Phase 1: Package Updates"
-log_info "Updating apt packages..."
-sudo apt update && sudo apt upgrade -y
-log_success "Packages updated"
-
-print_section "Phase 2: Cleanup"
-log_info "Removing old kernels..."
-sudo apt autoremove -y
-log_success "Cleanup complete"
-
-print_header_success "Update Complete"
-```
-
-## Common Patterns
-
-### Simple Status Script (logging only)
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-source "$HOME/.local/shell/logging.sh"
-
-log_info "Processing files..."
-# do work
-log_success "Processed 42 files"
-```
-
-### Visual Interactive Script (formatting only)
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-source "$HOME/.local/shell/formatting.sh"
-
-print_header "File Manager" "cyan"
-print_info "Loading files..."
-# show menu
-print_success "File selected"
-```
-
-### Installation Script (logging + formatting)
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-
-print_header "Install Package" "blue"
-
-print_section "Phase 1: Download"
-log_info "Downloading package..."
-# download
-log_success "Package downloaded"
-
-print_header_success "Installation Complete"
-```
-
-### Complex Script with Error Handling
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-source "$SHELL_DIR/error-handling.sh"
-source "$SHELL_DIR/formatting.sh"
-enable_error_traps
-
-# Setup cleanup
-TMP_DIR=$(mktemp -d)
-register_cleanup "rm -rf $TMP_DIR"
-
-print_header "Build Project" "blue"
-
-# Verify prerequisites
-require_commands node npm git
-
-print_section "Phase 1: Dependencies"
-run_with_context "Installing dependencies" npm install
-
-print_section "Phase 2: Build"
-run_with_context "Building project" npm run build
-
-print_header_success "Build Complete"
-exit_success
-```
-
-## Function Reference Quick Lookup
-
-### Logging (with [LEVEL] prefixes)
-
-| Function | Purpose | Output | Exit Code |
-| --- | --- | --- | --- |
-| `log_info` | Informational message | [INFO] ● cyan | - |
-| `log_success` | Success message | [INFO] ✓ green | - |
-| `log_warning` | Warning message | [WARNING] ▲ yellow | - |
-| `log_error` | Error message | [ERROR] ✗ red | - |
-| `log_debug` | Debug message (DEBUG=true) | [DEBUG] gray | - |
-| `log_fatal` | Fatal error | [FATAL] ✗ red | **1** |
-| `die` | Simple fatal error | [ERROR] ✗ red | **1** |
-
-### Formatting - Status (no [LEVEL] prefixes)
-
-| Function | Purpose | Output | Exit Code |
-| --- | --- | --- | --- |
-| `print_success` | Visual success | ✓ green | - |
-| `print_error` | Visual error | ✗ red | - |
-| `print_warning` | Visual warning | ▲ yellow | - |
-| `print_info` | Visual info | ● cyan | - |
-
-### Formatting - Structure
-
-| Function | Purpose | Visual Style |
-| --- | --- | --- |
-| `print_header` | Main header | Thick borders (━) |
-| `print_section` | Section header | Thin underline (─) |
-| `print_banner` | Tool banner | Double bars (═) |
-| `print_title` | Page title | Centered, full-width |
-
-Each has color variants and `_success/_error/_warning/_info` variants with emojis.
-
-### Formatting - Help Screens
-
-| Function | Purpose |
-| --- | --- |
-| `help_header` | Open a screen (rule, name, tagline) |
-| `help_usage` | Usage lines, `Usage:` label included |
-| `help_section` | Section heading, coloured by name |
-| `help_row` | One row; width computed across the section |
-| `help_text` | Verbatim prose (flushes pending rows) |
-| `help_end` | Close the screen |
-
-Low-level rows, for use outside a help screen: `print_help_row`, `print_example_row`.
-Mirrored for Python in the `pytermstyle` package.
-
-### Feature Flags
-
-| Function | Purpose |
-| --- | --- |
-| `flag_enabled` | True when a flag is on (unset means on unless a `0` default is passed) |
-| `flag_classify` | 0 on / 1 off / 2 unrecognized |
-
-### Error Handling
-
-| Function | Purpose |
-| --- | --- |
-| `enable_error_traps` | Set up ERR/EXIT handlers |
-| `register_cleanup` | Add cleanup command |
-| `require_commands` | Verify multiple commands |
-| `verify_file` | Check file exists/not empty |
-| `verify_directory` | Check directory exists |
-| `create_directory` | Create dir with error handling |
-| `download_file_with_retry` | Download with retry logic |
-| `safe_move` | Move file with verification |
-| `run_with_context` | Run command with logging |
-| `exit_success` | Clean exit with cleanup |
-| `exit_error` | Error exit with cleanup |
-
 ## Sourcing Patterns
 
 ### From Scripts in Repo (use DOTFILES_DIR)
@@ -465,19 +286,23 @@ source "$SHELL_DIR/error-handling.sh"
 
 Functions are available directly in interactive shells - no need to source.
 
-## Best Practices
+## Why Downloads Retry but Scripts Do Not
 
-1. **Always use log_* for installation/update scripts** - They need parseability
-2. **Always use print_* for purely visual tools** - No logging overhead
-3. **Source error-handling.sh for complex scripts** - Automatic cleanup is valuable
-4. **Use file:line in log_error/log_fatal** - Makes debugging easier
-5. **Register cleanup early** - Before creating temp files
-6. **Prefer log_fatal over die** when you have file:line info
-7. **Use print_header/section for visual structure** - Even in logged scripts
-8. **Don't mix print_success with log_info** - Pick one style per script
+`download_file_with_retry` is the one retrying thing in the libraries, and it is
+deliberately scoped to a single `curl`: three attempts, a fixed two-second gap,
+then `log_fatal`. No exponential backoff, and nothing above it retries.
+
+An installer that fails usually fails persistently — a blocked host, a moved
+release asset, a missing dependency — so retrying the *script* spends minutes
+re-running work that will fail the same way, and buries the error under repeated
+output. A single download is the one case where the failure is plausibly
+transient and the retry is cheap. Everything coarser fails fast and gets re-run
+by hand, which the idempotent design makes safe. `install.sh` isolates failures
+between installers rather than retrying them; see
+[Resilient Installation Patterns](../learnings/resilient-installation-patterns.md).
 
 ## See Also
 
-- `configs/common/.local/shell/colors.sh` - Color definitions
+- `configs/common/.local/shell/colors.sh` - The `color_*` helpers and `color_enabled`, used by formatting.sh
 - `install/flags.yml` - The declared flag list and per-machine defaults `flags.sh` tests
 - [Symlinks Manager](../reference/tools/symlinks.md) - Symlinks manager documentation

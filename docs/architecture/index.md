@@ -176,10 +176,6 @@ See [Platform Differences](../reference/platforms/differences.md) for platform-s
 
     System vs language version managers
 
-- :material-routes: **[PATH Ordering Strategy](path-ordering-strategy.md)**
-
-    Tool precedence and environment setup
-
 - :material-tools: **[Tool Composition](tool-composition.md)**
 
     How tools work together

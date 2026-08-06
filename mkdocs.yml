@@ -128,9 +128,7 @@ nav:
       - Shell Libraries: architecture/shell-libraries.md
       - tmux Sessions: architecture/tmux-sessions.md
       - Package Management: architecture/package-management.md
-      - PATH Ordering Strategy: architecture/path-ordering-strategy.md
       - Tool Composition: architecture/tool-composition.md
-      - Error Handling: architecture/error-handling.md
       - GitHub Release Installer: architecture/github-release-installer.md
   - Configuration:
       - Docker Setup: configuration/docker.md
@@ -146,8 +144,6 @@ nav:
   - Development:
       - development/index.md
       - VM Testing: development/testing.md
-      - Go Applications: development/go-apps.md
-      - Shell Formatting: development/shell-formatting.md
       - Publishing Docs: development/publishing-docs.md
   - Learnings:
       - Overview: learnings/index.md

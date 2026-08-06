@@ -6,48 +6,16 @@ icon: material/code-braces
 
 Contributing to and testing dotfiles.
 
-## Testing
+- **[Testing](testing.md)** — bats, pytest, and the Docker-backed installation tests
+- **[Publishing Docs](publishing-docs.md)** — how this site deploys, and the one rule about `gh-pages`
 
-<div class="grid cards" markdown>
+Go applications here (`toolbox`, `sesh`) install through `go_tools` in
+`install/packages.yml` and are documented per-app under
+[Apps](../apps/index.md). Language standards live on the hub:
+[Go Development](https://docs.ichrisbirch.com/go/go-development/),
+[Go Quick Reference](https://docs.ichrisbirch.com/go/go-quick-reference/),
+[Bubbletea](https://docs.ichrisbirch.com/go/bubbletea-quick-reference/).
 
-- :material-docker: __[VM Testing](testing.md)__
-
-    Docker-based installation testing
-
-</div>
-
-## Go Development
-
-<div class="grid cards" markdown>
-
-- :material-language-go: __[Overview](go-apps.md)__
-
-    Go applications architecture
-
-- :material-code-braces: __[Standards](https://docs.ichrisbirch.com/go/go-development/)__
-
-    Development standards and practices
-
-- :material-book: __[Go Quick Reference](https://docs.ichrisbirch.com/go/go-quick-reference/)__
-
-    Go language essentials
-
-- :material-widgets: __[Bubbletea Reference](https://docs.ichrisbirch.com/go/bubbletea-quick-reference/)__
-
-    TUI framework guide
-
-</div>
-
-## Documentation
-
-<div class="grid cards" markdown>
-
-- :material-format-paint: __[Shell Formatting](shell-formatting.md)__
-
-    ANSI formatting library
-
-- :material-publish: __[Publishing Docs](publishing-docs.md)__
-
-    GitHub Pages deployment
-
-</div>
+The shell libraries that scripts here source — logging, formatting, the help
+grammar, feature flags, error traps — are in
+[Shell Libraries](../architecture/shell-libraries.md).
