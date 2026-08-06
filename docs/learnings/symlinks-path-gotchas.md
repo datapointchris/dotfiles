@@ -1,0 +1,66 @@
+# Two Path Bugs from the Symlinks Python Rewrite
+
+**Date**: 2025-11-04
+**Context**: The symlinks manager was rewritten in Python. Both bugs below shipped
+in that rewrite and were found by running it, not by the unit tests.
+
+## Substring matching excluded `.gitconfig`
+
+`.gitconfig` stopped being symlinked to the home directory. The exclusion list
+contains `.git/`, and the matcher tested it as a substring:
+
+```python
+if pattern.endswith("/") and pattern.rstrip("/") in path_str:
+    return True  # ".git" is a substring of ".gitconfig"
+```
+
+A directory pattern has to match complete path components. `symlinks/core.py`
+now does:
+
+```python
+dir_name = pattern.rstrip('/')
+if f'/{dir_name}/' in path_str or path_str.startswith(f'{dir_name}/'):
+    return True
+```
+
+The pairs that make this fail are the ones where a directory name is a prefix of
+a real filename — `.git/` against `.gitconfig`, `.gitignore`, `.gitattributes`
+and `.github/`; `node_modules/` against `node_modules.txt`; `tmux/plugins/`
+against `tmux/tmux.conf`. Every one of those is a file that must survive, so the
+regression test asserts both directions:
+
+```python
+assert should_exclude(Path(".git/config"))
+assert not should_exclude(Path(".gitconfig"))
+```
+
+## Hand-rolled relative paths broke 122 symlinks
+
+The rewrite computed the link target with its own "common ancestor" logic:
+
+```python
+common = Path(*[p for p in target_parent.parts if p in source.parts])
+levels_up = len([p for p in target_parent.parts if p not in common.parts])
+```
+
+It produced `dotfiles/common/init.lua` where the answer was
+`../../dotfiles/common/.config/nvim/init.lua`, and every link it wrote was
+broken. The stdlib already handles this:
+
+```python
+return source.relative_to(target.parent, walk_up=True)
+```
+
+The unit tests passed throughout, because they asserted on the computed string
+rather than on a link that resolves. A symlink test has to create the link and
+read through it — `target.read_text()` is the assertion that would have caught
+this on the first run.
+
+## Key Learnings
+
+- **Match path components, never substrings.** For any path pattern, test a
+  similar-named sibling that must *not* match.
+- **Reach for the stdlib on path arithmetic.** `relative_to(..., walk_up=True)`
+  and `os.path.relpath` have the edge cases already.
+- **Assert through the symlink, not on the string.** Reading the file proves the
+  link works; comparing paths only proves the function is self-consistent.

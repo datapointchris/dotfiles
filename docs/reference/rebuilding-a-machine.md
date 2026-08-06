@@ -76,7 +76,7 @@ then editor and terminal plugins. It is idempotent and "fail loud but keep
 going": a failed step produces a report rather than a wedged install, so it is
 safe to re-run after fixing an issue. The architecture is documented under
 [Architecture](../architecture/index.md); the installation-pattern learnings in
-[Learnings](../learnings/idempotent-installation-patterns.md) explain the design
+[Learnings](../learnings/resilient-installation-patterns.md) explain the design
 choices behind it.
 
 ## After the install — manual steps

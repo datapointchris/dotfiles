@@ -199,7 +199,7 @@ Exclusion patterns in `symlinks/core.py` (`EXCLUDE_PATTERNS` constant):
 
 **Fix**: Check for `/.git/` or starts with `.git/`, not substring match
 
-See: `docs/learnings/directory-pattern-matching.md`
+See: `docs/learnings/symlinks-path-gotchas.md`
 
 ### Relative Path Calculation
 
@@ -207,7 +207,7 @@ See: `docs/learnings/directory-pattern-matching.md`
 
 **Fix**: Use Python stdlib `Path.relative_to(walk_up=True)` (Python 3.12+)
 
-See: `docs/learnings/relative-path-calculation.md`
+See: `docs/learnings/symlinks-path-gotchas.md`
 
 ### Cross-Platform Files
 
@@ -215,7 +215,7 @@ See: `docs/learnings/relative-path-calculation.md`
 
 **Fix**: Test edge cases - `.gitconfig`, `.gitignore`, `.gitattributes` should NEVER be excluded
 
-See: `docs/learnings/cross-platform-symlink-considerations.md`
+See: `docs/learnings/symlinks-path-gotchas.md`
 
 ## Troubleshooting
 
@@ -254,7 +254,4 @@ The package lives at `symlinks/` in the repo root as part of the main dotfiles p
 
 ## See Also
 
-- [Learnings: Directory Pattern Matching](../../learnings/directory-pattern-matching.md)
-- [Learnings: Relative Path Calculation](../../learnings/relative-path-calculation.md)
-- [Learnings: Cross-Platform Symlinks](../../learnings/cross-platform-symlink-considerations.md)
-- [Skills System](skills.md) - global skills overview
+- [Learnings: Symlinks Path Gotchas](../../learnings/symlinks-path-gotchas.md)

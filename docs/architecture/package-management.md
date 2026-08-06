@@ -24,23 +24,28 @@ By using universal installation methods (cargo-binstall, GitHub releases), we ge
 
 ### Tier 1: GitHub Releases (Latest Stable)
 
-**When to use**: Core tools requiring specific versions, not available in cargo/language ecosystems
-
 **Installation target**: `~/.local/bin` or `~/.local/{tool-name}/`
 
 **Method**: Download pre-built binaries from GitHub releases
 
-**Tools**:
+**Tools**: `packages list --section=github_releases`
 
-- `yq` - YAML processor (single binary)
-- `go` - Build toolchain (extract to `/usr/local/go` per official docs)
-- `fzf` - Fuzzy finder (pre-built binary)
-- `neovim` - Editor (extract to `~/.local/nvim-linux-x86_64/`, symlink binary)
-- `lazygit` - Git TUI (single binary)
-- `yazi` - File manager (single binary + plugins)
-- `glow` - Markdown renderer (single binary)
-- `duf` - Disk usage utility (single binary)
-- `awscli` - AWS command line tool (platform-specific installer)
+**When to use**: default to a system package and move a tool here only for a
+reason. The reasons that hold up:
+
+- Releases come faster than the package managers ship them. "Frequent" means the
+  tool is actively evolving, not just patching.
+- It is security tooling, where a stale version has real consequences — `trivy`
+  releases monthly and a lagging vulnerability database means missed CVEs, which
+  is the strongest case in the list.
+- The binary is self-contained, so nothing is gained from the distro's
+  dependency handling.
+- The same version is wanted on macOS and Linux at once.
+
+The inverse test names the tool that should *not* be here: `mkcert` last
+released in 2022, ships as 1.4.4 in every package manager, and is
+feature-complete. A GitHub-release installer for it would be a hand-maintained
+version pin replacing something the OS updates for free.
 
 **Advantages**:
 
@@ -259,7 +264,7 @@ upstream by a major version goes to GitHub releases or `cargo-binstall` instead.
 
 ### Single Source of Truth: packages.yml
 
-All package versions, repositories, and configurations are centralized in `install/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong. See [GitHub Releases vs System Packages](../learnings/github-releases-vs-system-packages.md) for the decision framework on choosing installation methods.
+All package versions, repositories, and configurations are centralized in `install/packages.yml`. This repo previously maintained both a Brewfile and packages.yml, which guaranteed drift — the migration found ~70 duplicate packages and tools that existed in one list but not the other. Lesson: if two lists describe the same things, one of them is wrong.
 
 **Every installation type is catalogued in packages.yml, including custom installers.** There is no auto-detection anywhere: `install.sh`, `update.sh`, and `install/offline/create-bundle.sh` all drive from the corresponding packages.yml section rather than listing directories. A script with no catalog entry (or a catalog entry with no script) is a hard error — see [Drift Detection](#drift-detection) below.
 
@@ -389,4 +394,4 @@ sudo apt update && sudo apt upgrade
 
 - [PATH Ordering Strategy](path-ordering-strategy.md) - How tool resolution works
 - [App Installation Patterns](../learnings/app-installation-patterns.md) - Go apps vs shell scripts
-- [Idempotent Installation Patterns](../learnings/idempotent-installation-patterns.md) - Re-runnable scripts
+- [Resilient Installation Patterns](../learnings/resilient-installation-patterns.md) - Failure isolation and re-runnability

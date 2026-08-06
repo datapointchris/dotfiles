@@ -18,8 +18,8 @@ Individual installer scripts use `set -euo pipefail` and `exit 1` on failure (co
 
 ```bash
 # Parent wrapper (install.sh)
-run_installer "install/install/github-releases/yazi.sh" "yazi" || true
-run_installer "install/install/github-releases/lazygit.sh" "lazygit" || true
+run_installer "install/common/github-releases/yazi.sh" "yazi" || true
+run_installer "install/common/github-releases/lazygit.sh" "lazygit" || true
 # ... continues even if yazi fails
 display_failure_summary  # Shows all failures at end
 ```
@@ -50,8 +50,40 @@ named explicitly, rather than reporting a vague "some packages may have failed."
 - Report exactly which packages failed (`Failed to install: borders`), not a guess
 - Applies to any batched installer where one bad argument aborts the whole command
 
+## Re-runnability: a `status:` Check Can Freeze Sub-Components
+
+A third failure mode is an install that succeeds and then never changes again.
+Task's `status:` field skips a task when the condition holds, and the obvious
+condition is "the binary exists":
+
+```yaml
+install-yazi:
+  cmds:
+    - bash install/common/github-releases/yazi.sh
+  status:
+    - command -v yazi >/dev/null 2>&1   # wrong for this script
+```
+
+Yazi's installer also installs flavors and plugins. Once the binary is on disk
+the task never runs again, so a plugin added to the script afterwards is never
+installed on any machine that already has yazi — and nothing reports a problem,
+because the task is "up to date". The same freeze happens from inside a script
+that opens with `command -v x && exit 0`.
+
+The distinction is whether the script installs one thing or several:
+
+- **Binary only** (lazygit, yq, uv) — keep `status:`, and drop any redundant
+  `command -v ... && exit 0` from the script. One layer should own the skip.
+- **Binary plus sub-components** (yazi, npm globals, cargo tools) — no `status:`.
+  Let the script run every time, guard the binary download with its own check,
+  and always run the component step. `ya pkg add` and `npm install -g` are
+  idempotent, so re-running is cheap and adding a component just works.
+
+Never paper over the difference with `|| echo "Failed (continuing)"`. That turns
+a real error into a line of output nobody reads.
+
 ## Related
 
 - [Centralized Failure Registry](centralized-failure-registry.md)
-- [Idempotent Installation Patterns](idempotent-installation-patterns.md)
-- [Error Handling Architecture](../architecture/error-handling.md)
+- [A packages.yml Entry Is Not an Install](packages-yml-entry-is-not-an-install.md)
+- [Shell Libraries](../architecture/shell-libraries.md)
