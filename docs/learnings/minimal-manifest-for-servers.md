@@ -50,8 +50,9 @@ A first-class `linux` platform plus a tiered system-package model:
   (nothing found in configs/, shell/, or apps/).
 
 Provision one with `install.sh --machine linux-lxc-server`. The interactive zsh
-overlay loads when `~/.env` sets `PLATFORM=linux`, the same manual step every
-platform uses.
+overlay loads when `~/.env` sets `PLATFORM=linux`, which the install now writes
+from the manifest rather than leaving to be typed by hand — see
+`docs/architecture/management-interface.md` § "The machine environment".
 
 ## Key Learnings
 

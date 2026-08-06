@@ -28,6 +28,13 @@ print_section "Checking installed packages" "brightcyan"
 packages missing
 missing_status=$?
 
+# The third drift question, and the one nothing else asks: a flag added to the
+# repo reaches no existing machine, so without this every machine silently keeps
+# the old default forever.
+print_section "Checking machine environment" "brightcyan"
+bash "$DOTFILES_DIR/install/ops/env.sh" check
+env_status=$?
+
 print_section "Summary" "brightcyan"
 if [[ $symlinks_status -eq 0 ]]; then
   print_success "Symlinks are healthy"
@@ -44,6 +51,11 @@ if [[ $missing_status -eq 0 ]]; then
 else
   print_error "Declared packages are missing — run 'dotfiles install'"
 fi
+if [[ $env_status -eq 0 ]]; then
+  print_success "Machine environment matches the manifest and the declared flags"
+else
+  print_error "Machine environment has drifted — run 'dotfiles env sync'"
+fi
 echo ""
 
-[[ $symlinks_status -eq 0 && $packages_status -eq 0 && $missing_status -eq 0 ]]
+[[ $symlinks_status -eq 0 && $packages_status -eq 0 && $missing_status -eq 0 && $env_status -eq 0 ]]

@@ -38,10 +38,32 @@ tasks:
       - task: symlinks:relink
 
   doctor:
-    desc: Health check — verify symlinks and package-manifest drift
+    desc: Health check — verify symlinks, package and flag drift
     silent: true
     cmds:
       - bash "{{.DOTFILES_DIR}}/install/ops/doctor.sh"
+
+  # ================================================================
+  # MACHINE ENVIRONMENT
+  # ================================================================
+
+  env:show:
+    desc: Print the generated ~/.env section without writing
+    silent: true
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install/ops/env.sh" show
+
+  env:sync:
+    desc: Write ~/.env from the manifest, preserving hand-edited overrides
+    silent: true
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install/ops/env.sh" sync
+
+  env:check:
+    desc: Report drift between the declared flags and this machine
+    silent: true
+    cmds:
+      - bash "{{.DOTFILES_DIR}}/install/ops/env.sh" check
 
   # ================================================================
   # SYMLINKS MANAGEMENT

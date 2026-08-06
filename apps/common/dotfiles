@@ -35,7 +35,8 @@ OPS_DIR="$DOTFILES_DIR/install/ops"
 COMMANDS=(
   "update|Manage|[GROUP...] [OPTIONS]|Update packages, tools, and plugins"
   "install|Manage|--machine NAME|Install tools from a machine manifest"
-  "doctor|Manage||Health check: broken symlinks and package-manifest drift"
+  "doctor|Manage||Health check: broken symlinks, package and flag drift"
+  "env|Manage|<verb>|show, sync, check — manage ~/.env from the manifest"
   "link|Symlinks||Create symlinks for the common layer and this platform"
   "relink|Symlinks||Rebuild every symlink, pruning dangling ones"
   "symlinks|Symlinks|<verb>|link, relink, unlink, check, show"
@@ -149,6 +150,9 @@ main() {
       ;;
     doctor)
       bash "$OPS_DIR/doctor.sh"
+      ;;
+    env)
+      bash "$OPS_DIR/env.sh" "$@"
       ;;
     link | relink)
       bash "$OPS_DIR/symlinks.sh" "$command"

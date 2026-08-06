@@ -35,7 +35,8 @@ dotfiles update [GROUP...]     # see "Selective updates" below
 dotfiles install --machine NAME
 dotfiles link | relink         # aliases for the two symlink verbs actually typed
 dotfiles symlinks <verb>       # link, relink, unlink, check, show
-dotfiles doctor                # broken symlinks + package-manifest drift
+dotfiles doctor                # broken symlinks, package-manifest and flag drift
+dotfiles env <verb>            # show, sync, check — manage ~/.env from the manifest
 dotfiles test [SUITE]          # all, unit, integration, watch
 dotfiles docs <verb>           # serve, build, deploy
 dotfiles windows <verb>        # WSL only: setup, bundle, offline, sync
@@ -52,6 +53,43 @@ output and dispatch; `tests/apps/dotfiles.bats` fails if the two disagree.
 
 First-run bootstrap on a bare machine still uses `./install.sh` directly — the CLI's
 symlink does not exist until the repo has been deployed once.
+
+## The machine environment (`~/.env`)
+
+`~/.env` is the first thing `.zshrc` sources and the first thing `install.sh` reads. It
+answers three questions — which OS this is (`PLATFORM`), what the machine is for
+(`MACHINE_ROLE`), and which features it wants running (the flags from
+`install/flags.yml`) — and it also carries secrets and machine-local values that must
+never be checked in.
+
+It used to be hand-authored, which made it the one piece of setup with no source of
+truth: a flag added to the repo reached no existing machine, and nothing could say which
+machines had drifted. `NVIM_AI_ENABLED` survived that way for a long time — set
+everywhere, read by nothing.
+
+Now `install.sh` generates it, and `dotfiles env sync` refreshes it:
+
+```bash
+dotfiles env show    # print the generated section, write nothing
+dotfiles env sync    # write it, preserving everything below the OVERRIDES marker
+dotfiles env check   # what doctor calls: declared-vs-present, and bad values
+```
+
+Everything above the `# OVERRIDES` marker comes from the manifest and `flags.yml` and is
+rewritten on every sync. Everything below it is preserved verbatim, which is what makes
+the file safe to regenerate while it holds API tokens. A file with no marker predates
+generation, so all of it is treated as hand-written and moved below — lossless by
+construction. Syncing also takes a `.bak` and writes through a temp file and a rename,
+because a half-written `~/.env` would take a machine's secrets with it.
+
+The bootstrap is genuinely circular — `~/.env` names the manifest, and the manifest
+generates `~/.env` — so a bare machine still has one line to type by hand. Only
+`MACHINE=` though; `install.sh --machine NAME` fills in the rest on first run.
+
+Flags are for behavior that is present and cheap, where the only question is whether this
+machine wants it. Payload that is expensive to install stays a manifest tool list, and
+config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays
+a platform overlay under `configs/`.
 
 ## Selective installs and updates
 

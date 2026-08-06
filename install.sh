@@ -505,6 +505,17 @@ main() {
 
   cd "$DOTFILES_DIR" || die "Could not change to dotfiles directory"
 
+  # Before the phases, so the rest of the run and every later shell agree on
+  # what this machine is. Hand-authoring ~/.env was the one piece of setup with
+  # no source of truth; the bootstrap paradox stays (this file was already read
+  # for MACHINE), but only MACHINE has to be typed by hand now. Overrides below
+  # the marker — including secrets — are preserved.
+  if [[ "$DRY_RUN" != "true" ]]; then
+    print_section "Machine environment" "brightcyan"
+    bash "$DOTFILES_DIR/install/ops/env.sh" sync --machine "$MACHINE" \
+      || log_warning "Could not sync ~/.env — continuing with the existing file"
+  fi
+
   run_selected_phases || exit 1
 
   [[ "$DRY_RUN" != "true" ]] && show_failures_summary
