@@ -135,6 +135,7 @@ nav:
   - Configuration:
       - configuration/index.md
       - Docker Setup: configuration/docker.md
+      - Hyprland: configuration/hyprland.md
   - Reference:
       - reference/index.md
       - Rebuilding a Machine: reference/rebuilding-a-machine.md
@@ -153,15 +154,10 @@ nav:
           - Corporate Setup: reference/support/corporate.md
   - Development:
       - development/index.md
-      - AWS Glue Local Workflow: development/aws-glue-local-workflow.md
       - VM Testing: development/testing.md
       - Go Applications: development/go-apps.md
       - Shell Formatting: development/shell-formatting.md
       - Publishing Docs: development/publishing-docs.md
-  - Research:
-      - research/index.md
-      - Hyprland:
-          - Understanding Hyprland: research/hyprland/understanding-hyprland.md
   - Learnings:
       - Overview: learnings/index.md
       - Script Refactoring Principles: learnings/script-refactoring-principles.md
