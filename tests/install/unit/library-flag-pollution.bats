@@ -18,6 +18,15 @@ setup_file() {
 test_library_flags() {
   local library="$1"
 
+  # A missing library sources to an error and carries on, because the probe
+  # below deliberately runs without -e. It then adds no -e flag, so it passes.
+  # install/common/lib/platform-detection.sh was in the list for months and had
+  # never existed; the suite reported seven libraries covered and checked six.
+  if [[ ! -f $library ]]; then
+    echo "FAIL: No library at $library — the list names a file that is not there"
+    return 1
+  fi
+
   # Create a test script that checks flags before and after sourcing
   local test_script
   test_script=$(mktemp)
@@ -63,7 +72,7 @@ TESTEOF
     install/common/lib/failure-logging.sh \
     install/common/lib/github-release-installer.sh \
     install/common/lib/version-helpers.sh \
-    install/common/lib/platform-detection.sh; do
+    install/platform-detection.sh; do
 
     run test_library_flags "$DOTFILES_DIR/$library"
     # The path is in the failure message because the loop hides which one broke.

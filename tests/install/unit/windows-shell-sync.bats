@@ -43,8 +43,16 @@ PROBE
 
 # Runs the probe with HOME pointed at the staged tree, merging stderr so the
 # per-file load warnings are visible to assertions.
+#
+# MACHINE_ROLE is unset because Git Bash on Windows starts without one — that is
+# the whole reason the role is baked into the generated .bashrc. Inheriting it
+# from the developer's shell made the suite machine-dependent: a personal
+# workstation exports MACHINE_ROLE=personal, which beat the synced work default
+# and left the work overlay unloaded, so "the role overlay loads" failed there
+# and passed everywhere else. Tests covering the ambient override set it
+# themselves rather than going through here.
 load_bashrc() {
-  env HOME="$TEST_DIR" bash --norc --noprofile "$TEST_DIR/probe.sh" 2>&1
+  env -u MACHINE_ROLE HOME="$TEST_DIR" bash --norc --noprofile "$TEST_DIR/probe.sh" 2>&1
 }
 
 @test "every file in the load order is staged and parses as bash" {
