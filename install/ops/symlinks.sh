@@ -32,6 +32,25 @@ sync_windows_shell_on_wsl() {
   bash "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh"
 }
 
+# `git config --global` writes to ~/.config/git/config when ~/.gitconfig does not
+# exist — and this repo owns the former through a symlink, so following git's own
+# "Please tell me who you are" hint on a fresh machine would commit an identity
+# into the repo. An empty file is enough to redirect the write; it deliberately
+# carries no [user], so useConfigOnly still refuses to commit until one is set.
+ensure_identity_file() {
+  local identity="$HOME/.gitconfig"
+  [[ -e "$identity" ]] && return 0
+
+  cat >"$identity" <<'EOF'
+# This machine's git identity. Not in the dotfiles repo: identity is per-machine,
+# and the shared config sets user.useConfigOnly so a machine without one refuses
+# to commit rather than guessing an author from the hostname.
+#
+# Read after ~/.config/git/config, so anything here wins.
+EOF
+  print_info "Created $identity — set an identity with: git config --global user.email <address>"
+}
+
 main() {
   local verb="${1:-}"
   [[ -z "$verb" || "$verb" == "help" || "$verb" == "-h" || "$verb" == "--help" ]] && usage 0
@@ -46,11 +65,13 @@ main() {
       print_section "Creating symlinks" "brightcyan"
       uv run symlinks link common
       uv run symlinks link "$PLATFORM"
+      ensure_identity_file
       sync_windows_shell_on_wsl
       ;;
     relink)
       print_section "Relinking symlinks" "brightcyan"
       uv run symlinks relink "$PLATFORM"
+      ensure_identity_file
       sync_windows_shell_on_wsl
       ;;
     unlink)

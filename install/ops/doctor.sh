@@ -35,6 +35,18 @@ print_section "Checking machine environment" "brightcyan"
 bash "$DOTFILES_DIR/install/ops/env.sh" check
 env_status=$?
 
+# The repo ships no identity and sets useConfigOnly, so a machine missing one
+# discovers it at the first commit, mid-work. Ask now instead. --global rather
+# than plain --get so a repo-local override cannot mask an unset machine.
+print_section "Checking git identity" "brightcyan"
+if git config --global --get user.email >/dev/null && git config --global --get user.name >/dev/null; then
+  identity_status=0
+  print_success "$(git config --global --get user.name) <$(git config --global --get user.email)>"
+else
+  identity_status=1
+  print_error "No git identity in ~/.gitconfig — set one with 'git config --global user.email <address>'"
+fi
+
 print_section "Summary" "brightcyan"
 if [[ $symlinks_status -eq 0 ]]; then
   print_success "Symlinks are healthy"
@@ -56,6 +68,11 @@ if [[ $env_status -eq 0 ]]; then
 else
   print_error "Machine environment has drifted — run 'dotfiles env sync'"
 fi
+if [[ $identity_status -eq 0 ]]; then
+  print_success "Git identity is set for this machine"
+else
+  print_error "Git identity is missing — commits will be refused"
+fi
 echo ""
 
-[[ $symlinks_status -eq 0 && $packages_status -eq 0 && $missing_status -eq 0 && $env_status -eq 0 ]]
+[[ $symlinks_status -eq 0 && $packages_status -eq 0 && $missing_status -eq 0 && $env_status -eq 0 && $identity_status -eq 0 ]]

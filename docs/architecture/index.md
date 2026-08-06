@@ -38,7 +38,7 @@ dotfiles symlinks show      # Show all symlinks
 **Example results**:
 
 - `configs/common/.config/zsh/.zshrc` → `~/.config/zsh/.zshrc`
-- `configs/macos/.gitconfig` → `~/.gitconfig` (overrides common)
+- `configs/macos/.config/git/platform.gitconfig` → `~/.config/git/platform.gitconfig` (adds to common)
 - `apps/common/menu` → `~/.local/bin/menu`
 
 ## Package Management
@@ -117,23 +117,22 @@ Configurations use inheritance: shared base with platform overrides.
 
 **Example: Git Config**
 
-macOS (`configs/macos/.gitconfig`):
+Git reads both `~/.config/git/config` and `~/.gitconfig`, in that order, and the repo uses the
+split deliberately. Everything shared — delta, the nvim mergetool, aliases, `pull.rebase` — ships
+from `configs/common/.config/git/config`, which git loads natively with no include wiring. Each
+platform adds only what genuinely differs through `configs/<platform>/.config/git/platform.gitconfig`:
+the `gh` credential helper path, and `core.autocrlf` on WSL. That file is pulled in by an include
+at the end of the common config and is ignored while absent, so a platform needing nothing ships
+nothing.
 
-```gitconfig
-[core]
-    editor = code --wait
-[credential]
-    helper = osxkeychain
-```
-
-WSL (`configs/wsl/.gitconfig`):
-
-```gitconfig
-[core]
-    editor = nvim
-[credential]
-    helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-wincred.exe
-```
+Identity is the exception, and it is not in this repo at all. `user.name` and `user.email` differ
+per *machine* rather than per platform — a machine that hosts both employer and personal
+repositories needs a different default from one that hosts only personal work — so they belong in
+`~/.gitconfig`, which git reads last and which nothing here writes. The common config sets
+`user.useConfigOnly = true` so that a machine without one fails loudly rather than inventing an
+author from the hostname. Scoping identity per repository on a mixed machine is a
+`~/.gitconfig` concern too, and `includeIf "hasconfig:remote.*.url:..."` keys on the remote rather
+than the checkout path, so it survives a repo being cloned somewhere unexpected.
 
 **Example: Neovim**
 

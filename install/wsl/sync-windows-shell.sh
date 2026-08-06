@@ -189,7 +189,7 @@ main() {
   fi
 
   local win_shell_dir="$win_home/.local/shell"
-  local common_gitconfig="$DOTFILES_DIR/configs/common/.config/git/common.gitconfig"
+  local shared_gitconfig="$DOTFILES_DIR/configs/common/.config/git/config"
 
   echo "Syncing shell files to Windows Git Bash..."
   echo "  Windows home: $win_home"
@@ -203,22 +203,16 @@ main() {
   write_bashrc "$win_home"
   echo "  Wrote: .bashrc"
 
-  cp "$common_gitconfig" "$win_home/.config/git/common.gitconfig"
-  echo "  Copied: .config/git/common.gitconfig"
+  # Git for Windows reads ~/.config/git/config natively, so this needs no
+  # include wiring on the Windows side. The Windows ~/.gitconfig is left alone:
+  # it carries that machine's identity, which this repo never ships.
+  cp "$shared_gitconfig" "$win_home/.config/git/config"
+  echo "  Copied: .config/git/config"
 
   # Reuse the comprehensive readline config used on Mac/Linux:
   # vi mode, case-insensitive + colored completion, Shift-Tab cycling, UTF-8, history search.
   cp "$DOTFILES_DIR/configs/common/.config/readline/inputrc" "$win_home/.inputrc"
   echo "  Copied: .inputrc"
-
-  # Add include to Windows .gitconfig if not already present
-  local win_gitconfig="$win_home/.gitconfig"
-  if ! grep -q "common.gitconfig" "$win_gitconfig" 2>/dev/null; then
-    printf '[include]\n\tpath = ~/.config/git/common.gitconfig\n' >>"$win_gitconfig"
-    echo "  Updated: .gitconfig (added include)"
-  else
-    echo "  Skipped: .gitconfig include already present"
-  fi
 
   echo "Windows shell sync complete."
 }

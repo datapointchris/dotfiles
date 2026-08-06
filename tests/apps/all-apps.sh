@@ -132,7 +132,7 @@ test_cmd "error-handling.sh loads" "source ~/.local/shell/error-handling.sh && c
 echo ""
 echo "Critical Symlinks:"
 test_symlink "zshrc symlinked" "$HOME/.config/zsh/.zshrc"
-test_symlink "gitconfig symlinked" "$HOME/.gitconfig"
+test_symlink "git config symlinked" "$HOME/.config/git/config"
 test_symlink "tmux.conf symlinked" "$HOME/.config/tmux/tmux.conf"
 
 # ================================================================
@@ -141,7 +141,7 @@ test_symlink "tmux.conf symlinked" "$HOME/.config/tmux/tmux.conf"
 echo ""
 echo "Config Files:"
 test_file "zsh config exists" "$HOME/.config/zsh/.zshrc"
-test_file "git config exists" "$HOME/.gitconfig"
+test_file "git identity file exists" "$HOME/.gitconfig"
 test_file "tmux config exists" "$HOME/.config/tmux/tmux.conf"
 test_file "nvim config exists" "$HOME/.config/nvim/init.lua"
 
