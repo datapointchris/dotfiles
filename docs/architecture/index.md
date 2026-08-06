@@ -150,23 +150,19 @@ Platform-specific (optional): platform LSP configs
 
 **Unified Theme System**: The `theme` CLI generates consistent configs for ghostty, tmux, btop, and Neovim from a single `theme.yml` source file per theme.
 
-## Advantages
+## The cost of the layering
 
-**Minimal Duplication**: Only platform differences exist in platform directories.
+The two-layer scheme buys one shared edit reaching every platform, and charges
+one recurring question: does this belong in `configs/common/` or in the platform
+directory? Getting it wrong is quiet — a setting lands in `common/` that only
+one OS can honour, and the others carry it harmlessly until the day one does
+not.
 
-**Clear Separation**: configs/common/ for shared, platform dirs for quirks only, apps/ for tools, install/ for repo tooling.
-
-**Easy Maintenance**: Update shared config once, all platforms benefit.
-
-**Testable**: Each platform can be tested independently with Docker containers.
-
-## Trade-offs
-
-**Symlink Complexity**: Two-layer system adds complexity, but `symlinks` tool handles it with clear errors.
-
-**Platform Knowledge**: Need to know whether to edit `configs/common/` or platform dir. Experience makes this clear.
-
-See [Platform Differences](../reference/platforms/differences.md) for platform-specific quirks.
+The test is whether the *other* platforms would want it if they could run it. A
+`.gitconfig` alias belongs in common even though only one machine uses that
+remote; a Homebrew path does not, because it is meaningless elsewhere rather
+than merely unused. See
+[Platform Differences](../reference/platforms/differences.md).
 
 ## Deep Dives
 

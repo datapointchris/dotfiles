@@ -52,12 +52,18 @@ Python-side coverage for `install/parse_packages.py` and `apps/common/packages` 
 uv run pytest tests/
 ```
 
-Test files:
+**Every test builds its own synthetic tree and never reads the real repo.** A
+`packages verify` test writes a `packages.yml` and manifest set into `tmp_path`,
+runs `packages verify --root <tmp_path>` as a subprocess, and asserts on
+stdout/stderr and exit code — one test per check. Reading the actual repo would
+make each test a description of today's package list, failing on the next
+unrelated addition and passing for reasons that have nothing to do with the
+check.
 
-- `tests/install/test_parse_packages.py` — packages.yml parser (filtered-by-manifest behavior, section field extraction).
-- `tests/install/test_parse_packages_simple.py` — core parse-helper sanity.
-- `tests/apps/test_packages_verify.py` — `packages verify` drift detection. Every test builds a synthetic `install/packages.yml` + manifest tree in `tmp_path`, invokes `packages verify --root <tmp_path>` via subprocess, and asserts on stdout/stderr + exit code. One test per check. The real repo is never read.
-- `tests/apps/test_packages_missing.py` — `packages missing`, same synthetic-tree approach. It additionally has to control what "installed" means, so each test runs with `PATH` pointing at a temp directory holding only `uv` (needed for the script's own shebang) plus whatever binaries that test installs.
+`packages missing` needs the same isolation for *installed-ness*, which is
+ambient. Those tests run with `PATH` pointed at a temp directory holding only
+`uv` — needed for the script's own shebang — plus whatever binaries that
+specific test decides exist.
 
 ## packages verify
 
@@ -99,149 +105,33 @@ See [Bash Testing Frameworks](https://docs.ichrisbirch.com/terminal/bash-testing
 
 ## Installation Testing
 
-Testing dotfiles installation across platforms using containers and virtual machines.
+Docker for Linux, a fresh user account for macOS. Both give a clean environment
+that can be destroyed and rebuilt, which is the only way to know an install
+works from nothing rather than from a machine that already had half of it.
 
-## Why Test in Isolated Environments
+macOS gets a user account rather than a VM because macOS VMs are slow and
+awkward enough that they stop being used, and a fresh account reproduces
+everything the install touches outside `/usr/local`.
 
-- Clean environment every time
-- Rapid iteration: destroy, fix, test again
-- Test all platforms without multiple machines
-- Catch installation issues early
-- Match production environment exactly
-
-## Testing Strategy
-
-| Platform | Method | Tool | Accuracy | Machine Manifest |
-| --- | --- | --- | --- | --- |
-| Ubuntu (WSL) | Docker | Official WSL rootfs | 100% exact match | `wsl-work-workstation` |
-| Arch Linux | Docker | Official Arch base image | 100% exact match | `archlinux-personal-workstation` |
-| macOS | Fresh user account | Local testing | Full | `macos-personal-workstation` |
-
-## Prerequisites
+The scripts are `eza -1 tests/install/e2e/`, one per environment, each pointed
+at the matching machine manifest. Docker Desktop is the only prerequisite:
 
 ```sh
-# Docker Desktop (required)
 brew install --cask docker
 ```
 
-## Testing with Docker (Recommended)
-
-### Platform-Specific Test Scripts
-
-Located in `tests/install/e2e/`:
-
-- `wsl-docker.sh` - WSL Ubuntu testing with Docker
-- `archlinux-docker.sh` - Arch Linux testing with Docker
-- `offline-docker.sh` - Offline installation testing with Docker
-- `wsl-network-restricted.sh` - Network-restricted WSL testing
-- `macos-temp-user.sh` - macOS testing with fresh user account
-- `current-user.sh` - Test on current user (any platform)
-
-All test scripts pass `--machine <manifest>` to `install.sh` and forward the host's GitHub token for authenticated API calls inside containers. The token is resolved from `gh auth token` on the host at test setup time, since `gh` is not available inside the test containers.
-
-### Why Docker for Testing
-
-Docker provides **100% exact match** to real environments:
-
-**WSL Ubuntu**:
-
-- 563 pre-installed packages (same as WSL Ubuntu 24.04)
-- Official Microsoft/Canonical WSL distribution
-- Fast container startup (~seconds vs minutes for VMs)
-
-**Arch Linux**:
-
-- Official Arch Linux base image
-- Latest rolling release packages
-- Realistic Arch environment
-- Automatic library linking fixes (pcre2 for git)
-- Binary naming differences (7z vs 7zz) handled automatically
-
-**Advantages**:
-
-- Lightweight resource usage
-- Fast iteration (destroy, fix, test again)
-- No guessing about environment differences
-- Automated cleanup (or keep with `-k` flag)
-
-### Test Phases
-
-Docker test scripts run comprehensive phases:
-
-1. **Prepare Docker Image** - Pull/update official platform image
-2. **Start Container** - Launch container with dotfiles mounted and GitHub token
-3. **Prepare Environment** - Create test user, install bootstrap packages (python3, python-yaml), copy dotfiles
-4. **Run Installation** - Execute `install.sh --machine <manifest>`
-5. **Verify Installation** - Run `verify-installation.sh` checks
-6. **Detect Alternates** - Run `detect-alternate-installations.sh`
-7. **Test Updates** - Run platform-specific `update-all` task
-
-### Features
-
-- Real-time output with logging (`test-{platform}-docker.log`)
-- Timing for each step (MM:SS format)
-- Colored output with section headers
-- Automatic cleanup (or keep with `-k` flag)
-- Comprehensive verification and duplicate detection
-
-### Test Logs
-
-Each test run creates a detailed log file:
-
-- WSL: `test-wsl-docker.log`
-- Arch Linux: `test-archlinux-docker.log`
-- macOS: `test-macos.log`
-
-Logs include all installation output, timing information, and test results.
-
-## Alternative Testing
-
-Docker is the recommended approach. For environments without Docker, VMs or cloud instances can be used but require more setup time and resources.
-
-## macOS Testing
-
-**Use separate user account**:
-
-1. Create new standard user in System Preferences
-2. Log in as that user
-3. Install and test dotfiles
-4. Delete user when done
-
-macOS VMs are too complex and resource-intensive. Fresh user accounts provide clean testing environment.
-
 ## Verification
 
-The test scripts automatically run comprehensive verification using `install/verify-installation.sh`. This checks:
-
-- Core build tools (git, curl, wget, make)
-- Task runner installation
-- Shell and terminal tools (zsh, tmux, bat, fd, fzf, ripgrep, zoxide, eza)
-- Development tools (neovim, lazygit, yazi, glow, duf)
-- Version managers (uv, cargo-binstall)
-- Language servers and Go tools
-- Platform-specific tools
-
-The verification script validates that tools are installed in the expected locations (e.g., `~/.local/bin/`, `~/.cargo/bin/`) and reports any duplicate installations.
-
-### Manual Verification
-
-If testing manually without the automated scripts:
-
 ```sh
-# Run comprehensive verification
-cd ~/dotfiles
 bash tests/install/verification/verify-installed-packages.sh
-
-# Check for duplicate installations
 bash tests/install/verification/detect-installed-duplicates.sh
 ```
 
-## Iteration Workflow
+The first checks that everything the manifest declared is present *and in the
+expected prefix*; the second catches the same tool installed twice by different
+methods, which is the failure that PATH order hides — a stale copy in
+`/usr/bin` shadowed by a current one in `~/.local/bin` works fine until the
+order changes.
 
-1. **Test** in clean VM
-2. **Capture errors** (screenshot, save output)
-3. **Fix** bootstrap/taskfile scripts
-4. **Destroy** VM
-5. **Repeat** until flawless
-
-Document quirks discovered in [Platform Differences](../reference/platforms/differences.md).
+The e2e scripts run both automatically. Document platform quirks found this way
+in [Platform Differences](../reference/platforms/differences.md).
