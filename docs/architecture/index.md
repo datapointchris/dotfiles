@@ -85,7 +85,9 @@ Shell functions and aliases live in `shell/` organized by platform, deployed via
 - **Role-specific**: `shell/roles/{role}.sh` (work, personal, server) → `~/.local/shell/roles/{role}.sh`
 - **`.zshrc` sources them explicitly** using the `$PLATFORM` and `$MACHINE_ROLE` env vars: `source "$SHELL_DIR/$PLATFORM.sh"` then `source "$SHELL_DIR/roles/$MACHINE_ROLE.sh"`
 
-Platform answers *which OS*, role answers *what the machine is for*, and they are deliberately independent — the CIFS mounts and Okta login in `shell/roles/work.sh` are employer infrastructure that a personal WSL box would want none of. The role overlay loads second so it can build on what the platform exported.
+Platform answers *which OS*, role answers *what the machine is for*, and they are deliberately independent — employer infrastructure belongs to the work role, not to WSL, and a personal WSL box would want none of it. The role overlay loads second so it can build on what the platform exported.
+
+A role overlay does not have to live in this repo. `.zshrc`, `menu`, and the symlink manager all guard on the file existing, and `relink` only removes symlinks that resolve into the repo — so a real file at `~/.local/shell/roles/<role>.sh` survives every relink untouched. That is the supported way to keep employer-specific shell code off a synced repo entirely, backed up with `safekeep` instead.
 
 Unlike a platform overlay, **every** role file is linked on every machine and `MACHINE_ROLE` selects one at shell startup, so changing a machine's role is a `~/.env` edit rather than a relink. A role with nothing to add ships no file at all; the source is guarded, like an optional platform overlay.
 

@@ -86,10 +86,11 @@ alias copycommand='fc -ln -1 | win32yank.exe -i'
 
 # ---------- Directory Navigation ---------- #
 
-# The Windows-side home. WINDOWS_USER comes from ~/.env so the account name is
-# per-machine rather than checked in; the default preserves the existing work
-# box until its ~/.env carries one.
-export winchris="/mnt/c/Users/${WINDOWS_USER:-600002371}"
+# The Windows-side home. WINDOWS_USER belongs in ~/.env below the OVERRIDES
+# marker: the account name is per-machine and, on the work box, an employee ID
+# that has no business in this repo. Left unset rather than guessed — deriving it
+# needs a cmd.exe fork, which is not worth paying on every shell startup.
+[[ -n "${WINDOWS_USER:-}" ]] && export winchris="/mnt/c/Users/${WINDOWS_USER}"
 
 # ---------- Operations ---------- #
 

@@ -23,7 +23,7 @@ setup() {
   source "$DOTFILES_DIR/install/wsl/sync-windows-shell.sh"
 
   stage_shell_files "$STAGED" >/dev/null
-  stage_role_files "$STAGED" >/dev/null
+  stage_role_files "$STAGED" "$DOTFILES_DIR/shell/roles" >/dev/null
   MACHINE_ROLE=work write_bashrc "$TEST_DIR"
 }
 
@@ -162,6 +162,14 @@ PROBE
   run env MACHINE_ROLE=server HOME="$TEST_DIR" bash --norc --noprofile "$TEST_DIR/probe.sh"
   assert_success
   assert_output --partial "role=server"
+}
+
+@test "staging a role never deletes one that exists nowhere else" {
+  # A role overlay may live outside the repo — employer-specific shell code kept
+  # off a synced clone. Wiping the directory first would destroy the only copy.
+  echo 'echo out-of-repo' >"$STAGED/roles/local-only.sh"
+  stage_role_files "$STAGED" "$DOTFILES_DIR/shell/roles" >/dev/null
+  assert [ -f "$STAGED/roles/local-only.sh" ]
 }
 
 @test "staging clears a combined.sh left by the old generator" {

@@ -79,14 +79,23 @@ stage_shell_files() {
 # Every role, not just this machine's, so MACHINE_ROLE in the Windows-side
 # ~/.env can switch role without a re-sync. Kept in a roles/ subdirectory rather
 # than flattened with the rest, so a role named like a platform cannot collide.
+#
+# Staged from the deployed ~/.local/shell/roles, not from the repo: a role
+# overlay may deliberately live outside this clone (employer-specific shell code
+# kept off a synced repo), and the deployed directory is the one place both kinds
+# appear. cp dereferences symlinks, so an in-repo role still copies through.
+#
+# Nothing is removed first. A stale role file here is inert — the generated
+# .bashrc only sources roles/$MACHINE_ROLE.sh — whereas an rm would delete the
+# only copy of a role that exists nowhere else.
 stage_role_files() {
   local dest="$1/roles"
+  local source="${2:-$HOME/.local/shell/roles}"
   local src
 
-  rm -rf "$dest"
   mkdir -p "$dest"
 
-  for src in "$DOTFILES_DIR"/shell/roles/*.sh; do
+  for src in "$source"/*.sh; do
     [[ -f "$src" ]] || continue
     cp "$src" "$dest/"
     echo "  Copied: roles/$(basename "$src")"
