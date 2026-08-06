@@ -1,133 +1,49 @@
 # Task Reference
 
-This dotfiles repository uses [go-task/task](https://taskfile.dev) for automation from inside the repo. The Taskfile is intentionally minimal - complex installation logic lives in dedicated shell scripts.
-
-Every task here has a `dotfiles` CLI equivalent that works from any directory, and both call the same scripts under `install/ops/`. See [Management Interface](../../architecture/management-interface.md) for the layering.
-
-## Available Tasks
-
-Run `task --list` to see all available tasks:
-
-```bash
-task --list
-```
-
-### Symlinks Management
-
-```bash
-task symlinks:link      # Create symlinks from dotfiles to home directory
-task symlinks:relink    # Remove and recreate all symlinks
-task symlinks:check     # Verify symlinks are correct
-task symlinks:show      # Show all configured symlinks
-task symlinks:unlink    # Remove all symlinks
-```
-
-Symlinks use a two-layer system: common configs first, then platform-specific overlay.
-
-### Testing
-
-```bash
-task test               # Run all BATS tests
-task test:unit          # Run unit tests
-task test:integration   # Run integration tests
-task test:watch         # Run tests on file changes (requires entr)
-```
-
-### Documentation
-
-```bash
-task docs:serve         # Serve documentation site locally (localhost:8000)
-task docs:build         # Build static documentation site
-task docs:deploy        # Deploy documentation to GitHub Pages
-```
+`task --list-all` from inside the repo is the list. It is generated from the
+Taskfile and cannot go stale, which a copy here would.
 
 ## Philosophy
 
-**Tasks are for orchestration, not wrappers.** The Taskfile coordinates multi-step workflows while keeping simple operations accessible via their native commands.
+**Tasks orchestrate, they do not wrap.** A task exists to coordinate a
+multi-step workflow. An operation that is already one command keeps its native
+command — wrapping `brew upgrade` in `task brew-upgrade` adds a name to
+remember and nothing else.
 
-**Minimal by design.** Complex installation logic lives in shell scripts under `install/`, not in YAML. This keeps the Taskfile readable and the logic testable.
+**Logic lives in shell, not YAML.** Installation logic sits in `install/`, where
+it can be tested with bats and read without counting indentation. The Taskfile
+calls those scripts. This is why the Taskfile stays short as the install grows.
 
-**Platform detection is automatic.** It lives in `install/platform-detection.sh` and is used by the `install/ops/` scripts, not reimplemented in YAML.
+**Platform detection is not reimplemented per task.** It lives in
+`install/platform-detection.sh` and the `install/ops/` scripts use it.
 
-### Windows Setup (WSL only)
+## Two front doors, one implementation
 
-```bash
-task windows:setup                # One-time Git Bash setup via winget (run from WSL)
-task windows:sync                 # Sync shell files to Windows Git Bash (run from WSL)
-task windows:bundle               # Bundle Windows tool binaries into a .tar.gz (any machine)
-task windows:offline -- <archive> # Install tools from a bundle when winget is blocked (WSL)
+`task <verb>` works from inside the repo; `dotfiles <verb>` works from anywhere.
+Both call the same scripts in `install/ops/`, so neither is the "real" one and
+they cannot drift. Use whichever is closer to hand — `dotfiles` when you are in
+another project, `task` when you are already here. See
+[Management Interface](../../architecture/management-interface.md).
+
+## Windows setup (from WSL)
+
+`windows:bundle` downloads the Windows `.exe` for each shell tool from GitHub
+releases into a single archive that can be carried to a network-restricted
+machine, where `windows:offline` installs them without touching the network.
+Use that pair when winget is blocked; otherwise `windows:setup` handles
+everything online, and `windows:sync` copies the shell files across.
+
+The Git Bash side gets copies rather than symlinks because Windows cannot follow
+a symlink across the WSL boundary — see
+[Architecture](../../architecture/index.md#shell-source-files).
+
+## Installation is not a task
+
+Full installation runs through `install.sh` with a machine manifest, not through
+Task, because it needs sudo and a `--machine` argument:
+
+```sh
+./install.sh --machine macos-personal-workstation
 ```
 
-`windows:bundle` downloads the Windows `.exe` for each shell tool from GitHub releases into a single archive that can be moved to a network-restricted machine, where `windows:offline` installs them without touching the network. Use this pair when winget is blocked; otherwise `windows:setup` handles everything online.
-
-## Installation
-
-Full installation is handled by `install.sh` with a machine manifest, not Tasks:
-
-```bash
-cd ~/dotfiles
-bash install.sh --machine archlinux-personal-workstation
-```
-
-Machine manifests in `install/manifests/` define what gets installed per computer type. The install script reads the manifest to determine platform, tools, and configuration.
-
-## Direct Commands
-
-For operations not covered by Tasks, use native commands:
-
-```bash
-# Package updates
-brew update && brew upgrade       # macOS
-sudo apt update && sudo apt upgrade  # WSL
-sudo pacman -Syu                  # Arch
-
-# Python tools
-uv tool upgrade --all
-uv tool list
-
-# Node.js
-npm update -g
-npm list -g --depth=0
-
-# Theme management
-theme apply <name>
-theme list
-theme current
-```
-
-## Package Definitions
-
-All package versions and configurations are centralized in `install/packages.yml`:
-
-- Runtime versions (Go, Node, Python)
-- GitHub binaries (neovim, lazygit, yazi, fzf)
-- Cargo packages
-- npm global packages
-- uv tools
-- Shell and tmux plugins
-
-## Troubleshooting
-
-### Task Not Found
-
-Install task:
-
-```bash
-go install github.com/go-task/task/v3/cmd/task@latest
-```
-
-### Permission Errors
-
-Some operations require sudo (apt/pacman). You'll be prompted when needed.
-
-### List All Tasks
-
-```bash
-task --list-all      # Shows all tasks including internal ones
-```
-
-## See Also
-
-- [Platform Differences](../platforms/differences.md) - Package managers per platform
-- [Symlinks Manager](symlinks.md) - Python symlinks tool
-- [Taskfile Documentation](https://taskfile.dev/docs/guide) - Official Task docs
+See [Rebuilding a Machine](../rebuilding-a-machine.md).

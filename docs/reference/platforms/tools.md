@@ -1,38 +1,17 @@
 # Tool Availability
 
-Tool support, version managers, and platform-specific quirks.
+What is installed on a machine is `toolbox list`, or
+`packages list --section=<section>` for one install method. This page covers
+only the tools where the *choice* of method needed a decision, and the
+per-platform quirks that decision produced.
 
-## Tool Availability by Platform
+## The one split-method tool
 
-| Tool           | macOS | Ubuntu | Arch | Installation Method                     |
-| -------------- | ----- | ------ | ---- | --------------------------------------- |
-| **bat**        | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **eza**        | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **fd**         | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **zoxide**     | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **git-delta**  | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **oxker**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **broot**      | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **ripgrep**    | ✅    | ✅     | ✅   | cargo-binstall (all platforms)          |
-| **neovim**     | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
-| **lazygit**    | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
-| **yazi**       | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
-| **fzf**        | ✅    | ✅     | ✅   | GitHub releases (all platforms)         |
-| **atuin**      | ✅    | ✅     | ✅   | GitHub releases (Linux); brew (macOS)   |
-| **tmux**       | ✅    | ✅     | ✅   | System package manager                  |
-| **aerospace**  | ✅    | ❌     | ❌   | macOS-only window manager (cask)        |
-| **borders**    | ✅    | ❌     | ❌   | macOS-only (JankyBorders)               |
-
-**Legend**:
-
-- ✅ Native package manager support
-- ⚠️ Alternative installation required
-- ❌ Not available or not applicable
-
-**atuin** is the one split-method tool. It uses GitHub releases on Linux like fzf and neovim, but
-macOS falls back to Homebrew: atuin publishes no Intel-macOS release binary (only Apple Silicon), and
-`cargo binstall` would compile it from source. brew's bottle covers both Mac architectures, so all
-Macs use it while every other platform uses the uniform GitHub-releases install.
+**atuin** installs from GitHub releases on Linux like fzf and neovim, but macOS
+falls back to Homebrew. It publishes no Intel-macOS release binary — only Apple
+Silicon — and `cargo binstall` would fall through to compiling from source.
+brew's bottle covers both Mac architectures, so every Mac uses it while every
+other platform takes the uniform GitHub-releases path.
 
 ## Version Managers
 
@@ -98,25 +77,6 @@ uv tool install mdformat
 ```
 
 Tools installed to: `~/.local/bin` (consistent across platforms)
-
-### Theme System
-
-Theme management uses the `theme` CLI (installed to `~/.local/bin/theme`):
-
-```bash
-theme list                  # List available themes
-theme apply rose-pine       # Apply theme
-theme preview               # Interactive fzf preview
-theme current               # Show current theme
-theme update                # Update to latest version
-```
-
-**Locations**:
-
-- Installed: `~/.local/share/theme/` (cloned from GitHub)
-- Development: `~/tools/theme/`
-- Data: `~/.config/theme/` (history, rejected themes)
-- Themes: `~/.local/share/theme/themes/`
 
 ## Platform-Specific Quirks
 
@@ -188,80 +148,3 @@ theme update                # Update to latest version
     - More frequent updates
     - May encounter breaking changes
     - Test updates in VM first
-
-## Testing Checklist
-
-When testing installations, verify these platform-specific items:
-
-=== "macOS"
-
-    - [ ] Homebrew location correct for architecture
-    - [ ] All system packages install
-    - [ ] Casks install correctly
-    - [ ] Symlinks created in expected locations
-    - [ ] GNU coreutils prepended to PATH (unprefixed)
-
-=== "Ubuntu/WSL"
-
-    - [ ] Cargo-binstall tools installed (ripgrep, bat, fd, eza, zoxide, delta, broot)
-    - [ ] GitHub release tools installed (neovim, lazygit, yazi, fzf)
-    - [ ] ~/.local/bin in PATH
-    - [ ] WSL-specific config applied (/etc/wsl.conf)
-    - [ ] systemd enabled if needed
-    - [ ] Fonts installed to Windows user fonts directory
-    - [ ] `font list` shows installed fonts
-
-=== "Arch Linux"
-
-    - [ ] yay AUR helper installed
-    - [ ] pacman.conf configured (color, parallel downloads)
-    - [ ] All packages install without conflicts
-    - [ ] Symlinks created correctly
-    - [ ] Services enabled if needed
-
-## Troubleshooting
-
-### Package Not Found
-
-!!! warning "Symptoms"
-    Package doesn't exist in repos
-
-!!! tip "Solutions"
-    === "macOS"
-
-        Check if it's a cask:
-        ```bash
-        brew search --cask <pkg>
-        ```
-
-    === "Ubuntu/WSL"
-
-        May need PPA or cargo install
-
-    === "Arch Linux"
-
-        Check AUR:
-        ```bash
-        yay -Ss <pkg>
-        ```
-
-### Binary Not in PATH
-
-!!! warning "Symptoms"
-    Command not found after install
-
-!!! tip "Solutions"
-    1. Check installation location: `which <command>`
-    2. Verify PATH: `echo $PATH | tr ':' '\n'`
-    3. Reload shell: `source ~/.zshrc`
-    4. Check symlinks: `ls -la ~/.local/bin`
-
-### Permission Denied
-
-!!! warning "Symptoms"
-    Can't install or write files
-
-!!! tip "Solutions"
-    - Ensure ~/.local/bin exists: `mkdir -p ~/.local/bin`
-    - Check ownership: `ls -la ~/.local`
-    - Fix permissions: `chmod 755 ~/.local/bin`

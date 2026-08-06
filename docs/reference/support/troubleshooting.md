@@ -1,117 +1,78 @@
 # Troubleshooting
 
-Common issues and solutions.
+## Start here
 
-## Command Not Found
+```sh
+dotfiles doctor      # symlink health and package-manifest drift
+packages missing     # declared in packages.yml but not installed
+toolbox check        # registry vs PATH vs disk
+```
 
-!!! warning "Symptom"
-    Tool installed but command not found
+Between them these answer most of "why isn't this working", and they answer it
+against the current state rather than against a guess. Run them before reading
+further.
 
-!!! info "Check PATH"
-    ```sh
-    echo $PATH | tr ':' '\n'
-    ```
+Also search the learnings by **symptom**, not by tool — the error string is what
+was recorded:
 
-    Should include:
+```sh
+rg -i "no route to host" docs/learnings/
+```
 
-    - `~/.local/bin`
-    - `/usr/local/bin` (macOS) or `/usr/bin` (Arch) for the Node.js system package
-    - `/usr/local/bin` or `/opt/homebrew/bin` (macOS)
+## Command not found after installing
 
-!!! tip "Fix: Reload shell"
-    ```sh
-    source ~/.config/zsh/.zshrc
-    # or
-    exec zsh
-    ```
+Check where the shell is actually looking:
 
-## Neovim Issues
+```sh
+echo $PATH | tr ':' '\n'
+```
 
-!!! warning "Plugins won't load"
-    ```sh
-    nvim -c "Lazy sync" -c "qa"    # Force sync
-    rm -rf ~/.local/share/nvim/lazy/  # Clear cache
-    ```
+If the directory is missing, the shell has not been reloaded (`exec zsh`) or the
+entry was added to the wrong end of `.zshrc` — `add_path` prepends, so the last
+call wins. See
+[Package Management](../../architecture/package-management.md#installation-location-strategy).
 
-!!! warning "LSP not working"
-    ```sh
-    :LspInfo                # Check attached servers
-    :checkhealth vim.lsp    # Run diagnostics
-    ```
+## Config changes not taking effect
 
-!!! warning "Version too old"
-    ```sh
-    nvim --version          # Should be 0.11+
-    brew upgrade neovim     # macOS
-    ```
+A config that is not a symlink into the repo is a copy, and editing the repo
+does nothing:
 
-## Symlink Issues
+```sh
+eza -l ~/.config/zsh/.zshrc   # should point into ~/dotfiles
+dotfiles relink               # prunes dangling links and recreates all of them
+```
 
-!!! warning "Config file not updating"
-    ```sh
-    ls -la ~/.config/zsh/.zshrc  # Check symlink
-    symlinks relink macos        # Recreate symlinks
-    ```
+`dotfiles link` only *adds* links. After deleting or renaming a source file it
+leaves the old link behind, pointing at nothing — `relink` is the one that
+prunes. It is idempotent, so when in doubt use it.
 
-## Theme Issues
+## ZDOTDIR
 
-!!! warning "Theme not applying"
-    ```sh
-    theme current           # Check current theme
-    theme verify            # Check theme system
-    theme apply <name>      # Apply theme directly
-    ```
+The system file differs by distro, which is the part that catches people:
+`/etc/zshenv` on macOS and Arch, `/etc/zsh/zshenv` on Ubuntu and WSL. Either
+way it should contain `export ZDOTDIR="$HOME/.config/zsh"`. `install.sh` writes
+this on every platform, so a missing one means the install did not finish.
 
-!!! warning "Tmux colors wrong"
-    ```sh
-    # In tmux
-    Ctrl+Space r            # Reload tmux config
-    ```
+There is deliberately no `~/.zshenv` or `~/.zprofile`; see
+[Architecture](../../architecture/index.md).
 
-## Git Issues
+## Neovim
 
-!!! tip "Git identity not set"
-    ```sh
-    git config --global user.name "Your Name"
-    git config --global user.email "your@email.com"
-    ```
+```sh
+nvim -c "Lazy sync" -c "qa"        # force plugin sync
+rm -rf ~/.local/share/nvim/lazy/   # clear the plugin cache and re-sync
+:checkhealth vim.lsp               # from inside nvim, for LSP problems
+```
 
-!!! tip "Credential helper not working (macOS)"
-    ```sh
-    git config --global credential.helper osxkeychain
-    ```
+A "module not found" error immediately after a repo change is usually a stale
+symlink rather than a plugin problem — run `dotfiles relink` first.
 
-## Package Manager Issues
+## Theme
 
-!!! warning "Homebrew slow/hanging (macOS)"
-    ```sh
-    brew update             # Update package lists
-    brew doctor             # Check for issues
-    brew cleanup            # Clean old versions
-    ```
+```sh
+theme verify     # checks the theme system end to end
+theme current
+```
 
-!!! warning "apt package not found (Ubuntu)"
-    ```sh
-    sudo apt update         # Update package lists
-    ```
-
-    Some tools need cargo install or manual installation on Ubuntu. See [Platform Differences](../platforms/differences.md).
-
-## WSL-Specific
-
-!!! info "ZDOTDIR not working"
-    Check `/etc/zshenv` (macOS) or `/etc/zsh/zshenv` (Ubuntu/WSL):
-
-    ```sh
-    cat /etc/zshenv
-    ```
-
-    Should contain:
-
-    ```sh
-    export ZDOTDIR="$HOME/.config/zsh"
-    ```
-
-## Still Having Issues?
-
-Check git history (`git log --oneline`) for recent changes that may have introduced issues.
+Ghostty needs a full restart for some changes; see
+[Ghostty Shader Reload](../../learnings/ghostty-shader-reload.md).
