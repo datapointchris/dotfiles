@@ -197,3 +197,4 @@ nav:
       - Version Comparison in Shell: learnings/version-comparison-in-shell.md
       - Pyright Config File Precedence: learnings/pyright-config-file-precedence.md
       - Ghostty Shader Reload: learnings/ghostty-shader-reload.md
+      - Man Page Overstrike in Pagers: learnings/man-page-overstrike-in-pagers.md

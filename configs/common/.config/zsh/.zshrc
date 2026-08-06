@@ -124,8 +124,12 @@ log "Setup" "History & Command Editing"
 # GENERAL SETTINGS
 # ------------------------------------------------------------------ #
 export EDITOR="nvim"
-export PAGER="bat --style=plain"
-export MANPAGER="bat --style=plain --language=man"
+export PAGER="bat"
+# col -bx strips the backspace overstrike man page formatters still emit for
+# bold (`N^HNA^HAM^HME^HE`); bat prints those bytes literally and only less
+# decodes them. Filtering first leaves bat's theme as the only source of color.
+# awscli reads MANPAGER before PAGER, so this fixes `aws <cmd> help` too.
+export MANPAGER="sh -c 'col -bx | bat --language=man'"
 export HOMEBREW_NO_AUTO_UPDATE=1
 
 # Tool directories
@@ -336,15 +340,9 @@ my_prompt="$HOME/.local/shell/prompt.zsh"
 # PLUGIN REPLACEMENTS
 # ------------------------------------------------------------------ #
 
-# colored-man-pages
-export LESS_TERMCAP_mb=$'\e[1;32m'     # begin bold
-export LESS_TERMCAP_md=$'\e[1;32m'     # begin blink
-export LESS_TERMCAP_so=$'\e[01;33m'    # begin reverse video
-export LESS_TERMCAP_us=$'\e[01;4;31m'  # begin underline
-export LESS_TERMCAP_me=$'\e[0m'        # reset bold/blink
-export LESS_TERMCAP_se=$'\e[0m'        # reset reverse video
-export LESS_TERMCAP_ue=$'\e[0m'        # reset underline
-export GROFF_NO_SGR=1                  # for groff compatibility
+# colored-man-pages (LESS_TERMCAP_* + GROFF_NO_SGR=1) was removed: it forced
+# groff to keep emitting overstrike so less could paint it, which is what leaked
+# `^H` into every pager that is not less. bat colors from the theme now.
 
 # ------------------------------------------------------------------ #
 # SHELL CONFIG
