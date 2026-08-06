@@ -215,12 +215,12 @@ delete it.**
 
 This is the repo-local application of the global rule "A Count Is a Command,
 Not a Constant" in `~/.claude/CLAUDE.md`, and it exists because the alternative
-was measured: an audit found roughly 40% of `docs/` was enumeration duplicating
-a machine-readable source, and it had drifted far enough to be actively
-wrong — commands that did not exist, a PATH order that was inverted, function
-tables missing a third of their functions. The pages that never needed editing
-were the ones spending their lines on reasoning. `docker.md`,
-`tmux-sessions.md` and `management-interface.md` are the models.
+was measured. `docs/development/docs-audit.md` is the record: what was found
+wrong, the baseline to compare against, and the re-measure commands. Read it
+before running another docs review, and add to it rather than editing it — it
+is a dated snapshot and the only place here where enumerations are the content.
+`docker.md`, `tmux-sessions.md` and `management-interface.md` are the models to
+imitate; the shared property is that nothing in them changes when code changes.
 
 `refcheck` runs as a pre-commit hook and validates `source`/`bash` targets in
 markdown as well as shell, so a doc citing a moved file now fails the commit.

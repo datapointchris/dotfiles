@@ -143,6 +143,7 @@ nav:
       - development/index.md
       - VM Testing: development/testing.md
       - Publishing Docs: development/publishing-docs.md
+      - Docs Audit Record: development/docs-audit.md
   - Learnings:
       - Overview: learnings/index.md
       - App Installation Patterns: learnings/app-installation-patterns.md
