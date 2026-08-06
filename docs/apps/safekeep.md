@@ -38,6 +38,6 @@ move possible: a script cannot take a `sys.path` hack with it when it leaves.
 
 ## See Also
 
-- [Backmeup](backmeup.md) — timestamped tar+zstd archives, the complementary tool that stayed
+- [Backup](backup.md) — the archive and snapshot tools that stayed in this repo
 - [Tool Composition](../architecture/tool-composition.md) — how safekeep fits into the toolchain
 - [App Installation Patterns](../learnings/app-installation-patterns.md) — the four install patterns

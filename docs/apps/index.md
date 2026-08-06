@@ -4,72 +4,36 @@ icon: material/apps
 
 # Apps
 
-Personal CLI tools for enhanced workflows.
+Personal CLI tools. Every one has `--help`, which is the reference for its flags
+and verbs; the pages here cover the parts `--help` cannot — why a tool exists,
+what it deliberately does not do, and how it fits the rest.
 
-## Development Tools
+Only tools with something to explain have a page. `eza ~/.local/bin` is the list
+of what is actually installed, and `toolbox list` is the searchable version.
 
-<div class="grid cards" markdown>
+## Finding and choosing
 
-- :material-notebook: __[Notes](notes.md)__
+- **[Menu](menu.md)** — federated search across tools, functions, aliases and keybindings
+- **[Menu Next](menu-next.md)** — what to do now, drawn from weighted pursuits
+- **[Toolbox](toolbox.md)** — the installed-tool registry and its `--brief` nudge
+- **[Workflows](workflows.md)** — the reference/recipe card format, and when a card is worth writing
 
-    Zettelkasten note-taking with zk
+## Backup and integrity
 
-- :material-check-all: __[Refcheck](refcheck.md)__
+- **[Backup](backup.md)** — `backmeup` archives versus `backup-incremental` snapshots
+- **[Safekeep](safekeep.md)** — moved to its own repo; the page records why, and the manifest consequence
+- **[Refcheck](refcheck.md)** — broken-reference validation, and why it runs here
 
-    Find broken file references
+## Appearance
 
-</div>
+- **[Theme](theme.md)** — which dotfiles-managed configs `theme apply` rewrites
+- **[Font](font.md)** — the same, for fonts
+- **[Work Monitor](work-monitor.md)** — Arch-only; the Dell hotplug behaviour behind it
 
-## Utilities
+## Documented elsewhere
 
-<div class="grid cards" markdown>
-
-- :fontawesome-solid-list: __[Menu](menu.md)__
-
-    Launcher and federated search across your tools
-
-- :material-dice-multiple: __[Menu Next](menu-next.md)__
-
-    What to do now, drawn from weighted pursuits
-
-- :material-toolbox: __[Toolbox](toolbox.md)__
-
-    Tool discovery CLI
-
-- :material-backup-restore: __[Backmeup](backmeup.md)__
-
-    Compressed archive backup
-
-- :material-backup-restore: __[Backup Incremental](backup-incremental.md)__
-
-    Rsync hard-link incremental backup
-
-- :material-safe-square-outline: __[Safekeep](safekeep.md)__
-
-    Config-driven file preservation with retention
-
-</div>
-
-## Theming & Fonts
-
-<div class="grid cards" markdown>
-
-- :material-palette: __[Theme](theme.md)__
-
-    Unified theme management across terminal apps
-
-- :fontawesome-solid-font: __[Font](font.md)__
-
-    Font management and tracking
-
-</div>
-
-## Personal
-
-<div class="grid cards" markdown>
-
-- :material-chart-timeline-variant: __[Patterns](patterns.md)__
-
-    Timestamped logging for health, mood, and habits
-
-</div>
+`dotfiles` is in [Management Interface](../architecture/management-interface.md),
+`packages` in [Package Management](../architecture/package-management.md), and
+`tmux-sessions` in [tmux Sessions](../architecture/tmux-sessions.md), because
+each is a component of the system that page describes rather than a standalone
+tool.
