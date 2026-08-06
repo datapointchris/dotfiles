@@ -2,7 +2,7 @@
 
 **Context**: Managing custom CLI apps with different installation methods.
 
-## Three App Categories
+## Four App Categories
 
 ### 1. Go Apps (Remote Install via `go install`)
 
@@ -55,7 +55,7 @@ ln -sf ~/.local/share/theme/bin/theme ~/.local/bin/theme
 
 ### 4. Python Tools (Remote Install via `uv tool install`)
 
-**Examples**: `relate`, `logsift`, `indy`, `refcheck`, `syncer`
+**Examples**: `relate`, `logsift`, `indy`, `refcheck`, `syncer`, `safekeep`
 
 **Installation**: Installed from GitHub via `uv tool install`, pinned to the repo's newest release tag, from packages.yml:
 

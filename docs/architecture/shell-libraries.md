@@ -110,7 +110,7 @@ bare `echo` for prose between rows, so pending rows flush ahead of it.
 The `pytermstyle` package mirrors all six functions for the Python apps, and `gotermstyle` does the
 same for the Go CLIs; all three render byte-identical screens. `pytermstyle` was extracted from this
 repo in August 2026 — it lived here as `appcore/formatting.py` for as long as every consumer was a
-script in `apps/`, and left when one stopped being: `safekeep` is moving to its own repo and could
+script in `apps/`, and left when one stopped being: `safekeep` moved to its own repo and could
 not take the help grammar with it through a `sys.path` hack. Each app now declares `pytermstyle` in
 its PEP 723 header, resolved from a git tag. The packaged Python CLIs on the fleet use Typer and get
 their help from Rich instead.

@@ -96,6 +96,7 @@ git_uv_tools:
   - logsift
   - dectl
   - ypl
+  - safekeep
 
 shell_plugins: true
 tmux_plugins: true

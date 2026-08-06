@@ -48,17 +48,22 @@ def run_missing(root: Path, *, machine: str = 'testbox', **env_overrides: str) -
 
 @pytest.fixture
 def empty_path_dir(tmp_path: Path) -> Path:
-    """A PATH containing nothing but uv, so only what a test puts there resolves.
+    """A PATH holding only what starts the script, so only what a test puts there resolves.
 
     uv has to be reachable or the `uv run --script` shebang cannot start the
-    script at all; symlinking it in keeps PATH otherwise fully controlled, where
-    appending uv's real directory would drag in every other tool beside it.
+    script at all, and git has to be reachable because the script's PEP 723 block
+    declares pytermstyle as a git dependency — uv shells out to git to resolve it,
+    and reports "Git executable not found" otherwise. Both are toolchain needed to
+    *start* the script rather than anything under test. Symlinking them in keeps
+    PATH otherwise fully controlled, where appending their real directory would
+    drag in every other tool beside them.
     """
     bin_dir = tmp_path / 'fakebin'
     bin_dir.mkdir()
-    uv = shutil.which('uv')
-    assert uv, 'uv must be installed to run the packages script'
-    (bin_dir / 'uv').symlink_to(uv)
+    for tool in ('uv', 'git'):
+        resolved = shutil.which(tool)
+        assert resolved, f'{tool} must be installed to run the packages script'
+        (bin_dir / tool).symlink_to(resolved)
     return bin_dir
 
 

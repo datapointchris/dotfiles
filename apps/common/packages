@@ -4,7 +4,11 @@
 # dependencies = ["pyyaml", "pytermstyle"]
 #
 # [tool.uv.sources]
-# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
+# # A commit, not the tag it carries. A tag is mutable, so uv re-checks the
+# # remote on EVERY run — a network round trip per invocation, and a hard failure
+# # with no network. A rev is immutable and resolves from cache. Repos with a
+# # uv.lock do not need this; a single-file script has no lockfile.
+# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", rev = "bef61a95120df523758029eac6692898140e4262" }  # v0.1.1
 # ///
 """Query packages.yml for browsing and discovery.
 

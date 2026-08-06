@@ -105,7 +105,6 @@ test_cmd "menu-review available" "command -v menu-review"
 test_cmd "menu-labs available" "command -v menu-labs"
 test_cmd "menu-dashboard available" "command -v menu-dashboard"
 test_cmd "backmeup help" "backmeup --help"
-test_cmd "safekeep help" "safekeep --help"
 test_cmd "workflows available" "command -v workflows"
 test_cmd "printcolors available" "command -v printcolors"
 

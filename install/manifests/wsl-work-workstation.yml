@@ -90,6 +90,7 @@ git_uv_tools:
   - syncer
   - indy
   - dectl
+  - safekeep
 
 shell_plugins: true
 tmux_plugins: true

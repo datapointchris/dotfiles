@@ -120,6 +120,15 @@ system_packages:
     pacman: man-db
     description: Manual page viewer (macOS has it built-in)
 
+  # MANPAGER pipes man through `col -b` to strip overstrike before bat renders
+  # it, so a missing col breaks `man` and `aws <cmd> help` outright. Debian moved
+  # col out of util-linux into bsdextrautils; macOS ships it at /usr/bin/col.
+  - name: bsdextrautils
+    tier: core
+    apt: bsdextrautils
+    pacman: util-linux
+    description: Provides col, which strips man page overstrike for the pager
+
   - name: wget
     tier: core
     apt: wget
@@ -1285,6 +1294,10 @@ git_uv_tools:
   - name: dectl
     repo: https://github.com/datapointchris/dectl.git
     description: Verb-last data-engineering control CLI
+
+  - name: safekeep
+    repo: https://github.com/datapointchris/safekeep.git
+    description: Dated snapshots of the files no package manager will put back
 
 # ================================================================
 # GO TOOLS

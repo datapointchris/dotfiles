@@ -17,7 +17,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
 - ALWAYS use `DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"` to get repo root. The exported value must win: `install.sh` and `update.sh` export it, and the `dotfiles` CLI runs from any directory, so a bare `git rev-parse` resolves to whatever repo the user happens to be standing in — or aborts outright outside one.
 - NEVER use relative path navigation like `$(cd "$(dirname ...)/../.." && pwd)`
 
-**App Installation Patterns** (⚠️ CRITICAL - Three distinct patterns):
+**App Installation Patterns** (⚠️ CRITICAL - Four distinct patterns):
 
 1. **Go Apps** (toolbox): Installed via `go install` from packages.yml
    - Defined in `packages.yml` under `go_tools` with `package` field (go install path)
@@ -25,7 +25,7 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
    - Development in `~/tools/{app}/`, push to GitHub, `go install` gets latest
    - Binary location: `~/go/bin/`
 
-2. **Symlinked Script Apps** (menu, notes; also Python: safekeep, packages, menu-review): Symlinked from repo
+2. **Symlinked Script Apps** (menu, notes; also Python: packages, menu-review): Symlinked from repo
    - Located in `apps/{platform}/` as executable files (bash, or Python via a `uv run --script` / `python3` shebang)
    - Symlinked to `~/.local/bin/`
    - Linked via `create_symlinks()` with `~/.local/bin/` as the target dir
@@ -34,6 +34,13 @@ preferences — live in `~/.claude/CLAUDE.md`, and how the fleet builds things l
    - Custom installers in `install/common/custom-installers/`
    - Clone to `~/.local/share/{tool}/`, symlink bin → `~/.local/bin/`
    - Development in `~/tools/{app}/`, push to GitHub, run `{tool} update`
+
+4. **Python Tools from git** (safekeep, refcheck, syncer, indy, …): `uv tool install` from a git repo
+   - Defined in `packages.yml` under `git_uv_tools` with `name`, `repo`, `description`
+   - Installer: `install/common/lib/uv-git-tools.sh`; binary lands in `~/.local/bin/`
+   - **Each machine's manifest also lists it** — unlike a symlinked app, which every machine
+     with `apps/` symlinks gets automatically, a git uv tool reaches only the machines naming it
+   - This is where a Python app goes once it outgrows being a single file in `apps/`
 
 See `docs/learnings/app-installation-patterns.md` for full details.
 
@@ -124,7 +131,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `archlinux/` - Arch Linux configurations
 - `apps/` - Personal CLI applications (bash or Python scripts, symlinked; see `apps/` for full listing)
-  - `common/` - Cross-platform tools (menu, notes, backmeup, safekeep, patterns, and more)
+  - `common/` - Cross-platform tools (menu, notes, backmeup, patterns, and more)
   - `macos/` - macOS-specific tools
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
 - `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)

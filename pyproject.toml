@@ -161,10 +161,6 @@ dev = [
     # at runtime but not under pytest: the test suite loads each script by path
     # with importlib, so its imports resolve against THIS environment instead.
     "pytermstyle",
-    # Tests only. tomllib reads TOML but cannot write it, and the alternative was a
-    # hand-rolled serializer in the test file. safekeep's own dependency list stays
-    # at pytermstyle alone.
-    "tomli-w>=1.0.0",
 ]
 
 [tool.uv.sources]
