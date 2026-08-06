@@ -76,9 +76,11 @@ set -euo pipefail
 # ============================================================================
 
 # Source required shell libraries
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
-source "$DOTFILES_DIR/configs/common/.local/shell/colors.sh"
+SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
+# shellcheck source=/dev/null
+source "$SHELL_DIR/formatting.sh"
+# shellcheck source=/dev/null
+source "$SHELL_DIR/colors.sh"
 
 # ============================================================================
 # Configuration
