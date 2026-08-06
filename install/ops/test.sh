@@ -3,8 +3,7 @@ set -uo pipefail
 
 # BATS suite runner shared by `dotfiles test` and `task test*`.
 
-OPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$OPS_DIR/../.." && pwd)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 

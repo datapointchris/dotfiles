@@ -6,8 +6,7 @@ set -uo pipefail
 # through `uv run` from the repo — plain `mkdocs` only resolves inside an
 # activated venv.
 
-OPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_DIR="$(cd "$OPS_DIR/../.." && pwd)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 export DOTFILES_DIR
 export TERM=${TERM:-xterm}
 
