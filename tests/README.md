@@ -48,25 +48,28 @@ Tests all user-facing tools can be invoked:
 #### Validate File References
 
 ```bash
-bash tests/install/utils/verify-file-references.sh
+refcheck
 ```
 
-Checks for broken file references before running expensive tests.
+Resolves every `source` and `bash` target in the repo, including the ones behind
+`$DOTFILES_DIR`, and checks them against disk. Seconds, and worth running before
+anything expensive.
 
 #### Validate Installation
 
 ```bash
-bash tests/install/utils/verify-installed-packages.sh
-bash tests/install/utils/detect-installed-duplicates.sh
+bash tests/install/verification/verify-installed-packages.sh
+bash tests/install/verification/detect-installed-duplicates.sh
 ```
 
 #### Full E2E Installation Test
 
+The scripts are `eza -1 tests/install/e2e/` — one per target environment, plus
+`offline-docker.sh` for the bundle path and `wsl-network-restricted.sh` for the
+firewalled case:
+
 ```bash
-bash tests/install/e2e/wsl-docker.sh
-bash tests/install/e2e/arch-docker.sh
-bash tests/install/e2e/macos-temp-user.sh
-bash tests/install/e2e/current-user.sh
+bash tests/install/e2e/archlinux-docker.sh
 ```
 
 **Speed:** Slow (5-15 minutes, requires Docker)

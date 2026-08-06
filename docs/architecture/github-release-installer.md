@@ -150,7 +150,7 @@ Most common pattern (majority of tools):
 set -euo pipefail
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-source "$DOTFILES_DIR/install/common/lib/error-handling.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/error-handling.sh"
 enable_error_traps
 source "$DOTFILES_DIR/install/common/lib/github-release-installer.sh"
 

@@ -177,16 +177,16 @@ Documentation in this repository serves as a technical reference for future me (
 
 ```text
 docs/
-├── {topic.md}           # High-level topics that don't need a subdirectory
-├── apps/                # Personal CLI application docs
-├── architecture/        # HOW and WHY everything works
-├── claude-code/         # Claude Code integration, agents, hooks
-├── configuration/       # Customization guides
+├── apps/                # Per-tool: why it exists, what it deliberately doesn't do
+├── architecture/        # HOW and WHY the system works
+├── configuration/       # Per-program config decisions (docker, hyprland)
 ├── development/         # Testing and contributing
-├── reference/           # Quick lookup (platforms, tools, tasks)
-├── research/            # Technical research and exploration
-└── learnings/           # Extracted wisdom from bugs and discoveries
+├── reference/           # Platform differences, symlinks, tasks, troubleshooting
+└── learnings/           # Debugging artifacts, searched by symptom
 ```
+
+General technical notes that do not name something in this repo belong on the
+hub (`~/docs`), not here.
 
 **Writing Guidelines**:
 
@@ -199,6 +199,33 @@ docs/
 - Reference files instead of copying code examples
 - Technical and factual, not promotional
 - Add new docs to `mkdocs.yml` navigation
+
+**Never write a list a command produces** (⚠️ MANDATORY):
+
+A tool roster, a flag reference, a function table, a package list, a task list,
+a file enumeration, a count — each is true only at the instant it is written,
+and a reader who cannot verify it stops trusting the page. Write the command
+instead: `task --list-all`, `packages list --section=<x>`, `toolbox list`,
+`eza -1 install/manifests/`, `rg '^[a-z_]+\(\)' <lib>`, `<tool> --help`.
+
+A doc earns its lines by explaining a decision, a rejected alternative, a
+non-obvious constraint, or a measured tradeoff — the things the code cannot
+state about itself. **If a section would be regenerated correctly by `--help`,
+delete it.**
+
+This is the repo-local application of the global rule "A Count Is a Command,
+Not a Constant" in `~/.claude/CLAUDE.md`, and it exists because the alternative
+was measured: an audit found roughly 40% of `docs/` was enumeration duplicating
+a machine-readable source, and it had drifted far enough to be actively
+wrong — commands that did not exist, a PATH order that was inverted, function
+tables missing a third of their functions. The pages that never needed editing
+were the ones spending their lines on reasoning. `docker.md`,
+`tmux-sessions.md` and `management-interface.md` are the models.
+
+`refcheck` runs as a pre-commit hook and validates `source`/`bash` targets in
+markdown as well as shell, so a doc citing a moved file now fails the commit.
+It is a backstop for paths only — nothing mechanical catches a stale flag
+table, which is why the rule above is to not write one.
 
 ## Key Custom Tools
 

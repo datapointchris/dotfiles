@@ -31,7 +31,10 @@ detect_platform() { ... }
 
 ## Testing
 
-See `tests/install/unit/library-flag-pollution.bats` — tests all 7 shell libraries to verify none add the `-e` flag when sourced.
+`tests/install/unit/library-flag-pollution.bats` sources each library listed in it and asserts no
+new flag appears in `$-`. It also checks the file exists first: a missing library sources to an
+error, carries on, adds no flags and passes, which is how it spent months reporting coverage of a
+path that had never existed.
 
 ## Related
 
