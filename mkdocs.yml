@@ -133,25 +133,16 @@ nav:
       - Error Handling: architecture/error-handling.md
       - GitHub Release Installer: architecture/github-release-installer.md
   - Configuration:
-      - configuration/index.md
       - Docker Setup: configuration/docker.md
       - Hyprland: configuration/hyprland.md
   - Reference:
-      - reference/index.md
       - Rebuilding a Machine: reference/rebuilding-a-machine.md
-      - Platforms:
-          - Platform Differences: reference/platforms/differences.md
-          - Package Differences: reference/platforms/packages.md
-          - Command Reference: reference/platforms/commands.md
-          - Tool Availability: reference/platforms/tools.md
-      - Tools:
-          - Symlinks Manager: reference/tools/symlinks.md
-          - Task Reference: reference/tools/tasks.md
-          - Hooks: reference/tools/hooks.md
-          - Skills System: reference/tools/skills.md
-      - Support:
-          - Troubleshooting: reference/support/troubleshooting.md
-          - Corporate Setup: reference/support/corporate.md
+      - Platform Differences: reference/platforms/differences.md
+      - Tool Availability: reference/platforms/tools.md
+      - Symlinks Manager: reference/tools/symlinks.md
+      - Task Reference: reference/tools/tasks.md
+      - Troubleshooting: reference/support/troubleshooting.md
+      - Restricted Networks: reference/support/corporate.md
   - Development:
       - development/index.md
       - VM Testing: development/testing.md

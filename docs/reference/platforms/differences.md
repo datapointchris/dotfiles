@@ -1,17 +1,19 @@
 # Platform Differences
 
-Comprehensive reference for platform-specific differences across macOS, WSL Ubuntu, and Arch Linux.
-
-## Quick Reference
+Which manifest a machine uses, and the handful of ways the platforms genuinely
+diverge.
 
 | Aspect | macOS | WSL Ubuntu | Arch Linux |
 | --- | --- | --- | --- |
 | **Package Manager** | brew | apt | pacman |
-| **Shell** | zsh (default) | bash (default) | bash |
-| **Binary Prefix** | None | Some (bat, fd) | None |
-| **User Binaries** | ~/.local/bin | ~/.local/bin | ~/.local/bin |
-| **System Binaries** | /usr/local/bin | /usr/bin | /usr/bin |
+| **System Binaries** | /usr/local/bin, /opt/homebrew/bin | /usr/bin | /usr/bin |
 | **Machine Manifest** | macos-personal-workstation | wsl-work-workstation | archlinux-personal-workstation |
+
+`~/.local/bin` is the user binary directory everywhere, and binary names are
+consistent everywhere — the Ubuntu `batcat`/`fdfind` problem does not arise
+because `bat` and `fd` install through `cargo binstall` rather than apt. That
+consistency is the point of the [package
+strategy](../../architecture/package-management.md), not an accident.
 
 A headless LXC or small Linux box uses the separate `linux-lxc-server` manifest
 (platform `linux`), a minimal profile installed with
@@ -21,22 +23,5 @@ packages the workstation manifests pull in. Do not point a small box at a
 workstation manifest; see
 [Minimal Manifest for Servers](../../learnings/minimal-manifest-for-servers.md).
 
-## Deep Dive
-
-<!-- markdownlint-disable MD033 -->
-<div class="grid cards" markdown>
-
-- :material-package: **[Package Differences](packages.md)**
-
-    Package name and binary name differences across platforms
-
-- :material-console: **[Command Reference](commands.md)**
-
-    Package manager commands and environment configuration
-
-- :material-tools: **[Tool Availability](tools.md)**
-
-    Tool support, version managers, and platform-specific quirks
-
-</div>
-<!-- markdownlint-enable MD033 -->
+Platform-specific quirks that needed a decision — the atuin split, fnm over
+nvm, the npm prefix — are in [Tool Availability](tools.md).

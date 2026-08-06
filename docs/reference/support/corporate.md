@@ -1,128 +1,49 @@
-# Corporate Environment
+# Restricted Networks
 
-Solutions for corporate environments with restricted internet access.
+The work machine sits behind a firewall that blocks most of what an install
+reaches for. Three pieces of machinery exist for it, and none of them are the
+generic advice about proxies and registry mirrors — that was the previous
+content of this page, and it described an installer this repo does not use.
 
-## Native LSP Advantage
+## Find out what is actually blocked
 
-This configuration uses native Neovim LSP, not Mason, which bypasses most corporate restrictions:
+`bash install/offline/test-connectivity.sh` walks every URL the install touches
+and writes a pass/fail line per host to
+`install/offline/connectivity-results.txt`. Run it on the restricted machine
+first: the answer is rarely "the internet is blocked" and usually "GitHub
+release assets are blocked but the API is not", which changes what you need to
+carry in.
 
-- No dependency on raw.githubusercontent.com
-- Direct tool installation via system package managers
-- Offline capable after initial setup
+The results file is committed deliberately. It is a record of one network's
+behaviour at one time, which is the only way to compare against it after the
+firewall rules change.
 
-## Installation
+## Install without the network
 
-Install language servers manually using approved package managers:
+`./install.sh --create-offline-bundle` downloads every GitHub release binary,
+cargo binary and install script into a single tarball, on a machine that *has*
+the network. `--platform` targets the machine you are building for, not the one
+you are on — the default is `linux-x86_64`, so building on a Mac for WSL needs
+no flag, and building for Apple Silicon does.
 
-**TypeScript/JavaScript**:
+Move the tarball across, then `./install.sh --offline` extracts it to
+`~/installers/` and installs from there. `install.sh --help` prints the full
+sequence including the `python3 -m http.server` route for when scp is also
+blocked.
 
-```sh
-npm install -g typescript typescript-language-server
-```
+This path is tested end to end: `tests/install/e2e/offline-docker.sh` builds a
+bundle, blocks GitHub inside a container, and asserts the install completes from
+cache. If you change the bundle format, that test is what catches it.
 
-**Python**:
+## Windows tools when winget is blocked
 
-```sh
-pip install --user basedpyright ruff
-```
+`task windows:bundle` and `task windows:offline` are the same idea for the Git
+Bash side. See [Task Reference](../tools/tasks.md).
 
-**JSON/HTML/CSS**:
+## Why the Neovim setup does not need any of this
 
-```sh
-npm install -g vscode-langservers-extracted
-```
-
-**Bash**:
-
-```sh
-npm install -g bash-language-server
-```
-
-**Lua**:
-
-```sh
-brew install lua-language-server  # macOS
-```
-
-## Offline Installation
-
-**Download packages at home**:
-
-```sh
-npm pack typescript typescript-language-server
-npm pack bash-language-server
-# Transfer files to work machine
-npm install -g ./typescript-x.x.x.tgz
-```
-
-**Use company package mirrors**:
-
-```sh
-npm config set registry http://npm.company.com/
-pip config set global.index-url http://pypi.company.com/simple/
-```
-
-## Configuration
-
-Disable features requiring internet access:
-
-```lua
--- Disable plugin auto-updates
-lazy = {
-  checker = { enabled = false },
-  change_detection = { enabled = false },
-}
-```
-
-## Troubleshooting
-
-**npm install fails**:
-
-```sh
-npm config set registry http://npm.company.com/
-```
-
-**Git clone fails**:
-
-```sh
-git config --global url."https://github.com/".insteadOf "git@github.com:"
-```
-
-**SSL certificate errors**:
-
-```sh
-npm config set strict-ssl false
-# Better: use company certificate
-git config --global http.sslcainfo /path/to/company-cert.pem
-```
-
-## Verification
-
-```sh
-# Check language servers installed
-which typescript-language-server
-which basedpyright
-
-# Test in Neovim
-nvim test.js
-# In Neovim: :LspInfo
-```
-
-## Minimal Setup
-
-If full setup is too complex, use minimal native LSP:
-
-```lua
--- No external dependencies, just native LSP
-vim.lsp.config.ts_ls = {
-  cmd = { 'typescript-language-server', '--stdio' },
-  filetypes = { 'typescript', 'javascript' },
-}
-
-vim.lsp.config.basedpyright = {
-  cmd = { 'basedpyright-langserver', '--stdio' },
-  filetypes = { 'python' },
-}
-
-vim.lsp.enable({ 'ts_ls', 'basedpyright' })
-```
+Neovim uses native LSP rather than Mason, so opening an editor does not reach
+`raw.githubusercontent.com` at all. Language servers arrive through
+`npm_globals` and `uv_tools` in `install/packages.yml` like every other tool,
+which means the bundle above already carries them. There is nothing
+Neovim-specific to arrange.
