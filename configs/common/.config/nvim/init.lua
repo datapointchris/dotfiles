@@ -8,8 +8,12 @@ require('core.early-notify')()
 -- Environment Validation
 -- ================================================================== --
 -- Validate required environment variables for proper configuration
+-- Both come from ~/.env, which `dotfiles env sync` generates. MACHINE_ROLE
+-- decides the plugin profile and gates the plugins that read personal
+-- directories, so a missing one silently changes which plugins load.
 local required_env_vars = {
   'PLATFORM',
+  'MACHINE_ROLE',
 }
 
 local missing_vars = {}

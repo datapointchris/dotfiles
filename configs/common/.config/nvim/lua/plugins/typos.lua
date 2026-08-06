@@ -1,7 +1,10 @@
 return {
   dir = '~/code/typos',
   name = 'typos',
-  cond = vim.env.PLATFORM ~= 'wsl',
+  -- Role, not platform: this reads ~/notes and ~/shart, which are Syncthing
+  -- personal directories that do not exist on the work box. It was gated on
+  -- PLATFORM ~= 'wsl' only because the work box happens to be the WSL one.
+  cond = vim.env.MACHINE_ROLE ~= 'work',
   ft = 'markdown', -- Notes are .md, no need to load otherwise
   cmd = { 'TyposToggle', 'TyposStatus' },
   opts = {

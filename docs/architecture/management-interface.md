@@ -117,6 +117,24 @@ Two ordering hazards, both real and both now handled:
   would call that hook, so `apply_shell_keybindings` is a named function with two callers
   — the hook, and the tail of `.zshrc` when the flag is off.
 
+### Beyond the shell
+
+Neovim reads the same vocabulary. `core/profiles.lua` derives its plugin profile from
+`MACHINE_ROLE` — a machine that has declared itself a server has already said everything
+needed to pick the minimal set — with `NVIM_PROFILE` kept as the override for the rarer
+case of a workstation that wants it lean. That removed a second variable which had to be
+set by hand on every server and kept in step with the role.
+
+`plugins/typos.lua` moved from `PLATFORM ~= 'wsl'` to `MACHINE_ROLE ~= 'work'`. It reads
+`~/notes` and `~/shart`, which are Syncthing personal directories; it was never about WSL,
+only about the work box happening to be the WSL one. `core/options.lua` keeps its
+`PLATFORM == 'wsl'` check, because win32yank genuinely is a WSL fact.
+
+tmux gets nothing. Every conditional in `tmux.conf` is real runtime detection — is this
+pane running vim, is `$WSL_DISTRO_NAME` set, does the theme file exist, is tpm cloned —
+and none of them is a preference in disguise. A flag with no consumer is how
+`NVIM_AI_ENABLED` happened, so the mechanism waits until something needs it.
+
 ## Selective installs and updates
 
 `install.sh` and `update.sh` share one phase registry, `install/phases.sh`, so both take

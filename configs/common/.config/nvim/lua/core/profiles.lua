@@ -3,13 +3,24 @@
 --
 -- Profiles (checked in priority order):
 --   vscode  - auto-detected when embedded in VSCode (vim.g.vscode)
---   minimal - set via NVIM_PROFILE=minimal (LXC server)
+--   minimal - a server, or NVIM_PROFILE=minimal explicitly
 --   full    - default, everything loads
+--
+-- The profile follows MACHINE_ROLE rather than being a second variable that has
+-- to be set by hand and kept in step: a machine that has already declared
+-- itself a server has said everything needed to pick this. NVIM_PROFILE stays
+-- as the override for the rarer case — a workstation that wants the lean set.
 
 local M = {}
 
+local function resolve_profile()
+  local explicit = vim.env.NVIM_PROFILE
+  if explicit and explicit ~= '' then return explicit end
+  return vim.env.MACHINE_ROLE == 'server' and 'minimal' or 'full'
+end
+
 M.is_vscode = vim.g.vscode ~= nil
-M.is_minimal = vim.env.NVIM_PROFILE == 'minimal'
+M.is_minimal = not M.is_vscode and resolve_profile() == 'minimal'
 M.is_full = not M.is_vscode and not M.is_minimal
 
 -- VSCode: these plugins are DISABLED (blocklist)
