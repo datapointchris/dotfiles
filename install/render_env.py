@@ -52,6 +52,22 @@ def load_flags():
     return load_yaml(INSTALL_DIR / 'flags.yml').get('flags', [])
 
 
+def load_required():
+    """Return the declared machine-local values as a list of dicts."""
+    return load_yaml(INSTALL_DIR / 'flags.yml').get('required', [])
+
+
+def applicable_required(manifest, required):
+    """The required values that apply to this machine.
+
+    An entry narrows by platform and/or role; one that names neither applies
+    everywhere.
+    """
+    role = manifest.get('role', 'personal')
+    platform = manifest.get('platform')
+    return [entry for entry in required if entry.get('platform', platform) == platform and entry.get('role', role) == role]
+
+
 def load_manifest(machine):
     return load_yaml(INSTALL_DIR / 'manifests' / f'{machine}.yml')
 
@@ -76,8 +92,9 @@ def assignment(name, value):
     return f'export {name}="${{{name}:-{value}}}"'
 
 
-def render_generated_section(manifest, flags):
+def render_generated_section(manifest, flags, required=None):
     """Build the managed part of ~/.env, ending with the OVERRIDES marker."""
+    required = load_required() if required is None else required
     machine = manifest.get('machine', '')
     lines = [
         '# ================================================================',
@@ -107,6 +124,18 @@ def render_generated_section(manifest, flags):
         if description:
             lines.append(f'# {description}')
         lines.append(assignment(name, value))
+
+    # Named, never valued: this is the only place that tells you a machine needs
+    # one before something quietly builds a wrong path out of the empty string.
+    needed = applicable_required(manifest, required)
+    if needed:
+        lines += [
+            '',
+            '# This machine also needs these set by hand BELOW the marker. Their values are',
+            '# machine-local and deliberately not in the repo; `dotfiles doctor` fails until',
+            '# each one is set.',
+        ]
+        lines += [f'#   {entry["name"]} - {entry.get("description", "")}'.rstrip(' -') for entry in needed]
 
     lines += ['', MARKER, '']
     return '\n'.join(lines)
@@ -154,8 +183,9 @@ def parse_env_assignments(text):
     return values
 
 
-def check(path, manifest, flags):
+def check(path, manifest, flags, required=None):
     """Report drift between the declared flags and what the machine actually has."""
+    required = load_required() if required is None else required
     problems = []
 
     if not path.exists():
@@ -183,6 +213,13 @@ def check(path, manifest, flags):
         elif actual.lower() not in TRUTHY | FALSEY:
             problems.append(f'{name} is {actual!r}, which is neither truthy nor falsey')
 
+    # Machine-local values the repo knows are needed but must never hold. Unset,
+    # they expand to the empty string and quietly build a wrong path at the point
+    # of use rather than failing anywhere you would look.
+    for entry in applicable_required(manifest, required):
+        if not present.get(entry['name']):
+            problems.append(f'{entry["name"]} must be set below the marker — {entry.get("description", "machine-local value")}')
+
     # Flags the shell no longer knows about. Not fatal — a machine may carry a
     # flag from a newer commit — but it is exactly how NVIM_AI_ENABLED survived
     # being read by nothing, so it is worth naming.
@@ -200,10 +237,10 @@ def check(path, manifest, flags):
     return 0
 
 
-def sync(path, manifest, flags):
+def sync(path, manifest, flags, required=None):
     """Rewrite the generated section, preserving everything below the marker."""
     overrides, migrating = split_existing(path)
-    content = render_generated_section(manifest, flags)
+    content = render_generated_section(manifest, flags, required)
     if overrides:
         content += overrides if overrides.endswith('\n') else overrides + '\n'
 

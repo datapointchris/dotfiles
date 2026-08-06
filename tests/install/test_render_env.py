@@ -95,9 +95,72 @@ def test_ambient_override_actually_wins_in_a_real_shell(tmp_path):
 
 def test_check_reads_through_the_self_referencing_default(tmp_path):
     # The value the shell would land on is what matters, not the literal text.
+    # required=[] because MANIFEST is role work, which the real flags.yml gives
+    # machine-local values this fixture has no reason to carry.
     env_file = tmp_path / '.env'
-    render_env.sync(env_file, MANIFEST, FLAGS)
-    assert render_env.check(env_file, MANIFEST, FLAGS) == 0
+    render_env.sync(env_file, MANIFEST, FLAGS, [])
+    assert render_env.check(env_file, MANIFEST, FLAGS, []) == 0
+
+
+REQUIRED = [
+    {'name': 'WINDOWS_USER', 'description': 'Windows account name', 'platform': 'macos'},
+    {'name': 'OTHER_PLATFORM_ONLY', 'description': 'Not here', 'platform': 'linux'},
+    {'name': 'EVERYWHERE', 'description': 'Applies to all'},
+]
+
+
+def test_required_values_narrow_by_platform():
+    names = [e['name'] for e in render_env.applicable_required(MANIFEST, REQUIRED)]
+    assert names == ['WINDOWS_USER', 'EVERYWHERE']
+
+
+def test_required_values_narrow_by_role():
+    entries = [{'name': 'WORK_ONLY', 'role': 'work'}, {'name': 'SERVER_ONLY', 'role': 'server'}]
+    names = [e['name'] for e in render_env.applicable_required(MANIFEST, entries)]
+    assert names == ['WORK_ONLY']
+
+
+def test_generated_section_names_the_required_values_without_valuing_them():
+    # The repo must say a machine needs one, and must never hold what it is.
+    section = render_env.render_generated_section(MANIFEST, FLAGS, REQUIRED)
+    assert 'WINDOWS_USER - Windows account name' in section
+    assert 'OTHER_PLATFORM_ONLY' not in section
+    assert 'export WINDOWS_USER' not in section
+
+
+def test_generated_section_omits_the_block_when_nothing_applies():
+    section = render_env.render_generated_section(MANIFEST, FLAGS, [])
+    assert 'needs these set by hand' not in section
+
+
+def test_check_reports_a_required_value_that_is_unset(env_file, capsys):
+    # Unset it expands to the empty string and silently builds a wrong path at
+    # the point of use, which is nowhere anyone would look.
+    render_env.sync(env_file, MANIFEST, FLAGS, REQUIRED)
+    assert render_env.check(env_file, MANIFEST, FLAGS, REQUIRED) == 1
+    assert 'WINDOWS_USER must be set below the marker' in capsys.readouterr().out
+
+
+def test_check_passes_once_the_required_value_is_set(env_file):
+    render_env.sync(env_file, MANIFEST, FLAGS, REQUIRED)
+    with env_file.open('a') as f:
+        f.write('export WINDOWS_USER=someone\nexport EVERYWHERE=yes\n')
+    assert render_env.check(env_file, MANIFEST, FLAGS, REQUIRED) == 0
+
+
+def test_check_treats_an_empty_required_value_as_unset(env_file, capsys):
+    render_env.sync(env_file, MANIFEST, FLAGS, REQUIRED)
+    with env_file.open('a') as f:
+        f.write('export WINDOWS_USER=\nexport EVERYWHERE=yes\n')
+    assert render_env.check(env_file, MANIFEST, FLAGS, REQUIRED) == 1
+    assert 'WINDOWS_USER must be set' in capsys.readouterr().out
+
+
+def test_wsl_manifest_actually_declares_windows_user():
+    # The live wiring, not a fixture: wsl.sh builds $winchris from it.
+    manifest = render_env.load_manifest('wsl-work-workstation')
+    names = [e['name'] for e in render_env.applicable_required(manifest, render_env.load_required())]
+    assert 'WINDOWS_USER' in names
 
 
 def test_sync_preserves_a_hand_written_file_in_full(env_file):
@@ -143,8 +206,8 @@ def test_sync_writes_a_private_file(env_file):
 
 
 def test_check_passes_on_a_freshly_synced_file(env_file):
-    render_env.sync(env_file, MANIFEST, FLAGS)
-    assert render_env.check(env_file, MANIFEST, FLAGS) == 0
+    render_env.sync(env_file, MANIFEST, FLAGS, [])
+    assert render_env.check(env_file, MANIFEST, FLAGS, []) == 0
 
 
 def test_check_reports_a_missing_file(env_file):

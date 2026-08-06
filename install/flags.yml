@@ -25,6 +25,33 @@
 # and cannot branch on (hyprland, waybar, ghostty) belongs in a platform
 # overlay under configs/.
 
+# Machine-local values that must be set by hand below the OVERRIDES marker. The
+# repo knows a machine needs them; it must never know their values, because they
+# are account names, employee IDs, and the like.
+#
+# Each entry may narrow to a platform and/or a role; an entry with neither
+# applies everywhere. The generated section names the ones that apply, and
+# `dotfiles doctor` fails while one is missing — without that, an unset value
+# just silently produces a wrong path at the point of use.
+# Only values whose absence is *silent* belong here. An unset WORK_USER mounts a
+# share with an empty username; an unset JIRA_API_TOKEN just makes `jira` print
+# an auth error, which names itself — that one stays undeclared.
+required:
+  - name: WINDOWS_USER
+    description: Windows account name, for the /mnt/c/Users path
+    platform: wsl
+    consumers:
+      - shell/wsl/wsl.sh
+
+  # No WORK_USER here: on a domain-joined machine the CIFS account is the same
+  # identity as the Windows profile, so it defaults to WINDOWS_USER and only
+  # needs setting in the case where the two genuinely differ.
+  - name: WORK_DOMAIN
+    description: Windows domain for the work CIFS shares
+    role: work
+    consumers:
+      - shell/roles/work.sh
+
 flags:
   - name: ZSHRC_DEBUG
     description: Print per-step timings during zsh startup

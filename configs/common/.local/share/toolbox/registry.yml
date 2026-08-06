@@ -1191,15 +1191,15 @@ tools:
     examples:
       - cmd: "dectl"
         desc: "Top-level help: available pipelines + active environment banner"
-      - cmd: "dectl uslegal list"
+      - cmd: "dectl <pipeline> list"
         desc: "Show alias -> real AWS name mapping for a pipeline"
-      - cmd: "dectl uslegal lambda deploy error-notifier"
+      - cmd: "dectl <pipeline> lambda deploy error-notifier"
         desc: "Fast local loop — update $LATEST and test directly"
-      - cmd: "dectl uslegal lambda deploy error-notifier --publish"
+      - cmd: "dectl <pipeline> lambda deploy error-notifier --publish"
         desc: "Publish an immutable version and move the configured alias"
-      - cmd: "dectl uslegal sfn watch ingest"
+      - cmd: "dectl <pipeline> sfn watch ingest"
         desc: "Tail the most recent Step Functions execution history"
-      - cmd: "dectl --env prod medpro list"
+      - cmd: "dectl --env prod <pipeline> list"
         desc: "Target the prod environment for a pipeline"
     see_also: [forge, syncer]
     tags: [aws, data-engineering, lambda, glue, step-functions, python, cli]
