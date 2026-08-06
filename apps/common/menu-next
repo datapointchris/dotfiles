@@ -1,7 +1,10 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pyyaml"]
+# dependencies = ["pyyaml", "pytermstyle"]
+#
+# [tool.uv.sources]
+# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
 # ///
 """menu-next - what to do now, drawn from what you said matters. Invoked as `menu next`.
 
@@ -50,31 +53,31 @@ from datetime import timedelta
 from pathlib import Path
 
 import yaml
+from pytermstyle import BOLD
+from pytermstyle import COMMAND
+from pytermstyle import CYAN
+from pytermstyle import GREEN
+from pytermstyle import MAGENTA
+from pytermstyle import RESET
+from pytermstyle import WHITE
+from pytermstyle import YELLOW
+from pytermstyle import clip
+from pytermstyle import header
+from pytermstyle import help_end
+from pytermstyle import help_header
+from pytermstyle import help_row
+from pytermstyle import help_section
+from pytermstyle import help_text
+from pytermstyle import help_usage
 
-# menu-next is symlinked onto PATH; resolve the real path so the repo-root appcore
-# and menucore packages are importable. parents[2] is the repo root:
+# menu-next is symlinked onto PATH; resolve the real path so the repo-root apppaths
+# and menucore modules are importable. parents[2] is the repo root:
 # apps/common/menu-next → apps/common → apps → <repo>.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from appcore import BOLD
-from appcore import COMMAND
-from appcore import CYAN
-from appcore import GREEN
-from appcore import MAGENTA
-from appcore import RESET
-from appcore import WHITE
-from appcore import YELLOW
-from appcore import clip
-from appcore import header
-from appcore import help_end
-from appcore import help_header
-from appcore import help_row
-from appcore import help_section
-from appcore import help_text
-from appcore import help_usage
-from appcore.paths import machine_name
-from appcore.paths import xdg_cache_home
-from appcore.paths import xdg_config_home
-from appcore.paths import xdg_state_home
+from apppaths import machine_name
+from apppaths import xdg_cache_home
+from apppaths import xdg_config_home
+from apppaths import xdg_state_home
 from menucore import DEFAULT_ALPHA
 from menucore import FALLBACK_LOGS_PER_DAY
 from menucore import bump_counts

@@ -12,10 +12,11 @@ Storage comes in two halves for the same reason. ``state`` is a small map rewrit
 whole, ``journal`` is an append-only per-machine log merged on read; ``journal``'s
 docstring explains which exposure each one accepts.
 
-Each tool layers its own register/deck loading on top. House terminal style —
-palette, section header, help grammar — and XDG path resolution are not menu
-concerns and live in ``appcore``, which every Python app in ``apps/`` shares. Import
-them from there, not through here.
+Each tool layers its own register/deck loading on top. Neither house terminal
+style nor XDG path resolution is a menu concern, and neither lives here: the
+palette, section header and help grammar come from the ``pytermstyle`` package,
+and the XDG helpers from the repo-root ``apppaths`` module. Import them from
+there, not through here.
 """
 
 from menucore.allocate import COOLDOWN_FRACTION

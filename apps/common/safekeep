@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pytermstyle"]
+#
+# [tool.uv.sources]
+# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
+# ///
 """safekeep - Config-driven file preservation with self-describing dated snapshots.
 
 Rsync-copies files and directories to a destination as dated snapshots, and writes a
@@ -31,23 +38,18 @@ from fnmatch import fnmatch
 from functools import cache
 from pathlib import Path
 
-# safekeep is symlinked onto PATH; resolve the real path so the repo-root appcore
-# package is importable for the house palette and help grammar. parents[2] is the
-# repo root: apps/common/safekeep → apps/common → apps → <repo>.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from appcore import bold
-from appcore import clip
-from appcore import cyan
-from appcore import green
-from appcore import help_end
-from appcore import help_header
-from appcore import help_row
-from appcore import help_section
-from appcore import help_text
-from appcore import help_usage
-from appcore import red
-from appcore import yellow
+from pytermstyle import bold
+from pytermstyle import clip
+from pytermstyle import cyan
+from pytermstyle import green
+from pytermstyle import help_end
+from pytermstyle import help_header
+from pytermstyle import help_row
+from pytermstyle import help_section
+from pytermstyle import help_text
+from pytermstyle import help_usage
+from pytermstyle import red
+from pytermstyle import yellow
 
 # Keys are phrases that state what safekeep will do, so the file reads as a description of the
 # backup rather than a dump of this program's variables -- see ~/dev/standards/configuration.md.

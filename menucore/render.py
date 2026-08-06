@@ -1,16 +1,17 @@
 """The menu family's startup-nudge renderers.
 
-The house palette, section header and help grammar live in ``appcore.formatting``
-— shared with every Python app. What is left here is specific to the menu family:
+The house palette, section header and help grammar live in ``pytermstyle``
+— shared with every Python app, and with the bash and Go CLIs through its
+counterparts. What is left here is specific to the menu family:
 a nudge is an interrupt you did not ask for, so it trades every browse-time field
 (description, tags, cadence, last-done) for one line per item, and every line is
 clipped to the terminal rather than wrapped.
 """
 
-from appcore.formatting import CYAN
-from appcore.formatting import RESET
-from appcore.formatting import YELLOW
-from appcore.formatting import clip
+from pytermstyle import CYAN
+from pytermstyle import RESET
+from pytermstyle import YELLOW
+from pytermstyle import clip
 
 # Wide enough for "overdue 999d", the longest status_label, plus a space.
 STATUS_WIDTH = 13

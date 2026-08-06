@@ -157,10 +157,21 @@ managed = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
+    # The apps declare pytermstyle in their own PEP 723 headers, which covers them
+    # at runtime but not under pytest: the test suite loads each script by path
+    # with importlib, so its imports resolve against THIS environment instead.
+    "pytermstyle",
     # Tests only. tomllib reads TOML but cannot write it, and the alternative was a
-    # hand-rolled serializer in the test file; safekeep itself stays stdlib-only.
+    # hand-rolled serializer in the test file. safekeep's own dependency list stays
+    # at pytermstyle alone.
     "tomli-w>=1.0.0",
 ]
+
+[tool.uv.sources]
+# Pinned to a tag rather than tracking main, so a push to pytermstyle cannot
+# change what this repo's tests run against. Bump deliberately, in step with the
+# tag in each app's PEP 723 header.
+pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
 
 [tool.uv.build-backend]
 module-name = "symlinks"

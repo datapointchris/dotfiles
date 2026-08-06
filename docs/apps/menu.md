@@ -308,11 +308,13 @@ there for the rest.
 
 **Location**: `apps/common/menu` (picker, bash), plus three Python helpers —
 `apps/common/menu-review` (register), `apps/common/menu-labs` (Labs), and
-`apps/common/menu-dashboard` (the cross-app glance). All three share two small repo-root packages
-imported via each script's resolved path, so no install step is needed: `menucore` (cadence parsing,
-atomic state, the nudge renderers), which keeps the register and Labs from drifting apart on
-scheduling, and `appcore` (the color palette, help grammar, XDG paths), which every Python app in
-`apps/` shares — see [Shell Libraries](../architecture/shell-libraries.md).
+`apps/common/menu-dashboard` (the cross-app glance). All three share two small repo-root modules
+imported via each script's resolved path, so no install step is needed for them: `menucore` (cadence
+parsing, atomic state, the nudge renderers), which keeps the register and Labs from drifting apart
+on scheduling, and `apppaths` (XDG path resolution), which every Python app in `apps/` shares. The
+color palette and help grammar are no longer repo-local — they come from the `pytermstyle` package,
+declared in each script's PEP 723 header — see
+[Shell Libraries](../architecture/shell-libraries.md).
 
 **Dependencies**: `fzf` (picker) and `yq` (registry) drive search and the launcher; the full view
 delegates to `toolbox`, `workflows`, `tldr`, `cheat`, and `bat`, and is paged through `less`;

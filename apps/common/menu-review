@@ -1,7 +1,10 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pyyaml"]
+# dependencies = ["pyyaml", "pytermstyle"]
+#
+# [tool.uv.sources]
+# pytermstyle = { git = "https://github.com/datapointchris/pytermstyle", tag = "v0.1.1" }
 # ///
 """menu-review - the temporal half of menu: a terminal-native cadence register.
 
@@ -29,23 +32,23 @@ from datetime import date
 from pathlib import Path
 
 import yaml
+from pytermstyle import CYAN
+from pytermstyle import GREEN
+from pytermstyle import RESET
+from pytermstyle import YELLOW
+from pytermstyle import header
+from pytermstyle import help_end
+from pytermstyle import help_header
+from pytermstyle import help_row
+from pytermstyle import help_section
+from pytermstyle import help_usage
 
 # menu-review is symlinked onto PATH; resolve the real path so the repo-root
-# appcore and menucore packages are importable. parents[2] is the repo root:
+# apppaths and menucore modules are importable. parents[2] is the repo root:
 # apps/common/menu-review → apps/common → apps → <repo>.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from appcore import CYAN
-from appcore import GREEN
-from appcore import RESET
-from appcore import YELLOW
-from appcore import header
-from appcore import help_end
-from appcore import help_header
-from appcore import help_row
-from appcore import help_section
-from appcore import help_usage
-from appcore import xdg_data_home
-from appcore import xdg_state_home
+from apppaths import xdg_data_home
+from apppaths import xdg_state_home
 from menucore import is_due
 from menucore import load_state
 from menucore import nudge_header
