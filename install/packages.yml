@@ -1280,10 +1280,6 @@ git_uv_tools:
     description: Align ZMK keymap bindings into readable columns
     tracks_branch: true
 
-  - name: doit
-    repo: https://github.com/datapointchris/doit.git
-    description: What to do now, and everything that decides it — the draw, the dashboard, the cards and Labs
-
   - name: indy
     repo: https://github.com/datapointchris/indy.git
     description: Semantic search index for local codebases, docs, and notes
