@@ -1,108 +1,119 @@
 # Rebuilding a Machine from Scratch
 
-How to wipe a personal workstation and rebuild it from this repository. The
-install system does the heavy lifting — this guide covers the manual bookends it
-cannot: what to rescue before erasing, and what to set up by hand afterward.
+How to wipe a machine and rebuild it from this repository. The shape is the same
+on every platform; only three things differ — how the machine gets erased, what
+has to exist before `install.sh` can run, and which bookends the automation
+deliberately refuses because they need a secret, an interactive sign-in, or a
+freshly generated identity.
 
-The guiding principle is that almost nothing on a workstation is truly
-irreplaceable. The operating system and every tool are reproducible from this
-repo plus the system package manager, and most documents already live in cloud
-sync. What remains at risk is a small set of local-only secrets — and those are
-exactly the things automation deliberately cannot restore for you.
+Every tool and config here is reproducible from this repo plus a package
+manager. What is genuinely at risk is the machine-local state that no repo
+holds, which is why the capture step comes first.
 
-## Before the wipe — rescue the irreplaceable
+## The shape
 
-Work through this list while the machine is still alive. Everything here is
-either local-only or destructive to lose.
+1. Capture the machine-local state, while the old system is still alive.
+2. Wipe and reinstall the OS.
+3. Install `git` with the system package manager — the one bootstrap dependency.
+4. Clone this repo over HTTPS. No SSH key exists yet on a fresh machine.
+5. Restore the captured state.
+6. `./install.sh --machine NAME`.
+7. Verify, then do the manual steps.
 
-- **Crypto wallets — back up the seed, not the files.** The mnemonic seed phrase
-  *is* the wallet; the application data files are conveniences that the seed
-  regenerates on any machine. So record each seed offline in two separate
-  physical places, and optionally as an encrypted note in a password manager.
-  Restore-test each wallet from its seed on a *different* machine and confirm the
-  addresses match **before** wiping. Never let a seed pass through a networked
-  tool, a screenshot, or a printer queue.
-- **Cloud-synced data.** Confirm Photos, Desktop, and Documents have finished
-  uploading to iCloud (or your sync provider) before erasing — "syncing" is not
-  "synced."
-- **SSH keys — treat as disposable.** Do not carry stale keys forward. Plan to
-  generate a fresh key after the rebuild and re-authorize it; this is cleaner
-  than migrating old key material and forces you to prune dead authorizations.
-- **Uncommitted git work.** Commit and push anything you want to keep, or accept
-  that it is gone. Check every active repo.
-- **GPG keys**, if you use them. Confirm the secret keys are mirrored on another
-  machine; export them securely if not.
+## Capture what no git repo holds
 
-## The wipe
+`safekeep` takes dated, tagged snapshots of exactly this; `safekeep --help`
+covers the verbs and `safekeep tags` says what a given tag would bring back.
 
-Modern Macs — Apple Silicon, or Intel with a T2 security chip — support a clean
-factory reset that does not require a Recovery reinstall:
+Getting the capture *set* right is the hard part, because what dies in a wipe is
+unobvious. `~/.env` holds the machine's identity, and everything below its
+`# OVERRIDES` marker is hand-written and exists nowhere else. The role overlay at
+`~/.local/shell/roles/<role>.sh` sits outside this repo on purpose, so employer
+shell code stays off a synced clone — which also means nothing redeploys it.
+`syncer`'s config is machine-local for the same reason, and without it a rebuilt
+box has no registry of repos to clone. Add credentials, SSH keys, and anything
+under `~/.config` that was authored rather than deployed.
 
-*System Settings → General → Transfer or Reset → Erase All Content and Settings.*
+Confirm the destination survives the wipe: a snapshot inside the machine you are
+about to erase is not a backup. On WSL that means a Windows or network path, not
+somewhere under the distro's own filesystem.
 
-Have your Apple ID password ready; the reset signs out of iCloud and clears
-Activation Lock as part of the flow.
+Seed phrases are the exception to all of this. Record them offline, restore-test
+each wallet on a *different* machine before wiping, and never let a seed pass
+through a networked tool.
 
-## Rebuild — automated
+## Restore before the install, not after
 
-The rebuild is one command after a couple of prerequisites.
+`install.sh` regenerates `~/.env` from the manifest **before** it runs any phase,
+preserving everything below the `# OVERRIDES` marker. Restore first and the
+managed half is rebuilt against the current manifest while the hand-edits and
+secrets survive intact.
 
-1. **Setup Assistant.** Create your user, sign into iCloud, and join the network.
-2. **Xcode Command Line Tools** — the only manual prerequisite, since it provides
-   `git` and a compiler:
+Restore afterwards and you reinstate the *old* machine's generated half — stale
+flags, possibly a stale platform — by which point every phase has already run on
+defaults. The comment at `install.sh:521` records what that costs: a run that
+fell back to `detect_platform`'s guess deployed the linux shell overlay to a
+machine whose manifest said wsl, and ignored every flag override for the whole
+install.
 
-   ```bash
-   xcode-select --install
-   ```
+## macOS
 
-3. **Clone this repo over HTTPS** (no SSH key exists yet on a fresh machine):
+Apple Silicon and T2 Intel Macs reset cleanly without a Recovery reinstall:
+*System Settings → General → Transfer or Reset → Erase All Content and
+Settings*. Have the Apple ID password ready; the reset clears Activation Lock as
+part of the flow.
 
-   ```bash
-   git clone https://github.com/datapointchris/dotfiles.git ~/dotfiles
-   ```
+Xcode Command Line Tools is the bootstrap dependency, being where `git` comes
+from. `install.sh` self-bootstraps Homebrew and everything after it.
 
-4. **Run the installer** with the manifest for this machine:
+```bash
+xcode-select --install
+```
 
-   ```bash
-   cd ~/dotfiles && bash install.sh --machine macos-personal-workstation
-   ```
+## Arch Linux
 
-   See [Platform Differences](platforms/differences.md) for the manifest name of
-   each platform.
+Do a base install, ensure `git` and `sudo` are present, and run `install.sh`.
+The installer owns everything above the base system, including the AUR helper.
 
-`install.sh` self-bootstraps in order — Homebrew, system packages, OS
-preferences, language toolchains, release-tool and custom installers, symlinks,
-then editor and terminal plugins. It is idempotent and "fail loud but keep
-going": a failed step produces a report rather than a wedged install, so it is
-safe to re-run after fixing an issue. The architecture is documented under
-[Architecture](../architecture/index.md); the installation-pattern learnings in
-[Learnings](../learnings/resilient-installation-patterns.md) explain the design
-choices behind it.
+## WSL — the work machine
 
-## After the install — manual steps
+Measure the firewall and build the offline bundle *before* the wipe. Both need
+the old box alive and networked, and neither is recoverable afterwards
+([Restricted Networks](support/corporate.md) covers the machinery). Re-measure
+rather than trusting an old reading — the blocked set has twice been wrong in
+the direction of carrying tools that were never actually blocked.
 
-These are the steps automation cannot do because they require a secret, an
-interactive sign-in, or a fresh identity.
+Rebuild by registering the new Ubuntu rootfs as the distro. Get the bundle onto
+the new WSL filesystem and install from there rather than across a mounted
+drive; `--offline` extracts it to `~/installers/` itself, so nothing needs
+unpacking by hand.
 
-- **SSH.** Generate a new key (`ssh-keygen -t ed25519`) and add the public key to
-  GitHub and any servers you reach. Authentication that already uses a token
-  (for example the GitHub CLI) needs nothing here.
-- **Wallets.** Install the wallet apps and restore each from its seed.
-- **File sync.** Installing the sync client is not enough — you must *peer* the
-  new machine with your existing devices so folders replicate down. Peering is a
-  mutual handshake: each side has to add the other and agree to share each
-  folder, so configure both ends. On a LAN the connection prefers a direct link
-  and falls back to an encrypted relay off-network; keep relay and discovery
-  enabled so a laptop still syncs when it travels.
-- **Application sign-ins.** iCloud re-downloads Desktop, Documents, and Photos on
-  its own; sign into the remaining apps manually.
-- **Verify.** Confirm the toolchain came up clean: `task --list`, `toolbox`, and
-  open your editor to check plugins loaded without errors.
+```bash
+./install.sh --machine wsl-work-workstation --offline
+```
 
-## Why the split
+This box has no Syncthing, so anything the fleet replicates that way — `~/dev`,
+`~/notes`, the `indy` index — is simply absent. Tools depending on those paths
+are either off the manifest or configured differently, which is a property of
+the machine rather than something the install detects.
 
-The installer handles the reproducible 95% — packages, configs, preferences, and
-tooling that are identical on every rebuild. The manual steps are precisely the
-remainder that *should not* be automated: secrets (keys, seeds), interactive
-account authorization, and freshly generated identities. Keeping that line sharp
-is what lets the automated half stay fully hands-off and safe to re-run.
+## Verify
+
+```bash
+dotfiles doctor      # symlink, package and flag drift in one place
+packages missing     # declared but not installed
+syncer check         # repos the registry expects, against what is on disk
+```
+
+Open the editor and confirm plugins loaded without errors. `install.sh` is
+idempotent, so anything that failed can be fixed and the whole thing re-run.
+
+## After the install
+
+Generate a new SSH key rather than carrying the old one forward, and
+re-authorize it — a fresh key forces the pruning of dead authorizations. Restore
+wallets from their seeds, and sign into the applications holding their own
+credentials.
+
+File sync needs *peering*, not just installation: each side has to add the other
+and agree to share each folder, so configure both ends.
