@@ -49,7 +49,11 @@ Both moved to `doit`'s own XDG paths, and both are Syncthing folders declared in
 | --- | --- |
 | `pursuits.yml`, `register.yml`, `sources.yml` | `~/.config/doit/` |
 | review/labs state, draw history, nudge marker | `~/.local/state/doit/` |
-| cards and Labs | `~/.local/share/doit/`, cloned on first run |
+| cards and Labs | `~/.local/share/doit/`, cloned on first run and pulled in the background on every run |
+
+On a personal workstation the `doit-content` custom installer clones the cards to `~/tools/doit-content`
+and points `~/.local/share/doit` at it, so writing a card and reading one are the same file and git
+sees the edit. The work box keeps the copy `doit` clones for itself.
 
 `register.yml` used to live under `$XDG_DATA_HOME/menu-review/` as a symlink into this repo. It is
 hand-edited config that the tool only ever reads, it is personal, and both `doit` repos are public —
