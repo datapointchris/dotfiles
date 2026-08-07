@@ -95,6 +95,7 @@ uv_tools:
   - tldr
 
 git_uv_tools:
+  - doit
   - refcheck
   - syncer
   - keymap-align
