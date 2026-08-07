@@ -37,6 +37,15 @@ create_symlinks(apps_dir / platform, f"apps-{platform}", target_dir=Path.home() 
 
 `create_symlinks()` skips directories (via `rglob` + `is_file()`), so only executable files are linked.
 
+**A helper module cannot live beside its app.** Every file in `apps/{platform}/` becomes a command
+on PATH, so a module the app imports would appear as one too. Put it under
+`configs/common/.local/share/<app>/` instead, which deploys to `~/.local/share/<app>/` — the same
+place `toolbox` reads its registry from. `aws-profiles` is the worked example: the entry point stays
+shell because it is *sourced* and has to `export AWS_PROFILE` into the calling shell, which no
+subprocess can do, while everything else it does lives in
+`~/.local/share/aws-profiles/aws_profiles.py`. The shell reads a decision from the helper's stdout
+while the menu goes to stderr, so the answer can be captured without hiding the interface.
+
 ### 3. Personal CLI Tools (Git Clone Pattern)
 
 **Examples**: `theme`, `font`
