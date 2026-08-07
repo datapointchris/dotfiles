@@ -980,6 +980,11 @@ custom_installers:
     bundle_install_script: true
     description: Claude Code CLI (self-updating, installs to ~/.local/bin via official installer)
 
+  - name: doit-content
+    source_type: github_clone
+    repo: datapointchris/doit-content
+    description: doit's cards and Labs — cloned to ~/tools, with ~/.local/share/doit linked at it so authoring and reading are one file
+
   - name: mount-s3
     source_type: aws_release
     url: https://s3.amazonaws.com/mountpoint-s3-release
