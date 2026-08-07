@@ -57,9 +57,6 @@ custom_installers:
   - bashselfupdate
   - theme
   - font
-  # Personal machines only: the work box has no ~/tools checkout, so doit clones
-  # its own read-only copy of the cards there instead.
-  - doit-content
 
 cargo_packages: [fnm, ripgrep, bat, fd-find, eza, zoxide, git-delta, oxker, broot]
 
