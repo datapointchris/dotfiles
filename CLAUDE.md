@@ -132,7 +132,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `wsl/` - Ubuntu WSL configurations for restricted work environment
   - `archlinux/` - Arch Linux configurations
 - `apps/` - Personal CLI applications (bash or Python scripts, symlinked; see `apps/` for full listing)
-  - `common/` - Cross-platform tools (menu, notes, backmeup, patterns, and more)
+  - `common/` - Cross-platform tools (notes, backmeup, patterns, and more)
   - `macos/` - macOS-specific tools
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
 - `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/) plus `roles/` (work/personal/server — symlinked to ~/.local/shell/roles/)
