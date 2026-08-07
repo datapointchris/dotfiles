@@ -1356,7 +1356,7 @@ go_tools:
     description: Project organization and task management with local-first SQLite
 
   - name: forge
-    package: github.com/datapointchris/forge/v3
+    package: github.com/datapointchris/forge/v4
     github_repo: datapointchris/forge
     binary_pattern: "forge_{version_num}_{os}_{go_arch}.tar.gz"
     description: Run commands and dies across all git repos
