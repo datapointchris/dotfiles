@@ -169,7 +169,9 @@ test_cmd "fzf installed" "command -v fzf"
 if [[ "$PLATFORM" == "macos" ]]; then
   echo ""
   echo "macOS Specific Apps:"
-  test_cmd "aws-profiles available" "command -v aws-profiles"
+  # The command is the underscored half; `aws-profiles` is a shell function,
+  # which is not visible from this script's own shell.
+  test_cmd "_aws-profiles available" "command -v _aws-profiles"
   test_cmd "stitch-udacity-videos available" "command -v stitch-udacity-videos"
   test_file "ghostty config exists" "$HOME/.config/ghostty/config"
   test_cmd "brew installed" "command -v brew"

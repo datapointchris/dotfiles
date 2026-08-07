@@ -103,7 +103,9 @@ The symlinks manager maps `apps/` and `shell/` to specific target directories ra
 **Shell scripts** (`apps/common/notes`, `apps/common/review-diff`, etc.):
 
 - Symlinked to `~/.local/bin/`
-- Examples: `notes`, `patterns`, `aws-profiles`
+- Examples: `notes`, `patterns`, `_aws-profiles`
+- An app whose job is to change the calling shell adds a function in `shell/common/functions.sh`;
+  the symlinked command cannot export into the shell that ran it
 
 **Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`, `shell/roles/{role}.sh`):
 

@@ -37,14 +37,21 @@ create_symlinks(apps_dir / platform, f"apps-{platform}", target_dir=Path.home() 
 
 `create_symlinks()` skips directories (via `rglob` + `is_file()`), so only executable files are linked.
 
-**A helper module cannot live beside its app.** Every file in `apps/{platform}/` becomes a command
-on PATH, so a module the app imports would appear as one too. Put it under
-`configs/common/.local/share/<app>/` instead, which deploys to `~/.local/share/<app>/` — the same
-place `toolbox` reads its registry from. `aws-profiles` is the worked example: the entry point stays
-shell because it is *sourced* and has to `export AWS_PROFILE` into the calling shell, which no
-subprocess can do, while everything else it does lives in
-`~/.local/share/aws-profiles/aws_profiles.py`. The shell reads a decision from the helper's stdout
-while the menu goes to stderr, so the answer can be captured without hiding the interface.
+**An app that has to change the calling shell is two pieces: a command and a function.** A
+subprocess cannot export a variable into the shell that ran it, so anything setting `AWS_PROFILE`,
+`PATH` or the like needs a shell function — and that function belongs in `shell/common/functions.sh`
+with the other forty, not in `apps/`. The command does the work and prints a decision; the function
+evals or reads it and does the exporting. This is how `zoxide init`, `fnm env` and `atuin init` are
+wired in `.zshrc`, and `aws-profiles` is the in-repo example: `_aws-profiles` draws the menu on
+stderr and prints its choice on stdout, and the `aws-profiles` function exports it.
+
+The underscore marks the half that is not the way in. It is safe in `~/.local/bin` — the `_name`
+convention that would collide is zsh's completion functions, which live in `fpath`, not `PATH`.
+
+The alternative this replaced was a *sourced* app plus `alias aws-profiles='source ...'`. It worked,
+but only on the one platform where somebody remembered to write the alias; everywhere else the
+command ran in its own process, said it had set the profile, and exited having set nothing. A
+function cannot be invoked the wrong way, which is the real reason to prefer it.
 
 ### 3. Personal CLI Tools (Git Clone Pattern)
 

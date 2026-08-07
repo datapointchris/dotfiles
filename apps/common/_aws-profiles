@@ -3,11 +3,13 @@
 
 Everything except the export: reads ~/.aws/config and ~/.aws/credentials,
 resolves each profile's account and identity through STS, draws the menu, and
-takes the choice. The result goes to stdout for the sourced `aws-profiles` shim
-to export, because setting a variable in an interactive shell is the one thing a
-subprocess cannot do.
+takes the choice. The result goes to stdout for the `aws-profiles` shell
+function to export, because setting a variable in the shell you are sitting in
+is the one thing a subprocess cannot do. Underscored because that function is
+the way in — see shell/common/functions.sh, and zoxide, fnm and atuin in
+.zshrc for the same arrangement.
 
-    aws_profiles.py [--refresh]      menu on stderr, decision on stdout
+    _aws-profiles [--refresh]        menu on stderr, decision on stdout
 
 Decision line, tab-separated:
     set<TAB><profile><TAB><region>
@@ -233,7 +235,7 @@ def confirm_selection(profile: str, cache: dict[str, dict[str, str]]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog='aws_profiles.py', description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(prog='_aws-profiles', description=__doc__.splitlines()[0])
     parser.add_argument('--refresh', action='store_true', help='re-resolve every account before listing')
     args = parser.parse_args(argv)
 

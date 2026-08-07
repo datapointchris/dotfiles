@@ -100,11 +100,6 @@ alias playpi="ssh chris@192.168.10.40 'pacmd suspend 0'"
 # Copy shrug to clipboard
 alias shrug="echo '¯\_(ツ)_/¯' | pbcopy"
 
-# ---------- AWS ---------- #
-
-# Source aws-profiles script to set profile (must be sourced for environment variables to persist)
-alias aws-profiles='source "$HOME/.local/bin/aws-profiles"'
-
 # ---------- Environment ---------- #
 
 # Set ENVIRONMENT variable (formerly functions in macos-functions.sh)

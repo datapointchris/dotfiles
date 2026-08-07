@@ -882,3 +882,37 @@ function find-commit() {
     nvim -c "DiffviewOpen -C${repo_path} ${sha}^!"
   fi
 }
+
+#@aws-profiles
+#--> Pick an AWS profile and export it into this shell
+# A function rather than a command because exporting into the shell you are
+# sitting in is the one thing a subprocess cannot do — the same reason zoxide,
+# fnm and atuin are wired through eval in .zshrc. `_aws-profiles` draws the menu
+# on stderr and prints its decision on stdout, so the answer can be captured
+# without hiding the interface.
+#
+# This replaced a macOS-only `alias aws-profiles='source ...'`. Everywhere else
+# the command ran in its own process, announced that it had set the profile, and
+# exited without having set anything.
+function aws-profiles() {
+  local decision action profile region
+  decision=$(_aws-profiles "$@") || return 1
+
+  IFS=$'\t' read -r action profile region <<<"$decision"
+  case "${action:-}" in
+    set)
+      export AWS_PROFILE="$profile"
+      if [[ -n "$region" ]]; then
+        export AWS_REGION="$region"
+        export AWS_DEFAULT_REGION="$region"
+        echo "AWS profile $profile and region $region have been set."
+      else
+        echo "AWS profile $profile has been set."
+      fi
+      ;;
+    clear)
+      unset AWS_PROFILE AWS_REGION AWS_DEFAULT_REGION
+      echo "The AWS profile has been cleared."
+      ;;
+  esac
+}

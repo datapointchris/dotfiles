@@ -87,7 +87,6 @@ pythonpath = [
     "install",
     "install/offline",
     "install/wsl",
-    "configs/common/.local/share/aws-profiles",
 ]
 
 

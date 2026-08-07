@@ -39,7 +39,7 @@ Tests all user-facing tools can be invoked:
 
 - apps: notes, toolbox, theme-sync, menu
 - shell libraries: logging.sh, formatting.sh, error-handling.sh
-- platform-specific: ghostty-theme, aws-profiles
+- platform-specific: ghostty-theme, _aws-profiles
 
 **Speed:** Fast (~5 seconds)
 
