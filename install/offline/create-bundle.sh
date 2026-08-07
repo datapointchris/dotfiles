@@ -9,6 +9,7 @@
 #   ./create-bundle.sh --platform linux-arm64                # Different platform
 #   ./create-bundle.sh --manifest archlinux-personal-workstation
 #   ./create-bundle.sh --no-cache                            # Re-download everything
+#   ifiles put "$(./create-bundle.sh --print-path)"          # Upload what was built
 #
 # Output:
 #   dotfiles-offline-v{YYYYMMDD}-{manifest}-{os}-{arch}.tar.gz
@@ -37,6 +38,8 @@ WORK_DIR=""
 STAGING_DIR=""
 MANIFEST_FILE=""
 CHECKSUMS_FILE=""
+TARBALL_PATH=""
+PRINT_PATH=false
 TOTAL_DOWNLOADS=0
 CACHE_HITS=0
 
@@ -556,6 +559,8 @@ usage() {
   help_row "--manifest" "NAME" "Machine manifest filter (default: wsl-work-workstation)"
   help_row "" "" "Bundles only the packages that manifest installs."
   help_row "--no-cache" "" "Re-download every asset, ignoring the download cache"
+  help_row "--print-path" "" "Send the build log to stderr and print only the"
+  help_row "" "" "tarball path on stdout, for a pipeline"
   help_row "--help" "" "Show this help message"
 
   help_end
@@ -575,6 +580,10 @@ parse_args() {
         ;;
       --no-cache)
         USE_DOWNLOAD_CACHE=false
+        shift
+        ;;
+      --print-path)
+        PRINT_PATH=true
         shift
         ;;
       --help | -h) usage ;;
@@ -687,16 +696,16 @@ EOF
 create_tarball() {
   log_info "Creating tarball..."
 
-  local tarball_path="$DOTFILES_DIR/$BUNDLE_NAME.tar.gz"
-  (cd "$WORK_DIR" && tar -czf "$tarball_path" installers)
+  TARBALL_PATH="$DOTFILES_DIR/$BUNDLE_NAME.tar.gz"
+  (cd "$WORK_DIR" && tar -czf "$TARBALL_PATH" installers)
 
   local tarball_size
-  tarball_size=$(du -h "$tarball_path" | cut -f1)
+  tarball_size=$(du -h "$TARBALL_PATH" | cut -f1)
 
   echo ""
   log_success "Bundle created successfully!"
   echo ""
-  echo "  File: $tarball_path"
+  echo "  File: $TARBALL_PATH"
   echo "  Size: $tarball_size"
   echo "  Downloads: $TOTAL_DOWNLOADS"
   if [[ "$USE_DOWNLOAD_CACHE" == "true" ]]; then
@@ -714,6 +723,15 @@ create_tarball() {
 
 main() {
   parse_args "$@"
+
+  # Everything a person reads moves to stderr so stdout carries the path alone.
+  # It stays on the terminal either way — the split is about which stream a
+  # pipeline consumes, not about hiding the build. fd 3 keeps a handle on the
+  # real stdout to print through at the end.
+  if [[ "$PRINT_PATH" == "true" ]]; then
+    exec 3>&1 1>&2
+  fi
+
   parse_platform
   validate_manifest
   setup_directories
@@ -736,6 +754,11 @@ main() {
   # --no-cache, and set -e would fail a build that succeeded.
   if [[ "$USE_DOWNLOAD_CACHE" == "true" ]]; then
     prune_download_cache
+  fi
+
+  # Last, so a consumer only ever receives a path whose bundle is complete.
+  if [[ "$PRINT_PATH" == "true" ]]; then
+    printf '%s\n' "$TARBALL_PATH" >&3
   fi
 }
 

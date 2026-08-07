@@ -330,6 +330,8 @@ usage() {
   help_row "--platform" "PLATFORM" "Target platform (default: linux-x86_64)"
   help_row "" "" "Supported: linux-x86_64, linux-arm64,"
   help_row "" "" "           darwin-x86_64, darwin-arm64"
+  help_row "--print-path" "" "Send the build log to stderr and print only the"
+  help_row "" "" "tarball path on stdout, for a pipeline"
 
   help_section "Environment Variables"
   help_row "MACHINE=name" "" "Same as --machine (flag takes precedence)"
@@ -350,6 +352,7 @@ usage() {
   help_row "python3 -m http.server 8000" "" "# 2a. Serve from source machine, then:"
   help_row "curl -O http://<source-ip>:8000/dotfiles-offline-*.tar.gz" "" "# 2a. Download on target (run from ~/)"
   help_row "scp dotfiles-offline-*.tar.gz user@target-host:~/" "" "# 2b. Or use scp instead"
+  help_row "ifiles put \"\$(./install.sh --create-offline-bundle --print-path)\"" "" "# 2c. Or upload it"
   help_row "./install.sh --machine wsl-work-workstation --offline" "" "# 3. Install on target machine"
 
   help_end

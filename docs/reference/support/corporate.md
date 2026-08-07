@@ -26,6 +26,19 @@ the network. `--platform` targets the machine you are building for, not the one
 you are on — the default is `linux-x86_64`, so building on a Mac for WSL needs
 no flag, and building for Apple Silicon does.
 
+The tarball is named after the date, the manifest and the target platform, so
+handing it to something else means retyping a name that changes every build.
+`--print-path` moves the build log to stderr and leaves the path alone on
+stdout, which makes the handoff a substitution rather than a copy-paste:
+
+```bash
+ifiles put "$(./install.sh --create-offline-bundle --print-path)"
+```
+
+The log still reaches the terminal — stderr is not suppressed, only separated —
+and the path is printed after pruning finishes, so nothing downstream ever sees
+a bundle that is still being written.
+
 Move the tarball across, then `./install.sh --offline` extracts it to
 `~/installers/` and installs from there. `install.sh --help` prints the full
 sequence including the `python3 -m http.server` route for when scp is also
