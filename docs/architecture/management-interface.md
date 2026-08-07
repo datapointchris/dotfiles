@@ -258,6 +258,6 @@ already the update mechanism, which is what `dotfiles pull` wraps.
 | Tool discovery | `toolbox` (across all installed tools) |
 | Cross-repo operations | `forge` |
 
-The `apps/` scripts (`menu`, `notes`, `backmeup`, …) remain **independent
+The `apps/` scripts (`notes`, `packup`, `patterns`, …) remain **independent
 user tools** with their own identity and `toolbox` discovery. Folding them into
 `dotfiles <subcommand>` would be a regression, not a consolidation.

@@ -4,19 +4,19 @@ icon: material/backup-restore
 
 # Backup
 
-Two tools, `apps/common/backmeup` and `apps/common/backup-incremental`. Run
+Two tools, `apps/common/packup` and `apps/common/backup-incremental`. Run
 either with `--help` for flags. This page is about which one to reach for.
 
 ## Which one
 
-**`backmeup`** makes one compressed archive of one or more paths. Each run is a
-`.tar.gz` that stands alone, so restoring is `tar -xzf` with nothing else
+**`packup`** makes one compressed archive of one or more paths. Each run is a
+`.tar.zst` that stands alone, so restoring is `tar -xf` with nothing else
 present. Use it before something you might want to undo wholesale — a rebase, a
 risky refactor, a config migration — where the value is a single file you can
 copy anywhere and unpack months later.
 
 ```sh
-backmeup -n dotfiles -d ~/Documents --exclude .git dotfiles
+packup -n dotfiles -d ~/Documents --exclude .git dotfiles
 ```
 
 **`backup-incremental`** makes rsync snapshots where unchanged files are hard
@@ -30,7 +30,7 @@ backup-incremental --name learning --exclude books ~/learning
 ```
 
 The distinction that matters: an archive is one restorable blob, a snapshot tree
-is browsable history. Reach for `backmeup` when you want to carry the result
+is browsable history. Reach for `packup` when you want to carry the result
 somewhere; reach for `backup-incremental` when you want to keep taking it.
 
 ## Restoring an incremental backup

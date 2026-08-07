@@ -81,7 +81,7 @@ usage() {
 
   help_section "Identifying Backups"
   help_row "Directories with 'latest' symlink" "" "Incremental backup (this tool)"
-  help_row "*.tar.zst/*.tar.gz/*.tar.xz" "" "Compressed archive (backmeup)"
+  help_row "*.tar.zst/*.tar.gz/*.tar.xz" "" "Compressed archive (packup)"
 
   help_section "How It Works"
   help_row "First backup" "" "Full copy of all files"

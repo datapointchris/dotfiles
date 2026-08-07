@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# backmeup - Create compressed backup archive of specified paths
+# packup - Create compressed backup archive of specified paths
 #
-# Usage: backmeup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]
+# Usage: packup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]
 #
 # Creates a timestamped zstd-compressed archive with smart exclusions, live progress
 # tracking, and comprehensive statistics.
@@ -14,10 +14,10 @@
 #   -h, --help              Show this help message
 #
 # Examples:
-#   backmeup -n dotfiles -d ~/Documents dotfiles .config
-#   backmeup -n learning -d ~/Backups learning
-#   backmeup -n code -d ~/Documents --exclude .git dotfiles
-#   backmeup -n snapshot -d /tmp dotfiles ~/.zshrc
+#   packup -n dotfiles -d ~/Documents dotfiles .config
+#   packup -n learning -d ~/Backups learning
+#   packup -n code -d ~/Documents --exclude .git dotfiles
+#   packup -n snapshot -d /tmp dotfiles ~/.zshrc
 #
 # Technical Implementation Notes:
 #
@@ -84,27 +84,13 @@ source "$SHELL_DIR/colors.sh"
 # Configuration
 # ============================================================================
 
-# Progress display tuning
 # UPDATE_INTERVAL_NS (90ms): Balances visual feedback vs CPU overhead. Too fast thrashes
 #   terminal rendering, too slow feels unresponsive. 90ms hits sweet spot.
-# COLOR_CYCLE_FILES (20): Changes color frequently enough to show progress but not so
-#   fast it's distracting or induces seizures.
-readonly COLOR_CYCLE_FILES=20        # Files per color change (visual rhythm)
 readonly UPDATE_INTERVAL_NS=90000000 # 90ms update interval (smooth without thrashing)
 readonly ARCHIVE_SPINNER_SLEEP=0.02  # 20ms: Responsive animation during archiving
 
-# Spinner animation characters - Braille dot patterns
-# These Unicode characters create a smooth circular animation that works in all modern
-# terminals. Braille dots are compact and don't disrupt the progress line layout.
+# Braille dots are compact and don't disrupt the progress line layout.
 readonly SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-
-# Rainbow colors - ANSI color codes for visual variety
-# Cycles through warm-to-cool spectrum. Avoids pure red/green to reduce eye strain.
-# Order: Red -> Yellow -> Green -> Cyan -> Blue -> Magenta -> repeat
-readonly COLORS=("91" "93" "92" "96" "94" "95")
-
-# Colors for path display (Green, Cyan, Yellow, Magenta, Blue)
-readonly PATH_COLORS=("92" "96" "93" "95" "94")
 
 # Default exclusion patterns for tar (common bloat to skip)
 readonly DEFAULT_EXCLUDE_PATTERNS=(
@@ -145,8 +131,8 @@ PROGRESS_FILE=""
 # ============================================================================
 
 usage() {
-  help_header "backmeup" "Create timestamped compressed backup archives with progress tracking"
-  help_usage "backmeup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]"
+  help_header "packup" "Create timestamped compressed backup archives with progress tracking"
+  help_usage "packup -n <name> -d <dest> [OPTIONS] <path1> [path2] [path3...]"
 
   help_section "Options"
   help_row "-n, --name" "<name>" "Backup name (required)"
@@ -155,10 +141,10 @@ usage() {
   help_row "-h, --help" "" "Show this help message"
 
   help_section "Examples"
-  help_row "backmeup -n dotfiles -d ~/Documents dotfiles .config" "" "# Backup dotfiles to Documents"
-  help_row "backmeup -n code -d /Volumes/External code" "" "# Backup to external drive"
-  help_row "backmeup -n dotfiles -d ~/Documents --exclude .git dotfiles" "" "# Exclude additional patterns"
-  help_row "backmeup -n snapshot -d /tmp dotfiles ~/.zshrc" "" "# Mix directories and files"
+  help_row "packup -n dotfiles -d ~/Documents dotfiles .config" "" "# Backup dotfiles to Documents"
+  help_row "packup -n code -d /Volumes/External code" "" "# Backup to external drive"
+  help_row "packup -n dotfiles -d ~/Documents --exclude .git dotfiles" "" "# Exclude additional patterns"
+  help_row "packup -n snapshot -d /tmp dotfiles ~/.zshrc" "" "# Mix directories and files"
 
   # shellcheck disable=SC2088
   help_section "Restore"
@@ -282,7 +268,6 @@ parse_arguments() {
 validate_paths() {
   local existing_paths=()
   local missing_paths=()
-  local path_idx=0
 
   echo ""
   print_banner "Backup Paths" "orange"
@@ -309,12 +294,10 @@ validate_paths() {
 
     if [[ -e "$full_path" ]]; then
       existing_paths+=("$relative_path")
-      local color_code="${PATH_COLORS[$path_idx]}"
-      echo -e "  ✓ Found: \033[${color_code}m$full_path\033[0m"
-      path_idx=$(((path_idx + 1) % ${#PATH_COLORS[@]}))
+      echo "  ✓ Found: $(color_bright_green "$full_path")"
     else
       missing_paths+=("$relative_path")
-      echo -e "  ⊘ Skipping: \033[90m$full_path\033[0m \033[33m(not found)\033[0m"
+      echo "  ⊘ Skipping: $(color_bright_black "$full_path") $(color_yellow "(not found)")"
     fi
   done
 
@@ -364,13 +347,8 @@ start_progress_count_only() {
         local time_str
         time_str=$(printf "%02d:%02d" $((elapsed / 60)) $((elapsed % 60)))
 
-        # Rainbow color based on count
-        local color_idx=$(((count / COLOR_CYCLE_FILES) % ${#COLORS[@]}))
-        local color_code="${COLORS[$color_idx]}"
-
         local spinner_char="${SPINNER_CHARS:$spinner_idx:1}"
-        # Count and time display
-        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] \033[95mProcessing...\033[0m \033[${color_code}m%'d\033[0m \033[93mentries\033[0m    " \
+        printf "\r  \033[96m%s\033[0m [\033[93m%s\033[0m] Processing... \033[92m%'d\033[0m entries    " \
           "$spinner_char" "$time_str" "$count"
         spinner_idx=$(((spinner_idx + 1) % ${#SPINNER_CHARS}))
       fi
@@ -432,7 +410,7 @@ create_archive() {
   fi
 
   # Initialize progress tracking
-  PROGRESS_FILE="/tmp/backup_dirs_$$_progress"
+  PROGRESS_FILE="/tmp/packup_$$_progress"
   echo "0" >"$PROGRESS_FILE"
 
   start_progress_count_only "$PROGRESS_FILE" "$ARCHIVE_START_TIME"

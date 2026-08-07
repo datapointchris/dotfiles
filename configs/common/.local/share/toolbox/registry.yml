@@ -1390,7 +1390,6 @@ tools:
         desc: "Show help and usage examples"
     see_also: [notes, jq, bat, fzf]
     tags: [dotfiles, logging, jsonl, tracking, health]
-    docs_url: "docs/apps/patterns.md"
 
   indy:
     category: custom-tools
@@ -1977,23 +1976,23 @@ tools:
         desc: "Display full color palette"
     tags: [dotfiles, terminal, colors]
 
-  backmeup:
+  packup:
     category: custom-tools
     description: "Create compressed backup archive of specified directories with progress tracking"
     installed_via: dotfiles
-    usage: "backmeup -n <name> -d <dest> <dir1> [dir2...]"
-    why_use: "One-off compressed backups with smart exclusions, rainbow progress, and comprehensive statistics"
+    usage: "packup -n <name> -d <dest> <dir1> [dir2...]"
+    why_use: "One-off compressed backups with smart exclusions, live progress, and comprehensive statistics"
     examples:
-      - cmd: "backmeup -n dotfiles -d ~/Documents .claude notes learning"
+      - cmd: "packup -n dotfiles -d ~/Documents .claude notes learning"
         desc: "Backup directories to ~/Documents"
-      - cmd: "backmeup -n learning-docs -d ~/Documents learning"
+      - cmd: "packup -n learning-docs -d ~/Documents learning"
         desc: "Create named backup"
-      - cmd: "backmeup -n configs -d ~/Backups .config dotfiles"
+      - cmd: "packup -n configs -d ~/Backups .config dotfiles"
         desc: "Backup to custom destination"
     see_also: [safekeep, backup-incremental, tar, fd]
     tags: [backup, compression, progress, one-off]
     notes: "Excludes .venv, node_modules, caches but keeps .git. Uses multi-threaded zstd compression by default."
-    docs_url: "docs/apps/backmeup.md"
+    docs_url: "docs/apps/backup.md"
 
   backup-incremental:
     category: custom-tools
@@ -2010,15 +2009,15 @@ tools:
         desc: "Optionally exclude specific directories"
       - cmd: "backup-incremental --name learning --network homelab:/backups ~/learning"
         desc: "Backup to network storage via SSH"
-    see_also: [backmeup, rsync]
+    see_also: [packup, rsync]
     tags: [backup, incremental, hard-links, deduplication, homelab]
     notes: "Each backup appears as complete snapshot but uses hard links for unchanged files. Network-ready for homelab backups."
-    docs_url: "docs/apps/backup-incremental.md"
+    docs_url: "docs/apps/backup.md"
 
   safekeep:
     category: custom-tools
     description: "Config-driven file preservation with self-describing dated snapshots - rsync-based backup and restore"
-    installed_via: dotfiles
+    installed_via: uv
     usage: "safekeep <backup|snapshots|restore|config|init> [OPTIONS]"
     why_use: "Back up scattered config files, scripts, and git-untracked WIP to a network drive, and restore them onto a rebuilt machine with file modes intact"
     examples:
@@ -2032,7 +2031,7 @@ tools:
         desc: "Rehearse a restore, picking snapshot and groups with fzf"
       - cmd: "safekeep restore --to / --tag wip"
         desc: "Restore every group tagged 'wip'"
-    see_also: [backmeup, backup-incremental, rsync, fzf]
+    see_also: [packup, backup-incremental, rsync, fzf]
     tags: [backup, restore, rsync, config-driven, snapshots, network]
     notes: "Backup is Python stdlib only; restore shells out to fzf for interactive selection. Config at ~/.config/safekeep/<name>.json. Each snapshot carries a manifest recording groups, tags, and file modes, so it restores without the config that made it. Snapshots are never pruned. Bare `safekeep` prints usage — nothing writes without an explicit verb."
     docs_url: "docs/apps/safekeep.md"
