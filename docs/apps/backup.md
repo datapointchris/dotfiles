@@ -4,43 +4,42 @@ icon: material/backup-restore
 
 # Backup
 
-Two tools, `apps/common/packup` and `apps/common/backup-incremental`. Run
+Two tools, `apps/common/packup` and `safekeep`, which lives in its own repo. Run
 either with `--help` for flags. This page is about which one to reach for.
 
 ## Which one
 
-**`packup`** makes one compressed archive of one or more paths. Each run is a
-`.tar.zst` that stands alone, so restoring is `tar -xf` with nothing else
-present. Use it before something you might want to undo wholesale — a rebase, a
-risky refactor, a config migration — where the value is a single file you can
-copy anywhere and unpack months later.
+**`packup`** makes one compressed archive of one or more paths, named on the
+command line. Each run is a `.tar.zst` that stands alone, so restoring is
+`tar -xf` with nothing else present. Use it before something you might want to
+undo wholesale — a rebase, a risky refactor, a config migration — where the value
+is a single file you can copy anywhere and unpack months later.
 
 ```sh
 packup -n dotfiles -d ~/Documents --exclude .git dotfiles
 ```
 
-**`backup-incremental`** makes rsync snapshots where unchanged files are hard
-links into the previous snapshot. Every snapshot browses as a complete tree
-while costing only the changed files, so keeping many is cheap. Use it for
-anything you back up repeatedly and want history for. `--network host:/path`
-sends it to any SSH-accessible host.
+**`safekeep`** backs up what a config file declares, as dated snapshots on a
+network drive, and restores them onto a rebuilt machine. Every snapshot carries a
+manifest recording its groups, tags and file modes, so it restores without the
+config that made it — which is the disaster-recovery case, where the config died
+with the machine. Unchanged files are hard links into the previous snapshot, so
+keeping every snapshot forever costs only what changed.
 
 ```sh
-backup-incremental --name learning --exclude books ~/learning
+safekeep backup
 ```
 
-The distinction that matters: an archive is one restorable blob, a snapshot tree
-is browsable history. Reach for `packup` when you want to carry the result
-somewhere; reach for `backup-incremental` when you want to keep taking it.
+The distinction that matters is imperative versus declarative, not archive versus
+snapshot. `packup` backs up what you name, right now, and forgets it. `safekeep`
+backs up what its config says, on whatever schedule you run it, and knows how to
+put it back.
 
-## Restoring an incremental backup
+## Restoring
 
-The hard links are the whole trick and also the whole hazard. Each snapshot is a
-real directory tree, so restoring is a plain `cp -a` or `rsync` out of the
-snapshot you want — no replay, no chain to walk.
+A `packup` archive is `tar -xf backup.tar.zst`, anywhere, with nothing installed.
 
-But because unchanged files are the *same inode* across snapshots, editing a
-file in place inside a snapshot edits it in every snapshot that shares it. Copy
-out before touching anything, and never edit in the backup directory. Deleting a
-whole snapshot directory is safe: the data survives as long as any other
-snapshot links it.
+A `safekeep` snapshot is `safekeep restore --to <target>`, which picks the
+snapshot and sources interactively and reapplies the recorded modes. Do not edit
+files inside a snapshot: hard links mean a shared file is the same inode in every
+snapshot holding it. Deleting a whole snapshot directory is safe.

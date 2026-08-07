@@ -18,7 +18,7 @@ of what is actually installed, and `toolbox list` is the searchable version.
 
 ## Backup and integrity
 
-- **[Backup](backup.md)** — `packup` archives versus `backup-incremental` snapshots
+- **[Backup](backup.md)** — `packup` archives versus `safekeep` snapshots
 - **[Safekeep](safekeep.md)** — moved to its own repo; the page records why, and the manifest consequence
 - **[Refcheck](refcheck.md)** — broken-reference validation, and why it runs here
 

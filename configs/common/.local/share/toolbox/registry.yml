@@ -1989,29 +1989,9 @@ tools:
         desc: "Create named backup"
       - cmd: "packup -n configs -d ~/Backups .config dotfiles"
         desc: "Backup to custom destination"
-    see_also: [safekeep, backup-incremental, tar, fd]
+    see_also: [safekeep, tar, fd]
     tags: [backup, compression, progress, one-off]
     notes: "Excludes .venv, node_modules, caches but keeps .git. Uses multi-threaded zstd compression by default."
-    docs_url: "docs/apps/backup.md"
-
-  backup-incremental:
-    category: custom-tools
-    description: "Space-efficient incremental backups using rsync hard links - unchanged files consume zero additional space"
-    installed_via: dotfiles
-    usage: "backup-incremental --name <backup-name> <source-dir>"
-    why_use: "Frequent backups with automatic deduplication via hard links. Books/static content stored once across all backups."
-    examples:
-      - cmd: "backup-incremental --name learning ~/learning"
-        desc: "Create incremental backup (unchanged files auto-linked)"
-      - cmd: "backup-incremental --name learning ~/learning"
-        desc: "Second backup only stores changes (books hard-linked)"
-      - cmd: "backup-incremental --name learning --exclude books ~/learning"
-        desc: "Optionally exclude specific directories"
-      - cmd: "backup-incremental --name learning --network homelab:/backups ~/learning"
-        desc: "Backup to network storage via SSH"
-    see_also: [packup, rsync]
-    tags: [backup, incremental, hard-links, deduplication, homelab]
-    notes: "Each backup appears as complete snapshot but uses hard links for unchanged files. Network-ready for homelab backups."
     docs_url: "docs/apps/backup.md"
 
   safekeep:
@@ -2031,7 +2011,7 @@ tools:
         desc: "Rehearse a restore, picking snapshot and groups with fzf"
       - cmd: "safekeep restore --to / --tag wip"
         desc: "Restore every group tagged 'wip'"
-    see_also: [packup, backup-incremental, rsync, fzf]
+    see_also: [packup, rsync, fzf]
     tags: [backup, restore, rsync, config-driven, snapshots, network]
     notes: "Backup is Python stdlib only; restore shells out to fzf for interactive selection. Config at ~/.config/safekeep/<name>.json. Each snapshot carries a manifest recording groups, tags, and file modes, so it restores without the config that made it. Snapshots are never pruned. Bare `safekeep` prints usage — nothing writes without an explicit verb."
     docs_url: "docs/apps/safekeep.md"
