@@ -82,7 +82,7 @@ cmd_search() {
       --bind "start:reload:rg --files-with-matches --no-messages --ignore-case '' '$NOTES_DIR' | grep '\\.md\$' | sed 's|^$NOTES_DIR/||' | awk -F/ '{name=\$NF; sub(/\\.md$/,\"\",name); print name \"\\t\" \$0}'" \
       --delimiter '\t' \
       --with-nth 1 \
-      --preview 'rg --color=always --context=5 --ignore-case --pretty -- {q} ~/notes/{2} 2>/dev/null | fold -s -w $(tput cols) || bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
+      --preview 'rg --color=always --context=5 --ignore-case --pretty -- {q} '"$NOTES_DIR"'/{2} 2>/dev/null | fold -s -w $(tput cols) || bat -p --color always --wrap never '"$NOTES_DIR"'/{2} | fold -s -w $(tput cols)' \
       --preview-window=right:60% \
       --prompt 'Search: ' \
       --header 'Type to search note content | Enter to open'
@@ -91,7 +91,7 @@ cmd_search() {
   if [[ -n "$selected" ]]; then
     local notepath
     notepath=$(echo "$selected" | cut -f2)
-    ${EDITOR:-nvim} ~/notes/"$notepath"
+    ${EDITOR:-nvim} "$NOTES_DIR/$notepath"
   fi
 }
 
@@ -157,13 +157,13 @@ cmd_recent() {
     | fzf --layout=reverse \
       --delimiter '\t' \
       --with-nth 1 \
-      --preview "bat -p --color always --wrap never ~/notes/{2} | fold -s -w \$(tput cols)" \
+      --preview "bat -p --color always --wrap never $NOTES_DIR/{2} | fold -s -w \$(tput cols)" \
       --preview-window=right:60%)
 
   if [[ -n "$selected" ]]; then
     local notepath
     notepath=$(echo "$selected" | cut -f2)
-    ${EDITOR:-nvim} ~/notes/"$notepath"
+    ${EDITOR:-nvim} "$NOTES_DIR/$notepath"
   fi
 }
 
@@ -190,13 +190,13 @@ cmd_browse() {
     | fzf --layout=reverse \
       --delimiter '\t' \
       --with-nth 1 \
-      --preview 'bat -p --color always --wrap never ~/notes/{2} | fold -s -w $(tput cols)' \
+      --preview 'bat -p --color always --wrap never '"$NOTES_DIR"'/{2} | fold -s -w $(tput cols)' \
       --preview-window=right:60%)
 
   if [[ -n "$selected" ]]; then
     local notepath
     notepath=$(echo "$selected" | cut -f2)
-    ${EDITOR:-nvim} ~/notes/"$notepath"
+    ${EDITOR:-nvim} "$NOTES_DIR/$notepath"
   fi
 }
 
