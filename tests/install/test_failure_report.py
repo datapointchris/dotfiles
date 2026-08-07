@@ -8,10 +8,7 @@ Run with: pytest tests/install/test_failure_report.py
 """
 
 import json
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install'))
 import failure_report
 
 

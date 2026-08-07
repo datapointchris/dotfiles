@@ -5,14 +5,11 @@ Run with: pytest tests/install/test_parse_packages.py
 Or from project root: python -m pytest tests/install/
 """
 
-import sys
 from pathlib import Path
 
+import parse_packages
 import pytest
 import yaml
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install'))
-import parse_packages
 
 PACKAGES_YML = Path(__file__).parent.parent.parent / 'install' / 'packages.yml'
 MANIFESTS_DIR = Path(__file__).parent.parent.parent / 'install' / 'manifests'

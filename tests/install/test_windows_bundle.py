@@ -7,13 +7,9 @@ discovered on the machine that cannot fix it.
 Run with: pytest tests/install/test_windows_bundle.py
 """
 
-import sys
 import zipfile
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install' / 'wsl'))
 import windows_bundle
 
 

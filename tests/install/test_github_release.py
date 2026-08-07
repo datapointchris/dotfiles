@@ -7,10 +7,6 @@ install. Every fallback below was earned by a real release.
 Run with: pytest tests/install/test_github_release.py
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install'))
 import github_release
 
 

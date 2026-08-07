@@ -79,6 +79,16 @@ analyzeUnannotatedFunctions = true  # or pylance stops analyzing in vscode
 addopts = "-vv"
 minversion = "8.0"
 testpaths = ["tests"]
+# The code under test is deployed to a machine, not installed as a package, so
+# it has no importable location. Naming the directories here lets a test say
+# `import create_bundle` instead of walking .parent up to the repo root and
+# guessing how many levels away it is.
+pythonpath = [
+    "install",
+    "install/offline",
+    "install/wsl",
+    "configs/common/.local/share/aws-profiles",
+]
 
 
 [tool.refurb]

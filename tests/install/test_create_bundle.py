@@ -8,15 +8,11 @@ Run with: pytest tests/install/test_create_bundle.py
 """
 
 import datetime as dt
-import sys
 import tarfile
 import zipfile
-from pathlib import Path
 
-import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'install' / 'offline'))
 import create_bundle
+import pytest
 
 
 class TestPlatform:
