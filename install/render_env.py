@@ -121,6 +121,7 @@ def render_generated_section(manifest, flags, required=None):
     ]
 
     for name, value, description in resolve_flag_values(manifest, flags):
+        lines.append('')
         if description:
             lines.append(f'# {description}')
         lines.append(assignment(name, value))
