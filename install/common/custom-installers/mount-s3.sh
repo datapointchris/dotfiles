@@ -38,6 +38,9 @@ ARCH=$(detect_arch)
 
 # Linux only — no macOS build exists.
 if [[ "$OS" != "linux" ]]; then
+  # Ahead of the log line, which a --print-url caller would otherwise parse as
+  # the URL. Non-zero says "nothing to report here", not "something failed".
+  [[ "${1:-}" == "--print-url" ]] && exit 1
   log_info "mount-s3 is Linux-only (no macOS build); skipping on $OS"
   exit 0
 fi
@@ -76,6 +79,13 @@ URL_BASE=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
 TARBALL_URL="${URL_BASE}/latest/${AWS_ARCH}/mount-s3.tar.gz"
 SIG_URL="${TARBALL_URL}.asc"
 KEYS_URL="${URL_BASE}/public_keys/KEYS"
+
+# The tarball path, not URL_BASE: the bucket root 403s, so a connectivity probe
+# against it reports a block that does not exist.
+if [[ "${1:-}" == "--print-url" ]]; then
+  echo "mount-s3|latest|$TARBALL_URL"
+  exit 0
+fi
 
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT

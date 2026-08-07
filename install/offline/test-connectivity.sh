@@ -1,165 +1,228 @@
 #!/usr/bin/env bash
-# Test connectivity to all URLs used during dotfiles installation
-# Run this on a restricted network to identify what's blocked
+# Test whether a restricted network can reach the sources a manifest installs from.
 #
-# Usage: bash test-connectivity.sh [output-file]
-# Default output: install/offline/connectivity-results.txt (in dotfiles repo)
+# Every probe is derived from packages.yml and the machine manifest, never typed
+# here. A hand-maintained URL list is what made the January 2026 results wrong in
+# both directions: pinned versions (neovim v0.10.0, lazygit v0.44.1) 404'd and were
+# recorded as firewall blocks, while bashselfupdate was on the manifest and never
+# probed at all. A URL written into a test is true only on the day it is written.
 #
-# After running, commit and push the results:
-#   git add install/offline/connectivity-results.txt
-#   git commit -m "Add connectivity test results from WSL"
-#   git push
+# What a NO means depends on the section, which is why the section is in the output:
+# a blocked registry kills a whole install method, a blocked single repo kills one
+# tool. Feed the result to install/offline/create-bundle.sh.
+#
+# Usage:
+#   bash test-connectivity.sh                              # wsl-work-workstation
+#   bash test-connectivity.sh --manifest archlinux-personal-workstation
+#   bash test-connectivity.sh --output /tmp/results.txt
 
-set -u
+set -uo pipefail
+
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
+
+source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
+source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/version-helpers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUTPUT_FILE="${1:-$SCRIPT_DIR/connectivity-results.txt}"
+MANIFEST="wsl-work-workstation"
+OUTPUT_FILE="$SCRIPT_DIR/connectivity-results.txt"
 TIMEOUT=10
 
-# Colors for terminal (won't affect file output)
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m'
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --manifest)
+      MANIFEST="$2"
+      shift 2
+      ;;
+    --output)
+      OUTPUT_FILE="$2"
+      shift 2
+      ;;
+    -h | --help)
+      sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
+      exit 0
+      ;;
+    *) die "Unknown argument: $1 (see --help)" ;;
+  esac
+done
 
-passed=0
-failed=0
-results=()
+MANIFEST_FILE="$DOTFILES_DIR/install/manifests/${MANIFEST}.yml"
+[[ -f "$MANIFEST_FILE" ]] || {
+  log_error "No such manifest: $MANIFEST_FILE"
+  exit 1
+}
 
-test_url() {
-  local name="$1"
-  local url="$2"
-  local method="${3:-HEAD}"
+PASSED=0
+FAILED=0
+RESULTS=()
 
-  # Use HEAD request by default (faster, no download)
-  # Some servers don't support HEAD, fall back to GET with range
-  if [[ "$method" == "HEAD" ]]; then
-    if curl -fsSL --head --connect-timeout "$TIMEOUT" "$url" >/dev/null 2>&1; then
-      echo -e "${GREEN}✓${NC} $name"
-      results+=("YES | $name | $url")
-      ((passed++))
-      return 0
+packages_query() {
+  /usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" "$@"
+}
+
+record() {
+  local verdict="$1" section="$2" name="$3" target="$4"
+  RESULTS+=("$(printf '%-4s| %-18s| %-24s| %s' "$verdict" "$section" "$name" "$target")")
+  if [[ "$verdict" == "YES" ]]; then
+    PASSED=$((PASSED + 1))
+    print_success "$name"
+  else
+    FAILED=$((FAILED + 1))
+    print_error "$name"
+  fi
+}
+
+# HEAD first because it downloads nothing; a range GET is the fallback for hosts
+# that reject HEAD, which S3 and some CDNs do.
+#
+# The User-Agent is required, not cosmetic: crates.io answers curl's default
+# agent with 403, which the January 2026 run recorded as a firewall block and
+# which would have meant bundling all nine cargo tools for no reason.
+USER_AGENT="dotfiles-connectivity-test (+https://github.com/datapointchris/dotfiles)"
+
+probe_url() {
+  local section="$1" name="$2" url="$3"
+  if curl -fsSL --head -A "$USER_AGENT" --connect-timeout "$TIMEOUT" "$url" >/dev/null 2>&1 \
+    || curl -fsSL -A "$USER_AGENT" --connect-timeout "$TIMEOUT" -r 0-0 "$url" >/dev/null 2>&1; then
+    record YES "$section" "$name" "$url"
+  else
+    record NO "$section" "$name" "$url"
+  fi
+}
+
+probe_clone() {
+  local section="$1" name="$2" repo="$3"
+  if GIT_TERMINAL_PROMPT=0 git ls-remote --quiet "$repo" HEAD >/dev/null 2>&1; then
+    record YES "$section" "$name" "$repo"
+  else
+    record NO "$section" "$name" "$repo"
+  fi
+}
+
+print_banner "connectivity"
+print_info "Manifest:  $MANIFEST"
+print_info "Host:      $(hostname)"
+print_info "Output:    $OUTPUT_FILE"
+
+# --- GitHub release pages -----------------------------------------------------
+# /releases/latest redirects to the newest tag, so there is no version to pin.
+
+print_section "GitHub releases"
+FIRST_GITHUB_REPO=""
+while IFS= read -r tool; do
+  [[ -z "$tool" ]] && continue
+  repo=$(packages_query --github-release "$tool" --field repo) || continue
+  [[ -z "$FIRST_GITHUB_REPO" ]] && FIRST_GITHUB_REPO="$repo"
+  probe_url github_release "$tool" "https://github.com/${repo}/releases/latest"
+done < <(packages_query --type=github --manifest="$MANIFEST")
+
+# --- GitHub API and asset delivery --------------------------------------------
+# Release pages live on github.com but the assets redirect to a separate host, so
+# a reachable /releases/latest does not prove a release can actually be downloaded.
+
+print_section "GitHub API and asset delivery"
+if [[ -n "$FIRST_GITHUB_REPO" ]]; then
+  probe_url github_api "api.github.com" "https://api.github.com/repos/${FIRST_GITHUB_REPO}/releases/latest"
+
+  if command -v jq >/dev/null 2>&1; then
+    asset_url=$(curl -fsSL --connect-timeout "$TIMEOUT" \
+      "https://api.github.com/repos/${FIRST_GITHUB_REPO}/releases/latest" 2>/dev/null \
+      | jq -r '.assets[0].browser_download_url // empty')
+    if [[ -n "$asset_url" ]]; then
+      probe_url github_asset "release asset download" "$asset_url"
+    else
+      log_warning "Could not resolve an asset URL for $FIRST_GITHUB_REPO; asset delivery unprobed"
     fi
+  else
+    log_warning "jq not installed; asset delivery unprobed"
   fi
+fi
 
-  # Try GET with range header (downloads only first byte)
-  if curl -fsSL --connect-timeout "$TIMEOUT" -r 0-0 "$url" >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} $name"
-    results+=("YES | $name | $url")
-    ((passed++))
-    return 0
-  fi
+# --- Git clone ----------------------------------------------------------------
 
-  echo -e "${RED}✗${NC} $name"
-  results+=("NO  | $name | $url")
-  ((failed++))
-  return 1
+print_section "Git clone"
+probe_clone git_clone "dotfiles" "https://github.com/datapointchris/dotfiles.git"
+
+while IFS='|' read -r name repo _; do
+  [[ -z "$name" ]] && continue
+  probe_clone git_clone "$name" "$repo"
+done < <(packages_query --type=git_uv --manifest="$MANIFEST" --format=name_repo)
+
+if [[ "$(yq -r '.shell_plugins // false' "$MANIFEST_FILE")" == "true" ]]; then
+  while IFS='|' read -r name repo; do
+    [[ -z "$name" ]] && continue
+    probe_clone git_clone "$name" "$repo"
+  done < <(packages_query --type=shell-plugins --format=name_repo)
+fi
+
+# --- Custom installers --------------------------------------------------------
+# source_type says where the bytes come from: a github_clone needs github.com, the
+# others each have their own vendor host that no other probe covers.
+
+print_section "Custom installers"
+while IFS= read -r tool; do
+  [[ -z "$tool" ]] && continue
+  source_type=$(packages_query --custom-installer "$tool" --field source_type 2>/dev/null || echo "")
+  case "$source_type" in
+    github_clone)
+      repo=$(packages_query --custom-installer "$tool" --field repo) || continue
+      probe_clone custom_installer "$tool" "https://github.com/${repo}.git"
+      ;;
+    hashicorp_release)
+      probe_url custom_installer "$tool" "https://releases.hashicorp.com/${tool}/"
+      ;;
+    official_installer | aws_release)
+      # The installer's own --print-url, not packages.yml's url: that field is a
+      # bucket root, and probing a root nothing ever requests reports a block
+      # that is really just S3 refusing to list (mount-s3, 403).
+      url=$(bash "$DOTFILES_DIR/install/common/custom-installers/${tool}.sh" --print-url 2>/dev/null | cut -d'|' -f3)
+      # An installer that skips on this platform logs instead of printing, and a
+      # log line has no pipes, so cut hands back the whole line. Probing that
+      # reports a block for a tool the machine was never going to install.
+      if [[ "$url" == http* ]]; then
+        probe_url custom_installer "$tool" "$url"
+      else
+        log_warning "$tool reports no download URL on this platform; unprobed"
+      fi
+      ;;
+    *) log_warning "$tool has no source_type in packages.yml; unprobed" ;;
+  esac
+done < <(packages_query --type=custom --manifest="$MANIFEST")
+
+# --- Language runtimes and their registries -----------------------------------
+# Each registry is probed only when the manifest actually declares tools that use
+# it, so a NO always names something this machine would really have failed to get.
+
+print_section "Language runtimes"
+uv_url=$(bash "$DOTFILES_DIR/install/common/language-managers/uv.sh" --print-url | cut -d'|' -f3)
+probe_url language_manager "uv installer" "$uv_url"
+probe_url language_manager "go.dev" "https://go.dev/VERSION?m=text"
+probe_url language_manager "rustup" "https://sh.rustup.rs"
+
+print_section "Package registries"
+manifest_has() {
+  [[ "$(yq -r "(.$1 // []) | length" "$MANIFEST_FILE")" != "0" ]]
 }
 
-test_git_clone() {
-  local name="$1"
-  local repo="$2"
+if manifest_has go_tools; then
+  probe_url registry "proxy.golang.org" "https://proxy.golang.org/github.com/go-task/task/v3/@latest"
+fi
+if manifest_has npm_globals; then
+  probe_url registry "registry.npmjs.org" "https://registry.npmjs.org/typescript/latest"
+fi
+if manifest_has uv_tools || manifest_has git_uv_tools; then
+  probe_url registry "pypi.org" "https://pypi.org/simple/ruff/"
+fi
+# cargo binstall resolves a crate's version through the crates.io API before
+# fetching the binary from GitHub, so a blocked crates.io fails the whole section
+# even though every byte it installs comes from a reachable host.
+if manifest_has cargo_packages; then
+  probe_url registry "crates.io" "https://crates.io/api/v1/crates/bat"
+fi
 
-  # Test git ls-remote (checks connectivity without cloning)
-  if git ls-remote --quiet "$repo" HEAD >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} $name"
-    results+=("YES | $name | $repo")
-    ((passed++))
-    return 0
-  fi
+# --- Write results ------------------------------------------------------------
 
-  echo -e "${RED}✗${NC} $name"
-  results+=("NO  | $name | $repo")
-  ((failed++))
-  return 1
-}
-
-echo "======================================"
-echo "Dotfiles Connectivity Test"
-echo "======================================"
-echo "Testing from: $(hostname)"
-echo "Date: $(date)"
-echo "Output file: $OUTPUT_FILE"
-echo ""
-
-# --- GitHub Releases ---
-echo -e "${YELLOW}GitHub Releases:${NC}"
-test_url "neovim" "https://github.com/neovim/neovim/releases/download/v0.10.0/nvim-linux64.tar.gz"
-test_url "lazygit" "https://github.com/jesseduffield/lazygit/releases/download/v0.44.1/lazygit_0.44.1_Linux_x86_64.tar.gz"
-test_url "yazi" "https://github.com/sxyazi/yazi/releases/latest"
-test_url "fzf" "https://github.com/junegunn/fzf/releases/latest"
-test_url "glow" "https://github.com/charmbracelet/glow/releases/latest"
-test_url "duf" "https://github.com/muesli/duf/releases/latest"
-test_url "shellcheck" "https://github.com/koalaman/shellcheck/releases/latest"
-test_url "tflint" "https://github.com/terraform-linters/tflint/releases/latest"
-test_url "trivy" "https://github.com/aquasecurity/trivy/releases/latest"
-test_url "zk" "https://github.com/zk-org/zk/releases/latest"
-test_url "win32yank" "https://github.com/equalsraf/win32yank/releases/latest"
-echo ""
-
-# --- GitHub API ---
-echo -e "${YELLOW}GitHub API:${NC}"
-test_url "github-api-releases" "https://api.github.com/repos/neovim/neovim/releases/latest" "GET"
-echo ""
-
-# --- Raw GitHub Content ---
-echo -e "${YELLOW}Raw GitHub Content (install scripts):${NC}"
-test_url "theme-install" "https://raw.githubusercontent.com/datapointchris/theme/main/install.sh"
-test_url "font-install" "https://raw.githubusercontent.com/datapointchris/font/main/install.sh"
-test_url "homebrew-install" "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-echo ""
-
-# --- Git Clone ---
-echo -e "${YELLOW}Git Clone (git protocol):${NC}"
-test_git_clone "github-dotfiles" "https://github.com/datapointchris/dotfiles.git"
-test_git_clone "github-theme" "https://github.com/datapointchris/theme.git"
-test_git_clone "github-tpm" "https://github.com/tmux-plugins/tpm.git"
-test_git_clone "github-zsh-syntax" "https://github.com/zsh-users/zsh-syntax-highlighting.git"
-test_git_clone "github-bats-core" "https://github.com/bats-core/bats-core.git"
-echo ""
-
-# --- Language Installers ---
-echo -e "${YELLOW}Language Runtime Installers:${NC}"
-test_url "go-download" "https://go.dev/dl/go1.22.0.linux-amd64.tar.gz"
-test_url "go-version-api" "https://go.dev/VERSION?m=text" "GET"
-test_url "rustup" "https://sh.rustup.rs" "GET"
-test_url "uv-install" "https://astral.sh/uv/install.sh"
-echo ""
-
-# --- Go Module Proxy ---
-echo -e "${YELLOW}Go Module Proxy (go install):${NC}"
-test_url "go-proxy-task" "https://proxy.golang.org/github.com/go-task/task/v3/@latest" "GET"
-test_url "go-proxy-gum" "https://proxy.golang.org/github.com/charmbracelet/gum/@latest" "GET"
-test_url "go-proxy-lazydocker" "https://proxy.golang.org/github.com/jesseduffield/lazydocker/@latest" "GET"
-echo ""
-
-# --- Go Tools as GitHub Releases ---
-echo -e "${YELLOW}Go Tools (GitHub Releases alternative):${NC}"
-test_url "task-release" "https://github.com/go-task/task/releases/latest"
-test_url "gum-release" "https://github.com/charmbracelet/gum/releases/latest"
-test_url "lazydocker-release" "https://github.com/jesseduffield/lazydocker/releases/latest"
-test_url "cheat-release" "https://github.com/cheat/cheat/releases/latest"
-test_url "terraform-docs-release" "https://github.com/terraform-docs/terraform-docs/releases/latest"
-test_url "actionlint-release" "https://github.com/rhysd/actionlint/releases/latest"
-test_url "goose-release" "https://github.com/pressly/goose/releases/latest"
-test_url "gofumpt-release" "https://github.com/mvdan/gofumpt/releases/latest"
-test_url "gdu-release" "https://github.com/dundee/gdu/releases/latest"
-echo ""
-
-# --- Package Registries ---
-echo -e "${YELLOW}Package Registries:${NC}"
-test_url "npm-registry" "https://registry.npmjs.org/typescript/latest" "GET"
-test_url "pypi" "https://pypi.org/simple/ruff/" "GET"
-test_url "crates-io" "https://crates.io/api/v1/crates/bat" "GET"
-echo ""
-
-# --- Other Tools ---
-echo -e "${YELLOW}Other Tools:${NC}"
-test_url "awscli-linux" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-test_url "terraform-releases" "https://releases.hashicorp.com/terraform-ls/" "GET"
-echo ""
-
-# --- Write results to file ---
 {
   echo "======================================"
   echo "Dotfiles Connectivity Test Results"
@@ -167,23 +230,19 @@ echo ""
   echo "Host: $(hostname)"
   echo "Date: $(date)"
   echo "User: $(whoami)"
+  echo "Manifest: $MANIFEST"
+  echo "OS: $(uname -sr)"
   echo ""
-  echo "Summary: $passed passed, $failed failed"
+  echo "Summary: $PASSED reachable, $FAILED blocked"
   echo ""
-  echo "Results:"
-  echo "--------------------------------------"
-  printf '%s\n' "${results[@]}"
-  echo "--------------------------------------"
+  printf '%-4s| %-18s| %-24s| %s\n' "" "SECTION" "NAME" "TARGET"
+  echo "----------------------------------------------------------------------"
+  printf '%s\n' "${RESULTS[@]}"
+  echo "----------------------------------------------------------------------"
   echo ""
-  echo "Legend: YES = accessible, NO = blocked/failed"
+  echo "Legend: YES = reachable, NO = blocked or unreachable"
 } >"$OUTPUT_FILE"
 
-echo ""
-echo "======================================"
-echo -e "Summary: ${GREEN}$passed passed${NC}, ${RED}$failed failed${NC}"
-echo "======================================"
-echo ""
-echo "Results written to: $OUTPUT_FILE"
-echo ""
-echo "Copy the output file to review results:"
-echo "  cat $OUTPUT_FILE"
+print_section "Summary"
+print_info "$PASSED reachable, $FAILED blocked"
+print_info "Results written to $OUTPUT_FILE"
