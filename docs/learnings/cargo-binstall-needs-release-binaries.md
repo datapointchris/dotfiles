@@ -13,8 +13,17 @@ XAMPPRocky/tokei stopped attaching release binaries after `v13.0.0-alpha.0`. Its
 current stable tags carry zero assets. Moving it to `cargo_packages` therefore:
 
 - compiles ~200 crates from source on every workstation install (slow), and
-- **fails entirely on the offline/firewalled WSL work box**, which has no crates.io
-  access and cannot be served a cached binary the offline bundler can't download.
+- **cannot be carried in the offline bundle at all** — the bundler can only cache a
+  binary upstream actually published, so the firewalled WSL work box compiles it
+  from source too.
+
+Measured on that box 2026-08-07 (`install/offline/connectivity-results.txt`):
+crates.io is **reachable**, and GitHub *release asset downloads* are **blocked**
+while the release API is not. So the compile does succeed there — an earlier
+reading claiming no crates.io access was wrong. The consequence is subtler than a
+hard failure: `cargo binstall` can resolve any crate but cannot download a single
+prebuilt binary, so on that machine it silently falls back to source builds for
+*every* cargo package unless the bundle carries them.
 
 Contrast `ripgrep`, which ships prebuilt binaries for every target on each release —
 it moves to `cargo binstall` cleanly and even works on minimal LXC servers.
