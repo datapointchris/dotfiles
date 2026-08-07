@@ -96,7 +96,6 @@ git_uv_tools:
   - doit
   - refcheck
   - syncer
-  - indy
   - dectl
   - safekeep
 
