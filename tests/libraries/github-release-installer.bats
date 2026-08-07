@@ -130,20 +130,6 @@ stub_releases_api() {
   assert_output ""
 }
 
-@test "checksum lookup: case-insensitive on the asset name, empty when absent" {
-  local checksums="$BATS_TEST_TMPDIR/checksums.txt"
-  local digest
-  digest=$(printf 'a%.0s' {1..64})
-  printf '%s  %s\n' "$digest" "lazygit_0.63.1_linux_x86_64.tar.gz" >"$checksums"
-
-  run checksum_for_asset "$checksums" "lazygit_0.63.1_Linux_x86_64.tar.gz"
-  assert_success
-  assert_output "$digest"
-
-  run checksum_for_asset "$checksums" "someothertool.tar.gz"
-  assert_output ""
-}
-
 # Offline bundle checksum tests
 #
 # The bundle exists for networks that cannot reach GitHub, so these must never

@@ -9,6 +9,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/version-helpers.sh"
 source "$SCRIPT_DIR/missing-tools.sh"
 
+# Checksum rules are shared with the offline bundler rather than reimplemented
+# here: two implementations could disagree silently, and a bundle would then
+# verify differently from a live install. /usr/bin/python3 for the same reason
+# parse_packages.py uses it.
+GITHUB_RELEASE_PY=(/usr/bin/python3 "${DOTFILES_DIR:-$(cd "$SCRIPT_DIR/../../.." && pwd)}/install/github_release.py")
+
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
 
@@ -59,214 +65,35 @@ download_release_asset() {
 
 # Split a GitHub release download URL into "<owner>/<repo>|<tag>".
 #
-# The tag may itself contain slashes (a nested module's `cli/v1.2.0`), so it is
-# everything between `/releases/download/` and the final filename segment.
 # Echoes nothing for a URL that is not a GitHub release asset, which is how a
 # caller distinguishes a HashiCorp or other non-GitHub source.
 parse_github_release_url() {
-  local url="$1"
-
-  if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$ ]]; then
-    printf '%s|%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
-  fi
+  "${GITHUB_RELEASE_PY[@]}" parse-url "$1"
 }
 
-# A file's SHA-256, as a bare lowercase hex digest.
-#
-# GNU coreutils and macOS ship different tools and only one is guaranteed
-# present, so this picks whichever exists rather than assuming a platform.
 compute_sha256() {
-  local file="$1"
-
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$file" | awk '{print $1}'
-  else
-    shasum -a 256 "$file" | awk '{print $1}'
-  fi
+  "${GITHUB_RELEASE_PY[@]}" sha256 "$1"
 }
 
-# Names that contain a checksum but are not one. Detached signatures,
-# certificates and sigstore bundles all sit beside the checksums file and match
-# a naive "*checksum*" match — tflint publishes checksums.txt alongside
-# checksums.txt.keyless.sig and checksums.txt.pem, and picking either of those
-# would compare the asset against a signature.
-CHECKSUM_AUX_PATTERN='\.(sig|asc|pem|gpgsig|bundle|json|crt|cert)$|_hashes_order$|-bsd$'
-
-# Name of the release asset holding the checksum for a given asset.
-#
-# A per-asset sidecar wins outright because it names exactly one file and
-# cannot be ambiguous; only when there is none does this fall back to the
-# combined file that goreleaser and coreutils both produce. Echoes nothing when
-# the release publishes neither.
-resolve_checksum_asset() {
-  local repo="$1"
-  local tag="$2"
-  local asset_name="$3"
-
-  local -a curl_opts=(-fsSL)
-  local token
-  token=$(github_token)
-  if [[ -n "$token" ]]; then
-    curl_opts+=(-H "Authorization: Bearer $token")
-  fi
-
-  local names
-  names=$(curl "${curl_opts[@]}" \
-    "https://api.github.com/repos/${repo}/releases/tags/$(printf '%s' "$tag" | jq -sRr '@uri')" 2>/dev/null \
-    | jq -r '.assets[]?.name') || return 1
-  [[ -z "$names" ]] && return 1
-
-  local suffix candidate
-  for suffix in .sha256 .sha256sum .sha256.txt .sha256sum.txt; do
-    candidate=$(printf '%s\n' "$names" | grep -Fx "${asset_name}${suffix}" | head -1)
-    if [[ -n "$candidate" ]]; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-
-  candidate=$(printf '%s\n' "$names" \
-    | grep -iE 'checksum|sha256sums?$' \
-    | grep -ivE "$CHECKSUM_AUX_PATTERN" \
-    | head -1)
-
-  [[ -n "$candidate" ]] || return 1
-  echo "$candidate"
-}
-
-# The expected digest for an asset, read out of a checksums file.
-#
-# Handles the sha256sum format GNU and goreleaser both emit — digest,
-# whitespace, an optional "*" binary marker, then the name — and the bare
-# single-digest sidecar some projects publish per asset.
-#
-# A CI step written as `sha256sum ./*.tar.gz`, which is a natural way to write
-# it, records "./tool.tar.gz" while the release asset is named "tool.tar.gz".
-# Both name the same file, so an exact match is tried first and the base name
-# only consulted when nothing matched exactly — a checksums file that
-# deliberately distinguishes two paths is never resolved by guessing.
-checksum_for_asset() {
-  local checksums_file="$1"
-  local asset_name="$2"
-
-  awk -v want="$asset_name" '
-    { sub(/\r$/, "") }
-    NF == 0 { next }
-    { lines++ }
-    NF == 1 && $1 ~ /^[0-9a-fA-F]{64}$/ { bare = $1; next }
-    NF < 2 { next }
-    {
-      name = $2
-      sub(/^\*/, "", name)
-      if (name == want) { exact = $1; exit }
-      base = name
-      sub(/^.*[\/\\]/, "", base)
-      if (by_base == "" && base == want) by_base = $1
-      if (by_case == "" && tolower(base) == tolower(want)) by_case = $1
-    }
-    END {
-      if (exact != "") print exact
-      else if (by_base != "") print by_base
-      # GitHub resolves a release asset path case-insensitively, so a download
-      # URL can name the asset differently from the checksums file and still
-      # fetch it: lazygit is downloaded as Linux_x86_64 and recorded as
-      # linux_x86_64. Rejecting that discards a checksum the project published.
-      else if (by_case != "") print by_case
-      # A lone digest is only trustworthy in a file that contains nothing else;
-      # in a combined file it would be an unrelated stray line.
-      else if (bare != "" && lines == 1) print bare
-    }
-  ' "$checksums_file"
-}
-
-# Verify a downloaded asset against the checksum its release published.
-#
-# Returns 0 verified, 1 failed, 2 nothing published. A mismatch is never
-# negotiable and deletes the file, so a retry cannot extract bytes that already
-# failed. Whether a 2 is acceptable is the caller's decision — see
-# CHECKSUM_REQUIRED in install_from_tarball.
-#
-# Set CHECKSUM_URL before calling to name the checksums file directly, for a
-# release that is not hosted on GitHub.
+# Returns 0 verified, 1 failed, 2 nothing published. Whether a 2 is acceptable
+# is the caller's decision — see CHECKSUM_REQUIRED in verify_download_or_fail.
+# Set CHECKSUM_URL to name the checksums file directly, for a release not hosted
+# on GitHub.
 #
 # Usage: verify_release_checksum <file> <asset_name> <repo> <tag>
 verify_release_checksum() {
   local file="$1"
   local asset_name="$2"
-  local repo="$3"
-  local tag="$4"
+  local repo="${3:-}"
+  local tag="${4:-}"
 
-  # A file taken from the bundle is checked against the bundle's own record.
-  # Falling through to the network here would defeat the point: the bundle
-  # exists because GitHub is unreachable, and its digests were verified against
-  # the published checksums on the machine that built it.
+  local -a args=(verify "$file" "$asset_name" "$repo" "$tag")
   if [[ "${USED_OFFLINE_CACHE:-false}" == "true" && -f "$OFFLINE_CHECKSUMS_FILE" ]]; then
-    local bundled
-    bundled=$(checksum_for_asset "$OFFLINE_CHECKSUMS_FILE" "$asset_name")
-    if [[ -n "$bundled" ]]; then
-      local cached_actual
-      cached_actual=$(compute_sha256 "$file")
-      if [[ "${bundled,,}" != "${cached_actual,,}" ]]; then
-        log_error "Checksum mismatch for $asset_name (offline bundle)"
-        log_error "  bundled:  $bundled"
-        log_error "  on disk:  $cached_actual"
-        rm -f "$file"
-        return 1
-      fi
-      log_success "Checksum verified from offline bundle: $asset_name"
-      return 0
-    fi
-    log_warning "Offline bundle records no checksum for $asset_name"
+    args+=(--bundle-checksums "$OFFLINE_CHECKSUMS_FILE")
   fi
+  [[ -n "${CHECKSUM_URL:-}" ]] && args+=(--checksum-url "$CHECKSUM_URL")
 
-  local checksums_path="/tmp/${asset_name}.checksums"
-  rm -f "$checksums_path"
-
-  if [[ -n "${CHECKSUM_URL:-}" ]]; then
-    if ! curl -fsSL "$CHECKSUM_URL" -o "$checksums_path"; then
-      log_error "Failed to download checksums from $CHECKSUM_URL"
-      return 1
-    fi
-  else
-    if [[ -z "$repo" || -z "$tag" ]]; then
-      return 2
-    fi
-
-    local checksum_asset
-    if ! checksum_asset=$(resolve_checksum_asset "$repo" "$tag" "$asset_name"); then
-      return 2
-    fi
-
-    local checksum_url="https://github.com/${repo}/releases/download/${tag}/${checksum_asset}"
-    if ! download_release_asset "$repo" "$tag" "$checksum_asset" "$checksums_path" "$checksum_url"; then
-      log_error "Failed to download $checksum_asset from $repo"
-      return 1
-    fi
-  fi
-
-  local expected
-  expected=$(checksum_for_asset "$checksums_path" "$asset_name")
-  rm -f "$checksums_path"
-
-  if [[ -z "$expected" ]]; then
-    log_error "Checksums file has no entry for $asset_name"
-    rm -f "$file"
-    return 1
-  fi
-
-  local actual
-  actual=$(compute_sha256 "$file")
-
-  if [[ "${expected,,}" != "${actual,,}" ]]; then
-    log_error "Checksum mismatch for $asset_name"
-    log_error "  published:  $expected"
-    log_error "  downloaded: $actual"
-    rm -f "$file"
-    return 1
-  fi
-
-  log_success "Checksum verified: $asset_name"
-  return 0
+  "${GITHUB_RELEASE_PY[@]}" "${args[@]}"
 }
 
 # Verify a downloaded asset, honouring the caller's CHECKSUM_REQUIRED setting.

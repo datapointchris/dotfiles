@@ -1,0 +1,357 @@
+#!/usr/bin/python3
+"""GitHub release asset resolution and checksum verification.
+
+Imported by install/offline/create_bundle.py, which verifies assets while
+building an offline bundle, and invoked as a CLI by
+install/common/lib/github-release-installer.sh, which verifies them while
+installing. Those were separate implementations — an awk program and Python —
+of rules subtle enough that a divergence would have gone unnoticed until a
+bundle verified differently from a live install.
+
+    github_release.py verify <file> <asset> [repo] [tag]   0 ok, 1 failed, 2 none published
+    github_release.py parse-url <url>                      prints repo|tag, empty if not a release
+    github_release.py checksum-for <file> <asset>          prints the digest, empty if absent
+    github_release.py sha256 <file>
+
+Stdlib-only, and annotations are deferred: this runs under the system python3,
+still 3.9 on macOS. See install/offline/create_bundle.py.
+"""
+
+from __future__ import annotations
+
+import argparse
+import enum
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+# Some hosts answer urllib's default identification with a 403 where they serve
+# curl fine.
+USER_AGENT = 'curl/8.0 (dotfiles-installer)'
+
+REQUEST_TIMEOUT_SECONDS = 300
+
+# Detached signatures, certificates and sigstore bundles sit beside the
+# checksums file and match a naive "*checksum*" search — tflint publishes
+# checksums.txt alongside checksums.txt.keyless.sig and checksums.txt.pem, and
+# either would compare the asset against a signature.
+CHECKSUM_AUX_PATTERN = re.compile(r'\.(sig|asc|pem|gpgsig|bundle|json|crt|cert)$|_hashes_order$|-bsd$', re.IGNORECASE)
+
+CHECKSUM_SIDECAR_SUFFIXES = ('.sha256', '.sha256sum', '.sha256.txt', '.sha256sum.txt')
+
+RELEASE_URL_PATTERN = re.compile(r'^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$')
+
+
+class Verification(enum.IntEnum):
+    """Values are the CLI's exit codes, so the shell library can `case` on `$?`."""
+
+    VERIFIED = 0
+    FAILED = 1
+    UNPUBLISHED = 2
+
+
+# The [LEVEL] prefixes are what logsift and the log aggregators match on, so
+# these lines carry the same ones logging.sh emits rather than bare text.
+def log_success(message: str) -> None:
+    print(f'[INFO] ✓ {message}', file=sys.stderr)
+
+
+def log_warning(message: str) -> None:
+    print(f'[WARNING] ▲ {message}', file=sys.stderr)
+
+
+def log_error(message: str) -> None:
+    print(f'[ERROR] ✗ {message}', file=sys.stderr)
+
+
+def parse_release_url(url: str) -> tuple[str, str] | None:
+    """(repo, tag), or None for a URL that is not a GitHub release asset.
+
+    The tag may contain slashes (a nested module's `cli/v1.2.0`). None is how a
+    caller tells a HashiCorp or other non-GitHub source apart.
+    """
+    match = RELEASE_URL_PATTERN.match(url)
+    return (match.group(1), match.group(2)) if match else None
+
+
+def select_checksum_asset(asset_names: list[str], asset_name: str) -> str | None:
+    """A per-asset sidecar wins outright, naming exactly one file and so never
+    ambiguous; the combined goreleaser/coreutils file is the fallback.
+    """
+    for suffix in CHECKSUM_SIDECAR_SUFFIXES:
+        if f'{asset_name}{suffix}' in asset_names:
+            return f'{asset_name}{suffix}'
+
+    for name in asset_names:
+        if CHECKSUM_AUX_PATTERN.search(name):
+            continue
+        if re.search(r'checksum|sha256sums?$', name, re.IGNORECASE):
+            return name
+    return None
+
+
+def checksum_for_asset(checksums_text: str, asset_name: str) -> str | None:
+    """The digest for an asset, out of a checksums file.
+
+    Three fallbacks, each earned by a real release. A leading path is stripped
+    only after an exact match fails, because `sha256sum ./*.tar.gz` in CI records
+    ./tool.tar.gz for an asset published as tool.tar.gz. Case is ignored last,
+    because GitHub resolves asset paths case-insensitively and lazygit is
+    downloaded as Linux_x86_64 while recorded as linux_x86_64. A lone digest
+    counts only in a file holding nothing else, where it cannot be a stray line.
+    """
+    bare = None
+    by_base = None
+    by_case = None
+    line_count = 0
+
+    for raw_line in checksums_text.splitlines():
+        fields = raw_line.rstrip('\r').split()
+        if not fields:
+            continue
+        line_count += 1
+
+        if len(fields) == 1:
+            if re.fullmatch(r'[0-9a-fA-F]{64}', fields[0]):
+                bare = fields[0]
+            continue
+
+        digest = fields[0]
+        name = fields[1].lstrip('*')
+        if name == asset_name:
+            return digest
+
+        base = re.sub(r'^.*[/\\]', '', name)
+        if by_base is None and base == asset_name:
+            by_base = digest
+        if by_case is None and base.lower() == asset_name.lower():
+            by_case = digest
+
+    if by_base:
+        return by_base
+    if by_case:
+        return by_case
+    return bare if bare and line_count == 1 else None
+
+
+def digests_match(expected: str, actual: str) -> bool:
+    return expected.lower() == actual.lower()
+
+
+def sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def github_token() -> str | None:
+    """Private repos need one for both the API and the download; public ones do not."""
+    token = os.environ.get('GITHUB_TOKEN')
+    if token:
+        return token
+    if shutil.which('gh'):
+        result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=False)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    return None
+
+
+def request(url: str, accept: str | None = None) -> bytes:
+    headers = {'User-Agent': USER_AGENT}
+    if accept:
+        headers['Accept'] = accept
+    token = github_token()
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
+        return response.read()
+
+
+def release_assets(repo: str, tag: str) -> dict[str, int]:
+    """{name: id} for a tag's assets, empty when the release cannot be read."""
+    encoded = urllib.parse.quote(tag, safe='')
+    try:
+        payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
+    except (urllib.error.URLError, json.JSONDecodeError):
+        return {}
+    return {asset['name']: asset['id'] for asset in payload.get('assets', [])}
+
+
+def latest_version(repo: str) -> str | None:
+    try:
+        payload = json.loads(request(f'https://api.github.com/repos/{repo}/releases/latest'))
+    except (urllib.error.URLError, json.JSONDecodeError):
+        return None
+    return payload.get('tag_name')
+
+
+def download_asset(url: str, destination: Path, repo: str = '', tag: str = '', asset_name: str = '') -> bool:
+    """The browser URL 404s on a private repo whatever token is presented; only
+    the REST asset endpoint serves those, and only with an octet-stream Accept.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    if github_token() and repo and tag and asset_name:
+        asset_id = release_assets(repo, tag).get(asset_name)
+        if asset_id is not None:
+            try:
+                destination.write_bytes(
+                    request(f'https://api.github.com/repos/{repo}/releases/assets/{asset_id}', accept='application/octet-stream')
+                )
+            except (urllib.error.URLError, OSError):
+                log_warning(f'Asset API download failed for {asset_name}, falling back to the public URL')
+            else:
+                return True
+
+    try:
+        destination.write_bytes(request(url))
+    except (urllib.error.URLError, OSError):
+        return False
+    return True
+
+
+def verify_from_bundle(path: Path, asset_name: str, checksums_file: Path) -> Verification | None:
+    """None when the bundle records nothing for this asset, which is the caller's
+    signal to fall through to the network. Falling through when it *does* record
+    one would defeat the bundle's purpose — it exists because GitHub is
+    unreachable, and its digests were checked where they could be.
+    """
+    expected = checksum_for_asset(checksums_file.read_text(), asset_name)
+    if expected is None:
+        return None
+
+    actual = sha256_of(path)
+    if not digests_match(expected, actual):
+        log_error(f'Checksum mismatch for {asset_name} (offline bundle)')
+        log_error(f'  bundled:  {expected}')
+        log_error(f'  on disk:  {actual}')
+        path.unlink(missing_ok=True)
+        return Verification.FAILED
+
+    log_success(f'Checksum verified from offline bundle: {asset_name}')
+    return Verification.VERIFIED
+
+
+def verify_release_checksum(
+    path: Path,
+    asset_name: str,
+    repo: str = '',
+    tag: str = '',
+    bundle_checksums: Path | None = None,
+    checksum_url: str = '',
+) -> Verification:
+    """A mismatch deletes the file, so a retry cannot extract bytes that already
+    failed. `checksum_url` names the checksums file directly, for a release not
+    hosted on GitHub.
+    """
+    if bundle_checksums is not None and bundle_checksums.is_file():
+        outcome = verify_from_bundle(path, asset_name, bundle_checksums)
+        if outcome is not None:
+            return outcome
+        log_warning(f'Offline bundle records no checksum for {asset_name}')
+
+    if checksum_url:
+        try:
+            checksums_text = request(checksum_url).decode()
+        except (urllib.error.URLError, UnicodeDecodeError):
+            log_error(f'Failed to download checksums from {checksum_url}')
+            return Verification.FAILED
+    else:
+        if not repo or not tag:
+            return Verification.UNPUBLISHED
+
+        checksum_asset = select_checksum_asset(sorted(release_assets(repo, tag)), asset_name)
+        if checksum_asset is None:
+            return Verification.UNPUBLISHED
+
+        destination = Path(f'/tmp/{asset_name}.checksums')  # noqa: S108
+        browser_url = f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}'
+        if not download_asset(browser_url, destination, repo, tag, checksum_asset):
+            log_error(f'Failed to download {checksum_asset} from {repo}')
+            return Verification.FAILED
+        checksums_text = destination.read_text()
+        destination.unlink(missing_ok=True)
+
+    expected = checksum_for_asset(checksums_text, asset_name)
+    if expected is None:
+        log_error(f'Checksums file has no entry for {asset_name}')
+        path.unlink(missing_ok=True)
+        return Verification.FAILED
+
+    actual = sha256_of(path)
+    if not digests_match(expected, actual):
+        log_error(f'Checksum mismatch for {asset_name}')
+        log_error(f'  published:  {expected}')
+        log_error(f'  downloaded: {actual}')
+        path.unlink(missing_ok=True)
+        return Verification.FAILED
+
+    log_success(f'Checksum verified: {asset_name}')
+    return Verification.VERIFIED
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog='github_release.py', description=__doc__.splitlines()[0])
+    commands = parser.add_subparsers(dest='command', required=True)
+
+    verify = commands.add_parser('verify', help='verify a file against its published checksum (exit 0 ok, 1 failed, 2 none published)')
+    verify.add_argument('file', help='the downloaded file to check')
+    verify.add_argument('asset', help='the release asset name it was downloaded as')
+    verify.add_argument('repo', nargs='?', default='', help='owner/name, omit for a non-GitHub source')
+    verify.add_argument('tag', nargs='?', default='', help='release tag the asset belongs to')
+    verify.add_argument('--bundle-checksums', default='', help="an offline bundle's checksums.txt to check against first")
+    verify.add_argument('--checksum-url', default='', help='name the checksums file directly, for a release not hosted on GitHub')
+
+    parse_url = commands.add_parser('parse-url', help='split a release download URL into repo|tag')
+    parse_url.add_argument('url', help='the release download URL')
+
+    checksum_for = commands.add_parser('checksum-for', help="read an asset's digest out of a checksums file")
+    checksum_for.add_argument('file', help='the checksums file to read')
+    checksum_for.add_argument('asset', help='the asset name to look up')
+
+    sha256 = commands.add_parser('sha256', help="print a file's SHA-256")
+    sha256.add_argument('file', help='the file to hash')
+
+    args = parser.parse_args(argv)
+
+    if args.command == 'verify':
+        return int(
+            verify_release_checksum(
+                Path(args.file),
+                args.asset,
+                args.repo,
+                args.tag,
+                Path(args.bundle_checksums) if args.bundle_checksums else None,
+                args.checksum_url,
+            )
+        )
+
+    if args.command == 'parse-url':
+        parsed = parse_release_url(args.url)
+        if parsed:
+            print(f'{parsed[0]}|{parsed[1]}')
+        return 0
+
+    if args.command == 'checksum-for':
+        digest = checksum_for_asset(Path(args.file).read_text(), args.asset)
+        if digest:
+            print(digest)
+        return 0
+
+    print(sha256_of(Path(args.file)))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -379,6 +379,14 @@ Every download is checked against the SHA-256 the release published, before extr
 the installers level with `goselfupdate`, which each tool's own `update` command already uses — the
 two paths install the same binary and now trust it on the same terms.
 
+The rules below live in `install/github_release.py`, not in the shell library. Both the installer
+and the offline bundler need the same ones — one to verify a download, the other to record a digest
+the first will later trust — and they were separate implementations, awk and Python, until the
+bundler was rewritten. Two implementations of rules this fiddly can disagree without anything
+saying so, and the symptom would be a bundle verifying differently from a live install. The bundler
+imports the module; `github-release-installer.sh` calls it, and the exit codes below are that CLI's.
+`tests/install/test_github_release.py` covers every case named here.
+
 **Finding the checksum file.** It is discovered from the release's asset list rather than guessed,
 because the naming is not consistent across projects: `checksums.txt` (goreleaser), `SHA256SUMS`
 (just), `<tool>_<version>_checksums.txt` (fzf, trivy), or a per-asset `<asset>.sha256` sidecar

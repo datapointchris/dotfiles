@@ -32,8 +32,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import gzip
-import hashlib
-import json
 import logging
 import os
 import re
@@ -43,7 +41,6 @@ import sys
 import tarfile
 import tempfile
 import urllib.error
-import urllib.parse
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -51,7 +48,8 @@ from pathlib import Path
 DOTFILES_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(DOTFILES_DIR / 'install'))
 
-import parse_packages  # noqa: E402  (path must be set before this resolves)
+import github_release  # noqa: E402  (path must be set before these resolve)
+import parse_packages  # noqa: E402
 
 log = logging.getLogger('create-bundle')
 
@@ -65,11 +63,6 @@ CACHE_RETENTION_DAYS = 90
 
 DOWNLOAD_TIMEOUT_SECONDS = 300
 DOWNLOAD_ATTEMPTS = 3
-
-# urllib identifies itself as Python-urllib by default, and astral.sh answers
-# that with a 403 where it serves curl fine. Nothing here wants to be treated
-# differently from the shell that used to make these requests.
-USER_AGENT = 'curl/8.0 (dotfiles-offline-bundle)'
 
 # Keep the tail of a failing command's output: a TLS, proxy or "too many errors"
 # failure states its cause on the last lines, under however much progress
@@ -86,17 +79,6 @@ PLATFORMS = {
     'darwin-arm64': ('darwin', 'arm64'),
     'macos-arm64': ('darwin', 'arm64'),
 }
-
-# Names that contain a checksum but are not one. Detached signatures,
-# certificates and sigstore bundles all sit beside the checksums file and match
-# a naive "*checksum*" match — tflint publishes checksums.txt alongside
-# checksums.txt.keyless.sig and checksums.txt.pem, and picking either of those
-# would compare the asset against a signature.
-CHECKSUM_AUX_PATTERN = re.compile(r'\.(sig|asc|pem|gpgsig|bundle|json|crt|cert)$|_hashes_order$|-bsd$', re.IGNORECASE)
-
-CHECKSUM_SIDECAR_SUFFIXES = ('.sha256', '.sha256sum', '.sha256.txt', '.sha256sum.txt')
-
-RELEASE_URL_PATTERN = re.compile(r'^https://github\.com/([^/]+/[^/]+)/releases/download/(.+)/([^/]+)$')
 
 BUNDLE_README = """\
 Dotfiles Offline Installers
@@ -139,15 +121,7 @@ class BundleError(Exception):
     """A failure that should end the build with a message rather than a traceback."""
 
 
-# ======================================================================
-# Pure functions
-# ======================================================================
-# No I/O, no network, no clock. Everything the build decides rather than
-# performs lives here, which is what makes it testable without a container.
-
-
 def parse_platform(target: str) -> tuple[str, str]:
-    """Split a --platform value into (os, arch)."""
     if target not in PLATFORMS:
         supported = ', '.join(sorted(PLATFORMS))
         raise BundleError(f'Unsupported platform: {target}\nSupported: {supported}')
@@ -155,7 +129,7 @@ def parse_platform(target: str) -> tuple[str, str]:
 
 
 def bundle_name(manifest: str, os_name: str, arch: str, today: dt.date) -> str:
-    """The tarball's stem. Dated, so two builds of the same manifest are distinguishable."""
+    """Dated, so two builds of the same manifest are distinguishable."""
     return f'dotfiles-offline-v{today:%Y%m%d}-{manifest}-{os_name}-{arch}'
 
 
@@ -175,12 +149,9 @@ def cargo_target(os_name: str, arch: str, linux_override: str = '', darwin_overr
 
 
 def expand_pattern(pattern: str, version: str, os_name: str, arch: str, target: str = '') -> str:
-    """Fill in a binary_pattern from packages.yml.
-
-    The placeholder set is the union of every naming scheme upstreams use: the
-    kernel name, the Go architecture spelling, capitalised variants (gum,
-    lazydocker), and the product name for Apple (jira-cli ships macOS, not
-    darwin).
+    """The placeholder set is the union of every naming scheme upstreams use:
+    the kernel name, the Go spelling, capitalised variants (gum, lazydocker),
+    and the product name for Apple (jira-cli ships macOS, not darwin).
     """
     version_num = version.lstrip('v')
     replacements = {
@@ -196,8 +167,6 @@ def expand_pattern(pattern: str, version: str, os_name: str, arch: str, target: 
         '{Os_mac}': 'Linux' if os_name == 'linux' else 'macOS',
         '{platform}': 'linux' if os_name == 'linux' else 'apple_darwin',
     }
-    # {arch} for the platform-name scheme spells arm64 as aarch64 (oxker), but
-    # only after the triple-based placeholders have consumed the plain value.
     expanded = pattern
     for placeholder, value in replacements.items():
         expanded = expanded.replace(placeholder, value)
@@ -218,166 +187,33 @@ def cache_path_for_url(url: str) -> Path:
     return CACHE_ROOT / key
 
 
-def select_checksum_asset(asset_names: list[str], asset_name: str) -> str | None:
-    """The release asset holding the checksum for a given asset.
-
-    A per-asset sidecar wins outright because it names exactly one file and
-    cannot be ambiguous; only when there is none does this fall back to the
-    combined file that goreleaser and coreutils both produce.
-    """
-    for suffix in CHECKSUM_SIDECAR_SUFFIXES:
-        sidecar = f'{asset_name}{suffix}'
-        if sidecar in asset_names:
-            return sidecar
-
-    for name in asset_names:
-        if CHECKSUM_AUX_PATTERN.search(name):
-            continue
-        if re.search(r'checksum|sha256sums?$', name, re.IGNORECASE):
-            return name
-    return None
-
-
-def checksum_for_asset(checksums_text: str, asset_name: str) -> str | None:
-    """The expected digest for an asset, read out of a checksums file.
-
-    Handles the sha256sum format GNU and goreleaser both emit — digest,
-    whitespace, an optional '*' binary marker, then the name — and the bare
-    single-digest sidecar some projects publish per asset.
-
-    A CI step written as `sha256sum ./*.tar.gz`, which is a natural way to write
-    it, records './tool.tar.gz' while the release asset is named 'tool.tar.gz'.
-    Both name the same file, so an exact match is tried first and the base name
-    only consulted when nothing matched exactly.
-    """
-    bare = None
-    by_base = None
-    by_case = None
-    line_count = 0
-
-    for raw_line in checksums_text.splitlines():
-        line = raw_line.rstrip('\r')
-        fields = line.split()
-        if not fields:
-            continue
-        line_count += 1
-
-        if len(fields) == 1:
-            if re.fullmatch(r'[0-9a-fA-F]{64}', fields[0]):
-                bare = fields[0]
-            continue
-
-        digest = fields[0]
-        name = fields[1].lstrip('*')
-        if name == asset_name:
-            return digest
-
-        base = re.sub(r'^.*[/\\]', '', name)
-        if by_base is None and base == asset_name:
-            by_base = digest
-        # GitHub resolves a release asset path case-insensitively, so a download
-        # URL can name the asset differently from the checksums file and still
-        # fetch it: lazygit is downloaded as Linux_x86_64 and recorded as
-        # linux_x86_64. Rejecting that discards a checksum the project published.
-        if by_case is None and base.lower() == asset_name.lower():
-            by_case = digest
-
-    if by_base:
-        return by_base
-    if by_case:
-        return by_case
-    # A lone digest is only trustworthy in a file that contains nothing else; in
-    # a combined file it would be an unrelated stray line.
-    if bare and line_count == 1:
-        return bare
-    return None
-
-
-def parse_release_url(url: str) -> tuple[str, str] | None:
-    """(repo, tag) for a GitHub release download URL, or None if it is not one."""
-    match = RELEASE_URL_PATTERN.match(url)
-    if not match:
-        return None
-    return match.group(1), match.group(2)
-
-
 def tail_lines(text: str, limit: int = FAILURE_DETAIL_MAX_LINES) -> str:
-    """The last `limit` non-empty lines, which is where a cause is stated."""
+    """The tail is where a failing command states its cause."""
     lines = [line for line in text.splitlines() if line.strip()]
     return '\n'.join(lines[-limit:])
 
 
-# ======================================================================
-# Network and filesystem
-# ======================================================================
-
-
-def github_token() -> str | None:
-    """A token if one is available. Private repos need it; public repos do not."""
-    token = os.environ.get('GITHUB_TOKEN')
-    if token:
-        return token
-    if shutil.which('gh'):
-        result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=False)
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    return None
-
-
-def github_request(url: str) -> bytes:
-    """Fetch a URL, authenticated when a token is available."""
-    request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
-    token = github_token()
-    if token:
-        request.add_header('Authorization', f'Bearer {token}')
-    with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:  # noqa: S310
-        return response.read()
-
-
 def fetch_latest_version(repo: str) -> str:
-    """The tag of a repo's latest release."""
-    try:
-        payload = json.loads(github_request(f'https://api.github.com/repos/{repo}/releases/latest'))
-    except (urllib.error.URLError, json.JSONDecodeError) as error:
-        raise BundleError(f'Could not fetch version for {repo}: {error}') from error
-    tag = payload.get('tag_name')
+    """The tag of a repo's latest release, as a hard requirement.
+
+    github_release.latest_version returns None for a release it cannot read,
+    which is the right answer for an installer deciding whether to update. A
+    bundle build has no such fallback: it cannot name the asset without the
+    version, so the miss is fatal here.
+    """
+    tag = github_release.latest_version(repo)
     if not tag:
-        raise BundleError(f'Could not fetch version for {repo}: release has no tag_name')
+        raise BundleError(f'Could not fetch version for {repo}')
     return tag
 
 
-def fetch_release_asset_names(repo: str, tag: str) -> list[str]:
-    """Every asset name published for a tag, empty when the release cannot be read."""
-    encoded = urllib.parse.quote(tag, safe='')
-    try:
-        payload = json.loads(github_request(f'https://api.github.com/repos/{repo}/releases/tags/{encoded}'))
-    except (urllib.error.URLError, json.JSONDecodeError):
-        return []
-    return [asset['name'] for asset in payload.get('assets', [])]
-
-
-def sha256_of(path: Path) -> str:
-    """A file's SHA-256, as a bare lowercase hex digest."""
-    digest = hashlib.sha256()
-    with path.open('rb') as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def download(url: str, destination: Path) -> None:
-    """Fetch a URL to a path, retrying a few times before giving up."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     last_error: Exception | None = None
 
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
-            request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
-            token = github_token()
-            if token and url.startswith('https://github.com/'):
-                request.add_header('Authorization', f'Bearer {token}')
-            with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:  # noqa: S310
-                destination.write_bytes(response.read())
+            destination.write_bytes(github_release.request(url))
         except (urllib.error.URLError, OSError) as error:
             last_error = error
             if attempt < DOWNLOAD_ATTEMPTS:
@@ -414,15 +250,6 @@ def run_installer_script(script: Path, *args: str) -> list[tuple[str, str, str]]
     return rows
 
 
-# ======================================================================
-# Download cache
-# ======================================================================
-# Most rebuilds change only a handful of tools, and the rest re-download bytes
-# that are already on disk. A release asset's URL names its version, so the URL
-# is a content key: while upstream has not moved, the same URL resolves to the
-# same bytes and the cached copy is the right copy. The moment a release ships,
-# the version in the URL changes and the entry misses on its own — there is no
-# staleness check to get wrong.
 #
 # This is why install scripts are excluded. Every one of them is served from an
 # unversioned URL (astral.sh/uv/install.sh, the raw.githubusercontent main
@@ -431,8 +258,6 @@ def run_installer_script(script: Path, *args: str) -> list[tuple[str, str, str]]
 
 
 class DownloadCache:
-    """Bytes and verification results for release assets, keyed by URL."""
-
     def __init__(self, enabled: bool):
         self.enabled = enabled
         self.hits = 0
@@ -441,13 +266,12 @@ class DownloadCache:
             CACHE_ROOT.mkdir(parents=True, exist_ok=True)
 
     def digest_file(self, url: str) -> Path:
-        """The digest of the bytes as they were cached."""
         cached = cache_path_for_url(url)
         return cached.with_name(cached.name + '.sha256')
 
     def status_file(self, url: str) -> Path:
-        """What asking upstream for a checksum returned — an answer about one
-        immutable release asset, so caching it is as safe as caching the asset.
+        """What asking upstream for a checksum returned. An answer about one
+        immutable asset, so caching it is as safe as caching the asset.
         """
         cached = cache_path_for_url(url)
         return cached.with_name(cached.name + '.checksum-status')
@@ -465,7 +289,7 @@ class DownloadCache:
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         if self.enabled and cached.is_file() and digest_file.is_file():
-            if sha256_of(cached) == digest_file.read_text().strip():
+            if github_release.sha256_of(cached) == digest_file.read_text().strip():
                 log.info('%s [cached]', label)
                 shutil.copyfile(cached, destination)
                 # mtime is the clock the retention sweep reads, so a hit has to
@@ -496,15 +320,13 @@ class DownloadCache:
             partial = cached.with_name(f'{cached.name}.partial.{os.getpid()}')
             shutil.copyfile(destination, partial)
             partial.replace(cached)
-            digest_file.write_text(sha256_of(cached) + '\n')
+            digest_file.write_text(github_release.sha256_of(cached) + '\n')
         except OSError:
             log.warning('    could not cache %s', destination.name)
 
     def remember_status(self, url: str, status: str) -> None:
-        """Record what asking upstream for a checksum returned.
-
-        Written only once the asset itself is cached, so a status can never
-        outlive the digest it refers to.
+        """Written only once the asset is cached, so a status cannot outlive the
+        digest it refers to.
         """
         if not self.enabled or not self.digest_file(url).is_file():
             return
@@ -539,14 +361,7 @@ class DownloadCache:
                 path.rmdir()
 
 
-# ======================================================================
-# Bundle assembly
-# ======================================================================
-
-
 class Bundle:
-    """The staging tree a build fills in, and the record of what went into it."""
-
     def __init__(self, staging: Path, os_name: str, arch: str):
         self.staging = staging
         self.os_name = os_name
@@ -591,7 +406,7 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, ur
     an asset whose release publishes nothing usable would make the installer log
     'verified' for bytes nobody verified.
     """
-    parsed = parse_release_url(url)
+    parsed = github_release.parse_release_url(url)
     if parsed is None:
         log.warning('    not a GitHub release, no checksum recorded: %s', path.name)
         return
@@ -608,18 +423,18 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, ur
     if status == 'unpublished':
         return
 
-    checksum_asset = select_checksum_asset(fetch_release_asset_names(repo, tag), asset_name)
+    checksum_asset = github_release.select_checksum_asset(sorted(github_release.release_assets(repo, tag)), asset_name)
     if checksum_asset is None:
         log.warning('    %s publishes no checksums, none recorded', repo)
         cache.remember_status(url, 'unpublished')
         return
 
     try:
-        checksums_text = github_request(f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}').decode()
+        checksums_text = github_release.request(f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}').decode()
     except (urllib.error.URLError, UnicodeDecodeError) as error:
         raise BundleError(f'Failed to download {checksum_asset} from {repo}: {error}') from error
 
-    expected = checksum_for_asset(checksums_text, asset_name)
+    expected = github_release.checksum_for_asset(checksums_text, asset_name)
     if expected is None:
         # yq's checksums is an rhash table (name first, then one column per
         # algorithm), which the sha256sum parser cannot read. Its installer does
@@ -628,8 +443,8 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, ur
         cache.remember_status(url, 'unpublished')
         return
 
-    actual = sha256_of(path)
-    if expected.lower() != actual.lower():
+    actual = github_release.sha256_of(path)
+    if not github_release.digests_match(expected, actual):
         # Bytes that failed against upstream must not be served to the next build.
         cache.evict(url)
         raise BundleError(f'Checksum mismatch while bundling {asset_name}\n  published:  {expected}\n  downloaded: {actual}')
@@ -710,11 +525,6 @@ def extract_go_binary(archive_path: Path, binary_name: str, destination: Path) -
     destination.chmod(0o755)
     if archive_path.exists() and archive_path != destination:
         archive_path.unlink()
-
-
-# ======================================================================
-# Download phases
-# ======================================================================
 
 
 def add_github_releases(bundle: Bundle, cache: DownloadCache, packages: dict, manifest: dict) -> None:
@@ -809,11 +619,6 @@ def add_install_scripts(bundle: Bundle, packages: dict, manifest: dict) -> None:
         log.info('  %s...', name)
         download(url, bundle.scripts / filename)
         bundle.record('script', name, version, filename)
-
-
-# ======================================================================
-# Entry point
-# ======================================================================
 
 
 def build(manifest_name: str, target_platform: str, use_cache: bool, today: dt.date | None = None) -> Path:
