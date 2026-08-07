@@ -495,7 +495,14 @@ main() {
     /usr/bin/python3 -m pip install --user PyYAML
   fi
 
+  # Exported, because every phase script resolves the platform through
+  # detect_platform, which honours $PLATFORM only if it is in the environment and
+  # otherwise greps /proc/version. Unexported, a fresh machine ran the phases on
+  # that guess instead of on the manifest — which is how a wsl manifest deployed
+  # the linux shell overlay. It worked on an established machine only because a
+  # pre-existing ~/.env happened to export it.
   PLATFORM=$(manifest_field "platform")
+  export PLATFORM
   start_time=$(date +%s)
 
   print_title "Dotfiles Installation - $MACHINE ($PLATFORM)"
@@ -511,8 +518,18 @@ main() {
   # the marker — including secrets — are preserved.
   if [[ "$DRY_RUN" != "true" ]]; then
     print_section "Machine environment" "brightcyan"
-    bash "$DOTFILES_DIR/install/ops/env.sh" sync --machine "$MACHINE" \
-      || log_warning "Could not sync ~/.env — continuing with the existing file"
+    if bash "$DOTFILES_DIR/install/ops/env.sh" sync --machine "$MACHINE"; then
+      # Read back what was just written. The file is sourced at the top of this
+      # script too, but on a fresh machine there was nothing there to read, so
+      # without this the run continued on detect_platform's guess and the flags
+      # defaulted — the phases deployed the linux shell overlay to a machine
+      # whose manifest says wsl, and every manifest flag override was ignored for
+      # the whole install.
+      # shellcheck disable=SC1091
+      source "$HOME/.env"
+    else
+      log_warning "Could not sync ~/.env — continuing with the existing file"
+    fi
   fi
 
   run_selected_phases || exit 1
