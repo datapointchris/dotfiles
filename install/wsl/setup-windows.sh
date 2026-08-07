@@ -40,19 +40,6 @@ source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 # {tag} = raw release tag (e.g. v0.26.1, 15.2.0); {ver} = tag with any
 # leading non-digits stripped (e.g. 0.26.1). A .exe pattern is a direct
 # download; a .zip pattern is extracted and the exe located inside it.
-WINDOWS_TOOL_SPECS=$(
-  cat <<'EOF'
-zoxide|ajeetdsouza/zoxide|zoxide-{ver}-x86_64-pc-windows-msvc.zip|zoxide.exe
-eza|eza-community/eza|eza.exe_x86_64-pc-windows-gnu.zip|eza.exe
-fzf|junegunn/fzf|fzf-{ver}-windows_amd64.zip|fzf.exe
-jq|jqlang/jq|jq-windows-amd64.exe|jq.exe
-bat|sharkdp/bat|bat-{tag}-x86_64-pc-windows-msvc.zip|bat.exe
-rg|BurntSushi/ripgrep|ripgrep-{tag}-x86_64-pc-windows-msvc.zip|rg.exe
-fd|sharkdp/fd|fd-{tag}-x86_64-pc-windows-msvc.zip|fd.exe
-delta|dandavison/delta|delta-{tag}-x86_64-pc-windows-msvc.zip|delta.exe
-EOF
-)
-
 usage() {
   help_header "setup-windows" "Provision Windows Git Bash with the shell tools used on Linux/macOS."
   help_usage "setup-windows.sh [--bundle [file] | --offline <src>]"
@@ -90,88 +77,11 @@ resolve_windows_dest() {
   echo "$win_home/.local/bin"
 }
 
-fetch_latest_tag() {
-  local repo="$1" tag
-  tag=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | jq -r '.tag_name')
-  if [[ -z "$tag" ]] || [[ "$tag" == "null" ]]; then
-    echo "ERROR: Could not fetch latest release tag for $repo" >&2
-    return 1
-  fi
-  echo "$tag"
-}
-
 # ================================================================
 # Mode: --bundle (download Windows binaries on an unblocked machine)
 # ================================================================
-# Produces a single .tar.gz so the result is one movable file rather than
-# a directory. The archive holds the flat .exe set plus versions.txt.
 build_bundle() {
-  local out_archive="$1"
-  # Normalize to a .tar.gz path so the output is always a single archive.
-  case "$out_archive" in
-    *.tar.gz | *.tgz) ;;
-    *) out_archive="${out_archive}.tar.gz" ;;
-  esac
-  local out_parent
-  out_parent=$(dirname "$out_archive")
-  mkdir -p "$out_parent"
-
-  local work_dir
-  work_dir=$(mktemp -d)
-  # shellcheck disable=SC2064
-  trap "rm -rf '$work_dir'" RETURN
-
-  echo "Building Windows tool bundle -> $out_archive"
-  echo ""
-
-  local versions_file="$work_dir/versions.txt"
-  : >"$versions_file"
-
-  local tool repo pattern exe tag ver asset url
-  while IFS='|' read -r tool repo pattern exe; do
-    [[ -z "$tool" ]] && continue
-
-    tag=$(fetch_latest_tag "$repo") || exit 1
-    ver=$(printf '%s' "$tag" | grep -oE '[0-9].*' | head -1)
-    asset="${pattern//\{tag\}/$tag}"
-    asset="${asset//\{ver\}/$ver}"
-    url="https://github.com/$repo/releases/download/$tag/$asset"
-
-    echo "  $tool ($tag)"
-    if [[ "$asset" == *.exe ]]; then
-      if ! curl -fsSL "$url" -o "$work_dir/$exe"; then
-        echo "  ERROR: failed to download $url" >&2
-        exit 1
-      fi
-    else
-      local tmp
-      tmp=$(mktemp -d)
-      if ! curl -fsSL "$url" -o "$tmp/$asset"; then
-        echo "  ERROR: failed to download $url" >&2
-        rm -rf "$tmp"
-        exit 1
-      fi
-      unzip -q "$tmp/$asset" -d "$tmp"
-      local found
-      found=$(find "$tmp" -name "$exe" -type f 2>/dev/null | head -1)
-      if [[ -z "$found" ]]; then
-        echo "  ERROR: $exe not found inside $asset" >&2
-        rm -rf "$tmp"
-        exit 1
-      fi
-      cp "$found" "$work_dir/$exe"
-      rm -rf "$tmp"
-    fi
-    echo "$tool $tag" >>"$versions_file"
-  done <<<"$WINDOWS_TOOL_SPECS"
-
-  tar -czf "$out_archive" -C "$work_dir" .
-
-  echo ""
-  echo "Bundle complete: $(find "$work_dir" -maxdepth 1 -name '*.exe' | wc -l | tr -d ' ') binaries"
-  echo "  Archive: $out_archive"
-  echo "  Move it to the target machine, then run:"
-  echo "    task windows:offline -- $out_archive"
+  /usr/bin/python3 "$DOTFILES_DIR/install/wsl/windows_bundle.py" "$1"
 }
 
 # ================================================================

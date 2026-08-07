@@ -63,6 +63,15 @@ cache. If you change the bundle format, that test is what catches it.
 `task windows:bundle` and `task windows:offline` are the same idea for the Git
 Bash side. See [Task Reference](../tools/tasks.md).
 
+`install/wsl/windows_bundle.py` builds it, sharing `install/github_release.py`
+with the Linux bundler — so a Windows asset is now verified against the checksum
+its release published, wherever one exists. The shell version it replaced
+verified nothing at all, which mattered most on exactly the network this page is
+about. Several of these projects publish no Windows checksum (fd, delta, bat,
+zoxide, eza at the time of writing); the build says so per tool rather than
+staying quiet, so what is and is not verified is visible while it is being
+built.
+
 ## Why the Neovim setup does not need any of this
 
 Neovim uses native LSP rather than Mason, so opening an editor does not reach

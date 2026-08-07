@@ -133,3 +133,36 @@ class TestVerification:
         payload.write_text('payload')
 
         assert github_release.verify_release_checksum(payload, 'terraform.zip') is github_release.Verification.UNPUBLISHED
+
+
+class TestSidecarChecksums:
+    """A per-asset `<asset>.sha256` names its subject in its filename, so a bare
+    digest inside it is unambiguous in a way the same line in a combined file is
+    not.
+    """
+
+    # Verbatim from ripgrep's Windows sidecar, which Windows CertUtil produces.
+    CERTUTIL = (
+        'SHA256 hash of ripgrep-15.2.0-x86_64-pc-windows-msvc.zip:\r\n'
+        '71b2fef860abe467217a538ff31de02f5258807c0129f771846f87bd029aafc5\r\n'
+        'CertUtil: -hashfile command completed successfully.\r\n'
+    )
+    ASSET = 'ripgrep-15.2.0-x86_64-pc-windows-msvc.zip'
+
+    def test_a_certutil_sidecar_yields_its_digest(self):
+        digest = github_release.checksum_for_asset(self.CERTUTIL, self.ASSET, from_sidecar=True)
+        assert digest == '71b2fef860abe467217a538ff31de02f5258807c0129f771846f87bd029aafc5'
+
+    def test_the_same_text_in_a_combined_file_is_still_refused(self):
+        # Two lines of prose around it, so the digest names no asset. Trusting it
+        # in a combined file would attach one tool's digest to another's bytes.
+        assert github_release.checksum_for_asset(self.CERTUTIL, self.ASSET) is None
+
+    def test_a_named_entry_still_wins_over_a_bare_digest(self):
+        text = f'{"a" * 64}\ndeadbeef  {self.ASSET}\n'
+        assert github_release.checksum_for_asset(text, self.ASSET, from_sidecar=True) == 'deadbeef'
+
+    def test_every_sidecar_suffix_is_recognised_as_one(self):
+        for suffix in github_release.CHECKSUM_SIDECAR_SUFFIXES:
+            names = ['tool.tar.gz', f'tool.tar.gz{suffix}']
+            assert github_release.select_checksum_asset(names, 'tool.tar.gz').endswith(suffix)

@@ -434,7 +434,9 @@ def verify_against_upstream(bundle: Bundle, cache: DownloadCache, path: Path, ur
     except (urllib.error.URLError, UnicodeDecodeError) as error:
         raise BundleError(f'Failed to download {checksum_asset} from {repo}: {error}') from error
 
-    expected = github_release.checksum_for_asset(checksums_text, asset_name)
+    expected = github_release.checksum_for_asset(
+        checksums_text, asset_name, checksum_asset.endswith(github_release.CHECKSUM_SIDECAR_SUFFIXES)
+    )
     if expected is None:
         # yq's checksums is an rhash table (name first, then one column per
         # algorithm), which the sha256sum parser cannot read. Its installer does

@@ -98,15 +98,20 @@ def select_checksum_asset(asset_names: list[str], asset_name: str) -> str | None
     return None
 
 
-def checksum_for_asset(checksums_text: str, asset_name: str) -> str | None:
+def checksum_for_asset(checksums_text: str, asset_name: str, from_sidecar: bool = False) -> str | None:
     """The digest for an asset, out of a checksums file.
 
     Three fallbacks, each earned by a real release. A leading path is stripped
     only after an exact match fails, because `sha256sum ./*.tar.gz` in CI records
     ./tool.tar.gz for an asset published as tool.tar.gz. Case is ignored last,
     because GitHub resolves asset paths case-insensitively and lazygit is
-    downloaded as Linux_x86_64 while recorded as linux_x86_64. A lone digest
-    counts only in a file holding nothing else, where it cannot be a stray line.
+    downloaded as Linux_x86_64 while recorded as linux_x86_64.
+
+    A digest on a line of its own names no asset, so in a combined file it could
+    belong to any of them and is only trusted when nothing else is there.
+    `from_sidecar` says the file is a per-asset `<asset>.sha256`, whose name
+    already settled which asset it describes — ripgrep's Windows sidecars are
+    CertUtil output, where the digest is line two of three.
     """
     bare = None
     by_base = None
@@ -139,7 +144,7 @@ def checksum_for_asset(checksums_text: str, asset_name: str) -> str | None:
         return by_base
     if by_case:
         return by_case
-    return bare if bare and line_count == 1 else None
+    return bare if bare and (from_sidecar or line_count == 1) else None
 
 
 def digests_match(expected: str, actual: str) -> bool:
@@ -261,6 +266,7 @@ def verify_release_checksum(
             return outcome
         log_warning(f'Offline bundle records no checksum for {asset_name}')
 
+    from_sidecar = False
     if checksum_url:
         try:
             checksums_text = request(checksum_url).decode()
@@ -274,6 +280,7 @@ def verify_release_checksum(
         checksum_asset = select_checksum_asset(sorted(release_assets(repo, tag)), asset_name)
         if checksum_asset is None:
             return Verification.UNPUBLISHED
+        from_sidecar = checksum_asset.endswith(CHECKSUM_SIDECAR_SUFFIXES)
 
         destination = Path(f'/tmp/{asset_name}.checksums')  # noqa: S108
         browser_url = f'https://github.com/{repo}/releases/download/{tag}/{checksum_asset}'
@@ -283,7 +290,7 @@ def verify_release_checksum(
         checksums_text = destination.read_text()
         destination.unlink(missing_ok=True)
 
-    expected = checksum_for_asset(checksums_text, asset_name)
+    expected = checksum_for_asset(checksums_text, asset_name, from_sidecar)
     if expected is None:
         log_error(f'Checksums file has no entry for {asset_name}')
         path.unlink(missing_ok=True)
