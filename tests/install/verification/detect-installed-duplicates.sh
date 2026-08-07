@@ -20,7 +20,7 @@
 set -euo pipefail
 
 # Source formatting library
-DOTFILES_DIR="$(git rev-parse --show-toplevel)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
@@ -33,15 +33,25 @@ DUPLICATES_FOUND=false
 declare -a CLEANUP_COMMANDS
 
 # Detect platform
-DETECTED_PLATFORM="unknown"
-if [ "$(uname)" = "Darwin" ]; then
-  DETECTED_PLATFORM="macos"
-elif grep -q "Microsoft" /proc/version 2>/dev/null; then
-  DETECTED_PLATFORM="wsl"
-elif [ -f /etc/arch-release ]; then
-  DETECTED_PLATFORM="archlinux"
-else
-  DETECTED_PLATFORM="linux"
+# ~/.env first: it carries MACHINE, and it is the only thing that identifies a WSL
+# machine correctly under Docker, where /proc/version is the host kernel and the
+# grep below silently answers "linux".
+if [ -f "$HOME/.env" ]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.env"
+fi
+
+DETECTED_PLATFORM="${PLATFORM:-}"
+if [ -z "$DETECTED_PLATFORM" ]; then
+  if [ "$(uname)" = "Darwin" ]; then
+    DETECTED_PLATFORM="macos"
+  elif grep -q "Microsoft" /proc/version 2>/dev/null; then
+    DETECTED_PLATFORM="wsl"
+  elif [ -f /etc/arch-release ]; then
+    DETECTED_PLATFORM="archlinux"
+  else
+    DETECTED_PLATFORM="linux"
+  fi
 fi
 
 # Cache for package manager lists (populated once at startup)
@@ -459,71 +469,56 @@ populate_package_manager_caches
 echo ""
 log_info "Checking for Alternate Installations"
 
-# GitHub Release Tools
+# Where each install method puts its binaries. This is the one thing not in
+# packages.yml — it is a property of the installer scripts, not the package.
+install_dir_for_section() {
+  case "$1" in
+    go_tools) echo "$HOME/go/bin" ;;
+    cargo_packages) echo "$HOME/.cargo/bin" ;;
+    npm_globals) echo "$HOME/.local/share/npm/bin" ;;
+    *) echo "$HOME/.local/bin" ;;
+  esac
+}
+
+# The tools themselves come from the manifest, so this list cannot fall behind the
+# install the way the hand-written one did — it still looked for `theme-sync` long
+# after it was deleted, and checked vscode-html-language-server where packages.yml
+# declares vscode-json-language-server.
+check_declared_tools() {
+  local manifest_name="${MACHINE:-}"
+  if [[ -z "$manifest_name" ]]; then
+    log_warning "MACHINE is not set in ~/.env; skipping the manifest-derived checks"
+    return 0
+  fi
+
+  local rows section kind value name
+  if ! rows=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+    --manifest="$manifest_name" --verify-commands 2>&1); then
+    log_error "Could not read the manifest's declared tools: $rows"
+    return 1
+  fi
+
+  while IFS='|' read -r section kind value name; do
+    [[ "$kind" == "command" ]] || continue
+    # awscli comes from Homebrew on macOS, so its ~/.local/bin copy is expected absent.
+    [[ "$value" == "aws" && "$DETECTED_PLATFORM" == "macos" ]] && continue
+    if [[ "$name" != "$value" ]]; then
+      check_tool "$value" "$(install_dir_for_section "$section")/$value" "$value" "$name"
+    else
+      check_tool "$value" "$(install_dir_for_section "$section")/$value" "$value"
+    fi
+  done <<<"$rows"
+}
+
+check_declared_tools
+
+# Bootstrap runtimes and companion binaries: installed by the language-manager
+# scripts or shipped alongside another tool, so no manifest section names them.
 check_tool "go" "/usr/local/go/bin/go" "go" "golang" "golang-go"
-check_tool "neovim" "$HOME/.local/bin/nvim" "nvim"
-check_tool "lazygit" "$HOME/.local/bin/lazygit" "lazygit"
-check_tool "yazi" "$HOME/.local/bin/yazi" "yazi"
-check_tool "ya" "$HOME/.local/bin/ya" "ya"
-check_tool "fzf" "$HOME/.local/bin/fzf" "fzf"
-
-# Terraform Tools
-check_tool "tenv" "$HOME/.local/bin/tenv" "tenv"
-check_tool "terraform-ls" "$HOME/.local/bin/terraform-ls" "terraform-ls"
-check_tool "tflint" "$HOME/.local/bin/tflint" "tflint"
-check_tool "terraformer" "$HOME/.local/bin/terraformer" "terraformer"
-check_tool "terrascan" "$HOME/.local/bin/terrascan" "terrascan"
-
-# AWS CLI: Skip on macOS (managed by Homebrew)
-if [[ "$DETECTED_PLATFORM" != "macos" ]]; then
-  check_tool "aws" "$HOME/.local/bin/aws" "aws" "awscli" "aws-cli"
-fi
-
-# Go Tools
-check_tool "cheat" "$HOME/go/bin/cheat" "cheat"
-check_tool "terraform-docs" "$HOME/go/bin/terraform-docs" "terraform-docs"
-
-# Cargo Tools
-check_tool "bat" "$HOME/.cargo/bin/bat" "bat"
-check_tool "eza" "$HOME/.cargo/bin/eza" "eza"
-check_tool "fd" "$HOME/.cargo/bin/fd" "fd" "fd-find"
-check_tool "zoxide" "$HOME/.cargo/bin/zoxide" "zoxide"
-check_tool "delta" "$HOME/.cargo/bin/delta" "delta" "git-delta"
-
-# Language Version Managers
 check_tool "rustup" "$HOME/.cargo/bin/rustup" "rustup"
 check_tool "uv" "$HOME/.local/bin/uv" "uv"
-# Note: node/npm are system packages (brew/pacman)
-# We only care if they're installed via brew/apt (detected by package manager checks)
-
-# Custom Go Applications
-check_tool "toolbox" "$HOME/go/bin/toolbox" "toolbox"
-
-# Custom Shell Script Applications
-check_tool "menu" "$HOME/.local/bin/menu" "menu"
+check_tool "ya" "$HOME/.local/bin/ya" "ya"
 check_tool "notes" "$HOME/.local/bin/notes" "notes"
-check_tool "theme-sync" "$HOME/.local/bin/theme-sync" "theme-sync"
-
-# npm Global Tools
-check_tool "typescript-language-server" "$HOME/.local/share/npm/bin/typescript-language-server" "typescript-language-server"
-check_tool "typescript" "$HOME/.local/share/npm/bin/tsc" "tsc"
-check_tool "eslint" "$HOME/.local/share/npm/bin/eslint" "eslint"
-check_tool "prettier" "$HOME/.local/share/npm/bin/prettier" "prettier"
-check_tool "bash-language-server" "$HOME/.local/share/npm/bin/bash-language-server" "bash-language-server"
-check_tool "yaml-language-server" "$HOME/.local/share/npm/bin/yaml-language-server" "yaml-language-server"
-check_tool "vscode-html-language-server" "$HOME/.local/share/npm/bin/vscode-html-language-server" "vscode-html-language-server"
-check_tool "gh-actions-language-server" "$HOME/.local/share/npm/bin/gh-actions-language-server" "gh-actions-language-server"
-check_tool "markdownlint" "$HOME/.local/share/npm/bin/markdownlint" "markdownlint" "markdownlint-cli"
-
-# uv Tools (Python)
-check_tool "ruff" "$HOME/.local/bin/ruff" "ruff"
-check_tool "mypy" "$HOME/.local/bin/mypy" "mypy"
-check_tool "basedpyright" "$HOME/.local/bin/basedpyright" "basedpyright"
-check_tool "codespell" "$HOME/.local/bin/codespell" "codespell"
-check_tool "sqlfluff" "$HOME/.local/bin/sqlfluff" "sqlfluff"
-check_tool "djlint" "$HOME/.local/bin/djlint" "djlint"
-check_tool "keymap" "$HOME/.local/bin/keymap" "keymap" "keymap-drawer"
-check_tool "nbpreview" "$HOME/.local/bin/nbpreview" "nbpreview"
 
 # ================================================================
 # SUMMARY & CLEANUP

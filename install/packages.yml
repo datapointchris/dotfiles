@@ -892,6 +892,10 @@ github_releases:
   # WSL-only
   - name: win32yank
     repo: equalsraf/win32yank
+    # Its installer skips unless /proc/version names Microsoft, so it is absent by
+    # design in a container. Declared here so verification applies the same test
+    # rather than reporting a machine that installed correctly as broken.
+    requires_wsl_host: true
     install_script: github-releases/win32yank.sh
     binary_pattern: "win32yank-x64.zip" # Fixed Windows binary; WSL clipboard bridge
     install_dir: "~/.local/bin"
@@ -1233,6 +1237,9 @@ uv_tools:
       description: Jupyter notebook preview in terminal
 
     - name: numpy
+      # Installed for other tools to import, and ships no entry point of its own,
+      # so verification has no command to look for.
+      library_only: true
       description: Numerical computing (for various tools)
 
   # Development Tools

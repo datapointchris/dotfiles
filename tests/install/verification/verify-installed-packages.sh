@@ -132,8 +132,68 @@ log_info "Detected platform: $DETECTED_PLATFORM"
 echo ""
 
 # ================================================================
+# Everything the manifest declares
+# ================================================================
+# Derived from packages.yml filtered by this machine's manifest, so the checks
+# cannot drift from the install. The hand-written list they replaced went stale
+# in both directions at once: it still asserted `menu` and `theme-sync` months
+# after both were deleted, checked vscode-html-language-server where packages.yml
+# declares vscode-json-language-server, and silently never checked taplo, sass,
+# fnm, broot, tldr, pre-commit, zk or atuin at all.
+#
+# Presence only, no version flag. A per-tool version flag is another list to keep
+# right, and getting it wrong is not a finding about the machine — `cargo-binstall
+# --version` reported a bogus version for exactly that reason.
+verify_declared_packages() {
+  # A failure, not a skip. Without MACHINE this silently checked 45 things instead
+  # of 138 and still printed "All verified successfully" — a pass that means less
+  # than it says is worse than no check at all.
+  local manifest_name="${MACHINE:-}"
+  if [[ -z "$manifest_name" ]]; then
+    log_error "MACHINE is not set — cannot verify what this machine declares"
+    FAILED_CHECKS=$((FAILED_CHECKS + 1))
+    FAILED_TOOLS+=("MACHINE unset in ~/.env")
+    return 1
+  fi
+
+  local rows section kind value name last_section=""
+  if ! rows=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
+    --manifest="$manifest_name" --verify-commands 2>&1); then
+    log_error "Could not read the manifest's declared commands: $rows"
+    FAILED_CHECKS=$((FAILED_CHECKS + 1))
+    return 1
+  fi
+
+  while IFS='|' read -r section kind value name; do
+    [[ -z "$value" ]] && continue
+    if [[ "$section" != "$last_section" ]]; then
+      print_section "${section//_/ } (declared by $manifest_name)"
+      last_section="$section"
+    fi
+    case "$kind" in
+      command) check_command "$value" "SKIP_VERSION" ;;
+      path) check_file_exists "$(basename "$value")" "${value/#\~/$HOME}" ;;
+      # The same test the installer makes, so a container — which is not a real
+      # WSL host and never gets the Windows clipboard bridge — is not reported as
+      # a broken machine.
+      command_wsl_host)
+        if grep -qE "Microsoft|WSL" /proc/version 2>/dev/null; then
+          check_command "$value" "SKIP_VERSION"
+        else
+          log_info "$value: skipped, needs a Windows host"
+        fi
+        ;;
+    esac
+  done <<<"$rows"
+}
+
+verify_declared_packages
+
+# ================================================================
 # Core Build Tools (Universal)
 # ================================================================
+# System packages and bootstrap runtimes: not in any manifest tool section, so
+# these stay written out.
 print_section "Core Build Tools (Universal)"
 check_command "git"
 check_command "curl"
@@ -142,29 +202,11 @@ check_command "unzip"
 check_command "make"
 
 # ================================================================
-# Task Runner (Universal)
-# ================================================================
-print_section "Task Runner (Universal)"
-check_command "task"
-
-# ================================================================
 # Shell and Terminal Tools (Universal)
 # ================================================================
 print_section "Shell and Terminal Tools (Universal)"
 check_command "zsh"
 check_command "tmux"
-check_command_at_path "bat" "$HOME/.cargo/bin/bat"
-check_command_at_path "fd" "$HOME/.cargo/bin/fd"
-check_command_at_path "fzf" "$HOME/.local/bin/fzf" "--version"
-check_command "rg" # ripgrep can be from system package manager
-check_command_at_path "zoxide" "$HOME/.cargo/bin/zoxide"
-check_command_at_path "eza" "$HOME/.cargo/bin/eza"
-
-# ================================================================
-# Editor (Universal)
-# ================================================================
-print_section "Editor (Universal)"
-check_command_at_path "nvim" "$HOME/.local/bin/nvim"
 
 # ================================================================
 # System Utilities (Universal)
@@ -220,38 +262,9 @@ check_command "uv"
 check_command "rustup"
 check_command "cargo"
 check_command "rustc"
-check_command "cargo-binstall" "--version"
+check_command "cargo-binstall" "-V"
 
 # Note: Lua/LuaJIT not checked - Neovim uses hererocks via lazy.nvim for Lua 5.1
-
-# ================================================================
-# GitHub Release Tools & Go Tools
-# ================================================================
-print_section "GitHub Release Tools (Universal)"
-
-# AWS CLI: macOS uses Homebrew, other platforms use ~/.local/bin
-if [[ "$DETECTED_PLATFORM" == "macos" ]]; then
-  check_command "aws"
-else
-  check_command_at_path "aws" "$HOME/.local/bin/aws"
-fi
-
-check_command_at_path "hadolint" "$HOME/.local/bin/hadolint"
-check_command_at_path "just" "$HOME/.local/bin/just"
-check_command_at_path "cheat" "$HOME/go/bin/cheat"
-check_command_at_path "terraform-docs" "$HOME/go/bin/terraform-docs"
-check_command_at_path "gum" "$HOME/go/bin/gum"
-check_command_at_path "lazydocker" "$HOME/go/bin/lazydocker"
-
-# ================================================================
-# Terraform Tools (Universal)
-# ================================================================
-print_section "Terraform Tools (Universal)"
-check_command_at_path "tenv" "$HOME/.local/bin/tenv"
-check_command_at_path "terraform-ls" "$HOME/.local/bin/terraform-ls"
-check_command_at_path "tflint" "$HOME/.local/bin/tflint"
-check_command_at_path "terraformer" "$HOME/.local/bin/terraformer"
-check_command_at_path "terrascan" "$HOME/.local/bin/terrascan"
 
 # ================================================================
 # Docker (Platform-Specific)
@@ -288,30 +301,16 @@ fi
 # ================================================================
 print_section "Git Tools (Universal)"
 check_command "gh"
-check_command_at_path "lazygit" "$HOME/.local/bin/lazygit"
-check_command_at_path "delta" "$HOME/.cargo/bin/delta"
 
 # ================================================================
-# File Managers
+# Second binaries and symlinked apps
 # ================================================================
-print_section "File Managers (Universal)"
-check_command_at_path "yazi" "$HOME/.local/bin/yazi"
+# Not manifest entries: `ya` is yazi's companion binary shipped by the same
+# release, and apps/ scripts are symlinked by the symlink manager rather than
+# installed by any packages.yml section.
+print_section "Companion Binaries and Symlinked Apps (Universal)"
 check_command_at_path "ya" "$HOME/.local/bin/ya"
-
-# ================================================================
-# Personal CLI Tools
-# ================================================================
-print_section "Personal CLI Tools (Universal)"
-check_command "theme" "SKIP_VERSION"
-check_command "font" "SKIP_VERSION"
-
-# ================================================================
-# Custom CLI Tools
-# ================================================================
-print_section "Custom CLI Tools (Universal)"
-check_command "menu" "SKIP_VERSION"
 check_command "notes" "SKIP_VERSION"
-check_command "toolbox" "SKIP_VERSION"
 
 # ================================================================
 # Claude Code (Universal - except WSL)
@@ -322,47 +321,10 @@ if [[ "$DETECTED_PLATFORM" != "wsl" ]]; then
 fi
 
 # ================================================================
-# npm Global Packages
-# ================================================================
-print_section "npm Global Packages - Language Servers (Universal)"
-check_command "typescript-language-server"
-check_command "tsc" "--version" # typescript compiler
-check_command "bash-language-server"
-check_command "yaml-language-server"
-check_command "vscode-html-language-server" "--version" # from vscode-langservers-extracted
-check_command "gh-actions-language-server"
-
-print_section "npm Global Packages - Linters/Formatters (Universal)"
-check_command "eslint"
-check_command "prettier"
-check_command "markdownlint"
-
-# ================================================================
 # System Package Linters
 # ================================================================
 print_section "Shell Script Tools (Universal)"
-check_command "shellcheck"
 check_command "shfmt"
-
-# ================================================================
-# Cargo Tools
-# ================================================================
-print_section "Cargo Tools (Universal)"
-# Already checked: bat, fd, eza, zoxide, delta
-check_command "oxker" "--version"
-
-# ================================================================
-# UV Tools (Python)
-# ================================================================
-print_section "UV Tools - Python (Universal)"
-check_command "ruff"
-check_command "mypy"
-check_command "basedpyright" "--version"
-check_command "codespell"
-check_command "sqlfluff"
-check_command "djlint"
-check_command "keymap" "--version"
-check_command "nbpreview" "--version"
 
 # ================================================================
 # Shell Configuration

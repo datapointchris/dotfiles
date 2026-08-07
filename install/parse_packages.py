@@ -77,6 +77,79 @@ def load_manifest(machine_name):
         return yaml.safe_load(f)
 
 
+# Sections whose entries each put one executable on PATH. system_packages is not
+# among them: apt/brew package names map to binaries too loosely to verify this way.
+# npm_globals and uv_tools nest their entries under group keys, hence the flag.
+VERIFIABLE_SECTIONS = (
+    ('go_tools', False),
+    ('github_releases', False),
+    ('custom_installers', False),
+    ('cargo_packages', False),
+    ('git_uv_tools', False),
+    ('npm_globals', True),
+    ('uv_tools', True),
+)
+
+
+def entry_command(entry):
+    """The executable an entry installs.
+
+    `command` is the declared override for a package whose binary is named
+    differently (ripgrep ships rg, @taplo/cli ships taplo). neovim instead
+    declares the full symlink it creates, so the name comes off the end of it.
+    Everything else installs a binary matching its own name.
+    """
+    if entry.get('command'):
+        return entry['command']
+    if entry.get('binary_link'):
+        return Path(entry['binary_link']).name
+    return entry['name']
+
+
+def verifiable_commands(data, manifest):
+    """Rows of `section|kind|value|name` for everything this manifest should install.
+
+    This is what keeps the verification honest: the checks are the manifest, so a
+    tool that is removed stops being checked and a tool that is added starts being
+    checked, with no list to update. Hand-maintained lists kept asserting `menu`
+    and `theme-sync` for months after both were deleted.
+
+    `kind` is `command` for a binary on PATH and `path` for an entry that declares
+    `installed_path` — a sourced library like bashselfupdate puts nothing on PATH,
+    and the checkout is the only evidence it installed.
+
+    `name` is carried alongside because it is the package name where that differs
+    from the binary (fd-find ships fd, git-delta ships delta), which is what the
+    duplicate detector needs to recognise the same tool installed via apt or brew.
+    """
+    rows = []
+    for section, is_grouped in VERIFIABLE_SECTIONS:
+        declared = manifest.get(section)
+        if not declared:
+            continue
+
+        available = data.get(section) or ([] if not is_grouped else {})
+        if is_grouped:
+            entries = [entry for group in available.values() for entry in group]
+        else:
+            entries = [entry for entry in available if isinstance(entry, dict)]
+
+        wanted = None if declared is True else set(declared)
+        for entry in entries:
+            if wanted is not None and entry['name'] not in wanted:
+                continue
+            if entry.get('library_only'):
+                continue
+            if entry.get('installed_path'):
+                kind = 'path'
+                value = entry['installed_path']
+            else:
+                kind = 'command_wsl_host' if entry.get('requires_wsl_host') else 'command'
+                value = entry_command(entry)
+            rows.append(f'{section}|{kind}|{value}|{entry["name"]}')
+    return rows
+
+
 def filter_go_packages_by_manifest(data, manifest, output_format='packages'):
     """Filter go packages to only those named in the manifest."""
     manifest_tools = manifest.get('go_tools', [])
@@ -488,6 +561,11 @@ def main():
     parser.add_argument('--owner', help='Only include packages owned by this GitHub owner (e.g., datapointchris)')
     parser.add_argument('--manifest', help='Machine manifest name (e.g., wsl-work-workstation) to filter packages')
     parser.add_argument('--manifest-field', help='Extract a field from the manifest (e.g., platform, go_tools)')
+    parser.add_argument(
+        '--verify-commands',
+        action='store_true',
+        help='With --manifest: emit section|command for every executable the manifest should install',
+    )
 
     args = parser.parse_args()
 
@@ -512,6 +590,14 @@ def main():
 
     data = load_packages()
     manifest = load_manifest(args.manifest) if args.manifest else None
+
+    if args.verify_commands:
+        if not manifest:
+            print('Error: --manifest required with --verify-commands', file=sys.stderr)
+            sys.exit(1)
+        for row in verifiable_commands(data, manifest):
+            print(row)
+        return
 
     if args.taps:
         taps = get_macos_taps(data)
