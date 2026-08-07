@@ -676,6 +676,31 @@ _clisteno_load() {
   done <$file
 }
 
+# The shallowest command the line could still become, when exactly one qualifies.
+# Without this the hint only fires on exact boundaries, which makes it a receipt
+# for what was typed rather than an offer about what is being typed: `dectl exa`
+# showed nothing, and `exg` never appeared until `glue` was already complete.
+# `(I)` matches keys inside the shell rather than looping over them, and `(b)`
+# stops a `*` or `[` in the buffer being read as pattern.
+_clisteno_best() {
+  local -a matches
+  matches=(${(k)_clisteno_sequence[(I)${(b)1}*]})
+  local best='' candidate count=0 fewest=0 depth
+  for candidate in $matches; do
+    depth=${#${(z)candidate}}
+    if (( fewest == 0 || depth < fewest )); then
+      fewest=$depth
+      best=$candidate
+      count=1
+    elif (( depth == fewest )); then
+      # A tie is a genuine fork — `dectl e` is still both env and
+      # example-pipeline — and answering it with either is a guess.
+      (( count++ ))
+    fi
+  done
+  (( count == 1 )) && print -r -- "$best"
+}
+
 _clisteno_hint() {
   local -a words
   words=(${(z)BUFFER})
@@ -689,6 +714,9 @@ _clisteno_hint() {
       shown="⌁ ${words[1]} ${offer}"
     elif [[ -n $meaning ]]; then
       shown="$meaning"
+    else
+      local best=$(_clisteno_best "$line")
+      [[ -n $best ]] && shown="⌁ ${words[1]} ${_clisteno_sequence[$best]}"
     fi
   fi
   # Always, including empty: the message survives until something replaces it,
