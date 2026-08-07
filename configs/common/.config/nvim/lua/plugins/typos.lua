@@ -4,18 +4,18 @@
 -- for the checkout and ~/notes — because a `dir` that is not on disk errors on
 -- every startup no matter what `cond` says, which no label could fix.
 --
--- Nothing conditional is needed now: capture is scoped to notes_root, so on a
--- machine without ~/notes the on_key hook matches no buffer and writes nothing,
--- and setup() creates no directories. A no-op by construction.
+-- `dirs` is the auto-on list: capture runs while the buffer is under one of them.
+-- A machine that has not run `syncer apply` has neither, so it captures nothing
+-- without any condition expressing that.
 --
 -- Consequence worth knowing: nvim loads the lazy clone, not ~/code/typos, so a
 -- local Lua change needs a push and `:Lazy update` to show up here.
 return {
   'datapointchris/typos',
   ft = 'markdown', -- Notes are .md, no need to load otherwise
-  cmd = { 'TyposToggle', 'TyposStatus' },
+  cmd = { 'TyposOn', 'TyposOff', 'TyposAuto', 'TyposStatus' },
   opts = {
-    notes_root = vim.fn.expand('~/notes'),
-    data_dir = vim.fn.expand('~/shart/typing'),
+    dirs = { '~/notes' },
+    data_dir = '~/shart/typing',
   },
 }
