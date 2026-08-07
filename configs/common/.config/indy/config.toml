@@ -1,0 +1,23 @@
+# indy — machine config. Everything here is a property of this fleet, not of the tool,
+# which is why none of it ships as an indy default.
+
+# forge and syncer read the same two registries, so the shared location is named here
+# rather than assumed by any of the three.
+repos_file = "~/dev/repos.json"
+exemplar_repos_file = "~/dev/exemplar-repos.json"
+
+# data_dir is deliberately unset: the index is derived state and belongs in
+# $XDG_DATA_HOME/indy, which Syncthing replicates as its own folder.
+
+# Non-repo roots worth searching — the reasoning behind decisions that no repo records.
+[[extra_paths]]
+name = "obsession"
+path = "~/obsession"
+
+[[extra_paths]]
+name = "notes"
+path = "~/notes"
+
+[[extra_paths]]
+name = "dev"
+path = "~/dev"
