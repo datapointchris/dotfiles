@@ -44,7 +44,18 @@ SECTION_SPECS: dict[str, dict[str, Any]] = {
         "required_any_of": [("apt", "pacman", "brew", "aur")],
         "id_field": "name",
     },
-    "github_releases": {"structure": "list", "required": ["name", "repo"], "id_field": "name"},
+    "github_releases": {
+        "structure": "list",
+        "required": ["name", "repo"],
+        # Both were carried on nearly every entry while every reader gated on
+        # `github_repo`, which this section does not use — so they went unvalidated
+        # and drifted into naming assets that no longer existed.
+        "forbidden": {
+            "binary_pattern": "the asset URL comes from the script's get_download_url",
+            "install_dir": "only tmux_plugins.install_dir is read; use binary_link",
+        },
+        "id_field": "name",
+    },
     "custom_installers": {
         "structure": "list",
         "required": ["name", "source_type", "description"],
@@ -613,6 +624,7 @@ def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[s
     spec = SECTION_SPECS[section]
     required = spec.get("required", [])
     required_any_of = spec.get("required_any_of", [])
+    forbidden = spec.get("forbidden", {})
     id_field = spec["id_field"]
 
     seen_ids: Counter[str] = Counter()
@@ -630,6 +642,12 @@ def check_section_shape(data: dict[str, Any], section: str, issues: list[tuple[s
             if not any(f in entry for f in any_of_group):
                 issues.append((section, "error",
                                f"{label}: must have at least one of {list(any_of_group)}"))
+
+        for field, reason in forbidden.items():
+            if field in entry:
+                issues.append((section, "error",
+                               f"{label}: field '{field}' is read by no code — {reason}. "
+                               f"Remove it; a field that only looks like config drifts unnoticed."))
 
         if id_field in entry:
             seen_ids[entry[id_field]] += 1

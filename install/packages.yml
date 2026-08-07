@@ -737,17 +737,18 @@ runtimes:
 # Tools installed via direct GitHub release downloads
 # Each has a dedicated install script that reads from this config
 #
-# NOTE: Most install scripts detect platform (macOS/Linux) and architecture automatically.
-# The binary_pattern field shows the pattern for reference, but scripts override with
-# platform-specific values (e.g., Darwin vs Linux, x86_64 vs arm64).
+# The asset URL is built by each script's get_download_url, never from this file.
+# binary_pattern and install_dir are therefore rejected here by `packages verify` —
+# both were carried for 22 and 23 entries respectively while no code read either,
+# so they drifted into describing assets that no longer existed. Naming an asset
+# from data would mean the URL vocabulary living here too; that trade is the
+# rejected alternative in docs/architecture/github-release-installer.md.
 
 github_releases:
   - name: neovim
     repo: neovim/neovim
     min_version: "0.11"
     install_script: install-neovim.sh
-    binary_pattern: "nvim-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
-    install_dir: "~/.local/nvim-{platform}-{arch}" # Platform-specific
     binary_link: "~/.local/bin/nvim"
     description: Extensible text editor
     tags: [cli, editor]
@@ -756,16 +757,12 @@ github_releases:
     repo: jesseduffield/lazygit
     version: "0.56.0"
     install_script: install-lazygit.sh
-    binary_pattern: "lazygit_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
-    install_dir: "~/.local/bin"
     description: Terminal UI for git
     tags: [cli, tui, git]
 
   - name: yazi
     repo: sxyazi/yazi
     install_script: install-yazi.sh
-    binary_pattern: "yazi-{arch}-{platform}.zip" # Platform-specific: apple-darwin/unknown-linux-gnu
-    install_dir: "~/.local/bin"
     description: Terminal file manager
     tags: [cli, tui, files]
 
@@ -774,23 +771,18 @@ github_releases:
     min_version: "0.50"
     install_script: install-fzf.sh
     build_method: go # Universal: built from source
-    install_dir: "~/.local/bin"
     description: Fuzzy finder
     tags: [cli, search]
 
   - name: glow
     repo: charmbracelet/glow
     install_script: install-glow.sh
-    binary_pattern: "glow_{version}_{platform}_{arch}.tar.gz" # Platform-specific: Darwin/linux
-    install_dir: "~/.local/bin"
     description: Markdown renderer for terminal
     tags: [cli]
 
   - name: duf
     repo: muesli/duf
     install_script: install-duf.sh
-    binary_pattern: "duf_{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
-    install_dir: "~/.local/bin"
     description: Disk usage analyzer
     tags: [cli]
 
@@ -798,66 +790,48 @@ github_releases:
   - name: tenv
     repo: tofuutils/tenv
     install_script: github-releases/tenv.sh
-    binary_pattern: "tenv_v{version}_{platform}_{arch}.tar.gz" # Platform-specific: darwin/linux
-    install_dir: "~/.local/bin"
     description: Version manager for Terraform/OpenTofu/Terragrunt and Terraform runtime
 
   - name: tflint
     repo: terraform-linters/tflint
     install_script: install-tflint.sh
-    binary_pattern: "tflint_{platform}_{arch}.zip" # Platform-specific: darwin/linux
-    install_dir: "~/.local/bin"
     description: Terraform linter
 
   - name: terraformer
     repo: GoogleCloudPlatform/terraformer
     version: "0.8.30"
     install_script: install-terraformer.sh
-    binary_pattern: "terraformer-all-{platform}-{arch}" # Platform-specific: darwin/linux (direct binary)
-    install_dir: "~/.local/bin"
     description: Generate Terraform from existing infrastructure
 
   - name: terrascan
     repo: tenable/terrascan
     install_script: install-terrascan.sh
-    binary_pattern: "terrascan_{version}_{Platform}_{arch}.tar.gz" # Platform-specific: Darwin/Linux
-    install_dir: "~/.local/bin"
     description: Terraform security scanner
 
   # Development Tools
   - name: zk
     repo: zk-org/zk
     install_script: install-zk.sh
-    binary_pattern: "zk-{version}-{platform}-{arch}.tar.gz" # Platform-specific: macos/linux
-    install_dir: "~/.local/bin"
     description: Plain text note-taking assistant
 
   - name: trivy
     repo: aquasecurity/trivy
     install_script: install-trivy.sh
-    binary_pattern: "trivy_{version}_{OS}_{arch}.tar.gz" # Platform-specific: macOS-64bit/macOS-ARM64/Linux-64bit/Linux-ARM64
-    install_dir: "~/.local/bin"
     description: Container/IaC vulnerability scanner
 
   - name: shellcheck
     repo: koalaman/shellcheck
     install_script: github-releases/shellcheck.sh
-    binary_pattern: "shellcheck-{version}.{platform}.{arch}.tar.xz" # Platform-specific: darwin/linux, x86_64/aarch64
-    install_dir: "~/.local/bin"
     description: Shell script static analysis tool (consistent version across all platforms)
 
   - name: hadolint
     repo: hadolint/hadolint
     install_script: github-releases/hadolint.sh
-    binary_pattern: "hadolint-{platform}-{arch}" # Direct binary: macos/linux, arm64/x86_64
-    install_dir: "~/.local/bin"
     description: Dockerfile linter (consistent version across all platforms)
 
   - name: just
     repo: casey/just
     install_script: github-releases/just.sh
-    binary_pattern: "just-{version}-{target}.tar.gz" # Target-specific: x86_64-apple-darwin, aarch64-apple-darwin, x86_64-unknown-linux-musl
-    install_dir: "~/.local/bin"
     description: Command runner (consistent version across all platforms, Ubuntu apt is 27 versions behind)
 
   # mikefarah/yq (Go), NOT the Python jq-wrapper: the de-facto standard yq that every
@@ -866,8 +840,6 @@ github_releases:
   - name: yq
     repo: mikefarah/yq
     install_script: github-releases/yq.sh
-    binary_pattern: "yq_{platform}_{arch}" # Direct binary: darwin/linux, amd64/arm64
-    install_dir: "~/.local/bin"
     description: YAML/JSON/XML processor (consistent version across all platforms)
     tags: [cli, yaml, json]
 
@@ -877,16 +849,12 @@ github_releases:
   - name: atuin
     repo: atuinsh/atuin
     install_script: github-releases/atuin.sh
-    binary_pattern: "atuin-{target}.tar.gz" # No version in filename; binary nests under atuin-{target}/atuin
-    install_dir: "~/.local/bin"
     description: SQLite-backed shell history capturing command, exit, cwd, and session
     tags: [cli, shell, history]
 
   - name: tree-sitter
     repo: tree-sitter/tree-sitter
     install_script: github-releases/tree-sitter.sh
-    binary_pattern: "tree-sitter-{platform}-{arch}.gz" # macos-arm64, macos-x64, linux-x64
-    install_dir: "~/.local/bin"
     description: Incremental parsing library CLI (used by Neovim treesitter; NOT installed via npm — see build_tools comment)
 
   # WSL-only
@@ -897,8 +865,6 @@ github_releases:
     # rather than reporting a machine that installed correctly as broken.
     requires_wsl_host: true
     install_script: github-releases/win32yank.sh
-    binary_pattern: "win32yank-x64.zip" # Fixed Windows binary; WSL clipboard bridge
-    install_dir: "~/.local/bin"
     description: Windows clipboard bridge for WSL (enables Neovim/tmux clipboard integration)
     tags: [cli, wsl]
 
@@ -913,8 +879,6 @@ github_releases:
     repo: datapointchris/ichrisbirch
     install_script: github-releases/icb.sh
     release_tag_prefix: "cli/"
-    binary_pattern: "icb_{version_num}_{os}_{go_arch}.tar.gz"
-    install_dir: "~/.local/bin"
     description: Tasks, habits, books, projects, articles, events, countdowns, recipes
     tags: [cli, personal]
 
@@ -922,8 +886,6 @@ github_releases:
     repo: datapointchris/learning
     install_script: github-releases/learning.sh
     release_tag_prefix: "cli/"
-    binary_pattern: "learning_{version_num}_{os}_{go_arch}.tar.gz"
-    install_dir: "~/.local/bin"
     description: Structured learning tracks, sections, topics, and resources
     tags: [cli, personal]
 
@@ -931,8 +893,6 @@ github_releases:
     repo: datapointchris/nomad
     install_script: github-releases/nomad.sh
     release_tag_prefix: "cli/"
-    binary_pattern: "nomad_{version_num}_{os}_{go_arch}.tar.gz"
-    install_dir: "~/.local/bin"
     description: Digital-nomad city research, trip planning, stops, and attractions
     tags: [cli, personal]
 
@@ -940,8 +900,6 @@ github_releases:
     repo: datapointchris/meso
     install_script: github-releases/meso.sh
     release_tag_prefix: "cli/"
-    binary_pattern: "meso_{version_num}_{os}_{go_arch}.tar.gz"
-    install_dir: "~/.local/bin"
     description: Fitness — mesocycle programming, workout logging, measurements
     tags: [cli, personal]
 

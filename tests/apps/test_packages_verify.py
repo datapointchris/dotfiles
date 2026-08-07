@@ -154,6 +154,32 @@ def test_required_any_of_flags_error_when_none_present(tmp_path: Path) -> None:
     assert_error(run_verify(tmp_path), 'must have at least one of')
 
 
+@pytest.mark.parametrize(
+    ('field', 'value'),
+    [('binary_pattern', 'fzf-{version}-{os}.tar.gz'), ('install_dir', '~/.local/bin')],
+)
+def test_forbidden_field_flags_error(tmp_path: Path, field: str, value: str) -> None:
+    """Both fields read as configuration but are read by no code, so they drifted
+    into naming assets that no longer existed. Verify rejects them on sight."""
+    build_tree(
+        tmp_path,
+        packages={'github_releases': [{'name': 'fzf', 'repo': 'junegunn/fzf', field: value}]},
+        manifests={},
+        github_release_scripts=['fzf'],
+    )
+    assert_error(run_verify(tmp_path), f"field '{field}' is read by no code")
+
+
+def test_forbidden_fields_do_not_apply_to_other_sections(tmp_path: Path) -> None:
+    """binary_pattern is live on cargo_packages, where it does build a release URL."""
+    build_tree(
+        tmp_path,
+        packages={'cargo_packages': [{'name': 'fd', 'github_repo': 'sharkdp/fd', 'binary_pattern': 'fd-{version}-{target}.tar.gz'}]},
+        manifests={'test-machine': {'machine': 'test-machine', 'platform': 'linux', 'cargo_packages': ['fd']}},
+    )
+    assert_clean(run_verify(tmp_path))
+
+
 def test_duplicate_name_within_section_flags_error(tmp_path: Path) -> None:
     """Two github_releases entries sharing the same name."""
     build_tree(

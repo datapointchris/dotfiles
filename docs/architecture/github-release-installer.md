@@ -267,6 +267,22 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/lazygit_${
 
 **Rationale:** URL patterns vary enough that YAML templates become complex. Inline keeps it explicit and traceable.
 
+Re-measured against every installer rather than assumed: most asset names do fit the
+placeholder vocabulary, and the ones that miss cluster tightly enough that two new
+placeholders would cover all but three. Those three are the reason the answer holds.
+shellcheck and trivy each need a spelling no other tool uses, and zk spells its
+architecture differently per OS — `x86_64` on macOS against `amd64` on Linux — which no
+flat placeholder can express at all. Add the seven installers carrying real logic beyond
+the URL and the split stops being lopsided enough to justify one vocabulary serving both
+routes.
+
+Enforce this rather than restate it: `packages verify` rejects `binary_pattern` and
+`install_dir` on a `github_releases` entry. Both were previously carried on nearly every
+entry while every reader gated on `github_repo`, a key this section does not use — so
+neither was read, neither was validated, and both drifted into naming assets that no
+longer existed. A field that only looks like configuration is worse than none, because
+it reads as authoritative to whoever edits the file next.
+
 ### Why Not Version Checking?
 
 **Rejected:** Minimum version requirements, complex version comparison
