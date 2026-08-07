@@ -4,6 +4,7 @@ set -euo pipefail
 DOTFILES_DIR="${DOTFILES_DIR:-$(git rev-parse --show-toplevel)}"
 source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
+source "$DOTFILES_DIR/install/common/lib/wsl-rootfs.sh"
 
 WSL_CACHE_DIR="${DOTFILES_DIR}/.wsl-rootfs-cache"
 
@@ -13,7 +14,7 @@ show_usage() {
 
   help_section "Commands"
   help_row "list" "" "List available WSL Docker images"
-  help_row "build" "VERSION" "Build/rebuild Docker image (currently only 22.04)"
+  help_row "build" "VERSION" "Build/rebuild Docker image (any Ubuntu release publishing a WSL image)"
   help_row "remove" "VERSION" "Remove Docker image"
   help_row "clean" "" "Remove all cached rootfs files"
   help_row "clean-all" "" "Remove both images and cached files"
@@ -21,22 +22,12 @@ show_usage() {
 
   help_section "Examples"
   help_row "$(basename "$0") list"
-  help_row "$(basename "$0") build 22.04"
-  help_row "$(basename "$0") remove 22.04"
+  help_row "$(basename "$0") build 26.04"
+  help_row "$(basename "$0") remove 26.04"
   help_row "$(basename "$0") clean"
 
   help_end
   exit 0
-}
-
-# Get codename from version
-get_codename() {
-  local version=$1
-  case "$version" in
-    22.04) echo "jammy" ;;
-    24.04) die "Ubuntu 24.04 uses .wsl format (not tar.gz), only 22.04 is currently supported" ;;
-    *) die "Unsupported version: $version (only 22.04 is supported)" ;;
-  esac
 }
 
 # List Docker images
@@ -48,51 +39,26 @@ list_images() {
   else
     echo "No WSL Docker images found"
     echo ""
-    echo "Build an image with: $(basename "$0") build 24.04"
+    echo "Build an image with: $(basename "$0") build $DEFAULT_UBUNTU_VERSION"
   fi
 }
 
 # Build Docker image
 build_image() {
-  local version=${1:-22.04}
-  local codename
-  codename=$(get_codename "$version")
-
+  local version=${1:-$DEFAULT_UBUNTU_VERSION}
   local docker_image="wsl-ubuntu:${version}"
-  # Note: Ubuntu 24.04+ uses .wsl format, only 22.04 has tar.gz rootfs
-  local rootfs_url="https://cloud-images.ubuntu.com/wsl/${codename}/current/ubuntu-${codename}-wsl-amd64-ubuntu${version}lts.rootfs.tar.gz"
-  local rootfs_file="${WSL_CACHE_DIR}/ubuntu-${codename}-wsl-amd64-ubuntu${version}lts.rootfs.tar.gz"
+  local rootfs_file
 
   print_section "Building WSL Docker Image"
-  echo "Version: Ubuntu ${version} (${codename})"
+  echo "Version: Ubuntu ${version}"
   echo "Image: ${docker_image}"
   echo ""
 
-  # Create cache directory
-  mkdir -p "$WSL_CACHE_DIR"
-
-  # Download rootfs if not cached
-  if [[ -f "$rootfs_file" ]]; then
-    log_success "Using cached rootfs: $rootfs_file"
-  else
-    log_info "Downloading WSL rootfs (~340MB, one-time download)..."
-    log_info "URL: $rootfs_url"
-    echo ""
-    curl -L --progress-bar "$rootfs_url" -o "$rootfs_file"
-    log_success "Downloaded and cached rootfs"
-  fi
+  rootfs_file=$(wsl_rootfs_fetch "$version" "$WSL_CACHE_DIR") || die "Could not fetch a rootfs for Ubuntu $version"
 
   echo ""
   log_info "Importing rootfs into Docker..."
-
-  # Remove existing image if present
-  if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    log_info "Removing existing image: $docker_image"
-    docker rmi "$docker_image" >/dev/null
-  fi
-
-  # Import rootfs
-  gunzip -c "$rootfs_file" | docker import - "$docker_image"
+  wsl_rootfs_import "$rootfs_file" "$docker_image"
 
   echo ""
   log_success "Built Docker image: $docker_image"
@@ -109,8 +75,6 @@ remove_image() {
     die "Version required. Usage: $(basename "$0") remove VERSION"
   fi
 
-  local codename
-  codename=$(get_codename "$version")
   local docker_image="wsl-ubuntu:${version}"
 
   print_section "Removing WSL Docker Image"
@@ -228,7 +192,7 @@ main() {
       list_images
       ;;
     build)
-      build_image "${1:-24.04}"
+      build_image "${1:-$DEFAULT_UBUNTU_VERSION}"
       ;;
     remove)
       remove_image "$@"

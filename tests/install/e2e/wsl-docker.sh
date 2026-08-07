@@ -11,6 +11,7 @@ set -euo pipefail
 # Source shared test helpers (includes formatting library)
 DOTFILES_DIR="$(git rev-parse --show-toplevel)"
 source "$DOTFILES_DIR/tests/install/helpers.sh"
+source "$DOTFILES_DIR/install/common/lib/wsl-rootfs.sh"
 
 # Show usage
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -19,15 +20,15 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "Test WSL installation script using Docker with official WSL Ubuntu rootfs"
   echo ""
   echo "Options:"
-  echo "  -v, --version VERSION  Ubuntu version to test (22.04 or 24.04, default: 24.04)"
+  echo "  -v, --version VERSION  Ubuntu version to test (any release publishing a WSL image, default: $DEFAULT_UBUNTU_VERSION)"
   echo "  -r, --reuse           Reuse most recent container (skips image build and initial setup)"
   echo "  -c, --container NAME   Reuse specific container by name"
   echo "  -k, --keep            Keep container after test (for debugging)"
   echo "  -h, --help            Show this help message"
   echo ""
   echo "Examples:"
-  echo "  $(basename "$0")                              # Test with Ubuntu 24.04 (default)"
-  echo "  $(basename "$0") -v 22.04                     # Test with Ubuntu 22.04"
+  echo "  $(basename "$0")                              # Test with Ubuntu $DEFAULT_UBUNTU_VERSION (default)"
+  echo "  $(basename "$0") -v 24.04                     # Test with Ubuntu 24.04"
   echo "  $(basename "$0") -k                           # Keep container for debugging"
   echo "  $(basename "$0") -r                           # Reuse most recent container"
   echo "  $(basename "$0") -c dotfiles-wsl-test-123456  # Reuse specific container"
@@ -35,14 +36,14 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 # Parse arguments
-UBUNTU_VERSION="24.04" # Default to 24.04 (current WSL version)
+UBUNTU_VERSION="$DEFAULT_UBUNTU_VERSION"
 KEEP_CONTAINER=false
 REUSE_CONTAINER=""
 REUSE_LATEST=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     -v | --version)
-      UBUNTU_VERSION="${2:-24.04}"
+      UBUNTU_VERSION="${2:-$DEFAULT_UBUNTU_VERSION}"
       shift 2
       ;;
     -r | --reuse)
@@ -105,24 +106,6 @@ else
   CONTAINER_NAME="dotfiles-wsl-test-$(date '+%Y%m%d-%H%M%S')"
 fi
 
-# Determine Ubuntu codename and file format
-case "$UBUNTU_VERSION" in
-  22.04)
-    UBUNTU_CODENAME="jammy"
-    ROOTFS_URL="https://cloud-images.ubuntu.com/wsl/${UBUNTU_CODENAME}/current/ubuntu-${UBUNTU_CODENAME}-wsl-amd64-ubuntu${UBUNTU_VERSION}lts.rootfs.tar.gz"
-    ROOTFS_FILE="${WSL_CACHE_DIR}/ubuntu-${UBUNTU_CODENAME}-wsl-amd64-ubuntu${UBUNTU_VERSION}lts.rootfs.tar.gz"
-    ;;
-  24.04)
-    UBUNTU_CODENAME="noble"
-    # Ubuntu 24.04 uses .wsl format (which is actually a tar file)
-    ROOTFS_URL="https://releases.ubuntu.com/${UBUNTU_CODENAME}/ubuntu-${UBUNTU_VERSION}.3-wsl-amd64.wsl"
-    ROOTFS_FILE="${WSL_CACHE_DIR}/ubuntu-${UBUNTU_VERSION}.3-wsl-amd64.wsl"
-    ;;
-  *)
-    die "Unsupported Ubuntu version: $UBUNTU_VERSION (use 22.04 or 24.04)"
-    ;;
-esac
-
 DOCKER_IMAGE="wsl-ubuntu:${UBUNTU_VERSION}"
 
 # Get GitHub token from host for authenticated API calls inside container
@@ -167,7 +150,7 @@ trap cleanup EXIT
 : >"$LOG_FILE"
 
 log_info "Testing WSL installation with Docker"
-log_info "Ubuntu version: ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
+log_info "Ubuntu version: ${UBUNTU_VERSION}"
 log_info "Docker image: ${DOCKER_IMAGE}"
 log_info "Container: ${CONTAINER_NAME}"
 log_info "Log file: ${LOG_FILE}"
@@ -200,39 +183,13 @@ if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
       echo "Docker image not found, will create from WSL rootfs..."
       echo ""
 
-      # Create cache directory
-      mkdir -p "$WSL_CACHE_DIR"
+      ROOTFS_FILE=$(wsl_rootfs_fetch "$UBUNTU_VERSION" "$WSL_CACHE_DIR") \
+        || die "No WSL image published for Ubuntu $UBUNTU_VERSION"
 
-      # Download rootfs if not cached
-      if [[ -f "$ROOTFS_FILE" ]]; then
-        log_success "Using cached WSL rootfs: $ROOTFS_FILE"
-      else
-        echo "Downloading WSL Ubuntu ${UBUNTU_VERSION} rootfs..."
-        echo "URL: $ROOTFS_URL"
-        echo "This is a one-time download (~340MB)..."
-        echo ""
-        curl -L --progress-bar "$ROOTFS_URL" -o "$ROOTFS_FILE"
-        log_success "Downloaded WSL rootfs to cache"
-      fi
-
-      # Import rootfs into Docker
       echo ""
       echo "Importing WSL rootfs into Docker..."
-      if [[ "$ROOTFS_FILE" == *.wsl ]]; then
-        # .wsl files are already tar format, no need to gunzip
-        docker import - "$DOCKER_IMAGE" <"$ROOTFS_FILE"
-      else
-        # .tar.gz files need gunzip
-        gunzip -c "$ROOTFS_FILE" | docker import - "$DOCKER_IMAGE"
-      fi
+      wsl_rootfs_import "$ROOTFS_FILE" "$DOCKER_IMAGE"
       log_success "Created Docker image: $DOCKER_IMAGE"
-
-      # Create non-root user for realistic WSL testing
-      echo ""
-      echo "Creating non-root user in Docker image..."
-      docker run --rm "$DOCKER_IMAGE" /bin/bash -c "useradd -m -s /bin/bash -G sudo ubuntu && echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers" 2>/dev/null || {
-        echo "Note: Image already has ubuntu user or user creation not needed"
-      }
     fi
   } 2>&1 | tee -a "$LOG_FILE"
   STEP_END=$(date +%s)
@@ -296,11 +253,13 @@ if [[ "$REUSE_LATEST" == "false" && -z "$REUSE_CONTAINER" ]]; then
     # Detect home directory
     CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
 
-    # Create ~/.env for testing
-    echo "Creating ~/.env..."
-    docker exec "$CONTAINER_NAME" bash -c 'cat > ~/.env <<EOF
-PLATFORM=wsl
-EOF'
+    # Deliberately no ~/.env: install.sh generates it from the manifest, and that
+    # is the step being rehearsed. Hand-writing a stub here hid two bugs at once —
+    # `env.sh sync` failed because uv is installed by a later phase, and the
+    # warning said it was "continuing with the existing file", which was this stub
+    # rather than anything install.sh produced. The stub also carried no MACHINE,
+    # so the manifest-derived verification silently checked 45 things instead of
+    # 138 and still reported success.
 
     # Copy dotfiles to writable location (install script modifies files)
     echo "Copying dotfiles to writable location..."
@@ -436,8 +395,11 @@ CONTAINER_HOME=$(docker exec "$CONTAINER_NAME" bash -c 'echo $HOME')
   echo ""
 } 2>&1 | tee -a "$LOG_FILE"
 
-# Run test outside of tee subshell to capture result
-if docker exec "$CONTAINER_NAME" bash -c "export PATH=\"${CONTAINER_HOME}/go/bin:${CONTAINER_HOME}/.local/bin:\$PATH\" && bash ${CONTAINER_HOME}/dotfiles/tests/apps/all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
+# ~/.env is what declares PLATFORM, and detect_platform falls back to grepping
+# /proc/version for "Microsoft" — which a Docker container never matches. Without
+# sourcing it the WSL test silently checked the `linux` overlay instead of `wsl`.
+# Run outside the tee subshell so the exit status is the test's, not tee's.
+if docker exec "$CONTAINER_NAME" bash -c "set -a && . ${CONTAINER_HOME}/.env && set +a && export PATH=\"${CONTAINER_HOME}/go/bin:${CONTAINER_HOME}/.local/bin:\$PATH\" && bash ${CONTAINER_HOME}/dotfiles/tests/apps/all-apps.sh" 2>&1 | tee -a "$LOG_FILE"; then
   STEP_STATUS+=("PASS")
 else
   STEP_STATUS+=("FAIL")
@@ -508,7 +470,7 @@ OVERALL_ELAPSED=$((OVERALL_END - OVERALL_START))
   echo ""
   print_section "Test Information" "cyan"
   echo ""
-  echo "  Ubuntu version: ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
+  echo "  Ubuntu version: ${UBUNTU_VERSION}"
   echo "  Docker image: ${DOCKER_IMAGE}"
   echo "  Container: ${CONTAINER_NAME}"
   echo "  Log file: ${LOG_FILE}"
