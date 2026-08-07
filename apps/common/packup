@@ -102,8 +102,6 @@ readonly DEFAULT_EXCLUDE_PATTERNS=(
   '.pytest_cache'
   'build'
   'dist'
-  'modules'
-  'zephyr'
   '*.pyc'
   '.DS_Store'
 )
