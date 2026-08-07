@@ -124,6 +124,8 @@ This dotfiles setup maintains a clear separation between system package managers
 
 A cross-platform dotfiles repository with manifest-driven installation and shared configurations with platform-specific overrides for macOS, WSL Ubuntu, and Arch Linux. The repository emphasizes automation, documentation, and ergonomic developer workflows.
 
+**This repo does not use `stow`** — symlinking is self-managed by the symlink manager (`task symlinks:link` / `relink`). Don't reach for stow conventions or assume a stow-shaped layout.
+
 **Directory Structure**:
 
 - `configs/` - Platform configurations (what gets deployed)
