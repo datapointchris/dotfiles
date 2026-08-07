@@ -102,6 +102,7 @@ git_uv_tools:
   - dectl
   - ypl
   - safekeep
+  - typos
 
 shell_plugins: true
 tmux_plugins: true

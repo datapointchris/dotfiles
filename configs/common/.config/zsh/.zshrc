@@ -186,6 +186,13 @@ export PYTHONPYCACHEPREFIX="$XDG_CACHE_HOME/python"
 export TF_PLUGIN_CACHE_DIR="$XDG_CACHE_HOME/terraform/plugins"
 export TLDR_CACHE_HOME="$XDG_CACHE_HOME/tldr"
 
+# Not $XDG_STATE_HOME, which typos would otherwise default to: these sessions are
+# a typing record worth keeping across a rebuild, and ~/shart is the Syncthing
+# folder that already replicates and backs up. Declared here rather than in the
+# nvim spec because the capture plugin and the `typos` CLI both read it, and they
+# have to agree on one path.
+export TYPOS_DATA_DIR="$HOME/shart/typing"
+
 # Data locations
 export AZURE_CONFIG_DIR="$XDG_DATA_HOME/azure"
 export ELECTRUMDIR="$XDG_DATA_HOME/electrum"

@@ -1275,6 +1275,13 @@ git_uv_tools:
     repo: https://github.com/datapointchris/safekeep.git
     description: Dated snapshots of the files no package manager will put back
 
+  # The analyzer half of typos. Its capture half is a Neovim plugin lazy installs
+  # from the same repo, so only the workstations that write sessions need the CLI
+  # that reads them.
+  - name: typos
+    repo: https://github.com/datapointchris/typos.git
+    description: Passive typing analyzer over captured Neovim keystrokes
+
 # ================================================================
 # GO TOOLS
 # ================================================================
