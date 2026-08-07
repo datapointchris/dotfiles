@@ -14,6 +14,12 @@
 # Usage in shell (already sourced):
 #   print_success "Command completed"
 #   print_error "Something failed"
+#
+# Everything here writes to stdout, deliberately and without exception, so what
+# a call site does is what you see at the call site. Headings, help screens and
+# status rows are all output the caller asked for. A script that also emits data
+# on stdout narrates with log_* instead, which is always on stderr — that split
+# is one rule in one file, rather than a per-function fact you have to look up.
 # ================================================================
 
 # These libraries always ship in one directory together, but which directory

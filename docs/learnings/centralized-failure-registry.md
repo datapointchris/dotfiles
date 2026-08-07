@@ -64,10 +64,12 @@ left behind loops over packages. The fallback could never have covered them.
 - Test with network-restricted Docker containers to simulate corporate firewall behavior
 - A hand-written `reason` can only name the step that failed. Always capture the failing
   command's own output — that is the only part of the report that identifies the cause
-- Send that output to stderr, not stdout: the wrapper only captures stderr, so anything
-  echoed to the console never reaches the file a person reads later
-- Parse one report entry per `FAILURE_TOOL` record. A flat grep over stderr spliced two
-  tools' fields into a single entry, and `go-tools.sh` fails several tools in one run
+- Capture both streams. Which one an installer's error lands on is not something the
+  installer's author controls — go prints on stdout, curl on stderr — so a wrapper that
+  captures one of them loses causes at random. (This one cost two rounds of fixes before the
+  channels were separated by *kind* instead: see below.)
+- Keep one report entry per failure. A flat grep over the whole output spliced two tools'
+  fields into a single entry, and `go-tools.sh` fails several tools in one run
 - Tests that reimplement the wrapper instead of sourcing it verify a format nothing produces
 - Never pipe a command whose failure you intend to report — under `set -o pipefail` the
   script dies at the pipeline and the reporting branch below it never runs. Redirect to a
@@ -77,6 +79,19 @@ left behind loops over packages. The fallback could never have covered them.
   reporting no cause, because the fallback refuses to guess among several tools
 - When nothing was captured, say so in the report. A blank entry cannot be told apart from
   the report having dropped the failure, and the reader re-runs the install to find out which
+
+## What Replaced It
+
+Every round above fought the same root cause: records and human text shared stderr, so each
+consumer had to filter for the other. The wrapper stripped `FAILURE_*` lines out of what it
+displayed, captured output had to have markers stripped so it could not forge a record, and
+telling several failures apart needed an awk state machine.
+
+Records now go to a JSON file named by `$FAILURE_RECORDS`, which leaves stdout and stderr
+carrying only what a person reads — so they are merged, shown live, and kept whole for the
+report. `install/failure_report.py` writes and renders them; the shell wrappers are a line
+each. The stdout-versus-stderr trap that caused two of the rounds above cannot recur, because
+nothing decides anything based on which of the two a line arrived on.
 
 ## Related
 

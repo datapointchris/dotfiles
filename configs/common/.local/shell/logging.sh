@@ -15,6 +15,17 @@
 #   - File:line error references
 #   - Debug mode support
 #
+# Streams
+# -------
+# Every level writes to stderr, without exception. stdout belongs to whatever
+# the script produces for a caller to consume — a path, a URL, a parseable
+# record — and a log line on it corrupts that. The rule holds even for levels
+# that are not errors: "is this a diagnostic" is the question, not "is this
+# bad news", and progress a human reads is a diagnostic.
+#
+# The payoff is that any script can be put in a pipeline without a flag, a
+# redirect dance, or a mode. See docs/architecture/output-streams.md.
+#
 # Usage:
 #   source "$HOME/.local/shell/logging.sh"
 #   log_info "Starting installation"
@@ -52,12 +63,12 @@ export UNICODE_INFO='●'
 
 log_info() {
   local message="$1"
-  echo -e "${COLOR_CYAN}[INFO] ${UNICODE_INFO}${COLOR_RESET} ${message}"
+  echo -e "${COLOR_CYAN}[INFO] ${UNICODE_INFO}${COLOR_RESET} ${message}" >&2
 }
 
 log_success() {
   local message="$1"
-  echo -e "${COLOR_GREEN}[INFO] ${UNICODE_CHECK}${COLOR_RESET} ${message}"
+  echo -e "${COLOR_GREEN}[INFO] ${UNICODE_CHECK}${COLOR_RESET} ${message}" >&2
 }
 
 log_warning() {

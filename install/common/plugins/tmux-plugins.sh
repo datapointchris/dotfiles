@@ -94,8 +94,7 @@ tmux -S "$TPM_SOCKET" set-environment -g TMUX_PLUGIN_MANAGER_PATH "$TMUX_PLUGINS
 # `set -o pipefail` abort the script at the pipeline the moment TPM exited
 # non-zero, so the reporting branch never ran and the failure reached the report
 # with no tool, reason or cause attached. Collecting also keeps the output
-# available to hand to output_failure_data — read through log_info it would go to
-# stdout, which run_installer does not capture.
+# available to hand to output_failure_data.
 tpm_status=0
 "$TPM_DIR/bin/install_plugins" >"$tpm_output" 2>&1 || tpm_status=$?
 

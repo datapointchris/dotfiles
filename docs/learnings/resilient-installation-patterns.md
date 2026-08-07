@@ -28,7 +28,10 @@ display_failure_summary  # Shows all failures at end
 
 - Separation of concerns: child scripts don't know about resilience, wrapper handles it
 - All scripts work standalone without the failure registry (backwards compatible)
-- Only capture stderr for structured failure data — let stdout flow through for real-time progress
+- Keep structured failure data off both streams — it goes to the file named by `$FAILURE_RECORDS`,
+  which leaves stdout and stderr free to be merged and teed, live and whole. Capturing one stream
+  for records and letting the other through loses causes at random, because which stream an error
+  lands on is the failing tool's choice, not the installer's
 - Capturing all output (`2>&1`) hides installation progress from the user (a critical bug found during testing)
 
 ## Batch Commands: One Bad Item Must Not Sink the Batch

@@ -16,7 +16,20 @@ setup() {
   source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 }
 
-@test "every level prints its own parseable prefix" {
+@test "every level prints its own parseable prefix, and prints it to stderr" {
+  # Not one level writes to stdout, including the ones that are good news.
+  # stdout belongs to whatever the script produces for a caller to consume, and
+  # a progress line on it corrupts that — which is the whole reason any script
+  # here can be put in a pipeline without a flag or a redirect dance.
+  #
+  # bats merges the two streams into $output, so this has to discard stderr
+  # explicitly. Asserting on $output would pass whichever stream they used,
+  # which is exactly how the routing went unnoticed before.
+  run bash -c "source '$LOGGING'
+    { log_info i; log_success s; log_warning w; log_error e; DEBUG=true log_debug d; } 2>/dev/null"
+  assert_success
+  assert_output ""
+
   # The prefixes are what logsift and the log aggregators match on, so each
   # level has to keep its own.
   run log_info "test message"

@@ -12,8 +12,8 @@
 # Reporting: tmux-plugins.sh piped TPM into a reader loop under
 # `set -o pipefail`, so a failing TPM aborted the script at the pipeline and the
 # reporting branch below it never ran. TPM's diagnosis was lost twice over — the
-# report named no cause, and the loop had re-emitted the output through log_info
-# onto stdout, which run_installer does not capture.
+# report named no cause, and the loop had re-emitted the output onto a stream
+# the wrapper was not capturing at the time.
 #
 # Isolation: TPM shells out to a bare `tmux`, and $TMUX — set whenever the
 # installer runs from inside a session — outranks TMUX_TMPDIR. Without unsetting
@@ -142,8 +142,9 @@ EOF
 }
 
 @test "tmux-plugins: TPM output on stdout still reaches the report" {
-  # TPM writes progress to stdout; a cause printed there was previously lost
-  # because run_installer captures stderr only.
+  # TPM writes its progress, and its failures, to stdout. This passes because
+  # the wrapper captures both streams; it failed for as long as it captured
+  # only stderr, and it is what stops that split being reintroduced.
   write_tpm_stub <<'EOF'
 #!/usr/bin/env bash
 echo "fatal: unable to access github.com: SSL certificate problem"
