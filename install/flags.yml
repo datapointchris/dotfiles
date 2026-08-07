@@ -75,6 +75,12 @@ flags:
     consumers:
       - configs/common/.config/zsh/.zshrc
 
+  - name: SHELL_CLISTENO
+    description: What the line means, and the short form that types it, under the prompt
+    default: true
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+
   - name: SHELL_SYNTAX_HIGHLIGHTING
     description: Colour the command line as it is typed
     default: true

@@ -641,6 +641,71 @@ else
   log_error "Load" "$autosuggestions_file"
 fi
 
+# clisteno — what is on the line, and the fast way to type it.
+#
+# Complementary to zsh-autosuggestions rather than competing with it: that owns
+# the inline space ahead of the cursor, this owns the line under the prompt, and
+# neither needs a keystroke. Type the long form and it offers the short one;
+# type the short one and it says what that command does.
+#
+# `zle -M` rather than RPROMPT. A line-pre-redraw widget is documented not to
+# call `zle reset-prompt`, and measured here it does not repaint at all — the
+# hook fires on every keystroke and the right margin never changes. -M paints.
+#
+# Nothing forks per keystroke. A tool's index is read once per shell into an
+# assoc array through the `read` builtin, and every keystroke after that is a
+# hash lookup — the same rule this file states for the doshell widgets.
+typeset -gA _clisteno_meaning _clisteno_sequence _clisteno_loaded
+
+_clisteno_load() {
+  local tool=$1 file typed command summary key
+  [[ -n ${_clisteno_loaded[$tool]} ]] && return
+  # Marked before the readability check, so a tool with no index is looked for
+  # once rather than stat-ed on every keystroke for the life of the shell.
+  _clisteno_loaded[$tool]=1
+  file="${XDG_CACHE_HOME:-$HOME/.cache}/clisteno/${tool}.tsv"
+  [[ -r $file ]] || return
+  # The key goes into a variable and the subscript is left unquoted: zsh reads a
+  # quoted subscript literally, so arr["a b"] stores the quotes as part of the
+  # key and every later lookup silently misses.
+  while IFS=$'\t' read -r typed command summary; do
+    key="$tool $typed"
+    _clisteno_meaning[$key]=$summary
+    key="$command"
+    _clisteno_sequence[$key]=$typed
+  done <$file
+}
+
+_clisteno_hint() {
+  local -a words
+  words=(${(z)BUFFER})
+  local shown=''
+  if (( ${#words} >= 2 )); then
+    _clisteno_load $words[1]
+    local line="${(j: :)words}"
+    local offer=${_clisteno_sequence[$line]}
+    local meaning=${_clisteno_meaning[$line]}
+    if [[ -n $offer ]]; then
+      shown="⌁ ${words[1]} ${offer}"
+    elif [[ -n $meaning ]]; then
+      shown="$meaning"
+    fi
+  fi
+  # Always, including empty: the message survives until something replaces it,
+  # so skipping the call leaves the previous command's summary under a line that
+  # no longer means it.
+  zle -M "$shown"
+}
+
+if flag_enabled SHELL_CLISTENO; then
+  autoload -Uz add-zle-hook-widget
+  zle -N _clisteno_hint
+  add-zle-hook-widget line-pre-redraw _clisteno_hint
+  log "Setup" "clisteno hint"
+else
+  log "Skip" "clisteno hint (SHELL_CLISTENO)"
+fi
+
 # zsh-syntax-highlighting (MUST load last)
 if ! flag_enabled SHELL_SYNTAX_HIGHLIGHTING; then
   log "Skip" "zsh-syntax-highlighting (SHELL_SYNTAX_HIGHLIGHTING)"
