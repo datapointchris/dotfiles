@@ -105,5 +105,31 @@ export ZVM_CLIPBOARD_PASTE_CMD='win32yank.exe -o --lf'
 
 # ---------- Network ---------- #
 
-# The CIFS share mounts live in shell/roles/work.sh — they are employer
-# infrastructure, not something WSL provides.
+# Mounting a Windows share is a WSL capability, so the mechanism lives here and
+# takes the share as an argument. Which shares exist is machine-local: the work
+# box's named wrappers (mount-h and friends) are employer infrastructure and live
+# in ~/.local/shell/local.sh, which this repo declares but never contains.
+#
+# Credentials come from ~/.env below the OVERRIDES marker, never from this repo —
+# an employee ID and an employer domain do not belong in it, and a wrong default
+# would mount a share as the wrong user rather than failing.
+#
+# Checked inside the function rather than at file scope: a `${VAR:?}` while
+# sourcing aborts the rest of this file, so an unset value would cost every
+# function below it on every new shell instead of failing the one command that
+# needs it.
+#@mount-cifs
+#--> Mount a Windows CIFS share: mount-cifs //host/share /mnt/point
+mount-cifs() {
+  local remote="$1" mountpoint="$2"
+
+  if [[ -z "${WINDOWS_USER:-}" || -z "${WINDOWS_DOMAIN:-}" ]]; then
+    echo "Set WINDOWS_USER and WINDOWS_DOMAIN in ~/.env (below the OVERRIDES marker)" >&2
+    return 1
+  fi
+
+  sudo mkdir -p "$mountpoint"
+  mountpoint -q "$mountpoint" && sudo umount -f "$mountpoint"
+  sudo mount -t cifs "$remote" "$mountpoint" \
+    -o "username=${WINDOWS_USER},domain=${WINDOWS_DOMAIN},vers=3.0,uid=$(id -u),gid=$(id -g)"
+}

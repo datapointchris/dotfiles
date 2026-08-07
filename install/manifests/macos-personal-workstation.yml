@@ -1,6 +1,5 @@
 machine: macos-personal-workstation
 platform: macos
-role: personal
 
 # Installation
 system_packages: workstation

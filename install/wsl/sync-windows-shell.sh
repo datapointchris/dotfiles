@@ -76,38 +76,28 @@ stage_shell_files() {
   rm -f "$dest/combined.sh"
 }
 
-# Every role, not just this machine's, so MACHINE_ROLE in the Windows-side
-# ~/.env can switch role without a re-sync. Kept in a roles/ subdirectory rather
-# than flattened with the rest, so a role named like a platform cannot collide.
+# The machine-local overlay, staged from the deployed ~/.local/shell rather than
+# from the repo — it exists nowhere in this clone by design, holding shell code
+# that must not be committed (employer hostnames and the like). This is the only
+# place both sides can see it.
 #
-# Staged from the deployed ~/.local/shell/roles, not from the repo: a role
-# overlay may deliberately live outside this clone (employer-specific shell code
-# kept off a synced repo), and the deployed directory is the one place both kinds
-# appear. cp dereferences symlinks, so an in-repo role still copies through.
-#
-# Nothing is removed first. A stale role file here is inert — the generated
-# .bashrc only sources roles/$MACHINE_ROLE.sh — whereas an rm would delete the
-# only copy of a role that exists nowhere else.
-stage_role_files() {
-  local dest="$1/roles"
-  local source="${2:-$HOME/.local/shell/roles}"
-  local src
+# Nothing is removed first: an rm would delete the Windows side's only copy of a
+# file the repo cannot regenerate.
+stage_local_file() {
+  local dest="$1"
+  local src="${2:-$HOME/.local/shell/local.sh}"
 
+  [[ -f "$src" ]] || return 0
+
+  # Destination named explicitly, not left to the source basename: the generated
+  # .bashrc sources local.sh literally, so the name is part of the contract.
   mkdir -p "$dest"
-
-  for src in "$source"/*.sh; do
-    [[ -f "$src" ]] || continue
-    cp "$src" "$dest/"
-    echo "  Copied: roles/$(basename "$src")"
-  done
+  cp "$src" "$dest/local.sh"
+  echo "  Copied: local.sh"
 }
 
 write_bashrc() {
   local win_home="$1"
-  # Baked in as the fallback only: the Windows ~/.env still wins, so a role
-  # change there does not need a re-sync. Captured from the syncing WSL box
-  # because Git Bash has no way to work out what the machine is for.
-  local synced_role="${MACHINE_ROLE:-personal}"
 
   {
     cat <<'BASHRC_HEAD'
@@ -137,13 +127,6 @@ export PATH="$HOME/.local/bin:$PATH"
 # to find the platform's own functions and aliases. Both precede the load below.
 export SHELL_DIR="$HOME/.local/shell"
 export PLATFORM="windows"
-BASHRC_HEAD
-
-    printf 'MACHINE_ROLE_DEFAULT=%s\n' "$synced_role"
-
-    cat <<'BASHRC_HEAD'
-export MACHINE_ROLE="${MACHINE_ROLE:-$MACHINE_ROLE_DEFAULT}"
-unset MACHINE_ROLE_DEFAULT
 
 # One source per file, in dependency order. These were concatenated into a
 # generated combined.sh until a syntax error partway through cost every alias
@@ -165,8 +148,8 @@ for shell_file in "${SHELL_FILES[@]}"; do
 done
 unset shell_file SHELL_FILES
 
-# Role overlay last, so it can build on what the platform files exported.
-[[ -r "$SHELL_DIR/roles/$MACHINE_ROLE.sh" ]] && source "$SHELL_DIR/roles/$MACHINE_ROLE.sh"
+# Machine-local overlay last, so it can build on what the platform files exported.
+[[ -r "$SHELL_DIR/local.sh" ]] && source "$SHELL_DIR/local.sh"
 
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
 command -v fzf >/dev/null 2>&1 && eval "$(fzf --bash)"
@@ -198,7 +181,7 @@ main() {
   mkdir -p "$win_home/.config/git"
 
   stage_shell_files "$win_shell_dir"
-  stage_role_files "$win_shell_dir"
+  stage_local_file "$win_shell_dir"
 
   write_bashrc "$win_home"
   echo "  Wrote: .bashrc"

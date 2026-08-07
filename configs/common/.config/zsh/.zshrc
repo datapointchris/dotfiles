@@ -377,13 +377,15 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 [[ -f "$SHELL_DIR/aliases.sh" ]] && source "$SHELL_DIR/aliases.sh" && log "Load" "$SHELL_DIR/aliases.sh" || log_error "Load" "$SHELL_DIR/aliases.sh"
 [[ -f "$SHELL_DIR/$PLATFORM.sh" ]] && source "$SHELL_DIR/$PLATFORM.sh" && log "Load" "$SHELL_DIR/$PLATFORM.sh" || log_error "Load" "$SHELL_DIR/$PLATFORM.sh"
 
-# Role overlay, after the platform one because a role can build on what the
-# platform exported (work's aws-login reads $winchris from wsl.sh). Every role
-# file is linked on every machine and MACHINE_ROLE picks one, so switching role
-# is a ~/.env edit rather than a relink. Optional, like a platform overlay:
-# `personal` and `server` have nothing to add yet.
-role_file="$SHELL_DIR/roles/$MACHINE_ROLE.sh"
-[[ -f "$role_file" ]] && source "$role_file" && log "Load" "$role_file"
+# Machine-local overlay, last so it can build on what the platform exported (the
+# work box's aws-login reads $winchris from wsl.sh). A real file, not a symlink:
+# it holds shell code that deliberately never enters this repo — employer
+# hostnames and the like — and it is restored by safekeep rather than installed.
+# `relink` only removes symlinks that resolve into the repo, so it survives
+# untouched. Absent on every machine that does not declare one, which is why the
+# source is guarded like an optional platform overlay.
+local_file="$SHELL_DIR/local.sh"
+[[ -f "$local_file" ]] && source "$local_file" && log "Load" "$local_file"
 
 # Claude on the prompt line. doshell(1) makes you decide to ask before you start
 # typing; these catch you mid-line instead, which is when you actually get stuck.

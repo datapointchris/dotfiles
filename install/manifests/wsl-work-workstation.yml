@@ -1,6 +1,5 @@
 machine: wsl-work-workstation
 platform: wsl
-role: work
 
 # Feature flags — overrides for install/flags.yml defaults. Rendered into ~/.env
 # by `dotfiles env sync`, where they can be overridden again per machine.

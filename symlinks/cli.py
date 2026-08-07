@@ -54,17 +54,7 @@ def link(
         else 0
     )
 
-    # Roles ride along with `common` because every machine gets every role file
-    # and MACHINE_ROLE picks one at shell startup — they are not a platform, so
-    # there is no `link roles` target.
-    roles_dir = core.DOTFILES_DIR / 'shell' / 'roles'
-    role_count = (
-        core.create_symlinks(roles_dir, 'shell-roles', verbose=verbose, target_dir=core.TARGET_DIR / '.local' / 'shell' / 'roles')
-        if target == 'common' and roles_dir.exists()
-        else 0
-    )
-
-    if count == 0 and shell_count == 0 and app_count == 0 and role_count == 0:
+    if count == 0 and shell_count == 0 and app_count == 0:
         console.print(f'[red]✗[/] No configs, shell, or apps overlay found for: {target}')
         configs_dir = core.DOTFILES_DIR / 'configs'
         console.print(f'Available configs in {configs_dir}:')

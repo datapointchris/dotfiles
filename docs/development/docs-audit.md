@@ -10,8 +10,8 @@ and counts are the content rather than a liability.
 
 ## Why this exists
 
-The audit was triggered by a small change (`shell/roles/`) forcing edits to four
-separate pages. Two of those edits added real reasoning; two were pure
+The audit was triggered by a small change (the since-removed `shell/` role
+overlay) forcing edits to four separate pages. Two of those edits added real reasoning; two were pure
 list-maintenance, restating file enumerations that `symlinks/core.py` and
 `.zshrc` already declare. The question was whether that ratio held across the
 whole of `docs/` — it did, and worse.
@@ -108,7 +108,7 @@ way to start the next audit.
 | --- | --- | --- |
 | `index.md`, `platforms/tools.md` | `theme preview`, `toolbox random` | Neither verb exists — `theme change`, `toolbox remind` |
 | `index.md` | WSL/Arch need ZDOTDIR set by hand | `install.sh` has done it on every platform since `ensure_zdotdir_in_system_zshenv` |
-| `index.md` | `configs/`, `apps/`, `shell/` carry the same platform set | None of the three do; `shell/` also has `roles/` and `windows/` |
+| `index.md` | `configs/`, `apps/`, `shell/` carry the same platform set | None of the three do; `shell/` also had a role overlay (since removed) and `windows/` |
 | `architecture/error-handling.md` | Library is at `install/common/lib/error-handling.sh` (×4) | It is `configs/common/.local/shell/`; **zero** code used the documented path |
 | `architecture/error-handling.md` | `exit_with_error()` | The function is `exit_error` |
 | `architecture/error-handling.md` | Library sets `set -euo pipefail` | Contradicted its own prose 15 lines above; libraries must not |
@@ -138,7 +138,9 @@ asserting nothing is the same class of problem as a doc nobody reads.
   seven libraries covered and checked six.
 - `windows-shell-sync.bats` inherited `MACHINE_ROLE` from the developer's shell,
   so the role-overlay test failed on personal machines and passed everywhere
-  else — the reverse of what a role test should do.
+  else — the reverse of what a role test should do. (The role axis was later
+  removed outright; the overlay test now builds its own fixture instead of
+  reading one out of the repo.)
 
 Both now fail loudly instead. The general lesson: a test whose setup can silently
 no-op needs an assertion that the setup happened.

@@ -107,12 +107,12 @@ The symlinks manager maps `apps/` and `shell/` to specific target directories ra
 - An app whose job is to change the calling shell adds a function in `shell/common/functions.sh`;
   the symlinked command cannot export into the shell that ran it
 
-**Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`, `shell/roles/{role}.sh`):
+**Shell source files** (`shell/common/functions.sh`, `shell/common/aliases.sh`, `shell/{platform}/{platform}.sh`):
 
 - Symlinked to `~/.local/shell/`
 - Common: `functions.sh` + `aliases.sh` on all platforms
 - Platform-specific: `macos.sh`, `archlinux.sh`, `wsl.sh`, `linux.sh` — only the resolved platform's file is linked
-- Role-specific: `roles/work.sh` — **every** role is linked on every machine, and `MACHINE_ROLE` picks one at shell startup, so changing role is a `~/.env` edit rather than a relink. Roles ride along with the `common` target since they are not a platform
+- `~/.local/shell/local.sh` is the exception to everything here: a real file, not a symlink, holding machine-local shell code that exists in no repo. `remove_symlinks` only unlinks what resolves into the source tree, so `relink` leaves it alone
 - These are shell code (functions + aliases), not config — `~/.local/shell/` is intentional
 
 **Go apps** (toolbox, sesh):

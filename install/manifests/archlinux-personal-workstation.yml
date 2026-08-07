@@ -1,6 +1,5 @@
 machine: archlinux-personal-workstation
 platform: archlinux
-role: personal
 
 # Installation
 system_packages: workstation

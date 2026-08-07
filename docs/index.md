@@ -28,9 +28,9 @@ Rebuilding a machine from scratch, including what the automation cannot do:
 
 `configs/`, `apps/`, and `shell/` each layer platform-specific directories over
 a shared `common/` base, though not all of them carry every platform —
-`eza -1 -D configs apps shell` shows which. `shell/` additionally has `roles/`,
-which is a different axis: platform answers *which OS*, role answers *what the
-machine is for*.
+`eza -1 -D configs apps shell` shows which. Platform is the only axis any of the
+three uses; `MACHINE` is the only other one in the repo, and it selects a
+manifest rather than a directory.
 
 `install/` handles provisioning — manifests in `install/manifests/`,
 platform scripts in `install/{platform}/`, shared libraries in
@@ -44,7 +44,7 @@ patterns and when each applies are in
 
 ## Key concepts
 
-- **Machine manifests** decide what installs where, and what `platform` and `role` a machine declares
+- **Machine manifests** decide what installs where, and what `platform` a machine declares
 - **Symlinks** deploy configs from the repo into `$HOME` — `dotfiles relink` after any rename or delete
 - **Feature flags** (`install/flags.yml`) turn behaviour on per machine, tested with `flag_enabled`
 - **Theme** applies one palette across ghostty, tmux, btop and Neovim

@@ -1,6 +1,5 @@
 machine: linux-lxc-server
 platform: linux
-role: server
 
 # Feature flags — overrides for install/flags.yml defaults. A box that exists to
 # be SSHed into for diagnosis wants a fast shell, not a personal one. The

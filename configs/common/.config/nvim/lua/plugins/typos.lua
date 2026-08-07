@@ -1,18 +1,17 @@
-local checkout = vim.fn.expand('~/code/typos')
-
--- Role, not platform: this reads ~/notes and ~/shart, which are Syncthing
--- personal directories that do not exist on the work box. It was gated on
--- PLATFORM ~= 'wsl' only because the work box happens to be the WSL one.
+-- A normal remote spec rather than a `dir =` local checkout, so lazy resolves it
+-- like every other plugin and there is nothing here to guard on. The gate this
+-- replaces was three conditions deep — PLATFORM, then MACHINE_ROLE, then testing
+-- for the checkout and ~/notes — because a `dir` that is not on disk errors on
+-- every startup no matter what `cond` says, which no label could fix.
 --
--- Contributed as no spec at all rather than `cond = false`: cond gates loading,
--- while lazy still resolves the spec, so a `dir` that is not on disk is an
--- error on every startup no matter what cond says. The checkout test carries
--- the same fix to any machine that has not cloned it yet.
-if vim.env.MACHINE_ROLE == 'work' or vim.fn.isdirectory(checkout) == 0 then return {} end
-
+-- Nothing conditional is needed now: capture is scoped to notes_root, so on a
+-- machine without ~/notes the on_key hook matches no buffer and writes nothing,
+-- and setup() creates no directories. A no-op by construction.
+--
+-- Consequence worth knowing: nvim loads the lazy clone, not ~/code/typos, so a
+-- local Lua change needs a push and `:Lazy update` to show up here.
 return {
-  dir = checkout,
-  name = 'typos',
+  'datapointchris/typos',
   ft = 'markdown', -- Notes are .md, no need to load otherwise
   cmd = { 'TyposToggle', 'TyposStatus' },
   opts = {

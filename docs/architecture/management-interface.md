@@ -57,10 +57,16 @@ symlink does not exist until the repo has been deployed once.
 ## The machine environment (`~/.env`)
 
 `~/.env` is the first thing `.zshrc` sources and the first thing `install.sh` reads. It
-answers three questions — which OS this is (`PLATFORM`), what the machine is for
-(`MACHINE_ROLE`), and which features it wants running (the flags from
+answers three questions — which machine this is (`MACHINE`), which OS it runs
+(`PLATFORM`), and which features it wants running (the flags from
 `install/flags.yml`) — and it also carries secrets and machine-local values that must
 never be checked in.
+
+`MACHINE` is the only one of the three that is chosen: it names a manifest, and
+everything else is derived from that manifest by `render_env.py`. Placing this file by
+hand is therefore the whole of the pre-install bootstrap — `install.sh` sources it with
+`set -a` before any phase, so a rebuild that copies `~/.env` into place first never needs
+`--machine`.
 
 It used to be hand-authored, which made it the one piece of setup with no source of
 truth: a flag added to the repo reached no existing machine, and nothing could say which
@@ -120,15 +126,23 @@ Two ordering hazards, both real and both now handled:
 ### Beyond the shell
 
 Neovim reads the same vocabulary. `core/profiles.lua` derives its plugin profile from
-`MACHINE_ROLE` — a machine that has declared itself a server has already said everything
-needed to pick the minimal set — with `NVIM_PROFILE` kept as the override for the rarer
-case of a workstation that wants it lean. That removed a second variable which had to be
-set by hand on every server and kept in step with the role.
+`PLATFORM` — `linux` is this repo's headless platform, so a machine declaring it has
+already said everything needed to pick the minimal set — with `NVIM_PROFILE` kept as the
+override for anything that does not follow. That removed a second variable which had to
+be set by hand on every server.
 
-`plugins/typos.lua` moved from `PLATFORM ~= 'wsl'` to `MACHINE_ROLE ~= 'work'`. It reads
-`~/notes` and `~/shart`, which are Syncthing personal directories; it was never about WSL,
-only about the work box happening to be the WSL one. `core/options.lua` keeps its
-`PLATFORM == 'wsl'` check, because win32yank genuinely is a WSL fact.
+`plugins/typos.lua` is the counter-example, and worth keeping in mind before reaching for
+this vocabulary at all. It was `PLATFORM ~= 'wsl'`, then `MACHINE_ROLE ~= 'work'`, then a
+test for `~/notes` — each one a label standing in for a condition that turned out not to
+need expressing. It is now an unconditional remote spec: capture is scoped to `notes_root`,
+so a machine without one writes nothing, and `setup()` creates no directories. The gate
+existed only because a `dir =` local checkout errors on every startup when the directory is
+absent, which is a fact about local specs rather than about machines.
+
+`core/options.lua` keeps its `PLATFORM == 'wsl'` check, because win32yank genuinely is a
+WSL fact rather than a stand-in for one. The test: if the condition can be stated as
+something the code needs, state that; reach for `MACHINE` or `PLATFORM` only when the
+difference really is which machine this is.
 
 tmux gets nothing. Every conditional in `tmux.conf` is real runtime detection — is this
 pane running vim, is `$WSL_DISTRO_NAME` set, does the theme file exist, is tpm cloned —

@@ -137,7 +137,7 @@ A cross-platform dotfiles repository with manifest-driven installation and share
   - `common/` - Cross-platform tools (notes, packup, patterns, and more)
   - `macos/` - macOS-specific tools
   - `archlinux/` - Arch Linux-specific tools (rofi menus, screen control)
-- `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/) plus `roles/` (work/personal/server — symlinked to ~/.local/shell/roles/)
+- `shell/` - Shell source files, organized by platform (common/, macos/, archlinux/, wsl/ — symlinked to ~/.local/shell/)
 - `install/` - Repository management tools
   - `manifests/` - Machine manifests (YAML defining what to install per computer)
   - `symlinks/` - Symlinks manager (Python)
@@ -151,9 +151,10 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Key Systems**:
 
-- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type, and the `platform` / `role` a machine declares
-- **Shell Files** - `shell/` contains platform subdirectories (common/, macos/, archlinux/, wsl/) and `roles/`; symlinked to `~/.local/shell/` by `task symlinks:link`
-- **Platform vs Role** (⚠️ do not conflate) - `PLATFORM` answers *which OS* and is detectable from the machine; `MACHINE_ROLE` answers *what the machine is for* (work/personal/server) and can only come from `~/.env`. Employer infrastructure goes in `shell/roles/work.sh`, never in `shell/wsl/wsl.sh` — a personal WSL box would want none of it
+- **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type, and the `platform` a machine declares
+- **Shell Files** - `shell/` contains only platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
+- **MACHINE and PLATFORM are the only two axes** (⚠️ do not add a third) - `MACHINE` is the single hand-chosen value; it selects a manifest, which declares everything else, and `render_env.py` derives `PLATFORM` and every flag from it. `PLATFORM` is a *sharing* key, not a second identity — it exists because several machines share an OS overlay, and it keys `configs/`, `apps/`, `shell/`. Nothing else selects anything. A `MACHINE_ROLE` axis (work/personal/server) was tried and removed: it was rendered from the same manifest so it carried no information `MACHINE` did not, it declared three values while shipping one file, and that file served one machine
+- **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles install` and the restore step of a rebuild — which is what `doctor` reports. A mechanism that is generic (mounting a Windows share) belongs in the platform overlay; only the values naming an employer go in the local file
 - **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a platform overlay under `configs/`
 - **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim

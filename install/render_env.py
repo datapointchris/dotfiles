@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render ~/.env from a machine manifest and the declared flag list.
 
-~/.env is what tells a machine which OS it is, what it is for, and which
+~/.env is what tells a machine which machine it is, which OS it runs, and which
 features it wants running. It used to be hand-authored, which made it the one
 piece of machine setup with no source of truth: a flag added to the repo
 reached no existing machine, and nothing could tell you which machines had
@@ -57,15 +57,30 @@ def load_required():
     return load_yaml(INSTALL_DIR / 'flags.yml').get('required', [])
 
 
-def applicable_required(manifest, required):
-    """The required values that apply to this machine.
+def load_required_files():
+    """Return the declared machine-local files as a list of dicts."""
+    return load_yaml(INSTALL_DIR / 'flags.yml').get('required_files', [])
 
-    An entry narrows by platform and/or role; one that names neither applies
+
+def _applies_to(entry, manifest):
+    """Whether a declaration narrows to this machine.
+
+    An entry narrows by platform and/or machine; one that names neither applies
     everywhere.
     """
-    role = manifest.get('role', 'personal')
+    machine = manifest.get('machine')
     platform = manifest.get('platform')
-    return [entry for entry in required if entry.get('platform', platform) == platform and entry.get('role', role) == role]
+    return entry.get('platform', platform) == platform and entry.get('machine', machine) == machine
+
+
+def applicable_required(manifest, required):
+    """The required values that apply to this machine."""
+    return [entry for entry in required if _applies_to(entry, manifest)]
+
+
+def applicable_required_files(manifest, required_files):
+    """The machine-local files that apply to this machine."""
+    return [entry for entry in required_files if _applies_to(entry, manifest)]
 
 
 def load_manifest(machine):
@@ -92,9 +107,10 @@ def assignment(name, value):
     return f'export {name}="${{{name}:-{value}}}"'
 
 
-def render_generated_section(manifest, flags, required=None):
+def render_generated_section(manifest, flags, required=None, required_files=None):
     """Build the managed part of ~/.env, ending with the OVERRIDES marker."""
     required = load_required() if required is None else required
+    required_files = load_required_files() if required_files is None else required_files
     machine = manifest.get('machine', '')
     lines = [
         '# ================================================================',
@@ -114,7 +130,6 @@ def render_generated_section(manifest, flags, required=None):
         '# anything else, so this file is also the install bootstrap.',
         assignment('MACHINE', machine),
         assignment('PLATFORM', manifest.get('platform', '')),
-        assignment('MACHINE_ROLE', manifest.get('role', 'personal')),
         '',
         '# Features. Every declared flag is written explicitly, so a machine is never',
         '# silently running on a default it never saw.',
@@ -137,6 +152,18 @@ def render_generated_section(manifest, flags, required=None):
             '# each one is set.',
         ]
         lines += [f'#   {entry["name"]} - {entry.get("description", "")}'.rstrip(' -') for entry in needed]
+
+    # Named for the same reason, and here rather than in a doc because a rebuild
+    # reads this file: it is the only place that says where a restored overlay goes.
+    needed_files = applicable_required_files(manifest, required_files)
+    if needed_files:
+        lines += [
+            '',
+            '# This machine also expects these files, which safekeep restores rather than',
+            '# `dotfiles install` creating them. They are missing between an install and the',
+            '# restore step of a rebuild, which is what `dotfiles doctor` reports.',
+        ]
+        lines += [f'#   {entry["path"]} - {entry.get("description", "")}'.rstrip(' -') for entry in needed_files]
 
     lines += ['', MARKER, '']
     return '\n'.join(lines)
@@ -184,9 +211,10 @@ def parse_env_assignments(text):
     return values
 
 
-def check(path, manifest, flags, required=None):
+def check(path, manifest, flags, required=None, required_files=None):
     """Report drift between the declared flags and what the machine actually has."""
     required = load_required() if required is None else required
+    required_files = load_required_files() if required_files is None else required_files
     problems = []
 
     if not path.exists():
@@ -198,7 +226,6 @@ def check(path, manifest, flags, required=None):
     for key, expected in (
         ('MACHINE', manifest.get('machine')),
         ('PLATFORM', manifest.get('platform')),
-        ('MACHINE_ROLE', manifest.get('role', 'personal')),
     ):
         actual = present.get(key)
         if actual is None:
@@ -220,6 +247,13 @@ def check(path, manifest, flags, required=None):
     for entry in applicable_required(manifest, required):
         if not present.get(entry['name']):
             problems.append(f'{entry["name"]} must be set below the marker — {entry.get("description", "machine-local value")}')
+
+    # Shell code the repo declares and never contains. Reported rather than
+    # created: the remedy is a safekeep restore, so this is expected to be red on
+    # a machine that has been installed but not yet restored.
+    for entry in applicable_required_files(manifest, required_files):
+        if not Path(entry['path']).expanduser().exists():
+            problems.append(f'{entry["path"]} is missing — restore it with safekeep ({entry.get("description", "machine-local file")})')
 
     # Flags the shell no longer knows about. Not fatal — a machine may carry a
     # flag from a newer commit — but it is exactly how NVIM_AI_ENABLED survived

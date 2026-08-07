@@ -82,14 +82,20 @@ Shell functions and aliases live in `shell/` organized by platform, deployed via
 
 - **Cross-platform**: `shell/common/functions.sh` and `shell/common/aliases.sh` → `~/.local/shell/`
 - **Platform-specific**: `shell/{platform}/{platform}.sh` (macos, arch, wsl, linux, windows) → `~/.local/shell/{platform}.sh`
-- **Role-specific**: `shell/roles/{role}.sh` (work, personal, server) → `~/.local/shell/roles/{role}.sh`
-- **`.zshrc` sources them explicitly** using the `$PLATFORM` and `$MACHINE_ROLE` env vars: `source "$SHELL_DIR/$PLATFORM.sh"` then `source "$SHELL_DIR/roles/$MACHINE_ROLE.sh"`
+- **Machine-local**: `~/.local/shell/local.sh` — a real file that exists in no repo, described below
+- **`.zshrc` sources them explicitly** using the `$PLATFORM` env var: `source "$SHELL_DIR/$PLATFORM.sh"`, then `local.sh` if it exists
 
-Platform answers *which OS*, role answers *what the machine is for*, and they are deliberately independent — employer infrastructure belongs to the work role, not to WSL, and a personal WSL box would want none of it. The role overlay loads second so it can build on what the platform exported.
+`shell/` is keyed by platform and nothing else. A `MACHINE_ROLE` axis (work, personal, server) sat alongside it and was removed: it was rendered from the same manifest as `PLATFORM`, so it carried no information `MACHINE` did not already carry, and it declared three values while shipping a single file that served a single machine. Its one file was employer infrastructure, which is now handled by the machine-local overlay instead — a better fit, because that code was never shareable in the first place.
 
-A role overlay does not have to live in this repo. `.zshrc`, `menu`, and the symlink manager all guard on the file existing, and `relink` only removes symlinks that resolve into the repo — so a real file at `~/.local/shell/roles/<role>.sh` survives every relink untouched. That is the supported way to keep employer-specific shell code off a synced repo entirely, backed up with `safekeep` instead.
+### The machine-local overlay
 
-Unlike a platform overlay, **every** role file is linked on every machine and `MACHINE_ROLE` selects one at shell startup, so changing a machine's role is a `~/.env` edit rather than a relink. A role with nothing to add ships no file at all; the source is guarded, like an optional platform overlay.
+`~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the platform overlay exported.
+
+The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed to one machine, so `dotfiles env sync` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles doctor` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
+
+It is restored by `safekeep`, not installed, so it is legitimately absent between `dotfiles install` and the restore step of a rebuild. Both consumers guard on the file existing, and `relink` only removes symlinks that resolve into the repo, so a real file there survives every relink untouched.
+
+The split to hold to is mechanism versus values: mounting a Windows share is a WSL capability, so `mount-cifs` lives in `shell/wsl/wsl.sh` and takes the share as an argument. Only the wrappers naming actual hosts go in `local.sh`.
 
 Windows Git Bash cannot follow symlinks across the WSL boundary, so `install/wsl/sync-windows-shell.sh` copies the files instead and writes the `.bashrc` that loads them. The load order is the `SHELL_FILES` array in that script, which is also its copy manifest. The generated `.bashrc` sources each file separately: a broken file then costs only itself and names itself on the way out. An earlier version concatenated everything into one `combined.sh` for startup speed, which measured at ~0.1ms of saved file opens against a ~60ms startup, and turned one syntax error into a shell with no aliases or functions at all.
 

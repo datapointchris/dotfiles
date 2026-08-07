@@ -3,20 +3,22 @@
 --
 -- Profiles (checked in priority order):
 --   vscode  - auto-detected when embedded in VSCode (vim.g.vscode)
---   minimal - a server, or NVIM_PROFILE=minimal explicitly
+--   minimal - the headless `linux` platform, or NVIM_PROFILE=minimal explicitly
 --   full    - default, everything loads
 --
--- The profile follows MACHINE_ROLE rather than being a second variable that has
--- to be set by hand and kept in step: a machine that has already declared
--- itself a server has said everything needed to pick this. NVIM_PROFILE stays
--- as the override for the rarer case — a workstation that wants the lean set.
+-- The profile follows PLATFORM rather than being a second variable that has to
+-- be set by hand and kept in step: `linux` is this repo's headless platform, so
+-- a machine declaring it has already said everything needed to pick this.
+-- NVIM_PROFILE stays as the override for anything that does not follow — a
+-- graphical Linux desktop wanting the full set, or a workstation wanting the
+-- lean one.
 
 local M = {}
 
 local function resolve_profile()
   local explicit = vim.env.NVIM_PROFILE
   if explicit and explicit ~= '' then return explicit end
-  return vim.env.MACHINE_ROLE == 'server' and 'minimal' or 'full'
+  return vim.env.PLATFORM == 'linux' and 'minimal' or 'full'
 end
 
 M.is_vscode = vim.g.vscode ~= nil

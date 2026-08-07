@@ -13,7 +13,7 @@ DOTFILES_DIR = Path(os.environ.get('DOTFILES', Path.home() / 'dotfiles')).resolv
 TARGET_DIR = Path.home().resolve()
 SEARCH_DEPTH = 5
 
-CLEANUP_DIRS = ['.config', '.local/shell', '.local/shell/roles', '.local/share/applications']
+CLEANUP_DIRS = ['.config', '.local/shell', '.local/share/applications']
 
 PROTECTED_DIRS = {
     '.local/state/claude',
@@ -398,9 +398,6 @@ def relink(
     def link_shell_files() -> None:
         link_if_exists(shell_dir / 'common', 'shell-common', target_shell)
         link_if_exists(shell_dir / platform, f'shell-{platform}', target_shell)
-        # Every role, not just this machine's: MACHINE_ROLE picks one at shell
-        # startup, so changing role is a ~/.env edit rather than a relink.
-        link_if_exists(shell_dir / 'roles', 'shell-roles', target_shell / 'roles')
 
     def link_apps() -> None:
         link_if_exists(_dotfiles_dir / 'apps' / 'common', 'apps-common', target_bin)

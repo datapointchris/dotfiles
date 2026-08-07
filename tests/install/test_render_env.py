@@ -16,7 +16,6 @@ import render_env
 MANIFEST = {
     'machine': 'test-machine',
     'platform': 'macos',
-    'role': 'work',
 }
 
 FLAGS = [
@@ -38,12 +37,6 @@ def test_generated_section_carries_identity_from_the_manifest():
     values = render_env.parse_env_assignments(render_env.render_generated_section(MANIFEST, FLAGS))
     assert values['MACHINE'] == 'test-machine'
     assert values['PLATFORM'] == 'macos'
-    assert values['MACHINE_ROLE'] == 'work'
-
-
-def test_role_defaults_to_personal_when_the_manifest_omits_it():
-    section = render_env.render_generated_section({'machine': 'm', 'platform': 'linux'}, [])
-    assert render_env.parse_env_assignments(section)['MACHINE_ROLE'] == 'personal'
 
 
 def test_every_declared_flag_is_written_explicitly():
@@ -80,19 +73,19 @@ def test_ambient_override_actually_wins_in_a_real_shell(tmp_path):
     env_file = tmp_path / '.env'
     render_env.sync(env_file, MANIFEST, FLAGS)
     result = subprocess.run(
-        ['bash', '-c', f'source "{env_file}"; echo "$MACHINE_ROLE"'],
+        ['bash', '-c', f'source "{env_file}"; echo "$PLATFORM"'],
         capture_output=True,
         text=True,
-        env={**os.environ, 'MACHINE_ROLE': 'server'},
+        env={**os.environ, 'PLATFORM': 'wsl'},
         check=True,
     )
-    assert result.stdout.strip() == 'server'
+    assert result.stdout.strip() == 'wsl'
 
 
 def test_check_reads_through_the_self_referencing_default(tmp_path):
     # The value the shell would land on is what matters, not the literal text.
-    # required=[] because MANIFEST is role work, which the real flags.yml gives
-    # machine-local values this fixture has no reason to carry.
+    # required=[] because the real flags.yml gives this platform machine-local
+    # values the fixture has no reason to carry.
     env_file = tmp_path / '.env'
     render_env.sync(env_file, MANIFEST, FLAGS, [])
     assert render_env.check(env_file, MANIFEST, FLAGS, []) == 0
@@ -110,10 +103,13 @@ def test_required_values_narrow_by_platform():
     assert names == ['WINDOWS_USER', 'EVERYWHERE']
 
 
-def test_required_values_narrow_by_role():
-    entries = [{'name': 'WORK_ONLY', 'role': 'work'}, {'name': 'SERVER_ONLY', 'role': 'server'}]
+def test_required_values_narrow_by_machine():
+    entries = [
+        {'name': 'THIS_MACHINE', 'machine': 'test-machine'},
+        {'name': 'OTHER_MACHINE', 'machine': 'somewhere-else'},
+    ]
     names = [e['name'] for e in render_env.applicable_required(MANIFEST, entries)]
-    assert names == ['WORK_ONLY']
+    assert names == ['THIS_MACHINE']
 
 
 def test_generated_section_names_the_required_values_without_valuing_them():
@@ -127,6 +123,46 @@ def test_generated_section_names_the_required_values_without_valuing_them():
 def test_generated_section_omits_the_block_when_nothing_applies():
     section = render_env.render_generated_section(MANIFEST, FLAGS, [])
     assert 'needs these set by hand' not in section
+
+
+REQUIRED_FILES = [
+    {'name': 'local.sh', 'path': '~/.local/shell/local.sh', 'description': 'Employer shell code', 'machine': 'test-machine'},
+    {'name': 'elsewhere.sh', 'path': '~/elsewhere.sh', 'description': 'Another machine', 'machine': 'somewhere-else'},
+]
+
+
+def test_required_files_narrow_by_machine():
+    names = [e['name'] for e in render_env.applicable_required_files(MANIFEST, REQUIRED_FILES)]
+    assert names == ['local.sh']
+
+
+def test_generated_section_names_where_a_restored_file_goes():
+    # A rebuild reads ~/.env, so this is the only place that says where safekeep
+    # should put an overlay the repo never contains.
+    section = render_env.render_generated_section(MANIFEST, FLAGS, [], REQUIRED_FILES)
+    assert '~/.local/shell/local.sh - Employer shell code' in section
+    assert 'elsewhere.sh' not in section
+
+
+def test_generated_section_omits_the_file_block_when_nothing_applies():
+    section = render_env.render_generated_section(MANIFEST, FLAGS, [], [])
+    assert 'safekeep restores' not in section
+
+
+def test_check_reports_a_required_file_that_is_missing(env_file, capsys):
+    # Expected between `dotfiles install` and the restore step of a rebuild: the
+    # remedy is a safekeep restore, not creating the file by hand.
+    render_env.sync(env_file, MANIFEST, FLAGS, [])
+    assert render_env.check(env_file, MANIFEST, FLAGS, [], REQUIRED_FILES) == 1
+    assert 'restore it with safekeep' in capsys.readouterr().out
+
+
+def test_check_passes_once_the_required_file_exists(env_file, tmp_path):
+    present = tmp_path / 'local.sh'
+    present.write_text('# machine-local\n')
+    entries = [{'name': 'local.sh', 'path': str(present), 'machine': 'test-machine'}]
+    render_env.sync(env_file, MANIFEST, FLAGS, [])
+    assert render_env.check(env_file, MANIFEST, FLAGS, [], entries) == 0
 
 
 def test_check_reports_a_required_value_that_is_unset(env_file, capsys):
@@ -181,11 +217,11 @@ def test_sync_refreshes_the_generated_section_without_touching_overrides(env_fil
     env_file.write_text('export OPENAI_API_KEY=sk-secret\n')
     render_env.sync(env_file, MANIFEST, FLAGS)
 
-    changed = {**MANIFEST, 'role': 'server'}
+    changed = {**MANIFEST, 'platform': 'linux'}
     render_env.sync(env_file, changed, FLAGS)
 
     values = read_assignments(env_file)
-    assert values['MACHINE_ROLE'] == 'server'
+    assert values['PLATFORM'] == 'linux'
     assert values['OPENAI_API_KEY'] == 'sk-secret'
 
 
@@ -223,9 +259,9 @@ def test_check_reports_an_unrecognized_value(env_file, capsys):
 
 
 def test_check_reports_identity_drift_from_the_manifest(env_file, capsys):
-    render_env.sync(env_file, {**MANIFEST, 'role': 'personal'}, FLAGS)
+    render_env.sync(env_file, {**MANIFEST, 'platform': 'linux'}, FLAGS)
     assert render_env.check(env_file, MANIFEST, FLAGS) == 1
-    assert 'MACHINE_ROLE' in capsys.readouterr().out
+    assert 'PLATFORM' in capsys.readouterr().out
 
 
 def test_check_names_a_flag_nothing_declares(env_file, capsys):

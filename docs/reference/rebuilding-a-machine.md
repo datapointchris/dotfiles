@@ -27,9 +27,10 @@ covers the verbs and `safekeep tags` says what a given tag would bring back.
 
 Getting the capture *set* right is the hard part, because what dies in a wipe is
 unobvious. `~/.env` holds the machine's identity, and everything below its
-`# OVERRIDES` marker is hand-written and exists nowhere else. The role overlay at
-`~/.local/shell/roles/<role>.sh` sits outside this repo on purpose, so employer
-shell code stays off a synced clone — which also means nothing redeploys it.
+`# OVERRIDES` marker is hand-written and exists nowhere else. The machine-local
+overlay at `~/.local/shell/local.sh` sits outside this repo on purpose, so
+employer shell code stays off a synced clone — which also means nothing
+redeploys it. The generated part of `~/.env` names the path for that reason.
 `syncer`'s config is machine-local for the same reason, and without it a rebuilt
 box has no registry of repos to clone. Add credentials, SSH keys, and anything
 under `~/.config` that was authored rather than deployed.

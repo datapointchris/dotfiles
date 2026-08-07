@@ -29,7 +29,7 @@
 # repo knows a machine needs them; it must never know their values, because they
 # are account names, employee IDs, and the like.
 #
-# Each entry may narrow to a platform and/or a role; an entry with neither
+# Each entry may narrow to a platform and/or a machine; an entry with neither
 # applies everywhere. The generated section names the ones that apply, and
 # `dotfiles doctor` fails while one is missing — without that, an unset value
 # just silently produces a wrong path at the point of use.
@@ -44,11 +44,29 @@ required:
     consumers:
       - shell/wsl/wsl.sh
 
-  - name: WORK_DOMAIN
-    description: Windows domain for the work CIFS shares
-    role: work
+  - name: WINDOWS_DOMAIN
+    description: Windows domain the account authenticates against, for CIFS mounts
+    platform: wsl
     consumers:
-      - shell/roles/work.sh
+      - shell/wsl/wsl.sh
+
+# Machine-local shell code the repo declares but deliberately never contains.
+# Same principle as `required:` above — the repo knows a machine needs it and
+# must never know its contents — one level up: a required file rather than a
+# required value.
+#
+# These are restored by safekeep, not created by hand and not installed, so they
+# are absent between `dotfiles install` and the restore step of a rebuild. That
+# window is why `doctor` reporting one missing is the accurate state of the
+# machine rather than a fault in the install.
+required_files:
+  - name: local.sh
+    path: ~/.local/shell/local.sh
+    description: Employer infrastructure — the named CIFS mounts and Okta login
+    machine: wsl-work-workstation
+    consumers:
+      - configs/common/.config/zsh/.zshrc
+      - install/wsl/sync-windows-shell.sh
 
 flags:
   - name: ZSHRC_DEBUG

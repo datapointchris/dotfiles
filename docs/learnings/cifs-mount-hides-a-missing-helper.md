@@ -3,7 +3,8 @@
 ## Problem
 
 A freshly installed WSL Ubuntu distro could not mount the work network drive.
-`mount-h` from `shell/roles/work.sh` failed with:
+`mount-h` — now a wrapper around `mount-cifs` in the work box's machine-local
+`~/.local/shell/local.sh` — failed with:
 
 ```text
 mount error(113): No route to host
