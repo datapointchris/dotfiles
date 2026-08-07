@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/missing-tools.sh"
 # Offline cache directory for pre-downloaded binaries
 OFFLINE_CACHE_DIR="${HOME}/installers/binaries"
 
-# Digests recorded by install/offline/create-bundle.sh, each already checked
+# Digests recorded by install/offline/create_bundle.py, each already checked
 # against the checksum its release published. Learning which asset holds that
 # checksum costs a release API call, so a network that blocks GitHub cannot
 # verify a cached binary at all — every offline install would fail on a missing

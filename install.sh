@@ -330,8 +330,8 @@ usage() {
   help_row "--platform" "PLATFORM" "Target platform (default: linux-x86_64)"
   help_row "" "" "Supported: linux-x86_64, linux-arm64,"
   help_row "" "" "           darwin-x86_64, darwin-arm64"
-  help_row "--print-path" "" "Send the build log to stderr and print only the"
-  help_row "" "" "tarball path on stdout, for a pipeline"
+  help_row "--print-path" "" "Print the finished tarball's path on stdout,"
+  help_row "" "" "for a pipeline"
 
   help_section "Environment Variables"
   help_row "MACHINE=name" "" "Same as --machine (flag takes precedence)"
@@ -420,7 +420,10 @@ parse_args() {
         ;;
       --create-offline-bundle)
         shift
-        exec bash "$DOTFILES_DIR/install/offline/create-bundle.sh" "$@"
+        # /usr/bin/python3 for the same reason parse_packages.py uses it: it is
+        # the interpreter guaranteed to have PyYAML, which create_bundle.py
+        # needs because it imports parse_packages rather than shelling out to it.
+        exec /usr/bin/python3 "$DOTFILES_DIR/install/offline/create_bundle.py" "$@"
         ;;
       --help | -h)
         usage

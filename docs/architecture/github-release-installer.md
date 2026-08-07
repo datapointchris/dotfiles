@@ -191,7 +191,7 @@ These scripts use library helpers where applicable but handle their unique requi
 
 ## Bundler Contract
 
-`install/offline/create-bundle.sh` invokes each script with two read-only flags to build the offline cache without performing any installation on the bundler's host:
+`install/offline/create_bundle.py` invokes each script with two read-only flags to build the offline cache without performing any installation on the bundler's host:
 
 - `--print-url <os> <arch>` — required. Emits one line: `name|version|url`. The bundler downloads `url` into `installers/binaries/`. See `install/common/github-releases/lazygit.sh` for the canonical implementation.
 - `--print-extras <os> <arch>` — optional. Emits zero or more lines in the same `name|version|url` format for companion files that aren't included in the release tarball. The bundler downloads each into `installers/binaries/` alongside the main artifact. The fzf installer uses this for `fzf-tmux`, the popup wrapper script that the tmux `prefix+s` binding calls — it lives in the fzf repo but is not bundled into release tarballs.
@@ -204,7 +204,7 @@ The bundle also carries `installers/manifest.txt`, which is where an offline ins
 
 ## Bundle Download Cache
 
-Rebuilding a bundle used to re-download every asset even when most releases had not moved. `create-bundle.sh` now keeps what it fetches under `$XDG_CACHE_HOME/dotfiles/offline-bundle/`, at a path mirroring the asset URL so an entry can be read, inspected, and deleted per repo without a lookup table. This is the bundler's own cache on the machine building the bundle, distinct from `installers/` inside the bundle itself.
+Rebuilding a bundle used to re-download every asset even when most releases had not moved. `create_bundle.py` now keeps what it fetches under `$XDG_CACHE_HOME/dotfiles/offline-bundle/`, at a path mirroring the asset URL so an entry can be read, inspected, and deleted per repo without a lookup table. This is the bundler's own cache on the machine building the bundle, distinct from `installers/` inside the bundle itself.
 
 The URL is the cache key, and that is the whole design. A release asset's URL names its version, so while upstream has not moved the same URL resolves to the same bytes; the moment a release ships, the URL changes and the entry misses on its own. There is no staleness heuristic, no TTL on correctness, and nothing to invalidate by hand.
 
@@ -397,7 +397,7 @@ file records `linux_x86_64`, and rejecting that discards a checksum the project 
 
 **Offline.** A cached file is verified against `installers/checksums.txt`, never the network —
 discovering which asset holds a checksum costs a release API call, and the network a bundle exists
-for is the one that blocks it. `create-bundle.sh` records only digests it verified against upstream
+for is the one that blocks it. `create_bundle.py` records only digests it verified against upstream
 while building, so an asset whose release publishes nothing usable is absent from that file and
 falls through to the normal path rather than being reported as verified. On a rebuild that digest
 may be replayed from the [bundle download cache](#bundle-download-cache) instead of re-fetched — the

@@ -24,7 +24,7 @@ REPO=$(/usr/bin/python3 "$DOTFILES_DIR/install/parse_packages.py" \
   }
 TARGET_BIN="$HOME/.local/bin/$BINARY_NAME"
 
-# Released from releases.hashicorp.com, so create-bundle.sh never caches it and
+# Released from releases.hashicorp.com, so create_bundle.py never caches it and
 # the version cannot be resolved from the bundle manifest either. Same reasoning
 # as tenv: failing the phase reports manual steps the machine cannot follow.
 if [[ "${OFFLINE_MODE:-false}" == "true" ]]; then

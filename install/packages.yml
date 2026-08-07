@@ -961,7 +961,7 @@ github_releases:
 #                        bucket (latest/ path, no version lookup), GPG-verified
 #
 # bundle_install_script: true marks installers whose downloadable script should
-# be cached in offline bundles (see install/offline/create-bundle.sh).
+# be cached in offline bundles (see install/offline/create_bundle.py).
 
 custom_installers:
   - name: awscli

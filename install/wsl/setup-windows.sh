@@ -292,7 +292,7 @@ case "${1:-}" in
   --bundle)
     MODE="bundle"
     # Optional: default to a dated archive at the repo root, like the main
-    # offline bundler (install/offline/create-bundle.sh). *.tar.gz is gitignored.
+    # offline bundler (install/offline/create_bundle.py). *.tar.gz is gitignored.
     BUNDLE_DIR="${2:-$DOTFILES_DIR/dotfiles-windows-tools-v$(date +%Y%m%d).tar.gz}"
     ;;
   --offline)

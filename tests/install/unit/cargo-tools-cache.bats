@@ -5,7 +5,7 @@
 # ================================================================
 # Tests the offline cache installation logic for standard single-platform
 # tarballs. Fat-zip handling (e.g. broot) is done at bundle creation time
-# in create-bundle.sh, so install_from_cache never sees a fat zip.
+# in create_bundle.py, so install_from_cache never sees a fat zip.
 # ================================================================
 
 load "${BATS_TEST_FILENAME%/tests/*}/tests/helpers/bats-libs"
@@ -70,7 +70,7 @@ create_single_tarball() {
 # install_from_cache
 # ================================================================
 # Grouped by outcome rather than by archive name: what matters is that the
-# lookup finds the cached archive under each naming scheme create-bundle.sh
+# lookup finds the cached archive under each naming scheme create_bundle.py
 # produces, and refuses to install anything when it does not.
 
 @test "cache/hit: finds the archive under every naming scheme, executable" {

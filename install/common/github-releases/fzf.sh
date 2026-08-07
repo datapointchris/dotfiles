@@ -37,7 +37,7 @@ fi
 
 # --print-extras: declare companion files for the offline bundler.
 # Format per line: <name>|<version>|<url>
-# create-bundle.sh fetches each into the offline cache so install_fzf_tmux()
+# create_bundle.py fetches each into the offline cache so install_fzf_tmux()
 # below can resolve them via cache when the network is restricted.
 if [[ "${1:-}" == "--print-extras" ]]; then
   VERSION=$(fetch_github_latest_version "$REPO")

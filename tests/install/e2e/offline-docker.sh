@@ -157,27 +157,41 @@ log_section "Step 2: Preparing Offline Bundle" 2>&1 | tee -a "$LOG_FILE"
 
 BUNDLE_FILE=""
 
+# --print-path makes the tarball's name the build's return value, so a fresh
+# build says which file it produced. Only the --skip-bundle and --reuse-bundle
+# paths still have to guess, and only because they are looking for a bundle some
+# earlier run left behind.
+#
+# The build log is teed from stderr, leaving stdout carrying the path alone.
+build_bundle() {
+  /usr/bin/python3 "$BUNDLE_SCRIPT_DIR/create_bundle.py" --platform linux-x86_64 --print-path \
+    2> >(tee -a "$LOG_FILE" >&2)
+}
+
+newest_existing_bundle() {
+  find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null \
+    | xargs -0 ls -t 2>/dev/null | head -1
+}
+
 if [[ "$SKIP_BUNDLE" == true ]]; then
   log_info "Skipping bundle creation (--skip-bundle)" 2>&1 | tee -a "$LOG_FILE"
-  BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1 || true)
+  BUNDLE_FILE=$(newest_existing_bundle || true)
   if [[ -z "$BUNDLE_FILE" || ! -f "$BUNDLE_FILE" ]]; then
     die "No existing bundle found. Run without --skip-bundle first."
   fi
 
 elif [[ "$REUSE_BUNDLE" == true ]]; then
-  BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1 || true)
+  BUNDLE_FILE=$(newest_existing_bundle || true)
   if [[ -n "$BUNDLE_FILE" && -f "$BUNDLE_FILE" ]]; then
     log_info "Reusing existing bundle: $(basename "$BUNDLE_FILE")" 2>&1 | tee -a "$LOG_FILE"
   else
     log_info "No existing bundle, creating new one..." 2>&1 | tee -a "$LOG_FILE"
-    bash "$BUNDLE_SCRIPT_DIR/create-bundle.sh" --platform linux-x86_64 2>&1 | tee -a "$LOG_FILE"
-    BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+    BUNDLE_FILE=$(build_bundle)
   fi
 
 else
   log_info "Creating fresh offline bundle..." 2>&1 | tee -a "$LOG_FILE"
-  bash "$BUNDLE_SCRIPT_DIR/create-bundle.sh" --platform linux-x86_64 2>&1 | tee -a "$LOG_FILE"
-  BUNDLE_FILE=$(find "$BUNDLE_OUTPUT_DIR" -maxdepth 1 -name "dotfiles-offline-*-linux-x86_64.tar.gz" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+  BUNDLE_FILE=$(build_bundle)
 fi
 
 if [[ -z "$BUNDLE_FILE" || ! -f "$BUNDLE_FILE" ]]; then

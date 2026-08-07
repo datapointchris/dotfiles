@@ -3,7 +3,7 @@
 The dotfiles repository has three layers of testing:
 
 1. **BATS unit + integration tests** — shell library and installer coverage
-2. **pytest** — Python code (packages CLI, `packages verify`, `parse_packages.py`)
+2. **pytest** — the Python side: the packages CLI, the manifest parser, the offline bundler
 3. **Installation e2e tests** — Docker-based platform walkthroughs of `install.sh`
 
 Fast tests run on every commit via pre-commit hooks: pytest, and BATS **unit** tests (gated to install-layer changes). The slower Docker-backed layers — BATS **integration** and the installation e2e tests — are run on demand (`task test:integration`, `task test`) rather than on every commit, to keep commits fast. See `.pre-commit-config.yaml` for the full wiring.
@@ -46,11 +46,22 @@ file on disk".
 
 ## pytest (Python Tests)
 
-Python-side coverage for `install/parse_packages.py` and `apps/common/packages` (including `packages verify`):
+Python-side coverage for `install/parse_packages.py`, `apps/common/packages`
+(including `packages verify`), and `install/offline/create_bundle.py`:
 
 ```sh
 uv run pytest tests/
 ```
+
+**Logic belongs here rather than in BATS, and moving it is the cheaper fix.**
+The offline bundler was shell until the cost showed: verifying a checksum parser
+written in awk meant a fixture tree and a subprocess per case, while the same
+parser as a function is called directly with a string and returns a value. The
+conversion traded seventeen BATS tests needing a shell for thirty-one pytest
+ones needing nothing, and they finish in under a second. When a shell script
+grows a parser, a cache, or a return value, that is the signal — see
+[app installation patterns](../learnings/app-installation-patterns.md) for
+where each language belongs.
 
 **Every test builds its own synthetic tree and never reads the real repo.** A
 `packages verify` test writes a `packages.yml` and manifest set into `tmp_path`,
