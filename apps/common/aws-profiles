@@ -21,7 +21,6 @@
 
 # Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=/dev/null
 source "$SHELL_DIR/formatting.sh"
 
 AWS_CONFIG="${AWS_CONFIG_FILE:-$HOME/.aws/config}"

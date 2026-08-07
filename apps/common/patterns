@@ -3,7 +3,6 @@ set -euo pipefail
 
 # Source shell libraries
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=/dev/null
 source "$SHELL_DIR/formatting.sh"
 
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"

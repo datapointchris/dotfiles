@@ -44,9 +44,7 @@ set -euo pipefail
 
 # Source required shell libraries
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=/dev/null
 source "$SHELL_DIR/formatting.sh"
-# shellcheck source=/dev/null
 source "$SHELL_DIR/colors.sh"
 
 # Default configuration

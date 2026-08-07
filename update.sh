@@ -32,7 +32,6 @@ source "$DOTFILES_DIR/install/common/lib/missing-tools.sh"
 # ~/.env carries MACHINE, which selects the manifest. install.sh does the same.
 if [[ -f "$HOME/.env" ]]; then
   set -a
-  # shellcheck source=/dev/null
   source "$HOME/.env"
   set +a
 fi

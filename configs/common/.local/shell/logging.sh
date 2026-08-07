@@ -37,7 +37,6 @@ SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 if [[ -f "$SHELL_DIR/colors.sh" ]]; then
   source "$SHELL_DIR/colors.sh"
 else
-  # shellcheck source=colors.sh
   source "$(dirname "${BASH_SOURCE[0]:-$0}")/colors.sh"
 fi
 

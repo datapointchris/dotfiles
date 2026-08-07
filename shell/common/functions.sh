@@ -524,7 +524,6 @@ function venv() {
   venvdir=$(findup .venv)
   script='/.venv/bin/activate'
   echo "$venvdir/.venv"
-  # shellcheck source=/dev/null
   source "$venvdir$script"
 }
 

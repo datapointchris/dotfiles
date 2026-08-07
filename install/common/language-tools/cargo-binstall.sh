@@ -7,7 +7,6 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 source "$DOTFILES_DIR/configs/common/.local/shell/formatting.sh"
 
 # Ensure cargo is available
-# shellcheck source=/dev/null
 source "$HOME/.cargo/env"
 
 if command -v cargo-binstall >/dev/null 2>&1; then

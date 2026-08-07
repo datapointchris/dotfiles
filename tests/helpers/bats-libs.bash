@@ -21,14 +21,12 @@ BATS_LIB_DIR="${BATS_LIB_DIR:-$HOME/.local/lib}"
 BATS_SAVED_PATH="${BATS_SAVED_PATH-$PATH}"
 
 for _bats_lib in output error lang; do
-  # shellcheck source=/dev/null
   source "$BATS_LIB_DIR/bats-support/src/$_bats_lib.bash"
 done
 
 for _bats_lib in assert refute assert_equal assert_not_equal assert_success \
   assert_failure assert_output refute_output assert_line refute_line \
   assert_regex refute_regex; do
-  # shellcheck source=/dev/null
   source "$BATS_LIB_DIR/bats-assert/src/$_bats_lib.bash"
 done
 

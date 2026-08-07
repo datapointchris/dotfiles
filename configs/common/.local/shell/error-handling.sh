@@ -32,7 +32,6 @@ export TERM=${TERM:-xterm}
 if [[ -f "$SHELL_DIR/logging.sh" ]]; then
   source "$SHELL_DIR/logging.sh"
 else
-  # shellcheck source=logging.sh
   source "$(dirname "${BASH_SOURCE[0]:-$0}")/logging.sh"
 fi
 

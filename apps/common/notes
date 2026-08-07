@@ -10,7 +10,6 @@ set -euo pipefail
 
 # Source formatting library
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=/dev/null
 source "$SHELL_DIR/formatting.sh"
 
 NOTES_DIR="${ZK_NOTEBOOK_DIR:-$HOME/notes}"

@@ -17,7 +17,6 @@
 set -euo pipefail
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=/dev/null
 source "$SHELL_DIR/formatting.sh"
 
 # ================================================================

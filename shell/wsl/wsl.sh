@@ -3,7 +3,6 @@
 # SC2154 = Variables referenced but not assigned (from sourced files)
 
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
-# shellcheck source=../../configs/common/.local/shell/colors.sh
 source "$SHELL_DIR/colors.sh"
 
 #@update-tldr

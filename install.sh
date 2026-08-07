@@ -19,7 +19,6 @@ source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 
 if [[ -f "$HOME/.env" ]]; then
   set -a
-  # shellcheck source=/dev/null
   source "$HOME/.env"
   set +a
 fi

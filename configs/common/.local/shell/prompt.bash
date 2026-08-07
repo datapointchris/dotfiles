@@ -9,7 +9,6 @@
 # Source shared prompt utilities
 SHELL_DIR="${SHELL_DIR:-$HOME/.local/shell}"
 if [[ -f "$SHELL_DIR/prompt-lib.sh" ]]; then
-  # shellcheck source=/dev/null
   source "$SHELL_DIR/prompt-lib.sh"
 fi
 

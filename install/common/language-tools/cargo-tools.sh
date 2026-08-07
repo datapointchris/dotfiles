@@ -12,7 +12,6 @@ source "$DOTFILES_DIR/install/common/lib/package-query.sh"
 # all. Sourcing unconditionally aborted the whole phase under set -e, taking
 # the cached-binary path — the one path that does work offline — down with it.
 if [[ -f "$HOME/.cargo/env" ]]; then
-  # shellcheck source=/dev/null
   source "$HOME/.cargo/env"
 fi
 

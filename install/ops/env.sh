@@ -15,7 +15,6 @@ source "$DOTFILES_DIR/configs/common/.local/shell/logging.sh"
 # whole design has to live with: ~/.env names the manifest, and the manifest
 # generates ~/.env. A fresh machine passes --machine instead.
 if [[ -f "$HOME/.env" ]]; then
-  # shellcheck source=/dev/null
   source "$HOME/.env"
 fi
 
