@@ -57,12 +57,17 @@ path = ~/.config/delta/current.gitconfig
 [include]
 path = ~/.config/git/platform.gitconfig
 
+# %cs/%cr rather than %ad with --date=short, so the format carries its own date
+# rendering and stays usable from any alias without a paired flag.
+[pretty]
+detailed = tformat:%C(blue)%h%C(auto)%d %s %C(green)%cs (%cr)%C(dim yellow) - %an%C(auto)
+
 [alias]
 prune = fetch --prune
 undo-commit = reset --soft HEAD^
 unstage = restore --staged
-graph = log --graph --pretty=format:'%C(blue)%h%C(auto)%d %s %C(green)(%cr)%C(dim yellow) - %an%C(auto)'
-oneline = log --oneline
+graph = log --graph --pretty=detailed
+oneline = log --pretty=detailed
 last = commit --amend --no-edit --no-verify
 last-commit = log -1 HEAD
 changes = log --pretty='short' --name-status
