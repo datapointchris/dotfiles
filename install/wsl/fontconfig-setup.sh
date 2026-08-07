@@ -21,6 +21,15 @@ get_windows_username() {
 
 log_info "Setting up fontconfig for Windows fonts..."
 
+# No mounted Windows drive means no Windows fonts to point at — a container or a
+# plain Linux box running the wsl phases. That is nothing to report: erroring here
+# put an [ERROR] in every Docker rehearsal, which is how a real error would come
+# to be scrolled past.
+if [[ ! -d /mnt/c ]]; then
+  log_info "No Windows filesystem at /mnt/c; skipping Windows font setup"
+  exit 0
+fi
+
 windows_user=$(get_windows_username)
 if [[ -z "$windows_user" ]]; then
   log_error "Could not detect Windows username"
