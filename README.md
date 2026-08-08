@@ -130,7 +130,7 @@ dotfiles update --mine                  # Only my own tools
 dotfiles update --no-system             # Skip the sudo-gated, slowest group
 
 # Symlinks
-dotfiles link                           # Deploy configs (also: relink, check, unlink)
+dotfiles symlinks apply                 # Deploy configs (also: check, show, unlink)
 
 # Discovery
 toolbox search python                   # Find Python tools
@@ -142,7 +142,7 @@ Run `dotfiles` for all commands, or `task --list` when working inside the repo.
 
 The `symlinks` tool manages deploying configs from the repo to their actual locations. Written in Python because shell scripts for path manipulation are a recipe for sadness.
 
-**Important**: After adding or removing files in the repo, run `task symlinks:link` to update symlinks. Otherwise Neovim will complain about missing modules and you'll spend 20 minutes debugging before remembering this note.
+**Important**: After adding or removing files in the repo, run `dotfiles symlinks apply` to update symlinks. Otherwise Neovim will complain about missing modules and you'll spend 20 minutes debugging before remembering this note.
 
 ## Theme System
 

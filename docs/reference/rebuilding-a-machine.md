@@ -101,7 +101,7 @@ the machine rather than something the install detects.
 ## Verify
 
 ```bash
-dotfiles doctor      # symlink, package and flag drift in one place
+dotfiles check       # symlink, package and flag drift in one place
 packages missing     # declared but not installed
 syncer check         # repos the registry expects, against what is on disk
 ```

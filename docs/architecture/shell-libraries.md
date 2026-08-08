@@ -175,7 +175,7 @@ print_header_success "Backup Complete"
 **Core Functions**:
 
 - `flag_enabled(NAME, [default])` - True when `$NAME` is truthy. `default` applies when the variable is unset, empty, or holds an unrecognized value, and itself defaults to enabled
-- `flag_classify(value)` - Returns 0 on, 1 off, 2 unrecognized. Used by `dotfiles doctor` to report typos
+- `flag_classify(value)` - Returns 0 on, 1 off, 2 unrecognized. Used by `dotfiles check` to report typos
 
 Truthy is `1`/`true`/`yes`/`on` and falsey is `0`/`false`/`no`/`off`, each case-insensitive.
 

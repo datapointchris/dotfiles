@@ -3,7 +3,7 @@
 ## Start here
 
 ```sh
-dotfiles doctor      # symlink health and package-manifest drift
+dotfiles check       # symlink health and package-manifest drift
 packages missing     # declared in packages.yml but not installed
 toolbox check        # registry vs PATH vs disk
 ```
@@ -39,12 +39,12 @@ does nothing:
 
 ```sh
 eza -l ~/.config/zsh/.zshrc   # should point into ~/dotfiles
-dotfiles relink               # prunes dangling links and recreates all of them
+dotfiles symlinks apply       # prunes dangling links and recreates all of them
 ```
 
-`dotfiles link` only *adds* links. After deleting or renaming a source file it
-leaves the old link behind, pointing at nothing — `relink` is the one that
-prunes. It is idempotent, so when in doubt use it.
+`apply` removes every link and recreates it, which is what prunes the ones left
+pointing at a deleted source. It is idempotent, and it is the only deployment
+verb — there is no create-only pass to pick between.
 
 ## ZDOTDIR
 
@@ -65,7 +65,7 @@ rm -rf ~/.local/share/nvim/lazy/   # clear the plugin cache and re-sync
 ```
 
 A "module not found" error immediately after a repo change is usually a stale
-symlink rather than a plugin problem — run `dotfiles relink` first.
+symlink rather than a plugin problem — run `dotfiles symlinks apply` first.
 
 ## Theme
 

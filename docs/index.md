@@ -45,7 +45,7 @@ patterns and when each applies are in
 ## Key concepts
 
 - **Machine manifests** decide what installs where, and what `platform` a machine declares
-- **Symlinks** deploy configs from the repo into `$HOME` — `dotfiles relink` after any rename or delete
+- **Symlinks** deploy configs from the repo into `$HOME` — `dotfiles symlinks apply` after any rename or delete
 - **Feature flags** (`install/flags.yml`) turn behaviour on per machine, tested with `flag_enabled`
 - **Theme** applies one palette across ghostty, tmux, btop and Neovim
 - **Composition** — tools emit parseable data and leave the UI to fzf, gum, or a script

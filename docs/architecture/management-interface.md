@@ -5,54 +5,42 @@ front door for work inside the repo, and one shared implementation underneath bo
 
 ## Layering
 
-Two front doors sit over the same scripts, so neither can drift from the other:
+Two front doors sit over the same implementation, so neither can drift from the other:
 
 ```text
-dotfiles <verb>          task <verb>
-        \                   /
-         install/ops/*.sh          composite operations
-         update.sh / install.sh    the two standalone drivers
-         symlinks/ · parse_packages.py · install/common/*
+dotfiles <noun> <verb>       task <verb>
+             \                  /
+              src/dotfiles/            the package: phase walk, symlinks, catalog
+              install/ops/*.sh         composite operations not yet converted
+              update.sh                the half of the phase registry still in bash
+              install/common/*         the per-tool installer scripts
 ```
 
-`install/ops/` holds the operations that take more than one step — resolving the
-platform, layering `common` under a platform overlay, ordering an unlink, running the
-WSL shell sync, guarding a test suite, running mkdocs through `uv`. Anything that is
-already a single command is invoked directly by both front doors with no wrapper.
+`src/dotfiles/bridge.py` is the seam. Every function in it reaches bash that has not
+moved yet, which makes the remaining conversion work countable: when a resource gains a
+real implementation, its entry disappears, and the module goes with the last one.
 
-Platform detection belongs to those scripts, which source
-`install/platform-detection.sh`. Do not reintroduce it into `Taskfile.yml`.
+`install/ops/` holds what is left of the composite operations — the doctor sweep, the
+`~/.env` render, the test-suite guard, mkdocs through `uv`. Anything that is already a
+single command is invoked directly with no wrapper.
 
 ## The `dotfiles` CLI
 
-`apps/common/dotfiles`, deployed to `~/.local/bin` by the symlink manager along with
-every other app. It resolves the repository by following its own symlink, so every
-verb works from any directory.
+`src/dotfiles/`, installed by `uv tool install` and so on `PATH` from any directory.
 
-```bash
-dotfiles                       # help
-dotfiles update [GROUP...]     # see "Selective updates" below
-dotfiles install --machine NAME
-dotfiles link | relink         # aliases for the two symlink verbs actually typed
-dotfiles symlinks <verb>       # link, relink, unlink, check, show
-dotfiles doctor                # broken symlinks, package-manifest and flag drift
-dotfiles env <verb>            # show, sync, check — manage ~/.env from the manifest
-dotfiles test [SUITE]          # all, unit, integration, watch
-dotfiles docs <verb>           # serve, build, deploy
-dotfiles windows <verb>        # WSL only: setup, bundle, offline, sync
-dotfiles pull                  # pull, relinking when deployed files changed
-dotfiles status | path | edit
-```
+The grammar is **noun-verb with exactly two verbs**: `check` reports drift and never
+writes, `apply` fixes it. Both sit at the top level and again under each resource, so
+narrowing to one part of the machine is the same sentence with a noun in it.
+`dotfiles --help` lists the nouns.
 
-`dotfiles pull` relinks automatically when the pulled diff touched `apps/`, `configs/`,
-or `shell/`. A pull that adds a config without relinking leaves the machine stale, and
-relink is idempotent, so there is no reason to defer it.
+`check` is `apply` minus the last step — structurally the same walk — which is why there
+is no `--dry-run` for `apply` to be the opposite of.
 
-The command table at the top of the script is the single source of truth for both help
-output and dispatch; `tests/apps/dotfiles.bats` fails if the two disagree.
-
-First-run bootstrap on a bare machine still uses `./install.sh` directly — the CLI's
-symlink does not exist until the repo has been deployed once.
+Bootstrapping a bare machine is `./install.sh --machine NAME`, and its whole job is
+getting to this CLI: check `git` and `tar`, stage an offline bundle if one is present,
+install uv, `uv tool install --editable`, then `exec dotfiles apply`. It validates the
+manifest name itself — the only check in the system that does — because the CLI that
+would answer the question does not exist yet.
 
 ## The machine environment (`~/.env`)
 
@@ -73,16 +61,10 @@ truth: a flag added to the repo reached no existing machine, and nothing could s
 machines had drifted. `NVIM_AI_ENABLED` survived that way for a long time — set
 everywhere, read by nothing.
 
-Now `install.sh` generates it, and `dotfiles env sync` refreshes it:
-
-```bash
-dotfiles env show    # print the generated section, write nothing
-dotfiles env sync    # write it, preserving everything below the OVERRIDES marker
-dotfiles env check   # what doctor calls: declared-vs-present, and bad values
-```
+Now `install.sh` generates it and `dotfiles env` maintains it.
 
 Everything above the `# OVERRIDES` marker comes from the manifest and `flags.yml` and is
-rewritten on every sync. Everything below it is preserved verbatim, which is what makes
+rewritten on every apply. Everything below it is preserved verbatim, which is what makes
 the file safe to regenerate while it holds API tokens. A file with no marker predates
 generation, so all of it is treated as hand-written and moved below — lossless by
 construction. Syncing also takes a `.bak` and writes through a temp file and a rename,
@@ -151,9 +133,12 @@ and none of them is a preference in disguise. A flag with no consumer is how
 
 ## Selective installs and updates
 
-`install.sh` and `update.sh` share one phase registry, `install/phases.sh`, so both take
-the same selectors and flags and differ only in the verb. The CLI passes its arguments
-straight through, so `task update -- --no-system` behaves identically.
+There are two phase registries while the conversion is half done: `apply.REGISTRY` in
+Python, which `dotfiles apply` walks, and `install/phases.sh`, which `update.sh` still
+walks. `tests/cli/test_phase_registry.py` sources the bash one and asserts the two agree
+on names, order and which phases have an owner — order included, because registry order
+is a real dependency chain and a registry that agreed on the set but not the sequence
+would install a machine wrongly and report success.
 
 | Group | Contents | Notes |
 | --- | --- | --- |
@@ -168,38 +153,37 @@ group, and each one shown is selectable. Listing names that could not be given a
 arguments was the original discoverability bug.
 
 ```bash
-dotfiles update                  # everything
-dotfiles update tools plugins    # named groups
-dotfiles update go-tools         # a single phase
-dotfiles update --no-system      # skip the sudo-gated, slowest group
-dotfiles update --mine           # only tools owned by datapointchris
-dotfiles install --mine          # install those tools, no brew or casks
-dotfiles install --list --dry-run
+dotfiles update                       # everything
+dotfiles update tools plugins         # named groups
+dotfiles update --no-system           # skip the sudo-gated, slowest group
+dotfiles update --mine                # only tools owned by datapointchris
+dotfiles apply --owner datapointchris # install those tools, no brew or casks
+dotfiles apply --skip system          # any resource address is skippable
 ```
 
-`--mine` narrows each phase to packages whose GitHub owner is `datapointchris`, and
-skips the phases that have no owner to filter on rather than silently running them in
-full. Ownership is derived from whichever field carries it — `repo`, `github_repo`, or a
-Go import path in `package` — not from a `personal` tag, because a tag has to be
-remembered on every new tool and silently excludes whatever it misses.
+Owner narrowing takes only the phases whose contents can be traced to a GitHub owner,
+and skips the rest rather than silently running them in full. Ownership is derived from
+whichever field carries it — `repo`, `github_repo`, or a Go import path in `package` —
+not from a `personal` tag, because a tag has to be remembered on every new tool and
+silently excludes whatever it misses.
 
-`dotfiles install --mine` is the command that matters most in practice: a newly released
+`dotfiles apply --owner` is the command that matters most in practice: a newly released
 personal tool has to be installed before any self-updater can maintain it, and those
 tools span four sections (`go_tools`, `github_releases`, `custom_installers`,
 `git_uv_tools`), so owner is the only selector that reaches all of them at once.
+
+An address that names no resource is a usage error, not an empty selection. A run that
+accepted a misspelt `--skip` would install the sudo-gated phase the caller was avoiding and
+report success.
 
 Both commands are manifest-aware when `MACHINE` is set in `~/.env`. The narrowing is
 built once in `install/common/lib/package-query.sh` and read by every tool script, which
 is what makes `--mine` reach cargo, uv, and npm — before that each script hand-rolled
 the filter block and only `go-tools.sh` honoured the owner.
 
-The phase registry is also the seam the unit tests use: sourcing either script exposes
-`selected_phase_names` without running anything — `main` is guarded on
-`BASH_SOURCE[0] == $0` in both — so selection is tested without resolving package lists.
-
 ### Update never installs
 
-`update` reconciles what is on the machine; `install` creates. That line used to be
+`update` reconciles what is on the machine; `apply` creates. That line used to be
 drawn by accident rather than intent: `go install @latest`, `cargo binstall`, and the
 release installers all create as a side effect of upgrading, while `uv tool upgrade` and
 `<tool> update` cannot. Whether `dotfiles update` installed a newly declared tool came
@@ -210,7 +194,7 @@ Every phase now skips a tool it finds missing, records it through
 installed. Reported rather than silently fixed, so adding a tool on one machine and
 pulling on another still surfaces — which is the job the accidental behaviour was doing.
 
-`packages missing` answers the same question on demand, and is what `doctor` calls. It
+`packages missing` answers the same question on demand, and is what `check` calls. It
 is deliberately separate from `packages verify`, which runs on every commit: `verify`
 compares `packages.yml` against the manifests and installer scripts, and a machine
 part-way through a rollout is not a repo defect that should fail a commit.
@@ -250,21 +234,22 @@ walking up from the working directory, so every management action was gated behi
 there was no way to skip the sudo-gated system phase or to refresh only your own tools.
 Selective update did not exist anywhere in the repository.
 
-It is bash, in this repository, rather than a Go binary with a release pipeline. The
-CLI's entire job is invoking scripts that only exist inside the cloned repo, so a
-separately-distributed binary could never function on its own — goreleaser and
-`goselfupdate` would buy a distribution channel that cannot be used. `git pull` is
-already the update mechanism, which is what `dotfiles pull` wraps.
+It was bash in this repository, on the grounds that a separately-distributed binary
+could never function on its own — the CLI's job is invoking scripts that exist only
+inside the cloned repo. That constraint is real and unchanged; what changed is that
+`uv tool install --editable` satisfies it. The installed tool *is* the checkout, so
+there is no distribution channel to buy and nothing to keep in sync, and the CLI gets a
+real type system, a test suite, and dependencies it can declare.
 
 ## Ownership
 
 | Concern | Owner |
 | --- | --- |
-| Machine bootstrap | `install.sh` (`--machine`, sudo) |
-| Installing and updating | `install.sh` / `update.sh` over the shared `install/phases.sh` registry |
-| Phase selection | `install/phases.sh` — groups, phases, `--mine`, `--skip`, `--dry-run` |
+| Machine bootstrap | `install.sh` — POSIX sh, up to the point uv installs the CLI |
+| Installing | `src/dotfiles/apply.py` — the phase registry and the walk |
+| Updating | `update.sh` over `install/phases.sh`, not yet converted |
 | Package query narrowing | `install/common/lib/package-query.sh` — manifest and owner filters |
-| Composite operations | `install/ops/` — shared by both front doors |
+| Composite operations | `install/ops/` — reached through `src/dotfiles/bridge.py` |
 | Symlink management | `src/dotfiles/symlinks/cli.py` |
 | Package queries | `src/dotfiles/parse_packages.py` — types, manifests, owners |
 | Registry drift | `packages verify` — packages.yml vs manifests vs scripts |

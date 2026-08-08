@@ -318,7 +318,7 @@ A fifth, softer check warns when packages.yml defines an entry that no manifest 
 
 Behavior is authoritative in `--help` and `packages verify --help`. Tests live in `tests/apps/test_packages_verify.py` and drive verify against synthetic fixture trees (one test per check), so coverage doesn't depend on the real repo being in any particular state.
 
-**`packages missing` is the machine-side counterpart** and is deliberately a separate command. `verify` compares the repo against itself and runs on every commit; `missing` compares *this machine* against what its manifest declares, and a box part-way through a rollout is not a repo defect that should fail a commit. It is what `dotfiles doctor` calls, and what `dotfiles update` leans on when it reports the tools it declined to install.
+**`packages missing` is the machine-side counterpart** and is deliberately a separate command. `verify` compares the repo against itself and runs on every commit; `missing` compares *this machine* against what its manifest declares, and a box part-way through a rollout is not a repo defect that should fail a commit. It is what `dotfiles check` calls, and what `dotfiles update` leans on when it reports the tools it declined to install.
 
 Both rely on `check_installed` resolving an entry to something observable, which is why the registry carries `command` where the binary name differs from the entry name (`markdownlint-cli` → `markdownlint`, `awscli` → `aws`) and `installed_path` for entries that install no binary at all (`bashselfupdate` is a sourced library). Without those, an installed tool reads as missing forever — the failure mode that makes a checker get ignored.
 
@@ -364,13 +364,8 @@ The root `install.sh` orchestrates the installation process, detecting the platf
 
 The `Taskfile.yml` provides convenience tasks for common operations but delegates complex logic to shell scripts:
 
-```yaml
-symlinks:link        # Deploy symlinks
-symlinks:check       # Verify symlinks
-docs:serve           # Local docs server
-```
-
-See [Task Reference](../reference/tools/tasks.md) for all available tasks.
+`task --list-all` from inside the repo is the roster; see
+[Task Reference](../reference/tools/tasks.md) for how the file is organised.
 
 ## Maintenance
 

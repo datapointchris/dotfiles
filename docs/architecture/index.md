@@ -23,17 +23,8 @@ Two-layer approach: common base + platform overlay.
 3. Links apps from `apps/{platform}/` to `~/.local/bin/`
 4. Links shell source files from `shell/{platform}/` to `~/.local/shell/`
 
-**Common commands** (the `dotfiles` CLI works from any directory; `task` is equivalent
-but only from inside the repo — see [Management Interface](management-interface.md)):
-
-```bash
-dotfiles link               # Deploy all symlinks
-dotfiles relink             # Complete refresh (remove and recreate)
-dotfiles update             # Update everything (or a subset: --mine, --no-system)
-dotfiles doctor             # Health check: symlinks + package-manifest drift
-dotfiles symlinks check     # Verify symlinks are correct
-dotfiles symlinks show      # Show all symlinks
-```
+Driven through `dotfiles symlinks`, which works from any directory; `task` is equivalent
+but only from inside the repo — see [Management Interface](management-interface.md).
 
 **Example results**:
 
@@ -91,9 +82,9 @@ Shell functions and aliases live in `shell/` organized by platform, deployed via
 
 `~/.local/shell/local.sh` is shell code this repo declares but deliberately never contains, for the work box's employer infrastructure — internal hostnames, share paths, Okta profiles. It is a real file among the symlinks, sourced last so it can build on what the platform overlay exported.
 
-The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed to one machine, so `dotfiles env sync` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles doctor` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
+The repo knows it exists without knowing its contents. `install/flags.yml` declares it as a `required_files` entry narrowed to one machine, so `dotfiles env apply` names the path in the generated `~/.env` — which is what tells a rebuild where the file goes — and `dotfiles check` reports it missing. That is the same split as the `required:` values beside it, one level up: a required file rather than a required value.
 
-It is restored by `safekeep`, not installed, so it is legitimately absent between `dotfiles install` and the restore step of a rebuild. Both consumers guard on the file existing, and `relink` only removes symlinks that resolve into the repo, so a real file there survives every relink untouched.
+It is restored by `safekeep`, not installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild. Both consumers guard on the file existing, and `relink` only removes symlinks that resolve into the repo, so a real file there survives every relink untouched.
 
 The split to hold to is mechanism versus values: mounting a Windows share is a WSL capability, so `mount-cifs` lives in `shell/wsl/wsl.sh` and takes the share as an argument. Only the wrappers naming actual hosts go in `local.sh`.
 

@@ -129,7 +129,7 @@ regardless of where it sits under `tests/`.
 
 Each test being its own process also means the suite scales across cores:
 `install/ops/test.sh` passes `--jobs` when GNU parallel is available, which is
-what `dotfiles test` and `task test:*` both run.
+what `task test:*` runs.
 
 See [Bash Testing Frameworks](https://docs.ichrisbirch.com/terminal/bash-testing-frameworks/) for detailed BATS usage.
 

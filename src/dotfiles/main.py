@@ -80,7 +80,7 @@ def _skipped(addresses: list[str] | None) -> frozenset[str]:
     worse than skipping more than asked, because the caller believes they
     excluded something and nothing says otherwise — which is the same reason a
     misspelled address is a usage error rather than an empty skip set. A run that
-    accepted `--skip sytem` would install the sudo-gated phase the caller was
+    accepted a misspelt `--skip` would install the sudo-gated phase the caller was
     trying to avoid and report success.
     """
     resources = frozenset(parse_address(value)[0] for value in addresses or ())

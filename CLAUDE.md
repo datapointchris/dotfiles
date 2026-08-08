@@ -124,7 +124,7 @@ This dotfiles setup maintains a clear separation between system package managers
 
 A cross-platform dotfiles repository with manifest-driven installation and shared configurations with platform-specific overrides for macOS, WSL Ubuntu, and Arch Linux. The repository emphasizes automation, documentation, and ergonomic developer workflows.
 
-**This repo does not use `stow`** — symlinking is self-managed by the symlink manager (`task symlinks:link` / `relink`). Don't reach for stow conventions or assume a stow-shaped layout.
+**This repo does not use `stow`** — symlinking is self-managed by the symlink manager (`dotfiles symlinks apply`). Don't reach for stow conventions or assume a stow-shaped layout.
 
 **Directory Structure**:
 
@@ -153,11 +153,11 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 **Key Systems**:
 
 - **Machine Manifests** - YAML files in `install/manifests/` defining what to install per computer type, and the `platform` a machine declares
-- **Shell Files** - `shell/` contains only platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `task symlinks:link`
+- **Shell Files** - `shell/` contains only platform subdirectories (common/, macos/, archlinux/, wsl/); symlinked to `~/.local/shell/` by `dotfiles symlinks apply`
 - **MACHINE and PLATFORM are the only two axes** (⚠️ do not add a third) - `MACHINE` is the single hand-chosen value; it selects a manifest, which declares everything else, and `render_env.py` derives `PLATFORM` and every flag from it. `PLATFORM` is a *sharing* key, not a second identity — it exists because several machines share an OS overlay, and it keys `configs/`, `apps/`, `shell/`. Nothing else selects anything. A `MACHINE_ROLE` axis (work/personal/server) was tried and removed: it was rendered from the same manifest so it carried no information `MACHINE` did not, it declared three values while shipping one file, and that file served one machine
-- **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles install` and the restore step of a rebuild — which is what `doctor` reports. A mechanism that is generic (mounting a Windows share) belongs in the platform overlay; only the values naming an employer go in the local file
+- **Machine-local shell code goes in `~/.local/shell/local.sh`** - Declared as a `required_files` entry in `install/flags.yml` and sourced last by `.zshrc`, but never present in this repo: it holds employer hostnames and the like. Restored by safekeep rather than installed, so it is legitimately absent between `dotfiles apply` and the restore step of a rebuild — which is what `dotfiles check` reports. A mechanism that is generic (mounting a Windows share) belongs in the platform overlay; only the values naming an employer go in the local file
 - **Feature Flags** - `install/flags.yml` declares every on/off switch; shell code tests them with `flag_enabled` from `flags.sh`. A flag belongs there only when the code is present and cheap and the only question is whether this machine wants it running. Expensive payload stays a manifest tool list; config a program discovers by path and cannot branch on (hyprland, waybar, ghostty) stays a platform overlay under `configs/`
-- **Symlink Manager** - Deploys dotfiles from repo to home directory via `task symlinks:link`
+- **Symlink Manager** - Deploys dotfiles from repo to home directory via `dotfiles symlinks apply`
 - **Theme System** (`theme`) - Unified theme management across ghostty, tmux, btop, and Neovim
 - **Tools Discovery** (`toolbox`) - CLI for exploring installed development tools
 - **Task Automation** - Modular Taskfile system for builds, tests, installations
@@ -165,11 +165,9 @@ A cross-platform dotfiles repository with manifest-driven installation and share
 
 **Symlink Management Critical Rule**:
 
-After **adding** files, run `dotfiles link` (create-only — it adds new links but leaves stale ones behind).
+After adding, removing or renaming any file under `configs/`, `apps/` or `shell/`, run `dotfiles symlinks apply`. It removes every symlink and recreates them, so it prunes the dangling ones a deletion leaves behind — there is no create-only verb to pick between, and it is idempotent.
 
-After **removing or renaming** files, run `dotfiles relink`. Unlike `link`, it removes every symlink and recreates them, so it **prunes dangling links** left by deletions/moves. `link` does NOT prune — a deleted source leaves a broken symlink in `~`. When in doubt, `dotfiles relink` is always safe (idempotent).
-
-`task link` / `task relink` are equivalent but only work from inside the repo; both front doors call `install/ops/symlinks.sh`.
+`task relink` is equivalent but only works from inside the repo.
 
 Common symptoms of outdated symlinks: "module not found" errors in Neovim, configs not being picked up, files in repo but not accessible in expected locations, or broken symlinks pointing at deleted repo files.
 
@@ -233,8 +231,8 @@ table, which is why the rule above is to not write one.
 
 ## Key Custom Tools
 
-- **dotfiles** (`dotfiles`) — the front door, usable from any directory: `update`, `install`, `link`/`relink`, `doctor`, `test`, `docs`, `pull`. See `docs/architecture/management-interface.md`
-- **Symlinks Manager** — `dotfiles symlinks {link,check,show}`
+- **dotfiles** (`dotfiles`) — the front door, usable from any directory. Two verbs, `check` and `apply`, at the top level and again under each resource; `dotfiles --help` lists them. See `docs/architecture/management-interface.md`
+- **Symlinks Manager** — `dotfiles symlinks apply`
 - **Theme** (`theme`) — unified theming across ghostty, tmux, btop, Neovim
 - **Toolbox** (`toolbox`) — CLI for discovering installed dev tools, registry at `~/.local/share/toolbox/registry.yml`, symlinked from `configs/common/.local/share/toolbox/`
 - **tmux Sessions** (`tmux-sessions`) — session switching, creation, and the cross-session window finder behind the two-line status bar. See `docs/architecture/tmux-sessions.md`
