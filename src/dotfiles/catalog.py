@@ -186,32 +186,11 @@ def load_packages(root: Path | None = None) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def flatten_packages(data: dict[str, Any], section: str) -> list[dict[str, Any]]:
-    """Extract packages from a section, handling nested structures like npm_globals."""
-    if section not in data:
-        return []
-
-    section_data = data[section]
-
-    # Handle nested categories (npm_globals, uv_tools have subcategories)
-    if isinstance(section_data, dict):
-        packages = []
-        for category in section_data.values():
-            if isinstance(category, list):
-                packages.extend(category)
-        return packages
-
-    if isinstance(section_data, list):
-        return section_data
-
-    return []
-
-
 def get_all_packages(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Get all packages with their section attached as _section."""
     all_packages = []
     for section in PACKAGE_SECTIONS:
-        for pkg in flatten_packages(data, section):
+        for pkg in iter_section_entries(data, section):
             if isinstance(pkg, dict) and 'name' in pkg:
                 pkg_copy = dict(pkg)
                 pkg_copy['_section'] = section
@@ -349,7 +328,7 @@ def cmd_sections(args: argparse.Namespace, data: dict[str, Any]) -> None:
     print_section('Package Sections')
     print()
     for section in PACKAGE_SECTIONS:
-        packages = flatten_packages(data, section)
+        packages = list(iter_section_entries(data, section))
         if packages:
             print(f'  {section:<20} {len(packages):3d} packages')
 
@@ -364,7 +343,7 @@ def cmd_stats(args: argparse.Namespace, data: dict[str, Any]) -> None:
 
     total = 0
     for section in PACKAGE_SECTIONS:
-        count = len(flatten_packages(data, section))
+        count = sum(1 for _ in iter_section_entries(data, section))
         if count:
             print(f'{section:<24} {count:5d}')
             total += count
@@ -495,7 +474,7 @@ def cmd_list(args: argparse.Namespace, data: dict[str, Any]) -> None:
     # Collect matching packages
     results = []
     for section in sections:
-        for pkg in flatten_packages(data, section):
+        for pkg in iter_section_entries(data, section):
             if not isinstance(pkg, dict) or 'name' not in pkg:
                 continue
             if args.tag and args.tag not in pkg.get('tags', []):
