@@ -117,6 +117,52 @@ AXIS_TYPES: dict[str, type[enum.StrEnum]] = {
 AXES = tuple(AXIS_TYPES)
 
 
+class Arch(enum.StrEnum):
+    """The CPU, which is measured and never declared.
+
+    Deliberately **not** a seventh entry in `Coordinates`. That tuple is what a
+    manifest says a machine is, and no manifest says what processor it runs on —
+    the CPU is a fact about the box, in the same family as `Detected` below.
+    Release assets are the only thing that needs it, and they need it paired with
+    the OS, which is what `Target` is.
+    """
+
+    X86_64 = 'x86_64'
+    ARM64 = 'arm64'
+
+
+@dc.dataclass(frozen=True, slots=True)
+class Target:
+    """What a release asset is named for: an OS and a CPU, together.
+
+    Together because neither answers alone. macOS is the one platform serving two
+    architectures, so a tool spelling only one of them is invisible from whichever
+    Mac happens to run a check — which is the exact fusion `PLATFORM` hid.
+    """
+
+    os_family: OSFamily
+    arch: Arch
+
+    @property
+    def is_darwin(self) -> bool:
+        return self.os_family is OSFamily.DARWIN
+
+    @property
+    def is_arm(self) -> bool:
+        return self.arch is Arch.ARM64
+
+
+def detect_arch(machine: str | None = None) -> Arch:
+    """`uname -m`, reduced to the two the fleet runs.
+
+    Anything unrecognised answers x86_64 rather than raising: the fleet is four
+    machines and two architectures, and a release installer that refused to guess
+    would refuse to run at all on a box nobody has yet.
+    """
+    name = (machine or platform.machine()).lower()
+    return Arch.ARM64 if name in {'arm64', 'aarch64'} else Arch.X86_64
+
+
 @dc.dataclass(frozen=True, slots=True)
 class Detected:
     """The three coordinates the box can answer about itself.

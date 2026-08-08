@@ -32,6 +32,10 @@ import pytest
 import yaml
 
 from dotfiles import github_release
+from dotfiles.coordinates import Arch
+from dotfiles.coordinates import OSFamily
+from dotfiles.coordinates import Target
+from dotfiles.providers import releases as providers
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALLERS = REPO_ROOT / 'install' / 'common' / 'github-releases'
@@ -281,3 +285,34 @@ def test_every_named_exception_is_a_tool_that_still_exists():
     as covered. Cheap, and it does not need the network."""
     named = PUBLISHES_NO_CHECKSUM | CHECKSUM_HAS_NO_ENTRY
     assert named <= declared_releases(), f'named but no longer declared: {sorted(named - declared_releases())}'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Parity with the installers the Python replaces
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The gate for deleting the 23 scripts. A URL builder can only be rewritten
+# safely against proof that the new one agrees with the old for every tool on
+# every platform declared — not just the platform the developer is sitting at.
+# Both sides are asked for the same resolved tag, so this compares naming alone
+# and a version that moved mid-run cannot make it flap.
+
+
+def python_asset_url(tool: str, tag: str, repo: str, os_name: str, arch: str) -> str:
+    target = Target(OSFamily(os_name), Arch(arch))
+    return providers.asset_url(repo, tag, providers.ASSETS[tool](tag, target))
+
+
+def test_python_covers_exactly_the_declared_releases():
+    """No network. A tool in packages.yml with no function would fall through to
+    whatever the registry's default was, which is how a section ends up silently
+    installing nothing."""
+    assert set(providers.ASSETS) == declared_releases()
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize(('tool', 'os_name', 'arch'), CORPUS)
+def test_the_python_asset_is_the_one_the_installer_asks_for(tool, os_name, arch, resolved_urls):
+    repo, tag, url = asset_under_test((tool, os_name, arch), resolved_urls)
+
+    assert python_asset_url(tool, tag, repo, os_name, arch) == url
