@@ -9,17 +9,34 @@ agreed only by the accident of the checkout being at ~/dotfiles.
 import os
 from pathlib import Path
 
+REPO_MARKER = Path('install') / 'packages.yml'
+"""What distinguishes the checkout from any other directory the search may land in."""
+
+
+def _looks_like_repo(candidate: Path) -> bool:
+    return (candidate / REPO_MARKER).is_file()
+
 
 def _repo_root() -> Path:
     """The checkout this package belongs to.
 
-    `DOTFILES_DIR` wins where it is set: install.sh and update.sh export it, the
-    CLI runs from any directory, and it is how a test points the whole package at
-    a synthetic tree. Otherwise walk up from this file, which is correct because
-    the package is installed editable from the checkout it manages.
+    `DOTFILES_DIR` wins unconditionally where it is set: install.sh and update.sh
+    export it, the CLI runs from any directory, and it is how a test points the
+    whole package at a synthetic tree — which must work even when that tree is
+    incomplete.
+
+    Otherwise walk up from this file, which is right for an editable install and
+    wrong for any other kind. A non-editable `uv tool install` puts this file
+    under `site-packages`, where the same walk lands in `.../lib/python3.13`: a
+    directory that exists, so nothing raises, and every path below is silently
+    wrong instead of absent. Checking for the marker is what turns that into
+    falling through to the one place the checkout actually lives.
     """
-    declared = os.environ.get('DOTFILES_DIR')
-    return Path(declared).resolve() if declared else Path(__file__).resolve().parents[2]
+    if declared := os.environ.get('DOTFILES_DIR'):
+        return Path(declared).resolve()
+
+    walked = Path(__file__).resolve().parents[2]
+    return walked if _looks_like_repo(walked) else (Path.home() / 'dotfiles').resolve()
 
 
 def _xdg_home(variable: str, fallback: str) -> Path:

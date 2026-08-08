@@ -1,0 +1,106 @@
+"""The closed vocabulary and the address grammar, in one place so they can be asserted.
+
+Both are surfaces a caller binds to. A verb appearing on one subcommand and not
+another, or an address spelled one way in `--skip` and another in the run record,
+is a break for every script and shell completion built on it — and neither shows
+up as a test failure unless something asserts the whole set at once. That is what
+this module exists for: `tests/cli/test_conformance.py` walks the built app and
+checks every command name against `VERBS`, so adding a verb means editing this
+file deliberately rather than discovering it later.
+"""
+
+from __future__ import annotations
+
+from enum import IntEnum
+
+
+class ExitCode(IntEnum):
+    """What a caller branches on. See `cli-design.md` § Machine contract.
+
+    Three exists to stop `check` reporting "a checker crashed" as "no drift".
+    Without it the shell nudge fires on a converged machine whose checker could
+    not run, and the caller has no way to tell the two apart.
+    """
+
+    CONVERGED = 0
+    DRIFT = 1
+    USAGE = 2
+    ISSUE = 3
+
+
+CORE_VERBS = ('check', 'apply', 'list', 'show', 'search')
+"""The vocabulary proper: what a resource does, spelled the same way everywhere."""
+
+EXCEPTION_VERBS: dict[str, str] = {
+    'unlink': 'symlinks: the inverse of apply, and it has no other spelling',
+    'create': 'bundle, windows: builds an artefact rather than reconciling a machine',
+    'stage': 'bundle: unpacks a bundle without installing from it',
+    'edit': 'machines, repo: opens $EDITOR, which is not a read or a write of state',
+    'prune': 'report, bundle: bounded retention, not drift',
+    'latest': 'report: the common read, worth one word rather than `show $(… list)`',
+    'path': 'report, repo: prints a path for a pipeline, e.g. `ifiles put "$(dotfiles report path)"`',
+    'stats': 'report: an aggregate across runs, which `show` on one run cannot be',
+    'update': 'the machine, not this CLI — a sanctioned exception in cli-design.md',
+    'shell-init': 'hidden; the `starship init` / `zoxide init` convention for a shell snippet',
+}
+"""Each exception carries the reason it is not one of the five, so the next reader
+does not have to reconstruct it — and so a new one has to be argued for in writing."""
+
+VERBS = frozenset(CORE_VERBS) | frozenset(EXCEPTION_VERBS)
+
+
+NOUNS = frozenset(
+    {
+        'packages',
+        'toolchains',
+        'plugins',
+        'symlinks',
+        'env',
+        'system',
+        'identity',
+        'machines',
+        'report',
+        'bundle',
+        'windows',
+        'repo',
+    }
+)
+"""Every subcommand group. A group is a thing; only its leaves are verbs.
+
+Asserted alongside `VERBS` so that a new group is as deliberate as a new verb —
+the grammar is `dotfiles <noun> <verb>`, and both halves are closed.
+"""
+
+RESOURCES = ('packages', 'toolchains', 'plugins', 'symlinks', 'env', 'system', 'identity')
+"""Ordered as the machine converges, not alphabetically.
+
+The order is a real dependency chain, not presentation: symlinks must land after
+the tools that provide `task` and before tpm reads the tmux config it deploys
+(`install/phases.sh:22-25`). Step 4 turns this tuple into the resolver's
+topological input; until then it is what `check` walks and what the help lists.
+"""
+
+ADDRESS_SEPARATOR = '/'
+"""`plugins/tmux`, not `plugins:tmux` or `plugins.tmux`.
+
+A plan node is `(resource, source)` rather than `resource`, because `plugins/shell`
+and `plugins/tmux` sit on opposite sides of `symlinks` in the ordering. The
+separator has to survive being a shell word, a JSON string and a `--skip`
+argument, and `/` is the one that reads as a path to everyone already.
+"""
+
+
+def address(resource: str, source: str | None = None) -> str:
+    """Build the one string that `check` prints, `--skip` takes, and the run record stores."""
+    return f'{resource}{ADDRESS_SEPARATOR}{source}' if source else resource
+
+
+def parse_address(value: str) -> tuple[str, str | None]:
+    """Split an address into its resource and optional source.
+
+    Deliberately does not validate the resource: `--skip` on a machine whose
+    manifest never declares that resource is a no-op, not an error, and the
+    sources come from `packages.yml` at runtime rather than from a literal here.
+    """
+    resource, separator, source = value.partition(ADDRESS_SEPARATOR)
+    return resource, source if separator else None

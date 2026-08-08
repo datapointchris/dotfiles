@@ -880,8 +880,14 @@ def cmd_verify(args: argparse.Namespace, data: dict[str, Any]) -> None:
     sys.exit(1 if errors else 0)
 
 
-def main() -> None:
-    """Main entry point with argument parsing."""
+def main(argv: list[str] | None = None) -> None:
+    """Main entry point with argument parsing.
+
+    `argv` defaults to `sys.argv[1:]` for the console script, and is passed
+    explicitly by the `dotfiles` CLI, which calls this in-process. The
+    alternative was shelling out to `uv run packages`, which needs a uv project
+    on disk — and the installed tool has none.
+    """
     parser = argparse.ArgumentParser(
         prog='packages',
         description='Query packages.yml for browsing and discovery',
@@ -933,7 +939,7 @@ def main() -> None:
     missing_parser.add_argument('--root', help='Override repo root (for testing with synthetic trees)')
     missing_parser.set_defaults(func=cmd_missing)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.version:
         # One distribution now, so one version — read from its metadata rather

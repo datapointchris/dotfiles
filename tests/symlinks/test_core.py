@@ -216,13 +216,17 @@ def test_a_real_file_at_the_target_is_refused_not_replaced(tmp_path):
     this guard, `uv tool install` writing an executable into ~/.local/bin and a
     link pass writing into the same directory means the second destroys the
     first, silently."""
+    # Deliberately a name pyproject.toml does not declare. A reserved name is
+    # skipped before this check is reached, so using one would exercise the
+    # reservation and silently stop testing the refusal -- which is what
+    # happened when this test used `dotfiles` and that became a console script.
     source = tmp_path / 'source'
     source.mkdir()
-    (source / 'dotfiles').write_text('the repo copy')
+    (source / 'installed-tool').write_text('the repo copy')
 
     target = tmp_path / 'target'
     target.mkdir()
-    executable = target / 'dotfiles'
+    executable = target / 'installed-tool'
     executable.write_text('an installed console script')
 
     result = core.create_symlinks(source, 'apps', target_dir=target)
