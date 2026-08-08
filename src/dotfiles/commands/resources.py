@@ -216,9 +216,9 @@ symlinks_app = typer.Typer(no_args_is_help=True, help='Deployed dotfiles: the re
 
 
 @symlinks_app.command('check')
-def symlinks_check(as_json: bool = JsonOption) -> None:
+def symlinks_check(machine: str = MachineOption, as_json: bool = JsonOption) -> None:
     """Report broken or missing symlinks without touching any."""
-    _report(reconcile.check_symlinks(), as_json)
+    _report(reconcile.check_symlinks(_session(machine)), as_json)
 
 
 @symlinks_app.command('apply')

@@ -80,17 +80,19 @@ def check_packages(session: Session) -> ResourceResult:
     )
 
 
-def check_symlinks() -> ResourceResult:
-    """In-process, and read-only.
+def check_symlinks(session: Session) -> ResourceResult:
+    """Read-only, and now per link rather than per broken link.
 
-    The script this replaced ran `symlinks check`, whose `--auto-fix` defaults to
-    true — a read verb whose default was to delete files. Reading is what `check`
-    does; removing the broken ones is what `symlinks apply` does.
+    The previous check answered only "is anything broken", so a file added to
+    `configs/` and never deployed read as converged. The resource compares every
+    declared link against what is at its target, which is what makes a missing
+    one visible without running the write.
     """
-    from dotfiles import deploy
+    from dotfiles.resources import symlinks
 
-    healthy = deploy.check()
-    return _from_status('symlinks', 0 if healthy else 1, 'symlinks are healthy', 'symlinks are broken or missing')
+    observed = symlinks.RESOURCE.observe(session, session.plan)
+    changes = symlinks.RESOURCE.diff(session.plan, observed)
+    return from_changes('symlinks', changes, f'all {len(observed.links)} declared symlinks are deployed')
 
 
 def check_env(session: Session) -> ResourceResult:
@@ -168,7 +170,7 @@ CHECKERS: dict[str, Checker] = {
     'packages': check_packages,
     'toolchains': _pending('toolchains'),
     'plugins': _pending('plugins'),
-    'symlinks': lambda _session: check_symlinks(),
+    'symlinks': check_symlinks,
     'env': check_env,
     'system': _pending('system'),
     'identity': check_identity,
