@@ -19,6 +19,10 @@ rows declare `needs_root = False` and a Mac converges without a password.
 from the script before this conversion — the note in it read "changes take effect
 on next login/reboot" — so the design's `restart:` field is not here. Do not add
 it back without reversing that decision first.
+
+The two lines of `preferences.sh` that were not `defaults write` are not here
+either. They are `steps` rows in `providers/steps.py`, with the three other
+pieces of machine state that have no shared mechanism behind them.
 """
 
 from __future__ import annotations
@@ -26,10 +30,7 @@ from __future__ import annotations
 import dataclasses as dc
 import os
 import plistlib
-import stat
-from collections.abc import Callable
 from collections.abc import Iterable
-from pathlib import Path
 from typing import Any
 
 from dotfiles import catalog
@@ -39,8 +40,6 @@ from dotfiles.providers.sysconfig import Result
 from dotfiles.providers.sysconfig import State
 from dotfiles.resources import Repair
 from dotfiles.resources import Verdict
-
-FINDER_INFO = 'com.apple.FinderInfo'
 
 SYSTEM_SETTINGS_APPS = ('System Settings', 'System Preferences')
 """Quit before writing. Either one holds its own copy of a domain in memory and
@@ -167,93 +166,3 @@ def _quit_settings_once() -> None:
     _QUIT = True
     for app in SYSTEM_SETTINGS_APPS:
         run(['osascript', '-e', f'tell application "{app}" to quit'], output=Output.QUIET)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# The two steps that are not preference keys
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def _library_visible() -> State:
-    """`~/Library` is hidden by two mechanisms and needs both undone.
-
-    The `UF_HIDDEN` flag is what `chflags nohidden` clears; the `FinderInfo`
-    extended attribute carries a second hidden bit that Finder honours on its
-    own. Clearing one leaves the folder hidden, which is why the script ran two
-    commands and why this reports on both.
-    """
-    library = Path.home() / 'Library'
-    if not library.is_dir():
-        return State(Verdict.UNKNOWN, 'no ~/Library on this machine', repair=Repair.NONE)
-
-    by = [reason for reason, held in (('the UF_HIDDEN flag', _hidden_flag(library)), (FINDER_INFO, _finder_info(library))) if held]
-    if not by:
-        return State(Verdict.MATCHED)
-    return State(Verdict.STALE, f'~/Library is hidden by {" and ".join(by)}')
-
-
-def _hidden_flag(path: Path) -> bool:
-    """`st_flags` is a BSD field, so it is absent on Linux and on any filesystem
-    that does not carry one — where nothing hid the folder either."""
-    return bool(getattr(path.stat(), 'st_flags', 0) & stat.UF_HIDDEN)
-
-
-def _finder_info(path: Path) -> bool:
-    try:
-        return FINDER_INFO in os.listxattr(path)
-    except OSError:
-        return False
-
-
-def _show_library() -> Result:
-    library = Path.home() / 'Library'
-    cleared = run(['chflags', 'nohidden', str(library)], output=Output.QUIET)
-    if not cleared.ok:
-        return Result(False, f'chflags failed: {cleared.transcript.strip()}')
-    # Absent on a folder nobody has hidden by hand, so a failure here is not one.
-    run(['xattr', '-d', FINDER_INFO, str(library)], output=Output.QUIET)
-    return Result(True, '~/Library is visible')
-
-
-def _screenshot_directory() -> Path:
-    return Path.home() / 'Desktop' / 'screenshots'
-
-
-def _screenshots_exist() -> State:
-    """The directory `com.apple.screencapture location` points at.
-
-    Its own row rather than a side effect of that entry, because a location key
-    pointing at a directory that does not exist is a screenshot that silently
-    fails to save — and the two can drift apart independently.
-    """
-    if _screenshot_directory().is_dir():
-        return State(Verdict.MATCHED)
-    return State(Verdict.MISSING, f'{_screenshot_directory()} does not exist')
-
-
-def _make_screenshots() -> Result:
-    _screenshot_directory().mkdir(parents=True, exist_ok=True)
-    return Result(True, f'{_screenshot_directory()} created')
-
-
-STEPS: dict[str, tuple[Callable[[], State], Callable[[], Result]]] = {
-    'library-visible': (_library_visible, _show_library),
-    'screenshot-directory': (_screenshots_exist, _make_screenshots),
-}
-"""Every `macos_steps` row, and the pair of functions that answers for it.
-
-The `custom_installers` shape: the declaration names which, the code says how,
-and `dotfiles machines check` fails on a declared row with no entry here.
-"""
-
-
-def observe_step(entry: catalog.MacosStep) -> State:
-    if entry.name not in STEPS:
-        return State(Verdict.UNKNOWN, f'no function in providers/macdefaults.py for {entry.name}', repair=Repair.NONE)
-    return STEPS[entry.name][0]()
-
-
-def apply_step(entry: catalog.MacosStep) -> Result:
-    if entry.name not in STEPS:
-        return Result(False, f'no function in providers/macdefaults.py for {entry.name}')
-    return STEPS[entry.name][1]()

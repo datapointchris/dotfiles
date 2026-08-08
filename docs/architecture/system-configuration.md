@@ -48,13 +48,11 @@ for one boolean stop being able to disagree.
 
 Two things there are not preference keys — `~/Library` being visible is a file
 flag plus an extended attribute, and the screenshot directory existing is a
-directory existing. They are the `custom_installers` shape: `macos_steps`
-declares which, `providers/macdefaults.py` says how, and a test asserts the two
-sets match in both directions.
+directory existing. Both are `steps` rows, described below.
 
-**Nothing on the Mac side escalates**, which is why `needs_root` is a property of
-the section rather than of the resource. A Mac whose only drift is its Dock size
-converges without a password.
+**No preference escalates**, which is why `needs_root` is a field with a
+per-section default rather than a resource-wide assumption. A Mac whose only
+drift is its Dock size converges without a password.
 
 Two decisions worth not reversing by accident. `System Settings` is quit once
 before the first write of a process, because it holds its own copy of a domain
@@ -63,6 +61,46 @@ nothing to say it happened. And **no app is restarted**: `killall Finder` and
 friends were deliberately removed from `preferences.sh` before this conversion,
 with a note reading "changes take effect on next login/reboot", so the `restart:`
 field the design sketched is not here.
+
+## `steps` is the name for no shared mechanism
+
+Five rows with nothing in common: `~/Library`'s hidden flag and extended
+attribute, the screenshot directory, the Xcode licence, OrbStack's plugin
+directory in `~/.config/docker/config.json`, and fontconfig pointing at the
+Windows user font directory. Each is one pair of functions in
+`providers/steps.py`, the shape `custom_installers` settled on — the declaration
+names *which*, the code says *how*, and a test asserts the two sets match in both
+directions so neither a row nothing implements nor a function nothing declares
+can sit there reading as maintained.
+
+A `check:`/`apply:` argv pair in the YAML was the alternative, and three of the
+five would not fit it: a JSON merge, a path discovered by asking Windows, and an
+observation that has to *decline* to escalate.
+
+Three of them are worth knowing about individually.
+
+**The Xcode licence is the one observation in the repo that genuinely needs
+root.** `observe` is never handed a `Privilege`, so it reports `UNKNOWN` with the
+reason rather than prompting from the half of the run that must never prompt. Two
+cheaper questions come first and settle it without root on every machine that has
+no full Xcode: no `xcodebuild` at all, or an active developer directory that is
+the Command Line Tools.
+
+**The docker config is docker's file, not this repo's.** It carries credential
+helpers and proxies, so the plugin directory is merged into whatever is there and
+a file that will not parse as JSON is refused rather than replaced — rewriting it
+would discard what it holds.
+
+**The Windows username is asked of Windows.** `WINDOWS_USER` is declared in
+`flags.yml`, but it lives below the OVERRIDES marker in `~/.env` and is set by
+hand, so it is absent during the very first install — the run that needs the font
+path most. `cmd.exe /C echo %USERNAME%` is self-describing and works then.
+
+`install/wsl/docker-repo.sh` deliberately did **not** convert. Nothing in the
+install path calls it: WSL borrows the engine from Docker Desktop, and
+`docs/configuration/docker.md` documents the script as the manual escape hatch
+for a machine that cannot have Docker Desktop. Making it a resource would make it
+something the installer runs, which is the opposite of what that page says.
 
 ## Every read is unprivileged, every write is not
 

@@ -6,8 +6,7 @@ its argv is the whole seam for the write side — which is the right shape anywa
 because the assertions are about the exact command and the exact comparison, and
 those are what a Mac would get wrong silently.
 
-The real declaration is asserted against the real code at the bottom: every
-`macos_steps` row has a pair of functions, and every `macos_defaults` row parses.
+The real declaration is asserted against the real code at the bottom.
 """
 
 from __future__ import annotations
@@ -228,49 +227,6 @@ def test_system_settings_is_quit_once_before_the_first_write_and_never_again(wri
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# The two steps
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_the_screenshot_directory_is_its_own_row(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Not a side effect of the location key: a location pointing at a directory
-    that does not exist is a screenshot that silently fails to save, and the two
-    drift apart independently."""
-    monkeypatch.setenv('HOME', str(tmp_path))
-    entry = catalog.MacosStep.from_mapping({'name': 'screenshot-directory'})
-
-    assert macdefaults.observe_step(entry).verdict is Verdict.MISSING
-    assert macdefaults.apply_step(entry).ok
-    assert macdefaults.observe_step(entry).verdict is Verdict.MATCHED
-
-
-def test_a_step_with_no_function_says_so_rather_than_passing(tmp_path: Path) -> None:
-    """The `custom_installers` failure mode: a declared row nothing installs, which
-    reads as converged because no code ever looked at it."""
-    state = macdefaults.observe_step(catalog.MacosStep.from_mapping({'name': 'invented'}))
-
-    assert state.verdict is Verdict.UNKNOWN
-    assert state.repair is Repair.NONE
-
-
-def test_a_visible_library_folder_reports_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Neither the UF_HIDDEN flag nor the FinderInfo xattr, which is the state
-    `chflags nohidden` plus `xattr -d` leaves behind."""
-    monkeypatch.setenv('HOME', str(tmp_path))
-    (tmp_path / 'Library').mkdir()
-
-    assert macdefaults.observe_step(catalog.MacosStep.from_mapping({'name': 'library-visible'})).verdict is Verdict.MATCHED
-
-
-def test_no_library_folder_is_unknown_rather_than_drifted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv('HOME', str(tmp_path))
-    state = macdefaults.observe_step(catalog.MacosStep.from_mapping({'name': 'library-visible'}))
-
-    assert state.verdict is Verdict.UNKNOWN
-    assert state.repair is Repair.NONE
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # The real declaration against the real code
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -279,23 +235,7 @@ def declared() -> catalog.Catalog:
     return catalog.load(paths.PACKAGES_FILE)
 
 
-def test_every_declared_step_has_a_pair_of_functions() -> None:
-    """One direction of the `custom_installers` rule, and the one that matters:
-    a row nothing implements reads as converged."""
-    names = {entry.name for entry in declared().section('macos_steps')}
-
-    assert names <= set(macdefaults.STEPS), f'macos_steps rows with no function: {sorted(names - set(macdefaults.STEPS))}'
-
-
-def test_every_function_is_a_declared_step() -> None:
-    """The other direction. A function nothing declares is dead code that reads
-    as maintained."""
-    names = {entry.name for entry in declared().section('macos_steps')}
-
-    assert set(macdefaults.STEPS) <= names, f'functions nothing declares: {sorted(set(macdefaults.STEPS) - names)}'
-
-
 def test_no_declared_preference_needs_root() -> None:
     """A Mac converges its own preferences without a password. Marking them
     privileged would put a prompt in front of a machine that needs none."""
-    assert all(not type(entry).needs_root for entry in declared().section('macos_defaults'))
+    assert all(not entry.needs_root for entry in declared().section('macos_defaults'))

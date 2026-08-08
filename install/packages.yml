@@ -212,7 +212,8 @@ system_packages:
     description: Z shell (macOS has it pre-installed)
 
   # Docker (cross-platform via official repos - WSL uses Windows Docker Desktop)
-  # Ubuntu: requires running setup-docker-official-repo-ubuntu.sh first
+  # Ubuntu: needs the official apt repo, which install/wsl/docker-repo.sh adds
+  # by hand — it is a documented escape hatch, not a step the installer runs.
   # Arch: official repos already up-to-date
   # macOS: OrbStack provides Docker CLI (see macos_casks)
   - name: docker

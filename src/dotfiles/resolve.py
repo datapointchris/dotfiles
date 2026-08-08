@@ -209,7 +209,7 @@ SYSTEM_PROVIDERS: dict[str, Provider] = {
     'managed_files': Provider('file', Stage.SYSTEM_CONFIG, 'system'),
     'login_shell': Provider('login-shell', Stage.SYSTEM_CONFIG, 'system'),
     'macos_defaults': Provider('macos-default', Stage.SYSTEM_CONFIG, 'system'),
-    'macos_steps': Provider('macos-step', Stage.SYSTEM_CONFIG, 'system'),
+    'steps': Provider('step', Stage.SYSTEM_CONFIG, 'system'),
 }
 """`system.yml`'s sections, resolved in a second pass rather than beside the rest.
 
@@ -312,7 +312,7 @@ def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed
     Each key narrows independently and all of them must hold, so an entry needing
     two conditions says both rather than needing a new combined axis.
     """
-    if entry.display_stack and entry.display_stack != str(machine.coordinates.display_stack):
+    if any(value != str(getattr(machine.coordinates, axis)) for axis, value in entry.narrowing.items()):
         return False
     if entry.requires_package and entry.requires_package not in installed:
         return False
@@ -321,12 +321,8 @@ def configures(entry: catalog.SystemConfig, machine: machines.Machine, installed
 
 def _decided_by(entry: catalog.SystemConfig) -> str:
     """What put this row in the plan, for `machines show` to print."""
-    narrowings = (
-        ('package', entry.requires_package),
-        ('display_stack', entry.display_stack),
-        ('feature', entry.feature),
-    )
-    named = ', '.join(f'{key}:{value}' for key, value in narrowings if value)
+    narrowings = {'package': entry.requires_package, **entry.narrowing, 'feature': entry.feature}
+    named = ', '.join(f'{key}:{value}' for key, value in narrowings.items() if value)
     return named or 'every machine'
 
 
@@ -339,7 +335,7 @@ def available(entry: catalog.Entry, coordinates: axes.Coordinates) -> bool:
     """
     if isinstance(entry, catalog.SystemPackage):
         return any(entry.package_for(installer) for installer in coordinates.installers)
-    if isinstance(entry, catalog.MacosCask | catalog.MasApp | catalog.MacosDefault | catalog.MacosStep):
+    if isinstance(entry, catalog.MacosCask | catalog.MasApp | catalog.MacosDefault):
         return coordinates.os_family is axes.OSFamily.DARWIN
     if isinstance(entry, catalog.FlatpakApp):
         return coordinates.os_family is axes.OSFamily.LINUX

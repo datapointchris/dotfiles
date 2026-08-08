@@ -120,7 +120,7 @@ Tools installed to: `~/.local/bin` (consistent across platforms)
 
     - Directory: `%LOCALAPPDATA%\Microsoft\Windows\Fonts` (user fonts, no admin)
     - Registry: `HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`
-    - Fontconfig: Configured to see Windows fonts via `fontconfig-setup.sh`
+    - Fontconfig: Configured to see Windows fonts by the `windows-fonts` step
 
     The `font` CLI and `fc-list` both see Windows-installed fonts.
 

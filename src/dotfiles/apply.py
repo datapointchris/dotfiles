@@ -303,7 +303,7 @@ def _run_scripts(context: Run, scripts: list[Path], *, tier: str = '') -> bool:
 COMMON = paths.INSTALL_DIR / 'common'
 
 SYSTEM_SCRIPTS = {
-    'macos': ('homebrew.sh', 'system-packages.sh', 'casks.sh', 'configure-docker.sh', 'mas-apps.sh', 'xcode.sh'),
+    'macos': ('homebrew.sh', 'system-packages.sh', 'casks.sh', 'mas-apps.sh'),
     'wsl': ('system-packages.sh',),
     'archlinux': ('system-packages.sh',),
     'linux': ('system-packages.sh',),
@@ -336,8 +336,6 @@ def _system_packages(context: Run) -> bool:
     if context.platform == 'macos' and not context.system_tier:
         scripts = [platform_dir / name for name in SYSTEM_SCRIPTS['macos'][1:]]
 
-    if context.platform == 'wsl':
-        scripts.append(platform_dir / 'fontconfig-setup.sh')
     if context.platform == 'archlinux' and context.wants('flatpak'):
         scripts.append(platform_dir / 'flatpak.sh')
 

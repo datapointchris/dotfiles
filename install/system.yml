@@ -364,8 +364,8 @@ macos_defaults:
     value: "false"
     description: Disable two-finger swipe to navigate pages
 
-  # Screenshots — the directory is a macos_steps row, because a location
-  # pointing at a directory that does not exist fails silently.
+  # Screenshots — the directory is a `steps` row, because a location pointing
+  # at a directory that does not exist fails silently.
   - domain: com.apple.screencapture
     key: location
     type: string
@@ -503,11 +503,26 @@ macos_defaults:
     value: "true"
     description: Reduce motion
 
-# macOS state that is not a preference key. The mechanics are one pair of
-# functions each in src/dotfiles/providers/macdefaults.py, for the same reason
-# custom_installers has no engine: two rows with nothing in common.
-macos_steps:
+# Machine state with no shared mechanism behind it: a file flag, a directory, a
+# root-only licence read, a JSON merge, and a path discovered by asking Windows.
+# The mechanics are one pair of functions each in src/dotfiles/providers/steps.py,
+# for the same reason custom_installers has no engine.
+steps:
   - name: library-visible
     description: ~/Library visible in Finder, which needs both the flag and the xattr cleared
+    os_family: darwin
   - name: screenshot-directory
     description: The directory com.apple.screencapture location points at
+    os_family: darwin
+  # The one observation in the repo that genuinely needs root, so `check` reports
+  # it unknown rather than prompting from the half that must never prompt.
+  - name: xcode-licence
+    description: The Xcode licence, where a full Xcode is installed
+    os_family: darwin
+    needs_root: true
+  - name: orbstack-docker-plugins
+    description: docker's cliPluginsExtraDirs pointing at OrbStack's xbin
+    os_family: darwin
+  - name: windows-fonts
+    description: fontconfig pointing at the Windows user font directory
+    host: wsl

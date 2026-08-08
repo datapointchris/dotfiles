@@ -474,15 +474,27 @@ class SystemConfig(Entry):
     """
 
     declared_in: ClassVar[str] = 'system.yml'
-    needs_root: ClassVar[bool] = True
-    """Whether repairing a row of this section escalates, which is a property of
-    the section rather than of the entry. macOS preferences are the exception —
-    they are user-level, and treating them as privileged would put a password
-    prompt in front of a Mac that needs none."""
 
+    needs_root: bool = True
+    """Whether repairing this row escalates.
+
+    A field with a per-section default rather than a class constant, because it
+    is mostly a property of the section and occasionally not: macOS preferences
+    are user-level throughout, and the Xcode licence is the one step in the repo
+    whose *read* needs root. Treating a whole section as privileged would put a
+    password prompt in front of a Mac that needs none.
+    """
+
+    os_family: str = ''
+    host: str = ''
     display_stack: str = ''
-    """Only where the machine's compositor matches. Hyprland replacing gdm is a
-    fact about the display stack, not about Arch."""
+    """Coordinate narrowings, and only the three anything declares.
+
+    Hyprland replacing gdm is a fact about the display stack, not about Arch; the
+    Windows font path is a fact about the host, not about Ubuntu. A fourth axis is
+    a fourth field when a row needs one — until then declaring it is a load-time
+    error rather than a key read by nothing.
+    """
 
     requires_package: str = ''
     """Only where this machine's plan installs that system package. Configuring
@@ -492,11 +504,19 @@ class SystemConfig(Entry):
     feature: str = ''
     """Only where the manifest sets this boolean — `configure_zsh` and its kind."""
 
+    @property
+    def narrowing(self) -> dict[str, str]:
+        """The coordinates this row narrows on, keyed as `Coordinates` spells them."""
+        declared = (('os_family', self.os_family), ('host', self.host), ('display_stack', self.display_stack))
+        return {axis: value for axis, value in declared if value}
+
     def problems(self) -> tuple[str, ...]:
-        if not self.display_stack or self.display_stack in set(axes.DisplayStack):
-            return Entry.problems(self)
-        known = ', '.join(axes.DisplayStack)
-        return (f'declares display_stack {self.display_stack!r}, which is not an axis value. Known: {known}', *Entry.problems(self))
+        wrong = [
+            f'declares {axis} {value!r}, which is not an axis value. Known: {", ".join(axes.AXIS_TYPES[axis])}'
+            for axis, value in self.narrowing.items()
+            if value not in set(axes.AXIS_TYPES[axis])
+        ]
+        return (*wrong, *Entry.problems(self))
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
@@ -582,13 +602,13 @@ class MacosDefault(SystemConfig):
     """
 
     section: ClassVar[str] = 'macos_defaults'
-    needs_root: ClassVar[bool] = False
 
     domain: str
     key: str
     type: str
     value: str
     name: str = ''
+    needs_root: bool = False
 
     dict_key: str = ''
     """The key *inside* the value, for the five entries using `-dict-add`. Their
@@ -625,18 +645,26 @@ class MacosDefault(SystemConfig):
 
 
 @dc.dataclass(frozen=True, slots=True, kw_only=True)
-class MacosStep(SystemConfig):
-    """A piece of macOS state that is not a preference key.
+class Step(SystemConfig):
+    """A piece of machine state with no shared mechanism behind it.
 
-    Two of them, with nothing in common: `~/Library` being visible is a file
-    flag, and the screenshot directory existing is a directory existing. This
-    section is the `custom_installers` shape — the declaration says which, and
-    `providers/macdefaults.py` says how — because a `check:`/`apply:` argv pair
-    in YAML would be a command language invented for two rows.
+    `~/Library` being visible is a file flag, the screenshot directory existing
+    is a directory existing, the Xcode licence is a `sudo` read, OrbStack's
+    plugin directory is a JSON merge, and the Windows font path is discovered by
+    asking Windows. Five rows with nothing in common.
+
+    This is the `custom_installers` shape — the declaration says which, and
+    `providers/steps.py` says how — because a `check:`/`apply:` argv pair in YAML
+    would be a command language invented for five rows, and three of them would
+    not fit it anyway.
+
+    `needs_root` defaults to False here rather than to the section default: four
+    of the five are user-level, and the Xcode licence declares its own exception.
     """
 
-    section: ClassVar[str] = 'macos_steps'
-    needs_root: ClassVar[bool] = False
+    section: ClassVar[str] = 'steps'
+
+    needs_root: bool = False
 
 
 SECTION_CLASSES: tuple[type[Entry], ...] = (
@@ -666,7 +694,7 @@ SYSTEM_SECTION_CLASSES: tuple[type[SystemConfig], ...] = (
     ManagedFile,
     LoginShell,
     MacosDefault,
-    MacosStep,
+    Step,
 )
 """`system.yml`, in its own map rather than merged into `SECTIONS`.
 

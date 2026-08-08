@@ -28,6 +28,7 @@ from dotfiles import evidence as ev
 from dotfiles.catalog import SystemConfig
 from dotfiles.privilege import Privilege
 from dotfiles.providers import macdefaults
+from dotfiles.providers import steps
 from dotfiles.providers import sysconfig
 from dotfiles.resolve import DesiredItem
 from dotfiles.resolve import Plan
@@ -140,8 +141,8 @@ def _observe_config(items: list[DesiredItem]) -> dict[str, sysconfig.State]:
 def _observe_row(entry: SystemConfig, stores: dict[macdefaults.Domain, dict[str, object] | None]) -> sysconfig.State:
     if isinstance(entry, catalog.MacosDefault):
         return macdefaults.observe_default(entry, stores)
-    if isinstance(entry, catalog.MacosStep):
-        return macdefaults.observe_step(entry)
+    if isinstance(entry, catalog.Step):
+        return steps.observe(entry.name)
     return sysconfig.observe(entry)
 
 
@@ -155,8 +156,8 @@ def _observe_one(entry: SystemConfig) -> sysconfig.State:
 def _apply_one(entry: SystemConfig, privilege: Privilege) -> sysconfig.Result:
     if isinstance(entry, catalog.MacosDefault):
         return macdefaults.apply_default(entry)
-    if isinstance(entry, catalog.MacosStep):
-        return macdefaults.apply_step(entry)
+    if isinstance(entry, catalog.Step):
+        return steps.apply(entry.name, privilege)
     return sysconfig.apply(entry, privilege)
 
 
